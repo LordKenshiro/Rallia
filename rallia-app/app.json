@@ -2,6 +2,7 @@
   "expo": {
     "name": "rallia-app",
     "slug": "rallia-app",
+    "owner": "rallia",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -35,6 +36,11 @@
           "organization": "rallia"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "62e3feab-58d6-4972-9371-577a10a12263"
+      }
+    }
   }
 }
