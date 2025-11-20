@@ -2,31 +2,23 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import AppHeader from '../components/AppHeader';
 import MatchCard, { Match } from '../components/MatchCard';
-import { supabase } from '../lib/supabase';
-import { Session } from '@supabase/supabase-js';
+import {
+  AuthOverlay,
+  LocationPermissionOverlay,
+  PersonalInformationOverlay,
+  CalendarAccessOverlay,
+} from '../components/overlays';
+import { useAuth, useOnboardingFlow } from '../hooks';
+import { getMockMatches } from '../data/mockMatches';
+import { COLORS } from '../constants';
 
 const Home = () => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Use custom hooks for auth and onboarding flow
+  const { session, loading, signOut } = useAuth();
+  const onboarding = useOnboardingFlow();
+  
   const [matches, setMatches] = useState<Match[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(false);
-
-  useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   // Fetch matches from Supabase
   useEffect(() => {
@@ -42,47 +34,9 @@ const Home = () => {
       //   .select('*')
       //   .order('date', { ascending: true });
       
-      // For now, using sample data
-      const sampleMatches: Match[] = [
-        {
-          id: '1',
-          title: "Jaad's Singles",
-          ageRestriction: '25+',
-          date: 'Nov 10',
-          time: '6:00PM - 7:00PM',
-          location: 'IGA Stadium',
-          court: 'Court 3',
-          tags: ['Competitive', 'Men Only', 'Open Access'],
-          participantCount: 4,
-          participantImages: [],
-        },
-        {
-          id: '2',
-          title: "Emy's Doubles",
-          ageRestriction: '25+',
-          date: 'Nov 11',
-          time: '9:00AM - 11:00AM',
-          location: 'MLK Tennis Courts',
-          court: 'No Court',
-          tags: ['Practice', 'All Gender', 'Closed Access'],
-          participantCount: 6,
-          participantImages: [],
-        },
-        {
-          id: '3',
-          title: "Sara's Singles",
-          ageRestriction: '25+',
-          date: 'Nov 11',
-          time: '2:00PM - 3:30PM',
-          location: 'Jeanne-Mance Park',
-          court: 'Court 9',
-          tags: ['Competitive', 'Women Only', 'Closed Access'],
-          participantCount: 3,
-          participantImages: [],
-        },
-      ];
-      
-      setMatches(sampleMatches);
+      // For now, using mock data
+      const mockMatches = getMockMatches();
+      setMatches(mockMatches);
     } catch (error) {
       console.error('Error fetching matches:', error);
     } finally {
@@ -90,9 +44,8 @@ const Home = () => {
     }
   };
 
-  const handleSignIn = () => {
-    // TODO: Navigate to sign-in screen or open auth modal
-    console.log('Navigate to sign in');
+  const handleSignOut = async () => {
+    await signOut();
   };
 
   if (loading) {
@@ -117,7 +70,7 @@ const Home = () => {
             <Text style={styles.sectionSubtitle}>
               You must sign in to create and{'\n'}access your matches
             </Text>
-            <TouchableOpacity style={styles.signInButton} onPress={handleSignIn}>
+            <TouchableOpacity style={styles.signInButton} onPress={onboarding.startOnboarding}>
               <Text style={styles.signInButtonText}>Sign In</Text>
             </TouchableOpacity>
           </View>
@@ -157,6 +110,35 @@ const Home = () => {
           )}
         </ScrollView>
       </View>
+
+      {/* Auth Overlay */}
+      <AuthOverlay 
+        visible={onboarding.showAuthOverlay} 
+        onClose={onboarding.closeAuthOverlay}
+        onAuthSuccess={onboarding.handleAuthSuccess}
+        onShowCalendarOverlay={onboarding.showCalendarOverlay}
+      />
+
+      {/* Location Permission Overlay */}
+      <LocationPermissionOverlay
+        visible={onboarding.showLocationPermission}
+        onAccept={onboarding.handleAcceptLocation}
+        onRefuse={onboarding.handleRefuseLocation}
+      />
+
+      {/* Calendar Access Overlay */}
+      <CalendarAccessOverlay
+        visible={onboarding.showCalendarAccess}
+        onAccept={onboarding.handleAcceptCalendar}
+        onRefuse={onboarding.handleRefuseCalendar}
+      />
+
+      {/* Personal Information Overlay */}
+      <PersonalInformationOverlay
+        visible={onboarding.showPersonalInfo}
+        onClose={onboarding.closePersonalInfo}
+        onContinue={onboarding.handlePersonalInfoContinue}
+      />
     </SafeAreaView>
   );
 };

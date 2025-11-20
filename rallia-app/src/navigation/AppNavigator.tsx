@@ -1,6 +1,7 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Ionicons } from '@expo/vector-icons';
+import Landing from "../screens/Landing";
 import Home from "../screens/Home";
 import Map from "../screens/Map";
 import Match from "../screens/Match";
@@ -76,10 +77,15 @@ function BottomTabs () {
 export default function AppNavigator() {
 
   // stack screen
-  // inside stack ---> we will call out bottom tabs also as one of the screens, same for upper navigation
+  // Landing screen first, then bottom tabs, then other screens
   return(
-    <Stack.Navigator>
-        <Stack.Screen
+    <Stack.Navigator initialRouteName="Landing">
+      <Stack.Screen
+        name="Landing"
+        component={Landing}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
         name="Main"
         component={BottomTabs}
         options={{ headerShown: false }}

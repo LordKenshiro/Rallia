@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { COLORS } from '../constants';
 
 export interface Match {
   id: string;
@@ -23,14 +24,29 @@ interface MatchCardProps {
 const MatchCard: React.FC<MatchCardProps> = ({ match, onPress }) => {
   const getTagColor = (tag: string): string => {
     const tagLower = tag.toLowerCase();
-    if (tagLower.includes('competitive')) return '#00A896';
-    if (tagLower.includes('practice')) return '#00A896';
-    if (tagLower.includes('men')) return '#4ECDC4';
-    if (tagLower.includes('women')) return '#FF6B9D';
-    if (tagLower.includes('open')) return '#95E1D3';
-    if (tagLower.includes('closed')) return '#AA96DA';
-    if (tagLower.includes('all gender')) return '#6C63FF';
-    return '#00B8A9';
+    if (tagLower.includes('competitive')) return COLORS.competitive;
+    if (tagLower.includes('practice')) return COLORS.practice;
+    if (tagLower.includes('men')) return COLORS.menOnly;
+    if (tagLower.includes('women')) return COLORS.womenOnly;
+    if (tagLower.includes('open')) return COLORS.openAccess;
+    if (tagLower.includes('closed')) return COLORS.closedAccess;
+    if (tagLower.includes('all gender')) return COLORS.allGender;
+    return COLORS.primary;
+  };
+
+  // Get position style for secondary images based on total count and index
+  const getSecondaryPosition = (index: number, total: number) => {
+    if (total === 3) {
+      // For 3 players: top-right and bottom-right
+      if (index === 0) return styles.secondaryTopSmall;
+      if (index === 1) return styles.secondaryBottomSmall;
+    } else if (total === 4) {
+      // For doubles (4 players): top, right, bottom
+      if (index === 0) return styles.secondaryTopSmall;
+      if (index === 1) return styles.secondaryRightSmall;
+      if (index === 2) return styles.secondaryBottomSmall;
+    }
+    return {};
   };
 
   return (
@@ -43,25 +59,43 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, onPress }) => {
       <View style={styles.header}>
         <View style={styles.profileSection}>
           <View style={styles.profileImagesContainer}>
+            {/* Profile pictures */}
             {match.participantImages && match.participantImages.length > 0 ? (
-              match.participantImages.slice(0, 2).map((image, index) => (
-                <Image
-                  key={index}
-                  source={{ uri: image }}
-                  style={[
-                    styles.profileImage,
-                    index > 0 && styles.profileImageOverlap,
-                  ]}
-                />
-              ))
+              match.participantCount === 2 ? (
+                // For 2 players: Same size images with slight overlap
+                <View style={styles.twoPlayersContainer}>
+                  <Image
+                    source={{ uri: match.participantImages[0] }}
+                    style={styles.equalProfileImage}
+                  />
+                  <Image
+                    source={{ uri: match.participantImages[1] }}
+                    style={[styles.equalProfileImage, styles.equalProfileOverlap]}
+                  />
+                </View>
+              ) : (
+                // For 3-4 players: Main image with smaller secondary images
+                <View style={styles.mainProfileWrapper}>
+                  <Image
+                    source={{ uri: match.participantImages[0] }}
+                    style={styles.mainProfileImage}
+                  />
+                  {/* Secondary profile pictures - smaller, half the size */}
+                  {match.participantImages.slice(1, Math.min(4, match.participantCount)).map((image, index) => (
+                    <Image
+                      key={index}
+                      source={{ uri: image }}
+                      style={[
+                        styles.secondaryProfileImage,
+                        getSecondaryPosition(index, match.participantCount),
+                      ]}
+                    />
+                  ))}
+                </View>
+              )
             ) : (
               <View style={styles.placeholderProfile}>
-                <Ionicons name="person" size={20} color="#999" />
-              </View>
-            )}
-            {match.participantCount > 0 && (
-              <View style={styles.countBadge}>
-                <Text style={styles.countText}>{match.participantCount}</Text>
+                <Ionicons name="person" size={24} color="#999" />
               </View>
             )}
           </View>
@@ -109,7 +143,7 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, onPress }) => {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: '#E8F8F5',
     borderRadius: 12,
     padding: 16,
     marginHorizontal: 16,
@@ -137,40 +171,67 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  profileImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  // For 2 players: same size images side by side
+  twoPlayersContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  equalProfileImage: {
+    width: 45,
+    height: 45,
+    borderRadius: 22.5,
     borderWidth: 2,
     borderColor: '#fff',
   },
-  profileImageOverlap: {
-    marginLeft: -12,
+  equalProfileOverlap: {
+    marginLeft: -10, // Slight overlap
+  },
+  // For 3-4 players: main image with smaller secondaries
+  mainProfileWrapper: {
+    position: 'relative',
+    width: 65,
+    height: 65,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mainProfileImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  secondaryProfileImage: {
+    position: 'absolute',
+    width: 25, // Half the size of main (50/2)
+    height: 25,
+    borderRadius: 12.5,
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  secondaryTopSmall: {
+    top: 0,
+    right: -5,
+  },
+  secondaryRightSmall: {
+    right: -5,
+    top: '50%',
+    marginTop: -12.5, // Half of image height
+  },
+  secondaryBottomSmall: {
+    bottom: 0,
+    right: -5,
   },
   placeholderProfile: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#E0E0E0',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  countBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#00B8A9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 8,
-  },
-  countText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
   ageBadge: {
-    backgroundColor: '#00B8A9',
+    backgroundColor: COLORS.primary,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
