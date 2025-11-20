@@ -5,3 +5,4 @@ export { default as LocationPermissionOverlay } from './LocationPermissionOverla
 export { default as CalendarAccessOverlay } from './CalendarAccessOverlay';
 export { default as PersonalInformationOverlay } from './PersonalInformationOverlay';
 export { default as PermissionOverlay } from './PermissionOverlay';
+export { default as SportSelectionOverlay } from './SportSelectionOverlay';

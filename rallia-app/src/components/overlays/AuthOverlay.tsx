@@ -49,13 +49,6 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ visible, onClose, onAuthSucce
     console.log('Continue with email:', email);
     // TODO: Send verification code to email
     setStep('code');
-    
-    // Trigger calendar overlay after a short delay
-    if (onShowCalendarOverlay) {
-      setTimeout(() => {
-        onShowCalendarOverlay();
-      }, 300);
-    }
   };
 
   const handleResendCode = () => {
@@ -278,7 +271,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   emailInput: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: COLORS.primaryLight,
     borderRadius: 10,
     paddingHorizontal: 20,
     paddingVertical: 15,
@@ -286,7 +279,7 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: COLORS.primaryLight,
   },
   continueButton: {
     backgroundColor: COLORS.buttonPrimary,
@@ -344,10 +337,10 @@ const styles = StyleSheet.create({
   codeBox: {
     width: 40,
     height: 50,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: COLORS.primaryLight,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: COLORS.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
   },

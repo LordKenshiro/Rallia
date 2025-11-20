@@ -4,7 +4,7 @@
 export const COLORS = {
   // Primary colors
   primary: '#00B8A9',
-  primaryLight: '#C8F2EF',
+  primaryLight: '#E0F9F7',
   primaryDark: '#00A896',
   
   // Accent colors

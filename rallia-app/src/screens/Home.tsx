@@ -7,6 +7,7 @@ import {
   LocationPermissionOverlay,
   PersonalInformationOverlay,
   CalendarAccessOverlay,
+  SportSelectionOverlay,
 } from '../components/overlays';
 import { useAuth, useOnboardingFlow } from '../hooks';
 import { getMockMatches } from '../data/mockMatches';
@@ -19,6 +20,11 @@ const Home = () => {
   
   const [matches, setMatches] = useState<Match[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(false);
+
+  // Show location permission overlay on first load
+  useEffect(() => {
+    onboarding.showLocationPermissionOnMount();
+  }, []);
 
   // Fetch matches from Supabase
   useEffect(() => {
@@ -116,7 +122,6 @@ const Home = () => {
         visible={onboarding.showAuthOverlay} 
         onClose={onboarding.closeAuthOverlay}
         onAuthSuccess={onboarding.handleAuthSuccess}
-        onShowCalendarOverlay={onboarding.showCalendarOverlay}
       />
 
       {/* Location Permission Overlay */}
@@ -138,6 +143,13 @@ const Home = () => {
         visible={onboarding.showPersonalInfo}
         onClose={onboarding.closePersonalInfo}
         onContinue={onboarding.handlePersonalInfoContinue}
+      />
+
+      {/* Sport Selection Overlay */}
+      <SportSelectionOverlay
+        visible={onboarding.showSportSelection}
+        onClose={onboarding.closeSportSelection}
+        onContinue={onboarding.handleSportSelectionContinue}
       />
     </SafeAreaView>
   );

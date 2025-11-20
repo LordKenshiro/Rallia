@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Overlay from './Overlay';
 import { useImagePicker } from '../../hooks';
+import { COLORS } from '../../constants';
 
 interface PersonalInformationOverlayProps {
   visible: boolean;
@@ -37,6 +38,25 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
 
   // Use custom hook for image picker
   const { image: profileImage, pickImage } = useImagePicker();
+
+  // Validation functions
+  const handleFullNameChange = (text: string) => {
+    // Only allow letters and spaces
+    const validText = text.replace(/[^a-zA-Z\s]/g, '');
+    setFullName(validText);
+  };
+
+  const handleUsernameChange = (text: string) => {
+    // Remove spaces and limit to 10 characters
+    const validText = text.replace(/\s/g, '').slice(0, 10);
+    setUsername(validText);
+  };
+
+  const handlePhoneNumberChange = (text: string) => {
+    // Only allow numbers and limit to 10 digits
+    const validText = text.replace(/[^0-9]/g, '').slice(0, 10);
+    setPhoneNumber(validText);
+  };
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
@@ -102,17 +122,18 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
           style={styles.input}
           placeholder="Full Name"
           value={fullName}
-          onChangeText={setFullName}
+          onChangeText={handleFullNameChange}
           autoCapitalize="words"
         />
 
         {/* Username Input */}
         <TextInput
           style={styles.input}
-          placeholder="Username"
+          placeholder="Username (max 10 chars, no spaces)"
           value={username}
-          onChangeText={setUsername}
+          onChangeText={handleUsernameChange}
           autoCapitalize="none"
+          maxLength={10}
         />
 
         {/* Date of Birth Input */}
@@ -227,10 +248,11 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         {/* Phone Number Input */}
         <TextInput
           style={styles.input}
-          placeholder="Phone Number"
+          placeholder="Phone Number (10 digits)"
           value={phoneNumber}
-          onChangeText={setPhoneNumber}
-          keyboardType="phone-pad"
+          onChangeText={handlePhoneNumberChange}
+          keyboardType="numeric"
+          maxLength={10}
         />
 
         {/* Continue Button */}
@@ -271,13 +293,13 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#E8F8F5',
+    backgroundColor: COLORS.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
     marginBottom: 25,
     borderWidth: 2,
-    borderColor: '#00B8A9',
+    borderColor: COLORS.primary,
     borderStyle: 'dashed',
     overflow: 'hidden',
   },
@@ -287,7 +309,7 @@ const styles = StyleSheet.create({
     borderRadius: 40,
   },
   input: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: COLORS.primaryLight,
     borderRadius: 10,
     paddingHorizontal: 20,
     paddingVertical: 15,
@@ -295,18 +317,18 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 15,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: COLORS.primaryLight,
   },
   inputWithIcon: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: COLORS.primaryLight,
     borderRadius: 10,
     paddingHorizontal: 20,
     paddingVertical: 15,
     marginBottom: 15,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: COLORS.primaryLight,
     position: 'relative',
   },
   inputField: {

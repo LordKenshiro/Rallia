@@ -12,13 +12,10 @@ export const useOnboardingFlow = () => {
   const [showLocationPermission, setShowLocationPermission] = useState(false);
   const [showCalendarAccess, setShowCalendarAccess] = useState(false);
   const [showPersonalInfo, setShowPersonalInfo] = useState(false);
+  const [showSportSelection, setShowSportSelection] = useState(false);
 
   const startOnboarding = () => {
     setShowAuthOverlay(true);
-    // Show location permission overlay at the same time with a slight delay
-    setTimeout(() => {
-      setShowLocationPermission(true);
-    }, ANIMATION_DELAYS.OVERLAY_STAGGER);
   };
 
   const closeAuthOverlay = () => {
@@ -30,7 +27,7 @@ export const useOnboardingFlow = () => {
     // Close auth overlay
     setShowAuthOverlay(false);
     
-    // Show PersonalInformationOverlay after auth completes
+    // Show Personal Information overlay after auth completes
     setTimeout(() => {
       console.log('Opening PersonalInformationOverlay');
       setShowPersonalInfo(true);
@@ -40,12 +37,24 @@ export const useOnboardingFlow = () => {
   const handleAcceptLocation = () => {
     console.log('Location permission accepted');
     setShowLocationPermission(false);
+    
+    // Show Calendar overlay after location permission
+    setTimeout(() => {
+      console.log('Opening CalendarAccessOverlay');
+      setShowCalendarAccess(true);
+    }, ANIMATION_DELAYS.OVERLAY_STAGGER);
     // TODO: Request actual location permission
   };
 
   const handleRefuseLocation = () => {
     console.log('Location permission refused');
     setShowLocationPermission(false);
+    
+    // Show Calendar overlay even if location was refused
+    setTimeout(() => {
+      console.log('Opening CalendarAccessOverlay');
+      setShowCalendarAccess(true);
+    }, ANIMATION_DELAYS.OVERLAY_STAGGER);
   };
 
   const showCalendarOverlay = () => {
@@ -67,11 +76,37 @@ export const useOnboardingFlow = () => {
   const handlePersonalInfoContinue = () => {
     console.log('Personal info completed');
     setShowPersonalInfo(false);
-    // TODO: Complete onboarding flow
+    
+    // Show Sport Selection overlay after personal info
+    setTimeout(() => {
+      console.log('Opening SportSelectionOverlay');
+      setShowSportSelection(true);
+    }, ANIMATION_DELAYS.OVERLAY_STAGGER);
   };
 
   const closePersonalInfo = () => {
     setShowPersonalInfo(false);
+  };
+
+  const handleSportSelectionContinue = (selectedSports: string[]) => {
+    console.log('Sport selection completed:', selectedSports);
+    setShowSportSelection(false);
+    // TODO: Save selected sports and complete onboarding flow
+  };
+
+  const closeSportSelection = () => {
+    console.log('Closing SportSelectionOverlay and reopening PersonalInformationOverlay');
+    setShowSportSelection(false);
+    
+    // Show Personal Information overlay again
+    setTimeout(() => {
+      setShowPersonalInfo(true);
+    }, ANIMATION_DELAYS.OVERLAY_STAGGER);
+  };
+
+  const showLocationPermissionOnMount = () => {
+    console.log('Showing LocationPermissionOverlay on mount');
+    setShowLocationPermission(true);
   };
 
   return {
@@ -80,6 +115,7 @@ export const useOnboardingFlow = () => {
     showLocationPermission,
     showCalendarAccess,
     showPersonalInfo,
+    showSportSelection,
     
     // Actions
     startOnboarding,
@@ -92,5 +128,8 @@ export const useOnboardingFlow = () => {
     handleRefuseCalendar,
     handlePersonalInfoContinue,
     closePersonalInfo,
+    handleSportSelectionContinue,
+    closeSportSelection,
+    showLocationPermissionOnMount,
   };
 };
