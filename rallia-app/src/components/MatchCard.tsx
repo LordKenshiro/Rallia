@@ -2,19 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants';
-
-export interface Match {
-  id: string;
-  title: string;
-  ageRestriction: string;
-  date: string;
-  time: string;
-  location: string;
-  court: string;
-  tags: string[];
-  participantCount: number;
-  participantImages?: string[];
-}
+import { Match } from '../types';
 
 interface MatchCardProps {
   match: Match;

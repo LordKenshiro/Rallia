@@ -1,4 +1,4 @@
-import { Match } from '../components/MatchCard';
+import { Match } from '../types';
 
 /**
  * Mock data for matches

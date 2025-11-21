@@ -14,6 +14,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import Overlay from './Overlay';
 import { useImagePicker } from '../../hooks';
 import { COLORS } from '../../constants';
+import { validateFullName, validateUsername, validatePhoneNumber } from '../../utils/validators';
 
 interface PersonalInformationOverlayProps {
   visible: boolean;
@@ -39,23 +40,17 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
   // Use custom hook for image picker
   const { image: profileImage, pickImage } = useImagePicker();
 
-  // Validation functions
+  // Validation handlers using utility functions
   const handleFullNameChange = (text: string) => {
-    // Only allow letters and spaces
-    const validText = text.replace(/[^a-zA-Z\s]/g, '');
-    setFullName(validText);
+    setFullName(validateFullName(text));
   };
 
   const handleUsernameChange = (text: string) => {
-    // Remove spaces and limit to 10 characters
-    const validText = text.replace(/\s/g, '').slice(0, 10);
-    setUsername(validText);
+    setUsername(validateUsername(text));
   };
 
   const handlePhoneNumberChange = (text: string) => {
-    // Only allow numbers and limit to 10 digits
-    const validText = text.replace(/[^0-9]/g, '').slice(0, 10);
-    setPhoneNumber(validText);
+    setPhoneNumber(validatePhoneNumber(text));
   };
 
   const handleDateChange = (event: any, selectedDate?: Date) => {

@@ -1,17 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import AppHeader from '../components/AppHeader';
-import MatchCard, { Match } from '../components/MatchCard';
+import { MatchCard } from '../features/matches/components';
 import {
   AuthOverlay,
-  LocationPermissionOverlay,
   PersonalInformationOverlay,
-  CalendarAccessOverlay,
   SportSelectionOverlay,
+} from '../features/onboarding/components';
+import {
+  LocationPermissionOverlay,
+  CalendarAccessOverlay,
 } from '../components/overlays';
 import { useAuth, useOnboardingFlow } from '../hooks';
-import { getMockMatches } from '../data/mockMatches';
+import { getMockMatches } from '../features/matches/data/mockMatches';
 import { COLORS } from '../constants';
+import { Match } from '../types';
 
 const Home = () => {
   // Use custom hooks for auth and onboarding flow
