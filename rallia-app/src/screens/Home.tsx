@@ -6,6 +6,9 @@ import {
   AuthOverlay,
   PersonalInformationOverlay,
   SportSelectionOverlay,
+  TennisRatingOverlay,
+  PickleballRatingOverlay,
+  PlayerPreferencesOverlay,
 } from '../features/onboarding/components';
 import {
   LocationPermissionOverlay,
@@ -153,6 +156,28 @@ const Home = () => {
         visible={onboarding.showSportSelection}
         onClose={onboarding.closeSportSelection}
         onContinue={onboarding.handleSportSelectionContinue}
+      />
+
+      {/* Tennis Rating Overlay */}
+      <TennisRatingOverlay
+        visible={onboarding.showTennisRating}
+        onClose={onboarding.closeTennisRating}
+        onContinue={onboarding.handleTennisRatingContinue}
+      />
+
+      {/* Pickleball Rating Overlay */}
+      <PickleballRatingOverlay
+        visible={onboarding.showPickleballRating}
+        onClose={onboarding.closePickleballRating}
+        onContinue={onboarding.handlePickleballRatingContinue}
+      />
+
+      {/* Player Preferences Overlay */}
+      <PlayerPreferencesOverlay
+        visible={onboarding.showPlayerPreferences}
+        onClose={onboarding.closePlayerPreferences}
+        onContinue={onboarding.handlePlayerPreferencesContinue}
+        selectedSports={onboarding.selectedSports}
       />
     </SafeAreaView>
   );

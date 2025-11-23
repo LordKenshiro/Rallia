@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { ANIMATION_DELAYS } from '../constants';
 
-type OnboardingStep = 'auth' | 'location' | 'calendar' | 'personal' | null;
+type OnboardingStep = 'auth' | 'location' | 'calendar' | 'personal' | 'sport' | 'tennis-rating' | 'pickleball-rating' | 'preferences' | null;
 
 /**
  * Custom hook for managing the onboarding flow overlays
- * Handles visibility state for all onboarding overlays
+ * Handles visibility state for all onboarding overlays with conditional rating flow
  */
 export const useOnboardingFlow = () => {
   const [showAuthOverlay, setShowAuthOverlay] = useState(false);
@@ -13,6 +13,12 @@ export const useOnboardingFlow = () => {
   const [showCalendarAccess, setShowCalendarAccess] = useState(false);
   const [showPersonalInfo, setShowPersonalInfo] = useState(false);
   const [showSportSelection, setShowSportSelection] = useState(false);
+  const [showTennisRating, setShowTennisRating] = useState(false);
+  const [showPickleballRating, setShowPickleballRating] = useState(false);
+  const [showPlayerPreferences, setShowPlayerPreferences] = useState(false);
+  
+  // Track which sports were selected
+  const [selectedSports, setSelectedSports] = useState<string[]>([]);
 
   const startOnboarding = () => {
     setShowAuthOverlay(true);
@@ -88,10 +94,30 @@ export const useOnboardingFlow = () => {
     setShowPersonalInfo(false);
   };
 
-  const handleSportSelectionContinue = (selectedSports: string[]) => {
-    console.log('Sport selection completed:', selectedSports);
+  const handleSportSelectionContinue = (sports: string[]) => {
+    console.log('Sport selection completed:', sports);
+    setSelectedSports(sports);
     setShowSportSelection(false);
-    // TODO: Save selected sports and complete onboarding flow
+    
+    // Determine which rating overlay to show based on selected sports
+    setTimeout(() => {
+      const hasTennis = sports.includes('tennis');
+      const hasPickleball = sports.includes('pickleball');
+      
+      if (hasTennis) {
+        // If tennis selected (with or without pickleball), show tennis rating first
+        console.log('Opening TennisRatingOverlay');
+        setShowTennisRating(true);
+      } else if (hasPickleball) {
+        // If only pickleball selected, show pickleball rating
+        console.log('Opening PickleballRatingOverlay');
+        setShowPickleballRating(true);
+      } else {
+        // No sports selected (shouldn't happen, but fallback to preferences)
+        console.log('No sports selected, opening PlayerPreferencesOverlay');
+        setShowPlayerPreferences(true);
+      }
+    }, ANIMATION_DELAYS.OVERLAY_STAGGER);
   };
 
   const closeSportSelection = () => {
@@ -101,6 +127,81 @@ export const useOnboardingFlow = () => {
     // Show Personal Information overlay again
     setTimeout(() => {
       setShowPersonalInfo(true);
+    }, ANIMATION_DELAYS.OVERLAY_STAGGER);
+  };
+
+  const handleTennisRatingContinue = (rating: string) => {
+    console.log('Tennis rating completed:', rating);
+    setShowTennisRating(false);
+    
+    // Check if pickleball was also selected
+    setTimeout(() => {
+      if (selectedSports.includes('pickleball')) {
+        // Show pickleball rating next
+        console.log('Opening PickleballRatingOverlay');
+        setShowPickleballRating(true);
+      } else {
+        // Go straight to preferences
+        console.log('Opening PlayerPreferencesOverlay');
+        setShowPlayerPreferences(true);
+      }
+    }, ANIMATION_DELAYS.OVERLAY_STAGGER);
+  };
+
+  const closeTennisRating = () => {
+    console.log('Closing TennisRatingOverlay and reopening SportSelectionOverlay');
+    setShowTennisRating(false);
+    
+    setTimeout(() => {
+      setShowSportSelection(true);
+    }, ANIMATION_DELAYS.OVERLAY_STAGGER);
+  };
+
+  const handlePickleballRatingContinue = (rating: string) => {
+    console.log('Pickleball rating completed:', rating);
+    setShowPickleballRating(false);
+    
+    // Always go to preferences after pickleball rating
+    setTimeout(() => {
+      console.log('Opening PlayerPreferencesOverlay');
+      setShowPlayerPreferences(true);
+    }, ANIMATION_DELAYS.OVERLAY_STAGGER);
+  };
+
+  const closePickleballRating = () => {
+    console.log('Closing PickleballRatingOverlay');
+    setShowPickleballRating(false);
+    
+    // Return to tennis rating if it was shown, otherwise to sport selection
+    setTimeout(() => {
+      if (selectedSports.includes('tennis')) {
+        setShowTennisRating(true);
+      } else {
+        setShowSportSelection(true);
+      }
+    }, ANIMATION_DELAYS.OVERLAY_STAGGER);
+  };
+
+  const handlePlayerPreferencesContinue = (preferences: any) => {
+    console.log('Player preferences completed:', preferences);
+    setShowPlayerPreferences(false);
+    // TODO: Save all onboarding data and complete the flow
+    console.log('Onboarding flow completed!');
+  };
+
+  const closePlayerPreferences = () => {
+    console.log('Closing PlayerPreferencesOverlay');
+    setShowPlayerPreferences(false);
+    
+    // Return to last rating overlay
+    setTimeout(() => {
+      if (selectedSports.includes('pickleball')) {
+        setShowPickleballRating(true);
+      } else if (selectedSports.includes('tennis')) {
+        setShowTennisRating(true);
+      } else {
+        setShowSportSelection(true);
+      }
     }, ANIMATION_DELAYS.OVERLAY_STAGGER);
   };
 
@@ -116,6 +217,10 @@ export const useOnboardingFlow = () => {
     showCalendarAccess,
     showPersonalInfo,
     showSportSelection,
+    showTennisRating,
+    showPickleballRating,
+    showPlayerPreferences,
+    selectedSports,
     
     // Actions
     startOnboarding,
@@ -130,6 +235,12 @@ export const useOnboardingFlow = () => {
     closePersonalInfo,
     handleSportSelectionContinue,
     closeSportSelection,
+    handleTennisRatingContinue,
+    closeTennisRating,
+    handlePickleballRatingContinue,
+    closePickleballRating,
+    handlePlayerPreferencesContinue,
+    closePlayerPreferences,
     showLocationPermissionOnMount,
   };
 };

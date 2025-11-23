@@ -31,8 +31,8 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
   const [selectedSports, setSelectedSports] = useState<string[]>([]);
 
   const sports: Sport[] = [
-    { id: 'tennis', name: 'Tennis', image: require('../../../../../assets/icon.png') },
-    { id: 'pickleball', name: 'Pickleball', image: require('../../../../../assets/icon.png') },
+    { id: 'tennis', name: 'Tennis', image: require('../../../../../assets/images/tennis.jpg') },
+    { id: 'pickleball', name: 'Pickleball', image: require('../../../../../assets/images/pickleball.jpg') },
     // Add more sports as needed
   ];
 
