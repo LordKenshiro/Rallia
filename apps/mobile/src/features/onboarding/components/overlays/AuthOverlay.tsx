@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
+import ProgressIndicator from '../ProgressIndicator';
+import { lightHaptic, mediumHaptic, successHaptic } from '../../../../utils/haptics';
 
 interface AuthOverlayProps {
   visible: boolean;
   onClose: () => void;
   onAuthSuccess?: () => void;
   onShowCalendarOverlay?: () => void;
+  currentStep?: number;
+  totalSteps?: number;
 }
 
 const AuthOverlay: React.FC<AuthOverlayProps> = ({
@@ -16,10 +20,39 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
   onClose,
   onAuthSuccess,
   onShowCalendarOverlay: _onShowCalendarOverlay,
+  currentStep = 1,
+  totalSteps = 8,
 }) => {
   const [email, setEmail] = useState('');
   const [step, setStep] = useState<'email' | 'code'>('email');
   const [code, setCode] = useState(['', '', '', '', '', '']);
+
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+
+  // Trigger animations when overlay becomes visible
+  useEffect(() => {
+    if (visible) {
+      // Reset animation values
+      fadeAnim.setValue(0);
+      slideAnim.setValue(50);
+      
+      // Run animations in parallel
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [visible, fadeAnim, slideAnim]);
 
   // Email validation
   const isValidEmail = (email: string): boolean => {
@@ -30,27 +63,32 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
   const isEmailValid = isValidEmail(email);
 
   const handleGoogleSignIn = () => {
+    lightHaptic();
     console.log('Sign in with Google');
     // TODO: Implement Google authentication
   };
 
   const handleAppleSignIn = () => {
+    lightHaptic();
     console.log('Sign in with Apple');
     // TODO: Implement Apple authentication
   };
 
   const handleFacebookSignIn = () => {
+    lightHaptic();
     console.log('Sign in with Facebook');
     // TODO: Implement Facebook authentication
   };
 
   const handleEmailContinue = () => {
+    mediumHaptic();
     console.log('Continue with email:', email);
     // TODO: Send verification code to email
     setStep('code');
   };
 
   const handleResendCode = () => {
+    lightHaptic();
     console.log('Resend code to:', email);
     // TODO: Resend verification code
   };
@@ -60,12 +98,14 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
     console.log('Verify code:', fullCode);
     // TODO: Verify code and sign in with Supabase
     // After successful verification, trigger the next step
+    successHaptic();
     if (onAuthSuccess) {
       onAuthSuccess();
     }
   };
 
   const handleBack = () => {
+    lightHaptic();
     if (step === 'code') {
       setStep('email');
       setCode(['', '', '', '', '', '']);
@@ -88,7 +128,18 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
 
   return (
     <Overlay visible={visible} onClose={handleBack}>
-      <View style={styles.container}>
+      <Animated.View
+        style={[
+          styles.container,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          },
+        ]}
+      >
+        {/* Progress Indicator */}
+        <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
+
         {step === 'email' ? (
           // Email Entry Step
           <>
@@ -212,7 +263,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
             </TouchableOpacity>
           </>
         )}
-      </View>
+      </Animated.View>
     </Overlay>
   );
 };

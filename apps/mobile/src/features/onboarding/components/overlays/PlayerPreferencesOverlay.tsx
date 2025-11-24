@@ -1,15 +1,20 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
+import ProgressIndicator from '../ProgressIndicator';
+import { selectionHaptic, mediumHaptic } from '../../../../utils/haptics';
 
 interface PlayerPreferencesOverlayProps {
   visible: boolean;
   onClose: () => void;
+  onBack?: () => void;
   onContinue?: (preferences: PlayerPreferences) => void;
   selectedSports: string[]; // ['tennis', 'pickleball'] or just one
+  currentStep?: number;
+  totalSteps?: number;
 }
 
 interface PlayerPreferences {
@@ -24,8 +29,11 @@ interface PlayerPreferences {
 const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
   visible,
   onClose,
+  onBack,
   onContinue,
   selectedSports,
+  currentStep = 1,
+  totalSteps = 8,
 }) => {
   const [playingHand, setPlayingHand] = useState<'left' | 'right' | 'both'>('right');
   const [maxTravelDistance, setMaxTravelDistance] = useState<number>(6);
@@ -41,8 +49,34 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
   const hasTennis = selectedSports.includes('tennis');
   const hasPickleball = selectedSports.includes('pickleball');
 
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+
+  // Trigger animations when overlay becomes visible
+  useEffect(() => {
+    if (visible) {
+      fadeAnim.setValue(0);
+      slideAnim.setValue(50);
+      
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [visible, fadeAnim, slideAnim]);
+
   const handleContinue = () => {
     if (onContinue) {
+      mediumHaptic();
       const preferences: PlayerPreferences = {
         playingHand,
         maxTravelDistance,
@@ -57,11 +91,21 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
   };
 
   return (
-    <Overlay visible={visible} onClose={onClose} type="bottom">
+    <Overlay visible={visible} onClose={onClose} onBack={onBack} type="bottom" showBackButton={false}>
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        <View style={styles.container}>
+        <Animated.View
+          style={[
+            styles.container,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
+          <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
+
           {/* Back Button */}
-          <TouchableOpacity style={styles.backButton} onPress={onClose} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.backButton} onPress={onBack || onClose} activeOpacity={0.7}>
             <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
 
@@ -73,7 +117,10 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
           <View style={styles.buttonGroup}>
             <TouchableOpacity
               style={[styles.optionButton, playingHand === 'left' && styles.optionButtonSelected]}
-              onPress={() => setPlayingHand('left')}
+              onPress={() => {
+                selectionHaptic();
+                setPlayingHand('left');
+              }}
               activeOpacity={0.8}
             >
               <Text
@@ -87,7 +134,10 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.optionButton, playingHand === 'right' && styles.optionButtonSelected]}
-              onPress={() => setPlayingHand('right')}
+              onPress={() => {
+                selectionHaptic();
+                setPlayingHand('right');
+              }}
               activeOpacity={0.8}
             >
               <Text
@@ -101,7 +151,10 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.optionButton, playingHand === 'both' && styles.optionButtonSelected]}
-              onPress={() => setPlayingHand('both')}
+              onPress={() => {
+                selectionHaptic();
+                setPlayingHand('both');
+              }}
               activeOpacity={0.8}
             >
               <Text
@@ -137,7 +190,10 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
           <View style={styles.buttonGroup}>
             <TouchableOpacity
               style={[styles.optionButton, matchDuration === '1h' && styles.optionButtonSelected]}
-              onPress={() => setMatchDuration('1h')}
+              onPress={() => {
+                selectionHaptic();
+                setMatchDuration('1h');
+              }}
               activeOpacity={0.8}
             >
               <Text
@@ -151,7 +207,10 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.optionButton, matchDuration === '1.5h' && styles.optionButtonSelected]}
-              onPress={() => setMatchDuration('1.5h')}
+              onPress={() => {
+                selectionHaptic();
+                setMatchDuration('1.5h');
+              }}
               activeOpacity={0.8}
             >
               <Text
@@ -165,7 +224,10 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.optionButton, matchDuration === '2h' && styles.optionButtonSelected]}
-              onPress={() => setMatchDuration('2h')}
+              onPress={() => {
+                selectionHaptic();
+                setMatchDuration('2h');
+              }}
               activeOpacity={0.8}
             >
               <Text
@@ -324,7 +386,7 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
           >
             <Text style={styles.continueButtonText}>Continue</Text>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
       </ScrollView>
     </Overlay>
   );

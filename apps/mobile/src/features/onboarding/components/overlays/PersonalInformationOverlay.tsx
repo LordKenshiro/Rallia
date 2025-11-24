@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Platform,
   Image,
   Modal,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -15,17 +16,25 @@ import { Overlay } from '@rallia/shared-components';
 import { useImagePicker } from '../../../../hooks';
 import { COLORS } from '@rallia/shared-constants';
 import { validateFullName, validateUsername, validatePhoneNumber } from '@rallia/shared-utils';
+import ProgressIndicator from '../ProgressIndicator';
+import { lightHaptic, mediumHaptic } from '../../../../utils/haptics';
 
 interface PersonalInformationOverlayProps {
   visible: boolean;
   onClose: () => void;
+  onBack?: () => void;
   onContinue?: () => void;
+  currentStep?: number;
+  totalSteps?: number;
 }
 
 const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
   visible,
   onClose,
+  onBack,
   onContinue,
+  currentStep = 1,
+  totalSteps = 8,
 }) => {
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
@@ -39,6 +48,31 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
 
   // Use custom hook for image picker
   const { image: profileImage, pickImage } = useImagePicker();
+
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+
+  // Trigger animations when overlay becomes visible
+  useEffect(() => {
+    if (visible) {
+      fadeAnim.setValue(0);
+      slideAnim.setValue(50);
+      
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [visible, fadeAnim, slideAnim]);
 
   // Validation handlers using utility functions
   const handleFullNameChange = (text: string) => {
@@ -75,6 +109,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
   };
 
   const handleContinue = () => {
+    mediumHaptic();
     console.log('Personal info:', {
       fullName,
       username,
@@ -90,6 +125,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
   };
 
   const handleSelectGender = (selectedGender: string) => {
+    lightHaptic();
     setGender(selectedGender);
     setShowGenderPicker(false);
   };
@@ -102,8 +138,19 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
     phoneNumber.trim() !== '';
 
   return (
-    <Overlay visible={visible} onClose={onClose} type="bottom">
-      <View style={styles.container}>
+    <Overlay visible={visible} onClose={onClose} onBack={onBack} type="bottom" showBackButton={false}>
+      <Animated.View
+        style={[
+          styles.container,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          },
+        ]}
+      >
+        {/* Progress Indicator */}
+        <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
+
         {/* Title */}
         <Text style={styles.title}>Tell us about your{'\n'}yourself</Text>
 
@@ -111,7 +158,10 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         <TouchableOpacity
           style={styles.profilePicContainer}
           activeOpacity={0.8}
-          onPress={pickImage}
+          onPress={() => {
+            lightHaptic();
+            pickImage();
+          }}
         >
           {profileImage ? (
             <Image source={{ uri: profileImage }} style={styles.profileImage} />
@@ -273,7 +323,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
             Continue
           </Text>
         </TouchableOpacity>
-      </View>
+      </Animated.View>
     </Overlay>
   );
 };

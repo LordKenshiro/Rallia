@@ -1,13 +1,18 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
+import ProgressIndicator from '../ProgressIndicator';
+import { selectionHaptic, mediumHaptic } from '../../../../utils/haptics';
 
 interface SportSelectionOverlayProps {
   visible: boolean;
   onClose: () => void;
+  onBack?: () => void;
   onContinue?: (selectedSports: string[]) => void;
+  currentStep?: number;
+  totalSteps?: number;
 }
 
 interface Sport {
@@ -19,9 +24,37 @@ interface Sport {
 const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
   visible,
   onClose,
+  onBack,
   onContinue,
+  currentStep = 1,
+  totalSteps = 8,
 }) => {
   const [selectedSports, setSelectedSports] = useState<string[]>([]);
+
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+
+  // Trigger animations when overlay becomes visible
+  useEffect(() => {
+    if (visible) {
+      fadeAnim.setValue(0);
+      slideAnim.setValue(50);
+      
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [visible, fadeAnim, slideAnim]);
 
   const sports: Sport[] = [
     { id: 'tennis', name: 'Tennis', image: require('../../../../../assets/images/tennis.jpg') },
@@ -34,6 +67,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
   ];
 
   const toggleSport = (sportId: string) => {
+    selectionHaptic();
     setSelectedSports(prev => {
       if (prev.includes(sportId)) {
         return prev.filter(id => id !== sportId);
@@ -44,6 +78,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
   };
 
   const handleContinue = () => {
+    mediumHaptic();
     console.log('Selected sports:', selectedSports);
     if (onContinue) {
       onContinue(selectedSports);
@@ -51,8 +86,19 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
   };
 
   return (
-    <Overlay visible={visible} onClose={onClose} type="bottom">
-      <View style={styles.container}>
+    <Overlay visible={visible} onClose={onClose} onBack={onBack} type="bottom" showBackButton={false}>
+      <Animated.View
+        style={[
+          styles.container,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          },
+        ]}
+      >
+        {/* Progress Indicator */}
+        <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
+
         {/* Title */}
         <Text style={styles.title}>Which sports would you{'\n'}like to play?</Text>
         <Text style={styles.subtitle}>Select all that apply</Text>
@@ -97,7 +143,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
         >
           <Text style={styles.continueButtonText}>Continue</Text>
         </TouchableOpacity>
-      </View>
+      </Animated.View>
     </Overlay>
   );
 };

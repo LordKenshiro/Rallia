@@ -3,3 +3,4 @@
  */
 
 export * from './overlays';
+export { default as ProgressIndicator } from './ProgressIndicator';

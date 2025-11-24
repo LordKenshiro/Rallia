@@ -14,6 +14,7 @@ export type OverlayType = 'bottom' | 'center';
 interface OverlayProps {
   visible: boolean;
   onClose: () => void;
+  onBack?: () => void; // Optional separate handler for back button
   children: React.ReactNode;
   type?: OverlayType;
   title?: string;
@@ -27,6 +28,7 @@ interface OverlayProps {
 const Overlay: React.FC<OverlayProps> = ({
   visible,
   onClose,
+  onBack,
   children,
   type = 'bottom',
   title,
@@ -38,6 +40,15 @@ const Overlay: React.FC<OverlayProps> = ({
 }) => {
   const handleBackdropPress = () => {
     if (dismissOnBackdropPress) {
+      onClose();
+    }
+  };
+
+  const handleBackPress = () => {
+    // If onBack is provided, use it; otherwise fall back to onClose
+    if (onBack) {
+      onBack();
+    } else {
       onClose();
     }
   };
@@ -70,7 +81,7 @@ const Overlay: React.FC<OverlayProps> = ({
               {type === 'bottom' && (
                 <View style={styles.header}>
                   {showBackButton && (
-                    <TouchableOpacity onPress={onClose} style={styles.backButton}>
+                    <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
                       <Ionicons name="chevron-back" size={24} color="#333" />
                     </TouchableOpacity>
                   )}
