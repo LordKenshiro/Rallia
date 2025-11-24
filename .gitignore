@@ -9,6 +9,10 @@ node_modules/
 dist/
 web-build/
 
+# Next.js
+.next/
+out/
+
 # Testing
 coverage/
 
