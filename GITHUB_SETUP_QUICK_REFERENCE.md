@@ -32,7 +32,7 @@ setup-github-workflows.ps1               # PowerShell setup script
 
 ```powershell
 # Run from project root
-cd "c:\Users\kenmo\Documents\Version Finale Rallia\Rallia"
+cd <PROJECT_ROOT>
 .\setup-github-workflows.ps1
 ```
 
