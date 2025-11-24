@@ -1,0 +1,20 @@
+{
+  "name": "@rallia/shared-components",
+  "version": "1.0.0",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*"
+  },
+  "dependencies": {
+    "@rallia/shared-constants": "*",
+    "@rallia/shared-types": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2"
+  }
+}

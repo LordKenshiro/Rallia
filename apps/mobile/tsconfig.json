@@ -1,0 +1,14 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@rallia/shared-components": ["../../packages/shared-components/src"],
+      "@rallia/shared-constants": ["../../packages/shared-constants/src"],
+      "@rallia/shared-hooks": ["../../packages/shared-hooks/src"],
+      "@rallia/shared-services": ["../../packages/shared-services/src"],
+      "@rallia/shared-types": ["../../packages/shared-types/src"],
+      "@rallia/shared-utils": ["../../packages/shared-utils/src"]
+    }
+  }
+}
