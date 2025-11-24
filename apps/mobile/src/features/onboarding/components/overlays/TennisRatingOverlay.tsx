@@ -1,12 +1,18 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
+import ProgressIndicator from '../ProgressIndicator';
+import { selectionHaptic, mediumHaptic } from '../../../../utils/haptics';
 
 interface TennisRatingOverlayProps {
   visible: boolean;
   onClose: () => void;
+  onBack?: () => void;
   onContinue?: (rating: string) => void;
+  currentStep?: number;
+  totalSteps?: number;
 }
 
 interface Rating {
@@ -20,9 +26,45 @@ interface Rating {
 const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
   visible,
   onClose,
+  onBack,
   onContinue,
+  currentStep = 1,
+  totalSteps = 8,
 }) => {
   const [selectedRating, setSelectedRating] = useState<string | null>(null);
+
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+
+  // Trigger animations when overlay becomes visible
+  useEffect(() => {
+    if (visible) {
+      fadeAnim.setValue(0);
+      slideAnim.setValue(50);
+      
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [visible, fadeAnim, slideAnim]);
+
+  // Helper function to get icon based on rating level
+  const getRatingIcon = (level: string): keyof typeof Ionicons.glyphMap => {
+    if (level.includes('Beginner') || level === 'Novice') return 'star-outline';
+    if (level.includes('Recreational') || level.includes('Intermediate')) return 'star-half';
+    if (level.includes('Advanced')) return 'star';
+    return 'trophy';
+  };
 
   const ratings: Rating[] = [
     {
@@ -77,16 +119,28 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
 
   const handleContinue = () => {
     if (selectedRating && onContinue) {
+      mediumHaptic();
       console.log('Selected tennis rating:', selectedRating);
       onContinue(selectedRating);
     }
   };
 
   return (
-    <Overlay visible={visible} onClose={onClose} type="bottom">
-      <View style={styles.container}>
+    <Overlay visible={visible} onClose={onClose} onBack={onBack} type="bottom" showBackButton={false}>
+      <Animated.View
+        style={[
+          styles.container,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          },
+        ]}
+      >
+        {/* Progress Indicator */}
+        <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
+
         {/* Back Button */}
-        <TouchableOpacity style={styles.backButton} onPress={onClose} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.backButton} onPress={onBack || onClose} activeOpacity={0.7}>
           <Text style={styles.backButtonText}>←</Text>
         </TouchableOpacity>
 
@@ -112,18 +166,29 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
                   rating.isHighlighted && styles.ratingCardHighlighted,
                   selectedRating === rating.id && styles.ratingCardSelected,
                 ]}
-                onPress={() => setSelectedRating(rating.id)}
+                onPress={() => {
+                  selectionHaptic();
+                  setSelectedRating(rating.id);
+                }}
                 activeOpacity={0.8}
               >
-                <Text
-                  style={[
-                    styles.ratingLevel,
-                    rating.isHighlighted && styles.ratingLevelHighlighted,
-                    selectedRating === rating.id && styles.ratingLevelSelected,
-                  ]}
-                >
-                  {rating.level}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                  <Ionicons
+                    name={getRatingIcon(rating.level)}
+                    size={20}
+                    color={selectedRating === rating.id ? '#fff' : COLORS.primary}
+                    style={{ marginRight: 8 }}
+                  />
+                  <Text
+                    style={[
+                      styles.ratingLevel,
+                      rating.isHighlighted && styles.ratingLevelHighlighted,
+                      selectedRating === rating.id && styles.ratingLevelSelected,
+                    ]}
+                  >
+                    {rating.level}
+                  </Text>
+                </View>
                 <Text
                   style={[
                     styles.ratingNtrp,
@@ -163,7 +228,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
             Continue
           </Text>
         </TouchableOpacity>
-      </View>
+      </Animated.View>
     </Overlay>
   );
 };

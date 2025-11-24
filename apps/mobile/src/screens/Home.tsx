@@ -16,11 +16,13 @@ import {
 } from '@rallia/shared-components';
 import {
   AuthOverlay,
+  AuthSuccessOverlay,
   PersonalInformationOverlay,
   SportSelectionOverlay,
   TennisRatingOverlay,
   PickleballRatingOverlay,
   PlayerPreferencesOverlay,
+  PlayerAvailabilitiesOverlay,
 } from '../features/onboarding/components';
 import RalliaLogo from '../../assets/images/light mode logo.svg';
 import { useAuth, useOnboardingFlow } from '../hooks';
@@ -137,6 +139,8 @@ const Home = () => {
         visible={onboarding.showAuthOverlay}
         onClose={onboarding.closeAuthOverlay}
         onAuthSuccess={onboarding.handleAuthSuccess}
+        currentStep={onboarding.currentStep}
+        totalSteps={onboarding.totalSteps}
       />
 
       {/* Location Permission Overlay */}
@@ -157,36 +161,67 @@ const Home = () => {
       <PersonalInformationOverlay
         visible={onboarding.showPersonalInfo}
         onClose={onboarding.closePersonalInfo}
+        onBack={onboarding.backFromPersonalInfo}
         onContinue={onboarding.handlePersonalInfoContinue}
+        currentStep={onboarding.currentStep}
+        totalSteps={onboarding.totalSteps}
       />
 
       {/* Sport Selection Overlay */}
       <SportSelectionOverlay
         visible={onboarding.showSportSelection}
         onClose={onboarding.closeSportSelection}
+        onBack={onboarding.backFromSportSelection}
         onContinue={onboarding.handleSportSelectionContinue}
+        currentStep={onboarding.currentStep}
+        totalSteps={onboarding.totalSteps}
       />
 
       {/* Tennis Rating Overlay */}
       <TennisRatingOverlay
         visible={onboarding.showTennisRating}
         onClose={onboarding.closeTennisRating}
+        onBack={onboarding.backFromTennisRating}
         onContinue={onboarding.handleTennisRatingContinue}
+        currentStep={onboarding.currentStep}
+        totalSteps={onboarding.totalSteps}
       />
 
       {/* Pickleball Rating Overlay */}
       <PickleballRatingOverlay
         visible={onboarding.showPickleballRating}
         onClose={onboarding.closePickleballRating}
+        onBack={onboarding.backFromPickleballRating}
         onContinue={onboarding.handlePickleballRatingContinue}
+        currentStep={onboarding.currentStep}
+        totalSteps={onboarding.totalSteps}
       />
 
       {/* Player Preferences Overlay */}
       <PlayerPreferencesOverlay
         visible={onboarding.showPlayerPreferences}
         onClose={onboarding.closePlayerPreferences}
+        onBack={onboarding.backFromPlayerPreferences}
         onContinue={onboarding.handlePlayerPreferencesContinue}
         selectedSports={onboarding.selectedSports}
+        currentStep={onboarding.currentStep}
+        totalSteps={onboarding.totalSteps}
+      />
+
+      {/* Player Availabilities Overlay */}
+      <PlayerAvailabilitiesOverlay
+        visible={onboarding.showPlayerAvailabilities}
+        onClose={onboarding.closePlayerAvailabilities}
+        onBack={onboarding.backFromPlayerAvailabilities}
+        onContinue={onboarding.handlePlayerAvailabilitiesContinue}
+        currentStep={onboarding.currentStep}
+        totalSteps={onboarding.totalSteps}
+      />
+
+      {/* Auth Success Overlay - Not counted in progress */}
+      <AuthSuccessOverlay
+        visible={onboarding.showAuthSuccess}
+        onClose={onboarding.closeAuthSuccess}
       />
     </SafeAreaView>
   );
