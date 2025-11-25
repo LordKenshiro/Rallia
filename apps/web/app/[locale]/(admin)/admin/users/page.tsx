@@ -1,17 +1,20 @@
-import { AdminTableRow } from "@/components/admin-table-row";
-import { SortableTableHeader } from "@/components/sortable-table-header";
-import { TablePagination } from "@/components/table-pagination";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserInvitationButton } from "@/components/user-invitation-button";
-import { buildTableQuery } from "@/lib/supabase-table-query";
-import { parseTableParams } from "@/lib/table-params";
-import { createClient } from "@/lib/supabase/server";
-import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { AdminTableRow } from '@/components/admin-table-row';
+import { SortableTableHeader } from '@/components/sortable-table-header';
+import { TablePagination } from '@/components/table-pagination';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { UserInvitationButton } from '@/components/user-invitation-button';
+import { buildTableQuery } from '@/lib/supabase-table-query';
+import { parseTableParams } from '@/lib/table-params';
+import { createClient } from '@/lib/supabase/server';
+import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
+import { getAdminRole, isAdmin } from '@/lib/supabase/check-admin';
+import { redirect } from 'next/navigation';
+import { isSuperAdmin } from '@/lib/supabase/check-admin';
 
 interface AdminWithProfile {
   id: string;
-  role: "super_admin" | "moderator" | "support";
+  role: 'super_admin' | 'moderator' | 'support';
   assigned_at: string;
   notes: string | null;
   profiles: {
@@ -24,7 +27,7 @@ interface AdminWithProfile {
 
 interface TransformedAdmin {
   id: string;
-  role: "super_admin" | "moderator" | "support";
+  role: 'super_admin' | 'moderator' | 'support';
   assigned_at: string;
   full_name: string | null;
   display_name: string | null;
@@ -34,10 +37,10 @@ interface TransformedAdmin {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("admin.users");
+  const t = await getTranslations('admin.users');
   return {
-    title: t("titleMeta"),
-    description: t("descriptionMeta"),
+    title: t('titleMeta'),
+    description: t('descriptionMeta'),
   };
 }
 
@@ -46,16 +49,26 @@ export default async function AdminUsersPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const t = await getTranslations("admin.users");
+  const t = await getTranslations('admin.users');
   const supabase = await createClient();
   const params = await searchParams;
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/admin/sign-in');
+  }
+
+  const userIsSuperAdmin = await isSuperAdmin(user.id);
 
   const tableParams = parseTableParams(params);
 
   // Set default sort if none specified (admins table doesn't have created_at)
   if (!tableParams.sortBy) {
-    tableParams.sortBy = "assigned_at";
-    tableParams.sortOrder = "desc";
+    tableParams.sortBy = 'assigned_at';
+    tableParams.sortOrder = 'desc';
   }
 
   // Fetch admins with profile data
@@ -68,7 +81,7 @@ export default async function AdminUsersPage({
   } | null = null;
 
   try {
-    const query = supabase.from("admins").select(
+    const query = supabase.from('admins').select(
       `
         id,
         role,
@@ -81,16 +94,16 @@ export default async function AdminUsersPage({
           created_at
         )
       `,
-      { count: "exact" }
+      { count: 'exact' }
     );
 
     const result = await buildTableQuery<AdminWithProfile>(query, tableParams, {
-      allowedSortFields: ["role", "assigned_at"],
-      allowedFilterFields: ["role"],
+      allowedSortFields: ['role', 'assigned_at'],
+      allowedFilterFields: ['role'],
     });
 
     // Transform the data to flatten profiles
-    const transformedData = result.data.map((admin) => ({
+    const transformedData = result.data.map(admin => ({
       id: admin.id,
       role: admin.role,
       assigned_at: admin.assigned_at,
@@ -98,7 +111,7 @@ export default async function AdminUsersPage({
       display_name: admin.profiles?.display_name || null,
       is_active: admin.profiles?.is_active ?? true,
       created_at: admin.profiles?.created_at || admin.assigned_at,
-      email: "", // Email will need to be fetched separately via admin API if needed
+      email: '', // Email will need to be fetched separately via admin API if needed
     }));
 
     adminsResult = {
@@ -106,36 +119,34 @@ export default async function AdminUsersPage({
       data: transformedData,
     };
   } catch (error) {
-    console.error("Error fetching admins:", error);
+    console.error('Error fetching admins:', error);
   }
 
   return (
     <div className="flex flex-col w-full gap-8 h-full">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold">{t("title")}</h1>
-          <p className="text-muted-foreground mt-2">{t("description")}</p>
+          <h1 className="text-3xl font-bold">{t('title')}</h1>
+          <p className="text-muted-foreground mt-2">{t('description')}</p>
         </div>
-        <UserInvitationButton />
+        {userIsSuperAdmin && <UserInvitationButton />}
       </div>
 
       <Tabs defaultValue="admins" className="w-full">
         <TabsList>
-          <TabsTrigger value="admins">{t("tabs.admins")}</TabsTrigger>
-          <TabsTrigger value="organizationMembers">
-            {t("tabs.organizationMembers")}
-          </TabsTrigger>
-          <TabsTrigger value="players">{t("tabs.players")}</TabsTrigger>
+          <TabsTrigger value="admins">{t('tabs.admins')}</TabsTrigger>
+          <TabsTrigger value="organizationMembers">{t('tabs.organizationMembers')}</TabsTrigger>
+          <TabsTrigger value="players">{t('tabs.players')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="admins" className="mt-6">
           {!adminsResult ? (
             <div className="border rounded-lg p-6">
-              <p className="text-destructive">{t("table.error")}</p>
+              <p className="text-destructive">{t('table.error')}</p>
             </div>
           ) : adminsResult.data.length === 0 ? (
             <div className="border rounded-lg p-6">
-              <p className="text-muted-foreground">{t("table.noAdmins")}</p>
+              <p className="text-muted-foreground">{t('table.noAdmins')}</p>
             </div>
           ) : (
             <div className="border rounded-lg grow overflow-hidden flex flex-col">
@@ -144,35 +155,35 @@ export default async function AdminUsersPage({
                   <thead className="border-b bg-muted/50">
                     <tr>
                       <th className="text-left px-3 py-2 text-sm font-semibold">
-                        {t("table.name")}
+                        {t('table.name')}
                       </th>
                       <th className="text-left px-3 py-2 text-sm font-semibold">
-                        {t("table.email")}
+                        {t('table.email')}
                       </th>
                       <SortableTableHeader
                         field="role"
                         currentSortBy={tableParams.sortBy}
                         currentSortOrder={tableParams.sortOrder}
                       >
-                        {t("table.role")}
+                        {t('table.role')}
                       </SortableTableHeader>
                       <SortableTableHeader
                         field="assigned_at"
                         currentSortBy={tableParams.sortBy}
                         currentSortOrder={tableParams.sortOrder}
                       >
-                        {t("table.assignedAt")}
+                        {t('table.assignedAt')}
                       </SortableTableHeader>
                       <th className="text-left px-3 py-2 text-sm font-semibold">
-                        {t("table.status")}
+                        {t('table.status')}
                       </th>
                       <th className="text-left px-3 py-2 text-sm font-semibold">
-                        {t("table.createdAt")}
+                        {t('table.createdAt')}
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {adminsResult.data.map((admin) => (
+                    {adminsResult.data.map(admin => (
                       <AdminTableRow
                         key={admin.id}
                         admin={{
@@ -202,13 +213,13 @@ export default async function AdminUsersPage({
 
         <TabsContent value="organizationMembers" className="mt-6">
           <div className="border rounded-lg p-6">
-            <p className="text-muted-foreground">{t("tabs.comingSoon")}</p>
+            <p className="text-muted-foreground">{t('tabs.comingSoon')}</p>
           </div>
         </TabsContent>
 
         <TabsContent value="players" className="mt-6">
           <div className="border rounded-lg p-6">
-            <p className="text-muted-foreground">{t("tabs.comingSoon")}</p>
+            <p className="text-muted-foreground">{t('tabs.comingSoon')}</p>
           </div>
         </TabsContent>
       </Tabs>

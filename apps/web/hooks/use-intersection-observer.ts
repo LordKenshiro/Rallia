@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useEffect, useState, RefObject } from "react";
+import { useEffect, useState, RefObject } from 'react';
 
 interface UseIntersectionObserverProps {
   threshold?: number;
@@ -14,7 +14,7 @@ export function useIntersectionObserver(
   {
     threshold = 0.1,
     root = null,
-    rootMargin = "0px",
+    rootMargin = '0px',
     freezeOnceVisible = true,
   }: UseIntersectionObserverProps = {}
 ): boolean {

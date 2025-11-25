@@ -1,13 +1,9 @@
-"use client";
+import { ModeToggle } from '@/components/mode-toggle';
 
-import { ModeToggle } from "@/components/mode-toggle";
-
-export function AuthHeader() {
+export async function AuthHeader() {
   return (
     <div className="absolute top-4 right-4">
       <ModeToggle />
     </div>
   );
 }
-
-

@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from '@/lib/supabase/server';
 
 /**
  * Check if a user is an admin (Rallia employee/manager)
@@ -18,9 +18,9 @@ export async function isAdmin(userId: string): Promise<boolean> {
   // The userId is the auth_users.id, which matches profiles.id
   // and admins.id references profiles.id
   const { data: admin, error } = await supabase
-    .from("admins")
-    .select("id, role")
-    .eq("id", userId)
+    .from('admins')
+    .select('id, role')
+    .eq('id', userId)
     .single();
 
   // If there's an error or no admin record found, user is not a platform admin
@@ -41,9 +41,9 @@ export async function getAdminRole(userId: string): Promise<string | null> {
   const supabase = await createClient();
 
   const { data: admin, error } = await supabase
-    .from("admins")
-    .select("role")
-    .eq("id", userId)
+    .from('admins')
+    .select('role')
+    .eq('id', userId)
     .single();
 
   if (error || !admin) {
@@ -51,4 +51,25 @@ export async function getAdminRole(userId: string): Promise<string | null> {
   }
 
   return admin.role;
+}
+
+/**
+ * Check if a user is a super admin
+ *
+ * Returns true if the user is a super admin, false otherwise.
+ */
+export async function isSuperAdmin(userId: string): Promise<boolean> {
+  const supabase = await createClient();
+
+  const { data: admin, error } = await supabase
+    .from('admins')
+    .select('role')
+    .eq('id', userId)
+    .single();
+
+  if (error || !admin) {
+    return false;
+  }
+
+  return admin.role === 'super_admin';
 }

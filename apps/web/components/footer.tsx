@@ -1,11 +1,9 @@
-"use client";
+import { getTranslations } from 'next-intl/server';
+import { Separator } from '@/components/ui/separator';
+import { Mail } from 'lucide-react';
 
-import { useTranslations } from "next-intl";
-import { Separator } from "@/components/ui/separator";
-import { Mail } from "lucide-react";
-
-export default function Footer() {
-  const t = useTranslations("footer");
+export async function Footer() {
+  const t = await getTranslations('footer');
 
   return (
     <footer className="w-full border-t bg-muted/30">
@@ -13,9 +11,9 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           {/* Brand Section */}
           <div className="md:col-span-2">
-            <h1 className="text-4xl font-bold mb-4">{t("title")}</h1>
+            <h1 className="text-4xl font-bold mb-4">{t('title')}</h1>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 max-w-md">
-              {t("description")}
+              {t('description')}
             </p>
             <div className="flex gap-4">
               <a
@@ -30,14 +28,14 @@ export default function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h4 className="font-semibold mb-4">{t("quickLinks")}</h4>
+            <h4 className="font-semibold mb-4">{t('quickLinks')}</h4>
             <ul className="space-y-3 text-sm">
               <li>
                 <a
                   href="#waitlist"
                   className="text-gray-600 dark:text-gray-400 hover:text-foreground transition-colors"
                 >
-                  {t("joinWaitlist")}
+                  {t('joinWaitlist')}
                 </a>
               </li>
             </ul>
@@ -49,11 +47,13 @@ export default function Footer() {
         {/* Bottom Section */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
           <p>
-            &copy; {new Date().getFullYear()} {t("title")}. {t("rights")}
+            &copy; {new Date().getFullYear()} {t('title')}. {t('rights')}
           </p>
-          <p className="text-xs">{t("comingSoon")}</p>
+          <p className="text-xs">{t('comingSoon')}</p>
         </div>
       </div>
     </footer>
   );
 }
+
+export default Footer;

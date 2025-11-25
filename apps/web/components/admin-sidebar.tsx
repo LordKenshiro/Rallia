@@ -1,61 +1,57 @@
-"use client";
+'use client';
 
-import { ModeToggle } from "@/components/mode-toggle";
-import ThemeLogo from "@/components/theme-logo";
-import { Button } from "@/components/ui/button";
-import { Link, usePathname } from "@/i18n/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { cn } from "@/lib/utils";
-import {
-  BarChart3,
-  Building2,
-  LayoutDashboard,
-  LogOut,
-  Settings,
-  Users,
-} from "lucide-react";
-import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import { ModeToggle } from '@/components/mode-toggle';
+import ThemeLogo from '@/components/theme-logo';
+import { Button } from '@/components/ui/button';
+import { Link, usePathname } from '@/i18n/navigation';
+import { createClient } from '@/lib/supabase/client';
+import { cn } from '@/lib/utils';
+import { BarChart3, Building2, LayoutDashboard, LogOut, Settings, Users } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
 
 export function AdminSidebar() {
-  const t = useTranslations("admin.sidebar");
-  const tApp = useTranslations("app");
+  const t = useTranslations('admin.sidebar');
+  const tApp = useTranslations('app');
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.push("/admin/sign-in");
+    router.push('/admin/sign-in');
     router.refresh();
   };
 
   const navItems = [
     {
-      href: "/admin/dashboard",
-      label: t("dashboard"),
+      href: '/admin/dashboard',
+      label: t('dashboard'),
       icon: LayoutDashboard,
+      rolesAllowed: ['super_admin', 'moderator', 'support'],
     },
     {
-      href: "/admin/organizations",
-      label: t("organizations"),
+      href: '/admin/organizations',
+      label: t('organizations'),
       icon: Building2,
+      rolesAllowed: ['super_admin', 'support'],
     },
     {
-      href: "/admin/users",
-      label: t("users"),
+      href: '/admin/users',
+      label: t('users'),
       icon: Users,
+      rolesAllowed: ['super_admin'],
     },
-    {
-      href: "/admin/analytics",
-      label: t("analytics"),
-      icon: BarChart3,
-    },
-    {
-      href: "/admin/settings",
-      label: t("settings"),
-      icon: Settings,
-    },
+    // {
+    //   href: '/admin/analytics',
+    //   label: t('analytics'),
+    //   icon: BarChart3,
+    // },
+    // {
+    //   href: '/admin/settings',
+    //   label: t('settings'),
+    //   icon: Settings,
+    // },
   ];
 
   return (
@@ -67,20 +63,19 @@ export function AdminSidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1">
-        {navItems.map((item) => {
+        {navItems.map(item => {
           const Icon = item.icon;
-          const isActive =
-            pathname === item.href || pathname?.startsWith(item.href + "/");
+          const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
 
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
                 isActive
-                  ? "bg-[var(--primary-100)] dark:bg-[var(--primary-800)] text-[var(--primary-700)] dark:text-[var(--primary-50)]"
-                  : "text-muted-foreground hover:bg-[var(--secondary-100)] dark:hover:bg-[var(--secondary-800)] hover:text-foreground"
+                  ? 'bg-[var(--primary-100)] dark:bg-[var(--primary-800)] text-[var(--primary-700)] dark:text-[var(--primary-50)]'
+                  : 'text-muted-foreground hover:bg-[var(--secondary-100)] dark:hover:bg-[var(--secondary-800)] hover:text-foreground'
               )}
             >
               <Icon className="size-4" />
@@ -93,9 +88,7 @@ export function AdminSidebar() {
       {/* Theme Toggle & Sign Out */}
       <div className="p-4 border-t border-[var(--secondary-200)] dark:border-[var(--secondary-800)] space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">
-            {tApp("nav.theme")}
-          </span>
+          <span className="text-sm text-muted-foreground">{tApp('nav.theme')}</span>
           <ModeToggle />
         </div>
         <Button
@@ -104,7 +97,7 @@ export function AdminSidebar() {
           onClick={handleSignOut}
         >
           <LogOut className="mr-2 size-4" />
-          {tApp("nav.signOut")}
+          {tApp('nav.signOut')}
         </Button>
       </div>
     </aside>

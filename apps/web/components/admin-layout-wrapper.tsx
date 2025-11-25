@@ -1,12 +1,6 @@
-"use client";
+import { AdminSidebar } from '@/components/admin-sidebar';
 
-import { AdminSidebar } from "@/components/admin-sidebar";
-
-export function AdminLayoutWrapper({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export async function AdminLayoutWrapper({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen">
       <AdminSidebar />
