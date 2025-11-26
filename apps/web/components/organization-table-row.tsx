@@ -12,10 +12,8 @@ interface OrganizationTableRowProps {
     | "name"
     | "email"
     | "phone"
+    | "website"
     | "nature"
-    | "type"
-    | "city"
-    | "country"
     | "slug"
     | "is_active"
     | "created_at"
@@ -56,6 +54,21 @@ export function OrganizationTableRow({
       <td className="px-3 py-2 text-sm text-muted-foreground">
         {organization.phone || "-"}
       </td>
+      <td className="px-3 py-2 text-sm text-muted-foreground">
+        {organization.website ? (
+          <a
+            href={organization.website}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="text-primary hover:underline"
+          >
+            {organization.website.replace(/^https?:\/\//, '')}
+          </a>
+        ) : (
+          "-"
+        )}
+      </td>
       <td className="px-3 py-2 text-sm">
         {organization.nature ? (
           <Badge variant="outline" className="text-xs">
@@ -64,15 +77,6 @@ export function OrganizationTableRow({
         ) : (
           "-"
         )}
-      </td>
-      <td className="px-3 py-2 text-sm text-muted-foreground">
-        {organization.type || "-"}
-      </td>
-      <td className="px-3 py-2 text-sm text-muted-foreground">
-        {organization.city || "-"}
-      </td>
-      <td className="px-3 py-2 text-sm text-muted-foreground">
-        {organization.country || "-"}
       </td>
       <td className="px-3 py-2 text-sm">
         <Badge

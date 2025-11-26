@@ -451,6 +451,7 @@
         "name": "Name",
         "email": "Email",
         "phone": "Phone",
+        "website": "Website",
         "nature": "Nature",
         "type": "Type",
         "city": "City",
@@ -508,6 +509,7 @@
           "postalCode": "Postal Code",
           "selectCountry": "Select Country",
           "facilityName": "Facility Name",
+          "facilityNamePlaceholder": "Enter facility name to search...",
           "facilityType": "Facility Type",
           "selectFacilityType": "Select Facility Type",
           "latitude": "Latitude",
@@ -521,7 +523,10 @@
           "sports": "Sports",
           "options": "Options",
           "lighting": "Lighting",
-          "indoor": "Indoor"
+          "indoor": "Indoor",
+          "markAsPrimary": "Mark as primary contact",
+          "selectSportsFirst": "Select sports above first",
+          "membershipRequired": "Membership required to access this facility"
         },
         "types": {
           "club": "Club",
@@ -534,11 +539,12 @@
           "private": "Private"
         },
         "facilityTypes": {
-          "municipal": "Municipal",
-          "university": "University",
+          "park": "Park",
           "club": "Club",
-          "school": "School",
-          "community_center": "Community Center"
+          "community_club": "Community Club",
+          "indoor_center": "Indoor Center",
+          "private": "Private",
+          "other": "Other"
         },
         "contactTypes": {
           "general": "General",
@@ -564,7 +570,8 @@
           "creating": "Creating...",
           "cancel": "Cancel",
           "useOrgAddress": "Use organization address",
-          "useOrgContact": "Use organization contact information"
+          "useOrgContact": "Use organization contact information",
+          "searchPlace": "Search Google Places"
         },
         "loading": {
           "sports": "Loading sports..."
@@ -576,7 +583,8 @@
           "requiredFields": "Please fill in all required fields",
           "atLeastOneFacility": "At least one facility is required",
           "facilityNameRequired": "Facility {index} name is required",
-          "facilitySportsRequired": "Facility {index} must have at least one sport selected"
+          "facilitySportsRequired": "Facility {index} must have at least one sport selected",
+          "facilityCountryRequired": "Facility {index} country is required"
         },
         "error": {
           "createFailed": "Failed to create organization"
@@ -625,6 +633,7 @@
         "noFacilities": "No facilities found for this organization",
         "primary": "Primary",
         "court": "Court",
+        "courts": "Courts",
         "surfaceType": "Surface Type",
         "lighting": "Lighting",
         "indoor": "Indoor",
@@ -664,6 +673,7 @@
           "postalCode": "Postal Code",
           "selectCountry": "Select Country",
           "facilityName": "Facility Name",
+          "facilityNamePlaceholder": "Enter facility name to search...",
           "facilityType": "Facility Type",
           "selectFacilityType": "Select Facility Type",
           "latitude": "Latitude",
@@ -677,7 +687,10 @@
           "sports": "Sports",
           "options": "Options",
           "lighting": "Lighting",
-          "indoor": "Indoor"
+          "indoor": "Indoor",
+          "markAsPrimary": "Mark as primary contact",
+          "selectSportsFirst": "Select sports above first",
+          "membershipRequired": "Membership required to access this facility"
         },
         "types": {
           "club": "Club",
@@ -690,11 +703,12 @@
           "private": "Private"
         },
         "facilityTypes": {
-          "municipal": "Municipal",
-          "university": "University",
+          "park": "Park",
           "club": "Club",
-          "school": "School",
-          "community_center": "Community Center"
+          "community_club": "Community Club",
+          "indoor_center": "Indoor Center",
+          "private": "Private",
+          "other": "Other"
         },
         "contactTypes": {
           "general": "General",
@@ -720,7 +734,8 @@
           "updating": "Updating...",
           "cancel": "Cancel",
           "useOrgAddress": "Use organization address",
-          "useOrgContact": "Use organization contact information"
+          "useOrgContact": "Use organization contact information",
+          "searchPlace": "Search Google Places"
         },
         "loading": {
           "sports": "Loading sports..."
@@ -732,7 +747,8 @@
           "requiredFields": "Please fill in all required fields",
           "atLeastOneFacility": "At least one facility is required",
           "facilityNameRequired": "Facility {index} name is required",
-          "facilitySportsRequired": "Facility {index} must have at least one sport selected"
+          "facilitySportsRequired": "Facility {index} must have at least one sport selected",
+          "facilityCountryRequired": "Facility {index} country is required"
         },
         "error": {
           "updateFailed": "Failed to update organization",

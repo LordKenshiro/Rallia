@@ -216,6 +216,7 @@ export type Database = {
           latitude: number | null;
           location: unknown;
           longitude: number | null;
+          membership_required: boolean;
           name: string;
           organization_id: string;
           postal_code: string | null;
@@ -238,6 +239,7 @@ export type Database = {
           latitude?: number | null;
           location?: unknown;
           longitude?: number | null;
+          membership_required?: boolean;
           name: string;
           organization_id: string;
           postal_code?: string | null;
@@ -260,6 +262,7 @@ export type Database = {
           latitude?: number | null;
           location?: unknown;
           longitude?: number | null;
+          membership_required?: boolean;
           name?: string;
           organization_id?: string;
           postal_code?: string | null;
@@ -825,6 +828,7 @@ export type Database = {
         | "club"
         | "indoor_center"
         | "private"
+        | "community_club"
         | "other";
       invite_source_enum:
         | "manual"

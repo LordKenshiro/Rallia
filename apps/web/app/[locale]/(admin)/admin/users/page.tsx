@@ -1,16 +1,17 @@
 import { AdminTableRow } from '@/components/admin-table-row';
 import { SortableTableHeader } from '@/components/sortable-table-header';
 import { TablePagination } from '@/components/table-pagination';
+import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { UserInvitationButton } from '@/components/user-invitation-button';
 import { buildTableQuery } from '@/lib/supabase-table-query';
 import { parseTableParams } from '@/lib/table-params';
 import { createClient } from '@/lib/supabase/server';
+import { Users } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { getAdminRole, isAdmin } from '@/lib/supabase/check-admin';
-import { redirect } from 'next/navigation';
 import { isSuperAdmin } from '@/lib/supabase/check-admin';
+import { redirect } from 'next/navigation';
 
 interface AdminWithProfile {
   id: string;
@@ -127,7 +128,7 @@ export default async function AdminUsersPage({
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-bold">{t('title')}</h1>
-          <p className="text-muted-foreground mt-2">{t('description')}</p>
+          <p className="text-muted-foreground mt-2 mb-0">{t('description')}</p>
         </div>
         {userIsSuperAdmin && <UserInvitationButton />}
       </div>
@@ -141,15 +142,20 @@ export default async function AdminUsersPage({
 
         <TabsContent value="admins" className="mt-6">
           {!adminsResult ? (
-            <div className="border rounded-lg p-6">
-              <p className="text-destructive">{t('table.error')}</p>
-            </div>
+            <Card className="overflow-hidden">
+              <CardContent className="pt-6">
+                <p className="text-destructive m-0">{t('table.error')}</p>
+              </CardContent>
+            </Card>
           ) : adminsResult.data.length === 0 ? (
-            <div className="border rounded-lg p-6">
-              <p className="text-muted-foreground">{t('table.noAdmins')}</p>
-            </div>
+            <Card className="overflow-hidden">
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <p className="text-muted-foreground m-0">{t('table.noAdmins')}</p>
+              </CardContent>
+            </Card>
           ) : (
-            <div className="border rounded-lg grow overflow-hidden flex flex-col">
+            <Card className="grow overflow-hidden flex flex-col">
               <div className="overflow-x-auto flex-1">
                 <table className="w-full">
                   <thead className="border-b bg-muted/50">
@@ -207,20 +213,26 @@ export default async function AdminUsersPage({
                 totalItems={adminsResult.total}
                 pageSize={adminsResult.pageSize}
               />
-            </div>
+            </Card>
           )}
         </TabsContent>
 
         <TabsContent value="organizationMembers" className="mt-6">
-          <div className="border rounded-lg p-6">
-            <p className="text-muted-foreground">{t('tabs.comingSoon')}</p>
-          </div>
+          <Card className="overflow-hidden">
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
+              <p className="text-muted-foreground m-0">{t('tabs.comingSoon')}</p>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="players" className="mt-6">
-          <div className="border rounded-lg p-6">
-            <p className="text-muted-foreground">{t('tabs.comingSoon')}</p>
-          </div>
+          <Card className="overflow-hidden">
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
+              <p className="text-muted-foreground m-0">{t('tabs.comingSoon')}</p>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

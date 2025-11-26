@@ -451,6 +451,7 @@
         "name": "Nom",
         "email": "Courriel",
         "phone": "Téléphone",
+        "website": "Site web",
         "nature": "Nature",
         "type": "Type",
         "city": "Ville",
@@ -508,6 +509,7 @@
           "postalCode": "Code postal",
           "selectCountry": "Sélectionner le pays",
           "facilityName": "Nom de l'installation",
+          "facilityNamePlaceholder": "Entrez le nom pour rechercher...",
           "facilityType": "Type d'installation",
           "selectFacilityType": "Sélectionner le type d'installation",
           "latitude": "Latitude",
@@ -521,7 +523,10 @@
           "sports": "Sports",
           "options": "Options",
           "lighting": "Éclairage",
-          "indoor": "Intérieur"
+          "indoor": "Intérieur",
+          "markAsPrimary": "Définir comme contact principal",
+          "selectSportsFirst": "Sélectionnez d'abord les sports ci-dessus",
+          "membershipRequired": "Adhésion requise pour accéder à cette installation"
         },
         "types": {
           "club": "Club",
@@ -534,11 +539,12 @@
           "private": "Privée"
         },
         "facilityTypes": {
-          "municipal": "Municipal",
-          "university": "Université",
+          "park": "Parc",
           "club": "Club",
-          "school": "École",
-          "community_center": "Centre communautaire"
+          "community_club": "Club communautaire",
+          "indoor_center": "Centre intérieur",
+          "private": "Privé",
+          "other": "Autre"
         },
         "contactTypes": {
           "general": "Général",
@@ -564,7 +570,8 @@
           "creating": "Création...",
           "cancel": "Annuler",
           "useOrgAddress": "Utiliser l'adresse de l'organisation",
-          "useOrgContact": "Utiliser les coordonnées de l'organisation"
+          "useOrgContact": "Utiliser les coordonnées de l'organisation",
+          "searchPlace": "Rechercher sur Google Places"
         },
         "loading": {
           "sports": "Chargement des sports..."
@@ -576,7 +583,8 @@
           "requiredFields": "Veuillez remplir tous les champs requis",
           "atLeastOneFacility": "Au moins une installation est requise",
           "facilityNameRequired": "Le nom de l'installation {index} est requis",
-          "facilitySportsRequired": "L'installation {index} doit avoir au moins un sport sélectionné"
+          "facilitySportsRequired": "L'installation {index} doit avoir au moins un sport sélectionné",
+          "facilityCountryRequired": "Le pays de l'installation {index} est requis"
         },
         "error": {
           "createFailed": "Échec de la création de l'organisation"
@@ -625,6 +633,7 @@
         "noFacilities": "Aucune installation trouvée pour cette organisation",
         "primary": "Principal",
         "court": "Terrain",
+        "courts": "Terrains",
         "surfaceType": "Type de surface",
         "lighting": "Éclairage",
         "indoor": "Intérieur",
@@ -664,6 +673,7 @@
           "postalCode": "Code postal",
           "selectCountry": "Sélectionner le pays",
           "facilityName": "Nom de l'installation",
+          "facilityNamePlaceholder": "Entrez le nom pour rechercher...",
           "facilityType": "Type d'installation",
           "selectFacilityType": "Sélectionner le type d'installation",
           "latitude": "Latitude",
@@ -677,7 +687,10 @@
           "sports": "Sports",
           "options": "Options",
           "lighting": "Éclairage",
-          "indoor": "Intérieur"
+          "indoor": "Intérieur",
+          "markAsPrimary": "Définir comme contact principal",
+          "selectSportsFirst": "Sélectionnez d'abord les sports ci-dessus",
+          "membershipRequired": "Adhésion requise pour accéder à cette installation"
         },
         "types": {
           "club": "Club",
@@ -690,11 +703,12 @@
           "private": "Privée"
         },
         "facilityTypes": {
-          "municipal": "Municipal",
-          "university": "Université",
+          "park": "Parc",
           "club": "Club",
-          "school": "École",
-          "community_center": "Centre communautaire"
+          "community_club": "Club communautaire",
+          "indoor_center": "Centre intérieur",
+          "private": "Privé",
+          "other": "Autre"
         },
         "contactTypes": {
           "general": "Général",
@@ -720,7 +734,8 @@
           "updating": "Mise à jour...",
           "cancel": "Annuler",
           "useOrgAddress": "Utiliser l'adresse de l'organisation",
-          "useOrgContact": "Utiliser les coordonnées de l'organisation"
+          "useOrgContact": "Utiliser les coordonnées de l'organisation",
+          "searchPlace": "Rechercher sur Google Places"
         },
         "loading": {
           "sports": "Chargement des sports..."
@@ -732,7 +747,8 @@
           "requiredFields": "Veuillez remplir tous les champs requis",
           "atLeastOneFacility": "Au moins une installation est requise",
           "facilityNameRequired": "Le nom de l'installation {index} est requis",
-          "facilitySportsRequired": "L'installation {index} doit avoir au moins un sport sélectionné"
+          "facilitySportsRequired": "L'installation {index} doit avoir au moins un sport sélectionné",
+          "facilityCountryRequired": "Le pays de l'installation {index} est requis"
         },
         "error": {
           "updateFailed": "Échec de la mise à jour de l'organisation",

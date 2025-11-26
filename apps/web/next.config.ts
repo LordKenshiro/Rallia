@@ -1,20 +1,23 @@
-import type { NextConfig } from "next";
-import createNextIntlPlugin from "next-intl/plugin";
+import type { NextConfig } from 'next';
+import createNextIntlPlugin from 'next-intl/plugin';
+
+const isDev = process.env.NODE_ENV === 'development';
 
 const nextConfig: NextConfig = {
   images: {
+    // Disable optimization in dev to allow local Supabase (private IP)
+    unoptimized: isDev,
     remotePatterns: [
       {
-        protocol: "https",
-        hostname: "*.supabase.co",
-        pathname: "/storage/v1/object/public/**",
+        protocol: 'https',
+        hostname: '**.supabase.co',
       },
     ],
   },
   webpack(config) {
     config.module.rules.push({
       test: /\.svg$/,
-      use: ["@svgr/webpack"],
+      use: ['@svgr/webpack'],
     });
     return config;
   },

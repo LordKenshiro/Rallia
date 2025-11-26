@@ -58,7 +58,7 @@ export default async function Home() {
           >
             <a href="#waitlist">{t("hero.ctaButton")}</a>
           </Button>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground m-0">
             {t("hero.ctaSubtext")}
           </p>
         </section>
@@ -294,9 +294,9 @@ export default async function Home() {
             <h2 className="text-4xl md:text-5xl font-bold text-center">
               {t("whyJoinEarly.sectionTitle")}
             </h2>
-            <p className="text-lg text-muted-foreground text-center max-w-2xl">
-              {t("whyJoinEarly.description")}
-            </p>
+          <p className="text-lg text-muted-foreground text-center max-w-2xl m-0">
+            {t("whyJoinEarly.description")}
+          </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
@@ -340,7 +340,7 @@ export default async function Home() {
             <h2 className="text-4xl md:text-5xl font-bold">
               {t("cta.headline")}
             </h2>
-            <p className="text-lg text-muted-foreground">
+            <p className="text-lg text-muted-foreground m-0">
               {t("cta.description")}
             </p>
           </div>
@@ -470,7 +470,7 @@ export default async function Home() {
             <h2 className="text-4xl md:text-5xl font-bold text-center">
               {t("waitlist.sectionTitle")}
             </h2>
-            <p className="text-lg text-muted-foreground text-center max-w-2xl">
+            <p className="text-lg text-muted-foreground text-center max-w-2xl m-0">
               {t("waitlist.description")}
             </p>
           </div>
