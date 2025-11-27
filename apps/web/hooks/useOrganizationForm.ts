@@ -56,7 +56,7 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
       return {
         name: initialData.organization.name,
         nature: initialData.organization.nature,
-        email: initialData.organization.email,
+        email: initialData.organization.email || '',
         phone: initialData.organization.phone || '',
         address: initialData.organization.address || '',
         city: initialData.organization.city || '',
@@ -427,7 +427,7 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
                   index === 0
                     ? {
                         ...contact,
-                        email: orgData.email,
+                        email: orgData.email || '',
                         phone: orgData.phone,
                         website: orgData.website,
                       }

@@ -65,7 +65,7 @@ function OrganizationFormContent() {
 
     try {
       // Validate required fields
-      if (!orgData.name || !orgData.email || !orgData.nature) {
+      if (!orgData.name || !orgData.nature) {
         throw new Error(t('validation.requiredFields'));
       }
 
@@ -265,7 +265,7 @@ function OrganizationFormContent() {
                     className="text-sm font-medium flex items-center gap-2"
                   >
                     <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                    {t('fields.email')} <span className="text-destructive">*</span>
+                    {t('fields.email')}
                   </label>
                   <Input
                     id="org-email"
@@ -273,7 +273,6 @@ function OrganizationFormContent() {
                     type="email"
                     value={orgData.email}
                     onChange={handleOrgChange}
-                    required
                     className="bg-background"
                   />
                 </div>

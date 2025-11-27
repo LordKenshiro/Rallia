@@ -263,7 +263,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const facilities: FacilityData[] = JSON.parse(facilitiesJson as string);
 
     // Validate organization
-    if (!organization.name || !organization.email || !organization.nature) {
+    if (!organization.name || !organization.nature) {
       return NextResponse.json({ error: 'Missing required organization fields' }, { status: 400 });
     }
 
@@ -284,7 +284,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       .update({
         name: organization.name,
         nature: organization.nature as OrganizationNature,
-        email: organization.email,
+        email: organization.email || null,
         phone: organization.phone || null,
         slug: orgSlug,
         address: organization.address || null,

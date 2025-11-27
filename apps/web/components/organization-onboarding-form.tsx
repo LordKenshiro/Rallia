@@ -209,7 +209,7 @@ export function OrganizationOnboardingForm() {
                 <div className="space-y-2">
                   <label htmlFor="email" className="text-sm font-medium flex items-center gap-2">
                     <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                    {t('emailLabel')} <span className="text-destructive">*</span>
+                    {t('emailLabel')}
                   </label>
                   <Input
                     id="email"
@@ -218,7 +218,6 @@ export function OrganizationOnboardingForm() {
                     placeholder={t('emailPlaceholder')}
                     value={formData.email}
                     onChange={handleChange}
-                    required
                     className="bg-background"
                   />
                 </div>

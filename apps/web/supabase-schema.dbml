@@ -130,7 +130,7 @@ Table organizations {
   name varchar(255) [not null]
   nature organization_nature_enum [not null, note: "public vs privée"]
 
-  email varchar(255) [unique, not null]
+  email varchar(255) [unique]
   phone varchar(20)
   slug varchar(255) [unique, not null, note: 'URL-friendly identifier']
 

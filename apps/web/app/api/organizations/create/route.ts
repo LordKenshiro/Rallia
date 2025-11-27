@@ -23,14 +23,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate required fields
-    if (!body.name || !body.email || !body.type || !body.nature || !body.role) {
+    if (!body.name || !body.type || !body.nature || !body.role) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(body.email)) {
-      return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
+    // Validate email format if provided
+    if (body.email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(body.email)) {
+        return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
+      }
     }
 
     // Validate slug uniqueness
@@ -70,7 +72,7 @@ export async function POST(request: NextRequest) {
         owner_id: user.id,
         name: body.name,
         nature: body.nature as OrganizationNature,
-        email: body.email,
+        email: body.email || null,
         phone: body.phone || null,
         slug: body.slug,
         address: body.address || null,
