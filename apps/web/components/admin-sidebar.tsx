@@ -6,19 +6,22 @@ import { Button } from '@/components/ui/button';
 import { Link, usePathname } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@rallia/shared-hooks';
 import { BarChart3, Building2, LayoutDashboard, LogOut, Settings, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
+import { useMemo } from 'react';
 
 export function AdminSidebar() {
   const t = useTranslations('admin.sidebar');
   const tApp = useTranslations('app');
   const pathname = usePathname();
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
+  const { signOut } = useAuth({ client: supabase });
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     router.push('/admin/sign-in');
     router.refresh();
   };

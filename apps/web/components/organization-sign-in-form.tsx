@@ -11,10 +11,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth, type OAuthProvider } from "@rallia/shared-hooks";
 import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 type AuthState = "initial" | "email-sent" | "loading" | "error";
 
@@ -25,7 +26,11 @@ export function OrganizationSignInForm({
 }) {
   const t = useTranslations("signIn");
   const router = useRouter();
-  const supabase = createClient();
+  // Use SSR-aware Supabase client for proper cookie handling
+  const supabase = useMemo(() => createClient(), []);
+  const { signInWithProvider, signInWithEmail, verifyOtp } = useAuth({
+    client: supabase,
+  });
 
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -33,32 +38,25 @@ export function OrganizationSignInForm({
   const [errorMessage, setErrorMessage] = useState<string | null>(
     initialError ? decodeURIComponent(initialError) : null
   );
-  const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
+  const [loadingProvider, setLoadingProvider] = useState<OAuthProvider | null>(
+    null
+  );
 
   const handleOAuthSignIn = async (provider: "google" | "azure") => {
     setLoadingProvider(provider);
     setErrorMessage(null);
 
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${window.location.origin}/api/auth/callback`,
-        },
-      });
+    const result = await signInWithProvider(provider, {
+      redirectTo: `${window.location.origin}/api/auth/callback`,
+    });
 
-      if (error) {
-        setErrorMessage(error.message);
-        setLoadingProvider(null);
-      }
-      // OAuth redirect will happen automatically
-    } catch (error) {
-      console.error("OAuth sign-in error:", error);
+    if (!result.success) {
       setErrorMessage(
-        error instanceof Error ? error.message : "An unexpected error occurred"
+        result.error?.message ?? t("unexpectedError")
       );
       setLoadingProvider(null);
     }
+    // OAuth redirect will happen automatically on success
   };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
@@ -68,56 +66,35 @@ export function OrganizationSignInForm({
     if (authState === "initial") {
       // Send OTP
       setAuthState("loading");
-      try {
-        const { error } = await supabase.auth.signInWithOtp({
-          email,
-          options: {
-            emailRedirectTo: `${window.location.origin}/api/auth/callback`,
-          },
-        });
 
-        if (error) {
-          setErrorMessage(error.message);
-          setAuthState("initial");
-        } else {
-          setAuthState("email-sent");
-        }
-      } catch (error) {
-        console.error("Email OTP send error:", error);
-        setErrorMessage(
-          error instanceof Error ? error.message : "Failed to send OTP"
-        );
+      const result = await signInWithEmail(email, {
+        emailRedirectTo: `${window.location.origin}/api/auth/callback`,
+      });
+
+      if (!result.success) {
+        setErrorMessage(result.error?.message ?? t("failedToSendOtp"));
         setAuthState("initial");
+      } else {
+        setAuthState("email-sent");
       }
     } else if (authState === "email-sent") {
       // Verify OTP
       if (!otp || otp.length !== 6) {
-        setErrorMessage("Please enter the 6-digit verification code");
+        setErrorMessage(t("invalidOtpCode"));
         return;
       }
 
       setAuthState("loading");
-      try {
-        const { error } = await supabase.auth.verifyOtp({
-          email,
-          token: otp,
-          type: "email",
-        });
 
-        if (error) {
-          setErrorMessage(error.message);
-          setAuthState("email-sent");
-        } else {
-          // Success - redirect will happen via session change
-          router.push("/sign-in/post-auth");
-          router.refresh();
-        }
-      } catch (error) {
-        console.error("OTP verification error:", error);
-        setErrorMessage(
-          error instanceof Error ? error.message : "Failed to verify OTP"
-        );
+      const result = await verifyOtp(email, otp);
+
+      if (!result.success) {
+        setErrorMessage(result.error?.message ?? t("failedToVerifyOtp"));
         setAuthState("email-sent");
+      } else {
+        // Success - redirect will happen via session change
+        router.push("/sign-in/post-auth");
+        router.refresh();
       }
     }
   };

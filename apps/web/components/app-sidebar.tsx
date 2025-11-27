@@ -1,30 +1,33 @@
-"use client";
+'use client';
 
-import { ModeToggle } from "@/components/mode-toggle";
-import { Button } from "@/components/ui/button";
-import { Link, usePathname } from "@/i18n/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { cn } from "@/lib/utils";
-import { LayoutDashboard, LogOut } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import { ModeToggle } from '@/components/mode-toggle';
+import { Button } from '@/components/ui/button';
+import { Link, usePathname } from '@/i18n/navigation';
+import { createClient } from '@/lib/supabase/client';
+import { cn } from '@/lib/utils';
+import { useAuth } from '@rallia/shared-hooks';
+import { LayoutDashboard, LogOut } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
+import { useMemo } from 'react';
 
 export function AppSidebar() {
-  const t = useTranslations("app");
+  const t = useTranslations('app');
   const pathname = usePathname();
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
+  const { signOut } = useAuth({ client: supabase });
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/sign-in");
+    await signOut();
+    router.push('/sign-in');
     router.refresh();
   };
 
   const navItems = [
     {
-      href: "/dashboard",
-      label: t("nav.dashboard"),
+      href: '/dashboard',
+      label: t('nav.dashboard'),
       icon: LayoutDashboard,
     },
     // Future routes - uncomment as you implement them
@@ -61,20 +64,19 @@ export function AppSidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1">
-        {navItems.map((item) => {
+        {navItems.map(item => {
           const Icon = item.icon;
-          const isActive =
-            pathname === item.href || pathname?.startsWith(item.href + "/");
+          const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
 
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
                 isActive
-                  ? "bg-[var(--primary-100)] dark:bg-[var(--primary-900)] text-[var(--primary-700)] dark:text-[var(--primary-300)]"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  ? 'bg-[var(--primary-100)] dark:bg-[var(--primary-900)] text-[var(--primary-700)] dark:text-[var(--primary-300)]'
+                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
               )}
             >
               <Icon className="size-4" />
@@ -87,9 +89,7 @@ export function AppSidebar() {
       {/* Theme Toggle & Sign Out */}
       <div className="p-4 border-t border-[var(--secondary-200)] dark:border-[var(--secondary-800)] space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">
-            {t("nav.theme")}
-          </span>
+          <span className="text-sm text-muted-foreground">{t('nav.theme')}</span>
           <ModeToggle />
         </div>
         <Button
@@ -98,7 +98,7 @@ export function AppSidebar() {
           onClick={handleSignOut}
         >
           <LogOut className="mr-2 size-4" />
-          {t("nav.signOut")}
+          {t('nav.signOut')}
         </Button>
       </div>
     </aside>
