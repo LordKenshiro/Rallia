@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { Link } from "@/i18n/navigation";
-import LogoDark from "@/public/rallia_logo_dark.svg";
-import LogoLight from "@/public/rallia_logo_light.svg";
-import { useTheme } from "next-themes";
-import Image from "next/image";
-import { useEffect, useState } from "react";
+import { Link } from '@/i18n/navigation';
+import LogoDark from '@/public/rallia_logo_dark.svg';
+import LogoLight from '@/public/rallia_logo_light.svg';
+import { useTheme } from 'next-themes';
+import Image from 'next/image';
+import { useEffect, useState } from 'react';
 
 interface ThemeLogoProps {
   width?: number;
@@ -17,7 +17,7 @@ interface ThemeLogoProps {
 export default function ThemeLogo({
   width = 120,
   height = 40,
-  className = "",
+  className = '',
   href,
 }: ThemeLogoProps) {
   const [mounted, setMounted] = useState(false);
@@ -36,8 +36,8 @@ export default function ThemeLogo({
     );
   }
 
-  const currentTheme = theme === "system" ? systemTheme : theme;
-  const logoSrc = currentTheme === "dark" ? LogoLight : LogoDark;
+  const currentTheme = theme === 'system' ? systemTheme : theme;
+  const logoSrc = currentTheme === 'dark' ? LogoLight : LogoDark;
 
   const logoElement = (
     <Image

@@ -231,7 +231,11 @@ export function FacilityCard({ facility, facilityIndex }: FacilityCardProps) {
                 <select
                   value={facility.facilityType}
                   onChange={e =>
-                    handleFacilityChange(facility.id, 'facilityType', e.target.value as FacilityType)
+                    handleFacilityChange(
+                      facility.id,
+                      'facilityType',
+                      e.target.value as FacilityType
+                    )
                   }
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >

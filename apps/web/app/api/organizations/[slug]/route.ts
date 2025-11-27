@@ -1,17 +1,14 @@
-import { createClient } from "@/lib/supabase/server";
-import { NextRequest, NextResponse } from "next/server";
+import { createClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await params;
     const supabase = await createClient();
 
     // Fetch organization with all related data
     const { data: organization, error: orgError } = await supabase
-      .from("organizations")
+      .from('organizations')
       .select(
         `
         id,
@@ -39,19 +36,16 @@ export async function GET(
         )
       `
       )
-      .eq("slug", slug)
+      .eq('slug', slug)
       .single();
 
     if (orgError || !organization) {
-      return NextResponse.json(
-        { error: "Organization not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
     // Fetch facilities with all related data
     const { data: facilities, error: facilitiesError } = await supabase
-      .from("facilities")
+      .from('facilities')
       .select(
         `
         id,
@@ -102,25 +96,22 @@ export async function GET(
         )
       `
       )
-      .eq("organization_id", organization.id)
-      .eq("is_active", true)
-      .order("created_at", { ascending: true });
+      .eq('organization_id', organization.id)
+      .eq('is_active', true)
+      .order('created_at', { ascending: true });
 
     if (facilitiesError) {
-      console.error("Error fetching facilities:", facilitiesError);
-      return NextResponse.json(
-        { error: "Failed to fetch facilities" },
-        { status: 500 }
-      );
+      console.error('Error fetching facilities:', facilitiesError);
+      return NextResponse.json({ error: 'Failed to fetch facilities' }, { status: 500 });
     }
 
     // Fetch courts for each facility
-    const facilityIds = facilities?.map((f) => f.id) || [];
+    const facilityIds = facilities?.map(f => f.id) || [];
     let courts: any[] = [];
 
     if (facilityIds.length > 0) {
       const { data: courtsData, error: courtsError } = await supabase
-        .from("courts")
+        .from('courts')
         .select(
           `
           id,
@@ -147,22 +138,20 @@ export async function GET(
           )
         `
         )
-        .in("facility_id", facilityIds)
-        .eq("is_active", true)
-        .order("court_number", { ascending: true });
+        .in('facility_id', facilityIds)
+        .eq('is_active', true)
+        .order('court_number', { ascending: true });
 
       if (courtsError) {
-        console.error("Error fetching courts:", courtsError);
+        console.error('Error fetching courts:', courtsError);
       } else {
         courts = courtsData || [];
       }
     }
 
     // Organize courts by facility
-    const facilitiesWithCourts = facilities?.map((facility) => {
-      const facilityCourts = courts.filter(
-        (court) => court.facility_id === facility.id
-      );
+    const facilitiesWithCourts = facilities?.map(facility => {
+      const facilityCourts = courts.filter(court => court.facility_id === facility.id);
       return {
         ...facility,
         courts: facilityCourts,
@@ -176,9 +165,9 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Error fetching organization:", error);
+    console.error('Error fetching organization:', error);
     return NextResponse.json(
-      { error: "An error occurred while fetching the organization" },
+      { error: 'An error occurred while fetching the organization' },
       { status: 500 }
     );
   }

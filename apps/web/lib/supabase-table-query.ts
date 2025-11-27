@@ -1,4 +1,4 @@
-import { TableParams } from "./table-params";
+import { TableParams } from './table-params';
 
 export interface TableQueryResult<T> {
   data: T[];
@@ -35,8 +35,8 @@ export async function buildTableQuery<T>(
     Object.entries(tableParams.filters).forEach(([key, value]) => {
       if (value && options.allowedFilterFields?.includes(key)) {
         // Support different filter types
-        if (key.includes("_like")) {
-          const fieldName = key.replace("_like", "");
+        if (key.includes('_like')) {
+          const fieldName = key.replace('_like', '');
           qb = qb.ilike(fieldName, `%${value}%`);
         } else {
           qb = qb.eq(key, value);
@@ -46,16 +46,13 @@ export async function buildTableQuery<T>(
   }
 
   // Apply sorting
-  if (
-    tableParams.sortBy &&
-    options?.allowedSortFields?.includes(tableParams.sortBy)
-  ) {
+  if (tableParams.sortBy && options?.allowedSortFields?.includes(tableParams.sortBy)) {
     qb = qb.order(tableParams.sortBy, {
-      ascending: tableParams.sortOrder === "asc",
+      ascending: tableParams.sortOrder === 'asc',
     });
   } else if (!tableParams.sortBy) {
     // Default sort if none specified
-    qb = qb.order("created_at", { ascending: false });
+    qb = qb.order('created_at', { ascending: false });
   }
 
   // Apply pagination

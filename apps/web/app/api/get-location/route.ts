@@ -1,26 +1,25 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
     // Get IP address from various headers
-    const forwarded = request.headers.get("x-forwarded-for");
-    const realIp = request.headers.get("x-real-ip");
-    const cfConnectingIp = request.headers.get("cf-connecting-ip");
+    const forwarded = request.headers.get('x-forwarded-for');
+    const realIp = request.headers.get('x-real-ip');
+    const cfConnectingIp = request.headers.get('cf-connecting-ip');
 
-    const ipAddress =
-      cfConnectingIp || forwarded?.split(",")[0] || realIp || "unknown";
+    const ipAddress = cfConnectingIp || forwarded?.split(',')[0] || realIp || 'unknown';
 
-    let location = "unknown, unknown";
-    let country = "unknown";
+    let location = 'unknown, unknown';
+    let country = 'unknown';
 
     // Skip geolocation for localhost/private IPs
-    if (ipAddress !== "unknown" && !isLocalOrPrivateIP(ipAddress)) {
+    if (ipAddress !== 'unknown' && !isLocalOrPrivateIP(ipAddress)) {
       try {
         // Call ipapi.co API for geolocation
         const response = await fetch(`https://ipapi.co/${ipAddress}/json/`, {
-          method: "GET",
+          method: 'GET',
           headers: {
-            "User-Agent": "Rallia-Waitlist/1.0",
+            'User-Agent': 'Rallia-Waitlist/1.0',
           },
         });
 
@@ -32,13 +31,13 @@ export async function GET(request: NextRequest) {
             location = `${data.city}, ${data.country_name}`;
             country = data.country_name;
           } else if (data.error) {
-            console.warn("ipapi.co error:", data.error);
+            console.warn('ipapi.co error:', data.error);
           }
         } else {
-          console.warn("ipapi.co API request failed:", response.status);
+          console.warn('ipapi.co API request failed:', response.status);
         }
       } catch (apiError) {
-        console.warn("Error calling ipapi.co:", apiError);
+        console.warn('Error calling ipapi.co:', apiError);
       }
     }
 
@@ -48,12 +47,12 @@ export async function GET(request: NextRequest) {
       country,
     });
   } catch (error) {
-    console.error("Error getting location:", error);
+    console.error('Error getting location:', error);
     return NextResponse.json(
       {
-        ipAddress: "unknown",
-        location: "unknown, unknown",
-        country: "unknown",
+        ipAddress: 'unknown',
+        location: 'unknown, unknown',
+        country: 'unknown',
       },
       { status: 200 }
     );
@@ -62,10 +61,10 @@ export async function GET(request: NextRequest) {
 
 // Helper function to check if IP is localhost or private
 function isLocalOrPrivateIP(ip: string): boolean {
-  if (ip === "unknown") return true;
+  if (ip === 'unknown') return true;
 
   // Check for localhost
-  if (ip === "127.0.0.1" || ip === "::1" || ip === "localhost") return true;
+  if (ip === '127.0.0.1' || ip === '::1' || ip === 'localhost') return true;
 
   // Check for private IP ranges
   const privateRanges = [
@@ -76,5 +75,5 @@ function isLocalOrPrivateIP(ip: string): boolean {
     /^fe80:/, // IPv6 link-local
   ];
 
-  return privateRanges.some((range) => range.test(ip));
+  return privateRanges.some(range => range.test(ip));
 }

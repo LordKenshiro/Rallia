@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -8,26 +8,23 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Loader2, Mail } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { useState } from "react";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Loader2, Mail } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 
-type UserRole = "player" | "admin" | "organization_member";
-type AdminRole = "super_admin" | "moderator" | "support";
+type UserRole = 'player' | 'admin' | 'organization_member';
+type AdminRole = 'super_admin' | 'moderator' | 'support';
 
 interface UserInvitationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function UserInvitationModal({
-  open,
-  onOpenChange,
-}: UserInvitationModalProps) {
-  const t = useTranslations("admin.users.invite");
-  const [email, setEmail] = useState("");
+export function UserInvitationModal({ open, onOpenChange }: UserInvitationModalProps) {
+  const t = useTranslations('admin.users.invite');
+  const [email, setEmail] = useState('');
   const [role, setRole] = useState<UserRole | undefined>(undefined);
   const [adminRole, setAdminRole] = useState<AdminRole | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -41,19 +38,19 @@ export function UserInvitationModal({
 
     try {
       // Validate email
-      if (!email || !email.includes("@")) {
-        throw new Error(t("validation.invalidEmail"));
+      if (!email || !email.includes('@')) {
+        throw new Error(t('validation.invalidEmail'));
       }
 
       // Validate admin role if role is admin
-      if (role === "admin" && !adminRole) {
-        throw new Error(t("validation.adminRoleRequired"));
+      if (role === 'admin' && !adminRole) {
+        throw new Error(t('validation.adminRoleRequired'));
       }
 
       // Call API to create invitation
-      const response = await fetch("/api/invitation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/invitation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email,
           role,
@@ -63,31 +60,29 @@ export function UserInvitationModal({
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || t("error.sendFailed"));
+        throw new Error(errorData.error || t('error.sendFailed'));
       }
 
       const result = await response.json();
       if (!result.success) {
-        throw new Error(result.error || t("error.sendFailed"));
+        throw new Error(result.error || t('error.sendFailed'));
       }
 
       // Show success message
-      setSuccessMessage(t("success.invitationSent", { email }));
+      setSuccessMessage(t('success.invitationSent', { email }));
       setErrorMessage(null);
 
       // Reset form after a delay
       setTimeout(() => {
-        setEmail("");
+        setEmail('');
         setRole(undefined);
         setAdminRole(undefined);
         setSuccessMessage(null);
         onOpenChange(false);
       }, 2000);
     } catch (error) {
-      console.error("Invitation error:", error);
-      setErrorMessage(
-        error instanceof Error ? error.message : t("error.sendFailed")
-      );
+      console.error('Invitation error:', error);
+      setErrorMessage(error instanceof Error ? error.message : t('error.sendFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -95,7 +90,7 @@ export function UserInvitationModal({
 
   const handleClose = () => {
     if (!isSubmitting) {
-      setEmail("");
+      setEmail('');
       setRole(undefined);
       setAdminRole(undefined);
       setErrorMessage(null);
@@ -108,8 +103,8 @@ export function UserInvitationModal({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t("title")}</DialogTitle>
-          <DialogDescription>{t("description")}</DialogDescription>
+          <DialogTitle>{t('title')}</DialogTitle>
+          <DialogDescription>{t('description')}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -126,17 +121,17 @@ export function UserInvitationModal({
 
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm font-medium">
-              {t("fields.email")} <span className="text-destructive">*</span>
+              {t('fields.email')} <span className="text-destructive">*</span>
             </label>
             <Input
               id="email"
               type="email"
               value={email}
-              onChange={(e) => {
+              onChange={e => {
                 setEmail(e.target.value);
                 setErrorMessage(null);
               }}
-              placeholder={t("fields.emailPlaceholder")}
+              placeholder={t('fields.emailPlaceholder')}
               required
               disabled={isSubmitting}
             />
@@ -144,17 +139,17 @@ export function UserInvitationModal({
 
           <div className="space-y-2">
             <label htmlFor="role" className="text-sm font-medium">
-              {t("fields.role")} <span className="text-destructive">*</span>
+              {t('fields.role')} <span className="text-destructive">*</span>
             </label>
             <select
               id="role"
               value={role}
-              onChange={(e) => {
+              onChange={e => {
                 setRole(e.target.value as UserRole);
-                if (e.target.value !== "admin") {
+                if (e.target.value !== 'admin') {
                   setAdminRole(undefined);
                 } else {
-                  setAdminRole("super_admin");
+                  setAdminRole('super_admin');
                 }
                 setErrorMessage(null);
               }}
@@ -162,27 +157,26 @@ export function UserInvitationModal({
               required
               disabled={isSubmitting}
             >
-              <option value={""}>{t("roles.selectRole")}</option>
+              <option value={''}>{t('roles.selectRole')}</option>
               <option value="player" disabled>
-                {t("roles.player")}
+                {t('roles.player')}
               </option>
-              <option value="admin">{t("roles.admin")}</option>
+              <option value="admin">{t('roles.admin')}</option>
               <option value="organization_member" disabled>
-                {t("roles.orgMember")}
+                {t('roles.orgMember')}
               </option>
             </select>
           </div>
 
-          {role === "admin" && (
+          {role === 'admin' && (
             <div className="space-y-2">
               <label htmlFor="adminRole" className="text-sm font-medium">
-                {t("fields.adminRole")}{" "}
-                <span className="text-destructive">*</span>
+                {t('fields.adminRole')} <span className="text-destructive">*</span>
               </label>
               <select
                 id="adminRole"
                 value={adminRole}
-                onChange={(e) => {
+                onChange={e => {
                   setAdminRole(e.target.value as AdminRole);
                   setErrorMessage(null);
                 }}
@@ -190,34 +184,27 @@ export function UserInvitationModal({
                 required
                 disabled={isSubmitting}
               >
-                <option value="super_admin">
-                  {t("adminRoles.super_admin")}
-                </option>
-                <option value="moderator">{t("adminRoles.moderator")}</option>
-                <option value="support">{t("adminRoles.support")}</option>
+                <option value="super_admin">{t('adminRoles.super_admin')}</option>
+                <option value="moderator">{t('adminRoles.moderator')}</option>
+                <option value="support">{t('adminRoles.support')}</option>
               </select>
             </div>
           )}
 
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              disabled={isSubmitting}
-            >
-              {t("actions.cancel")}
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
+              {t('actions.cancel')}
             </Button>
             <Button type="submit" disabled={isSubmitting || !role}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t("actions.sending")}
+                  {t('actions.sending')}
                 </>
               ) : (
                 <>
                   <Mail className="mr-2 h-4 w-4" />
-                  {t("actions.send")}
+                  {t('actions.send')}
                 </>
               )}
             </Button>

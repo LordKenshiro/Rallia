@@ -1,12 +1,12 @@
-import { InvitationHandler } from "./handlers/invitation.ts";
-import { NotificationHandler } from "./handlers/notification.ts";
+import { InvitationHandler } from './handlers/invitation.ts';
+import { NotificationHandler } from './handlers/notification.ts';
 import type {
   EmailContent,
   EmailRequest,
   EmailType,
   InvitationRecord,
   NotificationRecord,
-} from "./types.ts";
+} from './types.ts';
 
 // Handler interface for type-safe email processing
 export interface EmailHandler<T extends EmailRequest = EmailRequest> {
@@ -31,14 +31,10 @@ export function getHandler(type: EmailType): EmailHandler {
 }
 
 // Type guard helpers for discriminated union
-export function isInvitationRecord(
-  request: EmailRequest
-): request is InvitationRecord {
-  return request.emailType === "invitation";
+export function isInvitationRecord(request: EmailRequest): request is InvitationRecord {
+  return request.emailType === 'invitation';
 }
 
-export function isNotificationRecord(
-  request: EmailRequest
-): request is NotificationRecord {
-  return request.emailType === "notification";
+export function isNotificationRecord(request: EmailRequest): request is NotificationRecord {
+  return request.emailType === 'notification';
 }

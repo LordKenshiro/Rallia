@@ -37,7 +37,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
       // Reset animation values
       fadeAnim.setValue(0);
       slideAnim.setValue(50);
-      
+
       // Run animations in parallel
       Animated.parallel([
         Animated.timing(fadeAnim, {

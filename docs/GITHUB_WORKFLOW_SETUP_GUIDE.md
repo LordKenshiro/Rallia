@@ -1,6 +1,7 @@
 # GitHub Workflow & CI/CD Strategy
 
 ## Date: November 23, 2025
+
 ## Project: Rallia - React Native Monorepo
 
 ---
@@ -69,11 +70,11 @@ Go to GitHub: `Settings` → `Branches` → `Add branch protection rule`
 **Branch name pattern**: `dev`
 
 **Settings to enable**:
+
 - ✅ **Require a pull request before merging**
   - ✅ Require approvals: 1 (or 0 if you're solo developer)
   - ✅ Dismiss stale pull request approvals when new commits are pushed
   - ✅ Require review from Code Owners (optional)
-  
 - ✅ **Require status checks to pass before merging**
   - ✅ Require branches to be up to date before merging
   - Status checks (will be available after workflows run):
@@ -81,7 +82,6 @@ Go to GitHub: `Settings` → `Branches` → `Add branch protection rule`
     - `type-check`
     - `test`
     - `build-mobile`
-    
 - ✅ **Require conversation resolution before merging**
 
 - ✅ **Require linear history** (optional, keeps clean history)
@@ -93,16 +93,15 @@ Go to GitHub: `Settings` → `Branches` → `Add branch protection rule`
 **Branch name pattern**: `main`
 
 **Settings to enable**:
+
 - ✅ **Require a pull request before merging**
   - ✅ Require approvals: 1 (can be auto-approved by GitHub Actions)
-  
 - ✅ **Require status checks to pass before merging**
   - Status checks:
     - `lint`
     - `type-check`
     - `test`
     - `build-mobile`
-    
 - ✅ **Do not allow bypassing the above settings**
 
 ---
@@ -215,8 +214,8 @@ on:
   schedule:
     # Runs at 11:59 PM UTC every day (adjust timezone as needed)
     # For EST: 11:59 PM EST = 4:59 AM UTC next day
-    - cron: '59 23 * * *'  # 11:59 PM UTC
-  workflow_dispatch:  # Allow manual trigger
+    - cron: '59 23 * * *' # 11:59 PM UTC
+  workflow_dispatch: # Allow manual trigger
 
 jobs:
   check-and-merge:
@@ -225,12 +224,12 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history
+          fetch-depth: 0 # Fetch all history
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Git
@@ -243,11 +242,11 @@ jobs:
         run: |
           git fetch origin main
           git fetch origin dev
-          
+
           # Check if dev has commits ahead of main
           COMMITS_AHEAD=$(git rev-list --count origin/main..origin/dev)
           echo "commits_ahead=$COMMITS_AHEAD" >> $GITHUB_OUTPUT
-          
+
           if [ "$COMMITS_AHEAD" -gt 0 ]; then
             echo "✅ Dev branch has $COMMITS_AHEAD commits ahead of main"
             echo "has_changes=true" >> $GITHUB_OUTPUT
@@ -263,25 +262,25 @@ jobs:
         with:
           source_branch: dev
           destination_branch: main
-          pr_title: "🚀 Daily Auto-Merge: Dev → Main"
+          pr_title: '🚀 Daily Auto-Merge: Dev → Main'
           pr_body: |
             ## Automated Daily Merge
-            
+
             This PR was automatically created by GitHub Actions to merge the latest changes from `dev` into `main`.
-            
+
             **Changes**: ${{ steps.check_changes.outputs.commits_ahead }} commits
             **Triggered**: Scheduled daily merge (end of day)
             **Date**: ${{ github.event.repository.updated_at }}
-            
+
             ### ✅ Pre-merge Checklist
             - All CI checks must pass
             - No merge conflicts
             - Code review (optional based on settings)
-            
+
             ---
             *This PR will auto-merge once all checks pass.*
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          pr_label: "auto-merge,daily-release"
+          pr_label: 'auto-merge,daily-release'
 
       - name: Enable auto-merge
         if: steps.check_changes.outputs.has_changes == 'true' && steps.create_pr.outputs.pr_number != ''
@@ -388,10 +387,13 @@ And ensure each workspace has these scripts in their `package.json`:
 
 ```markdown
 ## Description
+
 <!-- Describe your changes in detail -->
 
 ## Type of Change
+
 <!-- Mark with an 'x' -->
+
 - [ ] Bug fix (non-breaking change which fixes an issue)
 - [ ] New feature (non-breaking change which adds functionality)
 - [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
@@ -401,20 +403,26 @@ And ensure each workspace has these scripts in their `package.json`:
 - [ ] Configuration change
 
 ## Related Issue
+
 <!-- Link to the issue if applicable -->
+
 Closes #(issue number)
 
 ## Testing
+
 <!-- Describe how you tested your changes -->
+
 - [ ] Tested on iOS
 - [ ] Tested on Android
 - [ ] Added unit tests
 - [ ] All existing tests pass
 
 ## Screenshots (if applicable)
+
 <!-- Add screenshots to help explain your changes -->
 
 ## Checklist
+
 - [ ] My code follows the project's style guidelines
 - [ ] I have performed a self-review of my code
 - [ ] I have commented my code where necessary
@@ -430,6 +438,7 @@ Closes #(issue number)
 ### 1. **Code Quality Gates** ✅ INCLUDED
 
 Already covered in workflows above:
+
 - ESLint
 - TypeScript type checking
 - Tests
@@ -453,7 +462,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Bump version
         uses: phips28/gh-action-bump-version@master
         with:
@@ -483,21 +492,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          
+
       - name: Setup Expo
         uses: expo/expo-github-action@v8
         with:
           expo-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
-          
+
       - name: Install dependencies
         run: npm ci
-        
+
       - name: Build on EAS
         working-directory: apps/mobile
         run: eas build --platform all --non-interactive --no-wait
@@ -512,16 +521,16 @@ Auto-update dependencies with Dependabot:
 ```yaml
 version: 2
 updates:
-  - package-ecosystem: "npm"
-    directory: "/"
+  - package-ecosystem: 'npm'
+    directory: '/'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
     open-pull-requests-limit: 10
     reviewers:
-      - "LordKenshiro"
+      - 'LordKenshiro'
     labels:
-      - "dependencies"
-      - "automated"
+      - 'dependencies'
+      - 'automated'
 ```
 
 ### 5. **Code Coverage** 📊 OPTIONAL
@@ -532,7 +541,7 @@ Track test coverage:
 # Add to ci.yml test job
 - name: Generate coverage report
   run: npm run test -- --coverage
-  
+
 - name: Upload coverage to Codecov
   uses: codecov/codecov-action@v3
   with:
@@ -552,17 +561,17 @@ on:
   pull_request:
     branches: [dev, main]
   schedule:
-    - cron: '0 0 * * 0'  # Weekly on Sunday
+    - cron: '0 0 * * 0' # Weekly on Sunday
 
 jobs:
   security:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Run npm audit
         run: npm audit --audit-level=moderate
-        
+
       - name: Run Snyk security scan
         uses: snyk/actions/node@master
         env:
@@ -574,18 +583,21 @@ jobs:
 ## 📊 Recommended CI/CD Priority Matrix
 
 ### ✅ MUST HAVE (Implement Now)
+
 1. ✅ Branch protection rules
 2. ✅ PR requirements
 3. ✅ Lint + Type check + Test + Build on PRs
 4. ✅ Auto-merge dev → main (daily)
 
 ### 🎯 SHOULD HAVE (Implement Soon)
+
 5. 📦 Automated versioning
 6. 🔒 Security scanning (npm audit)
 7. 📱 EAS Build for mobile releases
 8. 🔄 Dependabot for dependency updates
 
 ### 💡 NICE TO HAVE (Future)
+
 9. 📊 Code coverage tracking
 10. 🎨 Visual regression testing
 11. 📈 Performance monitoring
@@ -684,12 +696,14 @@ git push -u origin feature/test-ci-setup
 The workflows use `GITHUB_TOKEN` which has limited permissions. For auto-merge to work:
 
 **Option A**: Use default GITHUB_TOKEN (easier)
+
 - Go to `Settings` → `Actions` → `General`
 - Under "Workflow permissions", select:
   - ✅ "Read and write permissions"
   - ✅ "Allow GitHub Actions to create and approve pull requests"
 
 **Option B**: Create Personal Access Token (more control)
+
 - Create PAT with `repo` and `workflow` scopes
 - Add as secret: `Settings` → `Secrets` → `Actions` → `New repository secret`
 - Name it `PAT_TOKEN`
@@ -698,6 +712,7 @@ The workflows use `GITHUB_TOKEN` which has limited permissions. For auto-merge t
 ### 2. **Timezone Adjustment**
 
 The cron schedule is in UTC. Adjust for your timezone:
+
 ```yaml
 # For EST (UTC-5): 11:59 PM EST = 4:59 AM UTC next day
 - cron: '59 4 * * *'
@@ -712,6 +727,7 @@ The cron schedule is in UTC. Adjust for your timezone:
 ### 3. **Testing Workflows**
 
 Test workflows manually before relying on them:
+
 ```bash
 # Trigger workflow manually (if workflow_dispatch enabled)
 # Go to Actions tab → Select workflow → Run workflow

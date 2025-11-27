@@ -1,15 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/lib/supabase/server';
-import {
-  Building2,
-  Calendar,
-  Globe,
-  Mail,
-  MapPin,
-  Phone,
-  User,
-} from 'lucide-react';
+import { Building2, Calendar, Globe, Mail, MapPin, Phone, User } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 
@@ -194,7 +186,9 @@ export default async function DashboardPage() {
                   </div>
                   <div>
                     <CardTitle className="text-lg">{t('organizationTitle')}</CardTitle>
-                    <CardDescription className="m-0">{t('organizationDescription')}</CardDescription>
+                    <CardDescription className="m-0">
+                      {t('organizationDescription')}
+                    </CardDescription>
                   </div>
                 </div>
               </div>

@@ -1,6 +1,6 @@
-import { hasOrganizationMembership } from "@/lib/supabase/check-organization";
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+import { hasOrganizationMembership } from '@/lib/supabase/check-organization';
+import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
 
 export default async function PostAuthPage() {
   const supabase = await createClient();
@@ -13,7 +13,7 @@ export default async function PostAuthPage() {
 
   // If not authenticated, redirect to sign-in
   if (authError || !user) {
-    redirect("/sign-in");
+    redirect('/sign-in');
   }
 
   // Check if user has organization membership
@@ -21,8 +21,8 @@ export default async function PostAuthPage() {
 
   // Redirect based on organization membership
   if (hasOrg) {
-    redirect("/dashboard");
+    redirect('/dashboard');
   } else {
-    redirect("/onboarding");
+    redirect('/onboarding');
   }
 }

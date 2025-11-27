@@ -1,29 +1,27 @@
-"use client";
+'use client';
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 
 export function WaitlistForm() {
-  const t = useTranslations("winter.waitlist.form");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const t = useTranslations('winter.waitlist.form');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<
-    "idle" | "success" | "error"
-  >("idle");
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setSubmitStatus("idle");
+    setSubmitStatus('idle');
 
     try {
       // Capture IP address and location
-      const ipResponse = await fetch("/api/get-location");
+      const ipResponse = await fetch('/api/get-location');
       let locationData = null;
 
       if (ipResponse.ok) {
@@ -34,35 +32,35 @@ export function WaitlistForm() {
         name,
         email,
         phone: phone || undefined,
-        ipAddress: locationData?.ipAddress || "unknown",
-        location: locationData?.location || "unknown",
+        ipAddress: locationData?.ipAddress || 'unknown',
+        location: locationData?.location || 'unknown',
       };
 
       // Submit to API
-      const response = await fetch("/api/submit-waitlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/submit-waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Submission failed");
+        throw new Error(errorData.error || 'Submission failed');
       }
 
-      setSubmitStatus("success");
-      setName("");
-      setEmail("");
-      setPhone("");
+      setSubmitStatus('success');
+      setName('');
+      setEmail('');
+      setPhone('');
     } catch (error) {
-      console.error("Submission error:", error);
-      setSubmitStatus("error");
+      console.error('Submission error:', error);
+      setSubmitStatus('error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (submitStatus === "success") {
+  if (submitStatus === 'success') {
     return (
       <Card className="w-full max-w-md border-[var(--secondary-200)] dark:border-[var(--secondary-800)]">
         <CardContent className="pt-6">
@@ -82,7 +80,7 @@ export function WaitlistForm() {
                 />
               </svg>
             </div>
-            <p className="text-lg font-semibold">{t("successMessage")}</p>
+            <p className="text-lg font-semibold">{t('successMessage')}</p>
           </div>
         </CardContent>
       </Card>
@@ -98,15 +96,15 @@ export function WaitlistForm() {
               htmlFor="name"
               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
             >
-              {t("nameLabel")}
+              {t('nameLabel')}
             </label>
             <Input
               id="name"
               name="name"
               type="text"
-              placeholder={t("namePlaceholder")}
+              placeholder={t('namePlaceholder')}
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={e => setName(e.target.value)}
               required
             />
           </div>
@@ -115,15 +113,15 @@ export function WaitlistForm() {
               htmlFor="email"
               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
             >
-              {t("emailLabel")}
+              {t('emailLabel')}
             </label>
             <Input
               id="email"
               name="email"
               type="email"
-              placeholder={t("emailPlaceholder")}
+              placeholder={t('emailPlaceholder')}
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={e => setEmail(e.target.value)}
               required
             />
           </div>
@@ -132,15 +130,15 @@ export function WaitlistForm() {
               htmlFor="phone"
               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
             >
-              {t("phoneLabel")}
+              {t('phoneLabel')}
             </label>
             <Input
               id="phone"
               name="phone"
               type="tel"
-              placeholder={t("phonePlaceholder")}
+              placeholder={t('phonePlaceholder')}
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={e => setPhone(e.target.value)}
             />
           </div>
           <Button
@@ -149,11 +147,9 @@ export function WaitlistForm() {
             disabled={isSubmitting}
             className="button-scale w-full bg-[var(--secondary-500)] hover:bg-[var(--secondary-600)] dark:bg-[var(--secondary-500)] dark:hover:bg-[var(--secondary-600)]"
           >
-            {isSubmitting ? "Submitting..." : t("submitButton")}
+            {isSubmitting ? 'Submitting...' : t('submitButton')}
           </Button>
-          <p className="text-xs text-center text-muted-foreground">
-            {t("noCard")}
-          </p>
+          <p className="text-xs text-center text-muted-foreground">{t('noCard')}</p>
         </form>
       </CardContent>
     </Card>

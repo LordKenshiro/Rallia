@@ -1,6 +1,6 @@
-import { Database } from "@/types";
-import { createClient } from "@supabase/supabase-js";
-import { NextRequest, NextResponse } from "next/server";
+import { Database } from '@/types';
+import { createClient } from '@supabase/supabase-js';
+import { NextRequest, NextResponse } from 'next/server';
 
 /**
  * One-time endpoint to create the first super admin
@@ -19,61 +19,48 @@ import { NextRequest, NextResponse } from "next/server";
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const SUPER_ADMIN_SETUP_KEY = process.env.SUPER_ADMIN_SETUP_KEY;
-const ALLOW_SUPER_ADMIN_SETUP = process.env.ALLOW_SUPER_ADMIN_SETUP === "true";
+const ALLOW_SUPER_ADMIN_SETUP = process.env.ALLOW_SUPER_ADMIN_SETUP === 'true';
 
 export async function POST(request: NextRequest) {
   // Security check: Only allow if explicitly enabled
   if (!ALLOW_SUPER_ADMIN_SETUP) {
-    return NextResponse.json(
-      { error: "Super admin setup is disabled" },
-      { status: 403 }
-    );
+    return NextResponse.json({ error: 'Super admin setup is disabled' }, { status: 403 });
   }
 
   // Verify setup key
-  const setupKey = request.headers.get("X-Setup-Key");
+  const setupKey = request.headers.get('X-Setup-Key');
   if (!SUPER_ADMIN_SETUP_KEY || setupKey !== SUPER_ADMIN_SETUP_KEY) {
-    return NextResponse.json({ error: "Invalid setup key" }, { status: 401 });
+    return NextResponse.json({ error: 'Invalid setup key' }, { status: 401 });
   }
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    return NextResponse.json(
-      { error: "Server configuration error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
   }
 
   try {
     const body = await request.json();
-    const { email, role = "super_admin" } = body;
+    const { email, role = 'super_admin' } = body;
 
-    if (!email || !email.includes("@")) {
-      return NextResponse.json(
-        { error: "Valid email is required" },
-        { status: 400 }
-      );
+    if (!email || !email.includes('@')) {
+      return NextResponse.json({ error: 'Valid email is required' }, { status: 400 });
     }
 
     // Create admin client with service role
-    const supabaseAdmin = createClient<Database>(
-      SUPABASE_URL,
-      SUPABASE_SERVICE_ROLE_KEY,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
+    const supabaseAdmin = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
 
     // Check if any admins already exist
     const { data: existingAdmins, error: checkError } = await supabaseAdmin
-      .from("admins")
-      .select("id")
+      .from('admins')
+      .select('id')
       .limit(1);
 
     if (checkError) {
-      console.error("Error checking existing admins:", checkError);
+      console.error('Error checking existing admins:', checkError);
     }
 
     // Optional: Prevent creating multiple super admins
@@ -86,28 +73,23 @@ export async function POST(request: NextRequest) {
     // }
 
     // Check if user exists in auth
-    const { data: users, error: listError } =
-      await supabaseAdmin.auth.admin.listUsers();
+    const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers();
 
     if (listError) {
-      return NextResponse.json(
-        { error: "Failed to check existing users" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to check existing users' }, { status: 500 });
     }
 
-    const existingUser = users.users.find((u) => u.email === email);
+    const existingUser = users.users.find(u => u.email === email);
     let userId: string;
 
     if (existingUser) {
       userId = existingUser.id;
     } else {
       // Create user in Auth
-      const { data: newUser, error: createError } =
-        await supabaseAdmin.auth.admin.createUser({
-          email,
-          email_confirm: true,
-        });
+      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        email_confirm: true,
+      });
 
       if (createError) {
         return NextResponse.json(
@@ -120,14 +102,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Create/update profile
-    const { error: profileError } = await supabaseAdmin.from("profiles").upsert(
+    const { error: profileError } = await supabaseAdmin.from('profiles').upsert(
       {
         id: userId,
-        full_name: "Super Admin",
-        display_name: "Admin",
+        full_name: 'Super Admin',
+        display_name: 'Admin',
         is_active: true,
       },
-      { onConflict: "id" }
+      { onConflict: 'id' }
     );
 
     if (profileError) {
@@ -138,14 +120,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Create admin record
-    const { error: adminError } = await supabaseAdmin.from("admins").upsert(
+    const { error: adminError } = await supabaseAdmin.from('admins').upsert(
       {
         id: userId,
         role,
         permissions: {},
-        notes: "Created via API endpoint",
+        notes: 'Created via API endpoint',
       },
-      { onConflict: "id" }
+      { onConflict: 'id' }
     );
 
     if (adminError) {
@@ -158,7 +140,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        message: "Super admin created successfully",
+        message: 'Super admin created successfully',
         userId,
         email,
         role,
@@ -166,10 +148,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("Super admin creation error:", error);
-    return NextResponse.json(
-      { error: "An unexpected error occurred" },
-      { status: 500 }
-    );
+    console.error('Super admin creation error:', error);
+    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
   }
 }

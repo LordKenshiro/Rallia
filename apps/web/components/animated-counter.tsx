@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { RefObject, useEffect, useRef, useState } from "react";
-import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
+import { RefObject, useEffect, useRef, useState } from 'react';
+import { useIntersectionObserver } from '@/hooks/use-intersection-observer';
 
 interface AnimatedCounterProps {
   value: string;
@@ -9,12 +9,8 @@ interface AnimatedCounterProps {
   className?: string;
 }
 
-export function AnimatedCounter({
-  value,
-  duration = 2000,
-  className,
-}: AnimatedCounterProps) {
-  const [displayValue, setDisplayValue] = useState("0");
+export function AnimatedCounter({ value, duration = 2000, className }: AnimatedCounterProps) {
+  const [displayValue, setDisplayValue] = useState('0');
   const elementRef = useRef<HTMLSpanElement>(null);
   const isVisible = useIntersectionObserver(elementRef as RefObject<Element>, {
     threshold: 0.3,
@@ -25,15 +21,15 @@ export function AnimatedCounter({
 
   useEffect(() => {
     // Check if user prefers reduced motion
-    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     setPrefersReducedMotion(mediaQuery.matches);
 
     const handleChange = () => {
       setPrefersReducedMotion(mediaQuery.matches);
     };
 
-    mediaQuery.addEventListener("change", handleChange);
-    return () => mediaQuery.removeEventListener("change", handleChange);
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
   useEffect(() => {
@@ -55,7 +51,7 @@ export function AnimatedCounter({
     }
 
     const [, numStr, suffix] = matches;
-    const targetNum = parseFloat(numStr.replace(/,/g, ""));
+    const targetNum = parseFloat(numStr.replace(/,/g, ''));
 
     if (isNaN(targetNum)) {
       setDisplayValue(value);

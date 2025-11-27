@@ -58,7 +58,7 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
     if (visible) {
       fadeAnim.setValue(0);
       slideAnim.setValue(50);
-      
+
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -91,7 +91,13 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
   };
 
   return (
-    <Overlay visible={visible} onClose={onClose} onBack={onBack} type="bottom" showBackButton={false}>
+    <Overlay
+      visible={visible}
+      onClose={onClose}
+      onBack={onBack}
+      type="bottom"
+      showBackButton={false}
+    >
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <Animated.View
           style={[
@@ -105,7 +111,11 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
           <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
 
           {/* Back Button */}
-          <TouchableOpacity style={styles.backButton} onPress={onBack || onClose} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={onBack || onClose}
+            activeOpacity={0.7}
+          >
             <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
 

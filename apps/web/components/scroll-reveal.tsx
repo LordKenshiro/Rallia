@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { useRef, useEffect, RefObject } from "react";
-import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
+import { useRef, useEffect, RefObject } from 'react';
+import { useIntersectionObserver } from '@/hooks/use-intersection-observer';
 
 interface ScrollRevealProps {
   children: React.ReactNode;
   className?: string;
 }
 
-export function ScrollReveal({ children, className = "" }: ScrollRevealProps) {
+export function ScrollReveal({ children, className = '' }: ScrollRevealProps) {
   const elementRef = useRef<HTMLDivElement>(null);
   const isVisible = useIntersectionObserver(elementRef as RefObject<Element>, {
     threshold: 0.1,
@@ -17,7 +17,7 @@ export function ScrollReveal({ children, className = "" }: ScrollRevealProps) {
 
   useEffect(() => {
     if (isVisible && elementRef.current) {
-      elementRef.current.classList.add("is-visible");
+      elementRef.current.classList.add('is-visible');
     }
   }, [isVisible]);
 

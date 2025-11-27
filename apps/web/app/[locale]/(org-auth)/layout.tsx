@@ -1,10 +1,6 @@
-import { AuthHeader } from "@/components/auth-header";
+import { AuthHeader } from '@/components/auth-header';
 
-export default function OrgAuthLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function OrgAuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen items-center justify-center relative">
       <AuthHeader />
@@ -12,4 +8,3 @@ export default function OrgAuthLayout({
     </div>
   );
 }
-

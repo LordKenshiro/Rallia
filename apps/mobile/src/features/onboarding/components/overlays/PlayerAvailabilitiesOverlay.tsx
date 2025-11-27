@@ -56,7 +56,7 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
     if (visible) {
       fadeAnim.setValue(0);
       slideAnim.setValue(50);
-      
+
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -74,7 +74,7 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
 
   const toggleAvailability = (day: DayOfWeek, slot: TimeSlot) => {
     selectionHaptic();
-    setAvailabilities((prev) => ({
+    setAvailabilities(prev => ({
       ...prev,
       [day]: {
         ...prev[day],
@@ -92,7 +92,13 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
   };
 
   return (
-    <Overlay visible={visible} onClose={onClose} onBack={onBack} type="bottom" showBackButton={false}>
+    <Overlay
+      visible={visible}
+      onClose={onClose}
+      onBack={onBack}
+      type="bottom"
+      showBackButton={false}
+    >
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <Animated.View
           style={[
@@ -106,7 +112,11 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
           <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
 
           {/* Back Button */}
-          <TouchableOpacity style={styles.backButton} onPress={onBack || onClose} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={onBack || onClose}
+            activeOpacity={0.7}
+          >
             <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
 
@@ -124,7 +134,7 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
             {/* Header Row */}
             <View style={styles.row}>
               <View style={styles.dayCell} />
-              {timeSlots.map((slot) => (
+              {timeSlots.map(slot => (
                 <View key={slot} style={styles.headerCell}>
                   <Text style={styles.headerText}>{slot}</Text>
                 </View>
@@ -132,12 +142,12 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
             </View>
 
             {/* Day Rows */}
-            {days.map((day) => (
+            {days.map(day => (
               <View key={day} style={styles.row}>
                 <View style={styles.dayCell}>
                   <Text style={styles.dayText}>{day}</Text>
                 </View>
-                {timeSlots.map((slot) => (
+                {timeSlots.map(slot => (
                   <TouchableOpacity
                     key={`${day}-${slot}`}
                     style={[

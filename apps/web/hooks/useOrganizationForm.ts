@@ -733,4 +733,3 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
 
 // Export the return type for the context
 export type OrganizationFormContextValue = ReturnType<typeof useOrganizationForm>;
-

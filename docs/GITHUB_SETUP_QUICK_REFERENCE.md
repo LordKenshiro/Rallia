@@ -62,6 +62,7 @@ git push origin dev
 Go to: **GitHub → Settings → Branches → Add rule**
 
 #### For `dev` branch:
+
 - Branch name pattern: `dev`
 - ✅ Require a pull request before merging
 - ✅ Require status checks to pass (lint, type-check, test, build-mobile)
@@ -69,6 +70,7 @@ Go to: **GitHub → Settings → Branches → Add rule**
 - ✅ Do not allow bypassing settings
 
 #### For `main` branch:
+
 - Branch name pattern: `main`
 - ✅ Same settings as `dev`
 
@@ -133,6 +135,7 @@ git push -u origin feature/test-ci-setup
 ```
 
 Then:
+
 1. Go to GitHub and create PR: `feature/test-ci-setup` → `dev`
 2. Verify CI workflows run (lint, type-check, test, build)
 3. Verify welcome message appears
@@ -152,22 +155,27 @@ Then:
 ## 📊 Workflow Details
 
 ### CI Workflow (`ci.yml`)
+
 **Triggers**: PR or push to `dev` or `main`
 **Jobs**:
+
 - 🔍 Lint - ESLint checks
 - 📝 Type Check - TypeScript validation
 - 🧪 Test - Jest tests
 - 🏗️ Build - Build mobile app
 
 ### Auto-Merge Workflow (`auto-merge-dev-to-main.yml`)
+
 **Triggers**: Daily at 11:59 PM UTC (or manual)
 **Logic**:
+
 1. Check if dev has commits ahead of main
 2. If yes → Create PR dev → main
 3. Enable auto-merge
 4. If CI passes → Merge automatically
 
 ### Welcome Workflow (`welcome-pr.yml`)
+
 **Triggers**: New PR opened
 **Action**: Posts welcome comment with checklist
 
@@ -185,7 +193,7 @@ To adjust for your timezone:
 # For EST (UTC-5): 11:59 PM EST = 4:59 AM UTC next day
 - cron: '59 4 * * *'
 
-# For PST (UTC-8): 11:59 PM PST = 7:59 AM UTC next day  
+# For PST (UTC-8): 11:59 PM PST = 7:59 AM UTC next day
 - cron: '59 7 * * *'
 
 # For CST (UTC-6): 11:59 PM CST = 5:59 AM UTC next day
@@ -199,6 +207,7 @@ To adjust for your timezone:
 ### Problem: Auto-merge doesn't work
 
 **Solution**: Enable GitHub Actions permissions
+
 - Settings → Actions → General
 - Select "Read and write permissions"
 - Enable "Allow GitHub Actions to create and approve pull requests"
@@ -206,13 +215,15 @@ To adjust for your timezone:
 ### Problem: CI checks fail
 
 **Check**:
+
 1. Ensure all workspaces have required scripts in `package.json`
 2. Run locally: `npm run lint && npm run type-check && npm run test`
 3. Check workflow logs in Actions tab
 
 ### Problem: Branch protection blocking merge
 
-**Solution**: 
+**Solution**:
+
 - Review required status checks in branch protection
 - Ensure workflow names match exactly
 - Wait for all checks to complete

@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { useLocale } from "next-intl";
-import { usePathname } from "@/i18n/navigation";
-import { useSearchParams } from "next/navigation";
-import { useTransition } from "react";
-import { Button } from "./ui/button";
+import { useLocale } from 'next-intl';
+import { usePathname } from '@/i18n/navigation';
+import { useSearchParams } from 'next/navigation';
+import { useTransition } from 'react';
+import { Button } from './ui/button';
 
 const locales = [
-  { code: "fr-CA", name: "FR", flag: "🇨🇦" },
-  { code: "en-US", name: "EN", flag: "🇨🇦" },
+  { code: 'fr-CA', name: 'FR', flag: '🇨🇦' },
+  { code: 'en-US', name: 'EN', flag: '🇨🇦' },
 ] as const;
 
 export default function LocaleToggle() {
@@ -22,13 +22,11 @@ export default function LocaleToggle() {
 
     startTransition(() => {
       // Get the current pathname without locale prefix
-      const pathWithoutLocale = pathname.startsWith("/")
-        ? pathname
-        : `/${pathname}`;
+      const pathWithoutLocale = pathname.startsWith('/') ? pathname : `/${pathname}`;
 
       // Preserve query parameters
       const queryString = searchParams.toString();
-      const queryPart = queryString ? `?${queryString}` : "";
+      const queryPart = queryString ? `?${queryString}` : '';
 
       // Construct the new URL with the correct locale and preserved query params
       const newUrl = `/${newLocale}${pathWithoutLocale}${queryPart}`;
@@ -40,16 +38,14 @@ export default function LocaleToggle() {
 
   return (
     <div className="flex gap-3">
-      {locales.map((loc) => (
+      {locales.map(loc => (
         <Button
           key={loc.code}
           onClick={() => handleLocaleChange(loc.code)}
           disabled={isPending}
           variant="outline"
           className={`${
-            locale === loc.code
-              ? "bg-accent text-accent-foreground"
-              : "cursor-pointer"
+            locale === loc.code ? 'bg-accent text-accent-foreground' : 'cursor-pointer'
           }`}
         >
           {loc.flag} {loc.name}

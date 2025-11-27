@@ -1,5 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
-import { NextRequest, NextResponse } from "next/server";
+import { createClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -7,10 +7,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!body.name || !body.email) {
-      return NextResponse.json(
-        { error: "Name and email are required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Name and email are required' }, { status: 400 });
     }
 
     // Create Supabase client
@@ -18,7 +15,7 @@ export async function POST(request: NextRequest) {
 
     // Insert data into waitlist_signups table
     const { data, error } = await supabase
-      .from("waitlist_signups")
+      .from('waitlist_signups')
       .insert({
         name: body.name,
         email: body.email,
@@ -29,18 +26,15 @@ export async function POST(request: NextRequest) {
       .select();
 
     if (error) {
-      console.error("Supabase error:", error);
-      return NextResponse.json(
-        { error: "Failed to submit waitlist entry" },
-        { status: 500 }
-      );
+      console.error('Supabase error:', error);
+      return NextResponse.json({ error: 'Failed to submit waitlist entry' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, data }, { status: 201 });
   } catch (error) {
-    console.error("Waitlist submission error:", error);
+    console.error('Waitlist submission error:', error);
     return NextResponse.json(
-      { error: "An error occurred while processing your request" },
+      { error: 'An error occurred while processing your request' },
       { status: 500 }
     );
   }

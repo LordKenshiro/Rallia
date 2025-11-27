@@ -1,13 +1,9 @@
-import { AdminLayoutWrapper } from "@/components/admin-layout-wrapper";
-import { isAdmin } from "@/lib/supabase/check-admin";
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+import { AdminLayoutWrapper } from '@/components/admin-layout-wrapper';
+import { isAdmin } from '@/lib/supabase/check-admin';
+import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
 
-export default async function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
 
   // Check if user is authenticated
@@ -18,7 +14,7 @@ export default async function AdminLayout({
 
   // If not authenticated, redirect to admin sign-in
   if (authError || !user) {
-    redirect("/admin/sign-in");
+    redirect('/admin/sign-in');
   }
 
   // Check if user is an admin
@@ -26,7 +22,7 @@ export default async function AdminLayout({
 
   // If not an admin, redirect to org dashboard
   if (!userIsAdmin) {
-    redirect("/dashboard");
+    redirect('/dashboard');
   }
 
   return <AdminLayoutWrapper>{children}</AdminLayoutWrapper>;

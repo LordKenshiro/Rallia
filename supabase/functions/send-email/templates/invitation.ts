@@ -1,12 +1,8 @@
-import type { EmailContent, InvitationEmailPayload } from "../types.ts";
+import type { EmailContent, InvitationEmailPayload } from '../types.ts';
 
-export function renderInvitationEmail(
-  payload: InvitationEmailPayload
-): EmailContent {
+export function renderInvitationEmail(payload: InvitationEmailPayload): EmailContent {
   const currentYear = new Date().getFullYear();
-  const roleDisplay = payload.adminRole
-    ? `${payload.role} (${payload.adminRole})`
-    : payload.role;
+  const roleDisplay = payload.adminRole ? `${payload.role} (${payload.adminRole})` : payload.role;
 
   const html = `
 <!DOCTYPE html>

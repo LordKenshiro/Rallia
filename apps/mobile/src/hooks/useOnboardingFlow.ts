@@ -58,7 +58,7 @@ export const useOnboardingFlow = () => {
    * Calculate total steps based on selected sports
    * Note: Location and Calendar permissions are excluded from progress tracking
    * Base: 5 steps (Auth, Personal, Sport, Preferences, Availabilities)
-   * 
+   *
    * Breakdown:
    * - Auth: 1 step
    * - Personal: 1 step

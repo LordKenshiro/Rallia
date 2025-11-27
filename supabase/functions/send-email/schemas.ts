@@ -1,36 +1,36 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 // Enum schemas matching Database types
-const AppRoleSchema = z.enum(["player", "organization_member", "admin"]);
-const AdminRoleSchema = z.enum(["super_admin", "moderator", "support"]);
+const AppRoleSchema = z.enum(['player', 'organization_member', 'admin']);
+const AdminRoleSchema = z.enum(['super_admin', 'moderator', 'support']);
 const NotificationTypeSchema = z.enum([
-  "match_invitation",
-  "reminder",
-  "payment",
-  "support",
-  "chat",
-  "system",
+  'match_invitation',
+  'reminder',
+  'payment',
+  'support',
+  'chat',
+  'system',
 ]);
 const InviteSourceSchema = z.enum([
-  "manual",
-  "auto_match",
-  "invite_list",
-  "mailing_list",
-  "growth_prompt",
+  'manual',
+  'auto_match',
+  'invite_list',
+  'mailing_list',
+  'growth_prompt',
 ]);
 const InviteStatusSchema = z.enum([
-  "pending",
-  "sent",
-  "accepted",
-  "expired",
-  "bounced",
-  "cancelled",
+  'pending',
+  'sent',
+  'accepted',
+  'expired',
+  'bounced',
+  'cancelled',
 ]);
 
 // Invitation record schema (what comes from Supabase trigger)
 export const InvitationRecordSchema = z
   .object({
-    emailType: z.literal("invitation"),
+    emailType: z.literal('invitation'),
     id: z.string().uuid(),
     email: z.string().email().nullable(),
     phone: z.string().nullable(),
@@ -50,9 +50,9 @@ export const InvitationRecordSchema = z
     created_at: z.string().optional(),
     updated_at: z.string().optional(),
   })
-  .refine((data) => data.email !== null || data.phone !== null, {
-    message: "Either email or phone must be provided",
-    path: ["email", "phone"],
+  .refine(data => data.email !== null || data.phone !== null, {
+    message: 'Either email or phone must be provided',
+    path: ['email', 'phone'],
   });
 
 // Notification record schema (what comes from Supabase trigger)
@@ -69,7 +69,7 @@ export const InvitationRecordSchema = z
 //   ...other fields
 // }
 export const NotificationRecordSchema = z.object({
-  emailType: z.literal("notification"), // Email type discriminator (added by trigger)
+  emailType: z.literal('notification'), // Email type discriminator (added by trigger)
   id: z.string().uuid(),
   notification_type: NotificationTypeSchema, // Database "type" field (must be renamed by trigger)
   target_id: z.string().uuid().nullable(),
@@ -86,7 +86,4 @@ export const NotificationRecordSchema = z.object({
 // Union schema for all email types (raw records from triggers)
 // Using z.union() instead of z.discriminatedUnion() because InvitationRecordSchema
 // uses .refine() which wraps it in ZodEffects
-export const EmailRequestSchema = z.union([
-  InvitationRecordSchema,
-  NotificationRecordSchema,
-]);
+export const EmailRequestSchema = z.union([InvitationRecordSchema, NotificationRecordSchema]);

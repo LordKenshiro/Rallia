@@ -1,11 +1,11 @@
-import { createClient } from "@/lib/supabase/server";
-import { Enums } from "@/types";
-import { NextRequest, NextResponse } from "next/server";
+import { createClient } from '@/lib/supabase/server';
+import { Enums } from '@/types';
+import { NextRequest, NextResponse } from 'next/server';
 
-type OrganizationNature = Enums<"organization_nature_enum">;
-type OrganizationType = Enums<"organization_type_enum"> | null;
-type Country = Enums<"country_enum"> | null;
-type Role = Enums<"role_enum">;
+type OrganizationNature = Enums<'organization_nature_enum'>;
+type OrganizationType = Enums<'organization_type_enum'> | null;
+type Country = Enums<'country_enum'> | null;
+type Role = Enums<'role_enum'>;
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,31 +19,25 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Validate required fields
     if (!body.name || !body.email || !body.type || !body.nature || !body.role) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(body.email)) {
-      return NextResponse.json(
-        { error: "Invalid email format" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
     }
 
     // Validate slug uniqueness
     const { data: existingOrg } = await supabase
-      .from("organizations")
-      .select("id")
-      .eq("slug", body.slug)
+      .from('organizations')
+      .select('id')
+      .eq('slug', body.slug)
       .single();
 
     if (existingOrg) {
@@ -54,9 +48,9 @@ export async function POST(request: NextRequest) {
 
       while (slugExists) {
         const { data: check } = await supabase
-          .from("organizations")
-          .select("id")
-          .eq("slug", newSlug)
+          .from('organizations')
+          .select('id')
+          .eq('slug', newSlug)
           .single();
 
         if (!check) {
@@ -71,7 +65,7 @@ export async function POST(request: NextRequest) {
 
     // Create organization
     const { data: organization, error: orgError } = await supabase
-      .from("organizations")
+      .from('organizations')
       .insert({
         owner_id: user.id,
         name: body.name,
@@ -91,30 +85,27 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (orgError) {
-      console.error("Organization creation error:", orgError);
+      console.error('Organization creation error:', orgError);
       return NextResponse.json(
-        { error: orgError.message || "Failed to create organization" },
+        { error: orgError.message || 'Failed to create organization' },
         { status: 500 }
       );
     }
 
     // Create organization member record
-    const { error: memberError } = await supabase
-      .from("organization_members")
-      .insert({
-        user_id: user.id,
-        organization_id: organization.id,
-        role: body.role as Role,
-      });
+    const { error: memberError } = await supabase.from('organization_members').insert({
+      user_id: user.id,
+      organization_id: organization.id,
+      role: body.role as Role,
+    });
 
     if (memberError) {
-      console.error("Organization member creation error:", memberError);
+      console.error('Organization member creation error:', memberError);
       // Try to delete the organization if member creation fails
-      await supabase.from("organizations").delete().eq("id", organization.id);
+      await supabase.from('organizations').delete().eq('id', organization.id);
       return NextResponse.json(
         {
-          error:
-            memberError.message || "Failed to create organization membership",
+          error: memberError.message || 'Failed to create organization membership',
         },
         { status: 500 }
       );
@@ -122,9 +113,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, organization }, { status: 201 });
   } catch (error) {
-    console.error("Organization creation error:", error);
+    console.error('Organization creation error:', error);
     return NextResponse.json(
-      { error: "An error occurred while creating the organization" },
+      { error: 'An error occurred while creating the organization' },
       { status: 500 }
     );
   }

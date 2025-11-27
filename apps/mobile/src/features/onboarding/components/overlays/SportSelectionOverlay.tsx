@@ -1,5 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Animated } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  ScrollView,
+  Animated,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
@@ -40,7 +48,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
     if (visible) {
       fadeAnim.setValue(0);
       slideAnim.setValue(50);
-      
+
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -86,7 +94,13 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
   };
 
   return (
-    <Overlay visible={visible} onClose={onClose} onBack={onBack} type="bottom" showBackButton={false}>
+    <Overlay
+      visible={visible}
+      onClose={onClose}
+      onBack={onBack}
+      type="bottom"
+      showBackButton={false}
+    >
       <Animated.View
         style={[
           styles.container,

@@ -31,7 +31,7 @@
    │feature/│ │feature/│ │feature/│ │  fix/  │ │ chore/ │
    │  auth  │ │  chat  │ │  map   │ │ bug-01 │ │ docs   │
    └────────┘ └────────┘ └────────┘ └────────┘ └────────┘
-   
+
    Feature branches created from dev
    PR required to merge back to dev
 ```
@@ -292,7 +292,7 @@
 Day 1 (Monday)
 ─────────────────────────────────────────────────────────────────
 09:00 AM  │  Dev A creates feature/auth
-10:00 AM  │  Dev B creates feature/chat  
+10:00 AM  │  Dev B creates feature/chat
 02:00 PM  │  Dev A: PR feature/auth → dev (✅ merged)
 04:00 PM  │  Dev B: PR feature/chat → dev (✅ merged)
 11:59 PM  │  🤖 Auto-merge: dev → main (2 features deployed)

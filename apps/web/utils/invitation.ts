@@ -1,5 +1,5 @@
-import { randomBytes } from "crypto";
+import { randomBytes } from 'crypto';
 
 export function generateUrlSafeToken() {
-  return randomBytes(32).toString("base64url");
+  return randomBytes(32).toString('base64url');
 }

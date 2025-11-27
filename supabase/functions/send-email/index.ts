@@ -1,19 +1,19 @@
-import { ZodError } from "zod";
-import { getHandler } from "./registry.ts";
-import { EmailRequestSchema } from "./schemas.ts";
-import type { EmailRequest, EmailResponse } from "./types.ts";
+import { ZodError } from 'zod';
+import { getHandler } from './registry.ts';
+import { EmailRequestSchema } from './schemas.ts';
+import type { EmailRequest, EmailResponse } from './types.ts';
 
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-const FROM_EMAIL = Deno.env.get("FROM_EMAIL");
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+const FROM_EMAIL = Deno.env.get('FROM_EMAIL');
 
 if (!RESEND_API_KEY) {
-  throw new Error("RESEND_API_KEY environment variable is required");
+  throw new Error('RESEND_API_KEY environment variable is required');
 }
 if (!FROM_EMAIL) {
-  throw new Error("FROM_EMAIL environment variable is required");
+  throw new Error('FROM_EMAIL environment variable is required');
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async req => {
   try {
     // Parse and validate request body
     const body = await req.json();
@@ -30,10 +30,10 @@ Deno.serve(async (req) => {
     const { subject, html } = await handler.getContent(validatedPayload);
 
     // Send email via Resend API
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
@@ -48,9 +48,8 @@ Deno.serve(async (req) => {
 
     // Handle Resend API errors
     if (!res.ok) {
-      const errorMessage =
-        data?.message || data?.error || "Failed to send email";
-      console.error("Resend API error:", errorMessage, data);
+      const errorMessage = data?.message || data?.error || 'Failed to send email';
+      console.error('Resend API error:', errorMessage, data);
 
       const errorResponse: EmailResponse = {
         success: false,
@@ -59,7 +58,7 @@ Deno.serve(async (req) => {
 
       return new Response(JSON.stringify(errorResponse), {
         status: res.status,
-        headers: { "Content-Type": "application/json" },
+        headers: { 'Content-Type': 'application/json' },
       });
     }
 
@@ -67,43 +66,43 @@ Deno.serve(async (req) => {
     const successResponse: EmailResponse = {
       success: true,
       id: data?.id,
-      message: "Email sent successfully",
+      message: 'Email sent successfully',
     };
 
     return new Response(JSON.stringify(successResponse), {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error("Email function error:", error);
+    console.error('Email function error:', error);
 
     // Handle validation errors
     if (error instanceof ZodError) {
-      const errorMessages = error.issues.map((issue) => {
-        const path = issue.path.join(".");
+      const errorMessages = error.issues.map(issue => {
+        const path = issue.path.join('.');
         return path ? `${path}: ${issue.message}` : issue.message;
       });
 
       const errorResponse: EmailResponse = {
         success: false,
-        error: `Validation error: ${errorMessages.join("; ")}`,
+        error: `Validation error: ${errorMessages.join('; ')}`,
       };
 
       return new Response(JSON.stringify(errorResponse), {
         status: 400,
-        headers: { "Content-Type": "application/json" },
+        headers: { 'Content-Type': 'application/json' },
       });
     }
 
     // Handle other errors
     const errorResponse: EmailResponse = {
       success: false,
-      error: error instanceof Error ? error.message : "Internal server error",
+      error: error instanceof Error ? error.message : 'Internal server error',
     };
 
     return new Response(JSON.stringify(errorResponse), {
       status: 500,
-      headers: { "Content-Type": "application/json" },
+      headers: { 'Content-Type': 'application/json' },
     });
   }
 });

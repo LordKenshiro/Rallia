@@ -1,82 +1,81 @@
-import { ThemeProvider } from "@/components/theme-provider";
-import { routing } from "@/i18n/routing";
-import type { Metadata } from "next";
-import { Locale, NextIntlClientProvider } from "next-intl";
-import { Inter, Outfit, Poppins, Space_Grotesk } from "next/font/google";
-import { notFound } from "next/navigation";
-import "./globals.css";
+import { ThemeProvider } from '@/components/theme-provider';
+import { routing } from '@/i18n/routing';
+import type { Metadata } from 'next';
+import { Locale, NextIntlClientProvider } from 'next-intl';
+import { Inter, Outfit, Poppins, Space_Grotesk } from 'next/font/google';
+import { notFound } from 'next/navigation';
+import './globals.css';
 
-import { Analytics } from "@vercel/analytics/next";
+import { Analytics } from '@vercel/analytics/next';
 
 // Theme A: Court Classic - Outfit for headlines
 const outfit = Outfit({
-  weight: ["400", "500", "600", "700", "800"],
-  subsets: ["latin"],
-  variable: "--font-outfit",
+  weight: ['400', '500', '600', '700', '800'],
+  subsets: ['latin'],
+  variable: '--font-outfit',
 });
 
 // Theme B: Energy & Trust - Poppins for headlines
 const poppins = Poppins({
-  weight: ["400", "500", "600", "700", "800"],
-  subsets: ["latin"],
-  variable: "--font-poppins",
+  weight: ['400', '500', '600', '700', '800'],
+  subsets: ['latin'],
+  variable: '--font-poppins',
 });
 
 // Theme C: Minimal Sport - Space Grotesk for headlines
 const spaceGrotesk = Space_Grotesk({
-  weight: ["400", "500", "600", "700"],
-  subsets: ["latin"],
-  variable: "--font-space-grotesk",
+  weight: ['400', '500', '600', '700'],
+  subsets: ['latin'],
+  variable: '--font-space-grotesk',
 });
 
 // All themes use Inter for body text
 const inter = Inter({
-  weight: ["400", "500", "600", "700"],
-  subsets: ["latin"],
-  variable: "--font-inter",
+  weight: ['400', '500', '600', '700'],
+  subsets: ['latin'],
+  variable: '--font-inter',
 });
 
 export const metadata: Metadata = {
-  title:
-    "Rallia - Tennis & Pickleball Matchmaking Platform | Coming Early 2026",
+  title: 'Rallia - Tennis & Pickleball Matchmaking Platform | Coming Early 2026',
   description:
-    "Join the waitlist for Rallia - the revolutionary platform connecting tennis and pickleball players. Smart matchmaking, instant scheduling, and reliable partners. Sign up for exclusive early access.",
+    'Join the waitlist for Rallia - the revolutionary platform connecting tennis and pickleball players. Smart matchmaking, instant scheduling, and reliable partners. Sign up for exclusive early access.',
   keywords: [
-    "tennis matchmaking",
-    "pickleball partners",
-    "tennis scheduling",
-    "find tennis partners",
-    "tennis app",
-    "pickleball app",
-    "sports matchmaking",
+    'tennis matchmaking',
+    'pickleball partners',
+    'tennis scheduling',
+    'find tennis partners',
+    'tennis app',
+    'pickleball app',
+    'sports matchmaking',
   ],
-  authors: [{ name: "Rallia" }],
-  creator: "Rallia",
-  metadataBase: new URL("https://rallia.app"),
+  authors: [{ name: 'Rallia' }],
+  creator: 'Rallia',
+  metadataBase: new URL('https://rallia.app'),
   openGraph: {
-    type: "website",
-    locale: "en_US",
-    url: "https://rallia.app",
-    title: "Rallia - Where Rallies Live On",
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://rallia.app',
+    title: 'Rallia - Where Rallies Live On',
     description:
-      "Join the waitlist for the future of tennis and pickleball matchmaking. Smart player matching, instant scheduling, and reliable games.",
-    siteName: "Rallia",
+      'Join the waitlist for the future of tennis and pickleball matchmaking. Smart player matching, instant scheduling, and reliable games.',
+    siteName: 'Rallia',
     images: [
       {
-        url: "/og-image.png",
+        url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: "Rallia - Tennis & Pickleball Matchmaking",
+        alt: 'Rallia - Tennis & Pickleball Matchmaking',
       },
     ],
   },
   twitter: {
-    card: "summary_large_image",
-    title: "Rallia - Where Rallies Live On",
+    card: 'summary_large_image',
+    title: 'Rallia - Where Rallies Live On',
     description:
-      "Join the waitlist for the future of tennis and pickleball matchmaking. Coming Early 2026.",
-    images: ["/og-image.png"],
-    creator: "@rallia",
+      'Join the waitlist for the future of tennis and pickleball matchmaking. Coming Early 2026.',
+    images: ['/og-image.png'],
+    creator: '@rallia',
   },
   robots: {
     index: true,
@@ -84,20 +83,20 @@ export const metadata: Metadata = {
     googleBot: {
       index: true,
       follow: true,
-      "max-video-preview": -1,
-      "max-image-preview": "large",
-      "max-snippet": -1,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
     },
   },
   icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon-16x16.png",
-    apple: "/apple-touch-icon.png",
+    icon: '/favicon.ico',
+    shortcut: '/favicon-16x16.png',
+    apple: '/apple-touch-icon.png',
   },
 };
 
 export function generateStaticParams() {
-  return routing.locales.map((locale) => ({ locale }));
+  return routing.locales.map(locale => ({ locale }));
 }
 
 export default async function LocaleLayout({

@@ -1,37 +1,31 @@
 // Email type definitions using Database enums
 // These match the Database types from types/index.ts
 
-export type AppRole = "player" | "organization_member" | "admin";
-export type AdminRole = "super_admin" | "moderator" | "support";
+export type AppRole = 'player' | 'organization_member' | 'admin';
+export type AdminRole = 'super_admin' | 'moderator' | 'support';
 export type NotificationType =
-  | "match_invitation"
-  | "reminder"
-  | "payment"
-  | "support"
-  | "chat"
-  | "system";
+  | 'match_invitation'
+  | 'reminder'
+  | 'payment'
+  | 'support'
+  | 'chat'
+  | 'system';
 
 export type InviteSource =
-  | "manual"
-  | "auto_match"
-  | "invite_list"
-  | "mailing_list"
-  | "growth_prompt";
+  | 'manual'
+  | 'auto_match'
+  | 'invite_list'
+  | 'mailing_list'
+  | 'growth_prompt';
 
-export type InviteStatus =
-  | "pending"
-  | "sent"
-  | "accepted"
-  | "expired"
-  | "bounced"
-  | "cancelled";
+export type InviteStatus = 'pending' | 'sent' | 'accepted' | 'expired' | 'bounced' | 'cancelled';
 
 // Email type union
-export type EmailType = "invitation" | "notification";
+export type EmailType = 'invitation' | 'notification';
 
 // Raw database record from Supabase trigger (what we receive)
 export interface InvitationRecord {
-  emailType: "invitation"; // Added by trigger to distinguish email types
+  emailType: 'invitation'; // Added by trigger to distinguish email types
   id: string;
   email: string | null;
   phone: string | null;
@@ -56,7 +50,7 @@ export interface InvitationRecord {
 // Note: The database record has a "notification_type" field for notification_type_enum
 // The trigger adds "emailType" field to distinguish email types ("invitation" vs "notification")
 export interface NotificationRecord {
-  emailType: "notification"; // Added by trigger to distinguish email types
+  emailType: 'notification'; // Added by trigger to distinguish email types
   id: string;
   notification_type: NotificationType; // Database field: notification_type_enum (renamed to avoid conflict)
   target_id: string | null;
@@ -72,7 +66,7 @@ export interface NotificationRecord {
 
 // Processed payload for email rendering (after computing missing fields)
 export interface InvitationEmailPayload {
-  type: "invitation";
+  type: 'invitation';
   email: string;
   role: AppRole;
   adminRole?: AdminRole;
@@ -83,7 +77,7 @@ export interface InvitationEmailPayload {
 
 // Processed payload for email rendering (after computing missing fields)
 export interface NotificationEmailPayload {
-  type: "notification";
+  type: 'notification';
   email: string;
   notificationType: NotificationType;
   title: string;
