@@ -82,3 +82,4 @@ Pods/
 # Logs
 logs
 *.log
+.vercel

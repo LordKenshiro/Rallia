@@ -4,6 +4,15 @@ import createNextIntlPlugin from 'next-intl/plugin';
 const isDev = process.env.NODE_ENV === 'development';
 
 const nextConfig: NextConfig = {
+  // Transpile shared monorepo packages
+  transpilePackages: [
+    '@rallia/shared-components',
+    '@rallia/shared-constants',
+    '@rallia/shared-hooks',
+    '@rallia/shared-services',
+    '@rallia/shared-types',
+    '@rallia/shared-utils',
+  ],
   images: {
     // Disable optimization in dev to allow local Supabase (private IP)
     unoptimized: isDev,
