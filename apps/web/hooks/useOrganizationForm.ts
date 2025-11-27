@@ -84,13 +84,15 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
   const [facilities, setFacilities] = useState<Facility[]>(() => {
     if (isUpdateMode && initialData) {
       return initialData.facilities.map((facility: any) => {
-        // Convert existing images
+        // Convert existing images from facility_files joined with files
         const images: UpdateFacilityImage[] =
-          facility.facility_images?.map((img: any) => ({
-            id: img.id,
-            url: img.url,
-            thumbnail_url: img.thumbnail_url,
-            description: img.description,
+          facility.facility_files?.map((ff: any) => ({
+            id: ff.id, // facility_files junction table id
+            fileId: ff.files?.id || ff.file_id, // files table id
+            url: ff.files?.url || '',
+            thumbnail_url: ff.files?.thumbnail_url || null,
+            display_order: ff.display_order || 0,
+            is_primary: ff.is_primary || false,
           })) || [];
 
         // Convert contacts
@@ -601,7 +603,7 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
       if (isUpdateMode) {
         const updateImage = image as UpdateFacilityImage;
         if (isExistingImage(updateImage)) {
-          return updateImage.thumbnail_url || updateImage.url;
+          return updateImage.thumbnail_url ?? updateImage.url;
         } else if (isNewImage(updateImage)) {
           return updateImage.preview;
         }

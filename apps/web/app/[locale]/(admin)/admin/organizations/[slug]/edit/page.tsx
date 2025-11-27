@@ -90,13 +90,16 @@ export default async function AdminOrganizationEditPage({
         postal_code,
         latitude,
         longitude,
-        facility_images (
+        facility_files (
           id,
-          url,
-          thumbnail_url,
-          description,
+          file_id,
           display_order,
-          is_primary
+          is_primary,
+          files (
+            id,
+            url,
+            thumbnail_url
+          )
         ),
         facility_contacts (
           id,
@@ -207,7 +210,7 @@ export default async function AdminOrganizationEditPage({
       postal_code: facility.postal_code || '',
       latitude: facility.latitude?.toString() || '',
       longitude: facility.longitude?.toString() || '',
-      facility_images: facility.facility_images || [],
+      facility_files: facility.facility_files || [],
       facility_contacts: facility.facility_contacts || [],
       facility_sports: facility.facility_sports || [],
       courts: facility.courts || [],

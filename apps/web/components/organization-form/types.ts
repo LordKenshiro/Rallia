@@ -9,10 +9,16 @@ export type ContactType = Enums<'facility_contact_type_enum'>;
 
 // Use generated types
 export type Sport = Pick<Tables<'sports'>, 'id' | 'name' | 'slug'>;
-export type ExistingImage = Pick<
-  Tables<'facility_images'>,
-  'id' | 'url' | 'thumbnail_url' | 'description'
->;
+
+// ExistingImage now represents a file from the files table joined via facility_files
+export interface ExistingImage {
+  id: string; // facility_files.id (junction table id)
+  fileId: string; // files.id (actual file id)
+  url: string;
+  thumbnail_url: string | null;
+  display_order: number;
+  is_primary: boolean;
+}
 
 export interface NewImage {
   file: File;
@@ -30,7 +36,7 @@ export interface CreateFacilityImage {
 export type UpdateFacilityImage = ExistingImage | NewImage;
 
 export function isExistingImage(image: UpdateFacilityImage): image is ExistingImage {
-  return image != null && 'id' in image && !('file' in image);
+  return image != null && 'fileId' in image && !('file' in image);
 }
 
 export function isNewImage(image: UpdateFacilityImage): image is NewImage {

@@ -9,6 +9,7 @@ type Country = Enums<'country_enum'> | null;
 type ContactType = Enums<'facility_contact_type_enum'>;
 type SurfaceType = Enums<'surface_type_enum'>;
 type AvailabilityStatus = Enums<'availability_enum'>;
+type FileType = Enums<'file_type_enum'>;
 
 // Helper to convert empty strings to null for enum fields
 function toNullIfEmpty<T>(value: T | '' | null | undefined): T | null {
@@ -51,7 +52,7 @@ interface FacilityData {
   selectedSports: string[];
   images?: any[]; // Image metadata (files sent separately or existing images)
   imageCount?: number; // Number of new images to expect
-  existingImageIds?: string[]; // IDs of images to keep
+  existingFacilityFileIds?: string[]; // IDs of facility_files junction records to keep
   contacts: FacilityContactData[];
   courtRows: CourtRowData[];
 }
@@ -97,11 +98,13 @@ async function uploadFacilityImages(
   facilityId: string,
   facilityIndex: number,
   imageCount: number,
-  formData: FormData
+  formData: FormData,
+  uploaderId: string,
+  startDisplayOrder: number = 0
 ): Promise<any[]> {
   if (imageCount === 0) return [];
 
-  const imageEntries = [];
+  const facilityFileEntries = [];
   const maxSize = 10 * 1024 * 1024; // 10MB
   const UPLOAD_TIMEOUT = 60000; // 60 seconds
 
@@ -195,27 +198,47 @@ async function uploadFacilityImages(
     // Get public URL
     const { data: urlData } = supabase.storage.from('facility-images').getPublicUrl(storageKey);
 
-    imageEntries.push({
+    // Insert into files table first
+    const { data: fileRecord, error: fileError } = await supabase
+      .from('files')
+      .insert({
+        uploaded_by: uploaderId,
+        storage_key: storageKey,
+        url: urlData.publicUrl,
+        original_name: imageFile.name,
+        file_type: 'image' as FileType,
+        mime_type: imageFile.type,
+        file_size: imageFile.size,
+        metadata: {},
+      })
+      .select('id')
+      .single();
+
+    if (fileError) {
+      throw new Error(`Failed to create file record: ${fileError.message}`);
+    }
+
+    // Collect facility_files junction entries
+    facilityFileEntries.push({
       facility_id: facilityId,
-      storage_key: storageKey,
-      url: urlData.publicUrl,
-      file_size: imageFile.size,
-      mime_type: imageFile.type,
-      display_order: imageIndex,
-      is_primary: imageIndex === 0,
+      file_id: fileRecord.id,
+      display_order: startDisplayOrder + imageIndex,
+      is_primary: startDisplayOrder === 0 && imageIndex === 0,
     });
   }
 
-  // Insert facility_images records
-  if (imageEntries.length > 0) {
-    const { error: imagesError } = await supabase.from('facility_images').insert(imageEntries);
+  // Insert facility_files junction records
+  if (facilityFileEntries.length > 0) {
+    const { error: facilityFilesError } = await supabase
+      .from('facility_files')
+      .insert(facilityFileEntries);
 
-    if (imagesError) {
-      throw new Error(`Failed to create image records: ${imagesError.message}`);
+    if (facilityFilesError) {
+      throw new Error(`Failed to create facility file records: ${facilityFilesError.message}`);
     }
   }
 
-  return imageEntries;
+  return facilityFileEntries;
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
@@ -338,16 +361,29 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       await supabase.from('facility_sports').delete().eq('facility_id', facilityId);
       await supabase.from('facility_contacts').delete().eq('facility_id', facilityId);
 
-      // Delete images
-      const { data: images } = await supabase
-        .from('facility_images')
-        .select('storage_key')
+      // Delete facility files (junction + files + storage)
+      const { data: facilityFiles } = await supabase
+        .from('facility_files')
+        .select('id, file_id, files(storage_key)')
         .eq('facility_id', facilityId);
 
-      if (images && images.length > 0) {
-        const storageKeys = images.map((img: any) => img.storage_key);
-        await supabase.storage.from('facility-images').remove(storageKeys);
-        await supabase.from('facility_images').delete().eq('facility_id', facilityId);
+      if (facilityFiles && facilityFiles.length > 0) {
+        // Delete from storage
+        const storageKeys = facilityFiles
+          .map((ff: any) => ff.files?.storage_key)
+          .filter(Boolean);
+        if (storageKeys.length > 0) {
+          await supabase.storage.from('facility-images').remove(storageKeys);
+        }
+
+        // Delete facility_files junction records
+        await supabase.from('facility_files').delete().eq('facility_id', facilityId);
+
+        // Delete files records
+        const fileIds = facilityFiles.map((ff: any) => ff.file_id);
+        if (fileIds.length > 0) {
+          await supabase.from('files').delete().in('id', fileIds);
+        }
       }
 
       await supabase.from('facilities').delete().eq('id', facilityId);
@@ -409,38 +445,66 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         }
         facility = updatedFacility;
 
-        // Delete images not in existingImageIds
-        if (facilityData.existingImageIds) {
-          const { data: allImages } = await supabase
-            .from('facility_images')
-            .select('id, storage_key')
+        // Delete facility_files not in existingFacilityFileIds
+        if (facilityData.existingFacilityFileIds) {
+          const { data: allFacilityFiles } = await supabase
+            .from('facility_files')
+            .select('id, file_id, files(storage_key)')
             .eq('facility_id', facility.id);
 
-          const imagesToDelete =
-            allImages?.filter(img => !facilityData.existingImageIds!.includes(img.id)) || [];
+          const filesToDelete =
+            allFacilityFiles?.filter(
+              ff => !facilityData.existingFacilityFileIds!.includes(ff.id)
+            ) || [];
 
-          if (imagesToDelete.length > 0) {
-            const storageKeys = imagesToDelete.map(img => img.storage_key);
-            await supabase.storage.from('facility-images').remove(storageKeys);
+          if (filesToDelete.length > 0) {
+            // Delete from storage
+            const storageKeys = filesToDelete
+              .map((ff: any) => ff.files?.storage_key)
+              .filter(Boolean);
+            if (storageKeys.length > 0) {
+              await supabase.storage.from('facility-images').remove(storageKeys);
+            }
+
+            // Delete facility_files junction records
             await supabase
-              .from('facility_images')
+              .from('facility_files')
               .delete()
               .in(
                 'id',
-                imagesToDelete.map(img => img.id)
+                filesToDelete.map(ff => ff.id)
               );
+
+            // Delete files records
+            const fileIds = filesToDelete.map(ff => ff.file_id);
+            if (fileIds.length > 0) {
+              await supabase.from('files').delete().in('id', fileIds);
+            }
           }
         } else {
-          // Delete all images if no existingImageIds provided
-          const { data: allImages } = await supabase
-            .from('facility_images')
-            .select('id, storage_key')
+          // Delete all files if no existingFacilityFileIds provided
+          const { data: allFacilityFiles } = await supabase
+            .from('facility_files')
+            .select('id, file_id, files(storage_key)')
             .eq('facility_id', facility.id);
 
-          if (allImages && allImages.length > 0) {
-            const storageKeys = allImages.map(img => img.storage_key);
-            await supabase.storage.from('facility-images').remove(storageKeys);
-            await supabase.from('facility_images').delete().eq('facility_id', facility.id);
+          if (allFacilityFiles && allFacilityFiles.length > 0) {
+            // Delete from storage
+            const storageKeys = allFacilityFiles
+              .map((ff: any) => ff.files?.storage_key)
+              .filter(Boolean);
+            if (storageKeys.length > 0) {
+              await supabase.storage.from('facility-images').remove(storageKeys);
+            }
+
+            // Delete facility_files junction records
+            await supabase.from('facility_files').delete().eq('facility_id', facility.id);
+
+            // Delete files records
+            const fileIds = allFacilityFiles.map((ff: any) => ff.file_id);
+            if (fileIds.length > 0) {
+              await supabase.from('files').delete().in('id', fileIds);
+            }
           }
         }
 
@@ -562,7 +626,21 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       // Upload new images
       const imageCount = facilityData.imageCount || 0;
       if (imageCount > 0) {
-        await uploadFacilityImages(supabase, facility.id, facilityIndex, imageCount, formData);
+        // Get the count of existing files to determine starting display order
+        const { count: existingFileCount } = await supabase
+          .from('facility_files')
+          .select('*', { count: 'exact', head: true })
+          .eq('facility_id', facility.id);
+
+        await uploadFacilityImages(
+          supabase,
+          facility.id,
+          facilityIndex,
+          imageCount,
+          formData,
+          user.id,
+          existingFileCount || 0
+        );
       }
 
       // Create courts from court rows

@@ -21,10 +21,17 @@ function capitalize(str: string | null | undefined): string {
 }
 
 // Type aliases for relations - matching the actual query structure
-type FacilityImage = Pick<
-  Tables<'facility_images'>,
-  'id' | 'url' | 'thumbnail_url' | 'description' | 'display_order' | 'is_primary'
->;
+// FacilityFile now represents facility_files joined with files
+type FacilityFile = {
+  id: string;
+  display_order: number | null;
+  is_primary: boolean | null;
+  files: {
+    id: string;
+    url: string;
+    thumbnail_url: string | null;
+  } | null;
+};
 type FacilityContact = Pick<
   Tables<'facility_contacts'>,
   'id' | 'phone' | 'email' | 'website' | 'contact_type' | 'is_primary'
@@ -43,7 +50,7 @@ type Facility = Pick<
   Tables<'facilities'>,
   'id' | 'name' | 'slug' | 'address' | 'city' | 'country' | 'postal_code' | 'latitude' | 'longitude'
 > & {
-  facility_images: FacilityImage[];
+  facility_files: FacilityFile[];
   facility_contacts: FacilityContact[];
   facility_sports: Array<{
     sport_id: string;
@@ -159,13 +166,15 @@ export default async function OrganizationProfilePage({
         postal_code,
         latitude,
         longitude,
-        facility_images (
+        facility_files (
           id,
-          url,
-          thumbnail_url,
-          description,
           display_order,
-          is_primary
+          is_primary,
+          files (
+            id,
+            url,
+            thumbnail_url
+          )
         ),
         facility_contacts (
           id,
@@ -483,28 +492,29 @@ export default async function OrganizationProfilePage({
               </CardHeader>
               <CardContent className="pt-6 space-y-6">
                 {/* Facility Images */}
-                {facility.facility_images && facility.facility_images.length > 0 && (
+                {facility.facility_files && facility.facility_files.length > 0 && (
                   <div className="space-y-3">
                     <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                       {t('sections.facilityImages')}
                     </h4>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      {facility.facility_images
-                        .sort((a, b) => a.display_order - b.display_order)
-                        .map((image, index) => (
+                      {facility.facility_files
+                        .filter(ff => ff.files) // Filter out entries without files
+                        .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+                        .map(facilityFile => (
                           <div
-                            key={image.id}
+                            key={facilityFile.id}
                             className={`relative aspect-video rounded-lg overflow-hidden border-2 ${
-                              image.is_primary ? 'border-primary' : 'border-transparent'
+                              facilityFile.is_primary ? 'border-primary' : 'border-transparent'
                             } shadow-sm hover:shadow-md transition-shadow`}
                           >
                             <Image
-                              src={image.thumbnail_url || image.url}
-                              alt={image.description || facility.name}
+                              src={facilityFile.files!.thumbnail_url || facilityFile.files!.url}
+                              alt={facility.name}
                               fill
                               className="object-cover"
                             />
-                            {image.is_primary && (
+                            {facilityFile.is_primary && (
                               <div className="absolute top-2 left-2">
                                 <Badge variant="default" className="text-xs shadow">
                                   Primary

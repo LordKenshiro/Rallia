@@ -8,6 +8,7 @@ type Country = Enums<'country_enum'> | null;
 type ContactType = Enums<'facility_contact_type_enum'>;
 type SurfaceType = Enums<'surface_type_enum'>;
 type AvailabilityStatus = Enums<'availability_enum'>;
+type FileType = Enums<'file_type_enum'>;
 
 // Helper to convert empty strings to null for enum fields
 function toNullIfEmpty<T>(value: T | '' | null | undefined): T | null {
@@ -84,11 +85,12 @@ async function uploadFacilityImages(
   facilityId: string,
   facilityIndex: number,
   imageCount: number,
-  formData: FormData
+  formData: FormData,
+  uploaderId: string
 ): Promise<any[]> {
   if (imageCount === 0) return [];
 
-  const imageEntries = [];
+  const facilityFileEntries = [];
   const maxSize = 10 * 1024 * 1024; // 10MB
   const UPLOAD_TIMEOUT = 60000; // 60 seconds
 
@@ -182,27 +184,47 @@ async function uploadFacilityImages(
     // Get public URL
     const { data: urlData } = supabase.storage.from('facility-images').getPublicUrl(storageKey);
 
-    imageEntries.push({
+    // Insert into files table first
+    const { data: fileRecord, error: fileError } = await supabase
+      .from('files')
+      .insert({
+        uploaded_by: uploaderId,
+        storage_key: storageKey,
+        url: urlData.publicUrl,
+        original_name: imageFile.name,
+        file_type: 'image' as FileType,
+        mime_type: imageFile.type,
+        file_size: imageFile.size,
+        metadata: {},
+      })
+      .select('id')
+      .single();
+
+    if (fileError) {
+      throw new Error(`Failed to create file record: ${fileError.message}`);
+    }
+
+    // Collect facility_files junction entries
+    facilityFileEntries.push({
       facility_id: facilityId,
-      storage_key: storageKey,
-      url: urlData.publicUrl,
-      file_size: imageFile.size,
-      mime_type: imageFile.type,
+      file_id: fileRecord.id,
       display_order: imageIndex,
       is_primary: imageIndex === 0,
     });
   }
 
-  // Insert facility_images records
-  if (imageEntries.length > 0) {
-    const { error: imagesError } = await supabase.from('facility_images').insert(imageEntries);
+  // Insert facility_files junction records
+  if (facilityFileEntries.length > 0) {
+    const { error: facilityFilesError } = await supabase
+      .from('facility_files')
+      .insert(facilityFileEntries);
 
-    if (imagesError) {
-      throw new Error(`Failed to create image records: ${imagesError.message}`);
+    if (facilityFilesError) {
+      throw new Error(`Failed to create facility file records: ${facilityFilesError.message}`);
     }
   }
 
-  return imageEntries;
+  return facilityFileEntries;
 }
 
 async function rollbackFacilities(
@@ -250,24 +272,41 @@ async function rollbackFacilities(
         .eq('facility_id', facility.id);
       if (contactsError) rollbackErrors.push(`facility_contacts: ${contactsError.message}`);
 
-      // Delete facility_images
-      const { data: facilityImages } = await supabase
-        .from('facility_images')
-        .select('storage_key')
+      // Delete facility_files and associated files
+      const { data: facilityFiles } = await supabase
+        .from('facility_files')
+        .select('id, file_id, files(storage_key)')
         .eq('facility_id', facility.id);
 
-      if (facilityImages && facilityImages.length > 0) {
-        const storageKeys = facilityImages.map((img: any) => img.storage_key);
-        const { error: storageError } = await supabase.storage
-          .from('facility-images')
-          .remove(storageKeys);
-        if (storageError) rollbackErrors.push(`storage: ${storageError.message}`);
+      if (facilityFiles && facilityFiles.length > 0) {
+        // Delete from storage
+        const storageKeys = facilityFiles
+          .map((ff: any) => ff.files?.storage_key)
+          .filter(Boolean);
+        if (storageKeys.length > 0) {
+          const { error: storageError } = await supabase.storage
+            .from('facility-images')
+            .remove(storageKeys);
+          if (storageError) rollbackErrors.push(`storage: ${storageError.message}`);
+        }
 
-        const { error: imagesDeleteError } = await supabase
-          .from('facility_images')
+        // Delete facility_files junction records
+        const { error: facilityFilesError } = await supabase
+          .from('facility_files')
           .delete()
           .eq('facility_id', facility.id);
-        if (imagesDeleteError) rollbackErrors.push(`facility_images: ${imagesDeleteError.message}`);
+        if (facilityFilesError)
+          rollbackErrors.push(`facility_files: ${facilityFilesError.message}`);
+
+        // Delete files records
+        const fileIds = facilityFiles.map((ff: any) => ff.file_id);
+        if (fileIds.length > 0) {
+          const { error: filesError } = await supabase
+            .from('files')
+            .delete()
+            .in('id', fileIds);
+          if (filesError) rollbackErrors.push(`files: ${filesError.message}`);
+        }
       }
     } catch (error: any) {
       rollbackErrors.push(
@@ -420,7 +459,14 @@ export async function POST(request: NextRequest) {
         // Upload images
         const imageCount = (facilityData as any).imageCount || facilityData.images?.length || 0;
         if (imageCount > 0) {
-          await uploadFacilityImages(supabase, facility.id, facilityIndex, imageCount, formData);
+          await uploadFacilityImages(
+            supabase,
+            facility.id,
+            facilityIndex,
+            imageCount,
+            formData,
+            user.id
+          );
         }
 
         // Create facility_sports links

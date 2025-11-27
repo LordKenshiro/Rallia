@@ -105,9 +105,10 @@ function OrganizationFormContent() {
         if (isUpdateMode) {
           // Update mode: separate existing and new images
           const updateFacility = facility as UpdateFacility;
-          const existingImageIds = updateFacility.images
+          // Get facility_files junction table IDs of images to keep
+          const existingFacilityFileIds = updateFacility.images
             .filter((img): img is ExistingImage => isExistingImage(img))
-            .map(img => img.id);
+            .map(img => img.id); // This is the facility_files.id
 
           const newImageCount = updateFacility.images.filter((img): img is NewImage =>
             isNewImage(img)
@@ -117,7 +118,7 @@ function OrganizationFormContent() {
             ...updateFacility,
             images: [], // Remove image objects
             imageCount: newImageCount,
-            existingImageIds: existingImageIds,
+            existingFacilityFileIds: existingFacilityFileIds,
           };
         } else {
           // Create mode: simple image count
