@@ -71,7 +71,7 @@ export default async function AdminOrganizationsPage({
           </Link>
         </div>
 
-        <Card className="grow overflow-hidden flex flex-col">
+        <Card className="overflow-hidden flex flex-col">
           {result.data.length === 0 ? (
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Building2 className="h-12 w-12 text-muted-foreground/50 mb-4" />
