@@ -13,7 +13,13 @@ import { useMemo, useState } from 'react';
 
 type AuthState = 'initial' | 'email-sent' | 'loading' | 'error';
 
-export function AdminSignInForm({ initialError }: { initialError?: string }) {
+export function AdminSignInForm({
+  initialError,
+  initialEmail,
+}: {
+  initialError?: string;
+  initialEmail?: string;
+}) {
   const t = useTranslations('signIn');
   const tErrors = useTranslations('admin.errors');
   const router = useRouter();
@@ -26,7 +32,7 @@ export function AdminSignInForm({ initialError }: { initialError?: string }) {
 
   const token = searchParams.get('token');
 
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(initialEmail ?? '');
   const [otp, setOtp] = useState('');
   const [authState, setAuthState] = useState<AuthState>('initial');
   const [errorMessage, setErrorMessage] = useState<string | null>(

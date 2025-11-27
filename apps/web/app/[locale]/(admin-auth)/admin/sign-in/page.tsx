@@ -33,6 +33,20 @@ export default async function AdminSignInPage({
     redirect(`/admin/sign-in/post-auth?token=${token ? encodeURIComponent(token) : ''}`);
   }
 
+  // Look up invitation email from token
+  let invitationEmail: string | undefined;
+  if (token) {
+    const { data: invitation } = await supabase
+      .from('invitations')
+      .select('email')
+      .eq('token', token)
+      .single();
+
+    if (invitation?.email) {
+      invitationEmail = invitation.email;
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="text-center space-y-2">
@@ -41,7 +55,7 @@ export default async function AdminSignInPage({
         <p className="text-sm text-muted-foreground">{t('restricted')}</p>
       </div>
 
-      <AdminSignInForm initialError={params.error} />
+      <AdminSignInForm initialError={params.error} initialEmail={invitationEmail} />
     </div>
   );
 }
