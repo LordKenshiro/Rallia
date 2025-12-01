@@ -52,6 +52,7 @@ function OrganizationFormContent() {
     setShowSuccessModal,
     setCreatedOrganization,
     resetForm,
+    originalFacilityIds,
   } = useOrganizationFormContext();
 
   const t = useTranslations(
@@ -114,8 +115,13 @@ function OrganizationFormContent() {
             isNewImage(img)
           ).length;
 
+          // Only include id if this is an existing facility from the database
+          // New facilities added during edit have client-generated UUIDs that don't exist in DB
+          const isExistingFacility = originalFacilityIds.has(facility.id);
+
           return {
             ...updateFacility,
+            id: isExistingFacility ? updateFacility.id : undefined, // Don't send id for new facilities
             images: [], // Remove image objects
             imageCount: newImageCount,
             existingFacilityFileIds: existingFacilityFileIds,
@@ -125,6 +131,7 @@ function OrganizationFormContent() {
           const createFacility = facility as CreateFacility;
           return {
             ...createFacility,
+            id: undefined, // Never send id in create mode
             images: createFacility.images.map(() => ({})), // Keep structure but remove file references
             imageCount: createFacility.images.length,
           };

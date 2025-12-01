@@ -50,6 +50,14 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
 
   const [orgSlug, setOrgSlug] = useState(organizationSlug || '');
 
+  // Track original facility IDs from database (to distinguish from client-generated ones)
+  const [originalFacilityIds] = useState<Set<string>>(() => {
+    if (isUpdateMode && initialData) {
+      return new Set(initialData.facilities.map((f: any) => f.id).filter(Boolean));
+    }
+    return new Set();
+  });
+
   // Organization form data
   const [orgData, setOrgData] = useState<OrganizationData>(() => {
     if (isUpdateMode && initialData) {
@@ -692,6 +700,7 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
     orgSlug,
     orgData,
     facilities,
+    originalFacilityIds,
 
     // State setters
     setIsSubmitting,
