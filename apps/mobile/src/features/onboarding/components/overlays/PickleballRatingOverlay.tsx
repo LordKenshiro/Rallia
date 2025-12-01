@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
+import DatabaseService, { OnboardingService, SportService } from '@rallia/shared-services';
+import type { OnboardingRating } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '../../../../utils/haptics';
 
@@ -17,9 +19,10 @@ interface PickleballRatingOverlayProps {
 
 interface Rating {
   id: string;
-  level: string;
-  dupr: string;
+  score_value: number;
+  display_label: string;
   description: string;
+  skill_level: 'beginner' | 'intermediate' | 'advanced' | 'professional';
   isHighlighted?: boolean;
 }
 
@@ -32,10 +35,50 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
   totalSteps = 8,
 }) => {
   const [selectedRating, setSelectedRating] = useState<string | null>(null);
+  const [ratings, setRatings] = useState<Rating[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
+
+  // Load ratings from database when overlay becomes visible
+  useEffect(() => {
+    const loadRatings = async () => {
+      if (!visible) return;
+      
+      setIsLoading(true);
+      try {
+        const { data, error } = await DatabaseService.RatingScore.getRatingScoresBySport('pickleball', 'dupr');
+        
+        if (error || !data) {
+          console.error('Error loading pickleball ratings:', error);
+          Alert.alert('Error', 'Failed to load ratings. Please try again.');
+          return;
+        }
+        
+        // Transform database data to match UI expectations
+        const transformedRatings: Rating[] = data.map((rating) => ({
+          id: rating.id,
+          score_value: rating.score_value,
+          display_label: rating.display_label,
+          description: rating.description,
+          skill_level: rating.skill_level,
+          // Highlight DUPR 4.5 (advanced level)
+          isHighlighted: rating.score_value === 4.5,
+        }));
+        
+        setRatings(transformedRatings);
+      } catch (error) {
+        console.error('Unexpected error loading pickleball ratings:', error);
+        Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadRatings();
+  }, [visible]);
 
   // Trigger animations when overlay becomes visible
   useEffect(() => {
@@ -58,68 +101,71 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
     }
   }, [visible, fadeAnim, slideAnim]);
 
-  // Helper function to get icon based on rating level
-  const getRatingIcon = (level: string): keyof typeof Ionicons.glyphMap => {
-    if (level.includes('Beginner')) return 'star-outline';
-    if (level.includes('Intermediate')) return 'star-half';
-    if (level.includes('Advanced')) return 'star';
-    return 'trophy';
+  // Helper function to get icon based on skill level
+  const getRatingIcon = (skillLevel: string): keyof typeof Ionicons.glyphMap => {
+    if (skillLevel === 'beginner') return 'star-outline';
+    if (skillLevel === 'intermediate') return 'star-half';
+    if (skillLevel === 'advanced') return 'star';
+    return 'trophy'; // professional
   };
 
-  const ratings: Rating[] = [
-    {
-      id: 'beginner',
-      level: 'Beginner',
-      dupr: 'DUPR 2.0',
-      description:
-        'Just getting started. Short rallies (1-2 shots). Learning basic scoring knowledge.',
-      isHighlighted: false,
-    },
-    {
-      id: 'lower-intermediate',
-      level: 'Lower Intermediate',
-      dupr: 'DUPR 3.0',
-      description: 'Can sustain short rallies and serves. Beginning to dink. Learning positioning.',
-      isHighlighted: false,
-    },
-    {
-      id: 'intermediate',
-      level: 'Intermediate',
-      dupr: 'DUPR 3.5',
-      description: 'Developing third-shot drop. Can dink moderately. Avoids backhands.',
-      isHighlighted: false,
-    },
-    {
-      id: 'upper-intermediate',
-      level: 'Upper Intermediate',
-      dupr: 'DUPR 4.0',
-      description:
-        'Plays longer rallies with patience. Aware of positioning. Uses varied shots. Mixing power and soft shots.',
-      isHighlighted: false,
-    },
-    {
-      id: 'advanced',
-      level: 'Advanced',
-      dupr: 'DUPR 4.5',
-      description:
-        'Strong consistency and power. Varied shots. Faster speed. Comfortable crashing near the kitchen.',
-      isHighlighted: true,
-    },
-    {
-      id: 'elite',
-      level: 'Elite',
-      dupr: 'DUPR 5.0+',
-      description:
-        'Highest level of shot types. Rarely makes unforced errors. Plays competitively.',
-      isHighlighted: false,
-    },
-  ];
-
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (selectedRating && onContinue) {
       mediumHaptic();
-      console.log('Selected pickleball rating:', selectedRating);
-      onContinue(selectedRating);
+      
+      try {
+        // Get pickleball sport ID
+        const { data: pickleballSport, error: sportError } = await SportService.getSportByName('pickleball');
+        
+        if (sportError || !pickleballSport) {
+          console.error('Error fetching pickleball sport:', sportError);
+          Alert.alert(
+            'Error',
+            'Failed to save your rating. Please try again.',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+        
+        // Find the selected rating data
+        const selectedRatingData = ratings.find(r => r.id === selectedRating);
+        
+        if (!selectedRatingData) {
+          Alert.alert('Error', 'Invalid rating selected');
+          return;
+        }
+        
+        // Save rating to database
+        const ratingData: OnboardingRating = {
+          sport_id: pickleballSport.id,
+          sport_name: 'pickleball',
+          rating_type: 'dupr',
+          score_value: selectedRatingData.score_value,
+          display_label: selectedRatingData.display_label,
+        };
+        
+        const { error } = await OnboardingService.saveRatings([ratingData]);
+        
+        if (error) {
+          console.error('Error saving pickleball rating:', error);
+          Alert.alert(
+            'Error',
+            'Failed to save your rating. Please try again.',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+        
+        console.log('Pickleball rating saved to database:', ratingData);
+        onContinue(selectedRating);
+      } catch (error) {
+        console.error('Unexpected error saving pickleball rating:', error);
+        Alert.alert(
+          'Error',
+          'An unexpected error occurred. Please try again.',
+          [{ text: 'OK' }]
+        );
+      }
     }
   };
 
@@ -154,59 +200,66 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
 
         {/* Rating Options */}
         <ScrollView style={styles.ratingList} showsVerticalScrollIndicator={false}>
-          <View style={styles.ratingGrid}>
-            {ratings.map(rating => (
-              <TouchableOpacity
-                key={rating.id}
-                style={[
-                  styles.ratingCard,
-                  rating.isHighlighted && styles.ratingCardHighlighted,
-                  selectedRating === rating.id && styles.ratingCardSelected,
-                ]}
-                onPress={() => {
-                  selectionHaptic();
-                  setSelectedRating(rating.id);
-                }}
-                activeOpacity={0.8}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                  <Ionicons
-                    name={getRatingIcon(rating.level)}
-                    size={20}
-                    color={selectedRating === rating.id ? '#fff' : COLORS.primary}
-                    style={{ marginRight: 8 }}
-                  />
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={COLORS.primary} />
+              <Text style={styles.loadingText}>Loading ratings...</Text>
+            </View>
+          ) : (
+            <View style={styles.ratingGrid}>
+              {ratings.map(rating => (
+                <TouchableOpacity
+                  key={rating.id}
+                  style={[
+                    styles.ratingCard,
+                    rating.isHighlighted && styles.ratingCardHighlighted,
+                    selectedRating === rating.id && styles.ratingCardSelected,
+                  ]}
+                  onPress={() => {
+                    selectionHaptic();
+                    setSelectedRating(rating.id);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                    <Ionicons
+                      name={getRatingIcon(rating.skill_level)}
+                      size={20}
+                      color={selectedRating === rating.id ? '#fff' : COLORS.primary}
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text
+                      style={[
+                        styles.ratingLevel,
+                        rating.isHighlighted && styles.ratingLevelHighlighted,
+                        selectedRating === rating.id && styles.ratingLevelSelected,
+                      ]}
+                    >
+                      {rating.skill_level.charAt(0).toUpperCase() + rating.skill_level.slice(1)}
+                    </Text>
+                  </View>
                   <Text
                     style={[
-                      styles.ratingLevel,
-                      rating.isHighlighted && styles.ratingLevelHighlighted,
-                      selectedRating === rating.id && styles.ratingLevelSelected,
+                      styles.ratingDupr,
+                      rating.isHighlighted && styles.ratingDuprHighlighted,
+                      selectedRating === rating.id && styles.ratingDuprSelected,
                     ]}
                   >
-                    {rating.level}
+                    {rating.display_label}
                   </Text>
-                </View>
-                <Text
-                  style={[
-                    styles.ratingDupr,
-                    rating.isHighlighted && styles.ratingDuprHighlighted,
-                    selectedRating === rating.id && styles.ratingDuprSelected,
-                  ]}
-                >
-                  {rating.dupr}
-                </Text>
-                <Text
-                  style={[
-                    styles.ratingDescription,
-                    rating.isHighlighted && styles.ratingDescriptionHighlighted,
-                    selectedRating === rating.id && styles.ratingDescriptionSelected,
-                  ]}
-                >
-                  {rating.description}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+                  <Text
+                    style={[
+                      styles.ratingDescription,
+                      rating.isHighlighted && styles.ratingDescriptionHighlighted,
+                      selectedRating === rating.id && styles.ratingDescriptionSelected,
+                    ]}
+                  >
+                    {rating.description}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </ScrollView>
 
         {/* Continue Button */}
@@ -360,6 +413,17 @@ const styles = StyleSheet.create({
   },
   continueButtonTextDisabled: {
     color: '#999',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666',
   },
 });
 

@@ -1,15 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Animated, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
 import ProgressIndicator from '../ProgressIndicator';
 import { lightHaptic, mediumHaptic, successHaptic } from '../../../../utils/haptics';
+// TEMPORARY: verifyCode commented out during testing bypass
+import { sendVerificationCode, /* verifyCode, */ createAuthUser, ProfileService } from '@rallia/shared-services';
 
 interface AuthOverlayProps {
   visible: boolean;
   onClose: () => void;
   onAuthSuccess?: () => void;
+  onReturningUser?: () => void; // New callback for users with completed onboarding
   onShowCalendarOverlay?: () => void;
   currentStep?: number;
   totalSteps?: number;
@@ -19,6 +22,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
   visible,
   onClose,
   onAuthSuccess,
+  onReturningUser,
   onShowCalendarOverlay: _onShowCalendarOverlay,
   currentStep = 1,
   totalSteps = 8,
@@ -26,6 +30,8 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
   const [email, setEmail] = useState('');
   const [step, setStep] = useState<'email' | 'code'>('email');
   const [code, setCode] = useState(['', '', '', '', '', '']);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -80,27 +86,135 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
     // TODO: Implement Facebook authentication
   };
 
-  const handleEmailContinue = () => {
+  const handleEmailContinue = async () => {
     mediumHaptic();
-    console.log('Continue with email:', email);
-    // TODO: Send verification code to email
-    setStep('code');
+    setIsLoading(true);
+    setErrorMessage('');
+
+    try {
+      const result = await sendVerificationCode(email);
+      
+      if (result.success) {
+        console.log('Verification code sent to:', email);
+        setStep('code');
+      } else {
+        setErrorMessage(result.error || 'Failed to send verification code');
+        Alert.alert('Error', result.error || 'Failed to send verification code');
+      }
+    } catch (error) {
+      console.error('Error sending verification code:', error);
+      setErrorMessage('An unexpected error occurred');
+      Alert.alert('Error', 'An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleResendCode = () => {
+  const handleResendCode = async () => {
     lightHaptic();
-    console.log('Resend code to:', email);
-    // TODO: Resend verification code
+    setIsLoading(true);
+    setErrorMessage('');
+
+    try {
+      const result = await sendVerificationCode(email);
+      
+      if (result.success) {
+        console.log('Verification code resent to:', email);
+        Alert.alert('Success', 'Verification code sent!');
+      } else {
+        setErrorMessage(result.error || 'Failed to resend verification code');
+        Alert.alert('Error', result.error || 'Failed to resend verification code');
+      }
+    } catch (error) {
+      console.error('Error resending verification code:', error);
+      setErrorMessage('An unexpected error occurred');
+      Alert.alert('Error', 'An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleVerifyCode = () => {
+  const handleVerifyCode = async () => {
     const fullCode = code.join('');
-    console.log('Verify code:', fullCode);
-    // TODO: Verify code and sign in with Supabase
-    // After successful verification, trigger the next step
-    successHaptic();
-    if (onAuthSuccess) {
-      onAuthSuccess();
+    
+    if (fullCode.length !== 6) {
+      Alert.alert('Error', 'Please enter all 6 digits');
+      return;
+    }
+
+    mediumHaptic();
+    setIsLoading(true);
+    setErrorMessage('');
+
+    try {
+      // ========== TEMPORARY: BYPASS CODE VERIFICATION FOR TESTING ==========
+      // TODO: Re-enable code verification after testing is complete
+      
+      // COMMENTED OUT: Original verification logic
+      // // Verify the code
+      // const verifyResult = await verifyCode(email, fullCode);
+      // 
+      // if (!verifyResult.success) {
+      //   setErrorMessage(verifyResult.error || 'Invalid verification code');
+      //   Alert.alert('Error', verifyResult.error || 'Invalid verification code');
+      //   setIsLoading(false);
+      //   return;
+      // }
+
+      console.log('⚠️ TEMPORARY: Skipping code verification for testing');
+      
+      // Create auth user with verified email (no verification required for now)
+      const authResult = await createAuthUser(email);
+      
+      if (!authResult.success) {
+        setErrorMessage(authResult.error || 'Failed to create account');
+        Alert.alert('Error', authResult.error || 'Failed to create account');
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('User created (verification bypassed):', authResult.userId);
+      
+      // Check if this is a returning user (profile exists with completed onboarding)
+      const { data: profile, error: profileError } = await ProfileService.getProfile(authResult.userId!);
+      
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+        // If there's an error fetching profile, treat as new user to be safe
+        successHaptic();
+        if (onAuthSuccess) {
+          onAuthSuccess();
+        }
+        return;
+      }
+
+      // Check if onboarding is already completed
+      if (profile && profile.onboarding_completed) {
+        console.log('🔄 Returning user detected - onboarding already completed');
+        successHaptic();
+        
+        // Close auth overlay and navigate directly to app (skip onboarding)
+        if (onReturningUser) {
+          onReturningUser();
+        } else {
+          // Fallback: just close the overlay
+          onClose();
+        }
+      } else {
+        console.log('✨ New user or incomplete onboarding - proceeding with onboarding flow');
+        successHaptic();
+        
+        // Proceed to next step (Personal Information)
+        if (onAuthSuccess) {
+          onAuthSuccess();
+        }
+      }
+    } catch (error) {
+      console.error('Error creating user:', error);
+      setErrorMessage('An unexpected error occurred');
+      Alert.alert('Error', 'An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -191,21 +305,30 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
               autoCorrect={false}
             />
 
+            {/* Error Message */}
+            {errorMessage ? (
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            ) : null}
+
             {/* Continue Button */}
             <TouchableOpacity
-              style={[styles.continueButton, !isEmailValid && styles.continueButtonDisabled]}
-              onPress={isEmailValid ? handleEmailContinue : undefined}
-              activeOpacity={isEmailValid ? 0.8 : 1}
-              disabled={!isEmailValid}
+              style={[styles.continueButton, (!isEmailValid || isLoading) && styles.continueButtonDisabled]}
+              onPress={(isEmailValid && !isLoading) ? handleEmailContinue : undefined}
+              activeOpacity={(isEmailValid && !isLoading) ? 0.8 : 1}
+              disabled={!isEmailValid || isLoading}
             >
-              <Text
-                style={[
-                  styles.continueButtonText,
-                  !isEmailValid && styles.continueButtonTextDisabled,
-                ]}
-              >
-                Continue
-              </Text>
+              {isLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text
+                  style={[
+                    styles.continueButtonText,
+                    (!isEmailValid || isLoading) && styles.continueButtonTextDisabled,
+                  ]}
+                >
+                  Continue
+                </Text>
+              )}
             </TouchableOpacity>
 
             {/* Terms Text */}
@@ -249,17 +372,28 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
               style={styles.resendButton}
               onPress={handleResendCode}
               activeOpacity={0.8}
+              disabled={isLoading}
             >
               <Text style={styles.resendButtonText}>Resend Code</Text>
             </TouchableOpacity>
 
+            {/* Error Message */}
+            {errorMessage ? (
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            ) : null}
+
             {/* Continue Button */}
             <TouchableOpacity
-              style={styles.continueButton}
+              style={[styles.continueButton, isLoading && styles.continueButtonDisabled]}
               onPress={handleVerifyCode}
               activeOpacity={0.8}
+              disabled={isLoading}
             >
-              <Text style={styles.continueButtonText}>Continue</Text>
+              {isLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.continueButtonText}>Continue</Text>
+              )}
             </TouchableOpacity>
           </>
         )}
@@ -408,6 +542,13 @@ const styles = StyleSheet.create({
     color: COLORS.accent,
     fontSize: 16,
     fontWeight: '600',
+  },
+  errorText: {
+    color: COLORS.accent,
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 10,
+    marginTop: -5,
   },
 });
 

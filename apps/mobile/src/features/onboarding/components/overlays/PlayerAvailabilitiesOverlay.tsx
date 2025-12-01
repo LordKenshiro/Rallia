@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Alert } from 'react-native';
 import { Overlay } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
+import { OnboardingService } from '@rallia/shared-services';
+import type { DayOfWeek as DBDayOfWeek, TimePeriod, OnboardingAvailability } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '../../../../utils/haptics';
 
@@ -10,6 +12,7 @@ interface PlayerAvailabilitiesOverlayProps {
   onClose: () => void;
   onBack?: () => void;
   onContinue?: (availabilities: WeeklyAvailability) => void;
+  selectedSportIds: string[]; // Sport IDs to create availability entries for each sport
   currentStep?: number;
   totalSteps?: number;
 }
@@ -30,6 +33,7 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
   onClose,
   onBack,
   onContinue,
+  selectedSportIds,
   currentStep = 1,
   totalSteps = 8,
 }) => {
@@ -83,11 +87,82 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
     }));
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (onContinue) {
       mediumHaptic();
-      console.log('Player availabilities:', availabilities);
-      onContinue(availabilities);
+      
+      try {
+        // Map UI data to database format
+        const dayMap: Record<DayOfWeek, DBDayOfWeek> = {
+          'Mon': 'monday',
+          'Tue': 'tuesday',
+          'Wed': 'wednesday',
+          'Thu': 'thursday',
+          'Fri': 'friday',
+          'Sat': 'saturday',
+          'Sun': 'sunday',
+        };
+        
+        const timeSlotMap: Record<TimeSlot, TimePeriod> = {
+          'AM': 'morning',
+          'PM': 'afternoon',
+          'EVE': 'evening',
+        };
+        
+        // Convert availability grid to database format
+        // Create entries for EACH selected sport
+        const availabilityData: OnboardingAvailability[] = [];
+        
+        days.forEach((day) => {
+          timeSlots.forEach((slot) => {
+            if (availabilities[day][slot]) {
+              // Create one entry per selected sport
+              selectedSportIds.forEach((sportId) => {
+                availabilityData.push({
+                  sport_id: sportId,
+                  day_of_week: dayMap[day],
+                  time_period: timeSlotMap[slot],
+                  is_active: true,
+                });
+              });
+            }
+          });
+        });
+        
+        // Save availability to database
+        const { error } = await OnboardingService.saveAvailability(availabilityData);
+        
+        if (error) {
+          console.error('Error saving availability:', error);
+          Alert.alert(
+            'Error',
+            'Failed to save your availability. Please try again.',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+        
+        console.log('Player availabilities saved to database:', availabilityData);
+        
+        // Mark onboarding as completed
+        const { error: completeError } = await OnboardingService.completeOnboarding();
+        
+        if (completeError) {
+          console.error('Error completing onboarding:', completeError);
+          // Don't block the flow if this fails - just log it
+        } else {
+          console.log('✅ Onboarding marked as completed in profile');
+        }
+        
+        onContinue(availabilities);
+      } catch (error) {
+        console.error('Unexpected error saving availability:', error);
+        Alert.alert(
+          'Error',
+          'An unexpected error occurred. Please try again.',
+          [{ text: 'OK' }]
+        );
+      }
     }
   };
 

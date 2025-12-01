@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   Animated,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -97,7 +98,14 @@ const Overlay: React.FC<OverlayProps> = ({
               )}
 
               {/* Content */}
-              <View style={styles.content}>{children}</View>
+              <ScrollView 
+                style={styles.scrollView}
+                contentContainerStyle={styles.content}
+                showsVerticalScrollIndicator={true}
+                bounces={true}
+              >
+                {children}
+              </ScrollView>
             </View>
           </TouchableWithoutFeedback>
         </View>
@@ -158,8 +166,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#333',
     borderRadius: 2,
   },
+  scrollView: {
+    flex: 1,
+  },
   content: {
     paddingHorizontal: 20,
+    flexGrow: 1,
   },
 });
 

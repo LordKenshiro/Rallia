@@ -29,8 +29,11 @@ export const useOnboardingFlow = () => {
   const [showPlayerAvailabilities, setShowPlayerAvailabilities] = useState(false);
   const [showAuthSuccess, setShowAuthSuccess] = useState(false);
 
-  // Track which sports were selected
+  // Track which sports were selected (names for flow control)
   const [selectedSports, setSelectedSports] = useState<string[]>([]);
+  
+  // Track sport IDs for database operations
+  const [selectedSportIds, setSelectedSportIds] = useState<string[]>([]);
 
   // Track the last active overlay for resume functionality
   const [lastActiveOverlay, setLastActiveOverlay] = useState<OnboardingStep>(null);
@@ -271,9 +274,13 @@ export const useOnboardingFlow = () => {
     }, ANIMATION_DELAYS.OVERLAY_STAGGER);
   };
 
-  const handleSportSelectionContinue = (sports: string[]) => {
+  const handleSportSelectionContinue = (sports: string[], sportIds?: string[]) => {
     console.log('Sport selection completed:', sports);
     setSelectedSports(sports);
+    if (sportIds) {
+      setSelectedSportIds(sportIds);
+      console.log('Sport IDs for availability:', sportIds);
+    }
     setShowSportSelection(false);
 
     // Determine which rating overlay to show based on selected sports
@@ -426,6 +433,7 @@ export const useOnboardingFlow = () => {
     showPlayerAvailabilities,
     showAuthSuccess,
     selectedSports,
+    selectedSportIds,
     currentStep,
     totalSteps,
 

@@ -4,7 +4,10 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "peerDependencies": {
     "react": "*",
@@ -15,6 +18,11 @@
     "@rallia/shared-types": "*"
   },
   "devDependencies": {
+    "@babel/preset-react": "^7.28.5",
+    "@babel/preset-typescript": "^7.28.5",
+    "metro-react-native-babel-preset": "^0.77.0",
+    "react-native-web": "^0.21.2",
+    "react-test-renderer": "^19.1.0",
     "typescript": "^5.9.2"
   }
 }

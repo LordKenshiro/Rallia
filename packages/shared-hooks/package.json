@@ -4,6 +4,9 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "type-check": "tsc --noEmit"
   },
   "peerDependencies": {
