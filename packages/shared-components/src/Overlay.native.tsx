@@ -98,14 +98,18 @@ const Overlay: React.FC<OverlayProps> = ({
               )}
 
               {/* Content */}
-              <ScrollView 
-                style={styles.scrollView}
-                contentContainerStyle={styles.content}
-                showsVerticalScrollIndicator={true}
-                bounces={true}
-              >
-                {children}
-              </ScrollView>
+              {type === 'center' ? (
+                <View style={styles.centerContent}>{children}</View>
+              ) : (
+                <ScrollView
+                  style={styles.scrollView}
+                  contentContainerStyle={styles.content}
+                  showsVerticalScrollIndicator={true}
+                  bounces={true}
+                >
+                  {children}
+                </ScrollView>
+              )}
             </View>
           </TouchableWithoutFeedback>
         </View>
@@ -172,6 +176,10 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 20,
     flexGrow: 1,
+  },
+  centerContent: {
+    // For center-type overlays, use a simple View instead of ScrollView
+    // This prevents the flex: 1 collapse issue on iOS
   },
 });
 

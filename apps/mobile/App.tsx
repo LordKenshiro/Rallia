@@ -1,7 +1,7 @@
 import { NavigationContainer } from '@react-navigation/native';
 import AppNavigator from './src/navigation/AppNavigator';
 import { ErrorBoundary } from '@rallia/shared-components';
-import { Logger } from '@rallia/shared-services';
+import { Logger } from './src/services/logger';
 
 // IMPORTANT: Initialize Supabase with AsyncStorage before any other code runs
 import './src/lib/supabase';

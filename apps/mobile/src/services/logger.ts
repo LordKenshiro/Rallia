@@ -1,20 +1,20 @@
 /**
  * Logging Service
- * 
+ *
  * Centralized logging service for the application
  * Provides environment-aware logging with support for error tracking services
- * 
+ *
  * Features:
  * - Environment-based logging (dev vs production)
  * - Multiple log levels (debug, info, warn, error)
  * - Integration with error tracking services (Sentry)
  * - Structured logging with context
  * - Performance tracking
- * 
+ *
  * @example
  * ```typescript
- * import { Logger } from '@rallia/shared-services';
- * 
+ * import { Logger } from '../../services/logger';
+ *
  * Logger.info('User signed in', { userId: '123' });
  * Logger.error('Failed to load profile', error, { userId: '123' });
  * Logger.warn('Slow network detected', { latency: 5000 });
@@ -185,7 +185,7 @@ class LoggerService {
       // TODO: Integrate with Sentry or other error tracking service
       // Example Sentry integration:
       // import * as Sentry from '@sentry/react-native';
-      // 
+      //
       // if (entry.error) {
       //   Sentry.captureException(entry.error, {
       //     level: entry.level as Sentry.SeverityLevel,
