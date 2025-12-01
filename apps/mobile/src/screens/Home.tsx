@@ -1,18 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
+  Animated,
 } from 'react-native';
 import {
   AppHeader,
   MatchCard,
   LocationPermissionOverlay,
   CalendarAccessOverlay,
+  Text,
+  Heading,
+  Button,
+  Spinner,
 } from '@rallia/shared-components';
 import {
   AuthOverlay,
@@ -26,27 +29,57 @@ import {
 } from '../features/onboarding/components';
 import RalliaLogo from '../../assets/images/light mode logo.svg';
 import { useAuth, useOnboardingFlow } from '../hooks';
+import { useProfile } from '@rallia/shared-hooks';
 import { getMockMatches } from '../features/matches/data/mockMatches';
-import { COLORS } from '../constants';
 import { Match } from '../types';
 
 const Home = () => {
-  // Use custom hooks for auth and onboarding flow
-  const { session, loading, signOut } = useAuth();
+  // Use custom hooks for auth, profile, and onboarding flow
+  const { session, loading } = useAuth();
+  const { profile } = useProfile();
   const onboarding = useOnboardingFlow();
 
   const [matches, setMatches] = useState<Match[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
+  const welcomeOpacity = useState(new Animated.Value(1))[0];
+
+  // Extract display name from profile
+  const displayName = profile?.display_name || null;
 
   // Show location permission overlay on first load
   useEffect(() => {
     onboarding.showLocationPermissionOnMount();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Fetch matches from Supabase
   useEffect(() => {
     fetchMatches();
   }, []);
+
+  // Auto-dismiss welcome message when user logs in
+  useEffect(() => {
+    if (session?.user && displayName) {
+      // Auto-dismiss welcome message after 2 minutes (120000ms)
+      const dismissTimer = setTimeout(() => {
+        Animated.timing(welcomeOpacity, {
+          toValue: 0,
+          duration: 500,
+          useNativeDriver: true,
+        }).start(() => {
+          setShowWelcome(false);
+        });
+      }, 120000);
+
+      return () => clearTimeout(dismissTimer);
+    } else {
+      // Reset states when user logs out
+      setShowWelcome(true);
+      welcomeOpacity.setValue(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, displayName]);
 
   const fetchMatches = async () => {
     setLoadingMatches(true);
@@ -67,16 +100,12 @@ const Home = () => {
     }
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-  };
-
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <AppHeader backgroundColor="#C8F2EF" Logo={RalliaLogo} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#00B8A9" />
+          <Spinner size="lg" />
         </View>
       </SafeAreaView>
     );
@@ -89,34 +118,40 @@ const Home = () => {
       <View style={styles.contentWrapper}>
         {!session && (
           <View style={styles.matchesSection}>
-            <Text style={styles.sectionTitle}>🎾 Your Matches</Text>
-            <Text style={styles.sectionSubtitle}>
-              You must sign in to create and{'\n'}access your matches
+            <Heading level={3}>🎾 Your Matches</Heading>
+            <Text size="sm" color="#666" style={styles.sectionSubtitle}>
+              You must sign in to create and access your matches
             </Text>
-            <TouchableOpacity style={styles.signInButton} onPress={onboarding.startOnboarding}>
-              <Text style={styles.signInButtonText}>Sign In</Text>
-            </TouchableOpacity>
+            <Button 
+              variant="primary" 
+              onPress={onboarding.startOnboarding}
+              style={styles.signInButton}
+            >
+              Sign In
+            </Button>
           </View>
         )}
 
-        {session && (
-          <View style={styles.welcomeSection}>
-            <Text style={styles.welcomeText}>Welcome back! 👋</Text>
-            <Text style={styles.userEmail}>{session.user.email}</Text>
-          </View>
+        {session && showWelcome && (
+          <Animated.View style={[styles.welcomeSection, { opacity: welcomeOpacity }]}>
+            <Text size="lg" weight="bold" color="#333" style={styles.welcomeText}>Welcome back! 👋</Text>
+            <Text size="sm" color="#666">
+              {displayName || session.user.email?.split('@')[0] || 'User'}
+            </Text>
+          </Animated.View>
         )}
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.nearbyTitle}>🔍 Soon & Nearby</Text>
+          <Heading level={3}>🔍 Soon & Nearby</Heading>
           <TouchableOpacity>
-            <Text style={styles.viewAll}>View All &gt;</Text>
+            <Text size="sm" color="#666">View All &gt;</Text>
           </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {loadingMatches ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#00B8A9" />
+              <Spinner size="lg" />
             </View>
           ) : matches.length > 0 ? (
             matches.map(match => (
@@ -128,7 +163,7 @@ const Home = () => {
             ))
           ) : (
             <View style={styles.placeholderContainer}>
-              <Text style={styles.placeholderText}>No matches available</Text>
+              <Text size="base" color="#999" style={styles.placeholderText}>No matches available</Text>
             </View>
           )}
         </ScrollView>
@@ -139,6 +174,11 @@ const Home = () => {
         visible={onboarding.showAuthOverlay}
         onClose={onboarding.closeAuthOverlay}
         onAuthSuccess={onboarding.handleAuthSuccess}
+        onReturningUser={() => {
+          console.log('Returning user - skipping onboarding');
+          onboarding.closeAuthOverlay();
+          // Returning users go directly to the app (overlay closes)
+        }}
         currentStep={onboarding.currentStep}
         totalSteps={onboarding.totalSteps}
       />
@@ -214,6 +254,7 @@ const Home = () => {
         onClose={onboarding.closePlayerAvailabilities}
         onBack={onboarding.backFromPlayerAvailabilities}
         onContinue={onboarding.handlePlayerAvailabilitiesContinue}
+        selectedSportIds={onboarding.selectedSportIds}
         currentStep={onboarding.currentStep}
         totalSteps={onboarding.totalSteps}
       />
@@ -260,38 +301,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   welcomeText: {
-    fontSize: 20,
-    fontWeight: 'bold',
     marginBottom: 8,
-    color: '#333',
-  },
-  userEmail: {
-    fontSize: 14,
-    color: '#666',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    color: '#333',
   },
   sectionSubtitle: {
-    fontSize: 14,
-    color: '#666',
     textAlign: 'center',
     marginBottom: 16,
-    lineHeight: 20,
   },
   signInButton: {
-    backgroundColor: '#FF7B9C',
-    paddingHorizontal: 32,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-  signInButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    marginTop: 8,
   },
   content: {
     flex: 1,
@@ -304,23 +321,12 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 8,
   },
-  nearbyTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  viewAll: {
-    fontSize: 14,
-    color: '#666',
-  },
   placeholderContainer: {
     padding: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
   placeholderText: {
-    fontSize: 16,
-    color: '#999',
     textAlign: 'center',
   },
 });

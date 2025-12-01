@@ -1,9 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Animated,
+  Alert,
+} from 'react-native';
 import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
+import { OnboardingService, SportService } from '@rallia/shared-services';
+import type { OnboardingPlayerPreferences } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '../../../../utils/haptics';
 
@@ -21,6 +31,8 @@ interface PlayerPreferences {
   playingHand: 'left' | 'right' | 'both';
   maxTravelDistance: number;
   matchDuration: '1h' | '1.5h' | '2h';
+  tennisMatchDuration?: '1h' | '1.5h' | '2h';
+  pickleballMatchDuration?: '1h' | '1.5h' | '2h';
   sameForAllSports: boolean;
   tennisMatchType?: 'casual' | 'competitive' | 'both';
   pickleballMatchType?: 'casual' | 'competitive' | 'both';
@@ -38,7 +50,12 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
   const [playingHand, setPlayingHand] = useState<'left' | 'right' | 'both'>('right');
   const [maxTravelDistance, setMaxTravelDistance] = useState<number>(6);
   const [matchDuration, setMatchDuration] = useState<'1h' | '1.5h' | '2h'>('1.5h');
-  const [sameForAllSports, setSameForAllSports] = useState(true);
+  const [tennisMatchDuration, setTennisMatchDuration] = useState<'1h' | '1.5h' | '2h'>('1.5h');
+  const [pickleballMatchDuration, setPickleballMatchDuration] = useState<'1h' | '1.5h' | '2h'>(
+    '1.5h'
+  );
+  const [sameDurationForAllSports, setSameDurationForAllSports] = useState(true);
+  const [sameMatchTypeForAllSports, setSameMatchTypeForAllSports] = useState(true);
   const [tennisMatchType, setTennisMatchType] = useState<'casual' | 'competitive' | 'both'>(
     'competitive'
   );
@@ -74,19 +91,85 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
     }
   }, [visible, fadeAnim, slideAnim]);
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (onContinue) {
       mediumHaptic();
-      const preferences: PlayerPreferences = {
-        playingHand,
-        maxTravelDistance,
-        matchDuration,
-        sameForAllSports,
-        ...(hasTennis && { tennisMatchType }),
-        ...(hasPickleball && { pickleballMatchType }),
-      };
-      console.log('Player preferences:', preferences);
-      onContinue(preferences);
+
+      try {
+        // Get sport IDs from sport names
+        const sportsData: OnboardingPlayerPreferences['sports'] = [];
+
+        if (hasTennis) {
+          const { data: tennisSport } = await SportService.getSportByName('tennis');
+          if (tennisSport) {
+            sportsData.push({
+              sport_id: tennisSport.id,
+              sport_name: 'tennis',
+              preferred_match_duration: sameDurationForAllSports
+                ? matchDuration
+                : tennisMatchDuration,
+              preferred_match_type: tennisMatchType,
+              is_primary: selectedSports.length === 1 || selectedSports[0] === 'tennis',
+            });
+          }
+        }
+
+        if (hasPickleball) {
+          const { data: pickleballSport } = await SportService.getSportByName('pickleball');
+          if (pickleballSport) {
+            sportsData.push({
+              sport_id: pickleballSport.id,
+              sport_name: 'pickleball',
+              preferred_match_duration: sameDurationForAllSports
+                ? matchDuration
+                : pickleballMatchDuration,
+              preferred_match_type: sameMatchTypeForAllSports
+                ? tennisMatchType
+                : pickleballMatchType || 'competitive',
+              is_primary: selectedSports.length === 1 || selectedSports[0] === 'pickleball',
+            });
+          }
+        }
+
+        // Save preferences to database
+        const preferencesData: OnboardingPlayerPreferences = {
+          playing_hand: playingHand,
+          max_travel_distance: maxTravelDistance,
+          sports: sportsData,
+        };
+
+        const { error } = await OnboardingService.savePreferences(preferencesData);
+
+        if (error) {
+          console.error('Error saving preferences:', error);
+          Alert.alert('Error', 'Failed to save your preferences. Please try again.', [
+            { text: 'OK' },
+          ]);
+          return;
+        }
+
+        // Call the original onContinue with local preferences
+        const preferences: PlayerPreferences = {
+          playingHand,
+          maxTravelDistance,
+          matchDuration,
+          sameForAllSports: sameDurationForAllSports && sameMatchTypeForAllSports,
+          ...(hasTennis && { tennisMatchType }),
+          ...(hasPickleball && { pickleballMatchType }),
+          ...(hasTennis &&
+            hasPickleball &&
+            !sameDurationForAllSports && {
+              tennisMatchDuration,
+              pickleballMatchDuration,
+            }),
+        };
+
+        console.log('Player preferences saved to database:', preferencesData);
+        onContinue(preferences);
+      } catch (error) {
+        console.error('Unexpected error saving preferences:', error);
+        Alert.alert('Error', 'An unexpected error occurred. Please try again.', [{ text: 'OK' }]);
+      }
     }
   };
 
@@ -98,317 +181,530 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
       type="bottom"
       showBackButton={false}
     >
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        <Animated.View
-          style={[
-            styles.container,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            },
-          ]}
+      <View style={styles.overlayContent}>
+        <ScrollView
+          style={styles.scrollContainer}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
-
-          {/* Back Button */}
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={onBack || onClose}
-            activeOpacity={0.7}
+          <Animated.View
+            style={[
+              styles.container,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
           >
-            <Text style={styles.backButtonText}>←</Text>
-          </TouchableOpacity>
+            <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
 
-          {/* Title */}
-          <Text style={styles.title}>Tell us about your{'\n'}preferences</Text>
-
-          {/* Playing Hand */}
-          <Text style={styles.sectionLabel}>Preferred Playing Hand</Text>
-          <View style={styles.buttonGroup}>
+            {/* Back Button */}
             <TouchableOpacity
-              style={[styles.optionButton, playingHand === 'left' && styles.optionButtonSelected]}
-              onPress={() => {
-                selectionHaptic();
-                setPlayingHand('left');
-              }}
-              activeOpacity={0.8}
+              style={styles.backButton}
+              onPress={onBack || onClose}
+              activeOpacity={0.7}
             >
-              <Text
-                style={[
-                  styles.optionButtonText,
-                  playingHand === 'left' && styles.optionButtonTextSelected,
-                ]}
+              <Text style={styles.backButtonText}>←</Text>
+            </TouchableOpacity>
+
+            {/* Title */}
+            <Text style={styles.title}>Tell us about your{'\n'}preferences</Text>
+
+            {/* Playing Hand */}
+            <Text style={styles.sectionLabel}>Preferred Playing Hand</Text>
+            <View style={styles.buttonGroup}>
+              <TouchableOpacity
+                style={[styles.optionButton, playingHand === 'left' && styles.optionButtonSelected]}
+                onPress={() => {
+                  selectionHaptic();
+                  setPlayingHand('left');
+                }}
+                activeOpacity={0.8}
               >
-                Left
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.optionButton, playingHand === 'right' && styles.optionButtonSelected]}
-              onPress={() => {
-                selectionHaptic();
-                setPlayingHand('right');
-              }}
-              activeOpacity={0.8}
-            >
-              <Text
+                <Text
+                  style={[
+                    styles.optionButtonText,
+                    playingHand === 'left' && styles.optionButtonTextSelected,
+                  ]}
+                >
+                  Left
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
                 style={[
-                  styles.optionButtonText,
-                  playingHand === 'right' && styles.optionButtonTextSelected,
+                  styles.optionButton,
+                  playingHand === 'right' && styles.optionButtonSelected,
                 ]}
+                onPress={() => {
+                  selectionHaptic();
+                  setPlayingHand('right');
+                }}
+                activeOpacity={0.8}
               >
-                Right
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.optionButton, playingHand === 'both' && styles.optionButtonSelected]}
-              onPress={() => {
-                selectionHaptic();
-                setPlayingHand('both');
-              }}
-              activeOpacity={0.8}
-            >
-              <Text
-                style={[
-                  styles.optionButtonText,
-                  playingHand === 'both' && styles.optionButtonTextSelected,
-                ]}
+                <Text
+                  style={[
+                    styles.optionButtonText,
+                    playingHand === 'right' && styles.optionButtonTextSelected,
+                  ]}
+                >
+                  Right
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.optionButton, playingHand === 'both' && styles.optionButtonSelected]}
+                onPress={() => {
+                  selectionHaptic();
+                  setPlayingHand('both');
+                }}
+                activeOpacity={0.8}
               >
-                Both
-              </Text>
-            </TouchableOpacity>
-          </View>
+                <Text
+                  style={[
+                    styles.optionButtonText,
+                    playingHand === 'both' && styles.optionButtonTextSelected,
+                  ]}
+                >
+                  Both
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-          {/* Maximum Travel Distance */}
-          <Text style={styles.sectionLabel}>Maximum Travel Distance</Text>
-          <View style={styles.sliderContainer}>
-            <Text style={styles.sliderValue}>{maxTravelDistance} km</Text>
-            <Slider
-              style={styles.slider}
-              minimumValue={1}
-              maximumValue={50}
-              step={1}
-              value={maxTravelDistance}
-              onValueChange={setMaxTravelDistance}
-              minimumTrackTintColor={COLORS.primary}
-              maximumTrackTintColor="#E0E0E0"
-              thumbTintColor={COLORS.primary}
-            />
-          </View>
+            {/* Maximum Travel Distance */}
+            <Text style={styles.sectionLabel}>Maximum Travel Distance</Text>
+            <View style={styles.sliderContainer}>
+              <Text style={styles.sliderValue}>{maxTravelDistance} km</Text>
+              <Slider
+                style={styles.slider}
+                minimumValue={1}
+                maximumValue={50}
+                step={1}
+                value={maxTravelDistance}
+                onValueChange={setMaxTravelDistance}
+                minimumTrackTintColor={COLORS.primary}
+                maximumTrackTintColor="#E0E0E0"
+                thumbTintColor={COLORS.primary}
+              />
+            </View>
 
-          {/* Preferred Match Duration */}
-          <Text style={styles.sectionLabel}>Preferred Match Duration</Text>
-          <View style={styles.buttonGroup}>
-            <TouchableOpacity
-              style={[styles.optionButton, matchDuration === '1h' && styles.optionButtonSelected]}
-              onPress={() => {
-                selectionHaptic();
-                setMatchDuration('1h');
-              }}
-              activeOpacity={0.8}
-            >
-              <Text
-                style={[
-                  styles.optionButtonText,
-                  matchDuration === '1h' && styles.optionButtonTextSelected,
-                ]}
-              >
-                1h
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.optionButton, matchDuration === '1.5h' && styles.optionButtonSelected]}
-              onPress={() => {
-                selectionHaptic();
-                setMatchDuration('1.5h');
-              }}
-              activeOpacity={0.8}
-            >
-              <Text
-                style={[
-                  styles.optionButtonText,
-                  matchDuration === '1.5h' && styles.optionButtonTextSelected,
-                ]}
-              >
-                1.5h
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.optionButton, matchDuration === '2h' && styles.optionButtonSelected]}
-              onPress={() => {
-                selectionHaptic();
-                setMatchDuration('2h');
-              }}
-              activeOpacity={0.8}
-            >
-              <Text
-                style={[
-                  styles.optionButtonText,
-                  matchDuration === '2h' && styles.optionButtonTextSelected,
-                ]}
-              >
-                2h
-              </Text>
-            </TouchableOpacity>
-          </View>
+            {/* Preferred Match Duration */}
+            <Text style={styles.sectionLabel}>Preferred Match Duration</Text>
 
-          {/* Same for all sports checkbox (only show if both sports selected) */}
-          {hasTennis && hasPickleball && (
-            <TouchableOpacity
-              style={styles.checkboxContainer}
-              onPress={() => setSameForAllSports(!sameForAllSports)}
-              activeOpacity={0.8}
-            >
-              <View style={[styles.checkbox, sameForAllSports && styles.checkboxChecked]}>
-                {sameForAllSports && <Ionicons name="checkmark" size={16} color="#fff" />}
-              </View>
-              <Text style={styles.checkboxLabel}>Same for all sports</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Preferred Match Type */}
-          <Text style={styles.sectionLabel}>Preferred Match Type</Text>
-
-          {/* Tennis Match Type */}
-          {hasTennis && (
-            <>
-              <Text style={styles.sportSubLabel}>Tennis</Text>
+            {/* Show unified buttons when sameDurationForAllSports is true OR only one sport selected */}
+            {(sameDurationForAllSports || !(hasTennis && hasPickleball)) && (
               <View style={styles.buttonGroup}>
                 <TouchableOpacity
                   style={[
                     styles.optionButton,
-                    tennisMatchType === 'casual' && styles.optionButtonSelected,
+                    matchDuration === '1h' && styles.optionButtonSelected,
                   ]}
-                  onPress={() => setTennisMatchType('casual')}
+                  onPress={() => {
+                    selectionHaptic();
+                    setMatchDuration('1h');
+                    setTennisMatchDuration('1h');
+                    setPickleballMatchDuration('1h');
+                  }}
                   activeOpacity={0.8}
                 >
                   <Text
                     style={[
                       styles.optionButtonText,
-                      tennisMatchType === 'casual' && styles.optionButtonTextSelected,
+                      matchDuration === '1h' && styles.optionButtonTextSelected,
                     ]}
                   >
-                    Casual
+                    1h
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[
                     styles.optionButton,
-                    tennisMatchType === 'competitive' && styles.optionButtonSelected,
+                    matchDuration === '1.5h' && styles.optionButtonSelected,
                   ]}
-                  onPress={() => setTennisMatchType('competitive')}
+                  onPress={() => {
+                    selectionHaptic();
+                    setMatchDuration('1.5h');
+                    setTennisMatchDuration('1.5h');
+                    setPickleballMatchDuration('1.5h');
+                  }}
                   activeOpacity={0.8}
                 >
                   <Text
                     style={[
                       styles.optionButtonText,
-                      tennisMatchType === 'competitive' && styles.optionButtonTextSelected,
+                      matchDuration === '1.5h' && styles.optionButtonTextSelected,
                     ]}
                   >
-                    Competitive
+                    1.5h
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[
                     styles.optionButton,
-                    tennisMatchType === 'both' && styles.optionButtonSelected,
+                    matchDuration === '2h' && styles.optionButtonSelected,
                   ]}
-                  onPress={() => setTennisMatchType('both')}
+                  onPress={() => {
+                    selectionHaptic();
+                    setMatchDuration('2h');
+                    setTennisMatchDuration('2h');
+                    setPickleballMatchDuration('2h');
+                  }}
                   activeOpacity={0.8}
                 >
                   <Text
                     style={[
                       styles.optionButtonText,
-                      tennisMatchType === 'both' && styles.optionButtonTextSelected,
+                      matchDuration === '2h' && styles.optionButtonTextSelected,
                     ]}
                   >
-                    Both
+                    2h
                   </Text>
                 </TouchableOpacity>
               </View>
-            </>
-          )}
+            )}
 
-          {/* Pickleball Match Type - only show if not "same for all sports" or if only pickleball selected */}
-          {hasPickleball && (!sameForAllSports || !hasTennis) && (
-            <>
-              <Text style={styles.sportSubLabel}>Pickleball</Text>
-              <View style={styles.buttonGroup}>
-                <TouchableOpacity
-                  style={[
-                    styles.optionButton,
-                    pickleballMatchType === 'casual' && styles.optionButtonSelected,
-                  ]}
-                  onPress={() => setPickleballMatchType('casual')}
-                  activeOpacity={0.8}
-                >
-                  <Text
+            {/* Show separate rows for Tennis and Pickleball when checkbox is unchecked */}
+            {!sameDurationForAllSports && hasTennis && hasPickleball && (
+              <>
+                {/* Tennis Duration */}
+                <Text style={styles.sportSubLabel}>Tennis</Text>
+                <View style={styles.buttonGroup}>
+                  <TouchableOpacity
                     style={[
-                      styles.optionButtonText,
-                      pickleballMatchType === 'casual' && styles.optionButtonTextSelected,
+                      styles.optionButton,
+                      tennisMatchDuration === '1h' && styles.optionButtonSelected,
                     ]}
+                    onPress={() => {
+                      selectionHaptic();
+                      setTennisMatchDuration('1h');
+                    }}
+                    activeOpacity={0.8}
                   >
-                    Casual
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.optionButton,
-                    pickleballMatchType === 'competitive' && styles.optionButtonSelected,
-                  ]}
-                  onPress={() => setPickleballMatchType('competitive')}
-                  activeOpacity={0.8}
-                >
-                  <Text
+                    <Text
+                      style={[
+                        styles.optionButtonText,
+                        tennisMatchDuration === '1h' && styles.optionButtonTextSelected,
+                      ]}
+                    >
+                      1h
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
                     style={[
-                      styles.optionButtonText,
-                      pickleballMatchType === 'competitive' && styles.optionButtonTextSelected,
+                      styles.optionButton,
+                      tennisMatchDuration === '1.5h' && styles.optionButtonSelected,
                     ]}
+                    onPress={() => {
+                      selectionHaptic();
+                      setTennisMatchDuration('1.5h');
+                    }}
+                    activeOpacity={0.8}
                   >
-                    Competitive
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.optionButton,
-                    pickleballMatchType === 'both' && styles.optionButtonSelected,
-                  ]}
-                  onPress={() => setPickleballMatchType('both')}
-                  activeOpacity={0.8}
-                >
-                  <Text
+                    <Text
+                      style={[
+                        styles.optionButtonText,
+                        tennisMatchDuration === '1.5h' && styles.optionButtonTextSelected,
+                      ]}
+                    >
+                      1.5h
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
                     style={[
-                      styles.optionButtonText,
-                      pickleballMatchType === 'both' && styles.optionButtonTextSelected,
+                      styles.optionButton,
+                      tennisMatchDuration === '2h' && styles.optionButtonSelected,
                     ]}
+                    onPress={() => {
+                      selectionHaptic();
+                      setTennisMatchDuration('2h');
+                    }}
+                    activeOpacity={0.8}
                   >
-                    Both
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
+                    <Text
+                      style={[
+                        styles.optionButtonText,
+                        tennisMatchDuration === '2h' && styles.optionButtonTextSelected,
+                      ]}
+                    >
+                      2h
+                    </Text>
+                  </TouchableOpacity>
+                </View>
 
-          {/* Continue Button */}
-          <TouchableOpacity
-            style={styles.continueButton}
-            onPress={handleContinue}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.continueButtonText}>Continue</Text>
-          </TouchableOpacity>
-        </Animated.View>
-      </ScrollView>
+                {/* Pickleball Duration */}
+                <Text style={styles.sportSubLabel}>Pickleball</Text>
+                <View style={styles.buttonGroup}>
+                  <TouchableOpacity
+                    style={[
+                      styles.optionButton,
+                      pickleballMatchDuration === '1h' && styles.optionButtonSelected,
+                    ]}
+                    onPress={() => {
+                      selectionHaptic();
+                      setPickleballMatchDuration('1h');
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Text
+                      style={[
+                        styles.optionButtonText,
+                        pickleballMatchDuration === '1h' && styles.optionButtonTextSelected,
+                      ]}
+                    >
+                      1h
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.optionButton,
+                      pickleballMatchDuration === '1.5h' && styles.optionButtonSelected,
+                    ]}
+                    onPress={() => {
+                      selectionHaptic();
+                      setPickleballMatchDuration('1.5h');
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Text
+                      style={[
+                        styles.optionButtonText,
+                        pickleballMatchDuration === '1.5h' && styles.optionButtonTextSelected,
+                      ]}
+                    >
+                      1.5h
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.optionButton,
+                      pickleballMatchDuration === '2h' && styles.optionButtonSelected,
+                    ]}
+                    onPress={() => {
+                      selectionHaptic();
+                      setPickleballMatchDuration('2h');
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Text
+                      style={[
+                        styles.optionButtonText,
+                        pickleballMatchDuration === '2h' && styles.optionButtonTextSelected,
+                      ]}
+                    >
+                      2h
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+
+            {/* Same duration for all sports checkbox (only show if both sports selected) */}
+            {hasTennis && hasPickleball && (
+              <TouchableOpacity
+                style={styles.checkboxContainer}
+                onPress={() => {
+                  selectionHaptic();
+                  setSameDurationForAllSports(!sameDurationForAllSports);
+                }}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.checkbox, sameDurationForAllSports && styles.checkboxChecked]}>
+                  {sameDurationForAllSports && <Ionicons name="checkmark" size={16} color="#fff" />}
+                </View>
+                <Text style={styles.checkboxLabel}>Same for all sports</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Preferred Match Type */}
+            <Text style={styles.sectionLabel}>Preferred Match Type</Text>
+
+            {/* Tennis Match Type */}
+            {hasTennis && (
+              <>
+                <Text style={styles.sportSubLabel}>Tennis</Text>
+                <View style={styles.buttonGroup}>
+                  <TouchableOpacity
+                    style={[
+                      styles.optionButton,
+                      tennisMatchType === 'casual' && styles.optionButtonSelected,
+                    ]}
+                    onPress={() => {
+                      selectionHaptic();
+                      setTennisMatchType('casual');
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Text
+                      style={[
+                        styles.optionButtonText,
+                        tennisMatchType === 'casual' && styles.optionButtonTextSelected,
+                      ]}
+                    >
+                      Casual
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.optionButton,
+                      tennisMatchType === 'competitive' && styles.optionButtonSelected,
+                    ]}
+                    onPress={() => {
+                      selectionHaptic();
+                      setTennisMatchType('competitive');
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Text
+                      style={[
+                        styles.optionButtonText,
+                        tennisMatchType === 'competitive' && styles.optionButtonTextSelected,
+                      ]}
+                    >
+                      Competitive
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.optionButton,
+                      tennisMatchType === 'both' && styles.optionButtonSelected,
+                    ]}
+                    onPress={() => {
+                      selectionHaptic();
+                      setTennisMatchType('both');
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Text
+                      style={[
+                        styles.optionButtonText,
+                        tennisMatchType === 'both' && styles.optionButtonTextSelected,
+                      ]}
+                    >
+                      Both
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+
+            {/* Pickleball Match Type - only show if not "same for all sports" or if only pickleball selected */}
+            {hasPickleball && (!sameMatchTypeForAllSports || !hasTennis) && (
+              <>
+                <Text style={styles.sportSubLabel}>Pickleball</Text>
+                <View style={styles.buttonGroup}>
+                  <TouchableOpacity
+                    style={[
+                      styles.optionButton,
+                      pickleballMatchType === 'casual' && styles.optionButtonSelected,
+                    ]}
+                    onPress={() => {
+                      selectionHaptic();
+                      setPickleballMatchType('casual');
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Text
+                      style={[
+                        styles.optionButtonText,
+                        pickleballMatchType === 'casual' && styles.optionButtonTextSelected,
+                      ]}
+                    >
+                      Casual
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.optionButton,
+                      pickleballMatchType === 'competitive' && styles.optionButtonSelected,
+                    ]}
+                    onPress={() => {
+                      selectionHaptic();
+                      setPickleballMatchType('competitive');
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Text
+                      style={[
+                        styles.optionButtonText,
+                        pickleballMatchType === 'competitive' && styles.optionButtonTextSelected,
+                      ]}
+                    >
+                      Competitive
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.optionButton,
+                      pickleballMatchType === 'both' && styles.optionButtonSelected,
+                    ]}
+                    onPress={() => {
+                      selectionHaptic();
+                      setPickleballMatchType('both');
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Text
+                      style={[
+                        styles.optionButtonText,
+                        pickleballMatchType === 'both' && styles.optionButtonTextSelected,
+                      ]}
+                    >
+                      Both
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+
+            {/* Same match type for all sports checkbox (only show if both sports selected) */}
+            {hasTennis && hasPickleball && (
+              <TouchableOpacity
+                style={styles.checkboxContainer}
+                onPress={() => {
+                  selectionHaptic();
+                  setSameMatchTypeForAllSports(!sameMatchTypeForAllSports);
+                }}
+                activeOpacity={0.8}
+              >
+                <View
+                  style={[styles.checkbox, sameMatchTypeForAllSports && styles.checkboxChecked]}
+                >
+                  {sameMatchTypeForAllSports && (
+                    <Ionicons name="checkmark" size={16} color="#fff" />
+                  )}
+                </View>
+                <Text style={styles.checkboxLabel}>Same for all sports</Text>
+              </TouchableOpacity>
+            )}
+          </Animated.View>
+        </ScrollView>
+
+        {/* Continue Button - Fixed at bottom */}
+        <TouchableOpacity
+          style={styles.continueButton}
+          onPress={handleContinue}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.continueButtonText}>Continue</Text>
+        </TouchableOpacity>
+      </View>
     </Overlay>
   );
 };
 
 const styles = StyleSheet.create({
+  overlayContent: {
+    height: '100%',
+    maxHeight: 650,
+    flexDirection: 'column',
+  },
   scrollContainer: {
-    maxHeight: '90%',
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 20,
   },
   container: {
     paddingVertical: 20,
-    paddingBottom: 40,
+    paddingBottom: 20,
   },
   backButton: {
     position: 'absolute',
@@ -511,7 +807,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 30,
+    marginTop: 15,
+    marginHorizontal: 20,
+    marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,

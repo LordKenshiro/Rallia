@@ -7,7 +7,8 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.47.11"
+    "@supabase/supabase-js": "^2.47.11",
+    "resend": "^4.0.1"
   },
   "devDependencies": {
     "typescript": "^5.9.2"

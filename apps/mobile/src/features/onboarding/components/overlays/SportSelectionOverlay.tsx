@@ -1,16 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   Image,
   ScrollView,
   Animated,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Overlay } from '@rallia/shared-components';
+import { Overlay, Text, Heading, Button, Spinner } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
+import { Sport } from '@rallia/shared-types';
+import DatabaseService from '@rallia/shared-services';
 import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '../../../../utils/haptics';
 
@@ -18,15 +20,9 @@ interface SportSelectionOverlayProps {
   visible: boolean;
   onClose: () => void;
   onBack?: () => void;
-  onContinue?: (selectedSports: string[]) => void;
+  onContinue?: (selectedSportNames: string[], selectedSportIds: string[]) => void;
   currentStep?: number;
   totalSteps?: number;
-}
-
-interface Sport {
-  id: string;
-  name: string;
-  image: any; // For now, we'll use placeholder images
 }
 
 const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
@@ -37,11 +33,95 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
   currentStep = 1,
   totalSteps = 8,
 }) => {
-  const [selectedSports, setSelectedSports] = useState<string[]>([]);
+  const [selectedSportIds, setSelectedSportIds] = useState<string[]>([]); // Store IDs for database operations
+  const [sports, setSports] = useState<Sport[]>([]);
+  const [isLoadingSports, setIsLoadingSports] = useState(true);
+  const [playerId, setPlayerId] = useState<string | null>(null);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
+
+  // Fetch player ID when overlay becomes visible
+  useEffect(() => {
+    const fetchPlayerId = async () => {
+      try {
+        const userId = await DatabaseService.Auth.getCurrentUserId();
+        if (userId) {
+          setPlayerId(userId);
+        }
+      } catch (error) {
+        console.error('Error fetching player ID:', error);
+      }
+    };
+
+    if (visible) {
+      fetchPlayerId();
+    }
+  }, [visible]);
+
+  // Fetch active sports from database
+  useEffect(() => {
+    const fetchSports = async () => {
+      setIsLoadingSports(true);
+      const { data, error } = await DatabaseService.Sport.getAllSports();
+
+      if (error) {
+        console.error('Error fetching sports:', error);
+        Alert.alert('Error', 'Failed to load sports. Please try again.');
+        // Fallback to hardcoded sports if fetch fails
+        setSports([
+          {
+            id: 'tennis-fallback',
+            name: 'tennis',
+            display_name: 'Tennis',
+            description: null,
+            icon_url: null,
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+          {
+            id: 'pickleball-fallback',
+            name: 'pickleball',
+            display_name: 'Pickleball',
+            description: null,
+            icon_url: null,
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        ]);
+      } else if (data) {
+        // Filter to only active sports
+        const activeSports = data.filter((sport: Sport) => sport.is_active);
+        setSports(activeSports);
+      }
+
+      setIsLoadingSports(false);
+    };
+
+    if (visible) {
+      fetchSports();
+    }
+  }, [visible]);
+
+  // Load already selected sports from database
+  useEffect(() => {
+    const loadSelectedSportIds = async () => {
+      if (!playerId || !visible) return;
+
+      const { data, error } = await DatabaseService.PlayerSport.getPlayerSports(playerId);
+      if (data && !error) {
+        const sportIds = data.map((ps: { sport_id: string }) => ps.sport_id);
+        setSelectedSportIds(sportIds);
+      }
+    };
+
+    if (playerId && visible) {
+      loadSelectedSportIds();
+    }
+  }, [playerId, visible]);
 
   // Trigger animations when overlay becomes visible
   useEffect(() => {
@@ -64,32 +144,61 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
     }
   }, [visible, fadeAnim, slideAnim]);
 
-  const sports: Sport[] = [
-    { id: 'tennis', name: 'Tennis', image: require('../../../../../assets/images/tennis.jpg') },
-    {
-      id: 'pickleball',
-      name: 'Pickleball',
-      image: require('../../../../../assets/images/pickleball.jpg'),
-    },
-    // Add more sports as needed
-  ];
-
-  const toggleSport = (sportId: string) => {
+  const toggleSport = async (sportId: string) => {
     selectionHaptic();
-    setSelectedSports(prev => {
-      if (prev.includes(sportId)) {
-        return prev.filter(id => id !== sportId);
+
+    if (!playerId) {
+      Alert.alert('Error', 'Player not found. Please try again.');
+      return;
+    }
+
+    const isCurrentlySelected = selectedSportIds.includes(sportId);
+    const newSelectionState = !isCurrentlySelected;
+
+    // Optimistically update UI
+    setSelectedSportIds((prev: string[]) => {
+      if (isCurrentlySelected) {
+        return prev.filter((id: string) => id !== sportId);
       } else {
         return [...prev, sportId];
       }
     });
+
+    // Persist to database immediately
+    const { error } = await DatabaseService.PlayerSport.togglePlayerSport(
+      playerId,
+      sportId,
+      newSelectionState
+    );
+
+    if (error) {
+      console.error('Error toggling sport:', error);
+      // Revert optimistic update on error
+      setSelectedSportIds((prev: string[]) => {
+        if (newSelectionState) {
+          return prev.filter((id: string) => id !== sportId);
+        } else {
+          return [...prev, sportId];
+        }
+      });
+      Alert.alert('Error', 'Failed to update sport selection. Please try again.');
+    }
   };
 
   const handleContinue = () => {
     mediumHaptic();
-    console.log('Selected sports:', selectedSports);
+
+    // Get sport names from IDs for useOnboardingFlow
+    const selectedSportNames = selectedSportIds
+      .map(id => sports.find(s => s.id === id)?.name)
+      .filter(name => name !== undefined) as string[];
+
+    console.log('Selected sport IDs:', selectedSportIds);
+    console.log('Selected sport names:', selectedSportNames);
+
     if (onContinue) {
-      onContinue(selectedSports);
+      // Pass both names (for flow control) and IDs (for database operations)
+      onContinue(selectedSportNames, selectedSportIds);
     }
   };
 
@@ -114,49 +223,78 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
         <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
 
         {/* Title */}
-        <Text style={styles.title}>Which sports would you{'\n'}like to play?</Text>
-        <Text style={styles.subtitle}>Select all that apply</Text>
+        <Heading level={2} style={styles.title}>
+          Which sports would you like to play?
+        </Heading>
+        <Text variant="caption" color="#666" style={styles.subtitle}>
+          Select all that apply
+        </Text>
 
         {/* Sports Grid */}
         <ScrollView style={styles.sportsContainer} showsVerticalScrollIndicator={false}>
-          {sports.map(sport => {
-            const isSelected = selectedSports.includes(sport.id);
-            return (
-              <TouchableOpacity
-                key={sport.id}
-                style={[styles.sportCard, isSelected && styles.sportCardSelected]}
-                onPress={() => toggleSport(sport.id)}
-                activeOpacity={0.8}
-              >
-                {/* Sport Image Placeholder */}
-                <View style={styles.sportImageContainer}>
-                  <Image source={sport.image} style={styles.sportImage} resizeMode="cover" />
-                  {/* Overlay for darkening effect */}
-                  <View style={styles.sportImageOverlay} />
-                </View>
+          {isLoadingSports ? (
+            <View style={styles.loadingContainer}>
+              <Spinner size="lg" />
+              <Text size="sm" color="#666" style={styles.loadingText}>
+                Loading sports...
+              </Text>
+            </View>
+          ) : (
+            sports.map(sport => {
+              const isSelected = selectedSportIds.includes(sport.id);
 
-                {/* Sport Name */}
-                <View style={styles.sportNameContainer}>
-                  <Text style={styles.sportName}>{sport.name}</Text>
-                  {isSelected && <Ionicons name="checkmark" size={24} color="#fff" />}
-                </View>
-              </TouchableOpacity>
-            );
-          })}
+              // Map sport name to local images
+              const getSportImage = (sportName: string) => {
+                const lowerName = sportName.toLowerCase();
+                if (lowerName.includes('tennis')) {
+                  return require('../../../../../assets/images/tennis.jpg');
+                } else if (lowerName.includes('pickleball')) {
+                  return require('../../../../../assets/images/pickleball.jpg');
+                }
+                // Default fallback - could add more sports here
+                return require('../../../../../assets/images/tennis.jpg');
+              };
+
+              return (
+                <TouchableOpacity
+                  key={sport.id}
+                  style={[styles.sportCard, isSelected && styles.sportCardSelected]}
+                  onPress={() => toggleSport(sport.id)}
+                  activeOpacity={0.8}
+                >
+                  {/* Sport Image */}
+                  <View style={styles.sportImageContainer}>
+                    <Image
+                      source={getSportImage(sport.name)}
+                      style={styles.sportImage}
+                      resizeMode="cover"
+                    />
+                    {/* Overlay for darkening effect */}
+                    <View style={styles.sportImageOverlay} />
+                  </View>
+
+                  {/* Sport Name */}
+                  <View style={styles.sportNameContainer}>
+                    <Text size="xl" weight="bold" color="#fff">
+                      {sport.display_name}
+                    </Text>
+                    {isSelected && <Ionicons name="checkmark" size={24} color="#fff" />}
+                  </View>
+                </TouchableOpacity>
+              );
+            })
+          )}
         </ScrollView>
 
         {/* Continue Button */}
-        <TouchableOpacity
-          style={[
-            styles.continueButton,
-            selectedSports.length === 0 && styles.continueButtonDisabled,
-          ]}
+        <Button
+          variant="primary"
           onPress={handleContinue}
-          disabled={selectedSports.length === 0}
-          activeOpacity={0.8}
+          disabled={selectedSportIds.length === 0}
+          style={styles.continueButton}
         >
-          <Text style={styles.continueButtonText}>Continue</Text>
-        </TouchableOpacity>
+          Continue
+        </Button>
       </Animated.View>
     </Overlay>
   );
@@ -167,22 +305,25 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
     textAlign: 'center',
     marginBottom: 10,
-    lineHeight: 32,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#666',
     textAlign: 'center',
     marginBottom: 25,
   },
   sportsContainer: {
     maxHeight: 400,
     marginBottom: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    marginTop: 12,
   },
   sportCard: {
     height: 140,
@@ -223,36 +364,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  sportName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
   continueButton: {
-    backgroundColor: COLORS.buttonPrimary,
-    borderRadius: 10,
-    paddingVertical: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
     marginTop: 10,
-    shadowColor: COLORS.overlayDark,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  continueButtonDisabled: {
-    backgroundColor: COLORS.buttonDisabled,
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  continueButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });
 

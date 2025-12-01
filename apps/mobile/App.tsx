@@ -1,41 +1,24 @@
 import { NavigationContainer } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
 import AppNavigator from './src/navigation/AppNavigator';
-import * as Sentry from '@sentry/react-native';
+import { ErrorBoundary } from '@rallia/shared-components';
+import { Logger } from '@rallia/shared-services';
 
-Sentry.init({
-  dsn: 'https://de0b266881f3d2798771394cc9242ec8@o4510330094944256.ingest.us.sentry.io/4510330136756225',
+// IMPORTANT: Initialize Supabase with AsyncStorage before any other code runs
+import './src/lib/supabase';
 
-  // Adds more context data to events (IP address, cookies, user, etc.)
-  // For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/
-  sendDefaultPii: true,
+export default function App() {
+  const handleError = (error: Error, errorInfo: React.ErrorInfo) => {
+    // Log unhandled errors with full context
+    Logger.error('Unhandled app error', error, {
+      componentStack: errorInfo.componentStack,
+    });
+  };
 
-  // Enable Logs
-  enableLogs: true,
-
-  // Configure Session Replay
-  replaysSessionSampleRate: 0.1,
-  replaysOnErrorSampleRate: 1,
-  integrations: [Sentry.mobileReplayIntegration(), Sentry.feedbackIntegration()],
-
-  // uncomment the line below to enable Spotlight (https://spotlightjs.com)
-  // spotlight: __DEV__,
-});
-
-export default Sentry.wrap(function App() {
   return (
-    <NavigationContainer>
-      <AppNavigator />
-    </NavigationContainer>
+    <ErrorBoundary onError={handleError}>
+      <NavigationContainer>
+        <AppNavigator />
+      </NavigationContainer>
+    </ErrorBoundary>
   );
-});
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+}

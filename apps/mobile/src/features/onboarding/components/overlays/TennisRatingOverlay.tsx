@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
+import DatabaseService, { OnboardingService, SportService } from '@rallia/shared-services';
+import type { OnboardingRating } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '../../../../utils/haptics';
 
@@ -17,9 +19,10 @@ interface TennisRatingOverlayProps {
 
 interface Rating {
   id: string;
-  level: string;
-  ntrp: string;
+  score_value: number;
+  display_label: string;
   description: string;
+  skill_level: 'beginner' | 'intermediate' | 'advanced' | 'professional';
   isHighlighted?: boolean;
 }
 
@@ -32,10 +35,50 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
   totalSteps = 8,
 }) => {
   const [selectedRating, setSelectedRating] = useState<string | null>(null);
+  const [ratings, setRatings] = useState<Rating[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
+
+  // Load ratings from database when overlay becomes visible
+  useEffect(() => {
+    const loadRatings = async () => {
+      if (!visible) return;
+      
+      setIsLoading(true);
+      try {
+        const { data, error } = await DatabaseService.RatingScore.getRatingScoresBySport('tennis', 'ntrp');
+        
+        if (error || !data) {
+          console.error('Error loading tennis ratings:', error);
+          Alert.alert('Error', 'Failed to load ratings. Please try again.');
+          return;
+        }
+        
+        // Transform database data to match UI expectations
+        const transformedRatings: Rating[] = data.map((rating) => ({
+          id: rating.id,
+          score_value: rating.score_value,
+          display_label: rating.display_label,
+          description: rating.description,
+          skill_level: rating.skill_level,
+          // Highlight NTRP 3.0 (recreational level)
+          isHighlighted: rating.score_value === 3.0,
+        }));
+        
+        setRatings(transformedRatings);
+      } catch (error) {
+        console.error('Unexpected error loading tennis ratings:', error);
+        Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadRatings();
+  }, [visible]);
 
   // Trigger animations when overlay becomes visible
   useEffect(() => {
@@ -58,70 +101,71 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
     }
   }, [visible, fadeAnim, slideAnim]);
 
-  // Helper function to get icon based on rating level
-  const getRatingIcon = (level: string): keyof typeof Ionicons.glyphMap => {
-    if (level.includes('Beginner') || level === 'Novice') return 'star-outline';
-    if (level.includes('Recreational') || level.includes('Intermediate')) return 'star-half';
-    if (level.includes('Advanced')) return 'star';
-    return 'trophy';
+  // Helper function to get icon based on skill level
+  const getRatingIcon = (skillLevel: string): keyof typeof Ionicons.glyphMap => {
+    if (skillLevel === 'beginner') return 'star-outline';
+    if (skillLevel === 'intermediate') return 'star-half';
+    if (skillLevel === 'advanced') return 'star';
+    return 'trophy'; // professional
   };
 
-  const ratings: Rating[] = [
-    {
-      id: 'beginner',
-      level: 'Beginner',
-      ntrp: 'NTRP 1.5',
-      description:
-        'Still working on getting consistent; errors, many focused on getting the ball into play.',
-      isHighlighted: false,
-    },
-    {
-      id: 'novice',
-      level: 'Novice',
-      ntrp: 'NTRP 2.0',
-      description:
-        'Obvious stroke weaknesses for singles and doubles. Has clear stroke weaknesses and needs more court experience.',
-      isHighlighted: false,
-    },
-    {
-      id: 'advancing-beginner',
-      level: 'Advancing Beginner',
-      ntrp: 'NTRP 2.5',
-      description:
-        'Starting to judge ball direction and sustain short rallies; limited court coverage.',
-      isHighlighted: false,
-    },
-    {
-      id: 'recreational',
-      level: 'Recreational Player',
-      ntrp: 'NTRP 3.0 - 3.5',
-      description:
-        'Fairly consistent on medium paced shots but lacks control, depth and power with faster shots. Struggles with formations.',
-      isHighlighted: true,
-    },
-    {
-      id: 'intermediate',
-      level: 'Intermediate',
-      ntrp: 'NTRP 3.5',
-      description:
-        'More reliable strokes with directional control. Improving net play, coverage, and teamwork.',
-      isHighlighted: false,
-    },
-    {
-      id: 'advanced-intermediate',
-      level: 'Advanced Intermediate',
-      ntrp: 'NTRP 4.0',
-      description:
-        'Dependable strokes with control and depth; placement in point play shows teamwork, though rallies may end from impatience.',
-      isHighlighted: false,
-    },
-  ];
-
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (selectedRating && onContinue) {
       mediumHaptic();
-      console.log('Selected tennis rating:', selectedRating);
-      onContinue(selectedRating);
+      
+      try {
+        // Get tennis sport ID
+        const { data: tennisSport, error: sportError } = await SportService.getSportByName('tennis');
+        
+        if (sportError || !tennisSport) {
+          console.error('Error fetching tennis sport:', sportError);
+          Alert.alert(
+            'Error',
+            'Failed to save your rating. Please try again.',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+        
+        // Find the selected rating data
+        const selectedRatingData = ratings.find(r => r.id === selectedRating);
+        
+        if (!selectedRatingData) {
+          Alert.alert('Error', 'Invalid rating selected');
+          return;
+        }
+        
+        // Save rating to database
+        const ratingData: OnboardingRating = {
+          sport_id: tennisSport.id,
+          sport_name: 'tennis',
+          rating_type: 'ntrp',
+          score_value: selectedRatingData.score_value,
+          display_label: selectedRatingData.display_label,
+        };
+        
+        const { error } = await OnboardingService.saveRatings([ratingData]);
+        
+        if (error) {
+          console.error('Error saving tennis rating:', error);
+          Alert.alert(
+            'Error',
+            'Failed to save your rating. Please try again.',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+        
+        console.log('Tennis rating saved to database:', ratingData);
+        onContinue(selectedRating);
+      } catch (error) {
+        console.error('Unexpected error saving tennis rating:', error);
+        Alert.alert(
+          'Error',
+          'An unexpected error occurred. Please try again.',
+          [{ text: 'OK' }]
+        );
+      }
     }
   };
 
@@ -163,8 +207,14 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
 
         {/* Rating Options */}
         <ScrollView style={styles.ratingList} showsVerticalScrollIndicator={false}>
-          <View style={styles.ratingGrid}>
-            {ratings.map(rating => (
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={COLORS.primary} />
+              <Text style={styles.loadingText}>Loading ratings...</Text>
+            </View>
+          ) : (
+            <View style={styles.ratingGrid}>
+              {ratings.map(rating => (
               <TouchableOpacity
                 key={rating.id}
                 style={[
@@ -180,7 +230,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                   <Ionicons
-                    name={getRatingIcon(rating.level)}
+                    name={getRatingIcon(rating.skill_level)}
                     size={20}
                     color={selectedRating === rating.id ? '#fff' : COLORS.primary}
                     style={{ marginRight: 8 }}
@@ -192,7 +242,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
                       selectedRating === rating.id && styles.ratingLevelSelected,
                     ]}
                   >
-                    {rating.level}
+                    {rating.skill_level.charAt(0).toUpperCase() + rating.skill_level.slice(1)}
                   </Text>
                 </View>
                 <Text
@@ -202,7 +252,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
                     selectedRating === rating.id && styles.ratingNtrpSelected,
                   ]}
                 >
-                  {rating.ntrp}
+                  {rating.display_label}
                 </Text>
                 <Text
                   style={[
@@ -215,7 +265,8 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
                 </Text>
               </TouchableOpacity>
             ))}
-          </View>
+            </View>
+          )}
         </ScrollView>
 
         {/* Continue Button */}
@@ -369,6 +420,17 @@ const styles = StyleSheet.create({
   },
   continueButtonTextDisabled: {
     color: '#999',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666',
   },
 });
 

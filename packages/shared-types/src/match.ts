@@ -1,9 +1,18 @@
 /**
  * Match Type Definitions
  *
- * Core types for match-related data across the app
+ * @deprecated This file contains UI-specific types that will be migrated to database.ts
+ * New code should use types from database.ts instead
+ * See TYPE_MIGRATION_GUIDE.md for migration instructions
  */
 
+/**
+ * UI-specific match display type
+ * Used for displaying match cards in the mobile app
+ * 
+ * Note: This is NOT the database Match type (see database.ts)
+ * This is a simplified view model for the UI
+ */
 export interface Match {
   id: string;
   title: string;
@@ -17,10 +26,31 @@ export interface Match {
   participantImages?: string[];
 }
 
-export type MatchStatus = 'upcoming' | 'in-progress' | 'completed' | 'cancelled';
+/**
+ * @deprecated Use MatchStatus from database.ts instead
+ * Database type: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show'
+ * 
+ * Migration:
+ * - 'upcoming' → 'scheduled'
+ * - 'in-progress' → 'in_progress'
+ * - 'completed' → 'completed' (no change)
+ * - 'cancelled' → 'cancelled' (no change)
+ */
+export type LegacyMatchStatus = 'upcoming' | 'in-progress' | 'completed' | 'cancelled';
 
-export type MatchType = 'singles' | 'doubles';
+/**
+ * @deprecated Use MatchType from database.ts instead
+ * Database MatchType represents match style: 'casual' | 'competitive' | 'both'
+ * 
+ * For singles/doubles, use separate field in database schema
+ * Migration: This type is no longer used - see database.ts for new structure
+ */
+export type LegacyMatchType = 'singles' | 'doubles';
 
+/**
+ * Access type for matches
+ * This type is not in database.ts and remains valid for UI use
+ */
 export type AccessType = 'open' | 'closed' | 'invite-only';
 
 /**

@@ -1,21 +1,29 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
-  TextInput,
   Platform,
   Image,
   Modal,
   Animated,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Overlay } from '@rallia/shared-components';
+import { 
+  Overlay, 
+  Input, 
+  Select, 
+  Button, 
+  Heading, 
+  Text 
+} from '@rallia/shared-components';
 import { useImagePicker } from '../../../../hooks';
 import { COLORS } from '@rallia/shared-constants';
 import { validateFullName, validateUsername, validatePhoneNumber } from '@rallia/shared-utils';
+import { OnboardingService, supabase } from '@rallia/shared-services';
+import type { GenderType } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
 import { lightHaptic, mediumHaptic } from '../../../../utils/haptics';
 
@@ -42,9 +50,9 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [gender, setGender] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [showGenderPicker, setShowGenderPicker] = useState(false);
 
-  const genderOptions = ['Male', 'Female', 'Non-binary', 'Prefer not to say'];
+  // Dynamic gender options from database
+  const [genderOptions, setGenderOptions] = useState<Array<{ value: string; label: string }>>([]);
 
   // Use custom hook for image picker
   const { image: profileImage, pickImage } = useImagePicker();
@@ -52,6 +60,41 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
+
+  // Fetch gender options from database
+  useEffect(() => {
+    const fetchGenderOptions = async () => {
+      try {
+        const { data, error } = await OnboardingService.getGenderTypes();
+        
+        if (error) {
+          console.error('Error fetching gender types:', error);
+          // Use fallback if API fails
+          setGenderOptions([
+            { value: 'male', label: 'Male' },
+            { value: 'female', label: 'Female' },
+            { value: 'other', label: 'Non-binary' },
+            { value: 'prefer_not_to_say', label: 'Prefer not to say' },
+          ]);
+        } else if (data) {
+          setGenderOptions(data);
+        }
+      } catch (error) {
+        console.error('Unexpected error fetching genders:', error);
+        // Use fallback on error
+        setGenderOptions([
+          { value: 'male', label: 'Male' },
+          { value: 'female', label: 'Female' },
+          { value: 'other', label: 'Non-binary' },
+          { value: 'prefer_not_to_say', label: 'Prefer not to say' },
+        ]);
+      }
+    };
+
+    if (visible) {
+      fetchGenderOptions();
+    }
+  }, [visible]);
 
   // Trigger animations when overlay becomes visible
   useEffect(() => {
@@ -87,7 +130,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
     setPhoneNumber(validatePhoneNumber(text));
   };
 
-  const handleDateChange = (event: any, selectedDate?: Date) => {
+  const handleDateChange = (_event: unknown, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
       setShowDatePicker(false);
     }
@@ -108,26 +151,80 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
     return `${month}/${day}/${year}`;
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     mediumHaptic();
-    console.log('Personal info:', {
-      fullName,
-      username,
-      dateOfBirth: formatDate(dateOfBirth),
-      gender,
-      phoneNumber,
-      profileImage,
-    });
-    // TODO: Save personal information
-    if (onContinue) {
-      onContinue();
+    
+    if (!dateOfBirth) {
+      Alert.alert('Error', 'Please select your date of birth');
+      return;
     }
-  };
-
-  const handleSelectGender = (selectedGender: string) => {
-    lightHaptic();
-    setGender(selectedGender);
-    setShowGenderPicker(false);
+    
+    try {
+      // Gender is now stored as the enum value (e.g., 'male', 'female')
+      if (!gender) {
+        Alert.alert('Error', 'Please select a valid gender option');
+        return;
+      }
+      
+      // Format date to YYYY-MM-DD for database
+      const formattedDate = dateOfBirth.toISOString().split('T')[0];
+      
+      // Save personal information to database
+      const { error } = await OnboardingService.savePersonalInfo({
+        full_name: fullName,
+        display_name: username,
+        birth_date: formattedDate,
+        gender: gender as GenderType,
+        phone: phoneNumber,
+        profile_picture_url: profileImage || undefined,
+      });
+      
+      if (error) {
+        console.error('Error saving personal info:', error);
+        Alert.alert(
+          'Error',
+          'Failed to save your information. Please try again.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+      
+      // Sync username (display name) and phone number to auth.users
+      console.log('🔄 Syncing username and phone to auth.users...');
+      const { error: authUpdateError } = await supabase.auth.updateUser({
+        data: {
+          display_name: username, // Sync username to display_name in user_metadata
+        },
+        phone: phoneNumber, // Sync phone to auth.users phone field
+      });
+      
+      if (authUpdateError) {
+        console.error('⚠️ Warning: Failed to sync to auth.users:', authUpdateError.message);
+        // Don't block onboarding if this fails - data is already saved to profile table
+      } else {
+        console.log('✅ Username and phone synced to auth.users successfully');
+      }
+      
+      console.log('Personal info saved to database:', {
+        fullName,
+        username,
+        dateOfBirth: formattedDate,
+        gender: gender,
+        phoneNumber,
+        profileImage,
+      });
+      
+      if (onContinue) {
+        onContinue();
+      }
+    } catch (error) {
+      console.error('Unexpected error saving personal info:', error);
+      Alert.alert(
+        'Error',
+        'An unexpected error occurred. Please try again.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   const isFormValid =
@@ -158,7 +255,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
 
         {/* Title */}
-        <Text style={styles.title}>Tell us about your{'\n'}yourself</Text>
+        <Heading level={2} style={styles.title}>Tell us about yourself</Heading>
 
         {/* Profile Picture Upload */}
         <TouchableOpacity
@@ -177,22 +274,24 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         </TouchableOpacity>
 
         {/* Full Name Input */}
-        <TextInput
-          style={styles.input}
-          placeholder="Full Name"
+        <Input
+          label="Full Name"
+          placeholder="Enter your full name"
           value={fullName}
           onChangeText={handleFullNameChange}
-          autoCapitalize="words"
+          required
         />
 
         {/* Username Input */}
-        <TextInput
-          style={styles.input}
-          placeholder="Username (max 10 chars, no spaces)"
+        <Input
+          label="Username"
+          placeholder="Choose a username"
           value={username}
           onChangeText={handleUsernameChange}
-          autoCapitalize="none"
+          helperText="Max 10 characters, no spaces"
           maxLength={10}
+          showCharCount
+          required
         />
 
         {/* Date of Birth Input */}
@@ -228,8 +327,9 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
             onPress={() => setShowDatePicker(true)}
             activeOpacity={0.8}
           >
-            <Text
-              style={[styles.inputField, styles.inputText, !dateOfBirth && styles.placeholderText]}
+            <Text 
+              color={dateOfBirth ? '#333' : '#999'}
+              style={{ flex: 1 }}
             >
               {dateOfBirth ? formatDate(dateOfBirth) : 'Date of Birth'}
             </Text>
@@ -279,56 +379,36 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         )}
 
         {/* Gender Picker */}
-        <TouchableOpacity
-          style={styles.inputWithIcon}
-          onPress={() => setShowGenderPicker(!showGenderPicker)}
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.inputField, styles.inputText, !gender && styles.placeholderText]}>
-            {gender || 'Gender'}
-          </Text>
-          <Ionicons name="chevron-down" size={20} color="#999" style={styles.inputIcon} />
-        </TouchableOpacity>
-
-        {/* Gender Options Dropdown */}
-        {showGenderPicker && (
-          <View style={styles.genderOptions}>
-            {genderOptions.map(option => (
-              <TouchableOpacity
-                key={option}
-                style={styles.genderOption}
-                onPress={() => handleSelectGender(option)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.genderOptionText}>{option}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
+        <Select
+          label="Gender"
+          placeholder="Select your gender"
+          value={gender}
+          onChange={setGender}
+          options={genderOptions}
+          required
+        />
 
         {/* Phone Number Input */}
-        <TextInput
-          style={styles.input}
-          placeholder="Phone Number (10 digits)"
+        <Input
+          label="Phone Number"
+          type="phone"
+          placeholder="Enter phone number"
           value={phoneNumber}
           onChangeText={handlePhoneNumberChange}
-          keyboardType="numeric"
           maxLength={10}
+          showCharCount
+          required
         />
 
         {/* Continue Button */}
-        <TouchableOpacity
-          style={[styles.continueButton, !isFormValid && styles.continueButtonDisabled]}
-          onPress={isFormValid ? handleContinue : undefined}
-          activeOpacity={isFormValid ? 0.8 : 1}
+        <Button
+          variant="primary"
+          onPress={handleContinue}
           disabled={!isFormValid}
+          style={styles.continueButton}
         >
-          <Text
-            style={[styles.continueButtonText, !isFormValid && styles.continueButtonTextDisabled]}
-          >
-            Continue
-          </Text>
-        </TouchableOpacity>
+          Continue
+        </Button>
       </Animated.View>
     </Overlay>
   );
@@ -365,16 +445,8 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 40,
   },
-  input: {
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    fontSize: 16,
-    color: '#333',
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: COLORS.primaryLight,
+  continueButton: {
+    marginTop: 10,
   },
   inputWithIcon: {
     flexDirection: 'row',
@@ -386,7 +458,6 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     borderWidth: 1,
     borderColor: COLORS.primaryLight,
-    position: 'relative',
   },
   inputField: {
     flex: 1,
@@ -401,61 +472,6 @@ const styles = StyleSheet.create({
   },
   inputIcon: {
     marginLeft: 10,
-  },
-  genderOptions: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    marginBottom: 15,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  genderOption: {
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  genderOptionText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  continueButton: {
-    backgroundColor: '#EF6F7B',
-    borderRadius: 10,
-    paddingVertical: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 10,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  continueButtonDisabled: {
-    backgroundColor: '#D3D3D3',
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  continueButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  continueButtonTextDisabled: {
-    color: '#999',
   },
   modalOverlay: {
     flex: 1,
