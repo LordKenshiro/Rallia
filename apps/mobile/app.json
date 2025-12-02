@@ -17,7 +17,8 @@
       "infoPlist": {
         "NSCameraUsageDescription": "This app requires access to your camera to take profile pictures.",
         "NSPhotoLibraryUsageDescription": "This app requires access to your photo library to select profile pictures."
-      }
+      },
+      "bundleIdentifier": "com.mathisl971.rallia-app"
     },
     "android": {
       "adaptiveIcon": {
