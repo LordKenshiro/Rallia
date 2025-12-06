@@ -105,6 +105,7 @@ export async function POST(request: NextRequest) {
     const { error: profileError } = await supabaseAdmin.from('profiles').upsert(
       {
         id: userId,
+        email,
         full_name: 'Super Admin',
         display_name: 'Admin',
         is_active: true,
