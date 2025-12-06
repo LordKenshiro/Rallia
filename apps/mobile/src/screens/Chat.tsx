@@ -7,8 +7,6 @@ import RalliaLogo from '../../assets/images/light mode logo.svg';
 const Chat = () => {
   return (
     <SafeAreaView style={styles.container}>
-      <AppHeader backgroundColor="#C8F2EF" Logo={RalliaLogo} />
-
       <ScrollView style={styles.content}>
         <View style={styles.placeholderContainer}>
           <Text style={styles.placeholderText}>No messages yet</Text>

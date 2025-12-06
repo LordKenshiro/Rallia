@@ -19,8 +19,6 @@ const Map = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <AppHeader backgroundColor="#C8F2EF" Logo={RalliaLogo} />
-
       <View style={styles.mapContainer}>
         <Text style={styles.placeholderText}>Map View</Text>
       </View>

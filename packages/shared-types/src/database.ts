@@ -29,6 +29,7 @@ export type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'frida
 export type TimePeriod = 'morning' | 'afternoon' | 'evening' | 'night';
 
 export type RatingType = 'ntrp' | 'utr' | 'dupr' | 'self_assessment';
+export type RatingSourceType = 'self_reported' | 'api_verified' | 'peer_verified' | 'admin_verified';
 export type SkillLevel = 'beginner' | 'intermediate' | 'advanced' | 'professional';
 
 export type NetworkType = 'public' | 'private' | 'friends' | 'club';
@@ -142,9 +143,14 @@ export interface PlayerRatingScore {
   id: string;
   player_id: string;
   rating_score_id: string;
+  source_type: RatingSourceType;
   is_verified: boolean;
   verified_at: string | null;
   verified_by: string | null;
+  verification_method: string | null;
+  peer_rating_count: number;
+  peer_rating_average: number | null;
+  is_primary: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -243,6 +249,20 @@ export interface Notification {
   action_url: string | null;
   created_at: string;
   read_at: string | null;
+}
+
+export interface PlayerReview {
+  id: string;
+  match_id: string | null;
+  reviewer_id: string;
+  reviewed_id: string;
+  rating: number; // 1-5 stars for general experience
+  comment: string | null;
+  sport_id: string | null;
+  skill_rating_value: number | null; // NTRP/DUPR skill rating
+  skill_rating_score_id: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 // ============================================

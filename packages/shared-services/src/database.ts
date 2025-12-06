@@ -1026,7 +1026,9 @@ export const OnboardingService = {
           .insert({
             player_id: userId,
             rating_score_id: ratingScore.id,
+            source_type: 'self_reported', // NEW: All onboarding ratings are self-reported
             is_verified: false,
+            is_primary: true, // NEW: Mark as primary display rating
           })
           .select()
           .single();

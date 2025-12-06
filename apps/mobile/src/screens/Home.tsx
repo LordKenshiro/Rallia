@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  AppHeader,
   MatchCard,
   LocationPermissionOverlay,
   CalendarAccessOverlay,
@@ -21,7 +20,6 @@ import {
   PlayerPreferencesOverlay,
   PlayerAvailabilitiesOverlay,
 } from '../features/onboarding/components';
-import RalliaLogo from '../../assets/images/light mode logo.svg';
 import { useAuth, useOnboardingFlow } from '../hooks';
 import { useProfile } from '@rallia/shared-hooks';
 import { getMockMatches } from '../features/matches/data/mockMatches';
@@ -97,7 +95,6 @@ const Home = () => {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <AppHeader backgroundColor="#C8F2EF" Logo={RalliaLogo} />
         <View style={styles.loadingContainer}>
           <Spinner size="lg" />
         </View>
@@ -107,7 +104,6 @@ const Home = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <AppHeader backgroundColor="#C8F2EF" Logo={RalliaLogo} />
 
       <View style={styles.contentWrapper}>
         {!session && (

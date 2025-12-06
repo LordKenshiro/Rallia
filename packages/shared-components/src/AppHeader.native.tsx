@@ -4,7 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useProfile, usePlayerSports } from '@rallia/shared-hooks';
 import { Text } from './foundation/Text.native';
-import SettingsModal from './SettingsModal.native';
 
 interface Sport {
   id: string;
@@ -27,7 +26,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({ backgroundColor = '#C8F2EF', Logo
   const [userSports, setUserSports] = useState<Sport[]>([]);
   const [selectedSport, setSelectedSport] = useState<Sport | null>(null);
   const [showSportDropdown, setShowSportDropdown] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
 
   // Extract profile picture URL from profile data
@@ -88,8 +86,8 @@ const AppHeader: React.FC<AppHeaderProps> = ({ backgroundColor = '#C8F2EF', Logo
   };
 
   const handleProfilePress = () => {
-    // Navigate to Profile screen
-    navigation.navigate('Profile' as never);
+    // Navigate to UserProfile screen
+    (navigation as any).navigate('Profile');
   };
 
   const handleNotificationsPress = () => {
@@ -98,7 +96,10 @@ const AppHeader: React.FC<AppHeaderProps> = ({ backgroundColor = '#C8F2EF', Logo
   };
 
   const handleSettingsPress = () => {
-    setShowSettings(true);
+    // Navigate to Settings screen in Profile stack
+    (navigation as any).navigate('Profile', {
+      screen: 'Settings',
+    });
   };
 
   return (
@@ -199,12 +200,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({ backgroundColor = '#C8F2EF', Logo
           </TouchableOpacity>
         </Modal>
       )}
-
-      {/* Settings Modal */}
-      <SettingsModal 
-        visible={showSettings}
-        onClose={() => setShowSettings(false)}
-      />
     </>
   );
 };

@@ -10,6 +10,7 @@ import {
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { supabase } from '@rallia/shared-services';
 import { useProfile } from '@rallia/shared-hooks';
 import { Text } from './foundation/Text.native';
@@ -23,6 +24,7 @@ interface SettingsModalProps {
 const { width } = Dimensions.get('window');
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
+  const navigation = useNavigation();
   const [slideAnim] = useState(new Animated.Value(width));
   const [selectedLanguage, setSelectedLanguage] = useState<'EN' | 'FR'>('EN');
   const [selectedAppearance, setSelectedAppearance] = useState<'Light' | 'Dark' | 'System'>('Light');
@@ -136,7 +138,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
               </View>
 
               {/* Edit Profile */}
-              <TouchableOpacity style={styles.editProfileButton}>
+              <TouchableOpacity 
+                style={styles.editProfileButton}
+                onPress={() => {
+                  onClose(); // Close settings modal first
+                  navigation.navigate('UserProfile' as never);
+                }}
+              >
                 <Ionicons name="create-outline" size={16} color="#666" />
                 <Text size="sm">Edit Profile</Text>
                 <Ionicons name="chevron-forward" size={18} color="#999" style={{ marginLeft: 'auto' }} />
