@@ -1,13 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
-import { AppHeader } from '@rallia/shared-components';
-import RalliaLogo from '../../assets/images/light mode logo.svg';
 
 const Community = () => {
   return (
     <SafeAreaView style={styles.container}>
-      <AppHeader backgroundColor="#C8F2EF" Logo={RalliaLogo} />
-
       <ScrollView style={styles.content}>
         <View style={styles.placeholderContainer}>
           <Text style={styles.placeholderText}>Connect with other players</Text>

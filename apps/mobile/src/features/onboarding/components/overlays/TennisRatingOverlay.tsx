@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Alert, ActivityIndicator, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
@@ -15,6 +15,9 @@ interface TennisRatingOverlayProps {
   onContinue?: (rating: string) => void;
   currentStep?: number;
   totalSteps?: number;
+  mode?: 'onboarding' | 'edit'; // Mode: onboarding (create) or edit (update)
+  initialRating?: string; // Pre-selected rating ID for edit mode
+  onSave?: (ratingId: string) => void; // Save callback for edit mode
 }
 
 interface Rating {
@@ -33,8 +36,11 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
   onContinue,
   currentStep = 1,
   totalSteps = 8,
+  mode = 'onboarding',
+  initialRating,
+  onSave,
 }) => {
-  const [selectedRating, setSelectedRating] = useState<string | null>(null);
+  const [selectedRating, setSelectedRating] = useState<string | null>(initialRating || null);
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -110,9 +116,18 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
   };
 
   const handleContinue = async () => {
-    if (selectedRating && onContinue) {
-      mediumHaptic();
-      
+    if (!selectedRating) return;
+    
+    mediumHaptic();
+    
+    // Edit mode: use the onSave callback
+    if (mode === 'edit' && onSave) {
+      onSave(selectedRating);
+      return;
+    }
+    
+    // Onboarding mode: save to database
+    if (onContinue) {
       try {
         // Get tennis sport ID
         const { data: tennisSport, error: sportError } = await SportService.getSportByName('tennis');
@@ -180,8 +195,10 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
           },
         ]}
       >
-        {/* Progress Indicator */}
-        <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
+        {/* Progress Indicator - only show in onboarding mode */}
+        {mode === 'onboarding' && (
+          <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
+        )}
 
         {/* Back Button */}
         <TouchableOpacity style={styles.backButton} onPress={onBack || onClose} activeOpacity={0.7}>
@@ -189,15 +206,31 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
         </TouchableOpacity>
 
         {/* Title */}
-        <Text style={styles.title}>Tell us about your game</Text>
+        <Text style={styles.title}>
+          {mode === 'edit' ? 'Update your tennis rating' : 'Tell us about your game'}
+        </Text>
 
         {/* Sport Badge */}
         <View style={styles.sportBadge}>
           <Text style={styles.sportBadgeText}>Tennis</Text>
         </View>
 
-        {/* Subtitle */}
-        <Text style={styles.subtitle}>NTRP Rating</Text>
+        {/* Subtitle with NTRP link */}
+        <Text style={styles.subtitle}>
+          {mode === 'edit' ? (
+            <>
+              Learn more about the{' '}
+              <Text 
+                style={styles.link} 
+                onPress={() => Linking.openURL('https://www.usta.com/en/home/improve/national-tennis-rating-program.html')}
+              >
+                NTRP rating system
+              </Text>
+            </>
+          ) : (
+            'NTRP Rating'
+          )}
+        </Text>
 
         {/* Rating Options */}
         <ScrollView style={styles.ratingList} showsVerticalScrollIndicator={false}>
@@ -263,7 +296,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
           )}
         </ScrollView>
 
-        {/* Continue Button */}
+        {/* Continue/Save Button */}
         <TouchableOpacity
           style={[styles.continueButton, !selectedRating && styles.continueButtonDisabled]}
           onPress={handleContinue}
@@ -276,7 +309,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
               !selectedRating && styles.continueButtonTextDisabled,
             ]}
           >
-            Continue
+            {mode === 'edit' ? 'Save' : 'Continue'}
           </Text>
         </TouchableOpacity>
       </Animated.View>
@@ -425,6 +458,11 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 14,
     color: '#666',
+  },
+  link: {
+    color: COLORS.primary,
+    textDecorationLine: 'underline',
+    fontWeight: '600',
   },
 });
 

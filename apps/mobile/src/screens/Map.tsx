@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
-import { AppHeader, LocationPermissionOverlay } from '@rallia/shared-components';
-import RalliaLogo from '../../assets/images/light mode logo.svg';
+import { LocationPermissionOverlay } from '@rallia/shared-components';
 
 const Map = () => {
   const [showLocationPermission, setShowLocationPermission] = useState(false);
@@ -18,8 +17,6 @@ const Map = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <AppHeader backgroundColor="#C8F2EF" Logo={RalliaLogo} />
-
       <View style={styles.mapContainer}>
         <Text style={styles.placeholderText}>Map View</Text>
       </View>

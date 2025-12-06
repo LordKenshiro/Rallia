@@ -12,9 +12,12 @@ interface PlayerAvailabilitiesOverlayProps {
   onClose: () => void;
   onBack?: () => void;
   onContinue?: (availabilities: WeeklyAvailability) => void;
-  selectedSportIds: string[]; // Sport IDs to create availability entries for each sport
+  selectedSportIds?: string[]; // Sport IDs to create availability entries for each sport (optional for edit mode)
   currentStep?: number;
   totalSteps?: number;
+  mode?: 'onboarding' | 'edit'; // Mode: onboarding (create) or edit (update)
+  initialData?: WeeklyAvailability; // Initial availability data for edit mode
+  onSave?: (availabilities: WeeklyAvailability) => void; // Save callback for edit mode
 }
 
 type TimeSlot = 'AM' | 'PM' | 'EVE';
@@ -36,12 +39,15 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
   selectedSportIds,
   currentStep = 1,
   totalSteps = 8,
+  mode = 'onboarding',
+  initialData,
+  onSave,
 }) => {
   const days: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const timeSlots: TimeSlot[] = ['AM', 'PM', 'EVE'];
 
-  // Initialize availabilities with some default selections
-  const [availabilities, setAvailabilities] = useState<WeeklyAvailability>({
+  // Default availabilities for onboarding mode
+  const defaultAvailabilities: WeeklyAvailability = {
     Mon: { AM: true, PM: false, EVE: false },
     Tue: { AM: false, PM: false, EVE: false },
     Wed: { AM: false, PM: true, EVE: false },
@@ -49,7 +55,12 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
     Fri: { AM: false, PM: true, EVE: false },
     Sat: { AM: true, PM: false, EVE: false },
     Sun: { AM: false, PM: false, EVE: true },
-  });
+  };
+
+  // Initialize availabilities: use initialData for edit mode, defaults for onboarding
+  const [availabilities, setAvailabilities] = useState<WeeklyAvailability>(
+    initialData || defaultAvailabilities
+  );
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -88,9 +99,16 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
   };
 
   const handleContinue = async () => {
+    mediumHaptic();
+    
+    // Edit mode: use the onSave callback
+    if (mode === 'edit' && onSave) {
+      onSave(availabilities);
+      return;
+    }
+    
+    // Onboarding mode: save to database
     if (onContinue) {
-      mediumHaptic();
-      
       try {
         // Map UI data to database format
         const dayMap: Record<DayOfWeek, DBDayOfWeek> = {
@@ -117,7 +135,7 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
           timeSlots.forEach((slot) => {
             if (availabilities[day][slot]) {
               // Create one entry per selected sport
-              selectedSportIds.forEach((sportId) => {
+              selectedSportIds?.forEach((sportId) => {
                 availabilityData.push({
                   sport_id: sportId,
                   day_of_week: dayMap[day],
@@ -178,7 +196,10 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
             },
           ]}
         >
-          <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
+          {/* Show progress indicator only in onboarding mode */}
+          {mode === 'onboarding' && (
+            <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
+          )}
 
           {/* Back Button */}
           <TouchableOpacity style={styles.backButton} onPress={onBack || onClose} activeOpacity={0.7}>
@@ -236,13 +257,15 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
             ))}
           </View>
 
-          {/* Complete Button */}
+          {/* Complete/Save Button */}
           <TouchableOpacity
             style={styles.completeButton}
             onPress={handleContinue}
             activeOpacity={0.8}
           >
-            <Text style={styles.completeButtonText}>Complete</Text>
+            <Text style={styles.completeButtonText}>
+              {mode === 'edit' ? 'Save' : 'Complete'}
+            </Text>
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>

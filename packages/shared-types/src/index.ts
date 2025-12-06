@@ -13,3 +13,6 @@ export type { Match, AccessType } from './match';
 
 // Export deprecated types for backwards compatibility (will be removed in v2.0)
 export type { LegacyMatchStatus, LegacyMatchType } from './match';
+
+// Export player types and preferences
+export * from './player';
