@@ -12,10 +12,7 @@ interface ProgressIndicatorProps {
  * Shows current step and progress bar
  * Note: Returns null if currentStep is 0 (permission overlays)
  */
-const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
-  currentStep,
-  totalSteps,
-}) => {
+const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({ currentStep, totalSteps }) => {
   // Don't show progress indicator for permission overlays (currentStep = 0)
   if (currentStep === 0) {
     return null;

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
-import { LocationPermissionOverlay } from '@rallia/shared-components';
+import { View, Text, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppHeader, LocationPermissionOverlay } from '@rallia/shared-components';
+import RalliaLogo from '../../assets/images/light mode logo.svg';
 
 const Map = () => {
   const [showLocationPermission, setShowLocationPermission] = useState(false);

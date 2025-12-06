@@ -1,5 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Image, ScrollView, Animated, Alert } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  ScrollView,
+  Animated,
+  Alert,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay, Text, Heading, Button, Spinner } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
@@ -57,7 +65,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
     const fetchSports = async () => {
       setIsLoadingSports(true);
       const { data, error } = await DatabaseService.Sport.getAllSports();
-      
+
       if (error) {
         console.error('Error fetching sports:', error);
         Alert.alert('Error', 'Failed to load sports. Please try again.');
@@ -89,7 +97,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
         const activeSports = data.filter((sport: Sport) => sport.is_active);
         setSports(activeSports);
       }
-      
+
       setIsLoadingSports(false);
     };
 
@@ -120,7 +128,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
     if (visible) {
       fadeAnim.setValue(0);
       slideAnim.setValue(50);
-      
+
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -138,7 +146,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
 
   const toggleSport = async (sportId: string) => {
     selectionHaptic();
-    
+
     if (!playerId) {
       Alert.alert('Error', 'Player not found. Please try again.');
       return;
@@ -179,15 +187,15 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
 
   const handleContinue = () => {
     mediumHaptic();
-    
+
     // Get sport names from IDs for useOnboardingFlow
     const selectedSportNames = selectedSportIds
       .map(id => sports.find(s => s.id === id)?.name)
       .filter(name => name !== undefined) as string[];
-    
+
     console.log('Selected sport IDs:', selectedSportIds);
     console.log('Selected sport names:', selectedSportNames);
-    
+
     if (onContinue) {
       // Pass both names (for flow control) and IDs (for database operations)
       onContinue(selectedSportNames, selectedSportIds);
@@ -195,7 +203,13 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
   };
 
   return (
-    <Overlay visible={visible} onClose={onClose} onBack={onBack} type="bottom" showBackButton={false}>
+    <Overlay
+      visible={visible}
+      onClose={onClose}
+      onBack={onBack}
+      type="bottom"
+      showBackButton={false}
+    >
       <Animated.View
         style={[
           styles.container,
@@ -209,20 +223,26 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
         <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
 
         {/* Title */}
-        <Heading level={2} style={styles.title}>Which sports would you like to play?</Heading>
-        <Text variant="caption" color="#666" style={styles.subtitle}>Select all that apply</Text>
+        <Heading level={2} style={styles.title}>
+          Which sports would you like to play?
+        </Heading>
+        <Text variant="caption" color="#666" style={styles.subtitle}>
+          Select all that apply
+        </Text>
 
         {/* Sports Grid */}
         <ScrollView style={styles.sportsContainer} showsVerticalScrollIndicator={false}>
           {isLoadingSports ? (
             <View style={styles.loadingContainer}>
               <Spinner size="lg" />
-              <Text size="sm" color="#666" style={styles.loadingText}>Loading sports...</Text>
+              <Text size="sm" color="#666" style={styles.loadingText}>
+                Loading sports...
+              </Text>
             </View>
           ) : (
             sports.map(sport => {
               const isSelected = selectedSportIds.includes(sport.id);
-              
+
               // Map sport name to local images
               const getSportImage = (sportName: string) => {
                 const lowerName = sportName.toLowerCase();
@@ -234,7 +254,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
                 // Default fallback - could add more sports here
                 return require('../../../../../assets/images/tennis.jpg');
               };
-              
+
               return (
                 <TouchableOpacity
                   key={sport.id}
@@ -244,10 +264,10 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
                 >
                   {/* Sport Image */}
                   <View style={styles.sportImageContainer}>
-                    <Image 
-                      source={getSportImage(sport.name)} 
-                      style={styles.sportImage} 
-                      resizeMode="cover" 
+                    <Image
+                      source={getSportImage(sport.name)}
+                      style={styles.sportImage}
+                      resizeMode="cover"
                     />
                     {/* Overlay for darkening effect */}
                     <View style={styles.sportImageOverlay} />
@@ -255,7 +275,9 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
 
                   {/* Sport Name */}
                   <View style={styles.sportNameContainer}>
-                    <Text size="xl" weight="bold" color="#fff">{sport.display_name}</Text>
+                    <Text size="xl" weight="bold" color="#fff">
+                      {sport.display_name}
+                    </Text>
                     {isSelected && <Ionicons name="checkmark" size={24} color="#fff" />}
                   </View>
                 </TouchableOpacity>

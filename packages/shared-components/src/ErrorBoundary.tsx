@@ -1,25 +1,25 @@
 /**
  * ErrorBoundary Component
- * 
+ *
  * React Error Boundary component that catches JavaScript errors anywhere in the component tree,
  * logs those errors, and displays a fallback UI instead of crashing the whole app.
- * 
+ *
  * Features:
  * - Catches render errors in child components
  * - Logs errors to console (dev) and error tracking service (production)
  * - Displays user-friendly fallback UI
  * - Supports custom fallback components
  * - Provides retry functionality
- * 
+ *
  * @example
  * ```tsx
  * import { ErrorBoundary } from '@rallia/shared-components';
- * 
+ *
  * <ErrorBoundary>
  *   <App />
  * </ErrorBoundary>
  * ```
- * 
+ *
  * @example Custom fallback
  * ```tsx
  * <ErrorBoundary fallback={<CustomErrorScreen />}>
@@ -88,7 +88,7 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({ error, errorInfo, onReset
               <Heading level={4} color="#D32F2F">
                 Error Details (Development Only)
               </Heading>
-              
+
               <VStack spacing={8}>
                 <Text weight="bold" size="sm" color="#666">
                   Error Message:
@@ -141,7 +141,7 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({ error, errorInfo, onReset
 
 /**
  * ErrorBoundary class component
- * 
+ *
  * Note: Error boundaries must be class components as React doesn't yet support
  * error boundaries in functional components with hooks.
  */
@@ -205,7 +205,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       console.error('Error Boundary - Component Stack:', errorInfo.componentStack);
 
       // TODO: When Logger is available, use:
-      // import { Logger } from '@rallia/shared-services';
+      // import { Logger } from '../../services/logger';
       // Logger.error('Error caught by ErrorBoundary', error, {
       //   componentStack: errorInfo.componentStack,
       //   errorBoundary: true,

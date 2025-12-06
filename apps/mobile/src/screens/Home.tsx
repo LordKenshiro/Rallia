@@ -1,12 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  SafeAreaView,
-  ScrollView,
-  TouchableOpacity,
-  Animated,
-} from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Animated } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   MatchCard,
   LocationPermissionOverlay,
@@ -118,8 +112,8 @@ const Home = () => {
             <Text size="sm" color="#666" style={styles.sectionSubtitle}>
               You must sign in to create and access your matches
             </Text>
-            <Button 
-              variant="primary" 
+            <Button
+              variant="primary"
               onPress={onboarding.startOnboarding}
               style={styles.signInButton}
             >
@@ -130,7 +124,9 @@ const Home = () => {
 
         {session && showWelcome && (
           <Animated.View style={[styles.welcomeSection, { opacity: welcomeOpacity }]}>
-            <Text size="lg" weight="bold" color="#333" style={styles.welcomeText}>Welcome back! 👋</Text>
+            <Text size="lg" weight="bold" color="#333" style={styles.welcomeText}>
+              Welcome back! 👋
+            </Text>
             <Text size="sm" color="#666">
               {displayName || session.user.email?.split('@')[0] || 'User'}
             </Text>
@@ -140,7 +136,9 @@ const Home = () => {
         <View style={styles.sectionHeader}>
           <Heading level={3}>🔍 Soon & Nearby</Heading>
           <TouchableOpacity>
-            <Text size="sm" color="#666">View All &gt;</Text>
+            <Text size="sm" color="#666">
+              View All &gt;
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -159,7 +157,9 @@ const Home = () => {
             ))
           ) : (
             <View style={styles.placeholderContainer}>
-              <Text size="base" color="#999" style={styles.placeholderText}>No matches available</Text>
+              <Text size="base" color="#999" style={styles.placeholderText}>
+                No matches available
+              </Text>
             </View>
           )}
         </ScrollView>

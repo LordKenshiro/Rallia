@@ -7,7 +7,6 @@ export * from './database';
 export * from './verification';
 export * from './usta';
 export * from './dupr';
-export * from './logger';
 
 // Export default DatabaseService
 export { default } from './database';

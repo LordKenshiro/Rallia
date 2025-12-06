@@ -1,0 +1,11 @@
+{
+  "imports": {
+    "@supabase/functions-js": "jsr:@supabase/functions-js@2",
+    "@supabase/supabase-js": "jsr:@supabase/supabase-js@2",
+    "resend": "npm:resend@^4.0.0",
+    "zod": "npm:zod@^3.23.8"
+  },
+  "compilerOptions": {
+    "lib": ["deno.ns", "deno.unstable", "dom"]
+  }
+}

@@ -95,23 +95,23 @@ const AuthSuccessOverlay: React.FC<AuthSuccessOverlayProps> = ({ visible, onClos
               <Ionicons name="tennisball-outline" size={24} color={COLORS.primary} />
               <View style={styles.actionTextContainer}>
                 <Text style={styles.actionTitle}>Create a new match</Text>
-                <Text style={styles.actionDescription}>Create a new match and let other players join</Text>
+                <Text style={styles.actionDescription}>
+                  Create a new match and let other players join
+                </Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#999" />
           </TouchableOpacity>
 
           {/* Join a match */}
-          <TouchableOpacity
-            style={styles.actionItem}
-            onPress={handleJoinMatch}
-            activeOpacity={0.7}
-          >
+          <TouchableOpacity style={styles.actionItem} onPress={handleJoinMatch} activeOpacity={0.7}>
             <View style={styles.actionLeft}>
               <Ionicons name="location-outline" size={24} color={COLORS.primary} />
               <View style={styles.actionTextContainer}>
                 <Text style={styles.actionTitle}>Join a match</Text>
-                <Text style={styles.actionDescription}>Browse public matches and join a game nearby</Text>
+                <Text style={styles.actionDescription}>
+                  Browse public matches and join a game nearby
+                </Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#999" />
@@ -127,7 +127,9 @@ const AuthSuccessOverlay: React.FC<AuthSuccessOverlayProps> = ({ visible, onClos
               <Ionicons name="people-outline" size={24} color={COLORS.primary} />
               <View style={styles.actionTextContainer}>
                 <Text style={styles.actionTitle}>Join a community</Text>
-                <Text style={styles.actionDescription}>Create a new match and let other players join</Text>
+                <Text style={styles.actionDescription}>
+                  Create a new match and let other players join
+                </Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#999" />
@@ -135,11 +137,7 @@ const AuthSuccessOverlay: React.FC<AuthSuccessOverlayProps> = ({ visible, onClos
         </View>
 
         {/* Close Button */}
-        <TouchableOpacity
-          style={styles.closeButton}
-          onPress={handleClose}
-          activeOpacity={0.8}
-        >
+        <TouchableOpacity style={styles.closeButton} onPress={handleClose} activeOpacity={0.8}>
           <Text style={styles.closeButtonText}>Close</Text>
         </TouchableOpacity>
       </Animated.View>

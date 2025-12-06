@@ -91,7 +91,7 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
     if (visible) {
       fadeAnim.setValue(0);
       slideAnim.setValue(50);
-      
+
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -185,7 +185,13 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
   };
 
   return (
-    <Overlay visible={visible} onClose={onClose} onBack={onBack} type="bottom" showBackButton={false}>
+    <Overlay
+      visible={visible}
+      onClose={onClose}
+      onBack={onBack}
+      type="bottom"
+      showBackButton={false}
+    >
       <Animated.View
         style={[
           styles.container,
