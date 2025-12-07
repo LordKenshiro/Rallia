@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ANIMATION_DELAYS } from '../constants';
+import { useTimerCleanup } from './useTimerCleanup';
 
 type OnboardingStep =
   | 'auth'
@@ -18,6 +19,10 @@ type OnboardingStep =
  * Handles visibility state for all onboarding overlays with conditional rating flow
  */
 export const useOnboardingFlow = () => {
+  // Timer cleanup hook to prevent memory leaks
+  const { scheduleTimer } = useTimerCleanup();
+  
+  const [authMode, setAuthMode] = useState<'signup' | 'login'>('signup'); // Track auth mode
   const [showAuthOverlay, setShowAuthOverlay] = useState(false);
   const [showLocationPermission, setShowLocationPermission] = useState(false);
   const [showCalendarAccess, setShowCalendarAccess] = useState(false);
@@ -87,9 +92,10 @@ export const useOnboardingFlow = () => {
    * Otherwise, start from the beginning
    */
   const startOnboarding = () => {
+    setAuthMode('signup'); // Set mode to signup
     if (lastActiveOverlay) {
       // Resume from last active overlay
-      console.log('Resuming onboarding from:', lastActiveOverlay);
+      if (__DEV__) console.log('Resuming onboarding from:', lastActiveOverlay);
       switch (lastActiveOverlay) {
         case 'personal':
           setShowPersonalInfo(true);
@@ -119,6 +125,16 @@ export const useOnboardingFlow = () => {
   };
 
   /**
+   * Start login flow for existing users
+   * Opens auth overlay in login mode - skips onboarding
+   */
+  const startLogin = () => {
+    if (__DEV__) console.log('🔓 Starting login flow');
+    setAuthMode('login'); // Set mode to login
+    setShowAuthOverlay(true);
+  };
+
+  /**
    * Close overlay without going back (simply dismiss)
    * Preserves progress for resume functionality
    */
@@ -128,63 +144,63 @@ export const useOnboardingFlow = () => {
   };
 
   const handleAuthSuccess = () => {
-    console.log('Auth success - closing AuthOverlay');
+    if (__DEV__) console.log('Auth success - closing AuthOverlay');
     // Close auth overlay
     setShowAuthOverlay(false);
 
     // Show Personal Information overlay after auth completes
-    setTimeout(() => {
-      console.log('Opening PersonalInformationOverlay');
+    scheduleTimer(() => {
+      if (__DEV__) console.log('Opening PersonalInformationOverlay');
       setShowPersonalInfo(true);
     }, ANIMATION_DELAYS.OVERLAY_TRANSITION);
   };
 
   const handleAcceptLocation = () => {
-    console.log('Location permission accepted');
+    if (__DEV__) console.log('Location permission accepted');
     setShowLocationPermission(false);
 
     // Show Calendar overlay after location permission
-    setTimeout(() => {
-      console.log('Opening CalendarAccessOverlay');
+    scheduleTimer(() => {
+      if (__DEV__) console.log('Opening CalendarAccessOverlay');
       setShowCalendarAccess(true);
     }, ANIMATION_DELAYS.OVERLAY_STAGGER);
     // TODO: Request actual location permission
   };
 
   const handleRefuseLocation = () => {
-    console.log('Location permission refused');
+    if (__DEV__) console.log('Location permission refused');
     setShowLocationPermission(false);
 
     // Show Calendar overlay even if location was refused
-    setTimeout(() => {
-      console.log('Opening CalendarAccessOverlay');
+    scheduleTimer(() => {
+      if (__DEV__) console.log('Opening CalendarAccessOverlay');
       setShowCalendarAccess(true);
     }, ANIMATION_DELAYS.OVERLAY_STAGGER);
   };
 
   const showCalendarOverlay = () => {
-    console.log('Showing calendar access overlay');
+    if (__DEV__) console.log('Showing calendar access overlay');
     setShowCalendarAccess(true);
   };
 
   const handleAcceptCalendar = () => {
-    console.log('Calendar permission accepted');
+    if (__DEV__) console.log('Calendar permission accepted');
     setShowCalendarAccess(false);
     // TODO: Request actual calendar permission
   };
 
   const handleRefuseCalendar = () => {
-    console.log('Calendar permission refused');
+    if (__DEV__) console.log('Calendar permission refused');
     setShowCalendarAccess(false);
   };
 
   const handlePersonalInfoContinue = () => {
-    console.log('Personal info completed');
+    if (__DEV__) console.log('Personal info completed');
     setShowPersonalInfo(false);
 
     // Show Sport Selection overlay after personal info
-    setTimeout(() => {
-      console.log('Opening SportSelectionOverlay');
+    scheduleTimer(() => {
+      if (__DEV__) console.log('Opening SportSelectionOverlay');
       setShowSportSelection(true);
     }, ANIMATION_DELAYS.OVERLAY_STAGGER);
   };
@@ -202,9 +218,9 @@ export const useOnboardingFlow = () => {
    * Back button handler - navigate to previous overlay (Auth)
    */
   const backFromPersonalInfo = () => {
-    console.log('Going back from PersonalInformationOverlay to Auth');
+    if (__DEV__) console.log('Going back from PersonalInformationOverlay to Auth');
     setShowPersonalInfo(false);
-    setTimeout(() => {
+    scheduleTimer(() => {
       setShowAuthOverlay(true);
     }, ANIMATION_DELAYS.OVERLAY_STAGGER);
   };
@@ -213,9 +229,9 @@ export const useOnboardingFlow = () => {
    * Back button handler - navigate to previous overlay (Personal)
    */
   const backFromSportSelection = () => {
-    console.log('Going back from SportSelectionOverlay to PersonalInfo');
+    if (__DEV__) console.log('Going back from SportSelectionOverlay to PersonalInfo');
     setShowSportSelection(false);
-    setTimeout(() => {
+    scheduleTimer(() => {
       setShowPersonalInfo(true);
     }, ANIMATION_DELAYS.OVERLAY_STAGGER);
   };
@@ -224,9 +240,9 @@ export const useOnboardingFlow = () => {
    * Back button handler - navigate to previous overlay (Sport Selection)
    */
   const backFromTennisRating = () => {
-    console.log('Going back from TennisRatingOverlay to SportSelection');
+    if (__DEV__) console.log('Going back from TennisRatingOverlay to SportSelection');
     setShowTennisRating(false);
-    setTimeout(() => {
+    scheduleTimer(() => {
       setShowSportSelection(true);
     }, ANIMATION_DELAYS.OVERLAY_STAGGER);
   };
@@ -235,9 +251,9 @@ export const useOnboardingFlow = () => {
    * Back button handler - navigate to previous overlay (Tennis or Sport)
    */
   const backFromPickleballRating = () => {
-    console.log('Going back from PickleballRatingOverlay');
+    if (__DEV__) console.log('Going back from PickleballRatingOverlay');
     setShowPickleballRating(false);
-    setTimeout(() => {
+    scheduleTimer(() => {
       if (selectedSports.includes('tennis')) {
         setShowTennisRating(true);
       } else {
@@ -250,9 +266,9 @@ export const useOnboardingFlow = () => {
    * Back button handler - navigate to previous overlay (last rating overlay)
    */
   const backFromPlayerPreferences = () => {
-    console.log('Going back from PlayerPreferencesOverlay');
+    if (__DEV__) console.log('Going back from PlayerPreferencesOverlay');
     setShowPlayerPreferences(false);
-    setTimeout(() => {
+    scheduleTimer(() => {
       if (selectedSports.includes('pickleball')) {
         setShowPickleballRating(true);
       } else if (selectedSports.includes('tennis')) {
@@ -267,38 +283,38 @@ export const useOnboardingFlow = () => {
    * Back button handler - navigate to previous overlay (Preferences)
    */
   const backFromPlayerAvailabilities = () => {
-    console.log('Going back from PlayerAvailabilitiesOverlay to Preferences');
+    if (__DEV__) console.log('Going back from PlayerAvailabilitiesOverlay to Preferences');
     setShowPlayerAvailabilities(false);
-    setTimeout(() => {
+    scheduleTimer(() => {
       setShowPlayerPreferences(true);
     }, ANIMATION_DELAYS.OVERLAY_STAGGER);
   };
 
   const handleSportSelectionContinue = (sports: string[], sportIds?: string[]) => {
-    console.log('Sport selection completed:', sports);
+    if (__DEV__) console.log('Sport selection completed:', sports);
     setSelectedSports(sports);
     if (sportIds) {
       setSelectedSportIds(sportIds);
-      console.log('Sport IDs for availability:', sportIds);
+      if (__DEV__) console.log('Sport IDs for availability:', sportIds);
     }
     setShowSportSelection(false);
 
     // Determine which rating overlay to show based on selected sports
-    setTimeout(() => {
+    scheduleTimer(() => {
       const hasTennis = sports.includes('tennis');
       const hasPickleball = sports.includes('pickleball');
 
       if (hasTennis) {
         // If tennis selected (with or without pickleball), show tennis rating first
-        console.log('Opening TennisRatingOverlay');
+        if (__DEV__) console.log('Opening TennisRatingOverlay');
         setShowTennisRating(true);
       } else if (hasPickleball) {
         // If only pickleball selected, show pickleball rating
-        console.log('Opening PickleballRatingOverlay');
+        if (__DEV__) console.log('Opening PickleballRatingOverlay');
         setShowPickleballRating(true);
       } else {
         // No sports selected (shouldn't happen, but fallback to preferences)
-        console.log('No sports selected, opening PlayerPreferencesOverlay');
+        if (__DEV__) console.log('No sports selected, opening PlayerPreferencesOverlay');
         setShowPlayerPreferences(true);
       }
     }, ANIMATION_DELAYS.OVERLAY_STAGGER);
@@ -309,24 +325,24 @@ export const useOnboardingFlow = () => {
    * Preserves progress for resume functionality
    */
   const closeSportSelection = () => {
-    console.log('Closing SportSelectionOverlay');
+    if (__DEV__) console.log('Closing SportSelectionOverlay');
     setShowSportSelection(false);
     setLastActiveOverlay('sport');
   };
 
   const handleTennisRatingContinue = (rating: string) => {
-    console.log('Tennis rating completed:', rating);
+    if (__DEV__) console.log('Tennis rating completed:', rating);
     setShowTennisRating(false);
 
     // Check if pickleball was also selected
-    setTimeout(() => {
+    scheduleTimer(() => {
       if (selectedSports.includes('pickleball')) {
         // Show pickleball rating next
-        console.log('Opening PickleballRatingOverlay');
+        if (__DEV__) console.log('Opening PickleballRatingOverlay');
         setShowPickleballRating(true);
       } else {
         // Go straight to preferences
-        console.log('Opening PlayerPreferencesOverlay');
+        if (__DEV__) console.log('Opening PlayerPreferencesOverlay');
         setShowPlayerPreferences(true);
       }
     }, ANIMATION_DELAYS.OVERLAY_STAGGER);
@@ -337,18 +353,18 @@ export const useOnboardingFlow = () => {
    * Preserves progress for resume functionality
    */
   const closeTennisRating = () => {
-    console.log('Closing TennisRatingOverlay');
+    if (__DEV__) console.log('Closing TennisRatingOverlay');
     setShowTennisRating(false);
     setLastActiveOverlay('tennis-rating');
   };
 
   const handlePickleballRatingContinue = (rating: string) => {
-    console.log('Pickleball rating completed:', rating);
+    if (__DEV__) console.log('Pickleball rating completed:', rating);
     setShowPickleballRating(false);
 
     // Always go to preferences after pickleball rating
-    setTimeout(() => {
-      console.log('Opening PlayerPreferencesOverlay');
+    scheduleTimer(() => {
+      if (__DEV__) console.log('Opening PlayerPreferencesOverlay');
       setShowPlayerPreferences(true);
     }, ANIMATION_DELAYS.OVERLAY_STAGGER);
   };
@@ -358,18 +374,18 @@ export const useOnboardingFlow = () => {
    * Preserves progress for resume functionality
    */
   const closePickleballRating = () => {
-    console.log('Closing PickleballRatingOverlay');
+    if (__DEV__) console.log('Closing PickleballRatingOverlay');
     setShowPickleballRating(false);
     setLastActiveOverlay('pickleball-rating');
   };
 
   const handlePlayerPreferencesContinue = (preferences: unknown) => {
-    console.log('Player preferences completed:', preferences);
+    if (__DEV__) console.log('Player preferences completed:', preferences);
     setShowPlayerPreferences(false);
 
     // Show Player Availabilities overlay after preferences
-    setTimeout(() => {
-      console.log('Opening PlayerAvailabilitiesOverlay');
+    scheduleTimer(() => {
+      if (__DEV__) console.log('Opening PlayerAvailabilitiesOverlay');
       setShowPlayerAvailabilities(true);
     }, ANIMATION_DELAYS.OVERLAY_STAGGER);
   };
@@ -379,21 +395,21 @@ export const useOnboardingFlow = () => {
    * Preserves progress for resume functionality
    */
   const closePlayerPreferences = () => {
-    console.log('Closing PlayerPreferencesOverlay');
+    if (__DEV__) console.log('Closing PlayerPreferencesOverlay');
     setShowPlayerPreferences(false);
     setLastActiveOverlay('preferences');
   };
 
   const handlePlayerAvailabilitiesContinue = (availabilities: unknown) => {
-    console.log('Player availabilities completed:', availabilities);
+    if (__DEV__) console.log('Player availabilities completed:', availabilities);
     setShowPlayerAvailabilities(false);
     // TODO: In the future, persist data first, then show success overlay only if successful
     // For now, always show the success overlay
-    setTimeout(() => {
+    scheduleTimer(() => {
       setShowAuthSuccess(true);
       // Clear last active overlay since onboarding is complete
       setLastActiveOverlay(null);
-      console.log('Onboarding flow completed!');
+      if (__DEV__) console.log('Onboarding flow completed!');
     }, ANIMATION_DELAYS.OVERLAY_STAGGER);
   };
 
@@ -402,13 +418,13 @@ export const useOnboardingFlow = () => {
    * Preserves progress for resume functionality
    */
   const closePlayerAvailabilities = () => {
-    console.log('Closing PlayerAvailabilitiesOverlay');
+    if (__DEV__) console.log('Closing PlayerAvailabilitiesOverlay');
     setShowPlayerAvailabilities(false);
     setLastActiveOverlay('availabilities');
   };
 
   const showLocationPermissionOnMount = () => {
-    console.log('Showing LocationPermissionOverlay on mount');
+    if (__DEV__) console.log('Showing LocationPermissionOverlay on mount');
     setShowLocationPermission(true);
   };
 
@@ -416,12 +432,13 @@ export const useOnboardingFlow = () => {
    * Close the AuthSuccessOverlay
    */
   const closeAuthSuccess = () => {
-    console.log('Closing AuthSuccessOverlay');
+    if (__DEV__) console.log('Closing AuthSuccessOverlay');
     setShowAuthSuccess(false);
   };
 
   return {
     // State
+    authMode,
     showAuthOverlay,
     showLocationPermission,
     showCalendarAccess,
@@ -439,6 +456,7 @@ export const useOnboardingFlow = () => {
 
     // Actions
     startOnboarding,
+    startLogin,
     closeAuthOverlay,
     handleAuthSuccess,
     handleAcceptLocation,
@@ -468,3 +486,5 @@ export const useOnboardingFlow = () => {
     showLocationPermissionOnMount,
   };
 };
+
+

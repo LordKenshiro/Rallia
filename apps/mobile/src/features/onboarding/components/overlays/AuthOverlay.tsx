@@ -6,7 +6,7 @@ import { COLORS } from '@rallia/shared-constants';
 import ProgressIndicator from '../ProgressIndicator';
 import { lightHaptic, mediumHaptic, successHaptic } from '../../../../utils/haptics';
 // TEMPORARY: verifyCode commented out during testing bypass
-import { sendVerificationCode, /* verifyCode, */ createAuthUser, ProfileService } from '@rallia/shared-services';
+import { sendVerificationCode, /* verifyCode, */ createAuthUser, loginAuthUser, ProfileService } from '@rallia/shared-services';
 
 interface AuthOverlayProps {
   visible: boolean;
@@ -16,6 +16,7 @@ interface AuthOverlayProps {
   onShowCalendarOverlay?: () => void;
   currentStep?: number;
   totalSteps?: number;
+  mode?: 'signup' | 'login'; // New: distinguish between signup and login flows
 }
 
 const AuthOverlay: React.FC<AuthOverlayProps> = ({
@@ -26,6 +27,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
   onShowCalendarOverlay: _onShowCalendarOverlay,
   currentStep = 1,
   totalSteps = 8,
+  mode = 'signup', // Default to signup mode for backward compatibility
 }) => {
   const [email, setEmail] = useState('');
   const [step, setStep] = useState<'email' | 'code'>('email');
@@ -70,19 +72,19 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
 
   const handleGoogleSignIn = () => {
     lightHaptic();
-    console.log('Sign in with Google');
+    if (__DEV__) console.log('Sign in with Google');
     // TODO: Implement Google authentication
   };
 
   const handleAppleSignIn = () => {
     lightHaptic();
-    console.log('Sign in with Apple');
+    if (__DEV__) console.log('Sign in with Apple');
     // TODO: Implement Apple authentication
   };
 
   const handleFacebookSignIn = () => {
     lightHaptic();
-    console.log('Sign in with Facebook');
+    if (__DEV__) console.log('Sign in with Facebook');
     // TODO: Implement Facebook authentication
   };
 
@@ -92,10 +94,26 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
     setErrorMessage('');
 
     try {
+      // In login mode, check if email exists first
+      if (mode === 'login') {
+        if (__DEV__) console.log('🔍 Login mode: Checking if email exists...');
+        
+        const { data: existingProfile, error: profileError } = await ProfileService.getProfileByEmail(email);
+        
+        if (profileError || !existingProfile) {
+          setErrorMessage('No account found with this email. Please sign up instead.');
+          Alert.alert('Account Not Found', 'No account found with this email. Please use the Sign In button to create a new account.');
+          setIsLoading(false);
+          return;
+        }
+        
+        if (__DEV__) console.log('✅ Email exists, proceeding with login');
+      }
+      
       const result = await sendVerificationCode(email);
       
       if (result.success) {
-        console.log('Verification code sent to:', email);
+        if (__DEV__) console.log('Verification code sent to:', email);
         setStep('code');
       } else {
         setErrorMessage(result.error || 'Failed to send verification code');
@@ -119,7 +137,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
       const result = await sendVerificationCode(email);
       
       if (result.success) {
-        console.log('Verification code resent to:', email);
+        if (__DEV__) console.log('Verification code resent to:', email);
         Alert.alert('Success', 'Verification code sent!');
       } else {
         setErrorMessage(result.error || 'Failed to resend verification code');
@@ -161,19 +179,44 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
       //   return;
       // }
 
-      console.log('⚠️ TEMPORARY: Skipping code verification for testing');
+      if (__DEV__) console.log('⚠️ TEMPORARY: Skipping code verification for testing');
       
-      // Create auth user with verified email (no verification required for now)
-      const authResult = await createAuthUser(email);
+      // Use different auth method based on mode
+      let authResult;
+      if (mode === 'login') {
+        // Login existing user
+        if (__DEV__) console.log('🔓 Login mode - signing in existing user');
+        authResult = await loginAuthUser(email);
+      } else {
+        // Signup new user
+        if (__DEV__) console.log('📝 Signup mode - creating new user');
+        authResult = await createAuthUser(email);
+      }
       
       if (!authResult.success) {
-        setErrorMessage(authResult.error || 'Failed to create account');
-        Alert.alert('Error', authResult.error || 'Failed to create account');
+        const errorMsg = mode === 'login' 
+          ? (authResult.error || 'Failed to sign in')
+          : (authResult.error || 'Failed to create account');
+        setErrorMessage(errorMsg);
+        Alert.alert('Error', errorMsg);
         setIsLoading(false);
         return;
       }
 
-      console.log('User created (verification bypassed):', authResult.userId);
+      if (__DEV__) console.log(mode === 'login' ? 'User logged in:' : 'User created:', authResult.userId);
+      
+      // In login mode, always skip onboarding
+      if (mode === 'login') {
+        if (__DEV__) console.log('🔓 Login mode - skipping onboarding, going directly to app');
+        successHaptic();
+        
+        if (onReturningUser) {
+          onReturningUser();
+        } else {
+          onClose();
+        }
+        return;
+      }
       
       // Check if this is a returning user (profile exists with completed onboarding)
       const { data: profile, error: profileError } = await ProfileService.getProfile(authResult.userId!);
@@ -190,7 +233,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
 
       // Check if onboarding is already completed
       if (profile && profile.onboarding_completed) {
-        console.log('🔄 Returning user detected - onboarding already completed');
+        if (__DEV__) console.log('🔄 Returning user detected - onboarding already completed');
         successHaptic();
         
         // Close auth overlay and navigate directly to app (skip onboarding)
@@ -201,7 +244,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
           onClose();
         }
       } else {
-        console.log('✨ New user or incomplete onboarding - proceeding with onboarding flow');
+        if (__DEV__) console.log('✨ New user or incomplete onboarding - proceeding with onboarding flow');
         successHaptic();
         
         // Proceed to next step (Personal Information)
@@ -250,15 +293,18 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
             transform: [{ translateY: slideAnim }],
           },
         ]}
+        collapsable={false}
       >
-        {/* Progress Indicator */}
-        <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
+        {/* Progress Indicator - Only show in signup mode */}
+        {mode !== 'login' && (
+          <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
+        )}
 
         {step === 'email' ? (
           // Email Entry Step
           <>
             {/* Title */}
-            <Text style={styles.title}>Sign In</Text>
+            <Text style={styles.title}>{mode === 'login' ? 'Log In' : 'Sign In'}</Text>
 
             {/* Social Sign In Buttons */}
             <View style={styles.socialButtons}>
@@ -404,6 +450,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
 
 const styles = StyleSheet.create({
   container: {
+    width: '100%',
     paddingVertical: 20,
   },
   title: {
@@ -553,3 +600,4 @@ const styles = StyleSheet.create({
 });
 
 export default AuthOverlay;
+

@@ -29,7 +29,7 @@ const ProfilePictureButton: React.FC<ProfilePictureButtonProps> = ({ size = 28 }
   );
 
   const handlePress = () => {
-    (navigation as any).navigate('Profile');
+    (navigation as any).navigate('UserProfile');
   };
 
   return (

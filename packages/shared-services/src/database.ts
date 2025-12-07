@@ -349,6 +349,25 @@ export const ProfileService = {
   },
 
   /**
+   * Get profile by email address
+   */
+  async getProfileByEmail(email: string): Promise<DatabaseResponse<Profile>> {
+    try {
+      const { data, error } = await supabase
+        .from('profile')
+        .select('*')
+        .eq('email', email)
+        .single();
+
+      if (error) throw error;
+
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: handleError(error) };
+    }
+  },
+
+  /**
    * Create a new profile
    */
   async createProfile(profile: ProfileInsert): Promise<DatabaseResponse<Profile>> {

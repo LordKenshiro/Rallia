@@ -87,7 +87,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ backgroundColor = '#C8F2EF', Logo
 
   const handleProfilePress = () => {
     // Navigate to UserProfile screen
-    (navigation as any).navigate('Profile');
+    (navigation as any).navigate('UserProfile');
   };
 
   const handleNotificationsPress = () => {
@@ -96,10 +96,8 @@ const AppHeader: React.FC<AppHeaderProps> = ({ backgroundColor = '#C8F2EF', Logo
   };
 
   const handleSettingsPress = () => {
-    // Navigate to Settings screen in Profile stack
-    (navigation as any).navigate('Profile', {
-      screen: 'Settings',
-    });
+    // Navigate to Settings screen
+    (navigation as any).navigate('Settings');
   };
 
   return (

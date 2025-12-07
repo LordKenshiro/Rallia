@@ -23,7 +23,7 @@ import {
 import { useImagePicker } from '../../../../hooks';
 import { COLORS } from '@rallia/shared-constants';
 import { validateFullName, validateUsername, validatePhoneNumber } from '@rallia/shared-utils';
-import { OnboardingService, supabase } from '@rallia/shared-services';
+import { OnboardingService, supabase, uploadImage } from '@rallia/shared-services';
 import type { GenderType } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
 import { lightHaptic, mediumHaptic } from '../../../../utils/haptics';
@@ -71,6 +71,9 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
 
   // Use custom hook for image picker
   const { image: profileImage, pickImage } = useImagePicker();
+  
+  // Track image upload state
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -184,6 +187,29 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
       // Format date to YYYY-MM-DD for database
       const formattedDate = dateOfBirth.toISOString().split('T')[0];
       
+      // Upload profile picture if a new one was selected
+      let uploadedImageUrl: string | null = null;
+      if (profileImage) {
+        setUploadingImage(true);
+        const { url, error: uploadError } = await uploadImage(profileImage, 'profile-pictures');
+        setUploadingImage(false);
+        
+        if (uploadError) {
+          console.error('Error uploading profile picture:', uploadError);
+          Alert.alert(
+            'Upload Error',
+            'Failed to upload profile picture. Continue without updating picture?',
+            [
+              { text: 'Cancel', style: 'cancel', onPress: () => { return; } },
+              { text: 'Continue', onPress: () => { uploadedImageUrl = null; } }
+            ]
+          );
+          return; // Stop here to let user decide
+        } else {
+          uploadedImageUrl = url;
+        }
+      }
+      
       if (mode === 'edit') {
         // Edit mode: Update existing profile data
         const { data: { user } } = await supabase.auth.getUser();
@@ -193,15 +219,29 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
           return;
         }
 
+        const updateData: {
+          full_name: string;
+          display_name: string;
+          birth_date: string;
+          phone: string;
+          updated_at: string;
+          profile_picture_url?: string;
+        } = {
+          full_name: fullName,
+          display_name: username,
+          birth_date: formattedDate,
+          phone: phoneNumber,
+          updated_at: new Date().toISOString(),
+        };
+
+        // Only update profile picture if a new one was uploaded
+        if (uploadedImageUrl) {
+          updateData.profile_picture_url = uploadedImageUrl;
+        }
+
         const { error: updateError } = await supabase
           .from('profile')
-          .update({
-            full_name: fullName,
-            display_name: username,
-            birth_date: formattedDate,
-            phone: phoneNumber,
-            updated_at: new Date().toISOString(),
-          })
+          .update(updateData)
           .eq('id', user.id);
 
         if (updateError) {
@@ -252,7 +292,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
           birth_date: formattedDate,
           gender: gender as GenderType,
           phone: phoneNumber,
-          profile_picture_url: profileImage || undefined,
+          profile_picture_url: uploadedImageUrl || undefined,
         });
         
         if (error) {
@@ -267,7 +307,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         
         // Sync username (display name) to auth.users metadata
         // Note: Phone is stored in profile table, not auth.users (requires verification)
-        console.log('🔄 Syncing username to auth.users...');
+        if (__DEV__) console.log('🔄 Syncing username to auth.users...');
         const { error: authUpdateError } = await supabase.auth.updateUser({
           data: {
             display_name: username, // Sync username to display_name in user_metadata
@@ -278,10 +318,10 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
           console.error('⚠️ Warning: Failed to sync to auth.users:', authUpdateError.message);
           // Don't block onboarding if this fails - data is already saved to profile table
         } else {
-          console.log('✅ Username synced to auth.users successfully');
+          if (__DEV__) console.log('✅ Username synced to auth.users successfully');
         }
         
-        console.log('Personal info saved to database:', {
+        if (__DEV__) console.log('Personal info saved to database:', {
           fullName,
           username,
           dateOfBirth: formattedDate,
@@ -359,31 +399,27 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         {/* Full Name Input - Light green background for both modes */}
         <View style={styles.customInputContainer}>
           <Text style={styles.customInputLabel}>Full Name <Text style={styles.requiredStar}>*</Text></Text>
-          <View style={styles.inputWithIcon}>
-            <TextInput
-              placeholder="Enter your full name"
-              placeholderTextColor="#999"
-              value={fullName}
-              onChangeText={handleFullNameChange}
-              style={styles.inputField}
-            />
-          </View>
+          <TextInput
+            placeholder="Enter your full name"
+            placeholderTextColor="#999"
+            value={fullName}
+            onChangeText={handleFullNameChange}
+            style={[styles.inputWithIcon, styles.inputField]}
+          />
         </View>
 
         {/* Email Input - Only show in edit mode, read-only */}
         {mode === 'edit' && (
           <View style={styles.customInputContainer}>
             <Text style={styles.customInputLabel}>Email <Text style={styles.requiredStar}>*</Text></Text>
-            <View style={[styles.inputWithIcon, styles.customInputDisabled]}>
-              <TextInput
-                placeholder="Email"
-                placeholderTextColor="#999"
-                value={email}
-                onChangeText={() => {}} // Read-only, no-op
-                editable={false}
-                style={styles.inputField}
-              />
-            </View>
+            <TextInput
+              placeholder="Email"
+              placeholderTextColor="#999"
+              value={email}
+              onChangeText={() => {}} // Read-only, no-op
+              editable={false}
+              style={[styles.inputWithIcon, styles.inputField, styles.customInputDisabled]}
+            />
             <Text style={styles.customHelperText}>This information cannot be modified</Text>
           </View>
         )}
@@ -391,16 +427,14 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         {/* Username Input - Light green background for both modes */}
         <View style={styles.customInputContainer}>
           <Text style={styles.customInputLabel}>Username <Text style={styles.requiredStar}>*</Text></Text>
-          <View style={styles.inputWithIcon}>
-            <TextInput
-              placeholder="Choose a username"
-              placeholderTextColor="#999"
-              value={username}
-              onChangeText={handleUsernameChange}
-              maxLength={10}
-              style={styles.inputField}
-            />
-          </View>
+          <TextInput
+            placeholder="Choose a username"
+            placeholderTextColor="#999"
+            value={username}
+            onChangeText={handleUsernameChange}
+            maxLength={10}
+            style={[styles.inputWithIcon, styles.inputField]}
+          />
           <View style={styles.inputFooter}>
             <Text style={styles.customHelperText}>Max 10 characters, no spaces</Text>
             <Text style={styles.charCount}>{username.length}/10</Text>
@@ -508,17 +542,15 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         {/* Phone Number Input - Light green background for both modes */}
         <View style={styles.customInputContainer}>
           <Text style={styles.customInputLabel}>Phone Number <Text style={styles.requiredStar}>*</Text></Text>
-          <View style={styles.inputWithIcon}>
-            <TextInput
-              placeholder="Enter phone number"
-              placeholderTextColor="#999"
-              value={phoneNumber}
-              onChangeText={handlePhoneNumberChange}
-              maxLength={10}
-              keyboardType="phone-pad"
-              style={styles.inputField}
-            />
-          </View>
+          <TextInput
+            placeholder="Enter phone number"
+            placeholderTextColor="#999"
+            value={phoneNumber}
+            onChangeText={handlePhoneNumberChange}
+            maxLength={10}
+            keyboardType="phone-pad"
+            style={[styles.inputWithIcon, styles.inputField]}
+          />
           <View style={styles.inputFooter}>
             <View style={{ flex: 1 }} />
             <Text style={styles.charCount}>{phoneNumber.length}/10</Text>
@@ -529,10 +561,10 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         <Button
           variant="primary"
           onPress={handleContinue}
-          disabled={!isFormValid}
+          disabled={!isFormValid || uploadingImage}
           style={mode === 'edit' ? styles.saveButtonContainer : styles.continueButton}
         >
-          {mode === 'onboarding' ? 'Continue' : 'Save'}
+          {uploadingImage ? 'Uploading...' : (mode === 'onboarding' ? 'Continue' : 'Save')}
         </Button>
       </Animated.View>
     </Overlay>
@@ -572,6 +604,7 @@ const styles = StyleSheet.create({
     borderRadius: 40,
   },
   continueButton: {
+    backgroundColor: COLORS.buttonPrimary,
     marginTop: 10,
   },
   saveButtonContainer: {
@@ -622,8 +655,6 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   inputWithIcon: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: COLORS.primaryLight,
     borderRadius: 10,
     paddingHorizontal: 20,
@@ -633,7 +664,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primaryLight,
   },
   inputField: {
-    flex: 1,
     fontSize: 16,
     color: '#333',
   },
@@ -677,3 +707,4 @@ const styles = StyleSheet.create({
 });
 
 export default PersonalInformationOverlay;
+

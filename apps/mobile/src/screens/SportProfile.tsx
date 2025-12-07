@@ -16,6 +16,7 @@ import { Text, Button } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
 import { supabase } from '@rallia/shared-services';
 import * as Haptics from 'expo-haptics';
+import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import TennisRatingOverlay from '../features/onboarding/components/overlays/TennisRatingOverlay';
 import PickleballRatingOverlay from '../features/onboarding/components/overlays/PickleballRatingOverlay';
 import PeerRatingRequestOverlay from '../features/sport-profile/components/PeerRatingRequestOverlay';
@@ -64,6 +65,7 @@ const SportProfile = () => {
   const [userId, setUserId] = useState<string>('');
   const [isActive, setIsActive] = useState(false);
   const [playerSportId, setPlayerSportId] = useState<string | null>(null);
+  const [playerRatingScoreId, setPlayerRatingScoreId] = useState<string | null>(null);
   const [ratingInfo, setRatingInfo] = useState<RatingInfo | null>(null);
   const [preferences, setPreferences] = useState<PreferencesInfo>({
     matchDuration: null,
@@ -94,12 +96,18 @@ const SportProfile = () => {
       setUserId(user.id);
 
       // Fetch player's sport connection
-      const { data: playerSportData, error: playerSportError } = await supabase
-        .from('player_sport')
-        .select('id, is_active, preferred_match_duration, preferred_match_type, is_primary')
-        .eq('player_id', user.id)
-        .eq('sport_id', sportId)
-        .maybeSingle();
+      const playerSportResult = await withTimeout(
+        (async () => supabase
+          .from('player_sport')
+          .select('id, is_active, preferred_match_duration, preferred_match_type, is_primary')
+          .eq('player_id', user.id)
+          .eq('sport_id', sportId)
+          .maybeSingle())(),
+        15000,
+        'Failed to load sport profile - connection timeout'
+      );
+
+      const { data: playerSportData, error: playerSportError } = playerSportResult;
 
       if (playerSportError && playerSportError.code !== 'PGRST116') {
         throw playerSportError;
@@ -122,36 +130,44 @@ const SportProfile = () => {
       if (playerSportData?.is_active) {
         // Fetch player's rating for this sport
         // First, get all player ratings and filter by sport manually
-        console.log('Fetching ratings for player:', user.id);
-        const { data: ratingDataList, error: ratingError } = await supabase
-          .from('player_rating_score')
-          .select(`
-            rating_score_id,
-            is_verified,
-            verified_at,
-            rating_score (
+        if (__DEV__) console.log('Fetching ratings for player:', user.id);
+        
+        const ratingResult = await withTimeout(
+          (async () => supabase
+            .from('player_rating_score')
+            .select(`
               id,
-              score_value,
-              display_label,
-              skill_level,
-              rating (
-                rating_type,
-                display_name,
-                description,
-                min_value,
-                max_value,
-                sport_id
+              rating_score_id,
+              is_verified,
+              verified_at,
+              rating_score (
+                id,
+                score_value,
+                display_label,
+                skill_level,
+                rating (
+                  rating_type,
+                  display_name,
+                  description,
+                  min_value,
+                  max_value,
+                  sport_id
+                )
               )
-            )
-          `)
-          .eq('player_id', user.id);
+            `)
+            .eq('player_id', user.id))(),
+          15000,
+          'Failed to load ratings - connection timeout'
+        );
+
+        const { data: ratingDataList, error: ratingError } = ratingResult;
 
         if (ratingError && ratingError.code !== 'PGRST116') {
-          console.error('Rating fetch error:', ratingError);
+          if (__DEV__) console.error('Rating fetch error:', ratingError);
         }
 
-        console.log('All ratings fetched:', JSON.stringify(ratingDataList, null, 2));
-        console.log('Looking for sport:', sportName, 'with ID:', sportId);
+        if (__DEV__) console.log('All ratings fetched:', ratingDataList?.length, 'items');
+        if (__DEV__) console.log('Looking for sport:', sportName, 'with ID:', sportId);
 
         // Filter by sport_id in JavaScript since nested filtering doesn't work well
         const ratingData = ratingDataList?.find(item => {
@@ -159,11 +175,11 @@ const SportProfile = () => {
             id?: string;
             rating?: { sport_id?: string };
           } | null;
-          console.log('Checking rating_score:', ratingScore?.id, 'sport:', ratingScore?.rating?.sport_id);
+          if (__DEV__) console.log('Checking rating_score:', ratingScore?.id, 'sport:', ratingScore?.rating?.sport_id);
           return ratingScore?.rating?.sport_id === sportId;
         }) || null;
 
-        console.log('Rating data found for', sportName, ':', JSON.stringify(ratingData, null, 2));
+        if (__DEV__) console.log('Rating data found for', sportName);
 
         if (ratingData) {
           const ratingScore = ratingData.rating_score as {
@@ -191,11 +207,13 @@ const SportProfile = () => {
             maxValue: rating?.max_value || 10,
             description: rating?.description || '',
           };
-          console.log('Setting rating info:', newRatingInfo);
+          if (__DEV__) console.log('Setting rating info:', newRatingInfo);
           setRatingInfo(newRatingInfo);
+          setPlayerRatingScoreId(ratingData.id || null);
         } else {
-          console.log('No rating data found, clearing rating info');
+          if (__DEV__) console.log('No rating data found, clearing rating info');
           setRatingInfo(null);
+          setPlayerRatingScoreId(null);
         }
 
         // Note: Facility preference would come from a separate player_facility table
@@ -203,8 +221,8 @@ const SportProfile = () => {
       }
 
     } catch (error) {
-      console.error('Error fetching sport profile data:', error);
-      Alert.alert('Error', 'Failed to load sport profile');
+      if (__DEV__) console.error('Error fetching sport profile data:', error);
+      Alert.alert('Error', getNetworkErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -218,33 +236,39 @@ const SportProfile = () => {
         return;
       }
 
-      console.log('=== SAVING RATING (NEW SOURCE_TYPE LOGIC) ===');
-      console.log('New rating_score_id:', ratingScoreId);
-      console.log('Current sport ID:', sportId);
+      if (__DEV__) console.log('=== SAVING RATING (NEW SOURCE_TYPE LOGIC) ===');
+      if (__DEV__) console.log('New rating_score_id:', ratingScoreId);
+      if (__DEV__) console.log('Current sport ID:', sportId);
 
       // Step 1: Get ALL player ratings with source_type
-      const { data: allPlayerRatings, error: fetchError } = await supabase
-        .from('player_rating_score')
-        .select(`
-          id,
-          rating_score_id,
-          source_type,
-          is_verified,
-          rating_score (
+      const ratingsResult = await withTimeout(
+        (async () => supabase
+          .from('player_rating_score')
+          .select(`
             id,
-            rating (
-              sport_id
+            rating_score_id,
+            source_type,
+            is_verified,
+            rating_score (
+              id,
+              rating (
+                sport_id
+              )
             )
-          )
-        `)
-        .eq('player_id', user.id);
+          `)
+          .eq('player_id', user.id))(),
+        15000,
+        'Failed to fetch ratings - connection timeout'
+      );
+
+      const { data: allPlayerRatings, error: fetchError } = ratingsResult;
 
       if (fetchError) {
-        console.error('Error fetching player ratings:', fetchError);
+        if (__DEV__) console.error('Error fetching player ratings:', fetchError);
         throw fetchError;
       }
 
-      console.log('All player ratings before save:', allPlayerRatings);
+      if (__DEV__) console.log('All player ratings before save:', allPlayerRatings);
 
       // Step 2: Find and DELETE only SELF_REPORTED ratings for this specific sport
       const ratingsToDelete = allPlayerRatings?.filter(item => {
@@ -258,45 +282,53 @@ const SportProfile = () => {
         // Only delete self_reported ratings for current sport
         const shouldDelete = itemSportId === sportId && sourceType === 'self_reported';
         
-        console.log('Rating ID:', item.id, 'sport:', itemSportId, 'source:', sourceType, 'delete:', shouldDelete);
+        if (__DEV__) console.log('Rating ID:', item.id, 'sport:', itemSportId, 'source:', sourceType, 'delete:', shouldDelete);
         return shouldDelete;
       }) || [];
 
-      console.log('Self-reported ratings to delete for sport', sportId, ':', ratingsToDelete.length);
+      if (__DEV__) console.log('Self-reported ratings to delete for sport', sportId, ':', ratingsToDelete.length);
 
       // Delete only self_reported ratings (keep peer_verified, api_verified, admin_verified)
       for (const rating of ratingsToDelete) {
-        console.log('Deleting self_reported rating:', rating.id);
-        const { error: deleteError } = await supabase
-          .from('player_rating_score')
-          .delete()
-          .eq('id', rating.id);
+        if (__DEV__) console.log('Deleting self_reported rating:', rating.id);
+        const deleteResult = await withTimeout(
+          (async () => supabase
+            .from('player_rating_score')
+            .delete()
+            .eq('id', rating.id))(),
+          10000,
+          'Failed to delete rating - connection timeout'
+        );
 
-        if (deleteError) {
-          console.error('Error deleting rating:', rating.id, deleteError);
-          throw deleteError;
+        if (deleteResult.error) {
+          if (__DEV__) console.error('Error deleting rating:', rating.id, deleteResult.error);
+          throw deleteResult.error;
         }
-        console.log('✓ Deleted self_reported rating:', rating.id);
+        if (__DEV__) console.log('✓ Deleted self_reported rating:', rating.id);
       }
 
       // Step 3: Insert the new self_reported rating
-      console.log('Inserting new self_reported rating...');
-      const { error: insertError } = await supabase
-        .from('player_rating_score')
-        .insert({
-          player_id: user.id,
-          rating_score_id: ratingScoreId,
-          source_type: 'self_reported', // NEW: Explicitly self-reported
-          is_verified: false,
-          is_primary: true, // NEW: Mark as primary display rating
-        });
+      if (__DEV__) console.log('Inserting new self_reported rating...');
+      const insertResult = await withTimeout(
+        (async () => supabase
+          .from('player_rating_score')
+          .insert({
+            player_id: user.id,
+            rating_score_id: ratingScoreId,
+            source_type: 'self_reported', // NEW: Explicitly self-reported
+            is_verified: false,
+            is_primary: true, // NEW: Mark as primary display rating
+          }))(),
+        10000,
+        'Failed to save rating - connection timeout'
+      );
 
-      if (insertError) {
-        console.error('Error inserting new rating:', insertError);
-        throw insertError;
+      if (insertResult.error) {
+        if (__DEV__) console.error('Error inserting new rating:', insertResult.error);
+        throw insertResult.error;
       }
 
-      console.log('✅ Rating save completed successfully (self_reported)');
+      if (__DEV__) console.log('✅ Rating save completed successfully (self_reported)');
 
       // Close overlays first
       setShowTennisRatingOverlay(false);
@@ -309,16 +341,29 @@ const SportProfile = () => {
       await new Promise(resolve => setTimeout(resolve, 500));
 
       // Refresh data
-      console.log('Refreshing sport profile data...');
+      if (__DEV__) console.log('Refreshing sport profile data...');
       await fetchSportProfileData();
-      console.log('Sport profile data refreshed');
+      if (__DEV__) console.log('Sport profile data refreshed');
 
       // Show success message
       Alert.alert('Success', 'Your rating has been updated!');
     } catch (error) {
-      console.error('Error saving rating:', error);
-      Alert.alert('Error', 'Failed to save rating. Please try again.');
+      if (__DEV__) console.error('Error saving rating:', error);
+      Alert.alert('Error', getNetworkErrorMessage(error));
     }
+  };
+
+  const handleManageProofs = () => {
+    if (!playerRatingScoreId || !ratingInfo) {
+      Alert.alert('Error', 'Rating information not available');
+      return;
+    }
+    (navigation as any).navigate('RatingProofs', {
+      playerRatingScoreId: playerRatingScoreId,
+      sportName: sportName,
+      ratingValue: ratingInfo.scoreValue,
+      isOwnProfile: true
+    });
   };
 
   const handleToggleActive = async (newValue: boolean) => {
@@ -333,12 +378,16 @@ const SportProfile = () => {
 
       if (playerSportId) {
         // Entry exists: Update is_active field
-        const { error: updateError } = await supabase
-          .from('player_sport')
-          .update({ is_active: newValue })
-          .eq('id', playerSportId);
+        const updateResult = await withTimeout(
+          (async () => supabase
+            .from('player_sport')
+            .update({ is_active: newValue })
+            .eq('id', playerSportId))(),
+          10000,
+          'Failed to update availability - connection timeout'
+        );
 
-        if (updateError) throw updateError;
+        if (updateResult.error) throw updateResult.error;
 
         setIsActive(newValue);
 
@@ -361,18 +410,23 @@ const SportProfile = () => {
         // No entry exists
         if (newValue) {
           // User wants to play this sport: Create new entry with is_active = true
-          const { data: newRecord, error: insertError } = await supabase
-            .from('player_sport')
-            .insert({
-              player_id: user.id,
-              sport_id: sportId,
-              is_active: true,
-              is_primary: false,
-            })
-            .select('id')
-            .single();
+          const insertResult = await withTimeout(
+            (async () => supabase
+              .from('player_sport')
+              .insert({
+                player_id: user.id,
+                sport_id: sportId,
+                is_active: true,
+                is_primary: false,
+              })
+              .select('id')
+              .single())(),
+            10000,
+            'Failed to create sport profile - connection timeout'
+          );
 
-          if (insertError) throw insertError;
+          if (insertResult.error) throw insertResult.error;
+          const { data: newRecord } = insertResult;
           if (newRecord) setPlayerSportId(newRecord.id);
 
           setIsActive(true);
@@ -399,8 +453,8 @@ const SportProfile = () => {
       }
 
     } catch (error) {
-      console.error('Error toggling sport active status:', error);
-      Alert.alert('Error', 'Failed to update sport status');
+      if (__DEV__) console.error('Error toggling sport active status:', error);
+      Alert.alert('Error', getNetworkErrorMessage(error));
     }
   };
 
@@ -418,7 +472,7 @@ const SportProfile = () => {
     try {
       // TODO: Implement peer rating request logic
       // This will insert records into peer_rating_request table
-      console.log('Sending peer rating requests to:', selectedPlayerIds);
+      if (__DEV__) console.log('Sending peer rating requests to:', selectedPlayerIds);
       
       // For now, just show a success message
       if (Platform.OS === 'android') {
@@ -435,7 +489,7 @@ const SportProfile = () => {
       
       setShowPeerRatingRequestOverlay(false);
     } catch (error) {
-      console.error('Error sending peer rating requests:', error);
+      if (__DEV__) console.error('Error sending peer rating requests:', error);
       Alert.alert('Error', 'Failed to send peer rating requests');
     }
   };
@@ -444,7 +498,7 @@ const SportProfile = () => {
     try {
       // TODO: Implement reference request logic
       // This will insert records into reference_request table
-      console.log('Sending reference requests to:', selectedPlayerIds);
+      if (__DEV__) console.log('Sending reference requests to:', selectedPlayerIds);
       
       // For now, just show a success message
       if (Platform.OS === 'android') {
@@ -461,7 +515,7 @@ const SportProfile = () => {
       
       setShowReferenceRequestOverlay(false);
     } catch (error) {
-      console.error('Error sending reference requests:', error);
+      if (__DEV__) console.error('Error sending reference requests:', error);
       Alert.alert('Error', 'Failed to send reference requests');
     }
   };
@@ -479,18 +533,22 @@ const SportProfile = () => {
         return;
       }
 
-      const { error } = await supabase
-        .from('player_sport')
-        .update({
-          preferred_match_duration: updatedPreferences.matchDuration,
-          preferred_match_type: updatedPreferences.matchType,
-          preferred_court: updatedPreferences.court,
-          preferred_play_style: updatedPreferences.playStyle,
-          preferred_play_attributes: updatedPreferences.playAttributes,
-        })
-        .eq('id', playerSportId);
+      const updateResult = await withTimeout(
+        (async () => supabase
+          .from('player_sport')
+          .update({
+            preferred_match_duration: updatedPreferences.matchDuration,
+            preferred_match_type: updatedPreferences.matchType,
+            preferred_court: updatedPreferences.court,
+            preferred_play_style: updatedPreferences.playStyle,
+            preferred_play_attributes: updatedPreferences.playAttributes,
+          })
+          .eq('id', playerSportId))(),
+        10000,
+        'Failed to save preferences - connection timeout'
+      );
 
-      if (error) throw error;
+      if (updateResult.error) throw updateResult.error;
 
       // Update local state
       setPreferences({
@@ -513,8 +571,8 @@ const SportProfile = () => {
       // Refresh data
       await fetchSportProfileData();
     } catch (error) {
-      console.error('Error saving preferences:', error);
-      Alert.alert('Error', 'Failed to save preferences');
+      if (__DEV__) console.error('Error saving preferences:', error);
+      Alert.alert('Error', getNetworkErrorMessage(error));
     }
   };
 
@@ -676,28 +734,28 @@ const SportProfile = () => {
                   {/* Request Buttons */}
                   <View style={styles.requestButtons}>
                     <Button
-                      variant="secondary"
+                      variant="primary"
                       size="md"
                       onPress={() => setShowReferenceRequestOverlay(true)}
-                      style={styles.requestButton}
+                      style={[styles.requestButton, styles.coralButton]}
                       leftIcon={<Ionicons name="add-circle" size={18} color="#fff" />}
                     >
                       Request reference
                     </Button>
                     <Button
-                      variant="secondary"
+                      variant="primary"
                       size="md"
                       onPress={() => setShowPeerRatingRequestOverlay(true)}
-                      style={styles.requestButton}
+                      style={[styles.requestButton, styles.coralButton]}
                       leftIcon={<Ionicons name="add-circle" size={18} color="#fff" />}
                     >
                       Request peer rating
                     </Button>
                     <Button
-                      variant="secondary"
+                      variant="primary"
                       size="md"
-                      onPress={() => {}}
-                      style={styles.requestButton}
+                      onPress={handleManageProofs}
+                      style={[styles.requestButton, styles.coralButton]}
                       leftIcon={<Ionicons name="folder-open" size={18} color="#fff" />}
                     >
                       Manage rating proofs
@@ -1057,6 +1115,9 @@ const styles = StyleSheet.create({
   requestButton: {
     width: '100%',
   },
+  coralButton: {
+    backgroundColor: '#EF6F7B',
+  },
   noRatingContainer: {
     alignItems: 'center',
     paddingVertical: 24,
@@ -1119,3 +1180,5 @@ const styles = StyleSheet.create({
 });
 
 export default SportProfile;
+
+
