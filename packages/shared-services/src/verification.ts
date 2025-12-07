@@ -105,6 +105,19 @@ export const verifyCode = async (
 };
 
 /**
+ * Generate a deterministic password based on email for passwordless flow
+ * This ensures the same password is used for both signup and login
+ */
+const generatePasswordFromEmail = (email: string): string => {
+  // Create a deterministic password based on email
+  // In production, this should use a more secure approach
+  const hash = email.split('').reduce((acc, char) => {
+    return ((acc << 5) - acc) + char.charCodeAt(0);
+  }, 0);
+  return `${Math.abs(hash)}_${email.length}_rallia`;
+};
+
+/**
  * Create Supabase Auth user and confirm email
  */
 export const createAuthUser = async (
@@ -112,8 +125,8 @@ export const createAuthUser = async (
   password?: string
 ): Promise<{ success: boolean; userId?: string; error?: string }> => {
   try {
-    // If no password provided, generate a random one (for passwordless flow)
-    const userPassword = password || Math.random().toString(36).slice(-12);
+    // If no password provided, generate a deterministic one based on email (for passwordless flow)
+    const userPassword = password || generatePasswordFromEmail(email);
 
     console.log('🔐 Creating auth user for:', email);
 
@@ -201,6 +214,59 @@ export const createAuthUser = async (
     return { success: true, userId: userId };
   } catch (error) {
     console.error('❌ Create auth user error:', error);
+    return { success: false, error: 'An unexpected error occurred' };
+  }
+};
+
+/**
+ * Login existing Supabase Auth user
+ */
+export const loginAuthUser = async (
+  email: string,
+  password?: string
+): Promise<{ success: boolean; userId?: string; error?: string }> => {
+  try {
+    // If no password provided, use the same deterministic password as signup
+    const userPassword = password || generatePasswordFromEmail(email);
+
+    console.log('🔐 Logging in user:', email);
+
+    // Sign in with password
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password: userPassword,
+    });
+
+    if (error) {
+      console.error('❌ Failed to sign in:', error);
+      return { success: false, error: error.message };
+    }
+
+    if (!data.user) {
+      console.error('❌ No user returned from signIn');
+      return { success: false, error: 'Failed to sign in' };
+    }
+
+    if (!data.session) {
+      console.error('❌ No session returned from signIn');
+      return { success: false, error: 'Failed to establish session' };
+    }
+
+    const userId = data.user.id;
+    console.log('✅ User logged in successfully:', userId);
+
+    // Verify session was persisted
+    const { data: { session: verifySession } } = await supabase.auth.getSession();
+    if (verifySession) {
+      console.log('✅ Session verified and persisted');
+    } else {
+      console.error('❌ Session not persisted to storage');
+      return { success: false, error: 'Session was not properly saved' };
+    }
+
+    return { success: true, userId: userId };
+  } catch (error) {
+    console.error('❌ Login auth user error:', error);
     return { success: false, error: 'An unexpected error occurred' };
   }
 };

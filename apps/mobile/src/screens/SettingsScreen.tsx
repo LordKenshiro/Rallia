@@ -41,22 +41,23 @@ const SettingsScreen: React.FC = () => {
         setProfilePictureUrl(profile.profile_picture_url);
       }
     } catch (error) {
-      console.error('Error fetching user data:', error);
+      if (__DEV__) console.error('Error fetching user data:', error);
     }
   };
 
   const handleSignOut = async () => {
     try {
       await supabase.auth.signOut();
-      // Navigation to Landing will be handled by auth state change
+      // Navigate to Home after successful sign out
+      (navigation as any).navigate('HomeScreen');
     } catch (error) {
-      console.error('Error signing out:', error);
+      if (__DEV__) console.error('Error signing out:', error);
     }
   };
 
   const handleDeleteAccount = () => {
     // TODO: Implement delete account functionality
-    console.log('Delete account pressed');
+    if (__DEV__) console.log('Delete account pressed');
   };
 
   const handleEditProfile = () => {
@@ -114,32 +115,32 @@ const SettingsScreen: React.FC = () => {
           <SettingsItem 
             icon="notifications-outline" 
             title="Notifications" 
-            onPress={() => console.log('Notifications pressed')} 
+            onPress={() => { if (__DEV__) console.log('Notifications pressed'); }} 
           />
           <SettingsItem 
             icon="lock-closed-outline" 
             title="Permissions" 
-            onPress={() => console.log('Permissions pressed')} 
+            onPress={() => { if (__DEV__) console.log('Permissions pressed'); }} 
           />
           <SettingsItem 
             icon="card-outline" 
             title="Subscription" 
-            onPress={() => console.log('Subscription pressed')} 
+            onPress={() => { if (__DEV__) console.log('Subscription pressed'); }}
           />
           <SettingsItem 
             icon="wallet-outline" 
             title="Payments" 
-            onPress={() => console.log('Payments pressed')} 
+            onPress={() => { if (__DEV__) console.log('Payments pressed'); }}
           />
           <SettingsItem 
             icon="help-circle-outline" 
             title="Help & Assistance" 
-            onPress={() => console.log('Help pressed')} 
+            onPress={() => { if (__DEV__) console.log('Help pressed'); }}
           />
           <SettingsItem 
             icon="document-text-outline" 
             title="Terms & Conditions" 
-            onPress={() => console.log('Terms pressed')} 
+            onPress={() => { if (__DEV__) console.log('Terms pressed'); }}
           />
         </View>
 
@@ -424,3 +425,6 @@ const styles = StyleSheet.create({
 });
 
 export default SettingsScreen;
+
+
+

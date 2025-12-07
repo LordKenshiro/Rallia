@@ -8,12 +8,12 @@ const Map = () => {
   const [showLocationPermission, setShowLocationPermission] = useState(false);
 
   const handleAcceptLocation = () => {
-    console.log('Location permission accepted');
+    if (__DEV__) console.log('Location permission accepted');
     setShowLocationPermission(false);
   };
 
   const handleRefuseLocation = () => {
-    console.log('Location permission refused');
+    if (__DEV__) console.log('Location permission refused');
     setShowLocationPermission(false);
   };
 
@@ -50,3 +50,4 @@ const styles = StyleSheet.create({
 });
 
 export default Map;
+

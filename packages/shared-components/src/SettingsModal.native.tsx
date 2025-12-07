@@ -63,6 +63,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
     try {
       await supabase.auth.signOut();
       onClose();
+      // Navigate to Home after successful sign out
+      (navigation as any).navigate('Home');
     } catch (error) {
       console.error('Error signing out:', error);
     }

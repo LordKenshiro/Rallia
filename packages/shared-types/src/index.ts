@@ -16,3 +16,6 @@ export type { LegacyMatchStatus, LegacyMatchType } from './match';
 
 // Export player types and preferences
 export * from './player';
+
+// Export rating proof types
+export * from './ratings';

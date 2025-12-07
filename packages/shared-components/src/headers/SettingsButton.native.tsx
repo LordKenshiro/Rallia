@@ -15,9 +15,7 @@ const SettingsButton: React.FC<SettingsButtonProps> = ({
   const navigation = useNavigation();
 
   const handlePress = () => {
-    (navigation as any).navigate('Profile', {
-      screen: 'Settings',
-    });
+    (navigation as any).navigate('Settings');
   };
 
   return (
