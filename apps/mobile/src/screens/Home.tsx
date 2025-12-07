@@ -53,7 +53,7 @@ const Home = () => {
   // Auto-dismiss welcome message when user logs in
   useEffect(() => {
     if (session?.user && displayName) {
-      // Auto-dismiss welcome message after 2 minutes (120000ms)
+      // Auto-dismiss welcome message after 3 seconds (3000ms)
       const dismissTimer = setTimeout(() => {
         Animated.timing(welcomeOpacity, {
           toValue: 0,
@@ -62,7 +62,7 @@ const Home = () => {
         }).start(() => {
           setShowWelcome(false);
         });
-      }, 120000);
+      }, 3000);
 
       return () => clearTimeout(dismissTimer);
     } else {
@@ -86,7 +86,7 @@ const Home = () => {
       const mockMatches = getMockMatches();
       setMatches(mockMatches);
     } catch (error) {
-      console.error('Error fetching matches:', error);
+      if (__DEV__) console.error('Error fetching matches:', error);
     } finally {
       setLoadingMatches(false);
     }
@@ -112,13 +112,22 @@ const Home = () => {
             <Text size="sm" color="#666" style={styles.sectionSubtitle}>
               You must sign in to create and access your matches
             </Text>
-            <Button
-              variant="primary"
-              onPress={onboarding.startOnboarding}
-              style={styles.signInButton}
-            >
-              Sign In
-            </Button>
+            <View style={styles.authButtonsContainer}>
+              <Button
+                variant="primary"
+                onPress={onboarding.startOnboarding}
+                style={styles.signInButton}
+              >
+                Sign Up
+              </Button>
+              <Button
+                variant="primary"
+                onPress={onboarding.startLogin}
+                style={styles.logInButton}
+              >
+                Log In
+              </Button>
+            </View>
           </View>
         )}
 
@@ -152,7 +161,7 @@ const Home = () => {
               <MatchCard
                 key={match.id}
                 match={match}
-                onPress={() => console.log('Match pressed:', match.id)}
+                onPress={() => { if (__DEV__) console.log('Match pressed:', match.id); }}
               />
             ))
           ) : (
@@ -171,12 +180,13 @@ const Home = () => {
         onClose={onboarding.closeAuthOverlay}
         onAuthSuccess={onboarding.handleAuthSuccess}
         onReturningUser={() => {
-          console.log('Returning user - skipping onboarding');
+          if (__DEV__) console.log('Returning user - skipping onboarding');
           onboarding.closeAuthOverlay();
           // Returning users go directly to the app (overlay closes)
         }}
         currentStep={onboarding.currentStep}
         totalSteps={onboarding.totalSteps}
+        mode={onboarding.authMode}
       />
 
       {/* Location Permission Overlay */}
@@ -303,8 +313,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 16,
   },
-  signInButton: {
+  authButtonsContainer: {
+    flexDirection: 'row',
+    gap: 12,
     marginTop: 8,
+    width: '100%',
+    justifyContent: 'center',
+  },
+  signInButton: {
+    flex: 1,
+    backgroundColor: '#EF6F7B', // Same pink color as Continue button in AuthOverlay (COLORS.buttonPrimary)
+  },
+  logInButton: {
+    flex: 1,
+    // Uses default primary color (#00B8A9 teal)
   },
   content: {
     flex: 1,
@@ -328,3 +350,4 @@ const styles = StyleSheet.create({
 });
 
 export default Home;
+

@@ -365,6 +365,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   continueButton: {
+    backgroundColor: COLORS.buttonPrimary,
     marginTop: 10,
   },
 });
