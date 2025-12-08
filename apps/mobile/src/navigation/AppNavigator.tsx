@@ -1,5 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,8 @@ import {
   SettingsButton,
   SportSelector,
 } from '@rallia/shared-components';
+import { useOverlay } from '../context';
+import { useAuth } from '../hooks';
 import Landing from '../screens/Landing';
 import Home from '../screens/Home';
 import Map from '../screens/Map';
@@ -343,6 +345,45 @@ function ChatStack() {
   );
 }
 
+// Custom center tab button component that handles auth/onboarding state
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function CenterTabButton({ children, onPress }: { children: React.ReactNode; onPress?: (e: any) => void }) {
+  const { session } = useAuth();
+  const { startOnboarding, resumeOnboarding, needsOnboarding } = useOverlay();
+
+  const handlePress = () => {
+    // Not authenticated -> Start signup flow
+    if (!session?.user) {
+      startOnboarding();
+      return;
+    }
+
+    // Authenticated but onboarding not complete -> Resume onboarding
+    if (needsOnboarding) {
+      resumeOnboarding();
+      return;
+    }
+
+    // Fully onboarded -> Navigate to Match screen normally
+    if (onPress) {
+      onPress(null);
+    }
+  };
+
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      style={{
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+      }}
+    >
+      {children}
+    </TouchableOpacity>
+  );
+}
+
 function BottomTabs() {
   return (
     <Tab.Navigator
@@ -377,6 +418,7 @@ function BottomTabs() {
         component={MatchStack}
         options={{
           tabBarIcon: ({ color, size }) => <Ionicons name="add-circle" size={size} color={color} />,
+          tabBarButton: (props) => <CenterTabButton {...props} />,
         }}
       />
       <Tab.Screen
