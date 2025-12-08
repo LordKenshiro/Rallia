@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { Platform } from 'react-native';
+import { Logger } from './logger';
 
 export interface UploadResult {
   url: string | null;
@@ -29,40 +30,79 @@ export async function uploadImage(
   try {
     // If no userId provided, get from auth
     if (!userId) {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError) {
+        Logger.error('Auth error getting user for image upload', authError);
+        return { url: null, error: new Error(`Auth error: ${authError.message}`) };
+      }
       if (!user) {
-        return { url: null, error: new Error('User not authenticated') };
+        Logger.warn('No user session found for image upload');
+        return { url: null, error: new Error('User not authenticated - no active session') };
       }
       userId = user.id;
+      Logger.debug('Got user ID for image upload', { userId });
     }
 
     // Create unique filename
     const fileExt = imageUri.split('.').pop()?.split('?')[0] || 'jpg';
     const fileName = `${userId}-${Date.now()}.${fileExt}`;
     const filePath = `${fileName}`;
+    const contentType = `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;
 
-    // Convert image to uploadable format based on platform
-    let fileData: Blob;
+    let uploadData: ArrayBuffer | Blob;
     
     if (Platform.OS === 'web') {
       // Web: Convert data URI or blob URL to blob
       const response = await fetch(imageUri);
-      fileData = await response.blob();
+      uploadData = await response.blob();
     } else {
-      // Mobile: Fetch the image as blob
-      const response = await fetch(imageUri);
-      fileData = await response.blob();
+      // React Native: Use XMLHttpRequest to get the file as a blob, then use FileReader to convert to ArrayBuffer
+      Logger.debug('Reading image file for upload', { imageUri: imageUri.substring(0, 50) + '...' });
+      uploadData = await new Promise<ArrayBuffer>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.onload = () => {
+          try {
+            const blob = xhr.response as Blob;
+            Logger.debug('Got blob from XHR', { blobSize: blob.size, blobType: blob.type });
+            
+            // Use FileReader to convert blob to ArrayBuffer (more reliable in RN)
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              if (reader.result instanceof ArrayBuffer) {
+                Logger.debug('FileReader converted to ArrayBuffer', { size: reader.result.byteLength });
+                resolve(reader.result);
+              } else {
+                reject(new Error('FileReader did not return ArrayBuffer'));
+              }
+            };
+            reader.onerror = () => reject(new Error('FileReader error'));
+            reader.readAsArrayBuffer(blob);
+          } catch (e) {
+            Logger.error('Error processing blob', e as Error);
+            reject(e);
+          }
+        };
+        xhr.onerror = () => {
+          Logger.error('XHR error loading image', new Error('XHR failed'));
+          reject(new Error('Failed to load image file'));
+        };
+        xhr.responseType = 'blob';
+        xhr.open('GET', imageUri, true);
+        xhr.send(null);
+      });
     }
 
     // Upload to Supabase Storage
+    Logger.debug('Uploading image to Supabase Storage', { bucket, filePath, contentType, userId });
     const { error: uploadError } = await supabase.storage
       .from(bucket)
-      .upload(filePath, fileData, {
-        contentType: `image/${fileExt}`,
+      .upload(filePath, uploadData, {
+        contentType,
         upsert: false, // Create new file each time
       });
 
     if (uploadError) {
+      Logger.error('Supabase Storage upload error', uploadError, { bucket, filePath, userId });
       throw uploadError;
     }
 
@@ -71,9 +111,10 @@ export async function uploadImage(
       .from(bucket)
       .getPublicUrl(filePath);
 
+    Logger.info('Image uploaded successfully', { publicUrl, userId });
     return { url: publicUrl, error: null };
   } catch (error) {
-    console.error('Error uploading image:', error);
+    Logger.error('Error uploading image', error as Error, { bucket, userId });
     return { url: null, error: error as Error };
   }
 }

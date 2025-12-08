@@ -2,18 +2,19 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader, LocationPermissionOverlay } from '@rallia/shared-components';
+import { Logger } from '@rallia/shared-services';
 import RalliaLogo from '../../assets/images/light mode logo.svg';
 
 const Map = () => {
   const [showLocationPermission, setShowLocationPermission] = useState(false);
 
   const handleAcceptLocation = () => {
-    if (__DEV__) console.log('Location permission accepted');
+    Logger.logUserAction('location_permission_accepted');
     setShowLocationPermission(false);
   };
 
   const handleRefuseLocation = () => {
-    if (__DEV__) console.log('Location permission refused');
+    Logger.logUserAction('location_permission_refused');
     setShowLocationPermission(false);
   };
 

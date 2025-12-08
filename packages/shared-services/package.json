@@ -8,7 +8,12 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.47.11",
+    "base64-arraybuffer": "^1.0.2",
     "resend": "^4.0.1"
+  },
+  "peerDependencies": {
+    "expo-file-system": "*",
+    "react-native": "*"
   },
   "devDependencies": {
     "typescript": "^5.9.2"

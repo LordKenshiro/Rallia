@@ -7,8 +7,14 @@ import {
   TouchableWithoutFeedback,
   Animated,
   ScrollView,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export type OverlayType = 'bottom' | 'center';
 
@@ -39,6 +45,12 @@ const Overlay: React.FC<OverlayProps> = ({
   darkBackground = false,
   alignTop = false,
 }) => {
+  const insets = useSafeAreaInsets();
+  
+  // Calculate overlay height: 2/3 of screen height for bottom overlays
+  const twoThirdsHeight = Math.round(SCREEN_HEIGHT * 0.67);
+  const overlayHeight = twoThirdsHeight - insets.bottom; // Account for bottom safe area
+  
   const handleBackdropPress = () => {
     if (dismissOnBackdropPress) {
       onClose();
@@ -62,63 +74,77 @@ const Overlay: React.FC<OverlayProps> = ({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <TouchableWithoutFeedback onPress={handleBackdropPress}>
-        <View
-          style={[
-            styles.overlay,
-            type === 'center' && styles.overlayCentered,
-            type === 'center' && alignTop && styles.overlayTop,
-          ]}
-        >
-          <TouchableWithoutFeedback>
-            <View
-              style={[
-                styles.container,
-                type === 'center' && styles.containerCenter,
-                darkBackground && styles.containerDark,
-              ]}
-            >
-              {/* Header - only for bottom type */}
-              {type === 'bottom' && (
-                <View style={styles.header}>
-                  {showBackButton && (
-                    <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
-                      <Ionicons name="chevron-back" size={24} color="#333" />
-                    </TouchableOpacity>
-                  )}
+      <KeyboardAvoidingView 
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        <TouchableWithoutFeedback onPress={handleBackdropPress}>
+          <View
+            style={[
+              styles.overlay,
+              type === 'center' && styles.overlayCentered,
+              type === 'center' && alignTop && styles.overlayTop,
+            ]}
+          >
+            <TouchableWithoutFeedback>
+              <View
+                style={[
+                  styles.container,
+                  type === 'center' && styles.containerCenter,
+                  darkBackground && styles.containerDark,
+                  type === 'bottom' && { 
+                    height: overlayHeight,
+                    paddingBottom: insets.bottom + 20, // Safe area + padding
+                  },
+                ]}
+              >
+                {/* Header - only for bottom type */}
+                {type === 'bottom' && (
+                  <View style={styles.header}>
+                    {showBackButton && (
+                      <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
+                        <Ionicons name="chevron-back" size={24} color="#333" />
+                      </TouchableOpacity>
+                    )}
 
-                  {title && <View style={styles.titleBar} />}
+                    {title && <View style={styles.titleBar} />}
 
-                  {showCloseButton && (
-                    <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                      <Ionicons name="close" size={24} color="#333" />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              )}
+                    {showCloseButton && (
+                      <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                        <Ionicons name="close" size={24} color="#333" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
 
-              {/* Content */}
-              {type === 'center' ? (
-                <View style={styles.centerContent}>{children}</View>
-              ) : (
-                <ScrollView
-                  style={styles.scrollView}
-                  contentContainerStyle={styles.content}
-                  showsVerticalScrollIndicator={true}
-                  bounces={true}
-                >
-                  {children}
-                </ScrollView>
-              )}
-            </View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
+                {/* Content */}
+                {type === 'center' ? (
+                  <View style={styles.centerContent}>{children}</View>
+                ) : (
+                  <ScrollView
+                    style={styles.scrollView}
+                    contentContainerStyle={styles.content}
+                    showsVerticalScrollIndicator={true}
+                    bounces={true}
+                    keyboardShouldPersistTaps="handled"
+                  >
+                    {children}
+                  </ScrollView>
+                )}
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -136,8 +162,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '90%',
-    paddingBottom: 20,
+    // Height is set dynamically in component for bottom type
   },
   containerCenter: {
     borderRadius: 16,

@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Alert, ActivityIndicator } from 'react-native';
 import { Overlay } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
-import { OnboardingService } from '@rallia/shared-services';
+import { OnboardingService, Logger } from '@rallia/shared-services';
 import type { DayOfWeek as DBDayOfWeek, TimePeriod, OnboardingAvailability } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
-import { selectionHaptic, mediumHaptic } from '../../../../utils/haptics';
+import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
 
 interface PlayerAvailabilitiesOverlayProps {
   visible: boolean;
@@ -61,6 +61,7 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
   const [availabilities, setAvailabilities] = useState<WeeklyAvailability>(
     initialData || defaultAvailabilities
   );
+  const [isSaving, setIsSaving] = useState(false);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -101,6 +102,9 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
   const handleContinue = async () => {
     mediumHaptic();
     
+    // Prevent double-tap
+    if (isSaving) return;
+    
     // Edit mode: use the onSave callback
     if (mode === 'edit' && onSave) {
       onSave(availabilities);
@@ -109,6 +113,7 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
     
     // Onboarding mode: save to database
     if (onContinue) {
+      setIsSaving(true);
       try {
         // Map UI data to database format
         const dayMap: Record<DayOfWeek, DBDayOfWeek> = {
@@ -151,7 +156,8 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
         const { error } = await OnboardingService.saveAvailability(availabilityData);
         
         if (error) {
-          console.error('Error saving availability:', error);
+          Logger.error('Failed to save player availability', error as Error, { availabilityData });
+          setIsSaving(false);
           Alert.alert(
             'Error',
             'Failed to save your availability. Please try again.',
@@ -160,21 +166,22 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
           return;
         }
         
-        console.log('Player availabilities saved to database:', availabilityData);
+        Logger.debug('player_availabilities_saved', { availabilityData });
         
         // Mark onboarding as completed
         const { error: completeError } = await OnboardingService.completeOnboarding();
         
         if (completeError) {
-          console.error('Error completing onboarding:', completeError);
+          Logger.warn('Failed to mark onboarding as completed', { error: completeError });
           // Don't block the flow if this fails - just log it
         } else {
-          console.log('✅ Onboarding marked as completed in profile');
+          Logger.info('onboarding_completed', { message: 'Onboarding marked as completed in profile' });
         }
         
         onContinue(availabilities);
       } catch (error) {
-        console.error('Unexpected error saving availability:', error);
+        Logger.error('Unexpected error saving availability', error as Error);
+        setIsSaving(false);
         Alert.alert(
           'Error',
           'An unexpected error occurred. Please try again.',
@@ -191,23 +198,25 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
       onBack={onBack}
       type="bottom"
       showBackButton={false}
+      showCloseButton={false}
     >
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        <Animated.View
-          style={[
-            styles.container,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            },
-          ]}
-        >
-          {/* Show progress indicator only in onboarding mode */}
-          {mode === 'onboarding' && (
-            <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
-          )}
+      <Animated.View
+        style={[
+          styles.container,
+          {
+            flex: 1,
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          },
+        ]}
+      >
+        {/* Show progress indicator only in onboarding mode */}
+        {mode === 'onboarding' && (
+          <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
+        )}
 
-          {/* Back Button */}
+        {/* Back Button - Only show in onboarding mode */}
+        {mode === 'onboarding' && (
           <TouchableOpacity
             style={styles.backButton}
             onPress={onBack || onClose}
@@ -215,16 +224,19 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
           >
             <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
+        )}
 
-          {/* Close Button */}
-          <TouchableOpacity style={styles.closeButton} onPress={onClose} activeOpacity={0.7}>
-            <Text style={styles.closeButtonText}>✕</Text>
-          </TouchableOpacity>
+        {/* Close Button */}
+        <TouchableOpacity style={styles.closeButton} onPress={onClose} activeOpacity={0.7}>
+          <Text style={styles.closeButtonText}>✕</Text>
+        </TouchableOpacity>
 
-          {/* Title */}
-          <Text style={styles.title}>Tell us about your{'\n'}schedule</Text>
-          <Text style={styles.subtitle}>Select your availabilities</Text>
+        {/* Title */}
+        <Text style={styles.title}>Tell us about your{"\n"}schedule</Text>
+        <Text style={styles.subtitle}>Select your availabilities</Text>
 
+        {/* Scrollable Content Area */}
+        <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Availability Grid */}
           <View style={styles.gridContainer}>
             {/* Header Row */}
@@ -266,31 +278,36 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
               </View>
             ))}
           </View>
+        </ScrollView>
 
-          {/* Complete/Save Button */}
-          <TouchableOpacity
-            style={styles.completeButton}
-            onPress={handleContinue}
-            activeOpacity={0.8}
-          >
+        {/* Complete/Save Button - Fixed at bottom */}
+        <TouchableOpacity
+          style={[styles.completeButton, isSaving && styles.completeButtonDisabled]}
+          onPress={handleContinue}
+          activeOpacity={0.8}
+          disabled={isSaving}
+        >
+          {isSaving ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
             <Text style={styles.completeButtonText}>
               {mode === 'edit' ? 'Save' : 'Complete'}
             </Text>
-          </TouchableOpacity>
-        </Animated.View>
-      </ScrollView>
+          )}
+        </TouchableOpacity>
+      </Animated.View>
     </Overlay>
   );
 };
 
 const styles = StyleSheet.create({
-  scrollContainer: {
-    maxHeight: '90%',
-  },
   container: {
+    flex: 1,
     paddingVertical: 20,
     paddingHorizontal: 20,
-    paddingBottom: 40,
+  },
+  scrollContent: {
+    flex: 1,
   },
   backButton: {
     position: 'absolute',
@@ -394,6 +411,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
+  },
+  completeButtonDisabled: {
+    backgroundColor: '#999',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   completeButtonText: {
     color: '#fff',

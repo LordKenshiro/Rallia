@@ -7,9 +7,10 @@ import {
   SafeAreaView,
   ScrollView,
   Image,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '@rallia/shared-services';
+import { supabase, Logger } from '@rallia/shared-services';
 import { useNavigation } from '@react-navigation/native';
 
 const SettingsScreen: React.FC = () => {
@@ -20,9 +21,19 @@ const SettingsScreen: React.FC = () => {
   const [selectedLanguage, setSelectedLanguage] = useState<'EN' | 'FR'>('EN');
   const [selectedAppearance, setSelectedAppearance] = useState<'Light' | 'Dark' | 'System'>('Light');
 
+  // Check authentication on mount and redirect if not logged in
   useEffect(() => {
-    fetchUserData();
-  }, []);
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        Alert.alert('Error', 'Please sign in to access settings');
+        navigation.goBack();
+        return;
+      }
+      fetchUserData();
+    };
+    checkAuth();
+  }, [navigation]);
 
   const fetchUserData = async () => {
     try {
@@ -41,7 +52,7 @@ const SettingsScreen: React.FC = () => {
         setProfilePictureUrl(profile.profile_picture_url);
       }
     } catch (error) {
-      if (__DEV__) console.error('Error fetching user data:', error);
+      Logger.error('Failed to fetch user data', error as Error);
     }
   };
 
@@ -51,13 +62,13 @@ const SettingsScreen: React.FC = () => {
       // Navigate to Home after successful sign out
       (navigation as any).navigate('HomeScreen');
     } catch (error) {
-      if (__DEV__) console.error('Error signing out:', error);
+      Logger.error('Failed to sign out', error as Error);
     }
   };
 
   const handleDeleteAccount = () => {
     // TODO: Implement delete account functionality
-    if (__DEV__) console.log('Delete account pressed');
+    Logger.logUserAction('delete_account_pressed');
   };
 
   const handleEditProfile = () => {
@@ -115,32 +126,32 @@ const SettingsScreen: React.FC = () => {
           <SettingsItem 
             icon="notifications-outline" 
             title="Notifications" 
-            onPress={() => { if (__DEV__) console.log('Notifications pressed'); }} 
+            onPress={() => { Logger.logUserAction('settings_notifications_pressed'); }} 
           />
           <SettingsItem 
             icon="lock-closed-outline" 
             title="Permissions" 
-            onPress={() => { if (__DEV__) console.log('Permissions pressed'); }} 
+            onPress={() => { Logger.logUserAction('settings_permissions_pressed'); }} 
           />
           <SettingsItem 
             icon="card-outline" 
             title="Subscription" 
-            onPress={() => { if (__DEV__) console.log('Subscription pressed'); }}
+            onPress={() => { Logger.logUserAction('settings_subscription_pressed'); }}
           />
           <SettingsItem 
             icon="wallet-outline" 
             title="Payments" 
-            onPress={() => { if (__DEV__) console.log('Payments pressed'); }}
+            onPress={() => { Logger.logUserAction('settings_payments_pressed'); }}
           />
           <SettingsItem 
             icon="help-circle-outline" 
             title="Help & Assistance" 
-            onPress={() => { if (__DEV__) console.log('Help pressed'); }}
+            onPress={() => { Logger.logUserAction('settings_help_pressed'); }}
           />
           <SettingsItem 
             icon="document-text-outline" 
             title="Terms & Conditions" 
-            onPress={() => { if (__DEV__) console.log('Terms pressed'); }}
+            onPress={() => { Logger.logUserAction('settings_terms_pressed'); }}
           />
         </View>
 

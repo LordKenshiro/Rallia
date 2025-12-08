@@ -3,7 +3,7 @@
  * Initialize Resend API for email verification
  */
 
-import { initializeResend } from '@rallia/shared-services';
+import { initializeResend, Logger } from '@rallia/shared-services';
 
 // Resend API Key - Store this in environment variables
 // For development, you can temporarily hardcode it, but NEVER commit to git
@@ -16,15 +16,15 @@ const RESEND_API_KEY = process.env.EXPO_PUBLIC_RESEND_API_KEY || '';
  */
 export const setupResend = () => {
   if (!RESEND_API_KEY) {
-    console.warn('⚠️ Resend API key not found. Email verification will not work.');
-    console.warn('Set RESEND_API_KEY in your environment variables.');
+    Logger.warn('Resend API key not found - email verification will not work');
+    Logger.warn('Set EXPO_PUBLIC_RESEND_API_KEY in environment variables');
     return;
   }
 
   try {
     initializeResend(RESEND_API_KEY);
-    console.log('✅ Resend initialized successfully');
+    Logger.info('resend_initialized');
   } catch (error) {
-    console.error('❌ Failed to initialize Resend:', error);
+    Logger.error('Failed to initialize Resend', error as Error);
   }
 };

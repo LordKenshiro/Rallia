@@ -1,84 +1,84 @@
-import * as Haptics from 'expo-haptics';
-import { Logger } from '@rallia/shared-services';
-
 /**
- * Haptic feedback utility functions for enhanced UX
+ * Haptic Feedback - Native Implementation (React Native)
+ *
+ * Provides haptic feedback for mobile devices using Expo Haptics
  */
+
+import * as Haptics from 'expo-haptics';
 
 /**
  * Light impact feedback for selections, toggles
  */
-export const lightHaptic = async () => {
+export const lightHaptic = async (): Promise<void> => {
   try {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   } catch (error) {
-    // Haptics may not be available on all devices
-    Logger.debug('haptics_not_available', { type: 'light' });
+    // Haptics may not be available on all devices - fail silently
   }
 };
 
 /**
  * Medium impact feedback for important actions
  */
-export const mediumHaptic = async () => {
+export const mediumHaptic = async (): Promise<void> => {
   try {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   } catch (error) {
-    Logger.debug('haptics_not_available', { type: 'medium' });
+    // Fail silently
   }
 };
 
 /**
  * Heavy impact feedback for critical actions
  */
-export const heavyHaptic = async () => {
+export const heavyHaptic = async (): Promise<void> => {
   try {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
   } catch (error) {
-    Logger.debug('haptics_not_available', { type: 'heavy' });
+    // Fail silently
   }
 };
 
 /**
  * Success notification feedback
  */
-export const successHaptic = async () => {
+export const successHaptic = async (): Promise<void> => {
   try {
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   } catch (error) {
-    Logger.debug('haptics_not_available', { type: 'success' });
+    // Fail silently
   }
 };
 
 /**
  * Warning notification feedback
  */
-export const warningHaptic = async () => {
+export const warningHaptic = async (): Promise<void> => {
   try {
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
   } catch (error) {
-    Logger.debug('haptics_not_available', { type: 'warning' });
+    // Fail silently
   }
 };
 
 /**
  * Error notification feedback
  */
-export const errorHaptic = async () => {
+export const errorHaptic = async (): Promise<void> => {
   try {
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
   } catch (error) {
-    Logger.debug('haptics_not_available', { type: 'error' });
+    // Fail silently
   }
 };
 
 /**
  * Selection changed feedback (lighter than light impact)
  */
-export const selectionHaptic = async () => {
+export const selectionHaptic = async (): Promise<void> => {
   try {
     await Haptics.selectionAsync();
   } catch (error) {
-    Logger.debug('haptics_not_available', { type: 'selection' });
+    // Fail silently
   }
 };

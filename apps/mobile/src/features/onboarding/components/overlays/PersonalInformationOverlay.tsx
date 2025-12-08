@@ -10,6 +10,7 @@ import {
   Alert,
   TextInput,
   ToastAndroid,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -22,11 +23,10 @@ import {
 } from '@rallia/shared-components';
 import { useImagePicker } from '../../../../hooks';
 import { COLORS } from '@rallia/shared-constants';
-import { validateFullName, validateUsername, validatePhoneNumber } from '@rallia/shared-utils';
-import { OnboardingService, supabase, uploadImage } from '@rallia/shared-services';
+import { validateFullName, validateUsername, validatePhoneNumber, lightHaptic, mediumHaptic } from '@rallia/shared-utils';
+import { OnboardingService, supabase, uploadImage, Logger } from '@rallia/shared-services';
 import type { GenderType } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
-import { lightHaptic, mediumHaptic } from '../../../../utils/haptics';
 
 interface PersonalInformationOverlayProps {
   visible: boolean;
@@ -72,8 +72,8 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
   // Use custom hook for image picker
   const { image: profileImage, pickImage } = useImagePicker();
   
-  // Track image upload state
-  const [uploadingImage, setUploadingImage] = useState(false);
+  // Track saving state
+  const [isSaving, setIsSaving] = useState(false);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -83,10 +83,10 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
   useEffect(() => {
     const fetchGenderOptions = async () => {
       try {
-        const { data, error } = await OnboardingService.getGenderTypes();
+        const { data, error} = await OnboardingService.getGenderTypes();
         
         if (error) {
-          console.error('Error fetching gender types:', error);
+          Logger.error('Failed to fetch gender types from database', error as Error);
           // Use fallback if API fails
           setGenderOptions([
             { value: 'male', label: 'Male' },
@@ -98,7 +98,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
           setGenderOptions(data);
         }
       } catch (error) {
-        console.error('Unexpected error fetching genders:', error);
+        Logger.error('Unexpected error fetching gender types', error as Error);
         // Use fallback on error
         setGenderOptions([
           { value: 'male', label: 'Male' },
@@ -170,6 +170,8 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
   };
 
   const handleContinue = async () => {
+    if (isSaving) return;
+    
     mediumHaptic();
     
     if (!dateOfBirth) {
@@ -184,18 +186,19 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         return;
       }
       
+      setIsSaving(true);
+      
       // Format date to YYYY-MM-DD for database
       const formattedDate = dateOfBirth.toISOString().split('T')[0];
       
       // Upload profile picture if a new one was selected
       let uploadedImageUrl: string | null = null;
       if (profileImage) {
-        setUploadingImage(true);
         const { url, error: uploadError } = await uploadImage(profileImage, 'profile-pictures');
-        setUploadingImage(false);
         
         if (uploadError) {
-          console.error('Error uploading profile picture:', uploadError);
+          Logger.error('Failed to upload profile picture', uploadError as Error);
+          setIsSaving(false);
           Alert.alert(
             'Upload Error',
             'Failed to upload profile picture. Continue without updating picture?',
@@ -215,6 +218,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         const { data: { user } } = await supabase.auth.getUser();
         
         if (!user) {
+          setIsSaving(false);
           Alert.alert('Error', 'User not found');
           return;
         }
@@ -245,7 +249,8 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
           .eq('id', user.id);
 
         if (updateError) {
-          console.error('Error updating profile:', updateError);
+          Logger.error('Failed to update profile', updateError as Error, { userId: user.id });
+          setIsSaving(false);
           Alert.alert('Error', 'Failed to update your information. Please try again.');
           return;
         }
@@ -259,7 +264,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
           .eq('id', user.id);
 
         if (playerUpdateError) {
-          console.error('Error updating player gender:', playerUpdateError);
+          Logger.error('Failed to update player gender', playerUpdateError as Error, { userId: user.id });
         }
 
         // Sync display_name to auth.users metadata (phone is already in profile table)
@@ -268,7 +273,10 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         });
 
         if (authUpdateError) {
-          console.error('Warning: Failed to sync display_name to auth.users:', authUpdateError);
+          Logger.warn('Failed to sync display_name to auth.users', { 
+            error: authUpdateError.message,
+            userId: user.id 
+          });
           // Don't block the save - profile table is already updated
         }
 
@@ -296,7 +304,9 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         });
         
         if (error) {
-          console.error('Error saving personal info:', error);
+          Logger.error('Failed to save personal info during onboarding', error as Error, { 
+            hasProfileImage: !!uploadedImageUrl 
+          });
           Alert.alert(
             'Error',
             'Failed to save your information. Please try again.',
@@ -307,7 +317,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         
         // Sync username (display name) to auth.users metadata
         // Note: Phone is stored in profile table, not auth.users (requires verification)
-        if (__DEV__) console.log('🔄 Syncing username to auth.users...');
+        Logger.debug('Syncing username to auth.users', { username });
         const { error: authUpdateError } = await supabase.auth.updateUser({
           data: {
             display_name: username, // Sync username to display_name in user_metadata
@@ -315,19 +325,20 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         });
         
         if (authUpdateError) {
-          console.error('⚠️ Warning: Failed to sync to auth.users:', authUpdateError.message);
+          Logger.warn('Failed to sync username to auth.users', { 
+            error: authUpdateError.message 
+          });
           // Don't block onboarding if this fails - data is already saved to profile table
         } else {
-          if (__DEV__) console.log('✅ Username synced to auth.users successfully');
+          Logger.debug('Username synced to auth.users successfully', { username });
         }
         
-        if (__DEV__) console.log('Personal info saved to database:', {
-          fullName,
-          username,
-          dateOfBirth: formattedDate,
-          gender: gender,
-          phoneNumber,
-          profileImage,
+        Logger.info('Personal info saved successfully during onboarding', {
+          hasFullName: !!fullName,
+          hasUsername: !!username,
+          hasGender: !!gender,
+          hasPhone: !!phoneNumber,
+          hasProfileImage: !!profileImage,
         });
         
         if (onContinue) {
@@ -335,7 +346,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         }
       }
     } catch (error) {
-      console.error('Unexpected error saving personal info:', error);
+      Logger.error('Unexpected error saving personal info', error as Error, { mode });
       Alert.alert(
         'Error',
         'An unexpected error occurred. Please try again.',
@@ -561,10 +572,14 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         <Button
           variant="primary"
           onPress={handleContinue}
-          disabled={!isFormValid || uploadingImage}
+          disabled={!isFormValid || isSaving}
           style={mode === 'edit' ? styles.saveButtonContainer : styles.continueButton}
         >
-          {uploadingImage ? 'Uploading...' : (mode === 'onboarding' ? 'Continue' : 'Save')}
+          {isSaving ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            mode === 'onboarding' ? 'Continue' : 'Save'
+          )}
         </Button>
       </Animated.View>
     </Overlay>

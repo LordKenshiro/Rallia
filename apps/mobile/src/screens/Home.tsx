@@ -22,6 +22,7 @@ import {
 } from '../features/onboarding/components';
 import { useAuth, useOnboardingFlow } from '../hooks';
 import { useProfile } from '@rallia/shared-hooks';
+import { Logger } from '@rallia/shared-services';
 import { getMockMatches } from '../features/matches/data/mockMatches';
 import { Match } from '../types';
 
@@ -86,7 +87,7 @@ const Home = () => {
       const mockMatches = getMockMatches();
       setMatches(mockMatches);
     } catch (error) {
-      if (__DEV__) console.error('Error fetching matches:', error);
+      Logger.error('Failed to fetch matches', error as Error);
     } finally {
       setLoadingMatches(false);
     }
@@ -161,7 +162,7 @@ const Home = () => {
               <MatchCard
                 key={match.id}
                 match={match}
-                onPress={() => { if (__DEV__) console.log('Match pressed:', match.id); }}
+                onPress={() => { Logger.logUserAction('match_pressed', { matchId: match.id }); }}
               />
             ))
           ) : (
@@ -180,7 +181,7 @@ const Home = () => {
         onClose={onboarding.closeAuthOverlay}
         onAuthSuccess={onboarding.handleAuthSuccess}
         onReturningUser={() => {
-          if (__DEV__) console.log('Returning user - skipping onboarding');
+          Logger.debug('returning_user_skip_onboarding');
           onboarding.closeAuthOverlay();
           // Returning users go directly to the app (overlay closes)
         }}

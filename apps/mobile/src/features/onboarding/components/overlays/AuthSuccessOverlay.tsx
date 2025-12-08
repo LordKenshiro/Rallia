@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
-import { lightHaptic, mediumHaptic } from '../../../../utils/haptics';
+import { Logger } from '@rallia/shared-services';
+import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
 
 interface AuthSuccessOverlayProps {
   visible: boolean;
@@ -40,21 +41,21 @@ const AuthSuccessOverlay: React.FC<AuthSuccessOverlayProps> = ({ visible, onClos
 
   const handleCreateMatch = () => {
     mediumHaptic();
-    console.log('Navigate to Create Match');
+    Logger.logUserAction('create_match_intent', { source: 'auth_success_overlay' });
     // TODO: Navigate to create match screen
     onClose();
   };
 
   const handleJoinMatch = () => {
     mediumHaptic();
-    console.log('Navigate to Join Match');
+    Logger.logUserAction('join_match_intent', { source: 'auth_success_overlay' });
     // TODO: Navigate to join match screen
     onClose();
   };
 
   const handleJoinCommunity = () => {
     mediumHaptic();
-    console.log('Navigate to Join Community');
+    Logger.logUserAction('join_community_intent', { source: 'auth_success_overlay' });
     // TODO: Navigate to community screen
     onClose();
   };

@@ -28,6 +28,9 @@ const AppHeader: React.FC<AppHeaderProps> = ({ backgroundColor = '#C8F2EF', Logo
   const [showSportDropdown, setShowSportDropdown] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
 
+  // Check if user is logged in (profile exists)
+  const isLoggedIn = !!profile;
+
   // Extract profile picture URL from profile data
   const profilePictureUrl = profile?.profile_picture_url || null;
 
@@ -86,17 +89,20 @@ const AppHeader: React.FC<AppHeaderProps> = ({ backgroundColor = '#C8F2EF', Logo
   };
 
   const handleProfilePress = () => {
-    // Navigate to UserProfile screen
+    // Only navigate if logged in
+    if (!isLoggedIn) return;
     (navigation as any).navigate('UserProfile');
   };
 
   const handleNotificationsPress = () => {
-    // Handle notifications press
+    // Only handle if logged in
+    if (!isLoggedIn) return;
     console.log('Notifications pressed');
   };
 
   const handleSettingsPress = () => {
-    // Navigate to Settings screen
+    // Only navigate if logged in
+    if (!isLoggedIn) return;
     (navigation as any).navigate('Settings');
   };
 
@@ -105,24 +111,26 @@ const AppHeader: React.FC<AppHeaderProps> = ({ backgroundColor = '#C8F2EF', Logo
       <View style={[styles.container, { backgroundColor }]}>
         {/* Left - Profile Picture and Logo */}
         <View style={styles.leftSection}>
-          <TouchableOpacity style={styles.iconButton} onPress={handleProfilePress}>
-            {profilePictureUrl && !imageLoadError ? (
-              <Image 
-                source={{ uri: profilePictureUrl }} 
-                style={styles.profileImage}
-                onError={(error) => {
-                  console.error('❌ AppHeader - Failed to load profile image:', error.nativeEvent.error);
-                  setImageLoadError(true);
-                }}
-                onLoad={() => {
-                  console.log('✅ AppHeader - Profile image loaded successfully');
-                  setImageLoadError(false);
-                }}
-              />
-            ) : (
-              <Ionicons name="person-circle-outline" size={28} color="#333" />
-            )}
-          </TouchableOpacity>
+          {isLoggedIn && (
+            <TouchableOpacity style={styles.iconButton} onPress={handleProfilePress}>
+              {profilePictureUrl && !imageLoadError ? (
+                <Image 
+                  source={{ uri: profilePictureUrl }} 
+                  style={styles.profileImage}
+                  onError={(error) => {
+                    console.error('❌ AppHeader - Failed to load profile image:', error.nativeEvent.error);
+                    setImageLoadError(true);
+                  }}
+                  onLoad={() => {
+                    console.log('✅ AppHeader - Profile image loaded successfully');
+                    setImageLoadError(false);
+                  }}
+                />
+              ) : (
+                <Ionicons name="person-circle-outline" size={28} color="#333" />
+              )}
+            </TouchableOpacity>
+          )}
           
           {Logo && <Logo width={100} height={30} />}
         </View>
@@ -148,13 +156,17 @@ const AppHeader: React.FC<AppHeaderProps> = ({ backgroundColor = '#C8F2EF', Logo
 
         {/* Right - Notification and Settings Icons */}
         <View style={styles.rightIcons}>
-          <TouchableOpacity style={styles.iconButton} onPress={handleNotificationsPress}>
-            <Ionicons name="notifications-outline" size={24} color="#333" />
-          </TouchableOpacity>
+          {isLoggedIn && (
+            <>
+              <TouchableOpacity style={styles.iconButton} onPress={handleNotificationsPress}>
+                <Ionicons name="notifications-outline" size={24} color="#333" />
+              </TouchableOpacity>
 
-          <TouchableOpacity style={styles.iconButton} onPress={handleSettingsPress}>
-            <Ionicons name="settings-outline" size={24} color="#333" />
-          </TouchableOpacity>
+              <TouchableOpacity style={styles.iconButton} onPress={handleSettingsPress}>
+                <Ionicons name="settings-outline" size={24} color="#333" />
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </View>
 

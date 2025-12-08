@@ -12,7 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay, Text } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
-import { supabase } from '@rallia/shared-services';
+import { supabase, Logger } from '@rallia/shared-services';
 import { selectionHaptic, mediumHaptic } from '../../../utils/haptics';
 
 interface ReferenceRequestOverlayProps {
@@ -187,7 +187,7 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
       setPlayers(playersWithRatings);
       setFilteredPlayers(playersWithRatings);
     } catch (error) {
-      console.error('Error fetching certified players:', error);
+      Logger.error('Failed to fetch certified players', error as Error, { sportId });
     } finally {
       setLoading(false);
     }
@@ -216,7 +216,7 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
       setSelectedPlayers(new Set());
       setSearchQuery('');
     } catch (error) {
-      console.error('Error sending requests:', error);
+      Logger.error('Failed to send reference requests', error as Error, { count: selectedPlayers.size, sportId });
     } finally {
       setSending(false);
     }
