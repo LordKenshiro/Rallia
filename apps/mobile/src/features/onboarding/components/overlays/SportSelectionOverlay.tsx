@@ -12,9 +12,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Overlay, Text, Heading, Button, Spinner } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
 import { Sport } from '@rallia/shared-types';
-import DatabaseService from '@rallia/shared-services';
+import DatabaseService, { Logger } from '@rallia/shared-services';
 import ProgressIndicator from '../ProgressIndicator';
-import { selectionHaptic, mediumHaptic } from '../../../../utils/haptics';
+import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
 
 interface SportSelectionOverlayProps {
   visible: boolean;
@@ -51,7 +51,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
           setPlayerId(userId);
         }
       } catch (error) {
-        console.error('Error fetching player ID:', error);
+        Logger.error('Failed to fetch player ID', error as Error);
       }
     };
 
@@ -67,7 +67,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
       const { data, error } = await DatabaseService.Sport.getAllSports();
 
       if (error) {
-        console.error('Error fetching sports:', error);
+        Logger.error('Failed to fetch sports', error as Error);
         Alert.alert('Error', 'Failed to load sports. Please try again.');
         // Fallback to hardcoded sports if fetch fails
         setSports([
@@ -172,7 +172,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
     );
 
     if (error) {
-      console.error('Error toggling sport:', error);
+      Logger.error('Failed to toggle sport selection', error as Error, { sportId, newSelectionState });
       // Revert optimistic update on error
       setSelectedSportIds((prev: string[]) => {
         if (newSelectionState) {
@@ -193,8 +193,11 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
       .map(id => sports.find(s => s.id === id)?.name)
       .filter(name => name !== undefined) as string[];
 
-    console.log('Selected sport IDs:', selectedSportIds);
-    console.log('Selected sport names:', selectedSportNames);
+    Logger.debug('sport_selection_continue', { 
+      sportIds: selectedSportIds, 
+      sportNames: selectedSportNames,
+      count: selectedSportIds.length 
+    });
 
     if (onContinue) {
       // Pass both names (for flow control) and IDs (for database operations)

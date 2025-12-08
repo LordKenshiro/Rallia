@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Platform, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { Logger } from '@rallia/shared-services';
 
 export interface ImagePickerResult {
   uri: string | null;
@@ -41,7 +42,7 @@ export const useImagePicker = () => {
 
       return { uri: null };
     } catch (error) {
-      console.error('Error picking image from camera:', error);
+      Logger.error('Failed to pick image from camera', error as Error, { source: 'camera' });
       return { uri: null, error: 'Failed to capture image' };
     }
   };
@@ -63,7 +64,7 @@ export const useImagePicker = () => {
 
       return { uri: null };
     } catch (error) {
-      console.error('Error picking image from gallery:', error);
+      Logger.error('Failed to pick image from gallery', error as Error, { source: 'gallery' });
       return { uri: null, error: 'Failed to select image' };
     }
   };

@@ -11,9 +11,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { Text, Heading } from '@rallia/shared-components';
+import { Text } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
-import { supabase, uploadImage } from '@rallia/shared-services';
+import { supabase, uploadImage, Logger } from '@rallia/shared-services';
 import { useImagePicker } from '../hooks';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import PersonalInformationOverlay from '../features/onboarding/components/overlays/PersonalInformationOverlay';
@@ -54,15 +54,26 @@ const UserProfile = () => {
   // Use custom hook for image picker (for profile picture editing)
   const { image: newProfileImage, pickImage } = useImagePicker();
 
+  // Check authentication on mount and redirect if not logged in
   useEffect(() => {
-    fetchUserProfileData();
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        // User is not authenticated, go back
+        Alert.alert('Error', 'Please sign in to view your profile');
+        navigation.goBack();
+        return;
+      }
+      fetchUserProfileData();
+    };
+    checkAuth();
   }, []);
 
   // Re-fetch data when screen comes into focus (e.g., when navigating back from SportProfile)
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const unsubscribe = (navigation as any).addListener('focus', () => {
-      if (__DEV__) console.log('UserProfile: Screen focused, refreshing data...');
+      Logger.debug('user_profile_screen_focused');
       fetchUserProfileData();
     });
 
@@ -110,7 +121,7 @@ const UserProfile = () => {
 
       Alert.alert('Success', 'Profile picture updated successfully!');
     } catch (error) {
-      if (__DEV__) console.error('Error uploading profile picture:', error);
+      Logger.error('Failed to upload profile picture', error as Error, { userId: profile?.id });
       Alert.alert('Error', getNetworkErrorMessage(error));
     } finally {
       setUploadingImage(false);
@@ -126,87 +137,105 @@ const UserProfile = () => {
         return;
       }
 
-      // Fetch profile data
-      const profileResult = await withTimeout(
-        (async () => supabase
-          .from('profile')
-          .select('*')
-          .eq('id', user.id)
-          .single())(),
-        15000,
-        'Failed to load profile - connection timeout'
-      );
+      // Run all queries in parallel for better performance
+      const [profileResult, playerResult, sportsResult, playerSportsResult, ratingsResult, availResult] = await Promise.all([
+        // Fetch profile data
+        withTimeout(
+          (async () => supabase
+            .from('profile')
+            .select('*')
+            .eq('id', user.id)
+            .single())(),
+          15000,
+          'Failed to load profile - connection timeout'
+        ),
+        
+        // Fetch player data
+        withTimeout(
+          (async () => supabase
+            .from('player')
+            .select('*')
+            .eq('id', user.id)
+            .single())(),
+          15000,
+          'Failed to load player data - connection timeout'
+        ),
+        
+        // Fetch all sports
+        withTimeout(
+          (async () => supabase
+            .from('sport')
+            .select('*')
+            .eq('is_active', true)
+            .order('name'))(),
+          15000,
+          'Failed to load sports - connection timeout'
+        ),
+        
+        // Fetch player's selected sports
+        withTimeout(
+          (async () => supabase
+            .from('player_sport')
+            .select('sport_id, is_primary, is_active')
+            .eq('player_id', user.id))(),
+          15000,
+          'Failed to load player sports - connection timeout'
+        ),
+        
+        // Fetch player's ratings with source_type info
+        withTimeout(
+          (async () => supabase
+            .from('player_rating_score')
+            .select(`
+              *,
+              rating_score (
+                display_label,
+                rating (
+                  sport_id
+                )
+              )
+            `)
+            .eq('player_id', user.id)
+            .order('is_primary', { ascending: false })
+            .order('is_verified', { ascending: false })
+            .order('created_at', { ascending: false }))(),
+          15000,
+          'Failed to load ratings - connection timeout'
+        ),
+        
+        // Fetch player availabilities
+        withTimeout(
+          (async () => supabase
+            .from('player_availability')
+            .select('day_of_week, time_period, is_active')
+            .eq('player_id', user.id)
+            .eq('is_active', true))(),
+          15000,
+          'Failed to load availability - connection timeout'
+        ),
+      ]);
 
+      // Process profile
       if (profileResult.error) throw profileResult.error;
       setProfile(profileResult.data);
 
-      // Fetch player data
-      const playerResult = await withTimeout(
-        (async () => supabase
-          .from('player')
-          .select('*')
-          .eq('id', user.id)
-          .single())(),
-        15000,
-        'Failed to load player data - connection timeout'
-      );
-
+      // Process player (PGRST116 = no rows is okay)
       if (playerResult.error && playerResult.error.code !== 'PGRST116') {
-        // PGRST116 = no rows returned, which is okay
         throw playerResult.error;
       }
       setPlayer(playerResult.data);
 
-      // Fetch all sports with player's selections
-      const sportsResult = await withTimeout(
-        (async () => supabase
-          .from('sport')
-          .select('*')
-          .eq('is_active', true)
-          .order('name'))(),
-        15000,
-        'Failed to load sports - connection timeout'
-      );
-
+      // Process sports
       if (sportsResult.error) throw sportsResult.error;
       const allSports = sportsResult.data;
 
-      // Fetch player's selected sports (include is_active flag)
-      const playerSportsResult = await withTimeout(
-        (async () => supabase
-          .from('player_sport')
-          .select('sport_id, is_primary, is_active')
-          .eq('player_id', user.id))(),
-        15000,
-        'Failed to load player sports - connection timeout'
-      );
-
+      // Process player sports (PGRST116 = no rows is okay)
       if (playerSportsResult.error && playerSportsResult.error.code !== 'PGRST116') {
         throw playerSportsResult.error;
       }
       const playerSports = playerSportsResult.data;
 
-      // Fetch player's ratings with source_type info
-      const ratingsResult = await withTimeout(
-        (async () => supabase
-          .from('player_rating_score')
-          .select(`
-            *,
-            rating_score (
-              display_label,
-              rating (
-                sport_id
-              )
-            )
-          `)
-          .eq('player_id', user.id)
-          .order('is_primary', { ascending: false }) // Primary ratings first
-          .order('is_verified', { ascending: false }) // Then verified ratings
-          .order('created_at', { ascending: false }))(),  // Then most recent
-        15000,
-        'Failed to load ratings - connection timeout'
-      );
-
+      // Process ratings (PGRST116 = no rows is okay)
       if (ratingsResult.error && ratingsResult.error.code !== 'PGRST116') {
         throw ratingsResult.error;
       }
@@ -245,17 +274,7 @@ const UserProfile = () => {
 
       setSports(sportsWithStatus);
 
-      // Fetch player availabilities
-      const availResult = await withTimeout(
-        (async () => supabase
-          .from('player_availability')
-          .select('day_of_week, time_period, is_active')
-          .eq('player_id', user.id)
-          .eq('is_active', true))(),
-        15000,
-        'Failed to load availability - connection timeout'
-      );
-
+      // Process availabilities (PGRST116 = no rows is okay)
       if (availResult.error && availResult.error.code !== 'PGRST116') {
         throw availResult.error;
       }
@@ -281,7 +300,7 @@ const UserProfile = () => {
       setAvailabilities(availGrid);
 
     } catch (error) {
-      if (__DEV__) console.error('Error fetching user profile data:', error);
+      Logger.error('Failed to fetch user profile data', error as Error);
       Alert.alert('Error', getNetworkErrorMessage(error));
     } finally {
       setLoading(false);
@@ -290,6 +309,11 @@ const UserProfile = () => {
 
   // Convert DB format to UI format for the overlay
   const convertToUIFormat = (dbAvailabilities: AvailabilityGrid) => {
+    // Return empty object if no availabilities
+    if (!dbAvailabilities || Object.keys(dbAvailabilities).length === 0) {
+      return {};
+    }
+
     const dayMap: { [key: string]: 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun' } = {
       monday: 'Mon',
       tuesday: 'Tue',
@@ -300,21 +324,16 @@ const UserProfile = () => {
       sunday: 'Sun',
     };
 
-    const timeMap: { [key: string]: 'AM' | 'PM' | 'EVE' } = {
-      morning: 'AM',
-      afternoon: 'PM',
-      evening: 'EVE',
-    };
-
     const uiFormat: any = {};
     
     Object.keys(dbAvailabilities).forEach((day) => {
       const uiDay = dayMap[day];
-      if (uiDay) {
+      const dayData = dbAvailabilities[day];
+      if (uiDay && dayData) {
         uiFormat[uiDay] = {
-          AM: dbAvailabilities[day].morning,
-          PM: dbAvailabilities[day].afternoon,
-          EVE: dbAvailabilities[day].evening,
+          AM: dayData.morning ?? false,
+          PM: dayData.afternoon ?? false,
+          EVE: dayData.evening ?? false,
         };
       }
     });
@@ -406,7 +425,7 @@ const UserProfile = () => {
       
       Alert.alert('Success', 'Your availabilities have been updated!');
     } catch (error) {
-      if (__DEV__) console.error('Error saving availabilities:', error);
+      Logger.error('Failed to save availabilities', error as Error, { playerId: player?.id });
       Alert.alert('Error', getNetworkErrorMessage(error));
     }
   };
@@ -466,14 +485,7 @@ const UserProfile = () => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={28} color="#333" />
-          </TouchableOpacity>
-          <Heading level={3}>User Profile</Heading>
-          <View style={{ width: 28 }} />
-        </View>
+      <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
           <Text style={styles.loadingText}>Loading profile...</Text>
@@ -483,7 +495,7 @@ const UserProfile = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Profile Picture with Edit Overlay - Same as PersonalInformationOverlay */}
         <View style={styles.profileHeader}>

@@ -7,15 +7,16 @@ import {
   ScrollView,
   Animated,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
-import { OnboardingService, SportService } from '@rallia/shared-services';
+import { OnboardingService, SportService, Logger } from '@rallia/shared-services';
 import type { OnboardingPlayerPreferences } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
-import { selectionHaptic, mediumHaptic } from '../../../../utils/haptics';
+import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
 
 interface PlayerPreferencesOverlayProps {
   visible: boolean;
@@ -62,6 +63,7 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
   const [pickleballMatchType, setPickleballMatchType] = useState<'casual' | 'competitive' | 'both'>(
     'competitive'
   );
+  const [isSaving, setIsSaving] = useState(false);
 
   const hasTennis = selectedSports.includes('tennis');
   const hasPickleball = selectedSports.includes('pickleball');
@@ -92,8 +94,11 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
   }, [visible, fadeAnim, slideAnim]);
 
   const handleContinue = async () => {
+    if (isSaving) return;
+    
     if (onContinue) {
       mediumHaptic();
+      setIsSaving(true);
 
       try {
         // Get sport IDs from sport names
@@ -141,7 +146,8 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
         const { error } = await OnboardingService.savePreferences(preferencesData);
 
         if (error) {
-          console.error('Error saving preferences:', error);
+          Logger.error('Failed to save player preferences', error as Error, { preferencesData });
+          setIsSaving(false);
           Alert.alert('Error', 'Failed to save your preferences. Please try again.', [
             { text: 'OK' },
           ]);
@@ -164,10 +170,11 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
             }),
         };
 
-        console.log('Player preferences saved to database:', preferencesData);
+        Logger.debug('player_preferences_saved', { preferencesData });
         onContinue(preferences);
       } catch (error) {
-        console.error('Unexpected error saving preferences:', error);
+        Logger.error('Unexpected error saving preferences', error as Error);
+        setIsSaving(false);
         Alert.alert('Error', 'An unexpected error occurred. Please try again.', [{ text: 'OK' }]);
       }
     }
@@ -679,11 +686,16 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
 
         {/* Continue Button - Fixed at bottom */}
         <TouchableOpacity
-          style={styles.continueButton}
+          style={[styles.continueButton, isSaving && styles.continueButtonDisabled]}
           onPress={handleContinue}
           activeOpacity={0.8}
+          disabled={isSaving}
         >
-          <Text style={styles.continueButtonText}>Continue</Text>
+          {isSaving ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.continueButtonText}>Continue</Text>
+          )}
         </TouchableOpacity>
       </View>
     </Overlay>
@@ -823,6 +835,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  continueButtonDisabled: {
+    backgroundColor: '#999',
+    shadowOpacity: 0,
+    elevation: 0,
   },
 });
 

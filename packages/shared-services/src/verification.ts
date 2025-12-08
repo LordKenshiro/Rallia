@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { Logger } from './logger';
 
 /**
  * Verification Service
@@ -37,7 +38,10 @@ export const sendVerificationCode = async (
     const { data: { session } } = await supabase.auth.getSession();
     
     // Call Supabase Edge Function
-    const response = await fetch(getSupabaseFunctionUrl('send-verification-email'), {
+    const functionUrl = getSupabaseFunctionUrl('send-verification-email');
+    Logger.debug('Calling Edge Function', { url: functionUrl, email: email.split('@')[1] });
+    
+    const response = await fetch(functionUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -54,13 +58,18 @@ export const sendVerificationCode = async (
     const data = await response.json() as { error?: string; message?: string };
 
     if (!response.ok) {
-      console.error('Failed to send verification code:', data);
+      Logger.error('Failed to send verification code', new Error(data.error || 'Unknown error'), {
+        status: response.status,
+        statusText: response.statusText,
+        error: data.error,
+      });
       return { success: false, error: data.error || 'Failed to send verification email' };
     }
 
+    Logger.info('Verification code sent successfully', { emailDomain: email.split('@')[1] });
     return { success: true };
   } catch (error) {
-    console.error('Send verification code error:', error);
+    Logger.error('Send verification code error', error as Error, { email: email.split('@')[1] });
     return { success: false, error: 'An unexpected error occurred' };
   }
 };
@@ -76,8 +85,11 @@ export const verifyCode = async (
     // Get current session for authorization
     const { data: { session } } = await supabase.auth.getSession();
     
+    const functionUrl = getSupabaseFunctionUrl('verify-code');
+    Logger.debug('Calling verify-code Edge Function', { url: functionUrl, emailDomain: email.split('@')[1] });
+    
     // Call Supabase Edge Function
-    const response = await fetch(getSupabaseFunctionUrl('verify-code'), {
+    const response = await fetch(functionUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -93,13 +105,18 @@ export const verifyCode = async (
     const data = await response.json() as { error?: string; message?: string };
 
     if (!response.ok) {
-      console.error('Failed to verify code:', data);
+      Logger.warn('Code verification failed', { 
+        status: response.status, 
+        error: data.error,
+        emailDomain: email.split('@')[1] 
+      });
       return { success: false, error: data.error || 'Invalid or expired code' };
     }
 
+    Logger.info('Code verified successfully', { emailDomain: email.split('@')[1] });
     return { success: true };
   } catch (error) {
-    console.error('Verify code error:', error);
+    Logger.error('Verify code error', error as Error, { emailDomain: email.split('@')[1] });
     return { success: false, error: 'An unexpected error occurred' };
   }
 };
@@ -107,18 +124,96 @@ export const verifyCode = async (
 /**
  * Generate a deterministic password based on email for passwordless flow
  * This ensures the same password is used for both signup and login
+ * Uses a secret salt to make it more secure
  */
 const generatePasswordFromEmail = (email: string): string => {
-  // Create a deterministic password based on email
-  // In production, this should use a more secure approach
-  const hash = email.split('').reduce((acc, char) => {
+  // Create a deterministic password based on email with a secret component
+  const salt = 'rallia_secure_2024_v2'; // Changed salt to force new passwords
+  const combined = `${email.toLowerCase().trim()}:${salt}`;
+  const hash = combined.split('').reduce((acc, char) => {
     return ((acc << 5) - acc) + char.charCodeAt(0);
   }, 0);
-  return `${Math.abs(hash)}_${email.length}_rallia`;
+  return `Ral_${Math.abs(hash)}_${email.length}_lia!`;
+};
+
+/**
+ * Authenticate user after email verification
+ * This function handles both new users and existing users
+ */
+export const authenticateAfterVerification = async (
+  email: string
+): Promise<{ success: boolean; userId?: string; error?: string; isNewUser?: boolean }> => {
+  const normalizedEmail = email.toLowerCase().trim();
+  const userPassword = generatePasswordFromEmail(normalizedEmail);
+  
+  console.log('🔐 Authenticating user after verification:', normalizedEmail);
+
+  // First, try to sign in (user might already exist)
+  const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+    email: normalizedEmail,
+    password: userPassword,
+  });
+
+  if (!signInError && signInData.user && signInData.session) {
+    console.log('✅ Existing user signed in successfully');
+    return { success: true, userId: signInData.user.id, isNewUser: false };
+  }
+
+  // If sign in failed, try to create the user
+  console.log('📝 Sign in failed, attempting to create new user...');
+  
+  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+    email: normalizedEmail,
+    password: userPassword,
+    options: {
+      data: {
+        email_verified: true,
+        email_verified_at: new Date().toISOString(),
+      },
+    },
+  });
+
+  if (!signUpError && signUpData.user) {
+    // Check if we got a session (email confirmation disabled) or just user created
+    if (signUpData.session) {
+      console.log('✅ New user created and signed in');
+      return { success: true, userId: signUpData.user.id, isNewUser: true };
+    }
+    
+    // User created but no session - try signing in
+    console.log('📝 User created, attempting sign in...');
+    const { data: newSignIn, error: newSignInError } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password: userPassword,
+    });
+    
+    if (!newSignInError && newSignIn.session) {
+      console.log('✅ New user signed in after creation');
+      return { success: true, userId: signUpData.user.id, isNewUser: true };
+    }
+    
+    console.error('❌ Failed to sign in after user creation:', newSignInError);
+    return { success: false, error: 'Account created but sign in failed. Please try again.' };
+  }
+
+  // If signup also failed with "already registered", the user exists but with different password
+  if (signUpError?.message?.includes('already registered')) {
+    console.log('⚠️ User exists with different password - this should not happen with our flow');
+    // This means the user was created outside our system or with old password
+    // We cannot recover without admin access or password reset
+    return { 
+      success: false, 
+      error: 'Account exists but cannot sign in. Please contact support or use password reset.' 
+    };
+  }
+
+  console.error('❌ Authentication failed:', signUpError || signInError);
+  return { success: false, error: signUpError?.message || signInError?.message || 'Authentication failed' };
 };
 
 /**
  * Create Supabase Auth user and confirm email
+ * @deprecated Use authenticateAfterVerification instead
  */
 export const createAuthUser = async (
   email: string,
@@ -126,7 +221,7 @@ export const createAuthUser = async (
 ): Promise<{ success: boolean; userId?: string; error?: string }> => {
   try {
     // If no password provided, generate a deterministic one based on email (for passwordless flow)
-    const userPassword = password || generatePasswordFromEmail(email);
+    const userPassword = password || generatePasswordFromEmail(email.toLowerCase().trim());
 
     console.log('🔐 Creating auth user for:', email);
 
@@ -145,6 +240,14 @@ export const createAuthUser = async (
 
     if (error) {
       console.error('❌ Failed to create auth user:', error);
+      
+      // Check if user already exists
+      if (error.message.includes('already registered') || 
+          error.message.includes('already exists') ||
+          error.message.includes('User already registered')) {
+        return { success: false, error: 'User already registered' };
+      }
+      
       return { success: false, error: error.message };
     }
 
@@ -220,16 +323,18 @@ export const createAuthUser = async (
 
 /**
  * Login existing Supabase Auth user
+ * @deprecated Use authenticateAfterVerification instead
  */
 export const loginAuthUser = async (
   email: string,
   password?: string
 ): Promise<{ success: boolean; userId?: string; error?: string }> => {
   try {
-    // If no password provided, use the same deterministic password as signup
-    const userPassword = password || generatePasswordFromEmail(email);
+    // Normalize email and use deterministic password
+    const normalizedEmail = email.toLowerCase().trim();
+    const userPassword = password || generatePasswordFromEmail(normalizedEmail);
 
-    console.log('🔐 Logging in user:', email);
+    console.log('🔐 Logging in user:', normalizedEmail);
 
     // Sign in with password
     const { data, error } = await supabase.auth.signInWithPassword({

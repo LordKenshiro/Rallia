@@ -8,6 +8,7 @@ import {
   Alert,
   TextInput,
   ToastAndroid,
+  ActivityIndicator,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { 
@@ -17,8 +18,8 @@ import {
   Text 
 } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
-import { supabase } from '@rallia/shared-services';
-import { lightHaptic, mediumHaptic } from '../../../../utils/haptics';
+import { supabase, Logger } from '@rallia/shared-services';
+import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
 
 interface PlayerInformationOverlayProps {
   visible: boolean;
@@ -44,6 +45,7 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
   const [maximumTravelDistance, setMaximumTravelDistance] = useState<number>(
     initialData?.maximumTravelDistance || 5
   );
+  const [isSaving, setIsSaving] = useState(false);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -81,12 +83,16 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
   }, [visible, fadeAnim, slideAnim]);
 
   const handleSave = async () => {
+    if (isSaving) return;
+    
     mediumHaptic();
+    setIsSaving(true);
     
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
+        setIsSaving(false);
         Alert.alert('Error', 'User not found');
         return;
       }
@@ -102,7 +108,8 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
         .eq('id', user.id);
 
       if (profileUpdateError) {
-        console.error('Error updating profile:', profileUpdateError);
+        Logger.error('Failed to update profile', profileUpdateError as Error, { userId: user.id });
+        setIsSaving(false);
         Alert.alert('Error', 'Failed to update your information. Please try again.');
         return;
       }
@@ -117,7 +124,8 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
         .eq('id', user.id);
 
       if (playerUpdateError) {
-        console.error('Error updating player:', playerUpdateError);
+        Logger.error('Failed to update player', playerUpdateError as Error, { userId: user.id });
+        setIsSaving(false);
         Alert.alert('Error', 'Failed to update your information. Please try again.');
         return;
       }
@@ -128,7 +136,7 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
       });
 
       if (authUpdateError) {
-        console.error('Warning: Failed to sync display_name to auth.users:', authUpdateError);
+        Logger.warn('Failed to sync display_name to auth.users', { error: authUpdateError, userId: user.id });
         // Don't block the save - profile table is already updated
       }
 
@@ -145,7 +153,8 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
       }, 500);
 
     } catch (error) {
-      console.error('Unexpected error:', error);
+      Logger.error('Unexpected error updating player information', error as Error);
+      setIsSaving(false);
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
     }
   };
@@ -296,10 +305,10 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
         <Button
           variant="primary"
           onPress={handleSave}
-          disabled={!isFormValid}
+          disabled={!isFormValid || isSaving}
           style={styles.saveButton}
         >
-          Save
+          {isSaving ? <ActivityIndicator size="small" color="#fff" /> : 'Save'}
         </Button>
       </Animated.View>
     </Overlay>

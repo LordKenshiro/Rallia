@@ -3,33 +3,23 @@ import { View, StyleSheet, ScrollView, TouchableOpacity, Animated } from 'react-
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   MatchCard,
-  LocationPermissionOverlay,
-  CalendarAccessOverlay,
   Text,
   Heading,
   Button,
   Spinner,
 } from '@rallia/shared-components';
-import {
-  AuthOverlay,
-  AuthSuccessOverlay,
-  PersonalInformationOverlay,
-  SportSelectionOverlay,
-  TennisRatingOverlay,
-  PickleballRatingOverlay,
-  PlayerPreferencesOverlay,
-  PlayerAvailabilitiesOverlay,
-} from '../features/onboarding/components';
-import { useAuth, useOnboardingFlow } from '../hooks';
+import { useAuth } from '../hooks';
+import { useOverlay } from '../context';
 import { useProfile } from '@rallia/shared-hooks';
+import { Logger } from '@rallia/shared-services';
 import { getMockMatches } from '../features/matches/data/mockMatches';
 import { Match } from '../types';
 
 const Home = () => {
-  // Use custom hooks for auth, profile, and onboarding flow
+  // Use custom hooks for auth, profile, and overlay context
   const { session, loading } = useAuth();
   const { profile } = useProfile();
-  const onboarding = useOnboardingFlow();
+  const { startOnboarding, startLogin, setOnHomeScreen } = useOverlay();
 
   const [matches, setMatches] = useState<Match[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(false);
@@ -39,11 +29,11 @@ const Home = () => {
   // Extract display name from profile
   const displayName = profile?.display_name || null;
 
-  // Show location permission overlay on first load
+  // Notify OverlayContext that we're on Home screen (safe to show permission overlays)
   useEffect(() => {
-    onboarding.showLocationPermissionOnMount();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    setOnHomeScreen(true);
+    return () => setOnHomeScreen(false);
+  }, [setOnHomeScreen]);
 
   // Fetch matches from Supabase
   useEffect(() => {
@@ -86,7 +76,7 @@ const Home = () => {
       const mockMatches = getMockMatches();
       setMatches(mockMatches);
     } catch (error) {
-      if (__DEV__) console.error('Error fetching matches:', error);
+      Logger.error('Failed to fetch matches', error as Error);
     } finally {
       setLoadingMatches(false);
     }
@@ -115,14 +105,14 @@ const Home = () => {
             <View style={styles.authButtonsContainer}>
               <Button
                 variant="primary"
-                onPress={onboarding.startOnboarding}
+                onPress={startOnboarding}
                 style={styles.signInButton}
               >
                 Sign Up
               </Button>
               <Button
                 variant="primary"
-                onPress={onboarding.startLogin}
+                onPress={startLogin}
                 style={styles.logInButton}
               >
                 Log In
@@ -161,7 +151,7 @@ const Home = () => {
               <MatchCard
                 key={match.id}
                 match={match}
-                onPress={() => { if (__DEV__) console.log('Match pressed:', match.id); }}
+                onPress={() => { Logger.logUserAction('match_pressed', { matchId: match.id }); }}
               />
             ))
           ) : (
@@ -174,102 +164,7 @@ const Home = () => {
         </ScrollView>
       </View>
 
-      {/* Auth Overlay */}
-      <AuthOverlay
-        visible={onboarding.showAuthOverlay}
-        onClose={onboarding.closeAuthOverlay}
-        onAuthSuccess={onboarding.handleAuthSuccess}
-        onReturningUser={() => {
-          if (__DEV__) console.log('Returning user - skipping onboarding');
-          onboarding.closeAuthOverlay();
-          // Returning users go directly to the app (overlay closes)
-        }}
-        currentStep={onboarding.currentStep}
-        totalSteps={onboarding.totalSteps}
-        mode={onboarding.authMode}
-      />
-
-      {/* Location Permission Overlay */}
-      <LocationPermissionOverlay
-        visible={onboarding.showLocationPermission}
-        onAccept={onboarding.handleAcceptLocation}
-        onRefuse={onboarding.handleRefuseLocation}
-      />
-
-      {/* Calendar Access Overlay */}
-      <CalendarAccessOverlay
-        visible={onboarding.showCalendarAccess}
-        onAccept={onboarding.handleAcceptCalendar}
-        onRefuse={onboarding.handleRefuseCalendar}
-      />
-
-      {/* Personal Information Overlay */}
-      <PersonalInformationOverlay
-        visible={onboarding.showPersonalInfo}
-        onClose={onboarding.closePersonalInfo}
-        onBack={onboarding.backFromPersonalInfo}
-        onContinue={onboarding.handlePersonalInfoContinue}
-        currentStep={onboarding.currentStep}
-        totalSteps={onboarding.totalSteps}
-      />
-
-      {/* Sport Selection Overlay */}
-      <SportSelectionOverlay
-        visible={onboarding.showSportSelection}
-        onClose={onboarding.closeSportSelection}
-        onBack={onboarding.backFromSportSelection}
-        onContinue={onboarding.handleSportSelectionContinue}
-        currentStep={onboarding.currentStep}
-        totalSteps={onboarding.totalSteps}
-      />
-
-      {/* Tennis Rating Overlay */}
-      <TennisRatingOverlay
-        visible={onboarding.showTennisRating}
-        onClose={onboarding.closeTennisRating}
-        onBack={onboarding.backFromTennisRating}
-        onContinue={onboarding.handleTennisRatingContinue}
-        currentStep={onboarding.currentStep}
-        totalSteps={onboarding.totalSteps}
-      />
-
-      {/* Pickleball Rating Overlay */}
-      <PickleballRatingOverlay
-        visible={onboarding.showPickleballRating}
-        onClose={onboarding.closePickleballRating}
-        onBack={onboarding.backFromPickleballRating}
-        onContinue={onboarding.handlePickleballRatingContinue}
-        currentStep={onboarding.currentStep}
-        totalSteps={onboarding.totalSteps}
-      />
-
-      {/* Player Preferences Overlay */}
-      <PlayerPreferencesOverlay
-        visible={onboarding.showPlayerPreferences}
-        onClose={onboarding.closePlayerPreferences}
-        onBack={onboarding.backFromPlayerPreferences}
-        onContinue={onboarding.handlePlayerPreferencesContinue}
-        selectedSports={onboarding.selectedSports}
-        currentStep={onboarding.currentStep}
-        totalSteps={onboarding.totalSteps}
-      />
-
-      {/* Player Availabilities Overlay */}
-      <PlayerAvailabilitiesOverlay
-        visible={onboarding.showPlayerAvailabilities}
-        onClose={onboarding.closePlayerAvailabilities}
-        onBack={onboarding.backFromPlayerAvailabilities}
-        onContinue={onboarding.handlePlayerAvailabilitiesContinue}
-        selectedSportIds={onboarding.selectedSportIds}
-        currentStep={onboarding.currentStep}
-        totalSteps={onboarding.totalSteps}
-      />
-
-      {/* Auth Success Overlay - Not counted in progress */}
-      <AuthSuccessOverlay
-        visible={onboarding.showAuthSuccess}
-        onClose={onboarding.closeAuthSuccess}
-      />
+      {/* All overlays are now managed by OverlayProvider in App.tsx */}
     </SafeAreaView>
   );
 };

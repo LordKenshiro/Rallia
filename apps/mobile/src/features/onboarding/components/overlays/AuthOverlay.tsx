@@ -4,9 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
 import ProgressIndicator from '../ProgressIndicator';
-import { lightHaptic, mediumHaptic, successHaptic } from '../../../../utils/haptics';
-// TEMPORARY: verifyCode commented out during testing bypass
-import { sendVerificationCode, /* verifyCode, */ createAuthUser, loginAuthUser, ProfileService } from '@rallia/shared-services';
+import { lightHaptic, mediumHaptic, successHaptic } from '@rallia/shared-utils';
+import { sendVerificationCode, verifyCode, authenticateAfterVerification, ProfileService, Logger } from '@rallia/shared-services';
 
 interface AuthOverlayProps {
   visible: boolean;
@@ -34,6 +33,9 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Refs for code input fields
+  const codeInputRefs = useRef<(TextInput | null)[]>([]);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -72,19 +74,19 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
 
   const handleGoogleSignIn = () => {
     lightHaptic();
-    if (__DEV__) console.log('Sign in with Google');
+    Logger.logUserAction('oauth_signin_initiated', { provider: 'google' });
     // TODO: Implement Google authentication
   };
 
   const handleAppleSignIn = () => {
     lightHaptic();
-    if (__DEV__) console.log('Sign in with Apple');
+    Logger.logUserAction('oauth_signin_initiated', { provider: 'apple' });
     // TODO: Implement Apple authentication
   };
 
   const handleFacebookSignIn = () => {
     lightHaptic();
-    if (__DEV__) console.log('Sign in with Facebook');
+    Logger.logUserAction('oauth_signin_initiated', { provider: 'facebook' });
     // TODO: Implement Facebook authentication
   };
 
@@ -96,7 +98,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
     try {
       // In login mode, check if email exists first
       if (mode === 'login') {
-        if (__DEV__) console.log('🔍 Login mode: Checking if email exists...');
+        Logger.debug('Login mode: Checking if email exists', { mode: 'login' });
         
         const { data: existingProfile, error: profileError } = await ProfileService.getProfileByEmail(email);
         
@@ -107,20 +109,20 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
           return;
         }
         
-        if (__DEV__) console.log('✅ Email exists, proceeding with login');
+        Logger.debug('Email exists, proceeding with login', { emailDomain: email.split('@')[1] });
       }
       
       const result = await sendVerificationCode(email);
       
       if (result.success) {
-        if (__DEV__) console.log('Verification code sent to:', email);
+        Logger.info('Verification code sent successfully', { emailDomain: email.split('@')[1] });
         setStep('code');
       } else {
         setErrorMessage(result.error || 'Failed to send verification code');
         Alert.alert('Error', result.error || 'Failed to send verification code');
       }
     } catch (error) {
-      console.error('Error sending verification code:', error);
+      Logger.error('Failed to send verification code', error as Error, { email: email.split('@')[1] });
       setErrorMessage('An unexpected error occurred');
       Alert.alert('Error', 'An unexpected error occurred');
     } finally {
@@ -137,14 +139,14 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
       const result = await sendVerificationCode(email);
       
       if (result.success) {
-        if (__DEV__) console.log('Verification code resent to:', email);
+        Logger.info('Verification code resent successfully', { emailDomain: email.split('@')[1] });
         Alert.alert('Success', 'Verification code sent!');
       } else {
         setErrorMessage(result.error || 'Failed to resend verification code');
         Alert.alert('Error', result.error || 'Failed to resend verification code');
       }
     } catch (error) {
-      console.error('Error resending verification code:', error);
+      Logger.error('Failed to resend verification code', error as Error, { email: email.split('@')[1] });
       setErrorMessage('An unexpected error occurred');
       Alert.alert('Error', 'An unexpected error occurred');
     } finally {
@@ -165,49 +167,41 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
     setErrorMessage('');
 
     try {
-      // ========== TEMPORARY: BYPASS CODE VERIFICATION FOR TESTING ==========
-      // TODO: Re-enable code verification after testing is complete
+      // Step 1: Verify the code against the database
+      Logger.debug('Verifying code', { email: email.split('@')[1], codeLength: fullCode.length });
       
-      // COMMENTED OUT: Original verification logic
-      // // Verify the code
-      // const verifyResult = await verifyCode(email, fullCode);
-      // 
-      // if (!verifyResult.success) {
-      //   setErrorMessage(verifyResult.error || 'Invalid verification code');
-      //   Alert.alert('Error', verifyResult.error || 'Invalid verification code');
-      //   setIsLoading(false);
-      //   return;
-      // }
-
-      if (__DEV__) console.log('⚠️ TEMPORARY: Skipping code verification for testing');
+      const verifyResult = await verifyCode(email, fullCode);
       
-      // Use different auth method based on mode
-      let authResult;
-      if (mode === 'login') {
-        // Login existing user
-        if (__DEV__) console.log('🔓 Login mode - signing in existing user');
-        authResult = await loginAuthUser(email);
-      } else {
-        // Signup new user
-        if (__DEV__) console.log('📝 Signup mode - creating new user');
-        authResult = await createAuthUser(email);
-      }
-      
-      if (!authResult.success) {
-        const errorMsg = mode === 'login' 
-          ? (authResult.error || 'Failed to sign in')
-          : (authResult.error || 'Failed to create account');
-        setErrorMessage(errorMsg);
-        Alert.alert('Error', errorMsg);
+      if (!verifyResult.success) {
+        setErrorMessage(verifyResult.error || 'Invalid verification code');
+        Alert.alert('Error', verifyResult.error || 'Invalid verification code');
         setIsLoading(false);
         return;
       }
 
-      if (__DEV__) console.log(mode === 'login' ? 'User logged in:' : 'User created:', authResult.userId);
+      Logger.info('Code verified successfully', { email: email.split('@')[1] });
+      
+      // Step 2: Code is verified, now authenticate the user
+      Logger.debug('Authenticating user after code verification', { mode });
+      
+      const authResult = await authenticateAfterVerification(email);
+      
+      if (!authResult.success) {
+        setErrorMessage(authResult.error || 'Authentication failed');
+        Alert.alert('Error', authResult.error || 'Authentication failed');
+        setIsLoading(false);
+        return;
+      }
+
+      Logger.info('User authenticated successfully', { 
+        userId: authResult.userId,
+        isNewUser: authResult.isNewUser,
+        mode 
+      });
       
       // In login mode, always skip onboarding
       if (mode === 'login') {
-        if (__DEV__) console.log('🔓 Login mode - skipping onboarding, going directly to app');
+        Logger.logNavigation('skip_onboarding_login', { mode: 'login', userId: authResult.userId });
         successHaptic();
         
         if (onReturningUser) {
@@ -222,7 +216,14 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
       const { data: profile, error: profileError } = await ProfileService.getProfile(authResult.userId!);
       
       if (profileError) {
-        console.error('Error fetching profile:', profileError);
+        // PGRST116 means no profile found - this is expected for new users
+        const errorCode = (profileError as { code?: string })?.code;
+        const isNoRowsError = errorCode === 'PGRST116';
+        if (isNoRowsError) {
+          Logger.debug('No profile found - treating as new user', { userId: authResult.userId });
+        } else {
+          Logger.error('Failed to fetch profile', profileError as Error, { userId: authResult.userId });
+        }
         // If there's an error fetching profile, treat as new user to be safe
         successHaptic();
         if (onAuthSuccess) {
@@ -233,7 +234,10 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
 
       // Check if onboarding is already completed
       if (profile && profile.onboarding_completed) {
-        if (__DEV__) console.log('🔄 Returning user detected - onboarding already completed');
+        Logger.logNavigation('returning_user_skip_onboarding', { 
+          userId: authResult.userId,
+          onboardingCompleted: true 
+        });
         successHaptic();
         
         // Close auth overlay and navigate directly to app (skip onboarding)
@@ -244,7 +248,10 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
           onClose();
         }
       } else {
-        if (__DEV__) console.log('✨ New user or incomplete onboarding - proceeding with onboarding flow');
+        Logger.logNavigation('new_user_start_onboarding', { 
+          userId: authResult.userId,
+          onboardingCompleted: false 
+        });
         successHaptic();
         
         // Proceed to next step (Personal Information)
@@ -253,7 +260,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
         }
       }
     } catch (error) {
-      console.error('Error creating user:', error);
+      Logger.error('Error during user authentication', error as Error, { mode });
       setErrorMessage('An unexpected error occurred');
       Alert.alert('Error', 'An unexpected error occurred');
     } finally {
@@ -395,21 +402,38 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
             {/* Code Input Boxes */}
             <View style={styles.codeInputContainer}>
               {code.map((digit, index) => (
-                <TouchableOpacity
+                <TextInput
                   key={index}
-                  style={styles.codeBox}
-                  onPress={() => {
-                    // Simulate entering digits for demo
+                  ref={(ref) => { codeInputRefs.current[index] = ref; }}
+                  style={[
+                    styles.codeBox,
+                    digit !== '' && styles.codeBoxFilled,
+                  ]}
+                  value={digit}
+                  onChangeText={(text) => {
+                    // Only accept single digit
+                    const newDigit = text.replace(/[^0-9]/g, '').slice(-1);
                     const newCode = [...code];
-                    const emptyIndex = newCode.findIndex(d => d === '');
-                    if (emptyIndex !== -1) {
-                      newCode[emptyIndex] = String(Math.floor(Math.random() * 10));
-                      setCode(newCode);
+                    newCode[index] = newDigit;
+                    setCode(newCode);
+                    
+                    // Auto-focus next input if digit entered
+                    if (newDigit && index < 5) {
+                      codeInputRefs.current[index + 1]?.focus();
                     }
                   }}
-                >
-                  <Text style={styles.codeDigit}>{digit || '—'}</Text>
-                </TouchableOpacity>
+                  onKeyPress={({ nativeEvent }) => {
+                    // Handle backspace to go to previous input
+                    if (nativeEvent.key === 'Backspace' && !digit && index > 0) {
+                      codeInputRefs.current[index - 1]?.focus();
+                    }
+                  }}
+                  keyboardType="number-pad"
+                  maxLength={1}
+                  selectTextOnFocus
+                  textAlign="center"
+                  autoFocus={index === 0 && step === 'code'}
+                />
               ))}
             </View>
 
@@ -563,14 +587,21 @@ const styles = StyleSheet.create({
     marginBottom: 25,
   },
   codeBox: {
-    width: 40,
-    height: 50,
+    width: 45,
+    height: 55,
     backgroundColor: COLORS.primaryLight,
     borderRadius: 8,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: COLORS.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#333',
+  },
+  codeBoxFilled: {
+    borderColor: COLORS.accent,
+    backgroundColor: '#fff',
   },
   codeDigit: {
     fontSize: 24,

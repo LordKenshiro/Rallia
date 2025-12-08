@@ -3,10 +3,10 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Alert, 
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
-import DatabaseService, { OnboardingService, SportService } from '@rallia/shared-services';
+import DatabaseService, { OnboardingService, SportService, Logger } from '@rallia/shared-services';
 import type { OnboardingRating } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
-import { selectionHaptic, mediumHaptic } from '../../../../utils/haptics';
+import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
 
 interface TennisRatingOverlayProps {
   visible: boolean;
@@ -43,6 +43,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
   const [selectedRating, setSelectedRating] = useState<string | null>(initialRating || null);
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -58,7 +59,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
         const { data, error } = await DatabaseService.RatingScore.getRatingScoresBySport('tennis', 'ntrp');
         
         if (error || !data) {
-          console.error('Error loading tennis ratings:', error);
+          Logger.error('Failed to load tennis ratings', error as Error, { sport: 'tennis', system: 'ntrp' });
           Alert.alert('Error', 'Failed to load ratings. Please try again.');
           return;
         }
@@ -76,7 +77,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
         
         setRatings(transformedRatings);
       } catch (error) {
-        console.error('Unexpected error loading tennis ratings:', error);
+        Logger.error('Unexpected error loading tennis ratings', error as Error);
         Alert.alert('Error', 'An unexpected error occurred. Please try again.');
       } finally {
         setIsLoading(false);
@@ -116,7 +117,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
   };
 
   const handleContinue = async () => {
-    if (!selectedRating) return;
+    if (!selectedRating || isSaving) return;
     
     mediumHaptic();
     
@@ -128,12 +129,14 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
     
     // Onboarding mode: save to database
     if (onContinue) {
+      setIsSaving(true);
       try {
         // Get tennis sport ID
         const { data: tennisSport, error: sportError } = await SportService.getSportByName('tennis');
         
         if (sportError || !tennisSport) {
-          console.error('Error fetching tennis sport:', sportError);
+          Logger.error('Failed to fetch tennis sport', sportError as Error);
+          setIsSaving(false);
           Alert.alert(
             'Error',
             'Failed to save your rating. Please try again.',
@@ -146,6 +149,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
         const selectedRatingData = ratings.find(r => r.id === selectedRating);
         
         if (!selectedRatingData) {
+          setIsSaving(false);
           Alert.alert('Error', 'Invalid rating selected');
           return;
         }
@@ -162,7 +166,8 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
         const { error } = await OnboardingService.saveRatings([ratingData]);
         
         if (error) {
-          console.error('Error saving tennis rating:', error);
+          Logger.error('Failed to save tennis rating', error as Error, { ratingData });
+          setIsSaving(false);
           Alert.alert(
             'Error',
             'Failed to save your rating. Please try again.',
@@ -171,10 +176,11 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
           return;
         }
         
-        console.log('Tennis rating saved to database:', ratingData);
+        Logger.debug('tennis_rating_saved', { ratingData });
         onContinue(selectedRating);
       } catch (error) {
-        console.error('Unexpected error saving tennis rating:', error);
+        Logger.error('Unexpected error saving tennis rating', error as Error);
+        setIsSaving(false);
         Alert.alert(
           'Error',
           'An unexpected error occurred. Please try again.',
@@ -196,6 +202,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
         style={[
           styles.container,
           {
+            flex: 1,
             opacity: fadeAnim,
             transform: [{ translateY: slideAnim }],
           },
@@ -304,19 +311,23 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
 
         {/* Continue/Save Button */}
         <TouchableOpacity
-          style={[styles.continueButton, !selectedRating && styles.continueButtonDisabled]}
+          style={[styles.continueButton, (!selectedRating || isSaving) && styles.continueButtonDisabled]}
           onPress={handleContinue}
-          activeOpacity={selectedRating ? 0.8 : 1}
-          disabled={!selectedRating}
+          activeOpacity={selectedRating && !isSaving ? 0.8 : 1}
+          disabled={!selectedRating || isSaving}
         >
-          <Text
-            style={[
-              styles.continueButtonText,
-              !selectedRating && styles.continueButtonTextDisabled,
-            ]}
-          >
-            {mode === 'edit' ? 'Save' : 'Continue'}
-          </Text>
+          {isSaving ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text
+              style={[
+                styles.continueButtonText,
+                !selectedRating && styles.continueButtonTextDisabled,
+              ]}
+            >
+              {mode === 'edit' ? 'Save' : 'Continue'}
+            </Text>
+          )}
         </TouchableOpacity>
       </Animated.View>
     </Overlay>
@@ -325,8 +336,8 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     paddingVertical: 20,
-    maxHeight: '90%',
   },
   backButton: {
     position: 'absolute',
@@ -365,7 +376,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   ratingList: {
-    maxHeight: 400,
+    flex: 1,
     marginBottom: 15,
   },
   ratingGrid: {

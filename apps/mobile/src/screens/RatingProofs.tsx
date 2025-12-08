@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Text, Button } from '@rallia/shared-components';
-import { supabase } from '@rallia/shared-services';
+import { supabase, Logger } from '@rallia/shared-services';
 import { RatingProof, RatingProofsScreenParams } from '@rallia/shared-types';
 import AddRatingProofOverlay from '../features/ratings/components/AddRatingProofOverlay';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
@@ -71,7 +71,7 @@ const RatingProofs: React.FC = () => {
       if (result.error) throw result.error;
       setProofs(result.data || []);
     } catch (error) {
-      if (__DEV__) console.error('Error fetching rating proofs:', error);
+      Logger.error('Failed to fetch rating proofs', error as Error, { playerRatingScoreId });
       Alert.alert('Error', getNetworkErrorMessage(error));
     } finally {
       setLoading(false);
@@ -84,13 +84,13 @@ const RatingProofs: React.FC = () => {
 
   const handleSelectProofType = (type: 'external_link' | 'video' | 'image' | 'document') => {
     // TODO: Open appropriate input form based on type
-    if (__DEV__) console.log('Selected proof type:', type);
+    Logger.logUserAction('select_proof_type', { type, playerRatingScoreId });
     Alert.alert('Coming Soon', `Adding ${type} proof will be implemented next`);
   };
 
   const handleEditProof = (proof: RatingProof) => {
     // TODO: Open edit overlay
-    if (__DEV__) console.log('Edit proof:', proof.id);
+    Logger.logUserAction('edit_proof_pressed', { proofId: proof.id, playerRatingScoreId });
     Alert.alert('Coming Soon', 'Edit proof feature will be implemented next');
   };
 
@@ -119,7 +119,7 @@ const RatingProofs: React.FC = () => {
               Alert.alert('Success', 'Proof deleted successfully');
               fetchProofs();
             } catch (error) {
-              if (__DEV__) console.error('Error deleting proof:', error);
+              Logger.error('Failed to delete proof', error as Error, { proofId, playerRatingScoreId });
               Alert.alert('Error', getNetworkErrorMessage(error));
             }
           },
