@@ -12,7 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay, Text } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
-import { supabase } from '@rallia/shared-services';
+import { supabase, Logger } from '@rallia/shared-services';
 import { selectionHaptic, mediumHaptic } from '../../../utils/haptics';
 
 interface PeerRatingRequestOverlayProps {
@@ -191,7 +191,7 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
       setPlayers(playersWithRatings);
       setFilteredPlayers(playersWithRatings);
     } catch (error) {
-      console.error('Error fetching matched players:', error);
+      Logger.error('Failed to fetch matched players', error as Error, { sportId, currentUserId });
     } finally {
       setLoading(false);
     }
@@ -220,7 +220,7 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
       setSelectedPlayers(new Set());
       setSearchQuery('');
     } catch (error) {
-      console.error('Error sending requests:', error);
+      Logger.error('Failed to send peer rating requests', error as Error, { selectedCount: selectedPlayers.size });
     } finally {
       setSending(false);
     }

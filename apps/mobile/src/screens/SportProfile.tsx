@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Text, Button } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
-import { supabase } from '@rallia/shared-services';
+import { supabase, Logger } from '@rallia/shared-services';
 import * as Haptics from 'expo-haptics';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import TennisRatingOverlay from '../features/onboarding/components/overlays/TennisRatingOverlay';
@@ -95,44 +95,22 @@ const SportProfile = () => {
       }
       setUserId(user.id);
 
-      // Fetch player's sport connection
-      const playerSportResult = await withTimeout(
-        (async () => supabase
-          .from('player_sport')
-          .select('id, is_active, preferred_match_duration, preferred_match_type, is_primary')
-          .eq('player_id', user.id)
-          .eq('sport_id', sportId)
-          .maybeSingle())(),
-        15000,
-        'Failed to load sport profile - connection timeout'
-      );
-
-      const { data: playerSportData, error: playerSportError } = playerSportResult;
-
-      if (playerSportError && playerSportError.code !== 'PGRST116') {
-        throw playerSportError;
-      }
-
-      if (playerSportData) {
-        setIsActive(playerSportData.is_active || false);
-        setPlayerSportId(playerSportData.id);
-        setPreferences(prev => ({
-          ...prev,
-          matchDuration: playerSportData.preferred_match_duration || null,
-          matchType: playerSportData.preferred_match_type || null,
-        }));
-      } else {
-        setIsActive(false);
-        setPlayerSportId(null);
-      }
-
-      // Only fetch rating and preferences if sport is active
-      if (playerSportData?.is_active) {
-        // Fetch player's rating for this sport
-        // First, get all player ratings and filter by sport manually
-        if (__DEV__) console.log('Fetching ratings for player:', user.id);
+      // Fetch both queries in parallel for better performance
+      const [playerSportResult, ratingResult] = await Promise.all([
+        // Fetch player's sport connection
+        withTimeout(
+          (async () => supabase
+            .from('player_sport')
+            .select('id, is_active, preferred_match_duration, preferred_match_type, is_primary')
+            .eq('player_id', user.id)
+            .eq('sport_id', sportId)
+            .maybeSingle())(),
+          15000,
+          'Failed to load sport profile - connection timeout'
+        ),
         
-        const ratingResult = await withTimeout(
+        // Fetch player's ratings (fetch in parallel, process only if sport is active)
+        withTimeout(
           (async () => supabase
             .from('player_rating_score')
             .select(`
@@ -158,16 +136,38 @@ const SportProfile = () => {
             .eq('player_id', user.id))(),
           15000,
           'Failed to load ratings - connection timeout'
-        );
+        ),
+      ]);
 
+      // Process player sport data
+      const { data: playerSportData, error: playerSportError } = playerSportResult;
+
+      if (playerSportError && playerSportError.code !== 'PGRST116') {
+        throw playerSportError;
+      }
+
+      if (playerSportData) {
+        setIsActive(playerSportData.is_active || false);
+        setPlayerSportId(playerSportData.id);
+        setPreferences(prev => ({
+          ...prev,
+          matchDuration: playerSportData.preferred_match_duration || null,
+          matchType: playerSportData.preferred_match_type || null,
+        }));
+      } else {
+        setIsActive(false);
+        setPlayerSportId(null);
+      }
+
+      // Only process rating data if sport is active
+      if (playerSportData?.is_active) {
         const { data: ratingDataList, error: ratingError } = ratingResult;
 
         if (ratingError && ratingError.code !== 'PGRST116') {
-          if (__DEV__) console.error('Rating fetch error:', ratingError);
+          Logger.error('Failed to fetch player ratings', ratingError as Error, { playerId: user.id, sportId });
         }
 
-        if (__DEV__) console.log('All ratings fetched:', ratingDataList?.length, 'items');
-        if (__DEV__) console.log('Looking for sport:', sportName, 'with ID:', sportId);
+        Logger.debug('ratings_fetched', { count: ratingDataList?.length, sportName, sportId });
 
         // Filter by sport_id in JavaScript since nested filtering doesn't work well
         const ratingData = ratingDataList?.find(item => {
@@ -175,11 +175,10 @@ const SportProfile = () => {
             id?: string;
             rating?: { sport_id?: string };
           } | null;
-          if (__DEV__) console.log('Checking rating_score:', ratingScore?.id, 'sport:', ratingScore?.rating?.sport_id);
           return ratingScore?.rating?.sport_id === sportId;
         }) || null;
 
-        if (__DEV__) console.log('Rating data found for', sportName);
+        Logger.debug('rating_data_search_complete', { sportName, found: !!ratingData });
 
         if (ratingData) {
           const ratingScore = ratingData.rating_score as {
@@ -207,21 +206,18 @@ const SportProfile = () => {
             maxValue: rating?.max_value || 10,
             description: rating?.description || '',
           };
-          if (__DEV__) console.log('Setting rating info:', newRatingInfo);
+          Logger.debug('rating_info_set', { ratingScoreId: newRatingInfo.ratingScoreId, displayLabel: newRatingInfo.displayLabel });
           setRatingInfo(newRatingInfo);
           setPlayerRatingScoreId(ratingData.id || null);
         } else {
-          if (__DEV__) console.log('No rating data found, clearing rating info');
+          Logger.debug('no_rating_data_found', { sportName, sportId });
           setRatingInfo(null);
           setPlayerRatingScoreId(null);
         }
-
-        // Note: Facility preference would come from a separate player_facility table
-        // For now, we'll leave it as null since the table doesn't exist yet
       }
 
     } catch (error) {
-      if (__DEV__) console.error('Error fetching sport profile data:', error);
+      Logger.error('Failed to fetch sport profile data', error as Error, { sportId, sportName });
       Alert.alert('Error', getNetworkErrorMessage(error));
     } finally {
       setLoading(false);
@@ -236,9 +232,7 @@ const SportProfile = () => {
         return;
       }
 
-      if (__DEV__) console.log('=== SAVING RATING (NEW SOURCE_TYPE LOGIC) ===');
-      if (__DEV__) console.log('New rating_score_id:', ratingScoreId);
-      if (__DEV__) console.log('Current sport ID:', sportId);
+      Logger.debug('save_rating_start', { ratingScoreId, sportId, sportName });
 
       // Step 1: Get ALL player ratings with source_type
       const ratingsResult = await withTimeout(
@@ -264,11 +258,11 @@ const SportProfile = () => {
       const { data: allPlayerRatings, error: fetchError } = ratingsResult;
 
       if (fetchError) {
-        if (__DEV__) console.error('Error fetching player ratings:', fetchError);
+        Logger.error('Failed to fetch player ratings', fetchError as Error, { playerId: user.id });
         throw fetchError;
       }
 
-      if (__DEV__) console.log('All player ratings before save:', allPlayerRatings);
+      Logger.debug('player_ratings_fetched', { count: allPlayerRatings?.length });
 
       // Step 2: Find and DELETE only SELF_REPORTED ratings for this specific sport
       const ratingsToDelete = allPlayerRatings?.filter(item => {
@@ -282,15 +276,15 @@ const SportProfile = () => {
         // Only delete self_reported ratings for current sport
         const shouldDelete = itemSportId === sportId && sourceType === 'self_reported';
         
-        if (__DEV__) console.log('Rating ID:', item.id, 'sport:', itemSportId, 'source:', sourceType, 'delete:', shouldDelete);
+        Logger.debug('rating_delete_check', { ratingId: item.id, sportId: itemSportId, sourceType, shouldDelete });
         return shouldDelete;
       }) || [];
 
-      if (__DEV__) console.log('Self-reported ratings to delete for sport', sportId, ':', ratingsToDelete.length);
+      Logger.debug('ratings_to_delete', { sportId, count: ratingsToDelete.length });
 
       // Delete only self_reported ratings (keep peer_verified, api_verified, admin_verified)
       for (const rating of ratingsToDelete) {
-        if (__DEV__) console.log('Deleting self_reported rating:', rating.id);
+        Logger.debug('deleting_rating', { ratingId: rating.id });
         const deleteResult = await withTimeout(
           (async () => supabase
             .from('player_rating_score')
@@ -301,14 +295,14 @@ const SportProfile = () => {
         );
 
         if (deleteResult.error) {
-          if (__DEV__) console.error('Error deleting rating:', rating.id, deleteResult.error);
+          Logger.error('Failed to delete rating', deleteResult.error as Error, { ratingId: rating.id });
           throw deleteResult.error;
         }
-        if (__DEV__) console.log('✓ Deleted self_reported rating:', rating.id);
+        Logger.debug('rating_deleted', { ratingId: rating.id });
       }
 
       // Step 3: Insert the new self_reported rating
-      if (__DEV__) console.log('Inserting new self_reported rating...');
+      Logger.debug('inserting_new_rating', { ratingScoreId, playerId: user.id });
       const insertResult = await withTimeout(
         (async () => supabase
           .from('player_rating_score')
@@ -324,11 +318,11 @@ const SportProfile = () => {
       );
 
       if (insertResult.error) {
-        if (__DEV__) console.error('Error inserting new rating:', insertResult.error);
+        Logger.error('Failed to insert new rating', insertResult.error as Error, { ratingScoreId, playerId: user.id });
         throw insertResult.error;
       }
 
-      if (__DEV__) console.log('✅ Rating save completed successfully (self_reported)');
+      Logger.info('rating_save_complete', { ratingScoreId, sportId, sourceType: 'self_reported' });
 
       // Close overlays first
       setShowTennisRatingOverlay(false);
@@ -341,14 +335,14 @@ const SportProfile = () => {
       await new Promise(resolve => setTimeout(resolve, 500));
 
       // Refresh data
-      if (__DEV__) console.log('Refreshing sport profile data...');
+      Logger.debug('refreshing_sport_profile_data', { sportId });
       await fetchSportProfileData();
-      if (__DEV__) console.log('Sport profile data refreshed');
+      Logger.debug('sport_profile_data_refreshed', { sportId });
 
       // Show success message
       Alert.alert('Success', 'Your rating has been updated!');
     } catch (error) {
-      if (__DEV__) console.error('Error saving rating:', error);
+      Logger.error('Failed to save rating', error as Error, { sportId, ratingScoreId });
       Alert.alert('Error', getNetworkErrorMessage(error));
     }
   };
@@ -453,7 +447,7 @@ const SportProfile = () => {
       }
 
     } catch (error) {
-      if (__DEV__) console.error('Error toggling sport active status:', error);
+      Logger.error('Failed to toggle sport active status', error as Error, { sportId, sportName });
       Alert.alert('Error', getNetworkErrorMessage(error));
     }
   };
@@ -472,7 +466,7 @@ const SportProfile = () => {
     try {
       // TODO: Implement peer rating request logic
       // This will insert records into peer_rating_request table
-      if (__DEV__) console.log('Sending peer rating requests to:', selectedPlayerIds);
+      Logger.logUserAction('send_peer_rating_requests', { count: selectedPlayerIds.length, sportId });
       
       // For now, just show a success message
       if (Platform.OS === 'android') {
@@ -489,7 +483,7 @@ const SportProfile = () => {
       
       setShowPeerRatingRequestOverlay(false);
     } catch (error) {
-      if (__DEV__) console.error('Error sending peer rating requests:', error);
+      Logger.error('Failed to send peer rating requests', error as Error, { count: selectedPlayerIds.length, sportId });
       Alert.alert('Error', 'Failed to send peer rating requests');
     }
   };
@@ -498,7 +492,7 @@ const SportProfile = () => {
     try {
       // TODO: Implement reference request logic
       // This will insert records into reference_request table
-      if (__DEV__) console.log('Sending reference requests to:', selectedPlayerIds);
+      Logger.logUserAction('send_reference_requests', { count: selectedPlayerIds.length, sportId });
       
       // For now, just show a success message
       if (Platform.OS === 'android') {
@@ -515,7 +509,7 @@ const SportProfile = () => {
       
       setShowReferenceRequestOverlay(false);
     } catch (error) {
-      if (__DEV__) console.error('Error sending reference requests:', error);
+      Logger.error('Failed to send reference requests', error as Error, { count: selectedPlayerIds.length, sportId });
       Alert.alert('Error', 'Failed to send reference requests');
     }
   };
@@ -571,21 +565,14 @@ const SportProfile = () => {
       // Refresh data
       await fetchSportProfileData();
     } catch (error) {
-      if (__DEV__) console.error('Error saving preferences:', error);
+      Logger.error('Failed to save sport preferences', error as Error, { sportId, playerSportId });
       Alert.alert('Error', getNetworkErrorMessage(error));
     }
   };
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={28} color="#333" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{sportName} Profile</Text>
-          <View style={{ width: 28 }} />
-        </View>
+      <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
           <Text style={styles.loadingText}>Loading {sportName} profile...</Text>
@@ -595,7 +582,7 @@ const SportProfile = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Do you play this sport? Toggle */}
         <View style={styles.card}>

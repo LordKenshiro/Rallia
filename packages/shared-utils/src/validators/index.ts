@@ -3,3 +3,4 @@
  */
 
 export * from './inputValidators';
+export * from './nameValidator';

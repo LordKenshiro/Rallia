@@ -6,6 +6,7 @@
 import React, { Component, ReactNode } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Logger } from '@rallia/shared-services';
 
 interface Props {
   children: ReactNode;
@@ -34,14 +35,10 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Log error details for debugging
-    if (__DEV__) {
-      console.error('Error caught by ErrorBoundary:', error);
-      console.error('Error Info:', errorInfo);
-    }
-    
-    // TODO: Send error to tracking service (Sentry, etc.)
-    // Example: Sentry.captureException(error, { extra: errorInfo });
+    // Log error details for debugging and send to tracking service
+    Logger.error('Unhandled error caught by ErrorBoundary', error, { 
+      componentStack: errorInfo.componentStack 
+    });
   }
 
   handleReset = () => {
