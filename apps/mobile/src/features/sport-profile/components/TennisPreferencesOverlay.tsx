@@ -11,10 +11,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
-import { 
-  PreferencesInfo, 
-  PlayStyle, 
-  PlayAttribute,
+import {
+  PreferencesInfo,
+  PlayStyleEnum,
+  PlayAttributeEnum,
   PLAY_STYLE_LABELS,
   PLAY_ATTRIBUTE_LABELS,
 } from '@rallia/shared-types';
@@ -30,13 +30,13 @@ interface TennisPreferencesOverlayProps {
 const MATCH_DURATIONS = ['1h', '1.5h', '2h'];
 const MATCH_TYPES = ['Casual', 'Competitive', 'Both'];
 
-const PLAY_STYLES: { value: PlayStyle; label: string }[] = Object.entries(PLAY_STYLE_LABELS).map(
-  ([value, label]) => ({ value: value as PlayStyle, label })
-);
+const PLAY_STYLES: { value: PlayStyleEnum; label: string }[] = Object.entries(
+  PLAY_STYLE_LABELS
+).map(([value, label]) => ({ value: value as PlayStyleEnum, label }));
 
-const PLAY_ATTRIBUTES: { value: PlayAttribute; label: string }[] = Object.entries(PLAY_ATTRIBUTE_LABELS).map(
-  ([value, label]) => ({ value: value as PlayAttribute, label })
-);
+const PLAY_ATTRIBUTES: { value: PlayAttributeEnum; label: string }[] = Object.entries(
+  PLAY_ATTRIBUTE_LABELS
+).map(([value, label]) => ({ value: value as PlayAttributeEnum, label }));
 
 export const TennisPreferencesOverlay: React.FC<TennisPreferencesOverlayProps> = ({
   visible,
@@ -47,14 +47,12 @@ export const TennisPreferencesOverlay: React.FC<TennisPreferencesOverlayProps> =
   const [matchDuration, setMatchDuration] = useState<string | undefined>(
     initialPreferences.matchDuration
   );
-  const [matchType, setMatchType] = useState<string | undefined>(
-    initialPreferences.matchType
-  );
+  const [matchType, setMatchType] = useState<string | undefined>(initialPreferences.matchType);
   const [court, setCourt] = useState<string>(initialPreferences.court || '');
-  const [playStyle, setPlayStyle] = useState<PlayStyle | undefined>(
+  const [playStyle, setPlayStyle] = useState<PlayStyleEnum | undefined>(
     initialPreferences.playStyle
   );
-  const [playAttributes, setPlayAttributes] = useState<PlayAttribute[]>(
+  const [playAttributes, setPlayAttributes] = useState<PlayAttributeEnum[]>(
     initialPreferences.playAttributes || []
   );
   const [showPlayStyleDropdown, setShowPlayStyleDropdown] = useState(false);
@@ -66,7 +64,7 @@ export const TennisPreferencesOverlay: React.FC<TennisPreferencesOverlayProps> =
     if (visible) {
       fadeAnim.setValue(0);
       slideAnim.setValue(50);
-      
+
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -82,16 +80,14 @@ export const TennisPreferencesOverlay: React.FC<TennisPreferencesOverlayProps> =
     }
   }, [visible, fadeAnim, slideAnim]);
 
-  const handleTogglePlayAttribute = (attribute: PlayAttribute) => {
+  const handleTogglePlayAttribute = (attribute: PlayAttributeEnum) => {
     selectionHaptic();
-    setPlayAttributes((prev) =>
-      prev.includes(attribute)
-        ? prev.filter((a) => a !== attribute)
-        : [...prev, attribute]
+    setPlayAttributes(prev =>
+      prev.includes(attribute) ? prev.filter(a => a !== attribute) : [...prev, attribute]
     );
   };
 
-  const handleSelectPlayStyle = (style: PlayStyle) => {
+  const handleSelectPlayStyle = (style: PlayStyleEnum) => {
     selectionHaptic();
     setPlayStyle(style);
     setShowPlayStyleDropdown(false);
@@ -139,23 +135,17 @@ export const TennisPreferencesOverlay: React.FC<TennisPreferencesOverlayProps> =
           <View style={styles.section}>
             <Text style={styles.label}>Match Duration</Text>
             <View style={styles.chipsContainer}>
-              {MATCH_DURATIONS.map((duration) => (
+              {MATCH_DURATIONS.map(duration => (
                 <TouchableOpacity
                   key={duration}
-                  style={[
-                    styles.chip,
-                    matchDuration === duration && styles.chipSelected,
-                  ]}
+                  style={[styles.chip, matchDuration === duration && styles.chipSelected]}
                   onPress={() => {
                     selectionHaptic();
                     setMatchDuration(duration);
                   }}
                 >
                   <Text
-                    style={[
-                      styles.chipText,
-                      matchDuration === duration && styles.chipTextSelected,
-                    ]}
+                    style={[styles.chipText, matchDuration === duration && styles.chipTextSelected]}
                   >
                     {duration}
                   </Text>
@@ -168,24 +158,16 @@ export const TennisPreferencesOverlay: React.FC<TennisPreferencesOverlayProps> =
           <View style={styles.section}>
             <Text style={styles.label}>Match Type</Text>
             <View style={styles.chipsContainer}>
-              {MATCH_TYPES.map((type) => (
+              {MATCH_TYPES.map(type => (
                 <TouchableOpacity
                   key={type}
-                  style={[
-                    styles.chip,
-                    matchType === type && styles.chipSelected,
-                  ]}
+                  style={[styles.chip, matchType === type && styles.chipSelected]}
                   onPress={() => {
                     selectionHaptic();
                     setMatchType(type);
                   }}
                 >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      matchType === type && styles.chipTextSelected,
-                    ]}
-                  >
+                  <Text style={[styles.chipText, matchType === type && styles.chipTextSelected]}>
                     {type}
                   </Text>
                 </TouchableOpacity>
@@ -223,15 +205,9 @@ export const TennisPreferencesOverlay: React.FC<TennisPreferencesOverlayProps> =
                 setShowPlayStyleDropdown(!showPlayStyleDropdown);
               }}
             >
-              <Text
-                style={[
-                  styles.input,
-                  !playStyle && styles.placeholder,
-                  styles.dropdownText,
-                ]}
-              >
+              <Text style={[styles.input, !playStyle && styles.placeholder, styles.dropdownText]}>
                 {playStyle
-                  ? PLAY_STYLES.find((s) => s.value === playStyle)?.label
+                  ? PLAY_STYLES.find(s => s.value === playStyle)?.label
                   : 'Select your play style'}
               </Text>
               <Ionicons
@@ -244,7 +220,7 @@ export const TennisPreferencesOverlay: React.FC<TennisPreferencesOverlayProps> =
 
             {showPlayStyleDropdown && (
               <View style={styles.dropdown}>
-                {PLAY_STYLES.map((style) => (
+                {PLAY_STYLES.map(style => (
                   <TouchableOpacity
                     key={style.value}
                     style={[
@@ -256,18 +232,13 @@ export const TennisPreferencesOverlay: React.FC<TennisPreferencesOverlayProps> =
                     <Text
                       style={[
                         styles.dropdownItemText,
-                        playStyle === style.value &&
-                          styles.dropdownItemTextSelected,
+                        playStyle === style.value && styles.dropdownItemTextSelected,
                       ]}
                     >
                       {style.label}
                     </Text>
                     {playStyle === style.value && (
-                      <Ionicons
-                        name="checkmark"
-                        size={20}
-                        color={COLORS.primary}
-                      />
+                      <Ionicons name="checkmark" size={20} color={COLORS.primary} />
                     )}
                   </TouchableOpacity>
                 ))}
@@ -280,21 +251,19 @@ export const TennisPreferencesOverlay: React.FC<TennisPreferencesOverlayProps> =
             <Text style={styles.label}>Play Attributes</Text>
             <Text style={styles.sublabel}>Select all that apply</Text>
             <View style={styles.chipsContainer}>
-              {PLAY_ATTRIBUTES.map((attribute) => (
+              {PLAY_ATTRIBUTES.map(attribute => (
                 <TouchableOpacity
                   key={attribute.value}
                   style={[
                     styles.attributeChip,
-                    playAttributes.includes(attribute.value) &&
-                      styles.attributeChipSelected,
+                    playAttributes.includes(attribute.value) && styles.attributeChipSelected,
                   ]}
                   onPress={() => handleTogglePlayAttribute(attribute.value)}
                 >
                   <Text
                     style={[
                       styles.chipText,
-                      playAttributes.includes(attribute.value) &&
-                        styles.chipTextSelected,
+                      playAttributes.includes(attribute.value) && styles.chipTextSelected,
                     ]}
                   >
                     {attribute.label}

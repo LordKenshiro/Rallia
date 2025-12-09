@@ -21,7 +21,7 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "type-check": "turbo run type-check",
     "clean": "turbo run clean && rm -rf node_modules",
-    "db:generate-types": "npx supabase gen types typescript --project-id YOUR_PROJECT_ID > packages/shared-types/src/supabase-generated.ts",
+    "db:generate-types": "supabase gen types typescript --local > packages/shared-types/src/supabase.ts",
     "db:studio": "npx supabase start --workdir .",
     "db:reset": "npx supabase db reset --workdir ."
   },

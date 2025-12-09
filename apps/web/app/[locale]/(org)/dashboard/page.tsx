@@ -1,7 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/lib/supabase/server';
-import { Building2, Calendar, Globe, Mail, MapPin, Phone, User } from 'lucide-react';
+import { Building2, Globe, Mail, MapPin, Phone, User } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 
@@ -32,19 +32,19 @@ export default async function DashboardPage() {
 
   // Fetch user profile
   const { data: profile, error: profileError } = await supabase
-    .from('profiles')
+    .from('profile')
     .select('*')
     .eq('id', user!.id)
     .single();
 
   // Fetch user's organization memberships with organization details
   const { data: memberships, error: membershipsError } = await supabase
-    .from('organization_members')
+    .from('organization_member')
     .select(
       `
       role,
       joined_at,
-      organizations (
+      organization (
         id,
         name,
         nature,
@@ -72,7 +72,7 @@ export default async function DashboardPage() {
 
   // Get the first active organization (for now, showing one)
   const membership = memberships?.[0];
-  const organization = membership?.organizations as any;
+  const organization = membership?.organization as any;
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -141,34 +141,6 @@ export default async function DashboardPage() {
                     {t('displayName')}
                   </p>
                   <p className="text-sm font-medium m-0">{profile.display_name}</p>
-                </div>
-              </div>
-            )}
-
-            {profile?.locale && (
-              <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors">
-                <div className="p-2 bg-primary/10 rounded-md">
-                  <Globe className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide m-0">
-                    {t('locale')}
-                  </p>
-                  <p className="text-sm font-medium m-0">{profile.locale}</p>
-                </div>
-              </div>
-            )}
-
-            {profile?.timezone && (
-              <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors">
-                <div className="p-2 bg-primary/10 rounded-md">
-                  <Calendar className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide m-0">
-                    {t('timezone')}
-                  </p>
-                  <p className="text-sm font-medium m-0">{profile.timezone}</p>
                 </div>
               </div>
             )}

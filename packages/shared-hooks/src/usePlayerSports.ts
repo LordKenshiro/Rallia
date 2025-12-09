@@ -17,17 +17,17 @@ export interface PlayerSport {
 /**
  * Custom hook for fetching player's sports with sport details
  * Eliminates duplicate player sports fetching code across components
- * 
+ *
  * @param playerId - Optional player ID to fetch. If not provided, fetches current authenticated user's sports
  * @returns Object containing player sports array, loading state, error, and refetch function
- * 
+ *
  * @example
  * ```tsx
  * const { playerSports, loading, error, refetch } = usePlayerSports();
- * 
+ *
  * if (loading) return <Spinner />;
  * if (error) return <ErrorMessage message={error.message} />;
- * 
+ *
  * return playerSports.map(ps => {
  *   const sport = Array.isArray(ps.sport) ? ps.sport[0] : ps.sport;
  *   return <Text key={ps.sport_id}>{sport?.display_name}</Text>;
@@ -45,7 +45,9 @@ export const usePlayerSports = (playerId?: string) => {
       setError(null);
 
       // Get current authenticated user if no playerId provided
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       const targetPlayerId = playerId || user?.id;
 
       if (!targetPlayerId) {
@@ -57,7 +59,8 @@ export const usePlayerSports = (playerId?: string) => {
       // Fetch player's sports with sport details
       const { data, error: sportsError } = await supabase
         .from('player_sport')
-        .select(`
+        .select(
+          `
           player_id,
           sport_id,
           is_primary,
@@ -67,9 +70,11 @@ export const usePlayerSports = (playerId?: string) => {
             id,
             name,
             display_name,
+            icon_url,
             is_active
           )
-        `)
+        `
+        )
         .eq('player_id', targetPlayerId);
 
       if (sportsError) {
@@ -90,10 +95,10 @@ export const usePlayerSports = (playerId?: string) => {
     fetchPlayerSports();
   }, [fetchPlayerSports]);
 
-  return { 
-    playerSports, 
-    loading, 
-    error, 
-    refetch: fetchPlayerSports 
+  return {
+    playerSports,
+    loading,
+    error,
+    refetch: fetchPlayerSports,
   };
 };

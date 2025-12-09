@@ -14,18 +14,19 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { 
-  Overlay, 
-  Select, 
-  Button, 
-  Heading, 
-  Text 
-} from '@rallia/shared-components';
+import { Overlay, Select, Button, Heading, Text } from '@rallia/shared-components';
 import { useImagePicker } from '../../../../hooks';
 import { COLORS } from '@rallia/shared-constants';
-import { validateFullName, validateUsername, validatePhoneNumber, lightHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { OnboardingService, supabase, uploadImage, Logger } from '@rallia/shared-services';
-import type { GenderType } from '@rallia/shared-types';
+import {
+  validateFullName,
+  validateUsername,
+  validatePhoneNumber,
+  lightHaptic,
+  mediumHaptic,
+} from '@rallia/shared-utils';
+import { OnboardingService, supabase, Logger } from '@rallia/shared-services';
+import { uploadImage } from '../../../../services/imageUpload';
+import type { GenderEnum, GenderType } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
 
 interface PersonalInformationOverlayProps {
@@ -71,7 +72,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
 
   // Use custom hook for image picker
   const { image: profileImage, pickImage } = useImagePicker();
-  
+
   // Track saving state
   const [isSaving, setIsSaving] = useState(false);
 
@@ -83,8 +84,8 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
   useEffect(() => {
     const fetchGenderOptions = async () => {
       try {
-        const { data, error} = await OnboardingService.getGenderTypes();
-        
+        const { data, error } = await OnboardingService.getGenderTypes();
+
         if (error) {
           Logger.error('Failed to fetch gender types from database', error as Error);
           // Use fallback if API fails
@@ -171,31 +172,31 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
 
   const handleContinue = async () => {
     if (isSaving) return;
-    
+
     mediumHaptic();
-    
+
     if (!dateOfBirth) {
       Alert.alert('Error', 'Please select your date of birth');
       return;
     }
-    
+
     try {
       // Gender is now stored as the enum value (e.g., 'male', 'female')
       if (!gender) {
         Alert.alert('Error', 'Please select a valid gender option');
         return;
       }
-      
+
       setIsSaving(true);
-      
+
       // Format date to YYYY-MM-DD for database
       const formattedDate = dateOfBirth.toISOString().split('T')[0];
-      
+
       // Upload profile picture if a new one was selected
       let uploadedImageUrl: string | null = null;
       if (profileImage) {
         const { url, error: uploadError } = await uploadImage(profileImage, 'profile-pictures');
-        
+
         if (uploadError) {
           Logger.error('Failed to upload profile picture', uploadError as Error);
           setIsSaving(false);
@@ -203,8 +204,19 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
             'Upload Error',
             'Failed to upload profile picture. Continue without updating picture?',
             [
-              { text: 'Cancel', style: 'cancel', onPress: () => { return; } },
-              { text: 'Continue', onPress: () => { uploadedImageUrl = null; } }
+              {
+                text: 'Cancel',
+                style: 'cancel',
+                onPress: () => {
+                  return;
+                },
+              },
+              {
+                text: 'Continue',
+                onPress: () => {
+                  uploadedImageUrl = null;
+                },
+              },
             ]
           );
           return; // Stop here to let user decide
@@ -212,11 +224,13 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
           uploadedImageUrl = url;
         }
       }
-      
+
       if (mode === 'edit') {
         // Edit mode: Update existing profile data
-        const { data: { user } } = await supabase.auth.getUser();
-        
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
         if (!user) {
           setIsSaving(false);
           Alert.alert('Error', 'User not found');
@@ -264,7 +278,9 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
           .eq('id', user.id);
 
         if (playerUpdateError) {
-          Logger.error('Failed to update player gender', playerUpdateError as Error, { userId: user.id });
+          Logger.error('Failed to update player gender', playerUpdateError as Error, {
+            userId: user.id,
+          });
         }
 
         // Sync display_name to auth.users metadata (phone is already in profile table)
@@ -273,9 +289,9 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         });
 
         if (authUpdateError) {
-          Logger.warn('Failed to sync display_name to auth.users', { 
+          Logger.warn('Failed to sync display_name to auth.users', {
             error: authUpdateError.message,
-            userId: user.id 
+            userId: user.id,
           });
           // Don't block the save - profile table is already updated
         }
@@ -298,23 +314,21 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
           full_name: fullName,
           display_name: username,
           birth_date: formattedDate,
-          gender: gender as GenderType,
+          gender: gender as GenderEnum,
           phone: phoneNumber,
           profile_picture_url: uploadedImageUrl || undefined,
         });
-        
+
         if (error) {
-          Logger.error('Failed to save personal info during onboarding', error as Error, { 
-            hasProfileImage: !!uploadedImageUrl 
+          Logger.error('Failed to save personal info during onboarding', error as Error, {
+            hasProfileImage: !!uploadedImageUrl,
           });
-          Alert.alert(
-            'Error',
-            'Failed to save your information. Please try again.',
-            [{ text: 'OK' }]
-          );
+          Alert.alert('Error', 'Failed to save your information. Please try again.', [
+            { text: 'OK' },
+          ]);
           return;
         }
-        
+
         // Sync username (display name) to auth.users metadata
         // Note: Phone is stored in profile table, not auth.users (requires verification)
         Logger.debug('Syncing username to auth.users', { username });
@@ -323,16 +337,16 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
             display_name: username, // Sync username to display_name in user_metadata
           },
         });
-        
+
         if (authUpdateError) {
-          Logger.warn('Failed to sync username to auth.users', { 
-            error: authUpdateError.message 
+          Logger.warn('Failed to sync username to auth.users', {
+            error: authUpdateError.message,
           });
           // Don't block onboarding if this fails - data is already saved to profile table
         } else {
           Logger.debug('Username synced to auth.users successfully', { username });
         }
-        
+
         Logger.info('Personal info saved successfully during onboarding', {
           hasFullName: !!fullName,
           hasUsername: !!username,
@@ -340,18 +354,14 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
           hasPhone: !!phoneNumber,
           hasProfileImage: !!profileImage,
         });
-        
+
         if (onContinue) {
           onContinue();
         }
       }
     } catch (error) {
       Logger.error('Unexpected error saving personal info', error as Error, { mode });
-      Alert.alert(
-        'Error',
-        'An unexpected error occurred. Please try again.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.', [{ text: 'OK' }]);
     }
   };
 
@@ -409,7 +419,9 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
 
         {/* Full Name Input - Light green background for both modes */}
         <View style={styles.customInputContainer}>
-          <Text style={styles.customInputLabel}>Full Name <Text style={styles.requiredStar}>*</Text></Text>
+          <Text style={styles.customInputLabel}>
+            Full Name <Text style={styles.requiredStar}>*</Text>
+          </Text>
           <TextInput
             placeholder="Enter your full name"
             placeholderTextColor="#999"
@@ -422,7 +434,9 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         {/* Email Input - Only show in edit mode, read-only */}
         {mode === 'edit' && (
           <View style={styles.customInputContainer}>
-            <Text style={styles.customInputLabel}>Email <Text style={styles.requiredStar}>*</Text></Text>
+            <Text style={styles.customInputLabel}>
+              Email <Text style={styles.requiredStar}>*</Text>
+            </Text>
             <TextInput
               placeholder="Email"
               placeholderTextColor="#999"
@@ -437,7 +451,9 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
 
         {/* Username Input - Light green background for both modes */}
         <View style={styles.customInputContainer}>
-          <Text style={styles.customInputLabel}>Username <Text style={styles.requiredStar}>*</Text></Text>
+          <Text style={styles.customInputLabel}>
+            Username <Text style={styles.requiredStar}>*</Text>
+          </Text>
           <TextInput
             placeholder="Choose a username"
             placeholderTextColor="#999"
@@ -453,7 +469,9 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         </View>
 
         {/* Date of Birth Input - Light green background for both modes */}
-        <Text style={styles.customInputLabel}>Date of Birth <Text style={styles.requiredStar}>*</Text></Text>
+        <Text style={styles.customInputLabel}>
+          Date of Birth <Text style={styles.requiredStar}>*</Text>
+        </Text>
         {Platform.OS === 'web' ? (
           <View style={styles.inputWithIcon}>
             <input
@@ -486,10 +504,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
             onPress={() => setShowDatePicker(true)}
             activeOpacity={0.8}
           >
-            <Text 
-              color={dateOfBirth ? '#333' : '#999'}
-              style={{ flex: 1 }}
-            >
+            <Text color={dateOfBirth ? '#333' : '#999'} style={{ flex: 1 }}>
               {dateOfBirth ? formatDate(dateOfBirth) : 'Date of Birth'}
             </Text>
             <Ionicons name="calendar-outline" size={20} color="#999" style={styles.inputIcon} />
@@ -539,7 +554,9 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
 
         {/* Gender Picker - Light green background for both modes */}
         <View style={styles.customInputContainer}>
-          <Text style={styles.customInputLabel}>Gender <Text style={styles.requiredStar}>*</Text></Text>
+          <Text style={styles.customInputLabel}>
+            Gender <Text style={styles.requiredStar}>*</Text>
+          </Text>
           <Select
             placeholder="Select your gender"
             value={gender}
@@ -552,7 +569,9 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
 
         {/* Phone Number Input - Light green background for both modes */}
         <View style={styles.customInputContainer}>
-          <Text style={styles.customInputLabel}>Phone Number <Text style={styles.requiredStar}>*</Text></Text>
+          <Text style={styles.customInputLabel}>
+            Phone Number <Text style={styles.requiredStar}>*</Text>
+          </Text>
           <TextInput
             placeholder="Enter phone number"
             placeholderTextColor="#999"
@@ -577,8 +596,10 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         >
           {isSaving ? (
             <ActivityIndicator size="small" color="#fff" />
+          ) : mode === 'onboarding' ? (
+            'Continue'
           ) : (
-            mode === 'onboarding' ? 'Continue' : 'Save'
+            'Save'
           )}
         </Button>
       </Animated.View>
@@ -722,4 +743,3 @@ const styles = StyleSheet.create({
 });
 
 export default PersonalInformationOverlay;
-

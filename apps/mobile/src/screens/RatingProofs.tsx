@@ -12,21 +12,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Text, Button } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
-import { RatingProof, RatingProofsScreenParams } from '@rallia/shared-types';
+import { RatingProofWithFile, RatingProofsScreenParams } from '@rallia/shared-types';
 import AddRatingProofOverlay from '../features/ratings/components/AddRatingProofOverlay';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 
-type RatingProofsRouteProp = RouteProp<
-  { RatingProofs: RatingProofsScreenParams },
-  'RatingProofs'
->;
+type RatingProofsRouteProp = RouteProp<{ RatingProofs: RatingProofsScreenParams }, 'RatingProofs'>;
 
 const RatingProofs: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute<RatingProofsRouteProp>();
   const { playerRatingScoreId, sportName, ratingValue, isOwnProfile } = route.params;
 
-  const [proofs, setProofs] = useState<RatingProof[]>([]);
+  const [proofs, setProofs] = useState<RatingProofWithFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter] = useState<'all' | 'approved' | 'pending' | 'rejected'>('all');
   const [showAddProofOverlay, setShowAddProofOverlay] = useState(false);
@@ -41,12 +38,14 @@ const RatingProofs: React.FC = () => {
     try {
       // Build query based on filters
       let query = supabase
-        .from('rating_proofs')
-        .select(`
+        .from('rating_proof')
+        .select(
+          `
           *,
           file:files(*),
           reviewed_by_profile:profile!reviewed_by(display_name, profile_picture_url)
-        `)
+        `
+        )
         .eq('player_rating_score_id', playerRatingScoreId)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
@@ -88,7 +87,7 @@ const RatingProofs: React.FC = () => {
     Alert.alert('Coming Soon', `Adding ${type} proof will be implemented next`);
   };
 
-  const handleEditProof = (proof: RatingProof) => {
+  const handleEditProof = (proof: RatingProofWithFile) => {
     // TODO: Open edit overlay
     Logger.logUserAction('edit_proof_pressed', { proofId: proof.id, playerRatingScoreId });
     Alert.alert('Coming Soon', 'Edit proof feature will be implemented next');
@@ -106,10 +105,8 @@ const RatingProofs: React.FC = () => {
           onPress: async () => {
             try {
               const result = await withTimeout(
-                (async () => supabase
-                  .from('rating_proofs')
-                  .update({ is_active: false })
-                  .eq('id', proofId))(),
+                (async () =>
+                  supabase.from('rating_proof').update({ is_active: false }).eq('id', proofId))(),
                 10000,
                 'Failed to delete proof - connection timeout'
               );
@@ -119,7 +116,10 @@ const RatingProofs: React.FC = () => {
               Alert.alert('Success', 'Proof deleted successfully');
               fetchProofs();
             } catch (error) {
-              Logger.error('Failed to delete proof', error as Error, { proofId, playerRatingScoreId });
+              Logger.error('Failed to delete proof', error as Error, {
+                proofId,
+                playerRatingScoreId,
+              });
               Alert.alert('Error', getNetworkErrorMessage(error));
             }
           },
@@ -128,9 +128,7 @@ const RatingProofs: React.FC = () => {
     );
   };
 
-
-
-  const getProofTypeBadge = (proof: RatingProof) => {
+  const getProofTypeBadge = (proof: RatingProofWithFile) => {
     if (proof.proof_type === 'external_link') {
       return 'External Link';
     }
@@ -162,9 +160,9 @@ const RatingProofs: React.FC = () => {
     }
   };
 
-  const renderProofCard = ({ item }: { item: RatingProof }) => {
+  const renderProofCard = ({ item }: { item: RatingProofWithFile }) => {
     const verificationBadge = getVerificationBadge(item.status);
-    
+
     return (
       <View style={styles.proofCard}>
         {/* Card Header */}
@@ -184,7 +182,7 @@ const RatingProofs: React.FC = () => {
               </Text>
             </View>
           </View>
-          
+
           {/* Rating Badge */}
           <View style={styles.ratingBadge}>
             <Text size="sm" weight="bold" color="#fff">
@@ -210,16 +208,10 @@ const RatingProofs: React.FC = () => {
         {/* Action Icons */}
         {isOwnProfile && (
           <View style={styles.actionIcons}>
-            <TouchableOpacity
-              style={styles.iconButton}
-              onPress={() => handleEditProof(item)}
-            >
+            <TouchableOpacity style={styles.iconButton} onPress={() => handleEditProof(item)}>
               <Ionicons name="pencil" size={20} color="#666" />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.iconButton}
-              onPress={() => handleDeleteProof(item.id)}
-            >
+            <TouchableOpacity style={styles.iconButton} onPress={() => handleDeleteProof(item.id)}>
               <Ionicons name="trash-outline" size={20} color="#EF6F7B" />
             </TouchableOpacity>
           </View>
@@ -251,20 +243,14 @@ const RatingProofs: React.FC = () => {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Mint Green Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() => navigation.goBack()}
-        >
+        <TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={28} color="#000" />
         </TouchableOpacity>
         <Text size="lg" weight="semibold" color="#000">
           Rating Proofs
         </Text>
         {isOwnProfile && (
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={handleAddProof}
-          >
+          <TouchableOpacity style={styles.headerButton} onPress={handleAddProof}>
             <Ionicons name="add" size={28} color="#000" />
           </TouchableOpacity>
         )}
@@ -292,7 +278,7 @@ const RatingProofs: React.FC = () => {
           <FlatList
             data={proofs}
             renderItem={renderProofCard}
-            keyExtractor={(item) => item.id}
+            keyExtractor={item => item.id}
             contentContainerStyle={styles.listContent}
             ListEmptyComponent={renderEmptyState}
             showsVerticalScrollIndicator={false}
@@ -440,4 +426,3 @@ const styles = StyleSheet.create({
 });
 
 export default RatingProofs;
-

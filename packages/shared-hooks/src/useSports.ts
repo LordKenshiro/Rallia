@@ -8,6 +8,7 @@ export interface Sport {
   id: string;
   name: string;
   display_name: string;
+  icon_url: string | null;
   is_active: boolean;
   created_at?: string;
   updated_at?: string;
@@ -16,16 +17,16 @@ export interface Sport {
 /**
  * Custom hook for fetching all active sports
  * Eliminates duplicate sports fetching code across components
- * 
+ *
  * @returns Object containing sports array, loading state, error, and refetch function
- * 
+ *
  * @example
  * ```tsx
  * const { sports, loading, error, refetch } = useSports();
- * 
+ *
  * if (loading) return <Spinner />;
  * if (error) return <ErrorMessage message={error.message} />;
- * 
+ *
  * return sports.map(sport => <SportCard key={sport.id} sport={sport} />);
  * ```
  */
@@ -64,10 +65,10 @@ export const useSports = () => {
     fetchSports();
   }, [fetchSports]);
 
-  return { 
-    sports, 
-    loading, 
-    error, 
-    refetch: fetchSports 
+  return {
+    sports,
+    loading,
+    error,
+    refetch: fetchSports,
   };
 };

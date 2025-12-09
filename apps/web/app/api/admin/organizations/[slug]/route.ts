@@ -200,7 +200,7 @@ async function uploadFacilityImages(
 
     // Insert into files table first
     const { data: fileRecord, error: fileError } = await supabase
-      .from('files')
+      .from('file')
       .insert({
         uploaded_by: uploaderId,
         storage_key: storageKey,
@@ -230,7 +230,7 @@ async function uploadFacilityImages(
   // Insert facility_files junction records
   if (facilityFileEntries.length > 0) {
     const { error: facilityFilesError } = await supabase
-      .from('facility_files')
+      .from('facility_file')
       .insert(facilityFileEntries);
 
     if (facilityFilesError) {
@@ -264,7 +264,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     // Get existing organization
     const { data: existingOrg, error: orgFetchError } = await supabase
-      .from('organizations')
+      .from('organization')
       .select('id, slug, name')
       .eq('slug', slug)
       .single();
@@ -276,7 +276,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     // Parse form data
     const formData = await request.formData();
     const organizationJson = formData.get('organization');
-    const facilitiesJson = formData.get('facilities');
+    const facilitiesJson = formData.get('facility');
 
     if (!organizationJson || !facilitiesJson) {
       return NextResponse.json({ error: 'Missing required data' }, { status: 400 });
@@ -296,14 +296,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       orgSlug = await ensureUniqueSlug(
         supabase,
         generateSlug(organization.name),
-        'organizations',
+        'organization',
         existingOrg.id
       );
     }
 
     // Update organization
     const { data: updatedOrg, error: orgError } = await supabase
-      .from('organizations')
+      .from('organization')
       .update({
         name: organization.name,
         nature: organization.nature as OrganizationNature,
@@ -333,7 +333,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     // Get existing facilities
     const { data: existingFacilities } = await supabase
-      .from('facilities')
+      .from('facility')
       .select('id')
       .eq('organization_id', existingOrg.id);
 
@@ -348,45 +348,43 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     for (const facilityId of facilitiesToDelete) {
       // Delete related data first
       const { data: courts } = await supabase
-        .from('courts')
+        .from('court')
         .select('id')
         .eq('facility_id', facilityId);
 
       if (courts && courts.length > 0) {
         const courtIds = courts.map((c: any) => c.id);
-        await supabase.from('court_sports').delete().in('court_id', courtIds);
-        await supabase.from('courts').delete().in('id', courtIds);
+        await supabase.from('court_sport').delete().in('court_id', courtIds);
+        await supabase.from('court').delete().in('id', courtIds);
       }
 
-      await supabase.from('facility_sports').delete().eq('facility_id', facilityId);
-      await supabase.from('facility_contacts').delete().eq('facility_id', facilityId);
+      await supabase.from('facility_sport').delete().eq('facility_id', facilityId);
+      await supabase.from('facility_contact').delete().eq('facility_id', facilityId);
 
-      // Delete facility files (junction + files + storage)
+      // Delete facility file (junction + file + storage)
       const { data: facilityFiles } = await supabase
-        .from('facility_files')
+        .from('facility_file')
         .select('id, file_id, files(storage_key)')
         .eq('facility_id', facilityId);
 
       if (facilityFiles && facilityFiles.length > 0) {
         // Delete from storage
-        const storageKeys = facilityFiles
-          .map((ff: any) => ff.files?.storage_key)
-          .filter(Boolean);
+        const storageKeys = facilityFiles.map((ff: any) => ff.files?.storage_key).filter(Boolean);
         if (storageKeys.length > 0) {
           await supabase.storage.from('facility-images').remove(storageKeys);
         }
 
         // Delete facility_files junction records
-        await supabase.from('facility_files').delete().eq('facility_id', facilityId);
+        await supabase.from('facility_file').delete().eq('facility_id', facilityId);
 
         // Delete files records
         const fileIds = facilityFiles.map((ff: any) => ff.file_id);
         if (fileIds.length > 0) {
-          await supabase.from('files').delete().in('id', fileIds);
+          await supabase.from('file').delete().in('id', fileIds);
         }
       }
 
-      await supabase.from('facilities').delete().eq('id', facilityId);
+      await supabase.from('facility').delete().eq('id', facilityId);
     }
 
     // Process each facility (create or update)
@@ -410,18 +408,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         }
       }
 
-      let facility: Tables<'facilities'>;
+      let facility: Tables<'facility'>;
       if (facilityData.id) {
         // Update existing facility
         const facilitySlug = await ensureUniqueSlug(
           supabase,
           generateSlug(facilityData.name),
-          'facilities',
+          'facility',
           facilityData.id
         );
 
         const { data: updatedFacility, error: facilityError } = await supabase
-          .from('facilities')
+          .from('facility')
           .update({
             name: facilityData.name,
             slug: facilitySlug,
@@ -448,7 +446,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         // Delete facility_files not in existingFacilityFileIds
         if (facilityData.existingFacilityFileIds) {
           const { data: allFacilityFiles } = await supabase
-            .from('facility_files')
+            .from('facility_file')
             .select('id, file_id, files(storage_key)')
             .eq('facility_id', facility.id);
 
@@ -468,7 +466,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
             // Delete facility_files junction records
             await supabase
-              .from('facility_files')
+              .from('facility_file')
               .delete()
               .in(
                 'id',
@@ -478,13 +476,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             // Delete files records
             const fileIds = filesToDelete.map(ff => ff.file_id);
             if (fileIds.length > 0) {
-              await supabase.from('files').delete().in('id', fileIds);
+              await supabase.from('file').delete().in('id', fileIds);
             }
           }
         } else {
           // Delete all files if no existingFacilityFileIds provided
           const { data: allFacilityFiles } = await supabase
-            .from('facility_files')
+            .from('facility_file')
             .select('id, file_id, files(storage_key)')
             .eq('facility_id', facility.id);
 
@@ -498,29 +496,29 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             }
 
             // Delete facility_files junction records
-            await supabase.from('facility_files').delete().eq('facility_id', facility.id);
+            await supabase.from('facility_file').delete().eq('facility_id', facility.id);
 
             // Delete files records
             const fileIds = allFacilityFiles.map((ff: any) => ff.file_id);
             if (fileIds.length > 0) {
-              await supabase.from('files').delete().in('id', fileIds);
+              await supabase.from('file').delete().in('id', fileIds);
             }
           }
         }
 
         // Delete and recreate facility_sports
-        await supabase.from('facility_sports').delete().eq('facility_id', facility.id);
+        await supabase.from('facility_sport').delete().eq('facility_id', facility.id);
         if (facilityData.selectedSports.length > 0) {
           const facilitySports = facilityData.selectedSports.map(sportId => ({
             facility_id: facility.id,
             sport_id: sportId,
           }));
-          await supabase.from('facility_sports').insert(facilitySports);
+          await supabase.from('facility_sport').insert(facilitySports);
         }
 
         // Update contacts
         const { data: existingContacts } = await supabase
-          .from('facility_contacts')
+          .from('facility_contact')
           .select('id')
           .eq('facility_id', facility.id);
 
@@ -534,7 +532,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           id => !submittedContactIds.has(id)
         );
         if (contactsToDelete.length > 0) {
-          await supabase.from('facility_contacts').delete().in('id', contactsToDelete);
+          await supabase.from('facility_contact').delete().in('id', contactsToDelete);
         }
 
         // Update or insert contacts
@@ -550,33 +548,33 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           };
 
           if (contact.id) {
-            await supabase.from('facility_contacts').update(contactData).eq('id', contact.id);
+            await supabase.from('facility_contact').update(contactData).eq('id', contact.id);
           } else {
-            await supabase.from('facility_contacts').insert(contactData);
+            await supabase.from('facility_contact').insert(contactData);
           }
         }
 
         // Delete all courts and recreate
         const { data: existingCourts } = await supabase
-          .from('courts')
+          .from('court')
           .select('id')
           .eq('facility_id', facility.id);
 
         if (existingCourts && existingCourts.length > 0) {
           const courtIds = existingCourts.map(c => c.id);
-          await supabase.from('court_sports').delete().in('court_id', courtIds);
-          await supabase.from('courts').delete().in('id', courtIds);
+          await supabase.from('court_sport').delete().in('court_id', courtIds);
+          await supabase.from('court').delete().in('id', courtIds);
         }
       } else {
         // Create new facility
         const facilitySlug = await ensureUniqueSlug(
           supabase,
           generateSlug(facilityData.name),
-          'facilities'
+          'facility'
         );
 
         const { data: newFacility, error: facilityError } = await supabase
-          .from('facilities')
+          .from('facility')
           .insert({
             organization_id: existingOrg.id,
             name: facilityData.name,
@@ -605,7 +603,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             facility_id: facility.id,
             sport_id: sportId,
           }));
-          await supabase.from('facility_sports').insert(facilitySports);
+          await supabase.from('facility_sport').insert(facilitySports);
         }
 
         // Create facility contacts
@@ -619,7 +617,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             is_primary: contact.isPrimary,
             sport_id: contact.sportId || null,
           }));
-          await supabase.from('facility_contacts').insert(contacts);
+          await supabase.from('facility_contact').insert(contacts);
         }
       }
 
@@ -628,7 +626,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       if (imageCount > 0) {
         // Get the count of existing files to determine starting display order
         const { count: existingFileCount } = await supabase
-          .from('facility_files')
+          .from('facility_file')
           .select('*', { count: 'exact', head: true })
           .eq('facility_id', facility.id);
 
@@ -664,7 +662,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
         if (courts.length > 0) {
           const { data: createdCourts, error: courtsError } = await supabase
-            .from('courts')
+            .from('court')
             .insert(courts)
             .select('id');
 
@@ -686,7 +684,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
             if (courtSports.length > 0) {
               const { error: courtSportsError } = await supabase
-                .from('court_sports')
+                .from('court_sport')
                 .insert(courtSports);
 
               if (courtSportsError) {

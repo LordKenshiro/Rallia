@@ -8,7 +8,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     // Fetch organization with all related data
     const { data: organization, error: orgError } = await supabase
-      .from('organizations')
+      .from('organization')
       .select(
         `
         id,
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     // Fetch facilities with all related data
     const { data: facilities, error: facilitiesError } = await supabase
-      .from('facilities')
+      .from('facility')
       .select(
         `
         id,
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         is_active,
         created_at,
         updated_at,
-        facility_images (
+        facility_image (
           id,
           storage_key,
           url,
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           mime_type,
           uploaded_at
         ),
-        facility_contacts (
+        facility_contact (
           id,
           phone,
           email,
@@ -86,9 +86,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           attributes,
           sport_id
         ),
-        facility_sports (
+        facility_sport (
           sport_id,
-          sports (
+          sport (
             id,
             name,
             slug
@@ -111,7 +111,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     if (facilityIds.length > 0) {
       const { data: courtsData, error: courtsError } = await supabase
-        .from('courts')
+        .from('court')
         .select(
           `
           id,
@@ -128,9 +128,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           is_active,
           created_at,
           updated_at,
-          court_sports (
+          court_sport (
             sport_id,
-            sports (
+            sport (
               id,
               name,
               slug

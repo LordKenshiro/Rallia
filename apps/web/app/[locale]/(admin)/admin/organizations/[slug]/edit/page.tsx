@@ -16,7 +16,7 @@ export async function generateMetadata({
 
   try {
     const { data: organization } = await supabase
-      .from('organizations')
+      .from('organization')
       .select('name')
       .eq('slug', slug)
       .single();
@@ -51,7 +51,7 @@ export default async function AdminOrganizationEditPage({
   try {
     // Fetch organization
     const { data: orgData, error: orgError } = await supabase
-      .from('organizations')
+      .from('organization')
       .select(
         `
         id,
@@ -78,7 +78,7 @@ export default async function AdminOrganizationEditPage({
 
     // Fetch facilities with all related data
     const { data: facilities, error: facilitiesError } = await supabase
-      .from('facilities')
+      .from('facility')
       .select(
         `
         id,
@@ -90,18 +90,18 @@ export default async function AdminOrganizationEditPage({
         postal_code,
         latitude,
         longitude,
-        facility_files (
+        facility_file (
           id,
           file_id,
           display_order,
           is_primary,
-          files (
+          file (
             id,
             url,
             thumbnail_url
           )
         ),
-        facility_contacts (
+        facility_contact (
           id,
           phone,
           email,
@@ -110,9 +110,9 @@ export default async function AdminOrganizationEditPage({
           contact_type,
           sport_id
         ),
-        facility_sports (
+        facility_sport (
           sport_id,
-          sports (
+          sport (
             id,
             name,
             slug
@@ -134,7 +134,7 @@ export default async function AdminOrganizationEditPage({
 
     if (facilityIds.length > 0) {
       const { data: courtsData, error: courtsError } = await supabase
-        .from('courts')
+        .from('court')
         .select(
           `
           id,
@@ -145,9 +145,9 @@ export default async function AdminOrganizationEditPage({
           name,
           court_number,
           availability_status,
-          court_sports (
+          court_sport (
             sport_id,
-            sports (
+            sport (
               id,
               name,
               slug
@@ -210,9 +210,9 @@ export default async function AdminOrganizationEditPage({
       postal_code: facility.postal_code || '',
       latitude: facility.latitude?.toString() || '',
       longitude: facility.longitude?.toString() || '',
-      facility_files: facility.facility_files || [],
-      facility_contacts: facility.facility_contacts || [],
-      facility_sports: facility.facility_sports || [],
+      facility_files: facility.facility_file || [],
+      facility_contacts: facility.facility_contact || [],
+      facility_sports: facility.facility_sport || [],
       courts: facility.courts || [],
     })) || [];
 

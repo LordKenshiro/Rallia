@@ -2,10 +2,10 @@
 // https://deno.land/manual/getting_started/setup_your_environment
 // This enables autocomplete, go to definition, etc.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!;
 
 serve(async (req: any) => {
   // Handle CORS preflight
@@ -16,21 +16,18 @@ serve(async (req: any) => {
         'Access-Control-Allow-Methods': 'POST',
         'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
       },
-    })
+    });
   }
 
   try {
     // Parse request body
-    const { email, ipAddress, userAgent } = await req.json()
+    const { email, ipAddress, userAgent } = await req.json();
 
     if (!email) {
-      return new Response(
-        JSON.stringify({ error: 'Email is required' }),
-        { 
-          status: 400,
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-        }
-      )
+      return new Response(JSON.stringify({ error: 'Email is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      });
     }
 
     // Initialize Supabase client
@@ -42,68 +39,57 @@ serve(async (req: any) => {
           headers: { Authorization: req.headers.get('Authorization')! },
         },
       }
-    )
+    );
 
     // Check rate limiting: max 3 requests per minute per email
-    const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString()
+    const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString();
     const { data: recentCodes, error: rateLimitError } = await supabaseClient
-      .from('verification_codes')
+      .from('verification_code')
       .select('id')
       .eq('email', email)
-      .gte('created_at', oneMinuteAgo)
+      .gte('created_at', oneMinuteAgo);
 
     if (rateLimitError) {
-      console.error('Rate limit check error:', rateLimitError)
-      return new Response(
-        JSON.stringify({ error: 'Database error' }),
-        { 
-          status: 500,
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-        }
-      )
+      console.error('Rate limit check error:', rateLimitError);
+      return new Response(JSON.stringify({ error: 'Database error' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      });
     }
 
     if (recentCodes && recentCodes.length >= 3) {
-      return new Response(
-        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
-        { 
-          status: 429,
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-        }
-      )
+      return new Response(JSON.stringify({ error: 'Too many requests. Please try again later.' }), {
+        status: 429,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      });
     }
 
     // Generate 6-digit verification code
-    const code = Math.floor(100000 + Math.random() * 900000).toString()
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
 
     // Store code in database (expires in 10 minutes)
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
-    const { error: insertError } = await supabaseClient
-      .from('verification_codes')
-      .insert({
-        email,
-        code,
-        expires_at: expiresAt,
-        ip_address: ipAddress,
-        user_agent: userAgent,
-      })
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    const { error: insertError } = await supabaseClient.from('verification_code').insert({
+      email,
+      code,
+      expires_at: expiresAt,
+      ip_address: ipAddress,
+      user_agent: userAgent,
+    });
 
     if (insertError) {
-      console.error('Insert error:', insertError)
-      return new Response(
-        JSON.stringify({ error: 'Failed to generate verification code' }),
-        { 
-          status: 500,
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-        }
-      )
+      console.error('Insert error:', insertError);
+      return new Response(JSON.stringify({ error: 'Failed to generate verification code' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      });
     }
 
     // Send email via Resend using verified domain
     const resendResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        Authorization: `Bearer ${RESEND_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -174,39 +160,29 @@ serve(async (req: any) => {
           </html>
         `,
       }),
-    })
+    });
 
     if (!resendResponse.ok) {
-      const errorData = await resendResponse.json()
-      console.error('Resend error:', errorData)
-      return new Response(
-        JSON.stringify({ error: 'Failed to send email' }),
-        { 
-          status: 500,
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-        }
-      )
+      const errorData = await resendResponse.json();
+      console.error('Resend error:', errorData);
+      return new Response(JSON.stringify({ error: 'Failed to send email' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      });
     }
 
-    const resendData = await resendResponse.json()
-    console.log('Email sent successfully:', resendData)
+    const resendData = await resendResponse.json();
+    console.log('Email sent successfully:', resendData);
 
-    return new Response(
-      JSON.stringify({ success: true, message: 'Verification code sent' }),
-      { 
-        status: 200,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      }
-    )
-
+    return new Response(JSON.stringify({ success: true, message: 'Verification code sent' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+    });
   } catch (error) {
-    console.error('Error:', error)
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { 
-        status: 500,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      }
-    )
+    console.error('Error:', error);
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+    });
   }
-})
+});

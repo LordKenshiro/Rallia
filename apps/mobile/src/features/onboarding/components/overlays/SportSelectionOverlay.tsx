@@ -77,6 +77,8 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
             display_name: 'Tennis',
             description: null,
             icon_url: null,
+            slug: 'tennis',
+            attributes: null,
             is_active: true,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -87,6 +89,8 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
             display_name: 'Pickleball',
             description: null,
             icon_url: null,
+            slug: 'pickleball',
+            attributes: null,
             is_active: true,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -172,7 +176,10 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
     );
 
     if (error) {
-      Logger.error('Failed to toggle sport selection', error as Error, { sportId, newSelectionState });
+      Logger.error('Failed to toggle sport selection', error as Error, {
+        sportId,
+        newSelectionState,
+      });
       // Revert optimistic update on error
       setSelectedSportIds((prev: string[]) => {
         if (newSelectionState) {
@@ -193,10 +200,10 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
       .map(id => sports.find(s => s.id === id)?.name)
       .filter(name => name !== undefined) as string[];
 
-    Logger.debug('sport_selection_continue', { 
-      sportIds: selectedSportIds, 
+    Logger.debug('sport_selection_continue', {
+      sportIds: selectedSportIds,
       sportNames: selectedSportNames,
-      count: selectedSportIds.length 
+      count: selectedSportIds.length,
     });
 
     if (onContinue) {
