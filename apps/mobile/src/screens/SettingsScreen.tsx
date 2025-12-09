@@ -11,15 +11,35 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase, Logger } from '@rallia/shared-services';
+import { useTheme, ThemePreference } from '@rallia/shared-hooks';
 import { useNavigation } from '@react-navigation/native';
 
 const SettingsScreen: React.FC = () => {
   const navigation = useNavigation();
+  const { theme, themePreference, setThemePreference } = useTheme();
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<'EN' | 'FR'>('EN');
-  const [selectedAppearance, setSelectedAppearance] = useState<'Light' | 'Dark' | 'System'>('Light');
+
+  // Theme-aware colors
+  const isDark = theme === 'dark';
+  const colors = {
+    background: isDark ? '#042f2e' : '#C8F2EF',
+    cardBackground: isDark ? '#134e4a' : '#ffffff',
+    text: isDark ? '#f0fdfa' : '#333333',
+    textSecondary: isDark ? '#5eead4' : '#666666',
+    textMuted: isDark ? '#2dd4bf' : '#999999',
+    border: isDark ? '#115e59' : '#F0F0F0',
+    icon: isDark ? '#f0fdfa' : '#333333',
+    iconMuted: isDark ? '#5eead4' : '#999999',
+    buttonInactive: isDark ? '#115e59' : '#F0F0F0',
+    buttonActive: '#16A58D',
+    buttonTextInactive: isDark ? '#5eead4' : '#666666',
+    buttonTextActive: '#ffffff',
+    deleteButtonBg: isDark ? '#2f1516' : '#FFF5F5',
+    deleteButtonText: '#FF3B30',
+  };
 
   // Check authentication on mount and redirect if not logged in
   useEffect(() => {
@@ -84,20 +104,20 @@ const SettingsScreen: React.FC = () => {
     title: string; 
     onPress: () => void;
   }) => (
-    <TouchableOpacity style={styles.settingsItem} onPress={onPress}>
+    <TouchableOpacity style={[styles.settingsItem, { backgroundColor: colors.cardBackground, borderBottomColor: colors.border }]} onPress={onPress}>
       <View style={styles.settingsItemLeft}>
-        <Ionicons name={icon} size={20} color="#333" />
-        <Text style={styles.settingsItemText}>{title}</Text>
+        <Ionicons name={icon} size={20} color={colors.icon} />
+        <Text style={[styles.settingsItemText, { color: colors.text }]}>{title}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={20} color="#999" />
+      <Ionicons name="chevron-forward" size={20} color={colors.iconMuted} />
     </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScrollView style={[styles.scrollContent, { backgroundColor: colors.cardBackground }]} showsVerticalScrollIndicator={false}>
         {/* User Profile Section */}
-        <View style={styles.profileSection}>
+        <View style={[styles.profileSection, { backgroundColor: colors.cardBackground }]}>
           {profilePictureUrl ? (
             <Image 
               source={{ uri: profilePictureUrl }} 
@@ -105,24 +125,24 @@ const SettingsScreen: React.FC = () => {
             />
           ) : (
             <View style={styles.profileImagePlaceholder}>
-              <Ionicons name="person" size={32} color="#999" />
+              <Ionicons name="person" size={32} color={colors.iconMuted} />
             </View>
           )}
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{userName}</Text>
-            <Text style={styles.profileEmail}>{userEmail}</Text>
+            <Text style={[styles.profileName, { color: colors.text }]}>{userName}</Text>
+            <Text style={[styles.profileEmail, { color: colors.textSecondary }]}>{userEmail}</Text>
           </View>
         </View>
 
         {/* Edit Profile */}
-        <TouchableOpacity style={styles.editProfileButton} onPress={handleEditProfile}>
-          <Ionicons name="create-outline" size={18} color="#333" />
-          <Text style={styles.editProfileText}>Edit Profile</Text>
-          <Ionicons name="chevron-forward" size={20} color="#999" style={{ marginLeft: 'auto' }} />
+        <TouchableOpacity style={[styles.editProfileButton, { backgroundColor: colors.cardBackground, borderBottomColor: colors.border }]} onPress={handleEditProfile}>
+          <Ionicons name="create-outline" size={18} color={colors.icon} />
+          <Text style={[styles.editProfileText, { color: colors.text }]}>Edit Profile</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.iconMuted} style={{ marginLeft: 'auto' }} />
         </TouchableOpacity>
 
         {/* Settings Items */}
-        <View style={styles.settingsGroup}>
+        <View style={[styles.settingsGroup, { backgroundColor: colors.cardBackground }]}>
           <SettingsItem 
             icon="notifications-outline" 
             title="Notifications" 
@@ -156,20 +176,20 @@ const SettingsScreen: React.FC = () => {
         </View>
 
         {/* Preferred Language */}
-        <View style={styles.preferenceSection}>
-          <Text style={styles.preferenceSectionTitle}>Preferred language</Text>
+        <View style={[styles.preferenceSection, { backgroundColor: colors.cardBackground }]}>
+          <Text style={[styles.preferenceSectionTitle, { color: colors.textSecondary }]}>Preferred language</Text>
           <View style={styles.preferenceOptions}>
             <TouchableOpacity
               style={[
                 styles.preferenceButton,
-                selectedLanguage === 'EN' && styles.preferenceButtonActive,
+                { backgroundColor: selectedLanguage === 'EN' ? colors.buttonActive : colors.buttonInactive },
               ]}
               onPress={() => setSelectedLanguage('EN')}
             >
               <Text
                 style={[
                   styles.preferenceButtonText,
-                  selectedLanguage === 'EN' && styles.preferenceButtonTextActive,
+                  { color: selectedLanguage === 'EN' ? colors.buttonTextActive : colors.buttonTextInactive },
                 ]}
               >
                 EN
@@ -178,14 +198,14 @@ const SettingsScreen: React.FC = () => {
             <TouchableOpacity
               style={[
                 styles.preferenceButton,
-                selectedLanguage === 'FR' && styles.preferenceButtonActive,
+                { backgroundColor: selectedLanguage === 'FR' ? colors.buttonActive : colors.buttonInactive },
               ]}
               onPress={() => setSelectedLanguage('FR')}
             >
               <Text
                 style={[
                   styles.preferenceButtonText,
-                  selectedLanguage === 'FR' && styles.preferenceButtonTextActive,
+                  { color: selectedLanguage === 'FR' ? colors.buttonTextActive : colors.buttonTextInactive },
                 ]}
               >
                 FR
@@ -195,20 +215,20 @@ const SettingsScreen: React.FC = () => {
         </View>
 
         {/* Appearance */}
-        <View style={styles.preferenceSection}>
-          <Text style={styles.preferenceSectionTitle}>Appearance</Text>
+        <View style={[styles.preferenceSection, { backgroundColor: colors.cardBackground }]}>
+          <Text style={[styles.preferenceSectionTitle, { color: colors.textSecondary }]}>Appearance</Text>
           <View style={styles.preferenceOptions}>
             <TouchableOpacity
               style={[
                 styles.preferenceButton,
-                selectedAppearance === 'Light' && styles.preferenceButtonActive,
+                { backgroundColor: themePreference === 'light' ? colors.buttonActive : colors.buttonInactive },
               ]}
-              onPress={() => setSelectedAppearance('Light')}
+              onPress={() => setThemePreference('light')}
             >
               <Text
                 style={[
                   styles.preferenceButtonText,
-                  selectedAppearance === 'Light' && styles.preferenceButtonTextActive,
+                  { color: themePreference === 'light' ? colors.buttonTextActive : colors.buttonTextInactive },
                 ]}
               >
                 Light
@@ -217,14 +237,14 @@ const SettingsScreen: React.FC = () => {
             <TouchableOpacity
               style={[
                 styles.preferenceButton,
-                selectedAppearance === 'Dark' && styles.preferenceButtonActive,
+                { backgroundColor: themePreference === 'dark' ? colors.buttonActive : colors.buttonInactive },
               ]}
-              onPress={() => setSelectedAppearance('Dark')}
+              onPress={() => setThemePreference('dark')}
             >
               <Text
                 style={[
                   styles.preferenceButtonText,
-                  selectedAppearance === 'Dark' && styles.preferenceButtonTextActive,
+                  { color: themePreference === 'dark' ? colors.buttonTextActive : colors.buttonTextInactive },
                 ]}
               >
                 Dark
@@ -233,14 +253,14 @@ const SettingsScreen: React.FC = () => {
             <TouchableOpacity
               style={[
                 styles.preferenceButton,
-                selectedAppearance === 'System' && styles.preferenceButtonActive,
+                { backgroundColor: themePreference === 'system' ? colors.buttonActive : colors.buttonInactive },
               ]}
-              onPress={() => setSelectedAppearance('System')}
+              onPress={() => setThemePreference('system')}
             >
               <Text
                 style={[
                   styles.preferenceButtonText,
-                  selectedAppearance === 'System' && styles.preferenceButtonTextActive,
+                  { color: themePreference === 'system' ? colors.buttonTextActive : colors.buttonTextInactive },
                 ]}
               >
                 System
@@ -250,15 +270,15 @@ const SettingsScreen: React.FC = () => {
         </View>
 
         {/* Sign Out & Delete Account */}
-        <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-            <Ionicons name="log-out-outline" size={18} color="#333" />
-            <Text style={styles.signOutText}>Sign Out</Text>
+        <View style={[styles.actionButtons, { backgroundColor: colors.cardBackground }]}>
+          <TouchableOpacity style={[styles.signOutButton, { backgroundColor: colors.buttonInactive }]} onPress={handleSignOut}>
+            <Ionicons name="log-out-outline" size={18} color={colors.icon} />
+            <Text style={[styles.signOutText, { color: colors.text }]}>Sign Out</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
-            <Ionicons name="trash-outline" size={18} color="#FF3B30" />
-            <Text style={styles.deleteAccountText}>Delete Account</Text>
+          <TouchableOpacity style={[styles.deleteAccountButton, { backgroundColor: colors.deleteButtonBg }]} onPress={handleDeleteAccount}>
+            <Ionicons name="trash-outline" size={18} color={colors.deleteButtonText} />
+            <Text style={[styles.deleteAccountText, { color: colors.deleteButtonText }]}>Delete Account</Text>
           </TouchableOpacity>
         </View>
 
@@ -271,7 +291,6 @@ const SettingsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#C8F2EF',
   },
   header: {
     flexDirection: 'row',
@@ -280,7 +299,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 48,
     paddingBottom: 16,
-    backgroundColor: '#C8F2EF',
   },
   backButton: {
     padding: 0,
@@ -288,18 +306,15 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
   },
   scrollContent: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   profileSection: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 24,
-    backgroundColor: '#fff',
   },
   profileImage: {
     width: 56,
@@ -322,29 +337,24 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 4,
   },
   profileEmail: {
     fontSize: 14,
-    color: '#666',
   },
   editProfileButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
     gap: 8,
   },
   editProfileText: {
     fontSize: 16,
-    color: '#333',
   },
   settingsGroup: {
-    backgroundColor: '#fff',
+    // backgroundColor set dynamically
   },
   settingsItem: {
     flexDirection: 'row',
@@ -352,9 +362,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
   },
   settingsItemLeft: {
     flexDirection: 'row',
@@ -363,16 +371,13 @@ const styles = StyleSheet.create({
   },
   settingsItemText: {
     fontSize: 16,
-    color: '#333',
   },
   preferenceSection: {
     paddingHorizontal: 20,
     paddingVertical: 20,
-    backgroundColor: '#fff',
   },
   preferenceSectionTitle: {
     fontSize: 14,
-    color: '#666',
     marginBottom: 12,
   },
   preferenceOptions: {
@@ -383,26 +388,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: '#F0F0F0',
     minWidth: 80,
     alignItems: 'center',
   },
-  preferenceButtonActive: {
-    backgroundColor: '#16A58D',
-  },
   preferenceButtonText: {
     fontSize: 14,
-    color: '#666',
     fontWeight: '500',
-  },
-  preferenceButtonTextActive: {
-    color: '#fff',
-    fontWeight: '600',
   },
   actionButtons: {
     paddingHorizontal: 20,
     paddingTop: 24,
-    backgroundColor: '#fff',
     gap: 12,
   },
   signOutButton: {
@@ -410,13 +405,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 14,
-    backgroundColor: '#F0F0F0',
     borderRadius: 8,
     gap: 8,
   },
   signOutText: {
     fontSize: 16,
-    color: '#333',
     fontWeight: '500',
   },
   deleteAccountButton: {
@@ -424,13 +417,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 14,
-    backgroundColor: '#FFF5F5',
     borderRadius: 8,
     gap: 8,
   },
   deleteAccountText: {
     fontSize: 16,
-    color: '#FF3B30',
     fontWeight: '500',
   },
 });
