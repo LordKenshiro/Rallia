@@ -1,0 +1,1025 @@
+{
+  "common": {
+    "loading": "Chargement...",
+    "error": "Une erreur s'est produite",
+    "retry": "Réessayer",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "back": "Retour",
+    "next": "Suivant",
+    "done": "Terminé",
+    "continue": "Continuer",
+    "skip": "Passer",
+    "yes": "Oui",
+    "no": "Non",
+    "ok": "OK",
+    "close": "Fermer",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "sort": "Trier",
+    "refresh": "Actualiser",
+    "submit": "Soumettre",
+    "send": "Envoyer",
+    "select": "Sélectionner",
+    "required": "Requis",
+    "optional": "Optionnel"
+  },
+  "auth": {
+    "signIn": "Connexion",
+    "signOut": "Déconnexion",
+    "signUp": "Inscription",
+    "email": "Courriel",
+    "password": "Mot de passe",
+    "forgotPassword": "Mot de passe oublié?",
+    "resetPassword": "Réinitialiser le mot de passe",
+    "verificationCode": "Code de vérification",
+    "sendCode": "Envoyer le code",
+    "verifyCode": "Vérifier le code",
+    "resendCode": "Renvoyer le code",
+    "codeSent": "Code envoyé à {email}",
+    "codeExpired": "Code expiré. Veuillez en demander un nouveau.",
+    "invalidCode": "Code invalide. Veuillez réessayer.",
+    "welcomeBack": "Bon retour!",
+    "createAccount": "Créez un compte pour commencer"
+  },
+  "navigation": {
+    "home": "Accueil",
+    "matches": "Matchs",
+    "map": "Carte",
+    "community": "Communauté",
+    "profile": "Profil",
+    "settings": "Paramètres",
+    "chat": "Messagerie"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "language": "Langue",
+    "languageDescription": "Choisissez votre langue préférée",
+    "languageAuto": "Par défaut du système",
+    "notifications": "Notifications",
+    "privacy": "Confidentialité",
+    "subscription": "Abonnement",
+    "payments": "Paiements",
+    "about": "À propos",
+    "version": "Version",
+    "termsOfService": "Conditions d'utilisation",
+    "privacyPolicy": "Politique de confidentialité",
+    "logout": "Déconnexion",
+    "deleteAccount": "Supprimer le compte",
+    "theme": "Thème",
+    "darkMode": "Mode sombre",
+    "lightMode": "Mode clair",
+    "systemTheme": "Système"
+  },
+  "profile": {
+    "title": "Profil",
+    "editProfile": "Modifier le profil",
+    "firstName": "Prénom",
+    "lastName": "Nom",
+    "displayName": "Nom d'affichage",
+    "bio": "Bio",
+    "location": "Localisation",
+    "phone": "Téléphone",
+    "birthDate": "Date de naissance",
+    "gender": "Genre",
+    "male": "Homme",
+    "female": "Femme",
+    "other": "Autre",
+    "preferNotToSay": "Préfère ne pas dire",
+    "profilePicture": "Photo de profil",
+    "changePhoto": "Changer la photo",
+    "removePhoto": "Supprimer la photo",
+    "sportProfiles": "Profils sportifs",
+    "ratings": "Classements",
+    "matches": "Matchs",
+    "reviews": "Avis"
+  },
+  "onboarding": {
+    "welcome": "Bienvenue sur Rallia",
+    "welcomeSubtitle": "Trouvez vos partenaires de tennis et pickleball parfaits",
+    "getStarted": "Commencer",
+    "personalInfo": "Informations personnelles",
+    "personalInfoSubtitle": "Parlez-nous un peu de vous",
+    "sportSelection": "Sélectionnez vos sports",
+    "sportSelectionSubtitle": "Quels sports pratiquez-vous?",
+    "tennis": "Tennis",
+    "pickleball": "Pickleball",
+    "skillLevel": "Niveau de compétence",
+    "skillLevelSubtitle": "Quel est votre niveau actuel?",
+    "beginner": "Débutant",
+    "intermediate": "Intermédiaire",
+    "advanced": "Avancé",
+    "professional": "Professionnel",
+    "ratingSource": "Source du classement",
+    "selfRated": "Auto-évalué",
+    "verified": "Vérifié",
+    "availability": "Disponibilité",
+    "availabilitySubtitle": "Quand êtes-vous généralement disponible pour jouer?",
+    "preferences": "Préférences",
+    "preferencesSubtitle": "Définissez vos préférences de jeu",
+    "allSet": "Vous êtes prêt!",
+    "allSetSubtitle": "Commencez à trouver des matchs maintenant"
+  },
+  "matches": {
+    "title": "Matchs",
+    "noMatches": "Aucun match pour le moment",
+    "findMatch": "Trouver un match",
+    "createMatch": "Créer un match",
+    "upcoming": "À venir",
+    "past": "Passés",
+    "pending": "En attente",
+    "confirmed": "Confirmé",
+    "cancelled": "Annulé",
+    "completed": "Terminé",
+    "date": "Date",
+    "time": "Heure",
+    "location": "Lieu",
+    "players": "Joueurs",
+    "sport": "Sport",
+    "level": "Niveau",
+    "joinMatch": "Rejoindre le match",
+    "leaveMatch": "Quitter le match",
+    "cancelMatch": "Annuler le match",
+    "matchDetails": "Détails du match"
+  },
+  "ratings": {
+    "title": "Classements",
+    "currentRating": "Classement actuel",
+    "ratingHistory": "Historique des classements",
+    "addProof": "Ajouter une preuve de classement",
+    "verifyRating": "Vérifier le classement",
+    "proofTypes": {
+      "tournament": "Résultat de tournoi",
+      "league": "Classement de ligue",
+      "certificate": "Certificat",
+      "other": "Autre"
+    },
+    "ntrp": "NTRP",
+    "utr": "UTR",
+    "dupr": "DUPR"
+  },
+  "errors": {
+    "networkError": "Erreur réseau. Veuillez vérifier votre connexion.",
+    "serverError": "Erreur serveur. Veuillez réessayer plus tard.",
+    "unauthorized": "Vous n'êtes pas autorisé à effectuer cette action.",
+    "notFound": "La ressource demandée n'a pas été trouvée.",
+    "validation": "Veuillez vérifier vos données et réessayer.",
+    "unknown": "Une erreur inattendue s'est produite."
+  },
+  "home": {
+    "subtitle": "La meilleure façon de trouver votre prochain partenaire de tennis ou de pickleball",
+    "header": {
+      "ctaButton": "Rejoindre la liste"
+    },
+    "hero": {
+      "badge": "Disponible début 2026",
+      "headline": "Ton prochain match t'attend.",
+      "subheadline": "Connecte-toi avec des joueurs compatibles, planifie tes parties sans effort, et ne joue plus jamais seul.",
+      "ctaButton": "Rejoindre la liste d'attente",
+      "ctaSubtext": "Aucune carte requise • Accès anticipé exclusif"
+    },
+    "problems": {
+      "sectionTitle": "Le défi",
+      "sectionBadge": "Le problème",
+      "scheduling": {
+        "title": "Le cauchemar de la planification",
+        "description": "Des heures passées à coordonner via WhatsApp et Facebook. Des annulations de dernière minute. Des parties qui n'ont jamais lieu."
+      },
+      "compatibility": {
+        "title": "La crise de compatibilité",
+        "description": "Les différences de niveau gâchent l'expérience. Conflits de localisation. Préférences de surface incompatibles. Trouver le bon match semble impossible."
+      },
+      "reliability": {
+        "title": "Le problème de fiabilité",
+        "description": "Absences sans préavis. Désistements en série sans responsabilité. Impossible de savoir qui est digne de confiance."
+      },
+      "growth": {
+        "title": "La barrière de progression",
+        "description": "Impossible de trouver assez de parties pour s'améliorer. Réseau de partenaires limité. La progression stagne sans jeu régulier."
+      }
+    },
+    "howItWorks": {
+      "sectionTitle": "Comment ça fonctionne",
+      "sectionBadge": "Processus simple",
+      "step1": {
+        "title": "Rejoindre la liste",
+        "description": "Inscrivez-vous avec votre courriel pour réserver votre place et être notifié au lancement."
+      },
+      "step2": {
+        "title": "Créer votre profil",
+        "description": "Partagez votre niveau, localisation et préférences de jeu."
+      },
+      "step3": {
+        "title": "Être jumelé",
+        "description": "Nous trouvons des partenaires parfaits selon votre profil et disponibilité."
+      },
+      "step4": {
+        "title": "Jouer et évaluer",
+        "description": "Planifiez des matchs instantanément et construisez votre réseau fiable."
+      }
+    },
+    "solutions": {
+      "sectionTitle": "La solution",
+      "sectionBadge": "Comment ça marche",
+      "matchmaking": {
+        "title": "Jumelage intelligent",
+        "description": "Évaluation intelligente des compétences et suivi de fiabilité. Associez-vous avec des joueurs qui correspondent à votre niveau et engagement."
+      },
+      "scheduling": {
+        "title": "Planification instantanée",
+        "description": "Propositions de match en un clic avec synchronisation intelligente du calendrier. Confirmations automatiques et disponibilité en direct."
+      },
+      "marketplace": {
+        "title": "Marché de parties",
+        "description": "Publiez ou parcourez des matchs par heure, lieu et niveau. Réservation instantanée avec évaluations et avis intégrés."
+      },
+      "portfolio": {
+        "title": "Réseau de joueurs",
+        "description": "Constituez votre liste de joueurs favoris. Recevez des suggestions intelligentes basées sur vos préférences et historique."
+      }
+    },
+    "whyJoinEarly": {
+      "sectionTitle": "Pourquoi rejoindre tôt?",
+      "sectionBadge": "Avantages pionniers",
+      "description": "Faites partie de la communauté fondatrice et profitez d'avantages exclusifs qui ne seront plus disponibles après le lancement.",
+      "benefits": {
+        "priority": {
+          "title": "Accès prioritaire",
+          "description": "Passez la file et obtenez un accès immédiat au lancement. Aucune période d'attente."
+        },
+        "pricing": {
+          "title": "Avantages spéciaux précoces",
+          "description": "Profitez d'avantages spéciaux en tant que soutien précoce. Les membres fondateurs obtiennent des privilèges exclusifs."
+        },
+        "influence": {
+          "title": "Façonnez le produit",
+          "description": "Vos commentaires influencent directement les fonctionnalités. Aidez-nous à créer exactement ce dont vous avez besoin."
+        },
+        "exclusive": {
+          "title": "Fonctionnalités exclusives",
+          "description": "Accédez en avant-première aux fonctionnalités bêta et nouvelles versions avant tout le monde."
+        },
+        "community": {
+          "title": "Communauté fondatrice",
+          "description": "Connectez-vous avec d'autres pionniers et construisez votre réseau avant l'arrivée de la foule."
+        },
+        "support": {
+          "title": "Support VIP",
+          "description": "Ligne directe avec notre équipe. Obtenez un support prioritaire et aidez à façonner nos standards de service."
+        }
+      }
+    },
+    "cta": {
+      "headline": "Prêt à transformer votre expérience tennis?",
+      "description": "Soyez parmi les premiers à vivre l'avenir du jumelage au tennis. Inscrivez-vous sur notre liste et obtenez un accès anticipé exclusif au lancement.",
+      "button": "Rejoindre la liste d'attente"
+    },
+    "socialProof": {
+      "sectionTitle": "Ce que disent les testeurs bêta",
+      "sectionBadge": "Commentaires préliminaires",
+      "testimonials": {
+        "first": {
+          "name": "Sarah M.",
+          "location": "Toronto, ON",
+          "rating": "5",
+          "text": "J'ai testé la version bêta et le jumelage est incroyable. J'ai hâte au lancement complet - cela changera complètement ma façon de trouver des partenaires!"
+        },
+        "second": {
+          "name": "Michael R.",
+          "location": "Vancouver, BC",
+          "rating": "5",
+          "text": "Enfin, quelqu'un résout le vrai problème! L'interface est épurée et l'algorithme comprend vraiment les besoins des joueurs."
+        },
+        "third": {
+          "name": "Jennifer L.",
+          "location": "Montréal, QC",
+          "rating": "5",
+          "text": "La fonction de planification vaut à elle seule le coup. En tant que testeuse bêta, j'ai hâte de voir la suite. Inscrivez-vous sur la liste!"
+        }
+      },
+      "stats": {
+        "players": "2 500+",
+        "playersLabel": "Inscriptions liste",
+        "matches": "500+",
+        "matchesLabel": "Matchs test bêta",
+        "rating": "4.9/5",
+        "ratingLabel": "Note testeurs bêta"
+      }
+    },
+    "waitlist": {
+      "sectionTitle": "Rejoindre la liste d'attente",
+      "sectionBadge": "Accès anticipé",
+      "description": "Soyez parmi les premiers à vivre l'avenir du jumelage au tennis. Obtenez un accès anticipé exclusif et des avantages spéciaux.",
+      "form": {
+        "namePlaceholder": "Votre nom",
+        "emailPlaceholder": "votre.courriel@exemple.com",
+        "submitButton": "Obtenir l'accès anticipé",
+        "successMessage": "Merci! Nous vous contacterons bientôt.",
+        "nameLabel": "Nom",
+        "emailLabel": "Courriel",
+        "noCard": "Aucune carte requise • Obtenez des avantages exclusifs en tant que soutien précoce"
+      }
+    },
+    "faq": {
+      "sectionTitle": "Questions fréquentes",
+      "sectionBadge": "FAQ",
+      "questions": {
+        "cost": {
+          "question": "Est-ce que Rallia est gratuit?",
+          "answer": "Nous finalisons actuellement notre modèle tarifaire. Les premiers soutiens recevront des avantages spéciaux. Inscrivez-vous pour rester informé de nos plans."
+        },
+        "sports": {
+          "question": "Quels sports sont supportés?",
+          "answer": "Actuellement, nous supportons le tennis et le pickleball. Nous prévoyons étendre à d'autres sports de raquette comme le squash et le badminton selon la demande."
+        },
+        "matching": {
+          "question": "Comment fonctionne le jumelage par niveau?",
+          "answer": "Notre système analyse votre niveau auto-déclaré, l'historique de vos matchs et les commentaires des joueurs pour évaluer précisément votre capacité. Vous serez jumelé avec des joueurs de votre niveau pour des parties compétitives et agréables."
+        },
+        "privacy": {
+          "question": "Mes données sont-elles privées et sécurisées?",
+          "answer": "Absolument. Nous utilisons un chiffrement standard de l'industrie et ne partageons jamais vos informations personnelles avec des tiers. Vous contrôlez quelles informations sont visibles aux autres joueurs."
+        },
+        "availability": {
+          "question": "Quand est-ce que Rallia sera disponible?",
+          "answer": "Nous sommes actuellement en phase de test bêta et prévoyons lancer publiquement au début 2026. Inscrivez-vous à notre liste d'attente pour obtenir un accès anticipé et être notifié lors du lancement dans votre région."
+        },
+        "platforms": {
+          "question": "Sur quelles plateformes Rallia est-il disponible?",
+          "answer": "Rallia sera disponible comme application web, application iOS et application Android. Vous pourrez accéder à votre compte et planifier des matchs depuis n'importe quel appareil."
+        }
+      }
+    }
+  },
+  "winter": {
+    "title": "Crise des terrains intérieurs en hiver - Rallia",
+    "subtitle": "Résoudre la pénurie de terrains intérieurs pour les joueurs canadiens de tennis et pickleball",
+    "hero": {
+      "badge": "Bientôt disponible",
+      "headline": "La saison extérieure est terminée. Et maintenant?",
+      "subheadline": "Plus de 5 millions de joueurs canadiens de tennis et 1.5 million de joueurs de pickleball s'apprêtent à être mis au banc pendant des semaines, bloqués par une grave pénurie de terrains intérieurs.",
+      "ctaButton": "Devenir membre fondateur",
+      "ctaSubtext": "Fonctionnalités premium GRATUITES au lancement • Aidez à façonner l'app"
+    },
+    "problem": {
+      "sectionBadge": "La crise",
+      "sectionTitle": "La pénurie de terrains intérieurs",
+      "coreMessage": "Il n'y a tout simplement pas assez de terrains intérieurs pour tous ceux qui veulent jouer.",
+      "noCourtNoGame": {
+        "title": "Pas de terrain, pas de partie",
+        "description": "Une pénurie d'installations intérieures s'apprête à mettre au banc 6 millions de joueurs canadiens de tennis et de pickleball. Alors que la demande pour ces sports explose, le nombre de terrains intérieurs est resté le même."
+      },
+      "bookingCompetition": {
+        "title": "Réserver est une compétition",
+        "description": "Réserver un terrain ne devrait pas être un sport de compétition. Les créneaux de choix disparaissent en quelques minutes. Vous vous retrouvez à actualiser les pages à minuit, en espérant une annulation."
+      },
+      "temperatureDrop": {
+        "title": "Mis au banc par le froid",
+        "description": "Votre temps de jeu ne devrait pas se terminer simplement parce que la température baisse. Mais sans accès aux installations intérieures, des milliers de joueurs passeront des semaines—ou des mois—sans mettre les pieds sur un terrain."
+      }
+    },
+    "stats": {
+      "sectionBadge": "Les chiffres",
+      "sectionTitle": "La crise en chiffres",
+      "affectedPlayers": "6M+",
+      "affectedPlayersLabel": "Joueurs affectés par la pénurie de terrains",
+      "courtDensity": "1:25 000",
+      "courtDensityLabel": "Ratio terrain intérieur/joueur au Canada",
+      "demandGrowth": "300%",
+      "demandGrowthLabel": "Croissance de la demande tennis & pickleball depuis 2020",
+      "courtGrowth": "<5%",
+      "courtGrowthLabel": "Croissance des terrains intérieurs disponibles"
+    },
+    "solution": {
+      "sectionBadge": "La solution",
+      "sectionTitle": "Une meilleure façon de partager le temps de jeu",
+      "pitch": "Nous construisons une meilleure façon de se connecter et de partager le temps de jeu.",
+      "vision": "Nous construisons une communauté où les joueurs s'entraident pour accéder au terrain, peu importe la saison.",
+      "findPartners": {
+        "title": "Trouvez des partenaires avec réservation",
+        "description": "Connectez-vous avec des joueurs qui ont déjà réservé un terrain et qui cherchent un partenaire. Pas de terrain? Pas de problème. Ils ont fait la partie difficile—vous n'avez qu'à vous présenter et jouer."
+      },
+      "shareCosts": {
+        "title": "Partagez les coûts",
+        "description": "Le temps de jeu intérieur est cher. Partagez le coût de ce terrain premium avec un excellent partenaire, rendant le jeu hivernal abordable pour tous."
+      },
+      "fillCancellations": {
+        "title": "Comblez les annulations de dernière minute",
+        "description": "Soyez notifié quand du temps de jeu se libère. Comblez les annulations de dernière minute pour qu'aucun temps de terrain ne soit gaspillé. Transformez l'annulation de quelqu'un en votre opportunité."
+      },
+      "unlockPotential": {
+        "title": "Maximisez les installations existantes",
+        "description": "Libérez le plein potentiel des installations existantes tout en défendant la construction future. Chaque terrain devrait être utilisé à sa capacité maximale."
+      }
+    },
+    "foundingMember": {
+      "sectionBadge": "Offre exclusive",
+      "sectionTitle": "Devenez membre fondateur",
+      "offer": "Inscrivez-vous à la liste d'attente et obtenez des fonctionnalités premium GRATUITES au lancement.",
+      "survey": "Aidez-nous à créer l'application parfaite pour les joueurs canadiens. Rejoignez la liste d'attente et nous vous enverrons un sondage de 3 questions pour nous dire ce dont vous avez le plus besoin.",
+      "ctaButton": "Rejoindre la liste d'attente",
+      "benefits": "Fonctionnalités premium GRATUITES • Façonnez le produit • Accès prioritaire"
+    },
+    "waitlist": {
+      "sectionBadge": "Commencer",
+      "sectionTitle": "Rejoignez les membres fondateurs",
+      "description": "Faites partie de la solution. Rejoignez notre liste d'attente et aidez-nous à construire une communauté où chaque joueur accède au terrain, peu importe la saison.",
+      "form": {
+        "namePlaceholder": "Votre nom",
+        "emailPlaceholder": "votre.courriel@exemple.com",
+        "submitButton": "Devenir membre fondateur",
+        "successMessage": "Bienvenue dans la communauté fondatrice! Restez à l'affût pour les prochaines mises à jour.",
+        "nameLabel": "Nom",
+        "emailLabel": "Courriel",
+        "phoneLabel": "Téléphone (Optionnel)",
+        "phonePlaceholder": "+1 (555) 123-4567",
+        "noCard": "Aucune carte requise • Fonctionnalités premium GRATUITES au lancement"
+      }
+    },
+    "faq": {
+      "sectionBadge": "FAQ",
+      "sectionTitle": "Questions fréquentes",
+      "questions": {
+        "whatIsThis": {
+          "question": "Comment cela résout-il le problème de terrains intérieurs?",
+          "answer": "Nous aidons les joueurs canadiens de tennis et de pickleball à gérer la pénurie de terrains intérieurs pendant les mois d'hiver. Nous construisons des outils pour aider les joueurs à trouver des partenaires qui ont déjà réservé des terrains, partager les coûts et combler les annulations de dernière minute—maximisant l'utilisation des installations existantes."
+        },
+        "foundingMember": {
+          "question": "Qu'obtiennent les membres fondateurs?",
+          "answer": "Les membres fondateurs obtiennent des fonctionnalités premium complètement gratuites lors du lancement. Vous aiderez également à façonner le produit grâce à notre sondage, obtiendrez un accès prioritaire à l'application et ferez partie de la communauté dès le premier jour."
+        },
+        "whenLaunch": {
+          "question": "Quand sera-ce disponible?",
+          "answer": "Nous lançons début 2026, juste à temps pour la saison extérieure. Vous aurez tout l'été pour bâtir votre réseau et maîtriser l'application, afin qu'à l'arrivée de l'hiver 2026-2027, vous soyez prêt à dominer les réservations de terrains intérieurs. Rejoignez la liste d'attente pour être notifié lors du lancement."
+        },
+        "bothSports": {
+          "question": "Cela fonctionne-t-il pour le tennis et le pickleball?",
+          "answer": "Oui! La pénurie de terrains intérieurs affecte à la fois les joueurs de tennis et de pickleball. Notre plateforme est conçue pour aider les joueurs des deux sports à trouver des partenaires, partager les coûts et maximiser le temps de jeu."
+        },
+        "howHelp": {
+          "question": "Comment cela aidera-t-il avec la pénurie de terrains?",
+          "answer": "Bien que nous ne puissions pas construire de nouveaux terrains du jour au lendemain, nous pouvons aider à maximiser l'utilisation des installations existantes. En connectant les joueurs qui ont besoin de terrains avec ceux qui en ont réservé, en partageant les coûts et en comblant les annulations, nous nous assurons que chaque minute de temps de terrain est utilisée."
+        }
+      }
+    }
+  },
+  "footer": {
+    "title": "Rallia",
+    "description": "La plateforme qui connectera les joueurs de tennis et de pickleball pour de meilleurs matchs, à chaque fois.",
+    "quickLinks": "Liens rapides",
+    "joinWaitlist": "Rejoindre la liste",
+    "privacy": "Politique de confidentialité",
+    "terms": "Conditions d'utilisation",
+    "rights": "Tous droits réservés.",
+    "comingSoon": "Disponible début 2026"
+  },
+  "signIn": {
+    "title": "Connexion Organisation",
+    "description": "C'est la première étape pour créer votre organisation sur notre plateforme.",
+    "welcomeMessage": "Bienvenue! Connectez-vous pour commencer avec votre compte organisation.",
+    "signInWithGoogle": "Continuer avec Google",
+    "signInWithMicrosoft": "Continuer avec Microsoft",
+    "or": "Ou continuer avec courriel",
+    "emailLabel": "Courriel",
+    "emailPlaceholder": "votre.courriel@exemple.com",
+    "sendOtp": "Envoyer le code de vérification",
+    "otpLabel": "Code de vérification",
+    "otpPlaceholder": "000000",
+    "otpHint": "Entrez le code à 6 chiffres envoyé à votre courriel",
+    "otpSentMessage": "Nous avons envoyé un code de vérification à votre courriel. Veuillez vérifier votre boîte de réception et entrer le code à 6 chiffres ci-dessous.",
+    "verifyOtp": "Vérifier le code",
+    "changeEmail": "Utiliser un autre courriel",
+    "loading": "Traitement...",
+    "adminTitle": "Admin",
+    "adminDescription": "Connectez-vous pour accéder au tableau de bord d'administration",
+    "invalidOtpCode": "Veuillez entrer le code de vérification à 6 chiffres",
+    "failedToSendOtp": "Échec de l'envoi du code",
+    "failedToVerifyOtp": "Échec de la vérification du code"
+  },
+  "webOnboarding": {
+    "badge": "Commencer",
+    "pageTitle": "Créer votre organisation",
+    "pageDescription": "Configurez le profil de votre organisation pour commencer à gérer vos installations et membres.",
+    "title": "Détails de l'organisation",
+    "description": "Remplissez les informations ci-dessous pour créer le profil de votre organisation.",
+    "basicInfo": "Informations de base",
+    "contactInfo": "Informations de contact",
+    "locationInfo": "Informations de localisation",
+    "yourRole": "Votre rôle",
+    "nameLabel": "Nom de l'organisation",
+    "namePlaceholder": "ex. Club de tennis de Toronto",
+    "typeLabel": "Type d'organisation",
+    "typeClub": "Club",
+    "typeMunicipality": "Municipalité",
+    "typeCity": "Ville",
+    "typeAssociation": "Association",
+    "natureLabel": "Nature",
+    "naturePublic": "Publique",
+    "naturePrivate": "Privée",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Parlez-nous de votre organisation...",
+    "emailLabel": "Courriel",
+    "emailPlaceholder": "contact@organisation.com",
+    "phoneLabel": "Téléphone",
+    "phonePlaceholder": "+1 (555) 123-4567",
+    "websiteLabel": "Site web",
+    "websitePlaceholder": "https://www.organisation.com",
+    "addressLabel": "Adresse",
+    "addressPlaceholder": "123 rue Principale",
+    "cityLabel": "Ville",
+    "cityPlaceholder": "Toronto",
+    "countryLabel": "Pays",
+    "countryPlaceholder": "Sélectionner le pays",
+    "postalCodeLabel": "Code postal",
+    "postalCodePlaceholder": "M5H 2N2",
+    "roleLabel": "Votre rôle dans cette organisation",
+    "roleOwner": "Propriétaire",
+    "roleAdmin": "Administrateur",
+    "roleStaff": "Personnel",
+    "roleCoach": "Entraîneur",
+    "rolePlayer": "Joueur",
+    "roleHint": "Sélectionnez le rôle qui décrit le mieux votre position dans cette organisation.",
+    "createButton": "Créer l'organisation",
+    "creating": "Création...",
+    "cancel": "Annuler"
+  },
+  "dashboard": {
+    "badge": "Tableau de bord",
+    "title": "Bienvenue sur votre tableau de bord",
+    "description": "Gérez votre organisation et consultez les informations de votre profil.",
+    "profileTitle": "Votre profil",
+    "profileDescription": "Vos informations personnelles et paramètres de compte.",
+    "organizationTitle": "Votre organisation",
+    "organizationDescription": "Détails sur votre organisation.",
+    "email": "Courriel",
+    "fullName": "Nom complet",
+    "displayName": "Nom d'affichage",
+    "locale": "Paramètres régionaux",
+    "timezone": "Fuseau horaire",
+    "name": "Nom",
+    "phone": "Téléphone",
+    "location": "Localisation",
+    "website": "Site web",
+    "role": "Rôle",
+    "joinedAt": "Rejoint le"
+  },
+  "app": {
+    "nav": {
+      "dashboard": "Tableau de bord",
+      "organizations": "Organisations",
+      "facilities": "Installations",
+      "members": "Membres",
+      "settings": "Paramètres",
+      "theme": "Thème",
+      "signOut": "Déconnexion"
+    }
+  },
+  "admin": {
+    "signIn": {
+      "title": "Connexion Admin",
+      "description": "Connectez-vous pour accéder au tableau de bord d'administration",
+      "restricted": "Réservé aux employés de Rallia et aux administrateurs autorisés",
+      "titleMeta": "Connexion Admin - Rallia",
+      "descriptionMeta": "Connectez-vous pour accéder au tableau de bord d'administration de Rallia."
+    },
+    "sidebar": {
+      "brand": "Rallia Admin",
+      "dashboard": "Tableau de bord",
+      "organizations": "Organisations",
+      "users": "Utilisateurs",
+      "analytics": "Analytique",
+      "settings": "Paramètres"
+    },
+    "dashboard": {
+      "title": "Tableau de bord Admin",
+      "description": "Gérez les organisations, les utilisateurs et les paramètres.",
+      "titleMeta": "Tableau de bord Admin - Rallia",
+      "descriptionMeta": "Tableau de bord d'administration pour les employés de Rallia.",
+      "organizationsCard": {
+        "title": "Organisations",
+        "description": "Gérer toutes les organisations"
+      },
+      "usersCard": {
+        "title": "Utilisateurs",
+        "description": "Voir et gérer les comptes utilisateurs"
+      },
+      "analyticsCard": {
+        "title": "Analytique",
+        "description": "Analyses et informations"
+      }
+    },
+    "organizations": {
+      "title": "Organisations",
+      "description": "Gérer toutes les organisations.",
+      "titleMeta": "Organisations - Admin - Rallia",
+      "descriptionMeta": "Gérer toutes les organisations.",
+      "comingSoon": "Interface de gestion des organisations à venir.",
+      "table": {
+        "name": "Nom",
+        "email": "Courriel",
+        "phone": "Téléphone",
+        "website": "Site web",
+        "nature": "Nature",
+        "type": "Type",
+        "city": "Ville",
+        "country": "Pays",
+        "status": "Statut",
+        "createdAt": "Créé le",
+        "noOrganizations": "Aucune organisation trouvée.",
+        "loading": "Chargement des organisations...",
+        "error": "Échec du chargement des organisations."
+      },
+      "status": {
+        "active": "Actif",
+        "inactive": "Inactif"
+      },
+      "nature": {
+        "public": "Publique",
+        "private": "Privée"
+      },
+      "pagination": {
+        "showing": "Affichage de {start} à {end} sur {total} organisations",
+        "page": "Page {current} sur {total}"
+      },
+      "createButton": "Créer une organisation",
+      "create": {
+        "title": "Créer une organisation",
+        "description": "Créez une nouvelle organisation avec des installations, sports, contacts et terrains.",
+        "titleMeta": "Créer une organisation - Admin - Rallia",
+        "descriptionMeta": "Créez une nouvelle organisation avec toutes les entités associées.",
+        "formTitle": "Nouvelle organisation",
+        "formDescription": "Remplissez les détails ci-dessous pour créer une nouvelle organisation.",
+        "sections": {
+          "organization": "Informations de l'organisation",
+          "facilities": "Installations",
+          "facility": "Installation",
+          "facilityImages": "Images de l'installation",
+          "facilityInfo": "Informations de l'installation",
+          "sports": "Sports",
+          "contacts": "Contacts",
+          "contact": "Contact",
+          "courts": "Terrains",
+          "courtRow": "Ligne de terrains"
+        },
+        "fields": {
+          "orgName": "Nom de l'organisation",
+          "orgType": "Type d'organisation",
+          "selectOrgType": "Sélectionner le type d'organisation (optionnel)",
+          "orgNature": "Nature",
+          "email": "Courriel",
+          "phone": "Téléphone",
+          "website": "Site web",
+          "description": "Description",
+          "address": "Adresse",
+          "city": "Ville",
+          "country": "Pays",
+          "postalCode": "Code postal",
+          "selectCountry": "Sélectionner le pays",
+          "facilityName": "Nom de l'installation",
+          "facilityNamePlaceholder": "Entrez le nom pour rechercher...",
+          "facilityType": "Type d'installation",
+          "selectFacilityType": "Sélectionner le type d'installation",
+          "latitude": "Latitude",
+          "longitude": "Longitude",
+          "contactType": "Type de contact",
+          "isPrimary": "Contact principal",
+          "notes": "Notes",
+          "surfaceType": "Type de surface",
+          "selectSurfaceType": "Sélectionner le type de surface",
+          "quantity": "Quantité",
+          "sports": "Sports",
+          "options": "Options",
+          "lighting": "Éclairage",
+          "indoor": "Intérieur",
+          "markAsPrimary": "Définir comme contact principal",
+          "selectSportsFirst": "Sélectionnez d'abord les sports ci-dessus",
+          "membershipRequired": "Adhésion requise pour accéder à cette installation"
+        },
+        "types": {
+          "club": "Club",
+          "municipality": "Municipalité",
+          "city": "Ville",
+          "association": "Association"
+        },
+        "natures": {
+          "public": "Publique",
+          "private": "Privée"
+        },
+        "facilityTypes": {
+          "park": "Parc",
+          "club": "Club",
+          "community_club": "Club communautaire",
+          "indoor_center": "Centre intérieur",
+          "private": "Privé",
+          "other": "Autre"
+        },
+        "contactTypes": {
+          "general": "Général",
+          "reservation": "Réservation",
+          "maintenance": "Entretien",
+          "other": "Autre"
+        },
+        "surfaceTypes": {
+          "hard": "Dur",
+          "clay": "Terre battue",
+          "grass": "Gazon",
+          "synthetic": "Synthétique",
+          "carpet": "Moquette",
+          "asphalt": "Asphalte",
+          "concrete": "Béton"
+        },
+        "actions": {
+          "addFacility": "Ajouter une installation",
+          "addContact": "Ajouter un contact",
+          "addCourtRow": "Ajouter une ligne de terrains",
+          "uploadImages": "Cliquez pour télécharger des images",
+          "create": "Créer l'organisation",
+          "creating": "Création...",
+          "cancel": "Annuler",
+          "useOrgAddress": "Utiliser l'adresse de l'organisation",
+          "useOrgContact": "Utiliser les coordonnées de l'organisation",
+          "searchPlace": "Rechercher sur Google Places"
+        },
+        "loading": {
+          "sports": "Chargement des sports..."
+        },
+        "hints": {
+          "holdCtrlToSelect": "Maintenez Ctrl/Cmd pour sélectionner plusieurs"
+        },
+        "validation": {
+          "requiredFields": "Veuillez remplir tous les champs requis",
+          "atLeastOneFacility": "Au moins une installation est requise",
+          "facilityNameRequired": "Le nom de l'installation {index} est requis",
+          "facilitySportsRequired": "L'installation {index} doit avoir au moins un sport sélectionné",
+          "facilityCountryRequired": "Le pays de l'installation {index} est requis"
+        },
+        "error": {
+          "createFailed": "Échec de la création de l'organisation"
+        },
+        "success": {
+          "title": "Organisation créée avec succès",
+          "description": "L'organisation a été créée avec succès. Que souhaitez-vous faire ensuite?",
+          "viewOrganization": "Voir l'organisation",
+          "createAnother": "Créer une autre",
+          "backToList": "Retour à la liste"
+        }
+      },
+      "profile": {
+        "title": "Profil de l'organisation",
+        "description": "Voir les détails de l'organisation pour {slug}",
+        "titleMeta": "Profil de l'organisation - Admin - Rallia",
+        "descriptionMeta": "Voir les détails de l'organisation",
+        "updateButton": "Mettre à jour l'organisation",
+        "sections": {
+          "organizationInfo": "Informations de l'organisation",
+          "facilities": "Installations",
+          "facilityImages": "Images de l'installation",
+          "sports": "Sports",
+          "contacts": "Contacts",
+          "courts": "Terrains"
+        },
+        "fields": {
+          "email": "Courriel",
+          "phone": "Téléphone",
+          "website": "Site web",
+          "address": "Adresse",
+          "description": "Description",
+          "createdAt": "Créé le",
+          "updatedAt": "Mis à jour le"
+        },
+        "status": {
+          "active": "Actif",
+          "inactive": "Inactif"
+        },
+        "nature": {
+          "public": "Publique",
+          "private": "Privée"
+        },
+        "facility": "Installation",
+        "facilities": "Installations",
+        "noFacilities": "Aucune installation trouvée pour cette organisation",
+        "primary": "Principal",
+        "court": "Terrain",
+        "courts": "Terrains",
+        "surfaceType": "Type de surface",
+        "lighting": "Éclairage",
+        "indoor": "Intérieur",
+        "error": "Échec du chargement de l'organisation"
+      },
+      "update": {
+        "title": "Mettre à jour l'organisation",
+        "description": "Mettez à jour les détails de l'organisation, les installations et les informations associées.",
+        "titleMeta": "Mettre à jour l'organisation - Admin - Rallia",
+        "descriptionMeta": "Mettre à jour les détails de l'organisation.",
+        "formTitle": "Mettre à jour l'organisation",
+        "formDescription": "Mettez à jour les détails ci-dessous pour modifier l'organisation.",
+        "sections": {
+          "organization": "Informations de l'organisation",
+          "facilities": "Installations",
+          "facility": "Installation",
+          "facilityImages": "Images de l'installation",
+          "facilityInfo": "Informations de l'installation",
+          "sports": "Sports",
+          "contacts": "Contacts",
+          "contact": "Contact",
+          "courts": "Terrains",
+          "courtRow": "Ligne de terrains"
+        },
+        "fields": {
+          "orgName": "Nom de l'organisation",
+          "orgType": "Type d'organisation",
+          "selectOrgType": "Sélectionner le type d'organisation (optionnel)",
+          "orgNature": "Nature",
+          "email": "Courriel",
+          "phone": "Téléphone",
+          "website": "Site web",
+          "description": "Description",
+          "address": "Adresse",
+          "city": "Ville",
+          "country": "Pays",
+          "postalCode": "Code postal",
+          "selectCountry": "Sélectionner le pays",
+          "facilityName": "Nom de l'installation",
+          "facilityNamePlaceholder": "Entrez le nom pour rechercher...",
+          "facilityType": "Type d'installation",
+          "selectFacilityType": "Sélectionner le type d'installation",
+          "latitude": "Latitude",
+          "longitude": "Longitude",
+          "contactType": "Type de contact",
+          "isPrimary": "Contact principal",
+          "notes": "Notes",
+          "surfaceType": "Type de surface",
+          "selectSurfaceType": "Sélectionner le type de surface",
+          "quantity": "Quantité",
+          "sports": "Sports",
+          "options": "Options",
+          "lighting": "Éclairage",
+          "indoor": "Intérieur",
+          "markAsPrimary": "Définir comme contact principal",
+          "selectSportsFirst": "Sélectionnez d'abord les sports ci-dessus",
+          "membershipRequired": "Adhésion requise pour accéder à cette installation"
+        },
+        "types": {
+          "club": "Club",
+          "municipality": "Municipalité",
+          "city": "Ville",
+          "association": "Association"
+        },
+        "natures": {
+          "public": "Publique",
+          "private": "Privée"
+        },
+        "facilityTypes": {
+          "park": "Parc",
+          "club": "Club",
+          "community_club": "Club communautaire",
+          "indoor_center": "Centre intérieur",
+          "private": "Privé",
+          "other": "Autre"
+        },
+        "contactTypes": {
+          "general": "Général",
+          "reservation": "Réservation",
+          "maintenance": "Entretien",
+          "other": "Autre"
+        },
+        "surfaceTypes": {
+          "hard": "Dur",
+          "clay": "Terre battue",
+          "grass": "Gazon",
+          "synthetic": "Synthétique",
+          "carpet": "Moquette",
+          "asphalt": "Asphalte",
+          "concrete": "Béton"
+        },
+        "actions": {
+          "addFacility": "Ajouter une installation",
+          "addContact": "Ajouter un contact",
+          "addCourtRow": "Ajouter une ligne de terrains",
+          "uploadImages": "Cliquez pour télécharger des images",
+          "update": "Mettre à jour l'organisation",
+          "updating": "Mise à jour...",
+          "cancel": "Annuler",
+          "useOrgAddress": "Utiliser l'adresse de l'organisation",
+          "useOrgContact": "Utiliser les coordonnées de l'organisation",
+          "searchPlace": "Rechercher sur Google Places"
+        },
+        "loading": {
+          "sports": "Chargement des sports..."
+        },
+        "hints": {
+          "holdCtrlToSelect": "Maintenez Ctrl/Cmd pour sélectionner plusieurs"
+        },
+        "validation": {
+          "requiredFields": "Veuillez remplir tous les champs requis",
+          "atLeastOneFacility": "Au moins une installation est requise",
+          "facilityNameRequired": "Le nom de l'installation {index} est requis",
+          "facilitySportsRequired": "L'installation {index} doit avoir au moins un sport sélectionné",
+          "facilityCountryRequired": "Le pays de l'installation {index} est requis"
+        },
+        "error": {
+          "updateFailed": "Échec de la mise à jour de l'organisation",
+          "loadFailed": "Échec du chargement de l'organisation"
+        },
+        "success": {
+          "title": "Organisation mise à jour avec succès",
+          "description": "L'organisation a été mise à jour avec succès. Que souhaitez-vous faire ensuite?",
+          "viewOrganization": "Voir l'organisation",
+          "backToList": "Retour à la liste"
+        }
+      }
+    },
+    "users": {
+      "title": "Utilisateurs",
+      "description": "Gérer tous les utilisateurs, y compris les administrateurs, les membres d'organisation et les joueurs.",
+      "titleMeta": "Utilisateurs - Admin - Rallia",
+      "descriptionMeta": "Gérer tous les utilisateurs, y compris les administrateurs, les membres d'organisation et les joueurs.",
+      "comingSoon": "Interface de gestion des utilisateurs à venir.",
+      "tabs": {
+        "admins": "Administrateurs",
+        "organizationMembers": "Membres d'organisation",
+        "players": "Joueurs",
+        "comingSoon": "À venir"
+      },
+      "table": {
+        "name": "Nom",
+        "email": "Courriel",
+        "role": "Rôle",
+        "assignedAt": "Assigné le",
+        "status": "Statut",
+        "createdAt": "Créé le",
+        "noAdmins": "Aucun administrateur trouvé.",
+        "error": "Échec du chargement des administrateurs."
+      },
+      "status": {
+        "active": "Actif",
+        "inactive": "Inactif"
+      },
+      "roles": {
+        "super_admin": "Super Admin",
+        "moderator": "Modérateur",
+        "support": "Support"
+      },
+      "inviteButton": "Inviter un utilisateur",
+      "invite": {
+        "title": "Inviter un utilisateur",
+        "description": "Envoyer une invitation par courriel à un nouvel utilisateur.",
+        "fields": {
+          "email": "Courriel",
+          "emailPlaceholder": "utilisateur@exemple.com",
+          "role": "Rôle",
+          "adminRole": "Type d'administrateur"
+        },
+        "roles": {
+          "selectRole": "Sélectionner un rôle",
+          "player": "Joueur",
+          "admin": "Administrateur",
+          "orgMember": "Membre d'organisation"
+        },
+        "adminRoles": {
+          "super_admin": "Super Admin",
+          "moderator": "Modérateur",
+          "support": "Support"
+        },
+        "actions": {
+          "send": "Envoyer l'invitation",
+          "sending": "Envoi en cours...",
+          "cancel": "Annuler"
+        },
+        "validation": {
+          "invalidEmail": "Veuillez entrer une adresse courriel valide.",
+          "adminRoleRequired": "Veuillez sélectionner un type d'administrateur."
+        },
+        "error": {
+          "sendFailed": "Échec de l'envoi de l'invitation. Veuillez réessayer."
+        },
+        "success": {
+          "invitationSent": "Invitation envoyée avec succès à {email}!"
+        }
+      }
+    },
+    "analytics": {
+      "title": "Analytique",
+      "description": "Analyses et informations.",
+      "titleMeta": "Analytique - Admin - Rallia",
+      "descriptionMeta": "Analyses et informations.",
+      "comingSoon": "Tableau de bord analytique à venir."
+    },
+    "settings": {
+      "title": "Paramètres",
+      "description": "Gérer les paramètres et la configuration.",
+      "titleMeta": "Paramètres - Admin - Rallia",
+      "descriptionMeta": "Gérer les paramètres.",
+      "comingSoon": "Interface des paramètres à venir."
+    },
+    "errors": {
+      "accessDenied": "Accès refusé. Accès administrateur requis.",
+      "unexpectedError": "Une erreur inattendue s'est produite",
+      "invalidCallback": "Paramètres de rappel invalides"
+    }
+  }
+}
+

@@ -8,36 +8,57 @@ import {
   ScrollView,
   Image,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase, Logger } from '@rallia/shared-services';
 import { useNavigation } from '@react-navigation/native';
+import { useLocale } from '../context';
+import { useTranslation } from '../hooks';
+import type { Locale } from '@rallia/shared-translations';
 
 const SettingsScreen: React.FC = () => {
   const navigation = useNavigation();
+  const {
+    locale,
+    setLocale,
+    isManuallySet,
+    isReady,
+    resetToDeviceLocale,
+    localeConfigs,
+    availableLocales,
+  } = useLocale();
+  const { t } = useTranslation();
+
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
-  const [selectedLanguage, setSelectedLanguage] = useState<'EN' | 'FR'>('EN');
-  const [selectedAppearance, setSelectedAppearance] = useState<'Light' | 'Dark' | 'System'>('Light');
+  const [selectedAppearance, setSelectedAppearance] = useState<'Light' | 'Dark' | 'System'>(
+    'Light'
+  );
+  const [isChangingLocale, setIsChangingLocale] = useState(false);
 
   // Check authentication on mount and redirect if not logged in
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
-        Alert.alert('Error', 'Please sign in to access settings');
+        Alert.alert(t('errors.unauthorized'), t('auth.signIn'));
         navigation.goBack();
         return;
       }
       fetchUserData();
     };
     checkAuth();
-  }, [navigation]);
+  }, [navigation, t]);
 
   const fetchUserData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
       const { data: profile } = await supabase
@@ -53,6 +74,35 @@ const SettingsScreen: React.FC = () => {
       }
     } catch (error) {
       Logger.error('Failed to fetch user data', error as Error);
+    }
+  };
+
+  const handleLanguageChange = async (newLocale: Locale) => {
+    if (newLocale === locale || isChangingLocale) return;
+
+    setIsChangingLocale(true);
+    try {
+      await setLocale(newLocale);
+      Logger.logUserAction('language_changed', { locale: newLocale });
+    } catch (error) {
+      Logger.error('Failed to change language', error as Error);
+      Alert.alert(t('common.error'), t('errors.unknown'));
+    } finally {
+      setIsChangingLocale(false);
+    }
+  };
+
+  const handleResetToSystemLocale = async () => {
+    if (!isManuallySet || isChangingLocale) return;
+
+    setIsChangingLocale(true);
+    try {
+      await resetToDeviceLocale();
+      Logger.logUserAction('language_reset_to_system');
+    } catch (error) {
+      Logger.error('Failed to reset language', error as Error);
+    } finally {
+      setIsChangingLocale(false);
     }
   };
 
@@ -75,13 +125,13 @@ const SettingsScreen: React.FC = () => {
     (navigation as any).navigate('UserProfile');
   };
 
-  const SettingsItem = ({ 
-    icon, 
-    title, 
-    onPress 
-  }: { 
-    icon: keyof typeof Ionicons.glyphMap; 
-    title: string; 
+  const SettingsItem = ({
+    icon,
+    title,
+    onPress,
+  }: {
+    icon: keyof typeof Ionicons.glyphMap;
+    title: string;
     onPress: () => void;
   }) => (
     <TouchableOpacity style={styles.settingsItem} onPress={onPress}>
@@ -93,16 +143,24 @@ const SettingsScreen: React.FC = () => {
     </TouchableOpacity>
   );
 
+  // Show loading indicator until i18n is ready
+  if (!isReady) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#16A58D" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* User Profile Section */}
         <View style={styles.profileSection}>
           {profilePictureUrl ? (
-            <Image 
-              source={{ uri: profilePictureUrl }} 
-              style={styles.profileImage} 
-            />
+            <Image source={{ uri: profilePictureUrl }} style={styles.profileImage} />
           ) : (
             <View style={styles.profileImagePlaceholder}>
               <Ionicons name="person" size={32} color="#999" />
@@ -117,86 +175,101 @@ const SettingsScreen: React.FC = () => {
         {/* Edit Profile */}
         <TouchableOpacity style={styles.editProfileButton} onPress={handleEditProfile}>
           <Ionicons name="create-outline" size={18} color="#333" />
-          <Text style={styles.editProfileText}>Edit Profile</Text>
+          <Text style={styles.editProfileText}>{t('profile.editProfile')}</Text>
           <Ionicons name="chevron-forward" size={20} color="#999" style={{ marginLeft: 'auto' }} />
         </TouchableOpacity>
 
         {/* Settings Items */}
         <View style={styles.settingsGroup}>
-          <SettingsItem 
-            icon="notifications-outline" 
-            title="Notifications" 
-            onPress={() => { Logger.logUserAction('settings_notifications_pressed'); }} 
+          <SettingsItem
+            icon="notifications-outline"
+            title={t('settings.notifications')}
+            onPress={() => {
+              Logger.logUserAction('settings_notifications_pressed');
+            }}
           />
-          <SettingsItem 
-            icon="lock-closed-outline" 
-            title="Permissions" 
-            onPress={() => { Logger.logUserAction('settings_permissions_pressed'); }} 
+          <SettingsItem
+            icon="lock-closed-outline"
+            title={t('settings.privacy')}
+            onPress={() => {
+              Logger.logUserAction('settings_permissions_pressed');
+            }}
           />
-          <SettingsItem 
-            icon="card-outline" 
-            title="Subscription" 
-            onPress={() => { Logger.logUserAction('settings_subscription_pressed'); }}
+          <SettingsItem
+            icon="card-outline"
+            title={t('settings.subscription')}
+            onPress={() => {
+              Logger.logUserAction('settings_subscription_pressed');
+            }}
           />
-          <SettingsItem 
-            icon="wallet-outline" 
-            title="Payments" 
-            onPress={() => { Logger.logUserAction('settings_payments_pressed'); }}
+          <SettingsItem
+            icon="wallet-outline"
+            title={t('settings.payments')}
+            onPress={() => {
+              Logger.logUserAction('settings_payments_pressed');
+            }}
           />
-          <SettingsItem 
-            icon="help-circle-outline" 
-            title="Help & Assistance" 
-            onPress={() => { Logger.logUserAction('settings_help_pressed'); }}
+          <SettingsItem
+            icon="help-circle-outline"
+            title={t('settings.about')}
+            onPress={() => {
+              Logger.logUserAction('settings_help_pressed');
+            }}
           />
-          <SettingsItem 
-            icon="document-text-outline" 
-            title="Terms & Conditions" 
-            onPress={() => { Logger.logUserAction('settings_terms_pressed'); }}
+          <SettingsItem
+            icon="document-text-outline"
+            title={t('settings.termsOfService')}
+            onPress={() => {
+              Logger.logUserAction('settings_terms_pressed');
+            }}
           />
         </View>
 
         {/* Preferred Language */}
         <View style={styles.preferenceSection}>
-          <Text style={styles.preferenceSectionTitle}>Preferred language</Text>
-          <View style={styles.preferenceOptions}>
-            <TouchableOpacity
-              style={[
-                styles.preferenceButton,
-                selectedLanguage === 'EN' && styles.preferenceButtonActive,
-              ]}
-              onPress={() => setSelectedLanguage('EN')}
-            >
-              <Text
-                style={[
-                  styles.preferenceButtonText,
-                  selectedLanguage === 'EN' && styles.preferenceButtonTextActive,
-                ]}
-              >
-                EN
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.preferenceButton,
-                selectedLanguage === 'FR' && styles.preferenceButtonActive,
-              ]}
-              onPress={() => setSelectedLanguage('FR')}
-            >
-              <Text
-                style={[
-                  styles.preferenceButtonText,
-                  selectedLanguage === 'FR' && styles.preferenceButtonTextActive,
-                ]}
-              >
-                FR
-              </Text>
-            </TouchableOpacity>
+          <View style={styles.preferenceTitleRow}>
+            <Text style={styles.preferenceSectionTitle}>{t('settings.language')}</Text>
+            {isManuallySet && (
+              <TouchableOpacity onPress={handleResetToSystemLocale} disabled={isChangingLocale}>
+                <Text style={styles.resetButton}>{t('settings.languageAuto')}</Text>
+              </TouchableOpacity>
+            )}
           </View>
+          <Text style={styles.preferenceDescription}>{t('settings.languageDescription')}</Text>
+          <View style={styles.preferenceOptions}>
+            {availableLocales.map(loc => {
+              const config = localeConfigs[loc];
+              return (
+                <TouchableOpacity
+                  key={loc}
+                  style={[styles.preferenceButton, locale === loc && styles.preferenceButtonActive]}
+                  onPress={() => handleLanguageChange(loc)}
+                  disabled={isChangingLocale}
+                >
+                  {isChangingLocale && locale !== loc ? (
+                    <ActivityIndicator size="small" color={locale === loc ? '#fff' : '#666'} />
+                  ) : (
+                    <Text
+                      style={[
+                        styles.preferenceButtonText,
+                        locale === loc && styles.preferenceButtonTextActive,
+                      ]}
+                    >
+                      {config.nativeName}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          {!isManuallySet && (
+            <Text style={styles.autoDetectedText}>{t('settings.languageAuto')}</Text>
+          )}
         </View>
 
         {/* Appearance */}
         <View style={styles.preferenceSection}>
-          <Text style={styles.preferenceSectionTitle}>Appearance</Text>
+          <Text style={styles.preferenceSectionTitle}>{t('settings.theme')}</Text>
           <View style={styles.preferenceOptions}>
             <TouchableOpacity
               style={[
@@ -211,7 +284,7 @@ const SettingsScreen: React.FC = () => {
                   selectedAppearance === 'Light' && styles.preferenceButtonTextActive,
                 ]}
               >
-                Light
+                {t('settings.lightMode')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -227,7 +300,7 @@ const SettingsScreen: React.FC = () => {
                   selectedAppearance === 'Dark' && styles.preferenceButtonTextActive,
                 ]}
               >
-                Dark
+                {t('settings.darkMode')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -243,7 +316,7 @@ const SettingsScreen: React.FC = () => {
                   selectedAppearance === 'System' && styles.preferenceButtonTextActive,
                 ]}
               >
-                System
+                {t('settings.systemTheme')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -253,12 +326,12 @@ const SettingsScreen: React.FC = () => {
         <View style={styles.actionButtons}>
           <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
             <Ionicons name="log-out-outline" size={18} color="#333" />
-            <Text style={styles.signOutText}>Sign Out</Text>
+            <Text style={styles.signOutText}>{t('settings.logout')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
             <Ionicons name="trash-outline" size={18} color="#FF3B30" />
-            <Text style={styles.deleteAccountText}>Delete Account</Text>
+            <Text style={styles.deleteAccountText}>{t('settings.deleteAccount')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -272,6 +345,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#C8F2EF',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -370,10 +449,25 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     backgroundColor: '#fff',
   },
+  preferenceTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   preferenceSectionTitle: {
     fontSize: 14,
     color: '#666',
+    marginBottom: 4,
+  },
+  preferenceDescription: {
+    fontSize: 12,
+    color: '#999',
     marginBottom: 12,
+  },
+  resetButton: {
+    fontSize: 12,
+    color: '#16A58D',
+    fontWeight: '500',
   },
   preferenceOptions: {
     flexDirection: 'row',
@@ -398,6 +492,12 @@ const styles = StyleSheet.create({
   preferenceButtonTextActive: {
     color: '#fff',
     fontWeight: '600',
+  },
+  autoDetectedText: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 8,
+    fontStyle: 'italic',
   },
   actionButtons: {
     paddingHorizontal: 20,
@@ -436,6 +536,3 @@ const styles = StyleSheet.create({
 });
 
 export default SettingsScreen;
-
-
-
