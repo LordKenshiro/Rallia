@@ -40,6 +40,7 @@
     "@eslint/eslintrc": "^3",
     "@svgr/webpack": "^8.1.0",
     "@tailwindcss/postcss": "^4",
+    "lightningcss": "^1.29.0",
     "@types/node": "^20",
     "@types/react": "~19.1.0",
     "@types/react-dom": "^19",
