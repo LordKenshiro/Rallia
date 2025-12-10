@@ -1,6 +1,7 @@
 import { defineRouting } from 'next-intl/routing';
+import { locales, defaultLocale } from '@rallia/shared-translations';
 
 export const routing = defineRouting({
-  locales: ['en-US', 'fr-CA'],
-  defaultLocale: 'en-US',
+  locales: [...locales],
+  defaultLocale,
 });

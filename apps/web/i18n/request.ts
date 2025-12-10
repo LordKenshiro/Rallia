@@ -1,15 +1,23 @@
 import { getRequestConfig } from 'next-intl/server';
-import { routing } from './routing';
+import {
+  getTranslations,
+  isValidLocale,
+  defaultLocale,
+  type Locale,
+} from '@rallia/shared-translations';
 
 export default getRequestConfig(async ({ requestLocale }) => {
-  let locale = await requestLocale;
+  const requestedLocale = await requestLocale;
 
-  if (!locale || !routing.locales.includes(locale as any)) {
-    locale = routing.defaultLocale;
-  }
+  // Determine the final locale - use requested if valid, otherwise default
+  const locale: Locale =
+    requestedLocale && isValidLocale(requestedLocale) ? requestedLocale : defaultLocale;
+
+  // Use shared translations package
+  const messages = getTranslations(locale);
 
   return {
     locale,
-    messages: (await import(`../messages/${locale}.json`)).default,
+    messages,
   };
 });
