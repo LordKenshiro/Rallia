@@ -9,6 +9,9 @@ import { OverlayProvider, LocaleProvider } from './src/context';
 // IMPORTANT: Initialize Supabase with AsyncStorage before any other code runs
 import './src/lib/supabase';
 
+// Import NativeWind global styles (will be available after nativewind is installed)
+import './global.css';
+
 export default function App() {
   const handleError = (error: Error, errorInfo: React.ErrorInfo) => {
     // Log unhandled errors with full context

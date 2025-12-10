@@ -1,0 +1,38 @@
+{
+  "name": "@rallia/design-system",
+  "version": "1.0.0",
+  "description": "Rallia Design System - Unified design tokens for web and mobile",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens": "./src/tokens/index.ts",
+    "./themes": "./src/themes/index.ts",
+    "./config/tailwind": "./src/config/tailwind.preset.ts",
+    "./config/nativewind": "./src/config/nativewind.ts",
+    "./utils": "./src/utils/index.ts",
+    "./tailwind.preset": "./tailwind.preset.js"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "tailwindcss": ">=3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "tailwindcss": {
+      "optional": true
+    }
+  },
+  "keywords": [
+    "design-system",
+    "tokens",
+    "tailwind",
+    "nativewind",
+    "react-native"
+  ],
+  "license": "UNLICENSED"
+}
