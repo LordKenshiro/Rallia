@@ -7,7 +7,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.47.11",
+    "@supabase/supabase-js": "^2.83.0",
     "base64-arraybuffer": "^1.0.2",
     "resend": "^4.0.1"
   },
@@ -16,6 +16,6 @@
     "react-native": "*"
   },
   "devDependencies": {
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.3"
   }
 }
