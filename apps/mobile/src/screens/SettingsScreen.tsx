@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase, Logger } from '@rallia/shared-services';
+import { useTheme } from '@rallia/shared-hooks';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useLocale } from '../context';
@@ -40,10 +41,27 @@ const SettingsScreen: React.FC = () => {
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
-  const [selectedAppearance, setSelectedAppearance] = useState<'Light' | 'Dark' | 'System'>(
-    'Light'
-  );
   const [isChangingLocale, setIsChangingLocale] = useState(false);
+  const { theme, themePreference, setThemePreference } = useTheme();
+
+  // Theme-aware colors
+  const isDark = theme === 'dark';
+  const colors = {
+    background: isDark ? '#042f2e' : '#C8F2EF',
+    cardBackground: isDark ? '#134e4a' : '#ffffff',
+    text: isDark ? '#f0fdfa' : '#333333',
+    textSecondary: isDark ? '#5eead4' : '#666666',
+    textMuted: isDark ? '#2dd4bf' : '#999999',
+    border: isDark ? '#115e59' : '#F0F0F0',
+    icon: isDark ? '#f0fdfa' : '#333333',
+    iconMuted: isDark ? '#5eead4' : '#999999',
+    buttonInactive: isDark ? '#115e59' : '#F0F0F0',
+    buttonActive: '#16A58D',
+    buttonTextInactive: isDark ? '#5eead4' : '#666666',
+    buttonTextActive: '#ffffff',
+    deleteButtonBg: isDark ? '#2f1516' : '#FFF5F5',
+    deleteButtonText: '#FF3B30',
+  };
 
   // Check authentication on mount and redirect if not logged in
   useEffect(() => {
@@ -141,53 +159,75 @@ const SettingsScreen: React.FC = () => {
     title: string;
     onPress: () => void;
   }) => (
-    <TouchableOpacity style={styles.settingsItem} onPress={onPress}>
+    <TouchableOpacity
+      style={[
+        styles.settingsItem,
+        { backgroundColor: colors.cardBackground, borderBottomColor: colors.border },
+      ]}
+      onPress={onPress}
+    >
       <View style={styles.settingsItemLeft}>
-        <Ionicons name={icon} size={20} color="#333" />
-        <Text style={styles.settingsItemText}>{title}</Text>
+        <Ionicons name={icon} size={20} color={colors.icon} />
+        <Text style={[styles.settingsItemText, { color: colors.text }]}>{title}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={20} color="#999" />
+      <Ionicons name="chevron-forward" size={20} color={colors.iconMuted} />
     </TouchableOpacity>
   );
 
   // Show loading indicator until i18n is ready
   if (!isReady) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#16A58D" />
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.loadingContainer, { backgroundColor: colors.cardBackground }]}>
+          <ActivityIndicator size="large" color={colors.buttonActive} />
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScrollView
+        style={[styles.scrollContent, { backgroundColor: colors.cardBackground }]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* User Profile Section */}
-        <View style={styles.profileSection}>
+        <View style={[styles.profileSection, { backgroundColor: colors.cardBackground }]}>
           {profilePictureUrl ? (
             <Image source={{ uri: profilePictureUrl }} style={styles.profileImage} />
           ) : (
             <View style={styles.profileImagePlaceholder}>
-              <Ionicons name="person" size={32} color="#999" />
+              <Ionicons name="person" size={32} color={colors.iconMuted} />
             </View>
           )}
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{userName}</Text>
-            <Text style={styles.profileEmail}>{userEmail}</Text>
+            <Text style={[styles.profileName, { color: colors.text }]}>{userName}</Text>
+            <Text style={[styles.profileEmail, { color: colors.textSecondary }]}>{userEmail}</Text>
           </View>
         </View>
 
         {/* Edit Profile */}
-        <TouchableOpacity style={styles.editProfileButton} onPress={handleEditProfile}>
-          <Ionicons name="create-outline" size={18} color="#333" />
-          <Text style={styles.editProfileText}>{t('profile.editProfile')}</Text>
-          <Ionicons name="chevron-forward" size={20} color="#999" style={{ marginLeft: 'auto' }} />
+        <TouchableOpacity
+          style={[
+            styles.editProfileButton,
+            { backgroundColor: colors.cardBackground, borderBottomColor: colors.border },
+          ]}
+          onPress={handleEditProfile}
+        >
+          <Ionicons name="create-outline" size={18} color={colors.icon} />
+          <Text style={[styles.editProfileText, { color: colors.text }]}>
+            {t('profile.editProfile')}
+          </Text>
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color={colors.iconMuted}
+            style={{ marginLeft: 'auto' }}
+          />
         </TouchableOpacity>
 
         {/* Settings Items */}
-        <View style={styles.settingsGroup}>
+        <View style={[styles.settingsGroup, { backgroundColor: colors.cardBackground }]}>
           <SettingsItem
             icon="notifications-outline"
             title={t('settings.notifications')}
@@ -233,33 +273,48 @@ const SettingsScreen: React.FC = () => {
         </View>
 
         {/* Preferred Language */}
-        <View style={styles.preferenceSection}>
+        <View style={[styles.preferenceSection, { backgroundColor: colors.cardBackground }]}>
           <View style={styles.preferenceTitleRow}>
-            <Text style={styles.preferenceSectionTitle}>{t('settings.language')}</Text>
+            <Text style={[styles.preferenceSectionTitle, { color: colors.textSecondary }]}>
+              {t('settings.language')}
+            </Text>
             {isManuallySet && (
               <TouchableOpacity onPress={handleResetToSystemLocale} disabled={isChangingLocale}>
                 <Text style={styles.resetButton}>{t('settings.languageAuto')}</Text>
               </TouchableOpacity>
             )}
           </View>
-          <Text style={styles.preferenceDescription}>{t('settings.languageDescription')}</Text>
+          <Text style={[styles.preferenceDescription, { color: colors.textMuted }]}>
+            {t('settings.languageDescription')}
+          </Text>
           <View style={styles.preferenceOptions}>
             {availableLocales.map(loc => {
               const config = localeConfigs[loc];
               return (
                 <TouchableOpacity
                   key={loc}
-                  style={[styles.preferenceButton, locale === loc && styles.preferenceButtonActive]}
+                  style={[
+                    styles.preferenceButton,
+                    {
+                      backgroundColor: locale === loc ? colors.buttonActive : colors.buttonInactive,
+                    },
+                  ]}
                   onPress={() => handleLanguageChange(loc)}
                   disabled={isChangingLocale}
                 >
                   {isChangingLocale && locale !== loc ? (
-                    <ActivityIndicator size="small" color={locale === loc ? '#fff' : '#666'} />
+                    <ActivityIndicator
+                      size="small"
+                      color={locale === loc ? colors.buttonTextActive : colors.buttonTextInactive}
+                    />
                   ) : (
                     <Text
                       style={[
                         styles.preferenceButtonText,
-                        locale === loc && styles.preferenceButtonTextActive,
+                        {
+                          color:
+                            locale === loc ? colors.buttonTextActive : colors.buttonTextInactive,
+                        },
                       ]}
                     >
                       {config.nativeName}
@@ -270,25 +325,37 @@ const SettingsScreen: React.FC = () => {
             })}
           </View>
           {!isManuallySet && (
-            <Text style={styles.autoDetectedText}>{t('settings.languageAuto')}</Text>
+            <Text style={[styles.autoDetectedText, { color: colors.textMuted }]}>
+              {t('settings.languageAuto')}
+            </Text>
           )}
         </View>
 
         {/* Appearance */}
-        <View style={styles.preferenceSection}>
-          <Text style={styles.preferenceSectionTitle}>{t('settings.theme')}</Text>
+        <View style={[styles.preferenceSection, { backgroundColor: colors.cardBackground }]}>
+          <Text style={[styles.preferenceSectionTitle, { color: colors.textSecondary }]}>
+            {t('settings.theme')}
+          </Text>
           <View style={styles.preferenceOptions}>
             <TouchableOpacity
               style={[
                 styles.preferenceButton,
-                selectedAppearance === 'Light' && styles.preferenceButtonActive,
+                {
+                  backgroundColor:
+                    themePreference === 'light' ? colors.buttonActive : colors.buttonInactive,
+                },
               ]}
-              onPress={() => setSelectedAppearance('Light')}
+              onPress={() => setThemePreference('light')}
             >
               <Text
                 style={[
                   styles.preferenceButtonText,
-                  selectedAppearance === 'Light' && styles.preferenceButtonTextActive,
+                  {
+                    color:
+                      themePreference === 'light'
+                        ? colors.buttonTextActive
+                        : colors.buttonTextInactive,
+                  },
                 ]}
               >
                 {t('settings.lightMode')}
@@ -297,14 +364,22 @@ const SettingsScreen: React.FC = () => {
             <TouchableOpacity
               style={[
                 styles.preferenceButton,
-                selectedAppearance === 'Dark' && styles.preferenceButtonActive,
+                {
+                  backgroundColor:
+                    themePreference === 'dark' ? colors.buttonActive : colors.buttonInactive,
+                },
               ]}
-              onPress={() => setSelectedAppearance('Dark')}
+              onPress={() => setThemePreference('dark')}
             >
               <Text
                 style={[
                   styles.preferenceButtonText,
-                  selectedAppearance === 'Dark' && styles.preferenceButtonTextActive,
+                  {
+                    color:
+                      themePreference === 'dark'
+                        ? colors.buttonTextActive
+                        : colors.buttonTextInactive,
+                  },
                 ]}
               >
                 {t('settings.darkMode')}
@@ -313,14 +388,22 @@ const SettingsScreen: React.FC = () => {
             <TouchableOpacity
               style={[
                 styles.preferenceButton,
-                selectedAppearance === 'System' && styles.preferenceButtonActive,
+                {
+                  backgroundColor:
+                    themePreference === 'system' ? colors.buttonActive : colors.buttonInactive,
+                },
               ]}
-              onPress={() => setSelectedAppearance('System')}
+              onPress={() => setThemePreference('system')}
             >
               <Text
                 style={[
                   styles.preferenceButtonText,
-                  selectedAppearance === 'System' && styles.preferenceButtonTextActive,
+                  {
+                    color:
+                      themePreference === 'system'
+                        ? colors.buttonTextActive
+                        : colors.buttonTextInactive,
+                  },
                 ]}
               >
                 {t('settings.systemTheme')}
@@ -330,15 +413,23 @@ const SettingsScreen: React.FC = () => {
         </View>
 
         {/* Sign Out & Delete Account */}
-        <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-            <Ionicons name="log-out-outline" size={18} color="#333" />
-            <Text style={styles.signOutText}>{t('settings.logout')}</Text>
+        <View style={[styles.actionButtons, { backgroundColor: colors.cardBackground }]}>
+          <TouchableOpacity
+            style={[styles.signOutButton, { backgroundColor: colors.buttonInactive }]}
+            onPress={handleSignOut}
+          >
+            <Ionicons name="log-out-outline" size={18} color={colors.icon} />
+            <Text style={[styles.signOutText, { color: colors.text }]}>{t('settings.logout')}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
-            <Ionicons name="trash-outline" size={18} color="#FF3B30" />
-            <Text style={styles.deleteAccountText}>{t('settings.deleteAccount')}</Text>
+          <TouchableOpacity
+            style={[styles.deleteAccountButton, { backgroundColor: colors.deleteButtonBg }]}
+            onPress={handleDeleteAccount}
+          >
+            <Ionicons name="trash-outline" size={18} color={colors.deleteButtonText} />
+            <Text style={[styles.deleteAccountText, { color: colors.deleteButtonText }]}>
+              {t('settings.deleteAccount')}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -351,13 +442,11 @@ const SettingsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#C8F2EF',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -366,7 +455,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 48,
     paddingBottom: 16,
-    backgroundColor: '#C8F2EF',
   },
   backButton: {
     padding: 0,
@@ -374,18 +462,15 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
   },
   scrollContent: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   profileSection: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 24,
-    backgroundColor: '#fff',
   },
   profileImage: {
     width: 56,
@@ -408,29 +493,24 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 4,
   },
   profileEmail: {
     fontSize: 14,
-    color: '#666',
   },
   editProfileButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
     gap: 8,
   },
   editProfileText: {
     fontSize: 16,
-    color: '#333',
   },
   settingsGroup: {
-    backgroundColor: '#fff',
+    // backgroundColor set dynamically
   },
   settingsItem: {
     flexDirection: 'row',
@@ -438,9 +518,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
   },
   settingsItemLeft: {
     flexDirection: 'row',
@@ -449,12 +527,10 @@ const styles = StyleSheet.create({
   },
   settingsItemText: {
     fontSize: 16,
-    color: '#333',
   },
   preferenceSection: {
     paddingHorizontal: 20,
     paddingVertical: 20,
-    backgroundColor: '#fff',
   },
   preferenceTitleRow: {
     flexDirection: 'row',
@@ -463,12 +539,10 @@ const styles = StyleSheet.create({
   },
   preferenceSectionTitle: {
     fontSize: 14,
-    color: '#666',
     marginBottom: 4,
   },
   preferenceDescription: {
     fontSize: 12,
-    color: '#999',
     marginBottom: 12,
   },
   resetButton: {
@@ -484,32 +558,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: '#F0F0F0',
     minWidth: 80,
     alignItems: 'center',
   },
-  preferenceButtonActive: {
-    backgroundColor: '#16A58D',
-  },
   preferenceButtonText: {
     fontSize: 14,
-    color: '#666',
     fontWeight: '500',
-  },
-  preferenceButtonTextActive: {
-    color: '#fff',
-    fontWeight: '600',
   },
   autoDetectedText: {
     fontSize: 11,
-    color: '#999',
     marginTop: 8,
     fontStyle: 'italic',
   },
   actionButtons: {
     paddingHorizontal: 20,
     paddingTop: 24,
-    backgroundColor: '#fff',
     gap: 12,
   },
   signOutButton: {
@@ -517,13 +580,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 14,
-    backgroundColor: '#F0F0F0',
     borderRadius: 8,
     gap: 8,
   },
   signOutText: {
     fontSize: 16,
-    color: '#333',
     fontWeight: '500',
   },
   deleteAccountButton: {
@@ -531,13 +592,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 14,
-    backgroundColor: '#FFF5F5',
     borderRadius: 8,
     gap: 8,
   },
   deleteAccountText: {
     fontSize: 16,
-    color: '#FF3B30',
     fontWeight: '500',
   },
 });

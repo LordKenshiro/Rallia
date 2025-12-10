@@ -2,6 +2,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AppNavigator from './src/navigation/AppNavigator';
 import { ErrorBoundary } from '@rallia/shared-components';
+import { ThemeProvider } from '@rallia/shared-hooks';
 import { Logger } from './src/services/logger';
 import { OverlayProvider, LocaleProvider } from './src/context';
 
@@ -20,11 +21,13 @@ export default function App() {
     <ErrorBoundary onError={handleError}>
       <SafeAreaProvider>
         <LocaleProvider>
-          <OverlayProvider>
-            <NavigationContainer>
-              <AppNavigator />
-            </NavigationContainer>
-          </OverlayProvider>
+          <ThemeProvider>
+            <OverlayProvider>
+              <NavigationContainer>
+                <AppNavigator />
+              </NavigationContainer>
+            </OverlayProvider>
+          </ThemeProvider>
         </LocaleProvider>
       </SafeAreaProvider>
     </ErrorBoundary>
