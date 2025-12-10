@@ -31,4 +31,4 @@ config.resolver = {
 config.watchFolders = [workspaceRoot];
 
 // Apply NativeWind
-module.exports = withNativeWind(config, { input: './global.css' });
+module.exports = withNativeWind(config);
