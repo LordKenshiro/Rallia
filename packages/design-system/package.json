@@ -10,7 +10,8 @@
     "./themes": "./src/themes/index.ts",
     "./config/tailwind": "./src/config/tailwind.preset.ts",
     "./config/nativewind": "./src/config/nativewind.ts",
-    "./utils": "./src/utils/index.ts"
+    "./utils": "./src/utils/index.ts",
+    "./tailwind.preset": "./tailwind.preset.js"
   },
   "scripts": {
     "type-check": "tsc --noEmit"
