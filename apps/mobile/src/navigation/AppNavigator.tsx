@@ -2,6 +2,8 @@ import React from 'react';
 import { View, TouchableOpacity } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import {
   ProfilePictureButton,
@@ -9,6 +11,7 @@ import {
   SettingsButton,
   SportSelector,
 } from '@rallia/shared-components';
+import { useUnreadNotificationCount } from '@rallia/shared-hooks';
 import { useOverlay } from '../context';
 import { useAuth } from '../hooks';
 import Landing from '../screens/Landing';
@@ -21,7 +24,27 @@ import SettingsScreen from '../screens/SettingsScreen';
 import UserProfile from '../screens/UserProfile';
 import SportProfile from '../screens/SportProfile';
 import RatingProofs from '../screens/RatingProofs';
+import Notifications from '../screens/Notifications';
 import RalliaLogo from '../../assets/images/light mode logo.svg';
+
+type RootStackParamList = {
+  Notifications: undefined;
+  [key: string]: unknown;
+};
+
+// Wrapper component for NotificationButton with navigation and unread count
+function NotificationButtonWithBadge() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { session } = useAuth();
+  const { data: unreadCount } = useUnreadNotificationCount(session?.user?.id);
+
+  return (
+    <NotificationButton
+      onPress={() => navigation.navigate('Notifications')}
+      unreadCount={unreadCount ?? 0}
+    />
+  );
+}
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -53,7 +76,7 @@ const getMainScreenOptions = () => ({
   headerTitle: () => <SportSelector />,
   headerRight: () => (
     <View style={{ flexDirection: 'row', gap: 8, marginRight: 8 }}>
-      <NotificationButton />
+      <NotificationButtonWithBadge />
       <SettingsButton />
     </View>
   ),
@@ -64,49 +87,66 @@ function HomeStack() {
   return (
     <Stack.Navigator>
       <Stack.Screen name="HomeScreen" component={Home} options={getMainScreenOptions()} />
-      <Stack.Screen 
-        name="UserProfile" 
+      <Stack.Screen
+        name="Notifications"
+        component={Notifications}
+        options={({ navigation }) => ({
+          ...profileScreenOptions,
+          headerTitle: 'Notifications',
+          headerLeft: () => (
+            <Ionicons
+              name="chevron-back"
+              size={28}
+              color="#333"
+              onPress={() => navigation.goBack()}
+              style={{ marginLeft: 8 }}
+            />
+          ),
+        })}
+      />
+      <Stack.Screen
+        name="UserProfile"
         component={UserProfile}
         options={({ navigation }) => ({
           ...profileScreenOptions,
           headerTitle: 'Profile',
           headerLeft: () => (
-            <Ionicons 
-              name="chevron-back" 
-              size={28} 
-              color="#333" 
+            <Ionicons
+              name="chevron-back"
+              size={28}
+              color="#333"
               onPress={() => navigation.goBack()}
               style={{ marginLeft: 8 }}
             />
           ),
           headerRight: () => (
             <View style={{ flexDirection: 'row', gap: 8, marginRight: 8 }}>
-              <NotificationButton />
+              <NotificationButtonWithBadge />
               <SettingsButton />
             </View>
           ),
         })}
       />
-      <Stack.Screen 
-        name="SportProfile" 
+      <Stack.Screen
+        name="SportProfile"
         component={SportProfile}
         options={({ route }) => ({
           ...profileScreenOptions,
-          headerTitle: (route.params as any)?.sportName || 'Sport Profile',
+          headerTitle: (route.params as { sportName?: string })?.sportName || 'Sport Profile',
         })}
       />
       <Stack.Screen name="RatingProofs" component={RatingProofs} options={{ headerShown: false }} />
-      <Stack.Screen 
-        name="Settings" 
+      <Stack.Screen
+        name="Settings"
         component={SettingsScreen}
         options={({ navigation }) => ({
           ...profileScreenOptions,
           headerTitle: 'Settings',
           headerLeft: () => (
-            <Ionicons 
-              name="chevron-back" 
-              size={28} 
-              color="#333" 
+            <Ionicons
+              name="chevron-back"
+              size={28}
+              color="#333"
               onPress={() => navigation.goBack()}
               style={{ marginLeft: 8 }}
             />
@@ -121,49 +161,66 @@ function MapStack() {
   return (
     <Stack.Navigator>
       <Stack.Screen name="MapScreen" component={Map} options={getMainScreenOptions()} />
-      <Stack.Screen 
-        name="UserProfile" 
+      <Stack.Screen
+        name="Notifications"
+        component={Notifications}
+        options={({ navigation }) => ({
+          ...profileScreenOptions,
+          headerTitle: 'Notifications',
+          headerLeft: () => (
+            <Ionicons
+              name="chevron-back"
+              size={28}
+              color="#333"
+              onPress={() => navigation.goBack()}
+              style={{ marginLeft: 8 }}
+            />
+          ),
+        })}
+      />
+      <Stack.Screen
+        name="UserProfile"
         component={UserProfile}
         options={({ navigation }) => ({
           ...profileScreenOptions,
           headerTitle: 'Profile',
           headerLeft: () => (
-            <Ionicons 
-              name="chevron-back" 
-              size={28} 
-              color="#333" 
+            <Ionicons
+              name="chevron-back"
+              size={28}
+              color="#333"
               onPress={() => navigation.goBack()}
               style={{ marginLeft: 8 }}
             />
           ),
           headerRight: () => (
             <View style={{ flexDirection: 'row', gap: 8, marginRight: 8 }}>
-              <NotificationButton />
+              <NotificationButtonWithBadge />
               <SettingsButton />
             </View>
           ),
         })}
       />
-      <Stack.Screen 
-        name="SportProfile" 
+      <Stack.Screen
+        name="SportProfile"
         component={SportProfile}
         options={({ route }) => ({
           ...profileScreenOptions,
-          headerTitle: (route.params as any)?.sportName || 'Sport Profile',
+          headerTitle: (route.params as { sportName?: string })?.sportName || 'Sport Profile',
         })}
       />
       <Stack.Screen name="RatingProofs" component={RatingProofs} options={{ headerShown: false }} />
-      <Stack.Screen 
-        name="Settings" 
+      <Stack.Screen
+        name="Settings"
         component={SettingsScreen}
         options={({ navigation }) => ({
           ...profileScreenOptions,
           headerTitle: 'Settings',
           headerLeft: () => (
-            <Ionicons 
-              name="chevron-back" 
-              size={28} 
-              color="#333" 
+            <Ionicons
+              name="chevron-back"
+              size={28}
+              color="#333"
               onPress={() => navigation.goBack()}
               style={{ marginLeft: 8 }}
             />
@@ -178,49 +235,66 @@ function MatchStack() {
   return (
     <Stack.Navigator>
       <Stack.Screen name="MatchScreen" component={Match} options={getMainScreenOptions()} />
-      <Stack.Screen 
-        name="UserProfile" 
+      <Stack.Screen
+        name="Notifications"
+        component={Notifications}
+        options={({ navigation }) => ({
+          ...profileScreenOptions,
+          headerTitle: 'Notifications',
+          headerLeft: () => (
+            <Ionicons
+              name="chevron-back"
+              size={28}
+              color="#333"
+              onPress={() => navigation.goBack()}
+              style={{ marginLeft: 8 }}
+            />
+          ),
+        })}
+      />
+      <Stack.Screen
+        name="UserProfile"
         component={UserProfile}
         options={({ navigation }) => ({
           ...profileScreenOptions,
           headerTitle: 'Profile',
           headerLeft: () => (
-            <Ionicons 
-              name="chevron-back" 
-              size={28} 
-              color="#333" 
+            <Ionicons
+              name="chevron-back"
+              size={28}
+              color="#333"
               onPress={() => navigation.goBack()}
               style={{ marginLeft: 8 }}
             />
           ),
           headerRight: () => (
             <View style={{ flexDirection: 'row', gap: 8, marginRight: 8 }}>
-              <NotificationButton />
+              <NotificationButtonWithBadge />
               <SettingsButton />
             </View>
           ),
         })}
       />
-      <Stack.Screen 
-        name="SportProfile" 
+      <Stack.Screen
+        name="SportProfile"
         component={SportProfile}
         options={({ route }) => ({
           ...profileScreenOptions,
-          headerTitle: (route.params as any)?.sportName || 'Sport Profile',
+          headerTitle: (route.params as { sportName?: string })?.sportName || 'Sport Profile',
         })}
       />
       <Stack.Screen name="RatingProofs" component={RatingProofs} options={{ headerShown: false }} />
-      <Stack.Screen 
-        name="Settings" 
+      <Stack.Screen
+        name="Settings"
         component={SettingsScreen}
         options={({ navigation }) => ({
           ...profileScreenOptions,
           headerTitle: 'Settings',
           headerLeft: () => (
-            <Ionicons 
-              name="chevron-back" 
-              size={28} 
-              color="#333" 
+            <Ionicons
+              name="chevron-back"
+              size={28}
+              color="#333"
               onPress={() => navigation.goBack()}
               style={{ marginLeft: 8 }}
             />
@@ -235,49 +309,66 @@ function CommunityStack() {
   return (
     <Stack.Navigator>
       <Stack.Screen name="CommunityScreen" component={Community} options={getMainScreenOptions()} />
-      <Stack.Screen 
-        name="UserProfile" 
+      <Stack.Screen
+        name="Notifications"
+        component={Notifications}
+        options={({ navigation }) => ({
+          ...profileScreenOptions,
+          headerTitle: 'Notifications',
+          headerLeft: () => (
+            <Ionicons
+              name="chevron-back"
+              size={28}
+              color="#333"
+              onPress={() => navigation.goBack()}
+              style={{ marginLeft: 8 }}
+            />
+          ),
+        })}
+      />
+      <Stack.Screen
+        name="UserProfile"
         component={UserProfile}
         options={({ navigation }) => ({
           ...profileScreenOptions,
           headerTitle: 'Profile',
           headerLeft: () => (
-            <Ionicons 
-              name="chevron-back" 
-              size={28} 
-              color="#333" 
+            <Ionicons
+              name="chevron-back"
+              size={28}
+              color="#333"
               onPress={() => navigation.goBack()}
               style={{ marginLeft: 8 }}
             />
           ),
           headerRight: () => (
             <View style={{ flexDirection: 'row', gap: 8, marginRight: 8 }}>
-              <NotificationButton />
+              <NotificationButtonWithBadge />
               <SettingsButton />
             </View>
           ),
         })}
       />
-      <Stack.Screen 
-        name="SportProfile" 
+      <Stack.Screen
+        name="SportProfile"
         component={SportProfile}
         options={({ route }) => ({
           ...profileScreenOptions,
-          headerTitle: (route.params as any)?.sportName || 'Sport Profile',
+          headerTitle: (route.params as { sportName?: string })?.sportName || 'Sport Profile',
         })}
       />
       <Stack.Screen name="RatingProofs" component={RatingProofs} options={{ headerShown: false }} />
-      <Stack.Screen 
-        name="Settings" 
+      <Stack.Screen
+        name="Settings"
         component={SettingsScreen}
         options={({ navigation }) => ({
           ...profileScreenOptions,
           headerTitle: 'Settings',
           headerLeft: () => (
-            <Ionicons 
-              name="chevron-back" 
-              size={28} 
-              color="#333" 
+            <Ionicons
+              name="chevron-back"
+              size={28}
+              color="#333"
               onPress={() => navigation.goBack()}
               style={{ marginLeft: 8 }}
             />
@@ -292,49 +383,66 @@ function ChatStack() {
   return (
     <Stack.Navigator>
       <Stack.Screen name="ChatScreen" component={Chat} options={getMainScreenOptions()} />
-      <Stack.Screen 
-        name="UserProfile" 
+      <Stack.Screen
+        name="Notifications"
+        component={Notifications}
+        options={({ navigation }) => ({
+          ...profileScreenOptions,
+          headerTitle: 'Notifications',
+          headerLeft: () => (
+            <Ionicons
+              name="chevron-back"
+              size={28}
+              color="#333"
+              onPress={() => navigation.goBack()}
+              style={{ marginLeft: 8 }}
+            />
+          ),
+        })}
+      />
+      <Stack.Screen
+        name="UserProfile"
         component={UserProfile}
         options={({ navigation }) => ({
           ...profileScreenOptions,
           headerTitle: 'Profile',
           headerLeft: () => (
-            <Ionicons 
-              name="chevron-back" 
-              size={28} 
-              color="#333" 
+            <Ionicons
+              name="chevron-back"
+              size={28}
+              color="#333"
               onPress={() => navigation.goBack()}
               style={{ marginLeft: 8 }}
             />
           ),
           headerRight: () => (
             <View style={{ flexDirection: 'row', gap: 8, marginRight: 8 }}>
-              <NotificationButton />
+              <NotificationButtonWithBadge />
               <SettingsButton />
             </View>
           ),
         })}
       />
-      <Stack.Screen 
-        name="SportProfile" 
+      <Stack.Screen
+        name="SportProfile"
         component={SportProfile}
         options={({ route }) => ({
           ...profileScreenOptions,
-          headerTitle: (route.params as any)?.sportName || 'Sport Profile',
+          headerTitle: (route.params as { sportName?: string })?.sportName || 'Sport Profile',
         })}
       />
       <Stack.Screen name="RatingProofs" component={RatingProofs} options={{ headerShown: false }} />
-      <Stack.Screen 
-        name="Settings" 
+      <Stack.Screen
+        name="Settings"
         component={SettingsScreen}
         options={({ navigation }) => ({
           ...profileScreenOptions,
           headerTitle: 'Settings',
           headerLeft: () => (
-            <Ionicons 
-              name="chevron-back" 
-              size={28} 
-              color="#333" 
+            <Ionicons
+              name="chevron-back"
+              size={28}
+              color="#333"
               onPress={() => navigation.goBack()}
               style={{ marginLeft: 8 }}
             />
@@ -346,8 +454,13 @@ function ChatStack() {
 }
 
 // Custom center tab button component that handles auth/onboarding state
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function CenterTabButton({ children, onPress }: { children: React.ReactNode; onPress?: (e: any) => void }) {
+function CenterTabButton({
+  children,
+  onPress,
+}: {
+  children: React.ReactNode;
+  onPress?: (e: unknown) => void;
+}) {
   const { session } = useAuth();
   const { startOnboarding, resumeOnboarding, needsOnboarding } = useOverlay();
 
@@ -418,7 +531,7 @@ function BottomTabs() {
         component={MatchStack}
         options={{
           tabBarIcon: ({ color, size }) => <Ionicons name="add-circle" size={size} color={color} />,
-          tabBarButton: (props) => <CenterTabButton {...props} />,
+          tabBarButton: props => <CenterTabButton {...props} />,
         }}
       />
       <Tab.Screen

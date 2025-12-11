@@ -6,11 +6,14 @@ import { ThemeProvider } from '@rallia/shared-hooks';
 import { Logger } from './src/services/logger';
 import { OverlayProvider, LocaleProvider } from './src/context';
 
+const queryClient = new QueryClient();
+
 // IMPORTANT: Initialize Supabase with AsyncStorage before any other code runs
 import './src/lib/supabase';
 
 // Import NativeWind global styles (will be available after nativewind is installed)
 import './global.css';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 export default function App() {
   const handleError = (error: Error, errorInfo: React.ErrorInfo) => {
@@ -23,15 +26,17 @@ export default function App() {
   return (
     <ErrorBoundary onError={handleError}>
       <SafeAreaProvider>
-        <LocaleProvider>
-          <ThemeProvider>
-            <OverlayProvider>
-              <NavigationContainer>
-                <AppNavigator />
-              </NavigationContainer>
-            </OverlayProvider>
-          </ThemeProvider>
-        </LocaleProvider>
+        <QueryClientProvider client={queryClient}>
+          <LocaleProvider>
+            <ThemeProvider>
+              <OverlayProvider>
+                <NavigationContainer>
+                  <AppNavigator />
+                </NavigationContainer>
+              </OverlayProvider>
+            </ThemeProvider>
+          </LocaleProvider>
+        </QueryClientProvider>
       </SafeAreaProvider>
     </ErrorBoundary>
   );

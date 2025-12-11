@@ -1,6 +1,6 @@
 /**
  * Type Definitions - Barrel Export
- * 
+ *
  * Export order matters: database.ts types take precedence over legacy types
  * See TYPE_MIGRATION_GUIDE.md for type conflict resolution details
  */
@@ -19,3 +19,6 @@ export * from './player';
 
 // Export rating proof types
 export * from './ratings';
+
+// Export notification types (preferred over legacy database.ts Notification)
+export * from './notifications';

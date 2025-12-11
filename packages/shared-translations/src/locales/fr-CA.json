@@ -52,7 +52,26 @@
     "community": "Communauté",
     "profile": "Profil",
     "settings": "Paramètres",
-    "chat": "Messagerie"
+    "chat": "Messagerie",
+    "notifications": "Notifications"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "Aucune notification",
+    "emptyDescription": "Vous verrez ici les invitations de match, les rappels et plus encore",
+    "unread": "non lu(s)",
+    "markAllRead": "Tout marquer comme lu",
+    "markAsRead": "Marquer comme lu",
+    "delete": "Supprimer",
+    "timeAgo": "il y a {time}",
+    "types": {
+      "match_invitation": "Invitation de match",
+      "reminder": "Rappel",
+      "payment": "Paiement",
+      "support": "Support",
+      "chat": "Message",
+      "system": "Système"
+    }
   },
   "settings": {
     "title": "Paramètres",

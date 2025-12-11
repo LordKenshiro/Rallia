@@ -49,7 +49,7 @@
     "reinstall": "npm run clean && npm install",
     "// reinstall": "Clean install - useful for fixing dependency issues",
     "// ----- Database -----": "",
-    "db:generate-types": "npx supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > packages/shared-types/src/supabase-generated.ts",
+    "db:generate-types": "supabase gen types typescript --local > packages/shared-types/src/supabase.ts",
     "// db:generate-types": "Generate TypeScript types from Supabase schema (set SUPABASE_PROJECT_ID env var)",
     "db:studio": "npx supabase start --workdir .",
     "// db:studio": "Start Supabase Studio for local database management",

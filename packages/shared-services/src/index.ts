@@ -9,6 +9,7 @@ export * from './usta';
 export * from './dupr';
 export * from './imageUpload';
 export * from './logger';
+export * from './notifications';
 
 // Export default DatabaseService
 export { default } from './database';

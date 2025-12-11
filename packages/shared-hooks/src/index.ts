@@ -8,3 +8,4 @@ export * from './useProfile';
 export * from './useSports';
 export * from './usePlayerSports';
 export * from './useTheme';
+export * from './useNotifications';

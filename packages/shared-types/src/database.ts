@@ -25,11 +25,22 @@ export type MemberStatus = 'active' | 'inactive' | 'pending' | 'suspended';
 export type CourtSurface = 'hard' | 'clay' | 'grass' | 'carpet' | 'synthetic';
 export type CourtType = 'indoor' | 'outdoor' | 'covered';
 
-export type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+export type DayOfWeek =
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday';
 export type TimePeriod = 'morning' | 'afternoon' | 'evening' | 'night';
 
 export type RatingType = 'ntrp' | 'utr' | 'dupr' | 'self_assessment';
-export type RatingSourceType = 'self_reported' | 'api_verified' | 'peer_verified' | 'admin_verified';
+export type RatingSourceType =
+  | 'self_reported'
+  | 'api_verified'
+  | 'peer_verified'
+  | 'admin_verified';
 export type SkillLevel = 'beginner' | 'intermediate' | 'advanced' | 'professional';
 
 export type NetworkType = 'public' | 'private' | 'friends' | 'club';
@@ -38,7 +49,14 @@ export type NetworkMemberStatus = 'active' | 'pending' | 'blocked' | 'removed';
 export type ConversationType = 'direct' | 'group' | 'match' | 'announcement';
 export type MessageStatus = 'sent' | 'delivered' | 'read' | 'failed';
 
-export type NotificationType = 'match_request' | 'match_confirmation' | 'match_cancellation' | 'message' | 'friend_request' | 'system';
+/** @deprecated Use `NotificationType` from './notifications' instead */
+export type LegacyNotificationType =
+  | 'match_request'
+  | 'match_confirmation'
+  | 'match_cancellation'
+  | 'message'
+  | 'friend_request'
+  | 'system';
 export type NotificationStatus = 'unread' | 'read' | 'archived';
 
 export type ReportStatus = 'pending' | 'under_review' | 'resolved' | 'dismissed';
@@ -237,10 +255,14 @@ export interface MatchParticipant {
   updated_at: string;
 }
 
-export interface Notification {
+/**
+ * @deprecated Use `Notification` from './notifications' instead.
+ * This interface is kept for backwards compatibility.
+ */
+export interface LegacyNotification {
   id: string;
   player_id: string;
-  notification_type: NotificationType;
+  notification_type: LegacyNotificationType;
   title: string;
   message: string;
   status: NotificationStatus;
@@ -279,11 +301,17 @@ export type PlayerSportInsert = Omit<PlayerSport, 'id' | 'created_at' | 'updated
   id?: string;
 };
 
-export type PlayerRatingScoreInsert = Omit<PlayerRatingScore, 'id' | 'created_at' | 'updated_at'> & {
+export type PlayerRatingScoreInsert = Omit<
+  PlayerRatingScore,
+  'id' | 'created_at' | 'updated_at'
+> & {
   id?: string;
 };
 
-export type PlayerAvailabilityInsert = Omit<PlayerAvailability, 'id' | 'created_at' | 'updated_at'> & {
+export type PlayerAvailabilityInsert = Omit<
+  PlayerAvailability,
+  'id' | 'created_at' | 'updated_at'
+> & {
   id?: string;
 };
 
@@ -303,9 +331,13 @@ export type ProfileUpdate = Partial<Omit<Profile, 'id' | 'created_at' | 'updated
 
 export type PlayerUpdate = Partial<Omit<Player, 'id' | 'created_at' | 'updated_at'>>;
 
-export type PlayerSportUpdate = Partial<Omit<PlayerSport, 'id' | 'player_id' | 'sport_id' | 'created_at' | 'updated_at'>>;
+export type PlayerSportUpdate = Partial<
+  Omit<PlayerSport, 'id' | 'player_id' | 'sport_id' | 'created_at' | 'updated_at'>
+>;
 
-export type PlayerAvailabilityUpdate = Partial<Omit<PlayerAvailability, 'id' | 'created_at' | 'updated_at'>>;
+export type PlayerAvailabilityUpdate = Partial<
+  Omit<PlayerAvailability, 'id' | 'created_at' | 'updated_at'>
+>;
 
 // ============================================
 // ONBOARDING-SPECIFIC TYPES
@@ -377,9 +409,11 @@ export interface PlayerRatingWithDetails extends PlayerRatingScore {
 
 export interface MatchWithParticipants extends Match {
   sport: Sport;
-  participants: Array<MatchParticipant & {
-    player: PlayerWithProfile;
-  }>;
+  participants: Array<
+    MatchParticipant & {
+      player: PlayerWithProfile;
+    }
+  >;
 }
 
 // ============================================
