@@ -7,4 +7,3 @@ export * from './useDebounce';
 export * from './useProfile';
 export * from './useSports';
 export * from './usePlayerSports';
-export * from './useTheme';
