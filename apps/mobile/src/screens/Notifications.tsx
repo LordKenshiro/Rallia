@@ -11,13 +11,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { useTheme } from '@rallia/shared-hooks';
+import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks';
 import { useTranslation } from '../hooks/useTranslation';
 import { useOverlay } from '../context';
 import {
   Notification,
-  NotificationType,
   NOTIFICATION_TYPE_ICONS,
   NOTIFICATION_TYPE_COLORS,
 } from '@rallia/shared-types';
@@ -119,7 +118,7 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
   isDark,
 }) => {
   const isUnread = !notification.read_at;
-  const notificationType = notification.type as NotificationType;
+  const notificationType = notification.type;
   const iconName = NOTIFICATION_TYPE_ICONS[notificationType] ?? 'notifications-outline';
   const iconColor = NOTIFICATION_TYPE_COLORS[notificationType] ?? primary[500];
 

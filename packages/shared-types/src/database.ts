@@ -348,6 +348,36 @@ export interface OnboardingData {
 }
 
 // ============================================
+// NOTIFICATION SERVICE TYPES
+// ============================================
+
+/**
+ * Options for fetching paginated notifications
+ */
+export interface NotificationQueryOptions {
+  /** Number of notifications to fetch per page */
+  pageSize?: number;
+  /** Cursor for pagination (created_at of last item) */
+  cursor?: string;
+  /** Filter by read status */
+  unreadOnly?: boolean;
+  /** Filter by notification type */
+  type?: NotificationTypeEnum;
+}
+
+/**
+ * Paginated notifications response
+ */
+export interface NotificationsPage {
+  /** List of notifications */
+  notifications: Notification[];
+  /** Cursor for next page (created_at of last item) */
+  nextCursor: string | null;
+  /** Whether there are more notifications */
+  hasMore: boolean;
+}
+
+// ============================================
 // API REQUEST/RESPONSE TYPES
 // ============================================
 

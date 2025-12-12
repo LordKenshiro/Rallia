@@ -16,6 +16,7 @@ import type {
   GenderType,
   CourtSurface,
   CourtType,
+  NotificationTypeEnum,
 } from './database';
 
 // ============================================
@@ -267,3 +268,31 @@ export const RATING_SYSTEM_FULL_NAMES = {
   dupr: 'Dynamic Universal Pickleball Rating',
   self_assessment: 'Self Assessment',
 } as const;
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+/**
+ * Icon mapping for notification types (Ionicons names)
+ */
+export const NOTIFICATION_TYPE_ICONS: Record<NotificationTypeEnum, string> = {
+  match_invitation: 'calendar-outline',
+  reminder: 'alarm-outline',
+  payment: 'card-outline',
+  support: 'help-circle-outline',
+  chat: 'chatbubble-outline',
+  system: 'information-circle-outline',
+};
+
+/**
+ * Color mapping for notification types
+ */
+export const NOTIFICATION_TYPE_COLORS: Record<NotificationTypeEnum, string> = {
+  match_invitation: '#4DB8A8', // Teal
+  reminder: '#FF9800', // Orange
+  payment: '#4CAF50', // Green
+  support: '#2196F3', // Blue
+  chat: '#9C27B0', // Purple
+  system: '#607D8B', // Blue Grey
+};

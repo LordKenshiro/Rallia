@@ -8,9 +8,21 @@
  * - UI-only enums and constants
  */
 
+import type { Notification } from './database';
+
 // ============================================
 // VIEW MODELS
 // ============================================
+
+/**
+ * Notification with UI-specific computed properties
+ */
+export interface NotificationWithMeta extends Notification {
+  /** Whether the notification is unread */
+  isUnread: boolean;
+  /** Relative time string (e.g., "2 min ago") */
+  relativeTime?: string;
+}
 
 /**
  * Match card display model
