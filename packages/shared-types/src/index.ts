@@ -1,6 +1,6 @@
 /**
  * Type Definitions - Barrel Export
- * 
+ *
  * Export order matters: database.ts types take precedence over legacy types
  * See TYPE_MIGRATION_GUIDE.md for type conflict resolution details
  */

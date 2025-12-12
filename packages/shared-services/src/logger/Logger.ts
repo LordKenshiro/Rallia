@@ -63,9 +63,14 @@ class LoggerService {
 
   constructor() {
     // Detect development mode (works for both React Native and Next.js)
+    // Note: __DEV__ is a React Native global, we need to cast to any to avoid TS errors in web builds
+    const reactNativeDevMode =
+      typeof (globalThis as Record<string, unknown>).__DEV__ !== 'undefined' &&
+      (globalThis as Record<string, unknown>).__DEV__ === true;
+
     this.isDevelopment =
       (typeof process !== 'undefined' && process.env.NODE_ENV === 'development') ||
-      (typeof __DEV__ !== 'undefined' && __DEV__);
+      reactNativeDevMode;
 
     this.config = {
       minLevel: this.isDevelopment ? LogLevel.DEBUG : LogLevel.INFO,
@@ -115,7 +120,7 @@ class LoggerService {
     }
 
     // Send to all transports
-    this.transports.forEach((transport) => {
+    this.transports.forEach(transport => {
       try {
         // Check if transport has its own shouldLog method
         if (transport.shouldLog && !transport.shouldLog(entry.level)) {

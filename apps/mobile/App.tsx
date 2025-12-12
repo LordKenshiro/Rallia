@@ -2,7 +2,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AppNavigator from './src/navigation/AppNavigator';
 import { ErrorBoundary } from '@rallia/shared-components';
-import { ThemeProvider } from '@rallia/shared-hooks';
+import { ThemeProvider } from './src/hooks/useTheme';
 import { Logger } from './src/services/logger';
 import { OverlayProvider, LocaleProvider } from './src/context';
 

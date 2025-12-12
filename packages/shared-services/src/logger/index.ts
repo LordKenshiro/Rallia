@@ -4,7 +4,17 @@
  * Export the Logger singleton with transports configured
  */
 
-export { Logger, LoggerService, LogLevel, type LogEntry, type Transport, type LoggerConfig } from './Logger';
+// React Native global for dev mode detection
+declare const __DEV__: boolean | undefined;
+
+export {
+  Logger,
+  LoggerService,
+  LogLevel,
+  type LogEntry,
+  type Transport,
+  type LoggerConfig,
+} from './Logger';
 export { ConsoleTransport } from './ConsoleTransport';
 export { SentryTransport } from './SentryTransport';
 
