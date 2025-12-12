@@ -1,5 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Alert, ActivityIndicator, Linking } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Animated,
+  Alert,
+  ActivityIndicator,
+  Linking,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
@@ -25,7 +35,7 @@ interface Rating {
   score_value: number;
   display_label: string;
   description: string;
-  skill_level: 'beginner' | 'intermediate' | 'advanced' | 'professional';
+  skill_level: 'beginner' | 'intermediate' | 'advanced' | 'professional' | null;
   isHighlighted?: boolean;
 }
 
@@ -53,19 +63,25 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
   useEffect(() => {
     const loadRatings = async () => {
       if (!visible) return;
-      
+
       setIsLoading(true);
       try {
-        const { data, error } = await DatabaseService.RatingScore.getRatingScoresBySport('pickleball', 'dupr');
-        
+        const { data, error } = await DatabaseService.RatingScore.getRatingScoresBySport(
+          'pickleball',
+          'dupr'
+        );
+
         if (error || !data) {
-          Logger.error('Failed to load pickleball ratings', error as Error, { sport: 'pickleball', system: 'dupr' });
+          Logger.error('Failed to load pickleball ratings', error as Error, {
+            sport: 'pickleball',
+            system: 'dupr',
+          });
           Alert.alert('Error', 'Failed to load ratings. Please try again.');
           return;
         }
-        
+
         // Transform database data to match UI expectations
-        const transformedRatings: Rating[] = data.map((rating) => ({
+        const transformedRatings: Rating[] = data.map(rating => ({
           id: rating.id,
           score_value: rating.score_value,
           display_label: rating.display_label,
@@ -74,7 +90,7 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
           // Highlight DUPR 4.5 (advanced level)
           isHighlighted: rating.score_value === 4.5,
         }));
-        
+
         setRatings(transformedRatings);
       } catch (error) {
         Logger.error('Unexpected error loading pickleball ratings', error as Error);
@@ -83,7 +99,7 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
         setIsLoading(false);
       }
     };
-    
+
     loadRatings();
   }, [visible]);
 
@@ -118,74 +134,63 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
 
   const handleContinue = async () => {
     if (!selectedRating || isSaving) return;
-    
+
     mediumHaptic();
-    
+
     // Edit mode: use the onSave callback
     if (mode === 'edit' && onSave) {
       onSave(selectedRating);
       return;
     }
-    
+
     // Onboarding mode: save to database
     if (onContinue) {
       setIsSaving(true);
       try {
         // Get pickleball sport ID
-        const { data: pickleballSport, error: sportError} = await SportService.getSportByName('pickleball');
-        
+        const { data: pickleballSport, error: sportError } =
+          await SportService.getSportByName('pickleball');
+
         if (sportError || !pickleballSport) {
           Logger.error('Failed to fetch pickleball sport', sportError as Error);
           setIsSaving(false);
-          Alert.alert(
-            'Error',
-            'Failed to save your rating. Please try again.',
-            [{ text: 'OK' }]
-          );
+          Alert.alert('Error', 'Failed to save your rating. Please try again.', [{ text: 'OK' }]);
           return;
         }
-        
+
         // Find the selected rating data
         const selectedRatingData = ratings.find(r => r.id === selectedRating);
-        
+
         if (!selectedRatingData) {
           setIsSaving(false);
           Alert.alert('Error', 'Invalid rating selected');
           return;
         }
-        
+
         // Save rating to database
         const ratingData: OnboardingRating = {
           sport_id: pickleballSport.id,
           sport_name: 'pickleball',
-          rating_type: 'dupr',
+          rating_system_code: 'dupr',
           score_value: selectedRatingData.score_value,
           display_label: selectedRatingData.display_label,
         };
-        
+
         const { error } = await OnboardingService.saveRatings([ratingData]);
-        
+
         if (error) {
           Logger.error('Failed to save pickleball rating', error as Error, { ratingData });
           setIsSaving(false);
-          Alert.alert(
-            'Error',
-            'Failed to save your rating. Please try again.',
-            [{ text: 'OK' }]
-          );
+          Alert.alert('Error', 'Failed to save your rating. Please try again.', [{ text: 'OK' }]);
           return;
         }
-        
+
         Logger.debug('pickleball_rating_saved', { ratingData });
         onContinue(selectedRating);
       } catch (error) {
         Logger.error('Unexpected error saving pickleball rating', error as Error);
         setIsSaving(false);
-        Alert.alert(
-          'Error',
-          'An unexpected error occurred. Please try again.',
-          [{ text: 'OK' }]
-        );
+        Alert.alert('Error', 'An unexpected error occurred. Please try again.', [{ text: 'OK' }]);
       }
     }
   };
@@ -233,10 +238,7 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
           {mode === 'edit' ? (
             <>
               Learn more about the{' '}
-              <Text 
-                style={styles.link} 
-                onPress={() => Linking.openURL('https://mydupr.com/')}
-              >
+              <Text style={styles.link} onPress={() => Linking.openURL('https://mydupr.com/')}>
                 DUPR rating system
               </Text>
             </>
@@ -270,7 +272,7 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                     <Ionicons
-                      name={getRatingIcon(rating.skill_level)}
+                      name={getRatingIcon(rating.skill_level ?? 'intermediate')}
                       size={20}
                       color={selectedRating === rating.id ? '#fff' : COLORS.primary}
                       style={{ marginRight: 8 }}
@@ -282,7 +284,8 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
                         selectedRating === rating.id && styles.ratingLevelSelected,
                       ]}
                     >
-                      {rating.skill_level.charAt(0).toUpperCase() + rating.skill_level.slice(1)}
+                      {(rating.skill_level ?? 'intermediate').charAt(0).toUpperCase() +
+                        (rating.skill_level ?? 'intermediate').slice(1)}
                     </Text>
                   </View>
                   <Text
@@ -311,7 +314,10 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
 
         {/* Continue/Save Button */}
         <TouchableOpacity
-          style={[styles.continueButton, (!selectedRating || isSaving) && styles.continueButtonDisabled]}
+          style={[
+            styles.continueButton,
+            (!selectedRating || isSaving) && styles.continueButtonDisabled,
+          ]}
           onPress={handleContinue}
           activeOpacity={selectedRating && !isSaving ? 0.8 : 1}
           disabled={!selectedRating || isSaving}

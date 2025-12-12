@@ -66,6 +66,9 @@ export type PeriodEnum = DbEnum<'period_enum'>;
 export type RatingCertificationMethodEnum = DbEnum<'rating_certification_method_enum'>;
 export type RatingRequestStatusEnum = DbEnum<'rating_request_status_enum'>;
 
+// Rating System Code
+export type RatingSystemCodeEnum = DbEnum<'rating_system_code_enum'>;
+
 // Files & Proofs
 export type FileTypeEnum = DbEnum<'file_type_enum'>;
 export type ProofTypeEnum = DbEnum<'proof_type_enum'>;
@@ -267,7 +270,7 @@ export interface RatingProofWithReviewer extends RatingProof {
   file?: File;
   reviewed_by_profile?: {
     display_name: string | null;
-    avatar_url: string | null;
+    profile_picture_url: string | null;
   };
 }
 
@@ -324,19 +327,21 @@ export interface OnboardingPlayerPreferences {
 export interface OnboardingRating {
   sport_id: string;
   sport_name: 'tennis' | 'pickleball';
-  rating_system_code?: string;
-  rating_type?: string;
+  rating_system_code: RatingSystemCodeEnum;
   score_value: number;
   display_label: string;
 }
 
 export interface OnboardingAvailability {
+  /** Day of the week (new column name) */
   day?: DayEnum;
+  /** Time period (new column name) */
   period?: PeriodEnum;
-  sport_id?: string;
-  day_of_week?: DayOfWeek;
-  time_period?: TimePeriod;
   is_active: boolean;
+  /** @deprecated Use 'day' instead */
+  day_of_week?: DayOfWeek;
+  /** @deprecated Use 'period' instead */
+  time_period?: TimePeriod;
 }
 
 export interface OnboardingData {
@@ -455,10 +460,3 @@ export type PlayerSport = PlayerSportProfile;
 export type PlayerSportInsert = PlayerSportProfileInsert;
 /** @deprecated Use PlayerSportProfileUpdate instead */
 export type PlayerSportUpdate = PlayerSportProfileUpdate;
-
-/** @deprecated Use RatingSystem instead */
-export type Rating = RatingSystem;
-/** @deprecated Use RatingSystemInsert instead */
-export type RatingInsert = RatingSystemInsert;
-/** @deprecated Use RatingSystemUpdate instead */
-export type RatingUpdate = RatingSystemUpdate;
