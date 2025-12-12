@@ -35,6 +35,7 @@
     "@sentry/react-native": "^7.6.0",
     "@stripe/stripe-react-native": "^0.57.0",
     "@supabase/supabase-js": "^2.83.0",
+    "@tanstack/react-query": "^5.62.0",
     "expo": "~54.0.25",
     "expo-calendar": "~15.0.8",
     "expo-file-system": "^19.0.20",

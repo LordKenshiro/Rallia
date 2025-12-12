@@ -10,12 +10,15 @@
     "type-check": "tsc --noEmit"
   },
   "peerDependencies": {
-    "react": "*"
+    "react": "*",
+    "@tanstack/react-query": "^5.0.0"
   },
   "dependencies": {
-    "@rallia/shared-services": "*"
+    "@rallia/shared-services": "*",
+    "@rallia/shared-types": "*"
   },
   "devDependencies": {
+    "@tanstack/react-query": "^5.0.0",
     "typescript": "^5.9.3"
   }
 }

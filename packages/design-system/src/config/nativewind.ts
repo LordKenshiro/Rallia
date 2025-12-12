@@ -5,11 +5,31 @@
  * Use this to generate a tailwind.config.js for your mobile app.
  */
 
-import { tailwindPreset, tailwindColors, tailwindTypography } from './tailwind.preset';
+import { tailwindColors, tailwindTypography } from './tailwind.preset';
 import { primary, secondary, accent, neutral, base, status, darkMode } from '../tokens/colors';
-import { fontFamilyNative, fontSizePixels, fontWeightNumeric } from '../tokens/typography';
-import { spacingPixels } from '../tokens/spacing';
+import { fontFamilyNative } from '../tokens/typography';
 import { radiusPixels } from '../tokens/radius';
+
+/**
+ * Lazy load nativewind preset to avoid errors when not installed
+ * Uses eval to prevent Metro from statically analyzing the require at bundle time
+ */
+let nativewindPresetCache: unknown = null;
+function getNativewindPreset() {
+  if (nativewindPresetCache !== null) {
+    return nativewindPresetCache;
+  }
+  try {
+    // Use eval to prevent Metro from statically analyzing the require
+    // This way Metro won't try to resolve it until runtime
+    // eslint-disable-next-line no-eval
+    nativewindPresetCache = eval('require')('nativewind/preset');
+    return nativewindPresetCache;
+  } catch {
+    nativewindPresetCache = false;
+    return null;
+  }
+}
 
 /**
  * NativeWind-compatible color configuration
@@ -97,16 +117,13 @@ export const nativewindColors = {
  * NativeWind-specific configuration
  * Optimized for React Native
  */
-export const nativewindConfig = {
+const nativewindConfigBase = {
   // Content paths for NativeWind to scan
   content: [
     './App.{js,jsx,ts,tsx}',
     './src/**/*.{js,jsx,ts,tsx}',
     '../../packages/shared-components/src/**/*.{js,jsx,ts,tsx}',
   ],
-
-  // Presets
-  presets: [require('nativewind/preset')],
 
   // Theme configuration
   theme: {
@@ -146,6 +163,16 @@ export const nativewindConfig = {
   // Dark mode configuration
   darkMode: 'class',
 } as const;
+
+// Export config with lazy-loaded presets
+export const nativewindConfig = {
+  ...nativewindConfigBase,
+  // Presets are loaded lazily to avoid Metro trying to resolve nativewind/preset at bundle time
+  get presets() {
+    const preset = getNativewindPreset();
+    return preset ? [preset] : [];
+  },
+} as typeof nativewindConfigBase & { presets: unknown[] };
 
 /**
  * Generate CSS variables for NativeWind global styles

@@ -52,7 +52,26 @@
     "community": "Community",
     "profile": "Profile",
     "settings": "Settings",
-    "chat": "Chat"
+    "chat": "Chat",
+    "notifications": "Notifications"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No notifications yet",
+    "emptyDescription": "You'll see match invitations, reminders, and more here",
+    "unread": "unread",
+    "markAllRead": "Mark all as read",
+    "markAsRead": "Mark as read",
+    "delete": "Delete",
+    "timeAgo": "{time} ago",
+    "types": {
+      "match_invitation": "Match Invitation",
+      "reminder": "Reminder",
+      "payment": "Payment",
+      "support": "Support",
+      "chat": "Message",
+      "system": "System"
+    }
   },
   "settings": {
     "title": "Settings",
