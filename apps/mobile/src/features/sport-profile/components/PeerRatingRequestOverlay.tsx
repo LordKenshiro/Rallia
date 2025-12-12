@@ -63,7 +63,7 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
     } else {
       const query = searchQuery.toLowerCase();
       const filtered = players.filter(
-        (player) =>
+        player =>
           player.full_name.toLowerCase().includes(query) ||
           player.display_name?.toLowerCase().includes(query)
       );
@@ -76,7 +76,7 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
     if (visible) {
       fadeAnim.setValue(0);
       slideAnim.setValue(50);
-      
+
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -105,14 +105,15 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
       if (matchError) throw matchError;
 
       // Filter matches by sport and completed status
-      const relevantMatchIds = userMatches
-        ?.filter(
-          (m: { match_id: string; match: Array<{ sport_id: string; status: string }> }) => {
-            const matchData = m.match?.[0];
-            return matchData?.sport_id === sportId && matchData?.status === 'completed';
-          }
-        )
-        .map((m: { match_id: string }) => m.match_id) || [];
+      const relevantMatchIds =
+        userMatches
+          ?.filter(
+            (m: { match_id: string; match: Array<{ sport_id: string; status: string }> }) => {
+              const matchData = m.match?.[0];
+              return matchData?.sport_id === sportId && matchData?.status === 'completed';
+            }
+          )
+          .map((m: { match_id: string }) => m.match_id) || [];
 
       if (relevantMatchIds.length === 0) {
         setPlayers([]);
@@ -150,43 +151,58 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
 
       if (profilesError) throw profilesError;
 
-      // Step 4: Fetch primary ratings for each opponent for this sport
+      // Step 4: Fetch ratings for each opponent for this sport
       const { data: ratingsData, error: ratingsError } = await supabase
         .from('player_rating_score')
-        .select(`
+        .select(
+          `
           player_id,
-          is_primary,
-          rating_score (
-            display_label,
-            rating (
+          is_certified,
+          rating_score!player_rating_scores_rating_score_id_fkey (
+            label,
+            rating_system (
               sport_id
             )
           )
-        `)
+        `
+        )
         .in('player_id', uniqueOpponentIds)
-        .eq('is_primary', true);
+        .order('is_certified', { ascending: false });
 
       if (ratingsError) throw ratingsError;
 
       // Map ratings by player_id for this sport
       const ratingsMap = new Map<string, string>();
-      ratingsData?.forEach((rating: { player_id: string; is_primary: boolean; rating_score: unknown }) => {
-        const ratingScore = rating.rating_score as { display_label?: string; rating?: { sport_id?: string } };
-        const sportIdFromRating = ratingScore?.rating?.sport_id;
-        
-        if (sportIdFromRating === sportId && rating.is_primary) {
-          ratingsMap.set(rating.player_id, ratingScore?.display_label || '');
+      ratingsData?.forEach(
+        (rating: { player_id: string; is_certified: boolean; rating_score: unknown }) => {
+          const ratingScore = rating.rating_score as {
+            label?: string;
+            rating_system?: { sport_id?: string };
+          };
+          const sportIdFromRating = ratingScore?.rating_system?.sport_id;
+
+          // Only set if not already set (certified ratings come first due to ordering)
+          if (sportIdFromRating === sportId && !ratingsMap.has(rating.player_id)) {
+            ratingsMap.set(rating.player_id, ratingScore?.label || '');
+          }
         }
-      });
+      );
 
       // Combine profiles with ratings
-      const playersWithRatings: Player[] = (opponentProfiles || []).map((profile: { id: string; full_name: string; display_name: string | null; profile_picture_url: string | null }) => ({
-        id: profile.id,
-        full_name: profile.full_name,
-        display_name: profile.display_name,
-        profile_picture_url: profile.profile_picture_url,
-        rating: ratingsMap.get(profile.id) || null,
-      }));
+      const playersWithRatings: Player[] = (opponentProfiles || []).map(
+        (profile: {
+          id: string;
+          full_name: string;
+          display_name: string | null;
+          profile_picture_url: string | null;
+        }) => ({
+          id: profile.id,
+          full_name: profile.full_name,
+          display_name: profile.display_name,
+          profile_picture_url: profile.profile_picture_url,
+          rating: ratingsMap.get(profile.id) || null,
+        })
+      );
 
       setPlayers(playersWithRatings);
       setFilteredPlayers(playersWithRatings);
@@ -199,7 +215,7 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
 
   const togglePlayerSelection = (playerId: string) => {
     selectionHaptic();
-    setSelectedPlayers((prev) => {
+    setSelectedPlayers(prev => {
       const newSet = new Set(prev);
       if (newSet.has(playerId)) {
         newSet.delete(playerId);
@@ -212,7 +228,7 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
 
   const handleSendRequests = async () => {
     if (selectedPlayers.size === 0) return;
-    
+
     mediumHaptic();
     setSending(true);
     try {
@@ -220,7 +236,9 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
       setSelectedPlayers(new Set());
       setSearchQuery('');
     } catch (error) {
-      Logger.error('Failed to send peer rating requests', error as Error, { selectedCount: selectedPlayers.size });
+      Logger.error('Failed to send peer rating requests', error as Error, {
+        selectedCount: selectedPlayers.size,
+      });
     } finally {
       setSending(false);
     }
@@ -228,7 +246,7 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
 
   const renderPlayerCard = (player: Player) => {
     const isSelected = selectedPlayers.has(player.id);
-    
+
     return (
       <TouchableOpacity
         key={player.id}
@@ -239,10 +257,7 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
         {/* Avatar */}
         <View style={styles.avatarContainer}>
           {player.profile_picture_url ? (
-            <Image
-              source={{ uri: player.profile_picture_url }}
-              style={styles.avatar}
-            />
+            <Image source={{ uri: player.profile_picture_url }} style={styles.avatar} />
           ) : (
             <View style={[styles.avatar, styles.avatarPlaceholder]}>
               <Ionicons name="person" size={24} color="#999" />
@@ -258,9 +273,7 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
         {/* Player Info */}
         <View style={styles.playerInfo}>
           <Text style={styles.playerName}>{player.full_name}</Text>
-          {player.display_name && (
-            <Text style={styles.playerUsername}>@{player.display_name}</Text>
-          )}
+          {player.display_name && <Text style={styles.playerUsername}>@{player.display_name}</Text>}
         </View>
 
         {/* Rating Badge */}
@@ -298,12 +311,7 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
 
         {/* Search Bar */}
         <View style={styles.searchContainer}>
-          <Ionicons
-            name="search"
-            size={20}
-            color="#999"
-            style={styles.searchIcon}
-          />
+          <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search players..."
@@ -314,20 +322,14 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
             autoCorrect={false}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity
-              onPress={() => setSearchQuery('')}
-              style={styles.clearButton}
-            >
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
               <Ionicons name="close-circle" size={20} color="#999" />
             </TouchableOpacity>
           )}
         </View>
 
         {/* Players List */}
-        <ScrollView
-          style={styles.playersList}
-          showsVerticalScrollIndicator={false}
-        >
+        <ScrollView style={styles.playersList} showsVerticalScrollIndicator={false}>
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={COLORS.primary} />
@@ -345,7 +347,7 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
             </View>
           ) : (
             <View style={styles.playersGrid}>
-              {filteredPlayers.map((player) => renderPlayerCard(player))}
+              {filteredPlayers.map(player => renderPlayerCard(player))}
             </View>
           )}
         </ScrollView>

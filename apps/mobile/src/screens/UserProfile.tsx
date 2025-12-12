@@ -66,6 +66,7 @@ const UserProfile = () => {
       fetchUserProfileData();
     };
     checkAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Re-fetch data when screen comes into focus (e.g., when navigating back from SportProfile)
@@ -84,6 +85,7 @@ const UserProfile = () => {
     if (newProfileImage && profile?.id) {
       uploadProfilePicture(newProfileImage);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newProfileImage]);
 
   const uploadProfilePicture = async (imageUri: string) => {
@@ -179,7 +181,7 @@ const UserProfile = () => {
           'Failed to load player sports - connection timeout'
         ),
 
-        // Fetch player's ratings with source_type info
+        // Fetch player's ratings with source info
         withTimeout(
           (async () =>
             supabase
@@ -187,17 +189,16 @@ const UserProfile = () => {
               .select(
                 `
               *,
-              rating_score (
-                display_label,
-                rating (
+              rating_score!player_rating_scores_rating_score_id_fkey (
+                label,
+                rating_system (
                   sport_id
                 )
               )
             `
               )
               .eq('player_id', user.id)
-              .order('is_primary', { ascending: false })
-              .order('is_verified', { ascending: false })
+              .order('is_certified', { ascending: false })
               .order('created_at', { ascending: false }))(),
           15000,
           'Failed to load ratings - connection timeout'
@@ -208,7 +209,7 @@ const UserProfile = () => {
           (async () =>
             supabase
               .from('player_availability')
-              .select('day_of_week, time_period, is_active')
+              .select('day, period, is_active')
               .eq('player_id', user.id)
               .eq('is_active', true))(),
           15000,
@@ -250,18 +251,18 @@ const UserProfile = () => {
         ])
       );
 
-      // Map ratings - prioritize is_primary=true ratings
+      // Map ratings - use the first certified or most recent
       const ratingsMap = new Map<string, string>();
       (ratingsData || []).forEach(rating => {
         const ratingScore = rating.rating_score as {
-          display_label?: string;
-          rating?: { sport_id?: string };
+          label?: string;
+          rating_system?: { sport_id?: string };
         } | null;
-        const sportId = ratingScore?.rating?.sport_id;
-        const displayLabel = ratingScore?.display_label || '';
+        const sportId = ratingScore?.rating_system?.sport_id;
+        const displayLabel = ratingScore?.label || '';
 
-        // Only set if not already set, or if this is a primary rating
-        if (sportId && (!ratingsMap.has(sportId) || rating.is_primary)) {
+        // Only set if not already set (results are ordered by is_certified desc, created_at desc)
+        if (sportId && !ratingsMap.has(sportId)) {
           ratingsMap.set(sportId, displayLabel);
         }
       });
@@ -296,8 +297,8 @@ const UserProfile = () => {
       };
 
       (availData || []).forEach(avail => {
-        if (availGrid[avail.day_of_week]) {
-          availGrid[avail.day_of_week][avail.time_period] = true;
+        if (availGrid[avail.day]) {
+          availGrid[avail.day][avail.period] = true;
         }
       });
 
@@ -327,7 +328,7 @@ const UserProfile = () => {
       sunday: 'Sun',
     };
 
-    const uiFormat: any = {};
+    const uiFormat: Record<string, { AM: boolean; PM: boolean; EVE: boolean }> = {};
 
     Object.keys(dbAvailabilities).forEach(day => {
       const uiDay = dayMap[day];
@@ -345,7 +346,9 @@ const UserProfile = () => {
   };
 
   // Handle saving availabilities from the overlay
-  const handleSaveAvailabilities = async (uiAvailabilities: any) => {
+  const handleSaveAvailabilities = async (
+    uiAvailabilities: Record<string, Record<string, boolean>>
+  ) => {
     try {
       const {
         data: { user },
@@ -379,14 +382,9 @@ const UserProfile = () => {
         return;
       }
 
-      // Delete existing availabilities for this sport
+      // Delete existing availabilities for this player
       const deleteResult = await withTimeout(
-        (async () =>
-          supabase
-            .from('player_availability')
-            .delete()
-            .eq('player_id', user.id)
-            .eq('sport_id', primarySport.id))(),
+        (async () => supabase.from('player_availability').delete().eq('player_id', user.id))(),
         10000,
         'Failed to update availability - connection timeout'
       );
@@ -394,26 +392,34 @@ const UserProfile = () => {
       if (deleteResult.error) throw deleteResult.error;
 
       // Prepare new availability data
-      const availabilityData: any[] = [];
+      const availabilityData: Array<{
+        player_id: string;
+        day: string;
+        period: string;
+        is_active: boolean;
+      }> = [];
 
       Object.keys(uiAvailabilities).forEach(day => {
         Object.keys(uiAvailabilities[day]).forEach(slot => {
           if (uiAvailabilities[day][slot]) {
             availabilityData.push({
               player_id: user.id,
-              sport_id: primarySport.id,
-              day_of_week: dayMap[day],
-              time_period: timeMap[slot],
+              day: dayMap[day],
+              period: timeMap[slot],
               is_active: true,
             });
           }
         });
       });
 
-      // Insert new availabilities
+      // Upsert new availabilities (handles duplicates gracefully)
       if (availabilityData.length > 0) {
         const insertResult = await withTimeout(
-          (async () => supabase.from('player_availability').insert(availabilityData))(),
+          (async () =>
+            supabase.from('player_availability').upsert(availabilityData, {
+              onConflict: 'player_id,day,period',
+              ignoreDuplicates: false,
+            }))(),
           10000,
           'Failed to save availability - connection timeout'
         );
@@ -635,6 +641,7 @@ const UserProfile = () => {
                 style={[styles.sportCard, !sport.isActive && styles.sportCardInactive]}
                 activeOpacity={0.7}
                 onPress={() => {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   (navigation as any).navigate('SportProfile', {
                     sportId: sport.id,
                     sportName: sport.display_name,

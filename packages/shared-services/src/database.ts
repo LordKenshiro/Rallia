@@ -1,6 +1,6 @@
 /**
  * Database Service
- * 
+ *
  * Centralized service for all database operations using Supabase
  * Provides type-safe CRUD methods and onboarding-specific operations
  */
@@ -22,8 +22,9 @@ import type {
   PlayerAvailabilityInsert,
   PlayerAvailabilityUpdate,
   Sport,
-  Rating,
+  RatingSystem,
   RatingScore,
+  RatingSystemCodeEnum,
   OnboardingPersonalInfo,
   OnboardingPlayerPreferences,
   OnboardingRating,
@@ -59,31 +60,37 @@ function handleError(error: unknown): DatabaseError {
 async function getCurrentUserId(): Promise<string | null> {
   try {
     // First try to get the session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
     if (sessionError) {
       console.error('Error getting session:', sessionError);
       return null;
     }
-    
+
     if (!session) {
       console.warn('No active session found');
       return null;
     }
-    
+
     // If session exists, get user details
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
     if (userError) {
       console.error('Error getting user:', userError);
       return null;
     }
-    
+
     if (!user) {
       console.warn('Session exists but no user found');
       return null;
     }
-    
+
     console.log('User authenticated:', user.id);
     return user.id;
   } catch (error) {
@@ -108,7 +115,10 @@ export const AuthService = {
    * Get the current authenticated user
    */
   async getCurrentUser() {
-    const { data: { user }, error } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
     if (error) {
       return { data: null, error: handleError(error) };
     }
@@ -144,14 +154,14 @@ export const EnumService = {
       // The RPC function returns TABLE(value TEXT, label TEXT)
       // So data is already in the correct format
       console.log('✅ Gender types loaded from database:', data);
-      
+
       // Map enum labels to user-friendly display labels
       const genderTypes = (data || []).map((item: { value: string; label: string }) => {
         const labelMap: Record<string, string> = {
-          'male': 'Male',
-          'female': 'Female',
-          'other': 'Non-binary',
-          'prefer_not_to_say': 'Prefer not to say',
+          male: 'Male',
+          female: 'Female',
+          other: 'Non-binary',
+          prefer_not_to_say: 'Prefer not to say',
         };
         return {
           value: item.value,
@@ -204,7 +214,9 @@ export const EnumService = {
   /**
    * Get all match duration enum values with display labels
    */
-  async getMatchDurationTypes(): Promise<DatabaseResponse<Array<{ value: string; label: string }>>> {
+  async getMatchDurationTypes(): Promise<
+    DatabaseResponse<Array<{ value: string; label: string }>>
+  > {
     try {
       const { data, error } = await supabase.rpc('get_match_duration_types');
 
@@ -235,7 +247,7 @@ export const EnumService = {
    */
   async getMatchTypeTypes(): Promise<DatabaseResponse<Array<{ value: string; label: string }>>> {
     try {
-      const { data, error} = await supabase.rpc('get_match_type_types');
+      const { data, error } = await supabase.rpc('get_match_type_types');
 
       if (error) {
         console.warn('get_match_type_types RPC not found, using fallback values', error);
@@ -309,11 +321,7 @@ export const SportService = {
    */
   async getSportById(id: string): Promise<DatabaseResponse<Sport>> {
     try {
-      const { data, error } = await supabase
-        .from('sport')
-        .select('*')
-        .eq('id', id)
-        .single();
+      const { data, error } = await supabase.from('sport').select('*').eq('id', id).single();
 
       if (error) throw error;
 
@@ -334,11 +342,7 @@ export const ProfileService = {
    */
   async getProfile(userId: string): Promise<DatabaseResponse<Profile>> {
     try {
-      const { data, error } = await supabase
-        .from('profile')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      const { data, error } = await supabase.from('profile').select('*').eq('id', userId).single();
 
       if (error) throw error;
 
@@ -372,11 +376,7 @@ export const ProfileService = {
    */
   async createProfile(profile: ProfileInsert): Promise<DatabaseResponse<Profile>> {
     try {
-      const { data, error } = await supabase
-        .from('profile')
-        .insert(profile)
-        .select()
-        .single();
+      const { data, error } = await supabase.from('profile').insert(profile).select().single();
 
       if (error) throw error;
 
@@ -424,11 +424,7 @@ export const PlayerService = {
    */
   async getPlayer(userId: string): Promise<DatabaseResponse<Player>> {
     try {
-      const { data, error } = await supabase
-        .from('player')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      const { data, error } = await supabase.from('player').select('*').eq('id', userId).single();
 
       if (error) throw error;
 
@@ -443,11 +439,7 @@ export const PlayerService = {
    */
   async createPlayer(player: PlayerInsert): Promise<DatabaseResponse<Player>> {
     try {
-      const { data, error } = await supabase
-        .from('player')
-        .insert(player)
-        .select()
-        .single();
+      const { data, error } = await supabase.from('player').insert(player).select().single();
 
       if (error) throw error;
 
@@ -631,12 +623,12 @@ export const PlayerSportService = {
 
 export const RatingService = {
   /**
-   * Get all rating types for a sport
+   * Get all rating systems for a sport
    */
-  async getRatingsForSport(sportId: string): Promise<DatabaseResponse<Rating[]>> {
+  async getRatingSystemsForSport(sportId: string): Promise<DatabaseResponse<RatingSystem[]>> {
     try {
       const { data, error } = await supabase
-        .from('rating')
+        .from('rating_system')
         .select('*')
         .eq('sport_id', sportId)
         .eq('is_active', true);
@@ -650,15 +642,15 @@ export const RatingService = {
   },
 
   /**
-   * Get rating scores for a specific rating
+   * Get rating scores for a specific rating system
    */
-  async getRatingScores(ratingId: string): Promise<DatabaseResponse<RatingScore[]>> {
+  async getRatingScores(ratingSystemId: string): Promise<DatabaseResponse<RatingScore[]>> {
     try {
       const { data, error } = await supabase
         .from('rating_score')
         .select('*')
-        .eq('rating_id', ratingId)
-        .order('score_value');
+        .eq('rating_system_id', ratingSystemId)
+        .order('value');
 
       if (error) throw error;
 
@@ -675,7 +667,9 @@ export const RatingService = {
     try {
       const { data, error } = await supabase
         .from('player_rating_score')
-        .select('*, rating_score(*, rating(*, sport(*)))')
+        .select(
+          '*, rating_score!player_rating_scores_rating_score_id_fkey(*, rating_system(*, sport(*)))'
+        )
         .eq('player_id', playerId);
 
       if (error) throw error;
@@ -689,7 +683,9 @@ export const RatingService = {
   /**
    * Add a rating for a player
    */
-  async addPlayerRating(rating: PlayerRatingScoreInsert): Promise<DatabaseResponse<PlayerRatingScore>> {
+  async addPlayerRating(
+    rating: PlayerRatingScoreInsert
+  ): Promise<DatabaseResponse<PlayerRatingScore>> {
     try {
       const { data, error } = await supabase
         .from('player_rating_score')
@@ -708,7 +704,10 @@ export const RatingService = {
   /**
    * Remove a rating from a player
    */
-  async removePlayerRating(playerId: string, ratingScoreId: string): Promise<DatabaseResponse<null>> {
+  async removePlayerRating(
+    playerId: string,
+    ratingScoreId: string
+  ): Promise<DatabaseResponse<null>> {
     try {
       const { error } = await supabase
         .from('player_rating_score')
@@ -731,31 +730,41 @@ export const RatingService = {
 
 export const RatingScoreService = {
   /**
-   * Get rating scores by sport name and rating type (e.g., Tennis NTRP, Pickleball DUPR)
+   * Get rating scores by sport name and rating system code (e.g., Tennis ntrp, Pickleball dupr)
    * Uses the RPC function to fetch scores dynamically from database
    */
   async getRatingScoresBySport(
     sportName: string,
-    ratingType: 'ntrp' | 'utr' | 'dupr' | 'self_assessment'
-  ): Promise<DatabaseResponse<Array<{
-    id: string;
-    score_value: number;
-    display_label: string;
-    skill_level: 'beginner' | 'intermediate' | 'advanced' | 'professional';
-    description: string;
-  }>>> {
+    ratingSystemCode: RatingSystemCodeEnum
+  ): Promise<
+    DatabaseResponse<
+      Array<{
+        id: string;
+        score_value: number;
+        display_label: string;
+        skill_level: 'beginner' | 'intermediate' | 'advanced' | 'professional' | null;
+        description: string;
+      }>
+    >
+  > {
     try {
       const { data, error } = await supabase.rpc('get_rating_scores_by_type', {
         p_sport_name: sportName,
-        p_rating_type: ratingType,
+        p_rating_system_code: ratingSystemCode,
       });
 
       if (error) {
-        console.warn(`get_rating_scores_by_type RPC error for ${sportName} ${ratingType}:`, error);
+        console.warn(
+          `get_rating_scores_by_type RPC error for ${sportName} ${ratingSystemCode}:`,
+          error
+        );
         return { data: [], error };
       }
 
-      console.log(`✅ Rating scores loaded from database for ${sportName} ${ratingType}:`, data);
+      console.log(
+        `✅ Rating scores loaded from database for ${sportName} ${ratingSystemCode}:`,
+        data
+      );
       return { data: data || [], error: null };
     } catch (error) {
       console.error('Error fetching rating scores:', error);
@@ -905,7 +914,9 @@ export const OnboardingService = {
   /**
    * Save personal information from PersonalInformationOverlay
    */
-  async savePersonalInfo(info: OnboardingPersonalInfo): Promise<DatabaseResponse<{ profile: Profile; player: Player }>> {
+  async savePersonalInfo(
+    info: OnboardingPersonalInfo
+  ): Promise<DatabaseResponse<{ profile: Profile; player: Player }>> {
     try {
       const userId = await getCurrentUserId();
       if (!userId) {
@@ -913,7 +924,9 @@ export const OnboardingService = {
       }
 
       // Get user email from auth
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         throw new Error('User not found');
       }
@@ -921,15 +934,18 @@ export const OnboardingService = {
       // Upsert profile (create if doesn't exist, update if exists)
       const { data: profile, error: profileError } = await supabase
         .from('profile')
-        .upsert({
-          id: userId,
-          email: user.email,
-          full_name: info.full_name,
-          display_name: info.display_name || info.full_name,
-          birth_date: info.birth_date,
-          phone: info.phone,
-          profile_picture_url: info.profile_picture_url,
-        }, { onConflict: 'id' })
+        .upsert(
+          {
+            id: userId,
+            email: user.email,
+            full_name: info.full_name,
+            display_name: info.display_name || info.full_name,
+            birth_date: info.birth_date,
+            phone: info.phone,
+            profile_picture_url: info.profile_picture_url,
+          },
+          { onConflict: 'id' }
+        )
         .select()
         .single();
 
@@ -975,7 +991,9 @@ export const OnboardingService = {
   /**
    * Save player preferences from PlayerPreferencesOverlay
    */
-  async savePreferences(preferences: OnboardingPlayerPreferences): Promise<DatabaseResponse<{ player: Player; playerSports: PlayerSport[] }>> {
+  async savePreferences(
+    preferences: OnboardingPlayerPreferences
+  ): Promise<DatabaseResponse<{ player: Player; playerSports: PlayerSport[] }>> {
     try {
       const userId = await getCurrentUserId();
       if (!userId) {
@@ -996,7 +1014,7 @@ export const OnboardingService = {
       if (playerError) throw playerError;
 
       // Insert player sports with preferences
-      const playerSportsData = preferences.sports.map((sport) => ({
+      const playerSportsData = preferences.sports.map(sport => ({
         player_id: userId,
         sport_id: sport.sport_id,
         preferred_match_duration: sport.preferred_match_duration,
@@ -1027,14 +1045,14 @@ export const OnboardingService = {
         throw new Error('User not authenticated');
       }
 
-      const ratingPromises = ratings.map(async (rating) => {
-        // Find the rating_score_id based on sport, rating type, and score value
+      const ratingPromises = ratings.map(async rating => {
+        // Find the rating_score_id based on sport, rating system code, and score value
         const { data: ratingScore, error: scoreError } = await supabase
           .from('rating_score')
-          .select('id, rating!inner(sport_id, rating_type)')
-          .eq('rating.sport_id', rating.sport_id)
-          .eq('rating.rating_type', rating.rating_type)
-          .eq('score_value', rating.score_value)
+          .select('id, rating_system!inner(sport_id, code)')
+          .eq('rating_system.sport_id', rating.sport_id)
+          .eq('rating_system.code', rating.rating_system_code)
+          .eq('value', rating.score_value)
           .single();
 
         if (scoreError) throw scoreError;
@@ -1045,9 +1063,8 @@ export const OnboardingService = {
           .insert({
             player_id: userId,
             rating_score_id: ratingScore.id,
-            source_type: 'self_reported', // NEW: All onboarding ratings are self-reported
-            is_verified: false,
-            is_primary: true, // NEW: Mark as primary display rating
+            source: 'self_reported', // All onboarding ratings are self-reported
+            is_certified: false,
           })
           .select()
           .single();
@@ -1067,18 +1084,19 @@ export const OnboardingService = {
   /**
    * Save player availability from AvailabilityOverlay
    */
-  async saveAvailability(availabilities: OnboardingAvailability[]): Promise<DatabaseResponse<PlayerAvailability[]>> {
+  async saveAvailability(
+    availabilities: OnboardingAvailability[]
+  ): Promise<DatabaseResponse<PlayerAvailability[]>> {
     try {
       const userId = await getCurrentUserId();
       if (!userId) {
         throw new Error('User not authenticated');
       }
 
-      const availabilityData = availabilities.map((availability) => ({
+      const availabilityData = availabilities.map(availability => ({
         player_id: userId,
-        sport_id: availability.sport_id,
-        day_of_week: availability.day_of_week,
-        time_period: availability.time_period,
+        day: availability.day ?? availability.day_of_week,
+        period: availability.period ?? availability.time_period,
         is_active: availability.is_active,
       }));
 

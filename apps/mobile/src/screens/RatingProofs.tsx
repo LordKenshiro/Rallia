@@ -21,7 +21,7 @@ type RatingProofsRouteProp = RouteProp<{ RatingProofs: RatingProofsScreenParams 
 const RatingProofs: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute<RatingProofsRouteProp>();
-  const { playerRatingScoreId, sportName, ratingValue, isOwnProfile } = route.params;
+  const { playerRatingScoreId, sportName: _sportName, ratingValue, isOwnProfile } = route.params;
 
   const [proofs, setProofs] = useState<RatingProofWithFile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +42,7 @@ const RatingProofs: React.FC = () => {
         .select(
           `
           *,
-          file:files(*),
+          file:file(*),
           reviewed_by_profile:profile!reviewed_by(display_name, profile_picture_url)
         `
         )

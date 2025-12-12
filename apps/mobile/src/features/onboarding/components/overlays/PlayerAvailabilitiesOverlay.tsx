@@ -1,9 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Alert, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Animated,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import { Overlay } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
 import { OnboardingService, Logger } from '@rallia/shared-services';
-import type { DayOfWeek as DBDayOfWeek, TimePeriod, OnboardingAvailability } from '@rallia/shared-types';
+import type { DayEnum, PeriodEnum, OnboardingAvailability } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
 
@@ -36,7 +45,7 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
   onClose,
   onBack,
   onContinue,
-  selectedSportIds,
+  selectedSportIds: _selectedSportIds,
   currentStep = 1,
   totalSteps = 8,
   mode = 'onboarding',
@@ -101,92 +110,84 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
 
   const handleContinue = async () => {
     mediumHaptic();
-    
+
     // Prevent double-tap
     if (isSaving) return;
-    
+
     // Edit mode: use the onSave callback
     if (mode === 'edit' && onSave) {
       onSave(availabilities);
       return;
     }
-    
+
     // Onboarding mode: save to database
     if (onContinue) {
       setIsSaving(true);
       try {
         // Map UI data to database format
-        const dayMap: Record<DayOfWeek, DBDayOfWeek> = {
-          'Mon': 'monday',
-          'Tue': 'tuesday',
-          'Wed': 'wednesday',
-          'Thu': 'thursday',
-          'Fri': 'friday',
-          'Sat': 'saturday',
-          'Sun': 'sunday',
+        const dayMap: Record<DayOfWeek, DayEnum> = {
+          Mon: 'monday',
+          Tue: 'tuesday',
+          Wed: 'wednesday',
+          Thu: 'thursday',
+          Fri: 'friday',
+          Sat: 'saturday',
+          Sun: 'sunday',
         };
-        
-        const timeSlotMap: Record<TimeSlot, TimePeriod> = {
-          'AM': 'morning',
-          'PM': 'afternoon',
-          'EVE': 'evening',
+
+        const timeSlotMap: Record<TimeSlot, PeriodEnum> = {
+          AM: 'morning',
+          PM: 'afternoon',
+          EVE: 'evening',
         };
-        
+
         // Convert availability grid to database format
-        // Create entries for EACH selected sport
+        // Create one entry per day/period combination (not per sport)
         const availabilityData: OnboardingAvailability[] = [];
-        
-        days.forEach((day) => {
-          timeSlots.forEach((slot) => {
+
+        days.forEach(day => {
+          timeSlots.forEach(slot => {
             if (availabilities[day][slot]) {
-              // Create one entry per selected sport
-              selectedSportIds?.forEach((sportId) => {
-                availabilityData.push({
-                  sport_id: sportId,
-                  day_of_week: dayMap[day],
-                  time_period: timeSlotMap[slot],
-                  is_active: true,
-                });
+              availabilityData.push({
+                day: dayMap[day],
+                period: timeSlotMap[slot],
+                is_active: true,
               });
             }
           });
         });
-        
+
         // Save availability to database
         const { error } = await OnboardingService.saveAvailability(availabilityData);
-        
+
         if (error) {
           Logger.error('Failed to save player availability', error as Error, { availabilityData });
           setIsSaving(false);
-          Alert.alert(
-            'Error',
-            'Failed to save your availability. Please try again.',
-            [{ text: 'OK' }]
-          );
+          Alert.alert('Error', 'Failed to save your availability. Please try again.', [
+            { text: 'OK' },
+          ]);
           return;
         }
-        
+
         Logger.debug('player_availabilities_saved', { availabilityData });
-        
+
         // Mark onboarding as completed
         const { error: completeError } = await OnboardingService.completeOnboarding();
-        
+
         if (completeError) {
           Logger.warn('Failed to mark onboarding as completed', { error: completeError });
           // Don't block the flow if this fails - just log it
         } else {
-          Logger.info('onboarding_completed', { message: 'Onboarding marked as completed in profile' });
+          Logger.info('onboarding_completed', {
+            message: 'Onboarding marked as completed in profile',
+          });
         }
-        
+
         onContinue(availabilities);
       } catch (error) {
         Logger.error('Unexpected error saving availability', error as Error);
         setIsSaving(false);
-        Alert.alert(
-          'Error',
-          'An unexpected error occurred. Please try again.',
-          [{ text: 'OK' }]
-        );
+        Alert.alert('Error', 'An unexpected error occurred. Please try again.', [{ text: 'OK' }]);
       }
     }
   };
@@ -232,7 +233,7 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
         </TouchableOpacity>
 
         {/* Title */}
-        <Text style={styles.title}>Tell us about your{"\n"}schedule</Text>
+        <Text style={styles.title}>Tell us about your{'\n'}schedule</Text>
         <Text style={styles.subtitle}>Select your availabilities</Text>
 
         {/* Scrollable Content Area */}
@@ -290,9 +291,7 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
           {isSaving ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <Text style={styles.completeButtonText}>
-              {mode === 'edit' ? 'Save' : 'Complete'}
-            </Text>
+            <Text style={styles.completeButtonText}>{mode === 'edit' ? 'Save' : 'Complete'}</Text>
           )}
         </TouchableOpacity>
       </Animated.View>

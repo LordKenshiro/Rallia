@@ -1938,53 +1938,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      rating: {
-        Row: {
-          created_at: string | null;
-          description: string | null;
-          display_name: string;
-          id: string;
-          is_active: boolean | null;
-          max_value: number | null;
-          min_value: number | null;
-          rating_type: Database['public']['Enums']['rating_type'];
-          sport_id: string;
-          updated_at: string | null;
-        };
-        Insert: {
-          created_at?: string | null;
-          description?: string | null;
-          display_name: string;
-          id?: string;
-          is_active?: boolean | null;
-          max_value?: number | null;
-          min_value?: number | null;
-          rating_type: Database['public']['Enums']['rating_type'];
-          sport_id: string;
-          updated_at?: string | null;
-        };
-        Update: {
-          created_at?: string | null;
-          description?: string | null;
-          display_name?: string;
-          id?: string;
-          is_active?: boolean | null;
-          max_value?: number | null;
-          min_value?: number | null;
-          rating_type?: Database['public']['Enums']['rating_type'];
-          sport_id?: string;
-          updated_at?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'rating_sport_id_fkey';
-            columns: ['sport_id'];
-            isOneToOne: false;
-            referencedRelation: 'sport';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
       rating_proof: {
         Row: {
           created_at: string;
@@ -2120,6 +2073,7 @@ export type Database = {
           max_value: number | null;
           min_value: number | null;
           rating_system_id: string;
+          skill_level: Database['public']['Enums']['skill_level'] | null;
           updated_at: string;
           value: number | null;
         };
@@ -2131,6 +2085,7 @@ export type Database = {
           max_value?: number | null;
           min_value?: number | null;
           rating_system_id: string;
+          skill_level?: Database['public']['Enums']['skill_level'] | null;
           updated_at?: string;
           value?: number | null;
         };
@@ -2142,6 +2097,7 @@ export type Database = {
           max_value?: number | null;
           min_value?: number | null;
           rating_system_id?: string;
+          skill_level?: Database['public']['Enums']['skill_level'] | null;
           updated_at?: string;
           value?: number | null;
         };
@@ -2157,7 +2113,7 @@ export type Database = {
       };
       rating_system: {
         Row: {
-          code: string;
+          code: Database['public']['Enums']['rating_system_code_enum'];
           created_at: string;
           default_initial_value: number | null;
           description: string | null;
@@ -2172,7 +2128,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
-          code: string;
+          code: Database['public']['Enums']['rating_system_code_enum'];
           created_at?: string;
           default_initial_value?: number | null;
           description?: string | null;
@@ -2187,7 +2143,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
-          code?: string;
+          code?: Database['public']['Enums']['rating_system_code_enum'];
           created_at?: string;
           default_initial_value?: number | null;
           description?: string | null;
@@ -2514,7 +2470,7 @@ export type Database = {
       };
       get_rating_scores_by_type: {
         Args: {
-          p_rating_type: Database['public']['Enums']['rating_type'];
+          p_rating_system_code: Database['public']['Enums']['rating_system_code_enum'];
           p_sport_name: string;
         };
         Returns: {
@@ -2523,6 +2479,20 @@ export type Database = {
           id: string;
           score_value: number;
           skill_level: Database['public']['Enums']['skill_level'];
+        }[];
+      };
+      get_rating_systems_for_sport: {
+        Args: { p_sport_name: string };
+        Returns: {
+          code: Database['public']['Enums']['rating_system_code_enum'];
+          default_initial_value: number;
+          description: string;
+          id: string;
+          is_active: boolean;
+          max_value: number;
+          min_value: number;
+          name: string;
+          step: number;
         }[];
       };
     };
@@ -2626,7 +2596,7 @@ export type Database = {
         | 'peer_verified'
         | 'admin_verified'
         | 'reference_verified';
-      rating_type: 'ntrp' | 'utr' | 'dupr' | 'self_assessment';
+      rating_system_code_enum: 'ntrp' | 'utr' | 'self_tennis' | 'dupr' | 'self_pickle';
       report_reason: 'inappropriate_behavior' | 'harassment' | 'spam' | 'cheating' | 'other';
       report_status: 'pending' | 'under_review' | 'resolved' | 'dismissed';
       role_enum: 'admin' | 'staff' | 'player' | 'coach' | 'owner';
@@ -2862,7 +2832,7 @@ export const Constants = {
         'admin_verified',
         'reference_verified',
       ],
-      rating_type: ['ntrp', 'utr', 'dupr', 'self_assessment'],
+      rating_system_code_enum: ['ntrp', 'utr', 'self_tennis', 'dupr', 'self_pickle'],
       report_reason: ['inappropriate_behavior', 'harassment', 'spam', 'cheating', 'other'],
       report_status: ['pending', 'under_review', 'resolved', 'dismissed'],
       role_enum: ['admin', 'staff', 'player', 'coach', 'owner'],

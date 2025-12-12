@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase, Logger } from '@rallia/shared-services';
-import { useTheme } from '../hooks';
+import { useTheme } from '../hooks/useTheme';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useLocale } from '../context';

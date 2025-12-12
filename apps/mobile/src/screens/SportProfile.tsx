@@ -24,12 +24,15 @@ import ReferenceRequestOverlay from '../features/sport-profile/components/Refere
 import { TennisPreferencesOverlay } from '../features/sport-profile/components/TennisPreferencesOverlay';
 import { PickleballPreferencesOverlay } from '../features/sport-profile/components/PickleballPreferencesOverlay';
 
-type SportProfileRouteProp = RouteProp<{
-  params: {
-    sportId: string;
-    sportName: string;
-  };
-}, 'params'>;
+type SportProfileRouteProp = RouteProp<
+  {
+    params: {
+      sportId: string;
+      sportName: string;
+    };
+  },
+  'params'
+>;
 
 interface RatingInfo {
   ratingScoreId: string; // ID of the rating_score record
@@ -88,7 +91,9 @@ const SportProfile = () => {
   const fetchSportProfileData = async () => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         Alert.alert('Error', 'User not authenticated');
         return;
@@ -99,41 +104,46 @@ const SportProfile = () => {
       const [playerSportResult, ratingResult] = await Promise.all([
         // Fetch player's sport connection
         withTimeout(
-          (async () => supabase
-            .from('player_sport')
-            .select('id, is_active, preferred_match_duration, preferred_match_type, is_primary')
-            .eq('player_id', user.id)
-            .eq('sport_id', sportId)
-            .maybeSingle())(),
+          (async () =>
+            supabase
+              .from('player_sport')
+              .select('id, is_active, preferred_match_duration, preferred_match_type, is_primary')
+              .eq('player_id', user.id)
+              .eq('sport_id', sportId)
+              .maybeSingle())(),
           15000,
           'Failed to load sport profile - connection timeout'
         ),
-        
+
         // Fetch player's ratings (fetch in parallel, process only if sport is active)
         withTimeout(
-          (async () => supabase
-            .from('player_rating_score')
-            .select(`
+          (async () =>
+            supabase
+              .from('player_rating_score')
+              .select(
+                `
               id,
               rating_score_id,
-              is_verified,
-              verified_at,
-              rating_score (
+              is_certified,
+              certified_at,
+              rating_score!player_rating_scores_rating_score_id_fkey (
                 id,
-                score_value,
-                display_label,
+                value,
+                label,
+                description,
                 skill_level,
-                rating (
-                  rating_type,
-                  display_name,
+                rating_system (
+                  code,
+                  name,
                   description,
                   min_value,
                   max_value,
                   sport_id
                 )
               )
-            `)
-            .eq('player_id', user.id))(),
+            `
+              )
+              .eq('player_id', user.id))(),
           15000,
           'Failed to load ratings - connection timeout'
         ),
@@ -164,49 +174,59 @@ const SportProfile = () => {
         const { data: ratingDataList, error: ratingError } = ratingResult;
 
         if (ratingError && ratingError.code !== 'PGRST116') {
-          Logger.error('Failed to fetch player ratings', ratingError as Error, { playerId: user.id, sportId });
+          Logger.error('Failed to fetch player ratings', ratingError as Error, {
+            playerId: user.id,
+            sportId,
+          });
         }
 
         Logger.debug('ratings_fetched', { count: ratingDataList?.length, sportName, sportId });
 
         // Filter by sport_id in JavaScript since nested filtering doesn't work well
-        const ratingData = ratingDataList?.find(item => {
-          const ratingScore = item.rating_score as {
-            id?: string;
-            rating?: { sport_id?: string };
-          } | null;
-          return ratingScore?.rating?.sport_id === sportId;
-        }) || null;
+        const ratingData =
+          ratingDataList?.find(item => {
+            const ratingScore = item.rating_score as {
+              id?: string;
+              rating_system?: { sport_id?: string };
+            } | null;
+            return ratingScore?.rating_system?.sport_id === sportId;
+          }) || null;
 
         Logger.debug('rating_data_search_complete', { sportName, found: !!ratingData });
 
         if (ratingData) {
           const ratingScore = ratingData.rating_score as {
             id?: string;
-            display_label?: string;
-            score_value?: number;
-            skill_level?: string;
-            rating?: {
-              display_name?: string;
+            label?: string;
+            value?: number;
+            description?: string;
+            skill_level?: string | null;
+            rating_system?: {
+              name?: string;
               min_value?: number;
               max_value?: number;
               description?: string;
             };
           } | null;
-          const rating = ratingScore?.rating;
+          const ratingSystem = ratingScore?.rating_system;
           const newRatingInfo = {
             ratingScoreId: ratingScore?.id || ratingData.rating_score_id || '',
-            ratingTypeName: rating?.display_name || '',
-            displayLabel: ratingScore?.display_label || '',
-            scoreValue: ratingScore?.score_value || 0,
-            skillLevel: ratingScore?.skill_level || '',
-            isVerified: ratingData.is_verified || false,
-            verifiedAt: ratingData.verified_at || null,
-            minValue: rating?.min_value || 0,
-            maxValue: rating?.max_value || 10,
-            description: rating?.description || '',
+            ratingTypeName: ratingSystem?.name || '',
+            displayLabel: ratingScore?.label || '',
+            scoreValue: ratingScore?.value || 0,
+            skillLevel: ratingScore?.skill_level
+              ? ratingScore.skill_level.charAt(0).toUpperCase() + ratingScore.skill_level.slice(1)
+              : '',
+            isVerified: ratingData.is_certified || false,
+            verifiedAt: ratingData.certified_at || null,
+            minValue: ratingSystem?.min_value || 0,
+            maxValue: ratingSystem?.max_value || 10,
+            description: ratingSystem?.description || '',
           };
-          Logger.debug('rating_info_set', { ratingScoreId: newRatingInfo.ratingScoreId, displayLabel: newRatingInfo.displayLabel });
+          Logger.debug('rating_info_set', {
+            ratingScoreId: newRatingInfo.ratingScoreId,
+            displayLabel: newRatingInfo.displayLabel,
+          });
           setRatingInfo(newRatingInfo);
           setPlayerRatingScoreId(ratingData.id || null);
         } else {
@@ -215,7 +235,6 @@ const SportProfile = () => {
           setPlayerRatingScoreId(null);
         }
       }
-
     } catch (error) {
       Logger.error('Failed to fetch sport profile data', error as Error, { sportId, sportName });
       Alert.alert('Error', getNetworkErrorMessage(error));
@@ -226,7 +245,9 @@ const SportProfile = () => {
 
   const handleSaveRating = async (ratingScoreId: string) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         Alert.alert('Error', 'User not authenticated');
         return;
@@ -234,23 +255,26 @@ const SportProfile = () => {
 
       Logger.debug('save_rating_start', { ratingScoreId, sportId, sportName });
 
-      // Step 1: Get ALL player ratings with source_type
+      // Step 1: Get ALL player ratings with source info
       const ratingsResult = await withTimeout(
-        (async () => supabase
-          .from('player_rating_score')
-          .select(`
+        (async () =>
+          supabase
+            .from('player_rating_score')
+            .select(
+              `
             id,
             rating_score_id,
-            source_type,
-            is_verified,
-            rating_score (
+            source,
+            is_certified,
+            rating_score!player_rating_scores_rating_score_id_fkey (
               id,
-              rating (
+              rating_system (
                 sport_id
               )
             )
-          `)
-          .eq('player_id', user.id))(),
+          `
+            )
+            .eq('player_id', user.id))(),
         15000,
         'Failed to fetch ratings - connection timeout'
       );
@@ -265,20 +289,30 @@ const SportProfile = () => {
       Logger.debug('player_ratings_fetched', { count: allPlayerRatings?.length });
 
       // Step 2: Find and DELETE only SELF_REPORTED ratings for this specific sport
-      const ratingsToDelete = allPlayerRatings?.filter(item => {
-        const ratingScoreData = Array.isArray(item.rating_score) ? item.rating_score[0] : item.rating_score;
-        if (!ratingScoreData) return false;
-        
-        const ratingData = Array.isArray(ratingScoreData.rating) ? ratingScoreData.rating[0] : ratingScoreData.rating;
-        const itemSportId = ratingData?.sport_id;
-        const sourceType = item.source_type || 'self_reported'; // Default to self_reported for old data
-        
-        // Only delete self_reported ratings for current sport
-        const shouldDelete = itemSportId === sportId && sourceType === 'self_reported';
-        
-        Logger.debug('rating_delete_check', { ratingId: item.id, sportId: itemSportId, sourceType, shouldDelete });
-        return shouldDelete;
-      }) || [];
+      const ratingsToDelete =
+        allPlayerRatings?.filter(item => {
+          const ratingScoreData = Array.isArray(item.rating_score)
+            ? item.rating_score[0]
+            : item.rating_score;
+          if (!ratingScoreData) return false;
+
+          const ratingSystemData = Array.isArray(ratingScoreData.rating_system)
+            ? ratingScoreData.rating_system[0]
+            : ratingScoreData.rating_system;
+          const itemSportId = ratingSystemData?.sport_id;
+          const source = item.source || 'self_reported'; // Default to self_reported for old data
+
+          // Only delete self_reported ratings for current sport
+          const shouldDelete = itemSportId === sportId && source === 'self_reported';
+
+          Logger.debug('rating_delete_check', {
+            ratingId: item.id,
+            sportId: itemSportId,
+            source,
+            shouldDelete,
+          });
+          return shouldDelete;
+        }) || [];
 
       Logger.debug('ratings_to_delete', { sportId, count: ratingsToDelete.length });
 
@@ -286,16 +320,15 @@ const SportProfile = () => {
       for (const rating of ratingsToDelete) {
         Logger.debug('deleting_rating', { ratingId: rating.id });
         const deleteResult = await withTimeout(
-          (async () => supabase
-            .from('player_rating_score')
-            .delete()
-            .eq('id', rating.id))(),
+          (async () => supabase.from('player_rating_score').delete().eq('id', rating.id))(),
           10000,
           'Failed to delete rating - connection timeout'
         );
 
         if (deleteResult.error) {
-          Logger.error('Failed to delete rating', deleteResult.error as Error, { ratingId: rating.id });
+          Logger.error('Failed to delete rating', deleteResult.error as Error, {
+            ratingId: rating.id,
+          });
           throw deleteResult.error;
         }
         Logger.debug('rating_deleted', { ratingId: rating.id });
@@ -304,21 +337,22 @@ const SportProfile = () => {
       // Step 3: Insert the new self_reported rating
       Logger.debug('inserting_new_rating', { ratingScoreId, playerId: user.id });
       const insertResult = await withTimeout(
-        (async () => supabase
-          .from('player_rating_score')
-          .insert({
+        (async () =>
+          supabase.from('player_rating_score').insert({
             player_id: user.id,
             rating_score_id: ratingScoreId,
-            source_type: 'self_reported', // NEW: Explicitly self-reported
-            is_verified: false,
-            is_primary: true, // NEW: Mark as primary display rating
+            source: 'self_reported', // Explicitly self-reported
+            is_certified: false,
           }))(),
         10000,
         'Failed to save rating - connection timeout'
       );
 
       if (insertResult.error) {
-        Logger.error('Failed to insert new rating', insertResult.error as Error, { ratingScoreId, playerId: user.id });
+        Logger.error('Failed to insert new rating', insertResult.error as Error, {
+          ratingScoreId,
+          playerId: user.id,
+        });
         throw insertResult.error;
       }
 
@@ -352,11 +386,12 @@ const SportProfile = () => {
       Alert.alert('Error', 'Rating information not available');
       return;
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (navigation as any).navigate('RatingProofs', {
       playerRatingScoreId: playerRatingScoreId,
       sportName: sportName,
       ratingValue: ratingInfo.scoreValue,
-      isOwnProfile: true
+      isOwnProfile: true,
     });
   };
 
@@ -364,7 +399,9 @@ const SportProfile = () => {
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         Alert.alert('Error', 'User not authenticated');
         return;
@@ -373,10 +410,11 @@ const SportProfile = () => {
       if (playerSportId) {
         // Entry exists: Update is_active field
         const updateResult = await withTimeout(
-          (async () => supabase
-            .from('player_sport')
-            .update({ is_active: newValue })
-            .eq('id', playerSportId))(),
+          (async () =>
+            supabase
+              .from('player_sport')
+              .update({ is_active: newValue })
+              .eq('id', playerSportId))(),
           10000,
           'Failed to update availability - connection timeout'
         );
@@ -386,10 +424,10 @@ const SportProfile = () => {
         setIsActive(newValue);
 
         // Show success message
-        const message = newValue 
-          ? `${sportName} activated successfully!` 
+        const message = newValue
+          ? `${sportName} activated successfully!`
           : `${sportName} deactivated`;
-        
+
         if (Platform.OS === 'android') {
           ToastAndroid.show(message, ToastAndroid.SHORT);
         } else {
@@ -405,16 +443,17 @@ const SportProfile = () => {
         if (newValue) {
           // User wants to play this sport: Create new entry with is_active = true
           const insertResult = await withTimeout(
-            (async () => supabase
-              .from('player_sport')
-              .insert({
-                player_id: user.id,
-                sport_id: sportId,
-                is_active: true,
-                is_primary: false,
-              })
-              .select('id')
-              .single())(),
+            (async () =>
+              supabase
+                .from('player_sport')
+                .insert({
+                  player_id: user.id,
+                  sport_id: sportId,
+                  is_active: true,
+                  is_primary: false,
+                })
+                .select('id')
+                .single())(),
             10000,
             'Failed to create sport profile - connection timeout'
           );
@@ -438,14 +477,13 @@ const SportProfile = () => {
         } else {
           // User doesn't want to play this sport: Don't create entry, just update UI
           setIsActive(false);
-          
+
           // Optional: Show a subtle message
           if (Platform.OS === 'android') {
             ToastAndroid.show(`${sportName} not added`, ToastAndroid.SHORT);
           }
         }
       }
-
     } catch (error) {
       Logger.error('Failed to toggle sport active status', error as Error, { sportId, sportName });
       Alert.alert('Error', getNetworkErrorMessage(error));
@@ -466,8 +504,11 @@ const SportProfile = () => {
     try {
       // TODO: Implement peer rating request logic
       // This will insert records into peer_rating_request table
-      Logger.logUserAction('send_peer_rating_requests', { count: selectedPlayerIds.length, sportId });
-      
+      Logger.logUserAction('send_peer_rating_requests', {
+        count: selectedPlayerIds.length,
+        sportId,
+      });
+
       // For now, just show a success message
       if (Platform.OS === 'android') {
         ToastAndroid.show(
@@ -480,10 +521,13 @@ const SportProfile = () => {
           `Peer rating requests sent to ${selectedPlayerIds.length} player(s)`
         );
       }
-      
+
       setShowPeerRatingRequestOverlay(false);
     } catch (error) {
-      Logger.error('Failed to send peer rating requests', error as Error, { count: selectedPlayerIds.length, sportId });
+      Logger.error('Failed to send peer rating requests', error as Error, {
+        count: selectedPlayerIds.length,
+        sportId,
+      });
       Alert.alert('Error', 'Failed to send peer rating requests');
     }
   };
@@ -493,7 +537,7 @@ const SportProfile = () => {
       // TODO: Implement reference request logic
       // This will insert records into reference_request table
       Logger.logUserAction('send_reference_requests', { count: selectedPlayerIds.length, sportId });
-      
+
       // For now, just show a success message
       if (Platform.OS === 'android') {
         ToastAndroid.show(
@@ -506,10 +550,13 @@ const SportProfile = () => {
           `Reference requests sent to ${selectedPlayerIds.length} certified player(s)`
         );
       }
-      
+
       setShowReferenceRequestOverlay(false);
     } catch (error) {
-      Logger.error('Failed to send reference requests', error as Error, { count: selectedPlayerIds.length, sportId });
+      Logger.error('Failed to send reference requests', error as Error, {
+        count: selectedPlayerIds.length,
+        sportId,
+      });
       Alert.alert('Error', 'Failed to send reference requests');
     }
   };
@@ -528,16 +575,17 @@ const SportProfile = () => {
       }
 
       const updateResult = await withTimeout(
-        (async () => supabase
-          .from('player_sport')
-          .update({
-            preferred_match_duration: updatedPreferences.matchDuration,
-            preferred_match_type: updatedPreferences.matchType,
-            preferred_court: updatedPreferences.court,
-            preferred_play_style: updatedPreferences.playStyle,
-            preferred_play_attributes: updatedPreferences.playAttributes,
-          })
-          .eq('id', playerSportId))(),
+        (async () =>
+          supabase
+            .from('player_sport')
+            .update({
+              preferred_match_duration: updatedPreferences.matchDuration,
+              preferred_match_type: updatedPreferences.matchType,
+              preferred_court: updatedPreferences.court,
+              preferred_play_style: updatedPreferences.playStyle,
+              preferred_play_attributes: updatedPreferences.playAttributes,
+            })
+            .eq('id', playerSportId))(),
         10000,
         'Failed to save preferences - connection timeout'
       );
@@ -589,32 +637,30 @@ const SportProfile = () => {
           <Text style={styles.questionText}>Do you play {sportName}?</Text>
           <View style={styles.toggleContainer}>
             <TouchableOpacity
-              style={[
-                styles.toggleButton,
-                isActive && styles.toggleButtonActive,
-              ]}
+              style={[styles.toggleButton, isActive && styles.toggleButtonActive]}
               onPress={() => handleToggleActive(true)}
             >
-              <Text style={
-                isActive 
-                  ? [styles.toggleButtonText, styles.toggleButtonTextActive]
-                  : styles.toggleButtonText
-              }>
+              <Text
+                style={
+                  isActive
+                    ? [styles.toggleButtonText, styles.toggleButtonTextActive]
+                    : styles.toggleButtonText
+                }
+              >
                 Yes
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[
-                styles.toggleButton,
-                !isActive && styles.toggleButtonInactive,
-              ]}
+              style={[styles.toggleButton, !isActive && styles.toggleButtonInactive]}
               onPress={() => handleToggleActive(false)}
             >
-              <Text style={
-                !isActive
-                  ? [styles.toggleButtonText, styles.toggleButtonTextActive]
-                  : styles.toggleButtonText
-              }>
+              <Text
+                style={
+                  !isActive
+                    ? [styles.toggleButtonText, styles.toggleButtonTextActive]
+                    : styles.toggleButtonText
+                }
+              >
                 No
               </Text>
             </TouchableOpacity>
@@ -636,7 +682,7 @@ const SportProfile = () => {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>MY RATING</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.editIconButton}
                 onPress={() => {
                   // Determine which overlay to show based on sport name
@@ -752,9 +798,7 @@ const SportProfile = () => {
               ) : (
                 <View style={styles.noRatingContainer}>
                   <Text style={styles.noRatingText}>No rating information yet</Text>
-                  <Text style={styles.noRatingSubtext}>
-                    Set up your rating to start playing
-                  </Text>
+                  <Text style={styles.noRatingSubtext}>Set up your rating to start playing</Text>
                 </View>
               )}
             </View>
@@ -766,7 +810,7 @@ const SportProfile = () => {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>MY PREFERENCES</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.editIconButton}
                 onPress={() => {
                   Haptics.selectionAsync();
@@ -789,25 +833,19 @@ const SportProfile = () => {
               {/* Match Type */}
               <View style={styles.preferenceRow}>
                 <Text style={styles.preferenceLabel}>Match Type</Text>
-                <Text style={styles.preferenceValue}>
-                  {formatMatchType(preferences.matchType)}
-                </Text>
+                <Text style={styles.preferenceValue}>{formatMatchType(preferences.matchType)}</Text>
               </View>
 
               {/* Facility */}
               <View style={styles.preferenceRow}>
                 <Text style={styles.preferenceLabel}>Facility</Text>
-                <Text style={styles.preferenceValue}>
-                  {preferences.facilityName || 'Not set'}
-                </Text>
+                <Text style={styles.preferenceValue}>{preferences.facilityName || 'Not set'}</Text>
               </View>
 
               {/* Playing Style (for Tennis: Server & Volley, etc.) */}
               <View style={styles.preferenceRow}>
                 <Text style={styles.preferenceLabel}>Playing Style</Text>
-                <Text style={styles.preferenceValue}>
-                  {preferences.playingStyle || 'Not set'}
-                </Text>
+                <Text style={styles.preferenceValue}>{preferences.playingStyle || 'Not set'}</Text>
               </View>
 
               {/* Play Attributes */}
@@ -877,7 +915,12 @@ const SportProfile = () => {
             matchDuration: preferences.matchDuration || undefined,
             matchType: preferences.matchType || undefined,
             court: preferences.facilityName || undefined,
-            playStyle: (preferences.playingStyle as 'counterpuncher' | 'aggressive_baseliner' | 'serve_and_volley' | 'all_court') || undefined,
+            playStyle:
+              (preferences.playingStyle as
+                | 'counterpuncher'
+                | 'aggressive_baseliner'
+                | 'serve_and_volley'
+                | 'all_court') || undefined,
             playAttributes: [],
           }}
         />
@@ -893,7 +936,12 @@ const SportProfile = () => {
             matchDuration: preferences.matchDuration || undefined,
             matchType: preferences.matchType || undefined,
             court: preferences.facilityName || undefined,
-            playStyle: (preferences.playingStyle as 'counterpuncher' | 'aggressive_baseliner' | 'serve_and_volley' | 'all_court') || undefined,
+            playStyle:
+              (preferences.playingStyle as
+                | 'counterpuncher'
+                | 'aggressive_baseliner'
+                | 'serve_and_volley'
+                | 'all_court') || undefined,
             playAttributes: [],
           }}
         />
@@ -1167,5 +1215,3 @@ const styles = StyleSheet.create({
 });
 
 export default SportProfile;
-
-

@@ -29,7 +29,7 @@ import RalliaLogo from '../../assets/images/light mode logo.svg';
 
 type RootStackParamList = {
   Notifications: undefined;
-  [key: string]: unknown;
+  [key: string]: object | undefined;
 };
 
 // Wrapper component for NotificationButton with navigation and unread count
@@ -454,13 +454,9 @@ function ChatStack() {
 }
 
 // Custom center tab button component that handles auth/onboarding state
-function CenterTabButton({
-  children,
-  onPress,
-}: {
-  children: React.ReactNode;
-  onPress?: (e: unknown) => void;
-}) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function CenterTabButton(props: any) {
+  const { children, onPress } = props;
   const { session } = useAuth();
   const { startOnboarding, resumeOnboarding, needsOnboarding } = useOverlay();
 
@@ -478,9 +474,7 @@ function CenterTabButton({
     }
 
     // Fully onboarded -> Navigate to Match screen normally
-    if (onPress) {
-      onPress(null);
-    }
+    onPress?.();
   };
 
   return (

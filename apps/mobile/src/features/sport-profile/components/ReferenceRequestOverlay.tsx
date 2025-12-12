@@ -64,7 +64,7 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
     } else {
       const query = searchQuery.toLowerCase();
       const filtered = players.filter(
-        (player) =>
+        player =>
           player.full_name.toLowerCase().includes(query) ||
           player.display_name?.toLowerCase().includes(query)
       );
@@ -77,7 +77,7 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
     if (visible) {
       fadeAnim.setValue(0);
       slideAnim.setValue(50);
-      
+
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -98,35 +98,37 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
       setLoading(true);
 
       // Step 1: Find all players with CERTIFIED ratings for this sport
-      // (api_verified, peer_verified, admin_verified - NOT self_reported)
       const { data: certifiedRatings, error: ratingsError } = await supabase
         .from('player_rating_score')
-        .select(`
+        .select(
+          `
           player_id,
-          is_primary,
-          source_type,
-          rating_score (
+          source,
+          is_certified,
+          rating_score!player_rating_scores_rating_score_id_fkey (
             id,
-            display_label,
-            rating (
+            label,
+            rating_system (
               sport_id
             )
           )
-        `)
-        .eq('is_verified', true)
-        .neq('source_type', 'self_reported')
+        `
+        )
+        .eq('is_certified', true)
+        .neq('source', 'self_reported')
         .neq('player_id', currentUserId); // Exclude current user
 
       if (ratingsError) throw ratingsError;
 
       // Filter by sport and get unique player IDs
-      const sportCertifiedRatings = certifiedRatings?.filter((rating: {
-        rating_score: Array<{ rating: Array<{ sport_id: string }> }>;
-      }) => {
-        const ratingScoreArray = rating.rating_score;
-        const ratingArray = ratingScoreArray?.[0]?.rating;
-        return ratingArray?.[0]?.sport_id === sportId;
-      }) || [];
+      const sportCertifiedRatings =
+        certifiedRatings?.filter(
+          (rating: { rating_score: Array<{ rating_system: Array<{ sport_id: string }> }> }) => {
+            const ratingScoreArray = rating.rating_score;
+            const ratingSystemArray = ratingScoreArray?.[0]?.rating_system;
+            return ratingSystemArray?.[0]?.sport_id === sportId;
+          }
+        ) || [];
 
       const uniquePlayerIds = [
         ...new Set(sportCertifiedRatings.map((r: { player_id: string }) => r.player_id)),
@@ -147,42 +149,46 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
 
       if (profilesError) throw profilesError;
 
-      // Step 3: Map ratings by player_id (get primary rating)
+      // Step 3: Map ratings by player_id (get certified rating)
       const ratingsMap = new Map<string, { display_label: string; isCertified: boolean }>();
-      sportCertifiedRatings.forEach((rating: {
-        player_id: string;
-        is_primary: boolean;
-        source_type: string;
-        rating_score: unknown;
-      }) => {
-        const ratingScore = rating.rating_score as { display_label?: string };
-        const isCertified = rating.source_type !== 'self_reported';
-        
-        if (rating.is_primary || !ratingsMap.has(rating.player_id)) {
-          ratingsMap.set(rating.player_id, {
-            display_label: ratingScore?.display_label || '',
-            isCertified,
-          });
+      sportCertifiedRatings.forEach(
+        (rating: {
+          player_id: string;
+          source: string;
+          is_certified: boolean;
+          rating_score: unknown;
+        }) => {
+          const ratingScore = rating.rating_score as { label?: string };
+          const isCertified = rating.is_certified;
+
+          if (!ratingsMap.has(rating.player_id)) {
+            ratingsMap.set(rating.player_id, {
+              display_label: ratingScore?.label || '',
+              isCertified,
+            });
+          }
         }
-      });
+      );
 
       // Step 4: Combine profiles with ratings
-      const playersWithRatings: Player[] = (profiles || []).map((profile: {
-        id: string;
-        full_name: string;
-        display_name: string | null;
-        profile_picture_url: string | null;
-      }) => {
-        const ratingInfo = ratingsMap.get(profile.id);
-        return {
-          id: profile.id,
-          full_name: profile.full_name,
-          display_name: profile.display_name,
-          profile_picture_url: profile.profile_picture_url,
-          rating: ratingInfo?.display_label || null,
-          isCertified: ratingInfo?.isCertified || false,
-        };
-      });
+      const playersWithRatings: Player[] = (profiles || []).map(
+        (profile: {
+          id: string;
+          full_name: string;
+          display_name: string | null;
+          profile_picture_url: string | null;
+        }) => {
+          const ratingInfo = ratingsMap.get(profile.id);
+          return {
+            id: profile.id,
+            full_name: profile.full_name,
+            display_name: profile.display_name,
+            profile_picture_url: profile.profile_picture_url,
+            rating: ratingInfo?.display_label || null,
+            isCertified: ratingInfo?.isCertified || false,
+          };
+        }
+      );
 
       setPlayers(playersWithRatings);
       setFilteredPlayers(playersWithRatings);
@@ -195,7 +201,7 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
 
   const togglePlayerSelection = (playerId: string) => {
     selectionHaptic();
-    setSelectedPlayers((prev) => {
+    setSelectedPlayers(prev => {
       const newSet = new Set(prev);
       if (newSet.has(playerId)) {
         newSet.delete(playerId);
@@ -208,7 +214,7 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
 
   const handleSendRequests = async () => {
     if (selectedPlayers.size === 0) return;
-    
+
     mediumHaptic();
     setSending(true);
     try {
@@ -216,7 +222,10 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
       setSelectedPlayers(new Set());
       setSearchQuery('');
     } catch (error) {
-      Logger.error('Failed to send reference requests', error as Error, { count: selectedPlayers.size, sportId });
+      Logger.error('Failed to send reference requests', error as Error, {
+        count: selectedPlayers.size,
+        sportId,
+      });
     } finally {
       setSending(false);
     }
@@ -224,7 +233,7 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
 
   const renderPlayerCard = (player: Player) => {
     const isSelected = selectedPlayers.has(player.id);
-    
+
     return (
       <TouchableOpacity
         key={player.id}
@@ -235,10 +244,7 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
         {/* Avatar */}
         <View style={styles.avatarContainer}>
           {player.profile_picture_url ? (
-            <Image
-              source={{ uri: player.profile_picture_url }}
-              style={styles.avatar}
-            />
+            <Image source={{ uri: player.profile_picture_url }} style={styles.avatar} />
           ) : (
             <View style={[styles.avatar, styles.avatarPlaceholder]}>
               <Ionicons name="person" size={24} color="#999" />
@@ -254,9 +260,7 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
         {/* Player Info */}
         <View style={styles.playerInfo}>
           <Text style={styles.playerName}>{player.full_name}</Text>
-          {player.display_name && (
-            <Text style={styles.playerUsername}>@{player.display_name}</Text>
-          )}
+          {player.display_name && <Text style={styles.playerUsername}>@{player.display_name}</Text>}
         </View>
 
         {/* Rating Badge */}
@@ -289,17 +293,13 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
         {/* Title */}
         <Text style={styles.title}>Request references for your current rating</Text>
         <Text style={styles.subtitle}>
-          Request references allow you to certify your rating by asking other higher-rated or certified players to confirm your declared rating
+          Request references allow you to certify your rating by asking other higher-rated or
+          certified players to confirm your declared rating
         </Text>
 
         {/* Search Bar */}
         <View style={styles.searchContainer}>
-          <Ionicons
-            name="search"
-            size={20}
-            color="#999"
-            style={styles.searchIcon}
-          />
+          <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search players..."
@@ -310,20 +310,14 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
             autoCorrect={false}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity
-              onPress={() => setSearchQuery('')}
-              style={styles.clearButton}
-            >
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
               <Ionicons name="close-circle" size={20} color="#999" />
             </TouchableOpacity>
           )}
         </View>
 
         {/* Players List */}
-        <ScrollView
-          style={styles.playersList}
-          showsVerticalScrollIndicator={false}
-        >
+        <ScrollView style={styles.playersList} showsVerticalScrollIndicator={false}>
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={COLORS.primary} />
@@ -341,7 +335,7 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
             </View>
           ) : (
             <View style={styles.playersGrid}>
-              {filteredPlayers.map((player) => renderPlayerCard(player))}
+              {filteredPlayers.map(player => renderPlayerCard(player))}
             </View>
           )}
         </ScrollView>
