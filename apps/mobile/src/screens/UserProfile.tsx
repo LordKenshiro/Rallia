@@ -13,17 +13,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { Text } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
-import { supabase, uploadImage, Logger } from '@rallia/shared-services';
+import { supabase, Logger } from '@rallia/shared-services';
+import { uploadImage } from '../services/imageUpload';
 import { useImagePicker } from '../hooks';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import PersonalInformationOverlay from '../features/onboarding/components/overlays/PersonalInformationOverlay';
 import PlayerInformationOverlay from '../features/onboarding/components/overlays/PlayerInformationOverlay';
 import PlayerAvailabilitiesOverlay from '../features/onboarding/components/overlays/PlayerAvailabilitiesOverlay';
-import type { 
-  Profile, 
-  Player, 
-  Sport,
-} from '@rallia/shared-types';
+import type { Profile, Player, Sport } from '@rallia/shared-types';
 
 interface SportWithRating extends Sport {
   isActive: boolean;
@@ -50,14 +47,16 @@ const UserProfile = () => {
   const [showPersonalInfoOverlay, setShowPersonalInfoOverlay] = useState(false);
   const [showPlayerInfoOverlay, setShowPlayerInfoOverlay] = useState(false);
   const [showAvailabilitiesOverlay, setShowAvailabilitiesOverlay] = useState(false);
-  
+
   // Use custom hook for image picker (for profile picture editing)
   const { image: newProfileImage, pickImage } = useImagePicker();
 
   // Check authentication on mount and redirect if not logged in
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         // User is not authenticated, go back
         Alert.alert('Error', 'Please sign in to view your profile');
@@ -92,7 +91,9 @@ const UserProfile = () => {
       setUploadingImage(true);
 
       // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         Alert.alert('Error', 'User not authenticated');
         return;
@@ -106,10 +107,8 @@ const UserProfile = () => {
 
       // Update profile with new picture URL
       const updateResult = await withTimeout(
-        (async () => supabase
-          .from('profile')
-          .update({ profile_picture_url: url })
-          .eq('id', user.id))(),
+        (async () =>
+          supabase.from('profile').update({ profile_picture_url: url }).eq('id', user.id))(),
         10000,
         'Failed to update profile - connection timeout'
       );
@@ -117,7 +116,7 @@ const UserProfile = () => {
       if (updateResult.error) throw updateResult.error;
 
       // Update local state
-      setProfile(prev => prev ? { ...prev, profile_picture_url: url } : null);
+      setProfile(prev => (prev ? { ...prev, profile_picture_url: url } : null));
 
       Alert.alert('Success', 'Profile picture updated successfully!');
     } catch (error) {
@@ -131,62 +130,62 @@ const UserProfile = () => {
   const fetchUserProfileData = async () => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         Alert.alert('Error', 'User not authenticated');
         return;
       }
 
       // Run all queries in parallel for better performance
-      const [profileResult, playerResult, sportsResult, playerSportsResult, ratingsResult, availResult] = await Promise.all([
+      const [
+        profileResult,
+        playerResult,
+        sportsResult,
+        playerSportsResult,
+        ratingsResult,
+        availResult,
+      ] = await Promise.all([
         // Fetch profile data
         withTimeout(
-          (async () => supabase
-            .from('profile')
-            .select('*')
-            .eq('id', user.id)
-            .single())(),
+          (async () => supabase.from('profile').select('*').eq('id', user.id).single())(),
           15000,
           'Failed to load profile - connection timeout'
         ),
-        
+
         // Fetch player data
         withTimeout(
-          (async () => supabase
-            .from('player')
-            .select('*')
-            .eq('id', user.id)
-            .single())(),
+          (async () => supabase.from('player').select('*').eq('id', user.id).single())(),
           15000,
           'Failed to load player data - connection timeout'
         ),
-        
+
         // Fetch all sports
         withTimeout(
-          (async () => supabase
-            .from('sport')
-            .select('*')
-            .eq('is_active', true)
-            .order('name'))(),
+          (async () => supabase.from('sport').select('*').eq('is_active', true).order('name'))(),
           15000,
           'Failed to load sports - connection timeout'
         ),
-        
+
         // Fetch player's selected sports
         withTimeout(
-          (async () => supabase
-            .from('player_sport')
-            .select('sport_id, is_primary, is_active')
-            .eq('player_id', user.id))(),
+          (async () =>
+            supabase
+              .from('player_sport')
+              .select('sport_id, is_primary, is_active')
+              .eq('player_id', user.id))(),
           15000,
           'Failed to load player sports - connection timeout'
         ),
-        
+
         // Fetch player's ratings with source_type info
         withTimeout(
-          (async () => supabase
-            .from('player_rating_score')
-            .select(`
+          (async () =>
+            supabase
+              .from('player_rating_score')
+              .select(
+                `
               *,
               rating_score (
                 display_label,
@@ -194,22 +193,24 @@ const UserProfile = () => {
                   sport_id
                 )
               )
-            `)
-            .eq('player_id', user.id)
-            .order('is_primary', { ascending: false })
-            .order('is_verified', { ascending: false })
-            .order('created_at', { ascending: false }))(),
+            `
+              )
+              .eq('player_id', user.id)
+              .order('is_primary', { ascending: false })
+              .order('is_verified', { ascending: false })
+              .order('created_at', { ascending: false }))(),
           15000,
           'Failed to load ratings - connection timeout'
         ),
-        
+
         // Fetch player availabilities
         withTimeout(
-          (async () => supabase
-            .from('player_availability')
-            .select('day_of_week, time_period, is_active')
-            .eq('player_id', user.id)
-            .eq('is_active', true))(),
+          (async () =>
+            supabase
+              .from('player_availability')
+              .select('day_of_week, time_period, is_active')
+              .eq('player_id', user.id)
+              .eq('is_active', true))(),
           15000,
           'Failed to load availability - connection timeout'
         ),
@@ -244,18 +245,21 @@ const UserProfile = () => {
       // Map sports with active status and ratings
       const playerSportsMap = new Map(
         (playerSports || []).map(ps => [
-          ps.sport_id, 
-          { isPrimary: ps.is_primary || false, isActive: ps.is_active || false }
+          ps.sport_id,
+          { isPrimary: ps.is_primary || false, isActive: ps.is_active || false },
         ])
       );
 
       // Map ratings - prioritize is_primary=true ratings
       const ratingsMap = new Map<string, string>();
       (ratingsData || []).forEach(rating => {
-        const ratingScore = rating.rating_score as { display_label?: string; rating?: { sport_id?: string } } | null;
+        const ratingScore = rating.rating_score as {
+          display_label?: string;
+          rating?: { sport_id?: string };
+        } | null;
         const sportId = ratingScore?.rating?.sport_id;
         const displayLabel = ratingScore?.display_label || '';
-        
+
         // Only set if not already set, or if this is a primary rating
         if (sportId && (!ratingsMap.has(sportId) || rating.is_primary)) {
           ratingsMap.set(sportId, displayLabel);
@@ -298,7 +302,6 @@ const UserProfile = () => {
       });
 
       setAvailabilities(availGrid);
-
     } catch (error) {
       Logger.error('Failed to fetch user profile data', error as Error);
       Alert.alert('Error', getNetworkErrorMessage(error));
@@ -325,8 +328,8 @@ const UserProfile = () => {
     };
 
     const uiFormat: any = {};
-    
-    Object.keys(dbAvailabilities).forEach((day) => {
+
+    Object.keys(dbAvailabilities).forEach(day => {
       const uiDay = dayMap[day];
       const dayData = dbAvailabilities[day];
       if (uiDay && dayData) {
@@ -344,7 +347,9 @@ const UserProfile = () => {
   // Handle saving availabilities from the overlay
   const handleSaveAvailabilities = async (uiAvailabilities: any) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         Alert.alert('Error', 'User not authenticated');
         return;
@@ -376,11 +381,12 @@ const UserProfile = () => {
 
       // Delete existing availabilities for this sport
       const deleteResult = await withTimeout(
-        (async () => supabase
-          .from('player_availability')
-          .delete()
-          .eq('player_id', user.id)
-          .eq('sport_id', primarySport.id))(),
+        (async () =>
+          supabase
+            .from('player_availability')
+            .delete()
+            .eq('player_id', user.id)
+            .eq('sport_id', primarySport.id))(),
         10000,
         'Failed to update availability - connection timeout'
       );
@@ -389,9 +395,9 @@ const UserProfile = () => {
 
       // Prepare new availability data
       const availabilityData: any[] = [];
-      
-      Object.keys(uiAvailabilities).forEach((day) => {
-        Object.keys(uiAvailabilities[day]).forEach((slot) => {
+
+      Object.keys(uiAvailabilities).forEach(day => {
+        Object.keys(uiAvailabilities[day]).forEach(slot => {
           if (uiAvailabilities[day][slot]) {
             availabilityData.push({
               player_id: user.id,
@@ -407,9 +413,7 @@ const UserProfile = () => {
       // Insert new availabilities
       if (availabilityData.length > 0) {
         const insertResult = await withTimeout(
-          (async () => supabase
-            .from('player_availability')
-            .insert(availabilityData))(),
+          (async () => supabase.from('player_availability').insert(availabilityData))(),
           10000,
           'Failed to save availability - connection timeout'
         );
@@ -419,10 +423,10 @@ const UserProfile = () => {
 
       // Refresh the data
       await fetchUserProfileData();
-      
+
       // Close the overlay
       setShowAvailabilitiesOverlay(false);
-      
+
       Alert.alert('Success', 'Your availabilities have been updated!');
     } catch (error) {
       Logger.error('Failed to save availabilities', error as Error, { playerId: player?.id });
@@ -433,18 +437,18 @@ const UserProfile = () => {
   const formatDate = (dateString: string | null): string => {
     if (!dateString) return 'Not set';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
     });
   };
 
   const formatJoinedDate = (dateString: string | null): string => {
     if (!dateString) return '';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
       month: 'long',
     });
   };
@@ -499,16 +503,16 @@ const UserProfile = () => {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Profile Picture with Edit Overlay - Same as PersonalInformationOverlay */}
         <View style={styles.profileHeader}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.profilePicContainer}
             activeOpacity={0.8}
             onPress={pickImage}
             disabled={uploadingImage}
           >
             {profile?.profile_picture_url || newProfileImage ? (
-              <Image 
-                source={{ uri: newProfileImage || profile?.profile_picture_url || '' }} 
-                style={styles.profileImage} 
+              <Image
+                source={{ uri: newProfileImage || profile?.profile_picture_url || '' }}
+                style={styles.profileImage}
               />
             ) : (
               <Ionicons name="camera" size={32} color={COLORS.primary} />
@@ -520,7 +524,7 @@ const UserProfile = () => {
               </View>
             )}
           </TouchableOpacity>
-          
+
           {/* Name and Username */}
           <Text style={styles.profileName}>
             {profile?.display_name || profile?.full_name || 'User'}
@@ -528,7 +532,7 @@ const UserProfile = () => {
           <Text style={styles.username}>
             @{profile?.display_name?.toLowerCase().replace(/\s/g, '') || 'username'}
           </Text>
-          
+
           {/* Joined Date */}
           <View style={styles.joinedContainer}>
             <Ionicons name="calendar-outline" size={14} color="#666" />
@@ -542,14 +546,14 @@ const UserProfile = () => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>MY PERSONAL INFORMATION</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.editIconButton}
               onPress={() => setShowPersonalInfoOverlay(true)}
             >
               <Ionicons name="create-outline" size={20} color={COLORS.primary} />
             </TouchableOpacity>
           </View>
-          
+
           <View style={styles.card}>
             <View style={styles.compactRow}>
               <Text style={styles.label}>Full Name</Text>
@@ -582,23 +586,21 @@ const UserProfile = () => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>MY PLAYER INFORMATION</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.editIconButton}
               onPress={() => setShowPlayerInfoOverlay(true)}
             >
               <Ionicons name="create-outline" size={20} color={COLORS.primary} />
             </TouchableOpacity>
           </View>
-          
+
           <View style={styles.card}>
             {/* Bio - Vertical Layout */}
             <View style={styles.verticalField}>
               <Text style={styles.fieldLabel}>Bio</Text>
-              <Text style={styles.fieldValue}>
-                {profile?.bio || 'No bio yet'}
-              </Text>
+              <Text style={styles.fieldValue}>{profile?.bio || 'No bio yet'}</Text>
             </View>
-            
+
             {/* Playing Hand and Max Travel Distance - Side by Side */}
             <View style={styles.horizontalFieldsContainer}>
               <View style={styles.halfField}>
@@ -625,15 +627,12 @@ const UserProfile = () => {
               <Ionicons name="create-outline" size={20} color={COLORS.primary} />
             </TouchableOpacity>
           </View>
-          
+
           <View style={styles.sportsCardsContainer}>
             {sports.map(sport => (
-              <TouchableOpacity 
-                key={sport.id} 
-                style={[
-                  styles.sportCard,
-                  !sport.isActive && styles.sportCardInactive,
-                ]}
+              <TouchableOpacity
+                key={sport.id}
+                style={[styles.sportCard, !sport.isActive && styles.sportCardInactive]}
                 activeOpacity={0.7}
                 onPress={() => {
                   (navigation as any).navigate('SportProfile', {
@@ -643,11 +642,13 @@ const UserProfile = () => {
                 }}
               >
                 <View style={styles.sportCardLeft}>
-                  <Text style={
-                    sport.isActive 
-                      ? styles.sportName 
-                      : [styles.sportName, styles.sportNameInactive]
-                  }>
+                  <Text
+                    style={
+                      sport.isActive
+                        ? styles.sportName
+                        : [styles.sportName, styles.sportNameInactive]
+                    }
+                  >
                     {sport.display_name}
                   </Text>
                   {sport.isActive ? (
@@ -668,9 +669,7 @@ const UserProfile = () => {
                 <Ionicons name="chevron-forward" size={20} color="#999" />
               </TouchableOpacity>
             ))}
-            {sports.length === 0 && (
-              <Text style={styles.noDataText}>No sports available</Text>
-            )}
+            {sports.length === 0 && <Text style={styles.noDataText}>No sports available</Text>}
           </View>
         </View>
 
@@ -678,34 +677,38 @@ const UserProfile = () => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>MY AVAILABILITIES</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.editIconButton}
               onPress={() => setShowAvailabilitiesOverlay(true)}
             >
               <Ionicons name="create-outline" size={20} color={COLORS.primary} />
             </TouchableOpacity>
           </View>
-          
+
           <View style={styles.card}>
             {/* Availability Grid - Same as PlayerAvailabilitiesOverlay */}
             <View style={styles.gridContainer}>
               {/* Header Row */}
               <View style={styles.gridRow}>
                 <View style={styles.dayCell} />
-                {['AM', 'PM', 'EVE'].map((slot) => (
+                {['AM', 'PM', 'EVE'].map(slot => (
                   <View key={slot} style={styles.headerCell}>
-                    <Text size="xs" weight="semibold" color="#666">{slot}</Text>
+                    <Text size="xs" weight="semibold" color="#666">
+                      {slot}
+                    </Text>
                   </View>
                 ))}
               </View>
 
               {/* Day Rows */}
-              {Object.keys(availabilities).map((day) => (
+              {Object.keys(availabilities).map(day => (
                 <View key={day} style={styles.gridRow}>
                   <View style={styles.dayCell}>
-                    <Text size="sm" weight="medium" color="#333">{getDayLabel(day)}</Text>
+                    <Text size="sm" weight="medium" color="#333">
+                      {getDayLabel(day)}
+                    </Text>
                   </View>
-                  {['morning', 'afternoon', 'evening'].map((period) => (
+                  {['morning', 'afternoon', 'evening'].map(period => (
                     <View key={period} style={styles.timeSlotWrapper}>
                       <View
                         style={[
@@ -1068,4 +1071,3 @@ const styles = StyleSheet.create({
 });
 
 export default UserProfile;
-

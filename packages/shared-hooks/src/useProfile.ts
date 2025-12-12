@@ -5,17 +5,17 @@ import type { Profile } from '@rallia/shared-types';
 /**
  * Custom hook for fetching and managing user profile data
  * Eliminates duplicate profile fetching code across components
- * 
+ *
  * @param userId - Optional user ID to fetch. If not provided, fetches current authenticated user
  * @returns Object containing profile data, loading state, error, and refetch function
- * 
+ *
  * @example
  * ```tsx
  * const { profile, loading, error, refetch } = useProfile();
- * 
+ *
  * if (loading) return <Spinner />;
  * if (error) return <ErrorMessage message={error.message} />;
- * 
+ *
  * return <Text>{profile?.full_name}</Text>;
  * ```
  */
@@ -30,7 +30,9 @@ export const useProfile = (userId?: string) => {
       setError(null);
 
       // Get current authenticated user if no userId provided
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       const targetUserId = userId || user?.id;
 
       if (!targetUserId) {
@@ -64,10 +66,10 @@ export const useProfile = (userId?: string) => {
     fetchProfile();
   }, [fetchProfile]);
 
-  return { 
-    profile, 
-    loading, 
-    error, 
-    refetch: fetchProfile 
+  return {
+    profile,
+    loading,
+    error,
+    refetch: fetchProfile,
   };
 };

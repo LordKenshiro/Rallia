@@ -1,10 +1,10 @@
-import { Match } from '../../../types';
+import { MatchCardDisplay } from '../../../types';
 
 /**
  * Mock data for matches
  * TODO: Replace with actual Supabase queries when backend is ready
  */
-export const getMockMatches = (): Match[] => [
+export const getMockMatches = (): MatchCardDisplay[] => [
   {
     id: '1',
     title: "Jaad's Singles",

@@ -18,7 +18,7 @@ export async function isAdmin(userId: string): Promise<boolean> {
   // The userId is the auth_users.id, which matches profiles.id
   // and admins.id references profiles.id
   const { data: admin, error } = await supabase
-    .from('admins')
+    .from('admin')
     .select('id, role')
     .eq('id', userId)
     .single();
@@ -41,7 +41,7 @@ export async function getAdminRole(userId: string): Promise<string | null> {
   const supabase = await createClient();
 
   const { data: admin, error } = await supabase
-    .from('admins')
+    .from('admin')
     .select('role')
     .eq('id', userId)
     .single();
@@ -62,7 +62,7 @@ export async function isSuperAdmin(userId: string): Promise<boolean> {
   const supabase = await createClient();
 
   const { data: admin, error } = await supabase
-    .from('admins')
+    .from('admin')
     .select('role')
     .eq('id', userId)
     .single();

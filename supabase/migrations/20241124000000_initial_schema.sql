@@ -709,9 +709,9 @@ CREATE TRIGGER update_match_updated_at BEFORE UPDATE ON match
 -- ============================================
 
 -- Insert initial sports
-INSERT INTO sport (id, name, display_name, description, is_active) VALUES
-    ('550e8400-e29b-41d4-a716-446655440001', 'tennis', 'Tennis', 'Traditional tennis sport', true),
-    ('550e8400-e29b-41d4-a716-446655440002', 'pickleball', 'Pickleball', 'Fast-paced paddle sport', true);
+INSERT INTO sport (id, name, display_name, description, icon_url, is_active) VALUES
+    ('550e8400-e29b-41d4-a716-446655440001', 'tennis', 'Tennis', 'Traditional tennis sport', 'images/tennis.jpg', true),
+    ('550e8400-e29b-41d4-a716-446655440002', 'pickleball', 'Pickleball', 'Fast-paced paddle sport', 'images/pickleball.jpg', true);
 
 -- Insert rating types for Tennis
 INSERT INTO rating (id, sport_id, rating_type, display_name, description, min_value, max_value, is_active) VALUES

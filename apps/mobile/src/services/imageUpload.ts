@@ -1,5 +1,4 @@
-import { supabase } from './supabase';
-import { Logger } from '../../../apps/mobile/src/services/logger';
+import { supabase, Logger } from '@rallia/shared-services';
 
 export interface UploadResult {
   url: string | null;

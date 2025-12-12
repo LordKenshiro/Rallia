@@ -49,7 +49,7 @@ export async function POST(Request: NextRequest) {
 
     // Create invitation in database
     const { data: invitation, error: invitationError } = await supabase
-      .from('invitations')
+      .from('invitation')
       .insert({
         email: data.email,
         phone: data.phone,

@@ -18,7 +18,7 @@ interface AdminWithProfile {
   role: 'super_admin' | 'moderator' | 'support';
   assigned_at: string;
   notes: string | null;
-  profiles: {
+  profile: {
     full_name: string | null;
     display_name: string | null;
     is_active: boolean;
@@ -82,13 +82,13 @@ export default async function AdminUsersPage({
   } | null = null;
 
   try {
-    const query = supabase.from('admins').select(
+    const query = supabase.from('admin').select(
       `
         id,
         role,
         assigned_at,
         notes,
-        profiles (
+        profile (
           full_name,
           display_name,
           is_active,
@@ -108,10 +108,10 @@ export default async function AdminUsersPage({
       id: admin.id,
       role: admin.role,
       assigned_at: admin.assigned_at,
-      full_name: admin.profiles?.full_name || null,
-      display_name: admin.profiles?.display_name || null,
-      is_active: admin.profiles?.is_active ?? true,
-      created_at: admin.profiles?.created_at || admin.assigned_at,
+      full_name: admin.profile?.full_name || null,
+      display_name: admin.profile?.display_name || null,
+      is_active: admin.profile?.is_active ?? true,
+      created_at: admin.profile?.created_at || admin.assigned_at,
       email: '', // Email will need to be fetched separately via admin API if needed
     }));
 

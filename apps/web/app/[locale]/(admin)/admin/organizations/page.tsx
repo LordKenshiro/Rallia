@@ -12,7 +12,7 @@ import { Building2, Plus } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 
-type Organization = Tables<'organizations'>;
+type Organization = Tables<'organization'>;
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('admin.organizations');
@@ -35,7 +35,7 @@ export default async function AdminOrganizationsPage({
 
   try {
     // Build query with pagination, sorting, and filtering
-    const query = supabase.from('organizations').select(
+    const query = supabase.from('organization').select(
       `
       id,
       name,

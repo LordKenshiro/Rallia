@@ -8,7 +8,7 @@ export type SurfaceType = Enums<'surface_type_enum'> | '';
 export type ContactType = Enums<'facility_contact_type_enum'>;
 
 // Use generated types
-export type Sport = Pick<Tables<'sports'>, 'id' | 'name' | 'slug'>;
+export type Sport = Pick<Tables<'sport'>, 'id' | 'name' | 'slug'>;
 
 // ExistingImage now represents a file from the files table joined via facility_files
 export interface ExistingImage {

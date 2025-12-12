@@ -26,7 +26,7 @@ export default async function AdminPostAuthPage({
 
   if (token) {
     const { data: invitation, error: invitationError } = await supabase
-      .from('invitations')
+      .from('invitation')
       .select('*')
       .eq('token', token)
       .single();
@@ -76,7 +76,7 @@ export default async function AdminPostAuthPage({
     if (invitation.role === 'admin' && invitation.admin_role) {
       // First check if admin already exists
       const { data: existingAdmin } = await supabase
-        .from('admins')
+        .from('admin')
         .select('*')
         .eq('id', user.id)
         .single();
@@ -84,7 +84,7 @@ export default async function AdminPostAuthPage({
       if (existingAdmin) {
         // Admin already exists, just update the invitation
         const { error: updateError } = await supabase
-          .from('invitations')
+          .from('invitation')
           .update({
             status: 'accepted',
             accepted_at: new Date().toISOString(),
@@ -102,7 +102,7 @@ export default async function AdminPostAuthPage({
 
       // Create new admin record
       const { data: admin, error: adminError } = await supabase
-        .from('admins')
+        .from('admin')
         .insert({
           id: user.id,
           role: invitation.admin_role,
@@ -118,7 +118,7 @@ export default async function AdminPostAuthPage({
       if (admin) {
         // Update invitation status to accepted
         const { error: updateError } = await supabase
-          .from('invitations')
+          .from('invitation')
           .update({
             status: 'accepted',
             accepted_at: new Date().toISOString(),

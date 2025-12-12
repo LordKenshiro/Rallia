@@ -186,7 +186,7 @@ async function uploadFacilityImages(
 
     // Insert into files table first
     const { data: fileRecord, error: fileError } = await supabase
-      .from('files')
+      .from('file')
       .insert({
         uploaded_by: uploaderId,
         storage_key: storageKey,
@@ -216,7 +216,7 @@ async function uploadFacilityImages(
   // Insert facility_files junction records
   if (facilityFileEntries.length > 0) {
     const { error: facilityFilesError } = await supabase
-      .from('facility_files')
+      .from('facility_file')
       .insert(facilityFileEntries);
 
     if (facilityFilesError) {
@@ -239,27 +239,27 @@ async function rollbackFacilities(
     try {
       // Get courts for this facility
       const { data: courts } = await supabase
-        .from('courts')
+        .from('court')
         .select('id')
         .eq('facility_id', facility.id);
 
       // Delete court_sports
       if (courts && courts.length > 0) {
         const courtIds = courts.map((c: any) => c.id);
-        const { error } = await supabase.from('court_sports').delete().in('court_id', courtIds);
+        const { error } = await supabase.from('court_sport').delete().in('court_id', courtIds);
         if (error) rollbackErrors.push(`court_sports: ${error.message}`);
       }
 
       // Delete courts
       const { error: courtsError } = await supabase
-        .from('courts')
+        .from('court')
         .delete()
         .eq('facility_id', facility.id);
       if (courtsError) rollbackErrors.push(`courts: ${courtsError.message}`);
 
       // Delete facility_sports
       const { error: facilitySportsError } = await supabase
-        .from('facility_sports')
+        .from('facility_sport')
         .delete()
         .eq('facility_id', facility.id);
       if (facilitySportsError)
@@ -267,22 +267,20 @@ async function rollbackFacilities(
 
       // Delete facility_contacts
       const { error: contactsError } = await supabase
-        .from('facility_contacts')
+        .from('facility_contact')
         .delete()
         .eq('facility_id', facility.id);
       if (contactsError) rollbackErrors.push(`facility_contacts: ${contactsError.message}`);
 
       // Delete facility_files and associated files
       const { data: facilityFiles } = await supabase
-        .from('facility_files')
+        .from('facility_file')
         .select('id, file_id, files(storage_key)')
         .eq('facility_id', facility.id);
 
       if (facilityFiles && facilityFiles.length > 0) {
         // Delete from storage
-        const storageKeys = facilityFiles
-          .map((ff: any) => ff.files?.storage_key)
-          .filter(Boolean);
+        const storageKeys = facilityFiles.map((ff: any) => ff.files?.storage_key).filter(Boolean);
         if (storageKeys.length > 0) {
           const { error: storageError } = await supabase.storage
             .from('facility-images')
@@ -292,7 +290,7 @@ async function rollbackFacilities(
 
         // Delete facility_files junction records
         const { error: facilityFilesError } = await supabase
-          .from('facility_files')
+          .from('facility_file')
           .delete()
           .eq('facility_id', facility.id);
         if (facilityFilesError)
@@ -301,10 +299,7 @@ async function rollbackFacilities(
         // Delete files records
         const fileIds = facilityFiles.map((ff: any) => ff.file_id);
         if (fileIds.length > 0) {
-          const { error: filesError } = await supabase
-            .from('files')
-            .delete()
-            .in('id', fileIds);
+          const { error: filesError } = await supabase.from('file').delete().in('id', fileIds);
           if (filesError) rollbackErrors.push(`files: ${filesError.message}`);
         }
       }
@@ -317,12 +312,12 @@ async function rollbackFacilities(
 
   // Delete facilities
   for (const facility of createdFacilities) {
-    const { error } = await supabase.from('facilities').delete().eq('id', facility.id);
+    const { error } = await supabase.from('facility').delete().eq('id', facility.id);
     if (error) rollbackErrors.push(`facility ${facility.id}: ${error.message}`);
   }
 
   // Delete organization
-  const { error: orgError } = await supabase.from('organizations').delete().eq('id', createdOrg.id);
+  const { error: orgError } = await supabase.from('organization').delete().eq('id', createdOrg.id);
   if (orgError) rollbackErrors.push(`organization: ${orgError.message}`);
 
   return rollbackErrors;
@@ -351,7 +346,7 @@ export async function POST(request: NextRequest) {
     // Parse form data
     const formData = await request.formData();
     const organizationJson = formData.get('organization');
-    const facilitiesJson = formData.get('facilities');
+    const facilitiesJson = formData.get('facility');
 
     if (!organizationJson || !facilitiesJson) {
       return NextResponse.json({ error: 'Missing required data' }, { status: 400 });
@@ -369,11 +364,11 @@ export async function POST(request: NextRequest) {
     const orgSlug = await ensureUniqueSlug(
       supabase,
       generateSlug(organization.name),
-      'organizations'
+      'organization'
     );
 
     const { data: createdOrg, error: orgError } = await supabase
-      .from('organizations')
+      .from('organization')
       .insert({
         owner_id: user.id,
         name: organization.name,
@@ -420,7 +415,7 @@ export async function POST(request: NextRequest) {
         const facilitySlug = await ensureUniqueSlug(
           supabase,
           generateSlug(facilityData.name),
-          'facilities'
+          'facility'
         );
 
         // Prepare location if lat/long provided
@@ -435,7 +430,7 @@ export async function POST(request: NextRequest) {
 
         // Create facility
         const { data: facility, error: facilityError } = await supabase
-          .from('facilities')
+          .from('facility')
           .insert({
             organization_id: createdOrg.id,
             name: facilityData.name,
@@ -477,7 +472,7 @@ export async function POST(request: NextRequest) {
           }));
 
           const { error: sportsError } = await supabase
-            .from('facility_sports')
+            .from('facility_sport')
             .insert(facilitySports);
 
           if (sportsError) {
@@ -497,9 +492,7 @@ export async function POST(request: NextRequest) {
             sport_id: contact.sportId || null,
           }));
 
-          const { error: contactsError } = await supabase
-            .from('facility_contacts')
-            .insert(contacts);
+          const { error: contactsError } = await supabase.from('facility_contact').insert(contacts);
 
           if (contactsError) {
             throw new Error(`Failed to create contacts: ${contactsError.message}`);
@@ -527,7 +520,7 @@ export async function POST(request: NextRequest) {
 
           if (courts.length > 0) {
             const { data: createdCourts, error: courtsError } = await supabase
-              .from('courts')
+              .from('court')
               .insert(courts)
               .select('id');
 
@@ -549,7 +542,7 @@ export async function POST(request: NextRequest) {
 
               if (courtSports.length > 0) {
                 const { error: courtSportsError } = await supabase
-                  .from('court_sports')
+                  .from('court_sport')
                   .insert(courtSports);
 
                 if (courtSportsError) {

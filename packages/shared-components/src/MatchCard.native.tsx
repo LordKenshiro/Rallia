@@ -2,10 +2,10 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '@rallia/shared-constants';
-import { Match } from '@rallia/shared-types';
+import { MatchCardDisplay } from '@rallia/shared-types';
 
 interface MatchCardProps {
-  match: Match;
+  match: MatchCardDisplay;
   onPress?: () => void;
 }
 

@@ -13,12 +13,12 @@ export class NetworkTimeoutError extends Error {
 /**
  * Wraps a promise with a timeout
  * Rejects if the promise doesn't resolve within the specified time
- * 
+ *
  * @param promise - The promise to wrap
  * @param timeoutMs - Timeout in milliseconds (default: 15000ms = 15s)
  * @param errorMessage - Custom error message for timeout
  * @returns Promise that rejects on timeout or resolves with the original promise result
- * 
+ *
  * @example
  * const data = await withTimeout(
  *   supabase.from('users').select('*'),
@@ -52,14 +52,14 @@ export async function withTimeout<T>(
 /**
  * Wraps a Supabase query with timeout and retry logic
  * Automatically handles common network errors on mobile
- * 
+ *
  * @param queryFn - Function that returns a Supabase query promise
  * @param options - Configuration options
  * @returns Promise that resolves with query result or rejects with error
- * 
+ *
  * @example
  * const { data, error } = await queryWithTimeout(
- *   () => supabase.from('rating_proofs').select('*').eq('player_id', userId),
+ *   () => supabase.from('rating_proof').select('*').eq('player_id', userId),
  *   { timeout: 10000, retries: 2 }
  * );
  */
@@ -72,22 +72,13 @@ export async function queryWithTimeout<T>(
     onRetry?: (attempt: number, error: Error) => void;
   } = {}
 ): Promise<T> {
-  const {
-    timeout = 15000,
-    retries = 1,
-    retryDelay = 1000,
-    onRetry,
-  } = options;
+  const { timeout = 15000, retries = 1, retryDelay = 1000, onRetry } = options;
 
   let lastError: Error;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      return await withTimeout(
-        queryFn(),
-        timeout,
-        `Query timeout after ${timeout}ms`
-      );
+      return await withTimeout(queryFn(), timeout, `Query timeout after ${timeout}ms`);
     } catch (error) {
       lastError = error as Error;
 

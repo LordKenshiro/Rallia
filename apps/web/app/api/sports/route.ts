@@ -6,7 +6,7 @@ export async function GET() {
     const supabase = await createClient();
 
     const { data: sports, error } = await supabase
-      .from('sports')
+      .from('sport')
       .select('id, name, slug')
       .eq('is_active', true)
       .order('name', { ascending: true });

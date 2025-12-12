@@ -1,19 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import {
-  MatchCard,
-  Text,
-  Heading,
-  Button,
-  Spinner,
-} from '@rallia/shared-components';
+import { MatchCard, Text, Heading, Button, Spinner } from '@rallia/shared-components';
 import { useAuth } from '../hooks';
 import { useOverlay } from '../context';
 import { useProfile } from '@rallia/shared-hooks';
 import { Logger } from '@rallia/shared-services';
 import { getMockMatches } from '../features/matches/data/mockMatches';
-import { Match } from '../types';
+import { MatchCardDisplay } from '../types';
 
 const Home = () => {
   // Use custom hooks for auth, profile, and overlay context
@@ -21,7 +15,7 @@ const Home = () => {
   const { profile } = useProfile();
   const { startOnboarding, startLogin, setOnHomeScreen } = useOverlay();
 
-  const [matches, setMatches] = useState<Match[]>([]);
+  const [matches, setMatches] = useState<MatchCardDisplay[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
   const welcomeOpacity = useState(new Animated.Value(1))[0];
@@ -94,7 +88,6 @@ const Home = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-
       <View style={styles.contentWrapper}>
         {!session && (
           <View style={styles.matchesSection}>
@@ -103,18 +96,10 @@ const Home = () => {
               You must sign in to create and access your matches
             </Text>
             <View style={styles.authButtonsContainer}>
-              <Button
-                variant="primary"
-                onPress={startOnboarding}
-                style={styles.signInButton}
-              >
+              <Button variant="primary" onPress={startOnboarding} style={styles.signInButton}>
                 Sign Up
               </Button>
-              <Button
-                variant="primary"
-                onPress={startLogin}
-                style={styles.logInButton}
-              >
+              <Button variant="primary" onPress={startLogin} style={styles.logInButton}>
                 Log In
               </Button>
             </View>
@@ -151,7 +136,9 @@ const Home = () => {
               <MatchCard
                 key={match.id}
                 match={match}
-                onPress={() => { Logger.logUserAction('match_pressed', { matchId: match.id }); }}
+                onPress={() => {
+                  Logger.logUserAction('match_pressed', { matchId: match.id });
+                }}
               />
             ))
           ) : (
@@ -245,4 +232,3 @@ const styles = StyleSheet.create({
 });
 
 export default Home;
-

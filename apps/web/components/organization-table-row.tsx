@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 
 interface OrganizationTableRowProps {
   organization: Pick<
-    Tables<'organizations'>,
+    Tables<'organization'>,
     'id' | 'name' | 'email' | 'phone' | 'website' | 'nature' | 'slug' | 'is_active' | 'created_at'
   >;
 }

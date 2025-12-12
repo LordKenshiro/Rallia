@@ -94,7 +94,7 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
       return initialData.facilities.map((facility: any) => {
         // Convert existing images from facility_files joined with files
         const images: UpdateFacilityImage[] =
-          facility.facility_files?.map((ff: any) => ({
+          facility.facility_file?.map((ff: any) => ({
             id: ff.id, // facility_files junction table id
             fileId: ff.files?.id || ff.file_id, // files table id
             url: ff.files?.url || '',
@@ -105,7 +105,7 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
 
         // Convert contacts
         const contacts: FacilityContact[] =
-          facility.facility_contacts?.map((contact: any) => ({
+          facility.facility_contact?.map((contact: any) => ({
             id: contact.id || crypto.randomUUID(),
             phone: contact.phone || '',
             email: contact.email || '',
@@ -119,7 +119,7 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
         const courtRowsMap = new Map<string, CourtRow>();
         facility.courts?.forEach((court: any) => {
           const sportIds =
-            court.court_sports
+            court.court_sport
               ?.map((cs: any) => cs.sport_id)
               .sort()
               .join(',') || '';
@@ -134,7 +134,7 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
               lighting: court.lighting,
               indoor: court.indoor,
               quantity: 1,
-              sportIds: court.court_sports?.map((cs: any) => cs.sport_id) || [],
+              sportIds: court.court_sport?.map((cs: any) => cs.sport_id) || [],
             });
           }
         });
@@ -151,7 +151,7 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
           postalCode: facility.postal_code || '',
           latitude: facility.latitude?.toString() || '',
           longitude: facility.longitude?.toString() || '',
-          selectedSports: facility.facility_sports?.map((fs: any) => fs.sport_id) || [],
+          selectedSports: facility.facility_sport?.map((fs: any) => fs.sport_id) || [],
           contacts:
             contacts.length > 0
               ? contacts

@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Logger } from '../../../apps/mobile/src/services/logger';
+import { Logger } from '@rallia/shared-utils';
 
 /**
  * Verification Service

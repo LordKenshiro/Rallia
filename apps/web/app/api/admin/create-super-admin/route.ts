@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     // Check if any admins already exist
     const { data: existingAdmins, error: checkError } = await supabaseAdmin
-      .from('admins')
+      .from('admin')
       .select('id')
       .limit(1);
 
@@ -102,13 +102,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Create/update profile
-    const { error: profileError } = await supabaseAdmin.from('profiles').upsert(
+    const { error: profileError } = await supabaseAdmin.from('profile').upsert(
       {
         id: userId,
         email,
         full_name: 'Super Admin',
         display_name: 'Admin',
-        is_active: true,
       },
       { onConflict: 'id' }
     );
@@ -121,7 +120,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create admin record
-    const { error: adminError } = await supabaseAdmin.from('admins').upsert(
+    const { error: adminError } = await supabaseAdmin.from('admin').upsert(
       {
         id: userId,
         role,
