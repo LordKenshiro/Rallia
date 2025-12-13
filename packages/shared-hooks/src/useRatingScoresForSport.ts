@@ -139,15 +139,29 @@ export function useRatingScoresForSport(
 
             // Find the rating for this sport and rating system
             if (playerRatings) {
-              const matchingRating = playerRatings.find(
-                (pr: { rating_score?: { rating_system?: { sport_id?: string } } }) => {
-                  const ratingScore = pr.rating_score;
-                  const ratingSystem = ratingScore?.rating_system;
-                  return (
-                    ratingSystem?.sport_id === sportId && ratingSystem?.code === ratingSystemCode
+              const matchingRating = playerRatings.find(pr => {
+                // rating_score is returned as an array by Supabase
+                const ratingScores = Array.isArray(pr.rating_score)
+                  ? pr.rating_score
+                  : pr.rating_score
+                    ? [pr.rating_score]
+                    : [];
+
+                // Check each rating_score's rating_system
+                return ratingScores.some(ratingScore => {
+                  // rating_system is also returned as an array by Supabase
+                  const ratingSystems = Array.isArray(ratingScore?.rating_system)
+                    ? ratingScore.rating_system
+                    : ratingScore?.rating_system
+                      ? [ratingScore.rating_system]
+                      : [];
+
+                  return ratingSystems.some(
+                    ratingSystem =>
+                      ratingSystem?.sport_id === sportId && ratingSystem?.code === ratingSystemCode
                   );
-                }
-              );
+                });
+              });
 
               if (matchingRating) {
                 playerRatingScoreId = matchingRating.rating_score_id;
