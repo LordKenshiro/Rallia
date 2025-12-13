@@ -2,7 +2,7 @@
   "expo": {
     "name": "rallia-app",
     "slug": "rallia-app",
-    "owner": "rallia",
+    "owner": "rallia-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -16,7 +16,8 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSCameraUsageDescription": "This app requires access to your camera to take profile pictures.",
-        "NSPhotoLibraryUsageDescription": "This app requires access to your photo library to select profile pictures."
+        "NSPhotoLibraryUsageDescription": "This app requires access to your photo library to select profile pictures.",
+        "ITSAppUsesNonExemptEncryption": false
       },
       "bundleIdentifier": "com.mathisl971.rallia-app"
     },
@@ -26,14 +27,11 @@
         "backgroundColor": "#ffffff"
       },
       "permissions": [
-        "CAMERA",
-        "READ_MEDIA_IMAGES",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE",
-        "CAMERA",
-        "READ_MEDIA_IMAGES",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -41,6 +39,16 @@
       "bundler": "metro"
     },
     "plugins": [
+      "expo-dev-client",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "ccacheEnabled": true
+          }
+        }
+      ],
+      "./plugins/withFollyFix.js",
       [
         "expo-image-picker",
         {
@@ -51,14 +59,14 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "62e3feab-58d6-4972-9371-577a10a12263"
+        "projectId": "1baeff78-5ea2-4fa5-ab5a-b5f1386575b3"
       }
     },
     "runtimeVersion": {
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/62e3feab-58d6-4972-9371-577a10a12263"
+      "url": "https://u.expo.dev/1baeff78-5ea2-4fa5-ab5a-b5f1386575b3"
     }
   }
 }
