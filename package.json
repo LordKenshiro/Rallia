@@ -79,7 +79,9 @@
     "prepare": "husky",
     "// prepare": "Set up Git hooks (runs automatically on npm install)",
     "lint-staged": "lint-staged",
-    "// lint-staged": "Run linters on staged files (used by pre-commit hook)"
+    "// lint-staged": "Run linters on staged files (used by pre-commit hook)",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "devDependencies": {
     "@babel/plugin-proposal-export-default-from": "^7.27.1",
@@ -131,6 +133,9 @@
   },
   "dependencies": {
     "globals": "^16.5.0",
-    "prettier-plugin-tailwindcss": "^0.5.14"
+    "prettier-plugin-tailwindcss": "^0.5.14",
+    "expo": "~54.0.27",
+    "react": "19.1.0",
+    "react-native": "0.81.5"
   }
 }
