@@ -6,12 +6,25 @@
  * - Guest: Auth form to sign in/sign up
  * - Authenticated (not onboarded): Continue onboarding
  * - Onboarded: Actions wizard for creating matches, groups, etc.
+ *
+ * When "Create Match" is pressed, the MatchCreationWizard slides in.
  */
 
 import * as React from 'react';
-import { useCallback, useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
-import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
+import { useCallback, useMemo, useState, useEffect } from 'react';
+import { View, StyleSheet, TouchableOpacity, Dimensions, Keyboard } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  interpolate,
+} from 'react-native-reanimated';
+import {
+  BottomSheetModal,
+  BottomSheetScrollView,
+  BottomSheetBackdrop,
+  BottomSheetView,
+} from '@gorhom/bottom-sheet';
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
@@ -25,10 +38,11 @@ import {
   neutral,
   base,
 } from '@rallia/design-system';
-import { lightHaptic } from '@rallia/shared-utils';
+import { lightHaptic, successHaptic } from '@rallia/shared-utils';
 import { useActionsSheet, useOverlay } from '../context';
 import { useAuth, useTranslation, type TranslationKey } from '../hooks';
 import { useTheme } from '../hooks/useTheme';
+import { MatchCreationWizard } from '../features/matches';
 
 // =============================================================================
 // TYPES
@@ -189,16 +203,12 @@ const ActionItem: React.FC<ActionItemProps> = ({ icon, title, description, onPre
  */
 interface ActionsContentProps {
   onClose: () => void;
+  onCreateMatch: () => void;
   colors: ThemeColors;
   t: (key: TranslationKey) => string;
 }
 
-const ActionsContent: React.FC<ActionsContentProps> = ({ onClose, colors, t }) => {
-  const handleCreateMatch = () => {
-    // TODO: Navigate to create match flow
-    onClose();
-  };
-
+const ActionsContent: React.FC<ActionsContentProps> = ({ onClose, onCreateMatch, colors, t }) => {
   const handleInvitePlayers = () => {
     // TODO: Navigate to invite players flow
     onClose();
@@ -232,7 +242,7 @@ const ActionsContent: React.FC<ActionsContentProps> = ({ onClose, colors, t }) =
   return (
     <View style={styles.contentContainer}>
       <View style={[styles.wizardHeader, { borderBottomColor: colors.border }]}>
-        <Text size="xl" weight="bold" color={colors.text}>
+        <Text size="xl" weight="bold" color={colors.text} style={{ textAlign: 'center' }}>
           {t('actions.quickActions')}
         </Text>
       </View>
@@ -242,7 +252,7 @@ const ActionsContent: React.FC<ActionsContentProps> = ({ onClose, colors, t }) =
           icon="tennisball-outline"
           title={t('actions.createMatch')}
           description={t('actions.createMatchDescription')}
-          onPress={handleCreateMatch}
+          onPress={onCreateMatch}
           colors={colors}
         />
 
@@ -302,7 +312,7 @@ const ActionsContent: React.FC<ActionsContentProps> = ({ onClose, colors, t }) =
 // MAIN COMPONENT
 // =============================================================================
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 const MAX_SHEET_HEIGHT = SCREEN_HEIGHT * 0.9; // 90% of screen height
 
 export const ActionsBottomSheet: React.FC = () => {
@@ -312,6 +322,12 @@ export const ActionsBottomSheet: React.FC = () => {
   const { theme } = useTheme();
   const { t } = useTranslation();
   const isDark = theme === 'dark';
+
+  // Wizard state
+  const [showWizard, setShowWizard] = useState(false);
+
+  // Animation value for slide transition
+  const slideProgress = useSharedValue(0);
 
   // Theme-aware colors from design system
   const themeColors = isDark ? darkTheme : lightTheme;
@@ -359,6 +375,99 @@ export const ActionsBottomSheet: React.FC = () => {
     resumeOnboarding();
   }, [closeSheet, resumeOnboarding]);
 
+  // Handle create match - show wizard with slide animation
+  const handleCreateMatch = useCallback(() => {
+    lightHaptic();
+    setShowWizard(true);
+    slideProgress.value = withSpring(1, { damping: 80, stiffness: 600, overshootClamping: false });
+  }, [slideProgress]);
+
+  // Handle wizard close - slide back to actions list
+  const handleWizardClose = useCallback(() => {
+    slideProgress.value = withSpring(0, { damping: 80, stiffness: 600, overshootClamping: false });
+    // Wait for animation to complete before hiding wizard
+    setTimeout(() => {
+      setShowWizard(false);
+    }, 300);
+  }, [slideProgress]);
+
+  // Handle wizard success
+  const handleWizardSuccess = useCallback(
+    (matchId: string) => {
+      successHaptic();
+      // Close the sheet and navigate to match detail
+      closeSheet();
+      setShowWizard(false);
+      slideProgress.value = 0;
+      // TODO: Navigate to match detail screen
+      console.log('Match created:', matchId);
+    },
+    [closeSheet, slideProgress]
+  );
+
+  // Handle sheet dismiss - reset wizard state
+  const handleSheetDismiss = useCallback(() => {
+    setShowWizard(false);
+    slideProgress.value = 0;
+  }, [slideProgress]);
+
+  // Handle keyboard dismissal to restore sheet position
+  // This ensures the sheet restores when keyboard is dismissed by tapping outside
+  useEffect(() => {
+    if (!showWizard) return;
+
+    let hideTimeout: NodeJS.Timeout;
+
+    const handleKeyboardHide = () => {
+      // Clear any pending timeout
+      if (hideTimeout) {
+        clearTimeout(hideTimeout);
+      }
+
+      // Use a small delay to ensure keyboard is fully dismissed
+      // and to avoid conflicts with bottom sheet's internal keyboard handling
+      hideTimeout = setTimeout(() => {
+        if (sheetRef.current) {
+          try {
+            sheetRef.current.snapToIndex(0);
+          } catch (error) {
+            // Silently handle any errors (e.g., if sheet is already at that position)
+          }
+        }
+      }, 150);
+    };
+
+    const keyboardWillHideListener = Keyboard.addListener('keyboardWillHide', handleKeyboardHide);
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', handleKeyboardHide);
+
+    return () => {
+      if (hideTimeout) {
+        clearTimeout(hideTimeout);
+      }
+      keyboardWillHideListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, [showWizard, sheetRef]);
+
+  // Animated styles for content sliding
+  const actionsAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        translateX: interpolate(slideProgress.value, [0, 1], [0, -SCREEN_WIDTH]),
+      },
+    ],
+    opacity: interpolate(slideProgress.value, [0, 0.5, 1], [1, 0.5, 0]),
+  }));
+
+  const wizardAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        translateX: interpolate(slideProgress.value, [0, 1], [SCREEN_WIDTH, 0]),
+      },
+    ],
+    opacity: interpolate(slideProgress.value, [0, 0.5, 1], [0, 0.5, 1]),
+  }));
+
   // Determine which content to show
   const renderContent = () => {
     // Guest user - show auth options
@@ -371,21 +480,61 @@ export const ActionsBottomSheet: React.FC = () => {
       return <OnboardingContent onContinue={handleContinueOnboarding} colors={colors} t={t} />;
     }
 
-    // Fully onboarded - show actions wizard
-    return <ActionsContent onClose={closeSheet} colors={colors} t={t} />;
+    // Fully onboarded - show actions wizard or match creation wizard
+    return (
+      <View style={styles.slidingContainer}>
+        {/* Actions list */}
+        <Animated.View style={[styles.slidePanel, actionsAnimatedStyle]}>
+          <ActionsContent
+            onClose={closeSheet}
+            onCreateMatch={handleCreateMatch}
+            colors={colors}
+            t={t}
+          />
+        </Animated.View>
+
+        {/* Match creation wizard */}
+        {showWizard && (
+          <Animated.View style={[styles.slidePanel, styles.wizardPanel, wizardAnimatedStyle]}>
+            <MatchCreationWizard
+              onClose={closeSheet}
+              onBackToLanding={handleWizardClose}
+              onSuccess={handleWizardSuccess}
+            />
+          </Animated.View>
+        )}
+      </View>
+    );
   };
 
   return (
     <BottomSheetModal
       ref={sheetRef}
-      enableDynamicSizing={true}
+      enableDynamicSizing={!showWizard}
+      snapPoints={showWizard ? ['90%'] : undefined}
       maxDynamicContentSize={MAX_SHEET_HEIGHT}
       backdropComponent={renderBackdrop}
-      enablePanDownToClose
+      enablePanDownToClose={!showWizard}
       handleIndicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
       backgroundStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
+      bottomInset={0}
+      onDismiss={handleSheetDismiss}
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
+      enableDismissOnClose
     >
-      <BottomSheetScrollView style={styles.sheetContent}>{renderContent()}</BottomSheetScrollView>
+      {showWizard ? (
+        <BottomSheetView style={[styles.sheetContent, { backgroundColor: colors.cardBackground }]}>
+          {renderContent()}
+        </BottomSheetView>
+      ) : (
+        <BottomSheetScrollView
+          style={[styles.sheetContent, { backgroundColor: colors.cardBackground }]}
+        >
+          {renderContent()}
+        </BottomSheetScrollView>
+      )}
     </BottomSheetModal>
   );
 };
@@ -404,6 +553,20 @@ const styles = StyleSheet.create({
   },
   sheetContent: {
     flexGrow: 1,
+  },
+  slidingContainer: {
+    flex: 1,
+    overflow: 'hidden',
+  },
+  slidePanel: {
+    width: '100%',
+  },
+  wizardPanel: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   contentContainer: {
     paddingHorizontal: spacingPixels[6],

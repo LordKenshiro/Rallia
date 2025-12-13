@@ -13,5 +13,5 @@
       "@rallia/shared-utils": ["../../packages/shared-utils/src"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", "*.ts", "*.tsx"]
+  "include": ["**/*.ts", "**/*.tsx", "*.ts", "*.tsx", "nativewind-env.d.ts"]
 }

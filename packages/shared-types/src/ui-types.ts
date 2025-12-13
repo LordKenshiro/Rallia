@@ -8,7 +8,18 @@
  * - UI-only enums and constants
  */
 
-import type { Notification } from './database';
+import type {
+  Notification,
+  MatchFormatEnum,
+  CourtStatusEnum,
+  MatchVisibilityEnum,
+  MatchJoinModeEnum,
+  CostSplitTypeEnum,
+  LocationTypeEnum,
+  MatchDurationEnum,
+  MatchTypeEnum,
+  GenderType,
+} from './database';
 
 // ============================================
 // VIEW MODELS
@@ -153,16 +164,153 @@ export interface FormFieldState<T> {
 
 /**
  * Match creation form data
+ * Contains all fields needed for the match creation wizard
  */
 export interface MatchFormData {
+  // ============================================
+  // BASIC INFO
+  // ============================================
+
+  /** Selected sport ID */
   sportId: string;
+
+  /** Date of the match (ISO date string YYYY-MM-DD) */
   matchDate: string;
+
+  /** Start time (HH:MM format) */
   startTime: string;
+
+  /** End time (HH:MM format) - calculated from duration */
   endTime: string;
-  matchType: string;
+
+  /** IANA timezone identifier (e.g., "America/New_York") */
+  timezone: string;
+
+  // ============================================
+  // DURATION
+  // ============================================
+
+  /** Standard duration option (30, 60, 90, 120 minutes or custom) */
+  duration: MatchDurationEnum;
+
+  /** Custom duration in minutes (required when duration is 'custom') */
+  customDurationMinutes?: number;
+
+  // ============================================
+  // MATCH FORMAT & TYPE
+  // ============================================
+
+  /** Match format: singles (2 players) or doubles (4 players) */
+  format: MatchFormatEnum;
+
+  /** Player expectation: practice/rally, competitive match, or both */
+  playerExpectation: MatchTypeEnum;
+
+  // ============================================
+  // LOCATION
+  // ============================================
+
+  /** How location was specified */
+  locationType: LocationTypeEnum;
+
+  /** Selected facility ID (when locationType is 'facility') */
+  facilityId?: string;
+
+  /** Selected court ID (when locationType is 'facility') */
+  courtId?: string;
+
+  /** Custom location name (when locationType is 'custom') */
   locationName?: string;
+
+  /** Custom location address (when locationType is 'custom') */
   locationAddress?: string;
+
+  // ============================================
+  // COURT & COST
+  // ============================================
+
+  /** Court reservation status */
+  courtStatus?: CourtStatusEnum;
+
+  /** Whether the court is free (no cost) */
+  isCourtFree: boolean;
+
+  /** How court costs are split among players */
+  costSplitType: CostSplitTypeEnum;
+
+  /** Estimated total court cost (when isCourtFree is false) */
+  estimatedCost?: number;
+
+  // ============================================
+  // OPPONENT PREFERENCES
+  // ============================================
+
+  /** Minimum required rating for opponents (rating_score ID) */
+  minRatingScoreId?: string;
+
+  /** Preferred gender of opponent/partner */
+  preferredOpponentGender?: GenderType;
+
+  // ============================================
+  // VISIBILITY & ACCESS
+  // ============================================
+
+  /** Match visibility: public (discoverable) or private (invite only) */
+  visibility: MatchVisibilityEnum;
+
+  /** How players join: direct (auto-approve) or request (manual approval) */
+  joinMode: MatchJoinModeEnum;
+
+  // ============================================
+  // ADDITIONAL INFO
+  // ============================================
+
+  /** Additional notes or details from the creator */
   notes?: string;
+}
+
+/**
+ * Match creation wizard step data
+ * Used for multi-step form state management
+ */
+export interface MatchCreationWizardState {
+  /** Current step index (0-based) */
+  currentStep: number;
+
+  /** Total number of steps */
+  totalSteps: number;
+
+  /** Form data accumulated across steps */
+  formData: Partial<MatchFormData>;
+
+  /** Validation errors by field */
+  errors: Partial<Record<keyof MatchFormData, string>>;
+
+  /** Whether the form is being submitted */
+  isSubmitting: boolean;
+
+  /** Whether the form has been submitted successfully */
+  isSubmitted: boolean;
+}
+
+/**
+ * Match creation wizard step definition
+ */
+export interface MatchCreationWizardStep {
+  /** Step identifier */
+  id: string;
+
+  /** Step title for display */
+  title: string;
+
+  /** Step description/subtitle */
+  description?: string;
+
+  /** Fields included in this step */
+  fields: Array<keyof MatchFormData>;
+
+  /** Whether this step is optional */
+  optional?: boolean;
 }
 
 /**

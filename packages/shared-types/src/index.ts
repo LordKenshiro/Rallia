@@ -17,5 +17,8 @@ export * from './ui-types';
 // Domain constants (display labels, mappings)
 export * from './constants';
 
+// Validation schemas (Zod)
+export * from './validation';
+
 // Re-export Database type and Supabase helper types for client typing
 export type { Database, Tables, TablesInsert, TablesUpdate, Enums } from './supabase';

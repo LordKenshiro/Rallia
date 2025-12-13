@@ -1,6 +1,6 @@
 /**
- * Matches Feature - Component Exports
- * Re-export from shared components
+ * Match Creation Components
  */
 
-export { MatchCard } from '@rallia/shared-components';
+export { MatchCreationWizard } from './MatchCreationWizard';
+export * from './steps';

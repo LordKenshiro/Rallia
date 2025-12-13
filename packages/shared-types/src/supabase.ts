@@ -834,51 +834,99 @@ export type Database = {
       match: {
         Row: {
           booking_id: string | null;
+          cost_split_type: Database['public']['Enums']['cost_split_type_enum'] | null;
+          court_id: string | null;
+          court_status: Database['public']['Enums']['court_status_enum'] | null;
           created_at: string | null;
           created_by: string;
+          custom_duration_minutes: number | null;
+          duration: Database['public']['Enums']['match_duration_enum'] | null;
           end_time: string;
+          estimated_cost: number | null;
+          facility_id: string | null;
+          format: Database['public']['Enums']['match_format_enum'] | null;
           id: string;
+          is_court_free: boolean | null;
+          join_mode: Database['public']['Enums']['match_join_mode_enum'] | null;
           location_address: string | null;
           location_name: string | null;
+          location_type: Database['public']['Enums']['location_type_enum'] | null;
           match_date: string;
           match_type: Database['public']['Enums']['match_type'];
+          min_rating_score_id: string | null;
           notes: string | null;
+          player_expectation: Database['public']['Enums']['match_type_enum'] | null;
+          preferred_opponent_gender: Database['public']['Enums']['gender_type'] | null;
           sport_id: string;
           start_time: string;
           status: Database['public']['Enums']['match_status'] | null;
+          timezone: string;
           updated_at: string | null;
+          visibility: Database['public']['Enums']['match_visibility_enum'] | null;
         };
         Insert: {
           booking_id?: string | null;
+          cost_split_type?: Database['public']['Enums']['cost_split_type_enum'] | null;
+          court_id?: string | null;
+          court_status?: Database['public']['Enums']['court_status_enum'] | null;
           created_at?: string | null;
           created_by: string;
+          custom_duration_minutes?: number | null;
+          duration?: Database['public']['Enums']['match_duration_enum'] | null;
           end_time: string;
+          estimated_cost?: number | null;
+          facility_id?: string | null;
+          format?: Database['public']['Enums']['match_format_enum'] | null;
           id?: string;
+          is_court_free?: boolean | null;
+          join_mode?: Database['public']['Enums']['match_join_mode_enum'] | null;
           location_address?: string | null;
           location_name?: string | null;
+          location_type?: Database['public']['Enums']['location_type_enum'] | null;
           match_date: string;
           match_type: Database['public']['Enums']['match_type'];
+          min_rating_score_id?: string | null;
           notes?: string | null;
+          player_expectation?: Database['public']['Enums']['match_type_enum'] | null;
+          preferred_opponent_gender?: Database['public']['Enums']['gender_type'] | null;
           sport_id: string;
           start_time: string;
           status?: Database['public']['Enums']['match_status'] | null;
+          timezone?: string;
           updated_at?: string | null;
+          visibility?: Database['public']['Enums']['match_visibility_enum'] | null;
         };
         Update: {
           booking_id?: string | null;
+          cost_split_type?: Database['public']['Enums']['cost_split_type_enum'] | null;
+          court_id?: string | null;
+          court_status?: Database['public']['Enums']['court_status_enum'] | null;
           created_at?: string | null;
           created_by?: string;
+          custom_duration_minutes?: number | null;
+          duration?: Database['public']['Enums']['match_duration_enum'] | null;
           end_time?: string;
+          estimated_cost?: number | null;
+          facility_id?: string | null;
+          format?: Database['public']['Enums']['match_format_enum'] | null;
           id?: string;
+          is_court_free?: boolean | null;
+          join_mode?: Database['public']['Enums']['match_join_mode_enum'] | null;
           location_address?: string | null;
           location_name?: string | null;
+          location_type?: Database['public']['Enums']['location_type_enum'] | null;
           match_date?: string;
           match_type?: Database['public']['Enums']['match_type'];
+          min_rating_score_id?: string | null;
           notes?: string | null;
+          player_expectation?: Database['public']['Enums']['match_type_enum'] | null;
+          preferred_opponent_gender?: Database['public']['Enums']['gender_type'] | null;
           sport_id?: string;
           start_time?: string;
           status?: Database['public']['Enums']['match_status'] | null;
+          timezone?: string;
           updated_at?: string | null;
+          visibility?: Database['public']['Enums']['match_visibility_enum'] | null;
         };
         Relationships: [
           {
@@ -889,10 +937,31 @@ export type Database = {
             referencedColumns: ['id'];
           },
           {
+            foreignKeyName: 'match_court_id_fkey';
+            columns: ['court_id'];
+            isOneToOne: false;
+            referencedRelation: 'court';
+            referencedColumns: ['id'];
+          },
+          {
             foreignKeyName: 'match_created_by_fkey';
             columns: ['created_by'];
             isOneToOne: false;
             referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'match_facility_id_fkey';
+            columns: ['facility_id'];
+            isOneToOne: false;
+            referencedRelation: 'facility';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'match_min_rating_score_id_fkey';
+            columns: ['min_rating_score_id'];
+            isOneToOne: false;
+            referencedRelation: 'rating_score';
             referencedColumns: ['id'];
           },
           {
@@ -2495,6 +2564,22 @@ export type Database = {
           step: number;
         }[];
       };
+      get_user_created_match_ids: {
+        Args: { p_player_id: string };
+        Returns: string[];
+      };
+      get_user_participating_match_ids: {
+        Args: { p_player_id: string };
+        Returns: string[];
+      };
+      is_match_creator: {
+        Args: { p_match_id: string; p_player_id: string };
+        Returns: boolean;
+      };
+      is_match_participant: {
+        Args: { p_match_id: string; p_player_id: string };
+        Returns: boolean;
+      };
     };
     Enums: {
       account_status: 'active' | 'suspended' | 'deleted' | 'pending_verification';
@@ -2509,7 +2594,9 @@ export type Database = {
         | 'closed';
       booking_status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
       conversation_type: 'direct' | 'group' | 'match' | 'announcement';
+      cost_split_type_enum: 'host_pays' | 'split_equal' | 'custom';
       country_enum: 'Canada' | 'United States';
+      court_status_enum: 'reserved' | 'to_reserve';
       court_surface: 'hard' | 'clay' | 'grass' | 'carpet' | 'synthetic';
       court_type: 'indoor' | 'outdoor' | 'covered';
       day_enum: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
@@ -2545,11 +2632,15 @@ export type Database = {
         | 'mailing_list'
         | 'growth_prompt';
       invite_status_enum: 'pending' | 'sent' | 'accepted' | 'expired' | 'bounced' | 'cancelled';
+      location_type_enum: 'facility' | 'custom' | 'tbd';
       match_duration: '1h' | '1.5h' | '2h';
-      match_duration_enum: '30' | '60' | '90' | '120';
+      match_duration_enum: '30' | '60' | '90' | '120' | 'custom';
+      match_format_enum: 'singles' | 'doubles';
+      match_join_mode_enum: 'direct' | 'request';
       match_status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
       match_type: 'casual' | 'competitive' | 'both';
       match_type_enum: 'practice' | 'competitive' | 'both';
+      match_visibility_enum: 'public' | 'private';
       member_role: 'owner' | 'admin' | 'manager' | 'staff' | 'member';
       member_status: 'active' | 'inactive' | 'pending' | 'suspended';
       message_status: 'sent' | 'delivered' | 'read' | 'failed';
@@ -2752,7 +2843,9 @@ export const Constants = {
       ],
       booking_status: ['pending', 'confirmed', 'cancelled', 'completed'],
       conversation_type: ['direct', 'group', 'match', 'announcement'],
+      cost_split_type_enum: ['host_pays', 'split_equal', 'custom'],
       country_enum: ['Canada', 'United States'],
+      court_status_enum: ['reserved', 'to_reserve'],
       court_surface: ['hard', 'clay', 'grass', 'carpet', 'synthetic'],
       court_type: ['indoor', 'outdoor', 'covered'],
       day_enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
@@ -2777,11 +2870,15 @@ export const Constants = {
       gender_type: ['male', 'female', 'other', 'prefer_not_to_say'],
       invite_source_enum: ['manual', 'auto_match', 'invite_list', 'mailing_list', 'growth_prompt'],
       invite_status_enum: ['pending', 'sent', 'accepted', 'expired', 'bounced', 'cancelled'],
+      location_type_enum: ['facility', 'custom', 'tbd'],
       match_duration: ['1h', '1.5h', '2h'],
-      match_duration_enum: ['30', '60', '90', '120'],
+      match_duration_enum: ['30', '60', '90', '120', 'custom'],
+      match_format_enum: ['singles', 'doubles'],
+      match_join_mode_enum: ['direct', 'request'],
       match_status: ['scheduled', 'in_progress', 'completed', 'cancelled', 'no_show'],
       match_type: ['casual', 'competitive', 'both'],
       match_type_enum: ['practice', 'competitive', 'both'],
+      match_visibility_enum: ['public', 'private'],
       member_role: ['owner', 'admin', 'manager', 'staff', 'member'],
       member_status: ['active', 'inactive', 'pending', 'suspended'],
       message_status: ['sent', 'delivered', 'read', 'failed'],

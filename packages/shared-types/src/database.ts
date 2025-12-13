@@ -48,6 +48,15 @@ export type PlayingHandEnum = DbEnum<'playing_hand_enum'>;
 export type MatchDurationEnum = DbEnum<'match_duration_enum'>;
 export type MatchTypeEnum = DbEnum<'match_type_enum'>;
 
+// Match Creation (enums for match wizard)
+export type MatchFormatEnum = DbEnum<'match_format_enum'>;
+export type CourtStatusEnum = DbEnum<'court_status_enum'>;
+export type MatchVisibilityEnum = DbEnum<'match_visibility_enum'>;
+export type MatchJoinModeEnum = DbEnum<'match_join_mode_enum'>;
+export type CostSplitTypeEnum = DbEnum<'cost_split_type_enum'>;
+export type LocationTypeEnum = DbEnum<'location_type_enum'>;
+export type MatchStatusEnum = DbEnum<'match_status'>;
+
 // Organization & Facility
 export type OrganizationTypeEnum = DbEnum<'organization_type_enum'>;
 export type OrganizationNatureEnum = DbEnum<'organization_nature_enum'>;
@@ -150,6 +159,11 @@ export type FacilityFile = TableRow<'facility_file'>;
 export type Court = TableRow<'court'>;
 export type CourtSport = TableRow<'court_sport'>;
 
+// Match
+export type Match = TableRow<'match'>;
+export type MatchParticipant = TableRow<'match_participant'>;
+export type MatchResult = TableRow<'match_result'>;
+
 // Notification
 export type Notification = TableRow<'notification'>;
 export type DeliveryAttempt = TableRow<'delivery_attempt'>;
@@ -194,6 +208,9 @@ export type FacilitySportInsert = TableInsert<'facility_sport'>;
 export type FacilityFileInsert = TableInsert<'facility_file'>;
 export type CourtInsert = TableInsert<'court'>;
 export type CourtSportInsert = TableInsert<'court_sport'>;
+export type MatchInsert = TableInsert<'match'>;
+export type MatchParticipantInsert = TableInsert<'match_participant'>;
+export type MatchResultInsert = TableInsert<'match_result'>;
 export type NotificationInsert = TableInsert<'notification'>;
 export type DeliveryAttemptInsert = TableInsert<'delivery_attempt'>;
 export type FileInsert = TableInsert<'file'>;
@@ -229,6 +246,9 @@ export type FacilitySportUpdate = TableUpdate<'facility_sport'>;
 export type FacilityFileUpdate = TableUpdate<'facility_file'>;
 export type CourtUpdate = TableUpdate<'court'>;
 export type CourtSportUpdate = TableUpdate<'court_sport'>;
+export type MatchUpdate = TableUpdate<'match'>;
+export type MatchParticipantUpdate = TableUpdate<'match_participant'>;
+export type MatchResultUpdate = TableUpdate<'match_result'>;
 export type NotificationUpdate = TableUpdate<'notification'>;
 export type DeliveryAttemptUpdate = TableUpdate<'delivery_attempt'>;
 export type FileUpdate = TableUpdate<'file'>;
@@ -286,6 +306,22 @@ export interface FacilityWithDetails extends Facility {
   sports?: FacilitySport[];
 }
 
+/** Facility search result from nearby search */
+export interface FacilitySearchResult {
+  id: string;
+  name: string;
+  city: string | null;
+  address: string | null;
+  distance_meters: number | null;
+}
+
+/** Paginated facilities response */
+export interface FacilitiesPage {
+  facilities: FacilitySearchResult[];
+  hasMore: boolean;
+  nextOffset: number | null;
+}
+
 /** Court with facility info */
 export interface CourtWithFacility extends Court {
   facility: Facility;
@@ -295,6 +331,22 @@ export interface CourtWithFacility extends Court {
 /** Organization member with profile */
 export interface OrganizationMemberWithProfile extends OrganizationMember {
   profile: Profile;
+}
+
+/** Match with full details for display */
+export interface MatchWithDetails extends Match {
+  sport: Sport;
+  created_by_player: PlayerWithProfile;
+  facility?: Facility;
+  court?: Court;
+  min_rating_score?: RatingScore;
+  participants?: MatchParticipantWithPlayer[];
+  result?: MatchResult;
+}
+
+/** Match participant with player and profile info */
+export interface MatchParticipantWithPlayer extends MatchParticipant {
+  player: PlayerWithProfile;
 }
 
 // ============================================

@@ -17,6 +17,16 @@ import type {
   CourtSurface,
   CourtType,
   NotificationTypeEnum,
+  // Match Creation enums
+  MatchFormatEnum,
+  CourtStatusEnum,
+  MatchVisibilityEnum,
+  MatchJoinModeEnum,
+  CostSplitTypeEnum,
+  LocationTypeEnum,
+  MatchDurationEnum,
+  MatchTypeEnum,
+  MatchStatusEnum,
 } from './database';
 
 // ============================================
@@ -295,4 +305,171 @@ export const NOTIFICATION_TYPE_COLORS: Record<NotificationTypeEnum, string> = {
   support: '#2196F3', // Blue
   chat: '#9C27B0', // Purple
   system: '#607D8B', // Blue Grey
+};
+
+// ============================================
+// MATCH CREATION - NEW ENUMS
+// ============================================
+
+/**
+ * Human-readable labels for match format (singles/doubles)
+ */
+export const MATCH_FORMAT_LABELS: Record<MatchFormatEnum, string> = {
+  singles: 'Singles',
+  doubles: 'Doubles',
+};
+
+/**
+ * Descriptions for match formats
+ */
+export const MATCH_FORMAT_DESCRIPTIONS: Record<MatchFormatEnum, string> = {
+  singles: '1 vs 1 match',
+  doubles: '2 vs 2 match with teams',
+};
+
+/**
+ * Human-readable labels for court reservation status
+ */
+export const COURT_STATUS_LABELS: Record<CourtStatusEnum, string> = {
+  reserved: 'Court Reserved',
+  to_reserve: 'Court To Reserve',
+};
+
+/**
+ * Descriptions for court status
+ */
+export const COURT_STATUS_DESCRIPTIONS: Record<CourtStatusEnum, string> = {
+  reserved: 'The court has already been booked',
+  to_reserve: 'The court still needs to be reserved',
+};
+
+/**
+ * Human-readable labels for match visibility
+ */
+export const MATCH_VISIBILITY_LABELS: Record<MatchVisibilityEnum, string> = {
+  public: 'Public',
+  private: 'Private',
+};
+
+/**
+ * Descriptions for match visibility
+ */
+export const MATCH_VISIBILITY_DESCRIPTIONS: Record<MatchVisibilityEnum, string> = {
+  public: 'Anyone can discover and join this match',
+  private: 'Only invited players can see this match',
+};
+
+/**
+ * Human-readable labels for match join mode
+ */
+export const MATCH_JOIN_MODE_LABELS: Record<MatchJoinModeEnum, string> = {
+  direct: 'Join Directly',
+  request: 'Request to Join',
+};
+
+/**
+ * Descriptions for match join mode
+ */
+export const MATCH_JOIN_MODE_DESCRIPTIONS: Record<MatchJoinModeEnum, string> = {
+  direct: 'Players can join immediately without approval',
+  request: 'Players must request to join and wait for approval',
+};
+
+/**
+ * Human-readable labels for cost split type
+ */
+export const COST_SPLIT_TYPE_LABELS: Record<CostSplitTypeEnum, string> = {
+  host_pays: 'Host Pays',
+  split_equal: 'Split Equally',
+  custom: 'Custom Split',
+};
+
+/**
+ * Descriptions for cost split types
+ */
+export const COST_SPLIT_TYPE_DESCRIPTIONS: Record<CostSplitTypeEnum, string> = {
+  host_pays: 'The match host covers all court costs',
+  split_equal: 'Court costs are split equally between all players',
+  custom: 'Custom arrangement for splitting costs',
+};
+
+/**
+ * Human-readable labels for location type
+ */
+export const LOCATION_TYPE_LABELS: Record<LocationTypeEnum, string> = {
+  facility: 'Select Facility',
+  custom: 'Custom Location',
+  tbd: 'To Be Determined',
+};
+
+/**
+ * Descriptions for location types
+ */
+export const LOCATION_TYPE_DESCRIPTIONS: Record<LocationTypeEnum, string> = {
+  facility: 'Choose from available facilities and courts',
+  custom: 'Enter a custom location address',
+  tbd: 'Location will be decided later',
+};
+
+/**
+ * Human-readable labels for match duration (using match_duration_enum)
+ */
+export const MATCH_DURATION_ENUM_LABELS: Record<MatchDurationEnum, string> = {
+  '30': '30 Minutes',
+  '60': '1 Hour',
+  '90': '1.5 Hours',
+  '120': '2 Hours',
+  custom: 'Custom Duration',
+};
+
+/**
+ * Human-readable labels for match type enum (practice/competitive/both)
+ * Used for player expectation in match creation
+ */
+export const MATCH_TYPE_ENUM_LABELS: Record<MatchTypeEnum, string> = {
+  practice: 'Practice / Rally',
+  competitive: 'Competitive Match',
+  both: 'Either',
+};
+
+/**
+ * Descriptions for match type enum (player expectation)
+ */
+export const MATCH_TYPE_ENUM_DESCRIPTIONS: Record<MatchTypeEnum, string> = {
+  practice: 'Casual hitting, rallying, or practice session',
+  competitive: 'A real match with scoring and competition',
+  both: 'Open to either practice or competitive play',
+};
+
+/**
+ * Human-readable labels for match status
+ */
+export const MATCH_STATUS_LABELS: Record<MatchStatusEnum, string> = {
+  scheduled: 'Scheduled',
+  in_progress: 'In Progress',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+  no_show: 'No Show',
+};
+
+/**
+ * Icon mapping for match status (Ionicons names)
+ */
+export const MATCH_STATUS_ICONS: Record<MatchStatusEnum, string> = {
+  scheduled: 'calendar-outline',
+  in_progress: 'play-circle-outline',
+  completed: 'checkmark-circle-outline',
+  cancelled: 'close-circle-outline',
+  no_show: 'alert-circle-outline',
+};
+
+/**
+ * Color mapping for match status
+ */
+export const MATCH_STATUS_COLORS: Record<MatchStatusEnum, string> = {
+  scheduled: '#2196F3', // Blue
+  in_progress: '#FF9800', // Orange
+  completed: '#4CAF50', // Green
+  cancelled: '#F44336', // Red
+  no_show: '#9E9E9E', // Grey
 };
