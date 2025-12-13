@@ -188,6 +188,28 @@
     "validation": "Veuillez vérifier vos données et réessayer.",
     "unknown": "Une erreur inattendue s'est produite."
   },
+  "actions": {
+    "welcome": "Bienvenue sur Rallia",
+    "welcomeSubtitle": "Connectez-vous pour commencer à jouer",
+    "completeProfile": "Complétez votre profil",
+    "completeProfileSubtitle": "Terminez la configuration pour commencer à trouver des partenaires",
+    "continueSetup": "Continuer la configuration",
+    "quickActions": "Actions rapides",
+    "createMatch": "Créer un match",
+    "createMatchDescription": "Planifiez une nouvelle partie avec des joueurs",
+    "invitePlayers": "Inviter des joueurs",
+    "invitePlayersDescription": "Invitez vos amis à rejoindre Rallia",
+    "createShareList": "Créer une liste de partage",
+    "createShareListDescription": "Créez une liste de joueurs à partager",
+    "createGroup": "Créer un groupe",
+    "createGroupDescription": "Créez un groupe privé pour des parties régulières",
+    "createCommunity": "Créer une communauté",
+    "createCommunityDescription": "Créez une communauté pour vos amis",
+    "createTournament": "Créer un tournoi",
+    "createTournamentDescription": "Organisez un événement compétitif",
+    "createLeague": "Créer une ligue",
+    "createLeagueDescription": "Créez une ligue pour vos amis"
+  },
   "home": {
     "subtitle": "La meilleure façon de trouver votre prochain partenaire de tennis ou de pickleball",
     "header": {

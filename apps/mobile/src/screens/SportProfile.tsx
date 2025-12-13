@@ -11,7 +11,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
+import { useAppNavigation } from '../navigation/hooks';
+import type { RootStackParamList } from '../navigation/types';
 import { Text, Button } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
 import { supabase, Logger } from '@rallia/shared-services';
@@ -24,15 +27,7 @@ import ReferenceRequestOverlay from '../features/sport-profile/components/Refere
 import { TennisPreferencesOverlay } from '../features/sport-profile/components/TennisPreferencesOverlay';
 import { PickleballPreferencesOverlay } from '../features/sport-profile/components/PickleballPreferencesOverlay';
 
-type SportProfileRouteProp = RouteProp<
-  {
-    params: {
-      sportId: string;
-      sportName: string;
-    };
-  },
-  'params'
->;
+type SportProfileRouteProp = RouteProp<RootStackParamList, 'SportProfile'>;
 
 interface RatingInfo {
   ratingScoreId: string; // ID of the rating_score record
@@ -60,7 +55,7 @@ interface PlayAttributeValue {
 }
 
 const SportProfile = () => {
-  const navigation = useNavigation();
+  const navigation = useAppNavigation();
   const route = useRoute<SportProfileRouteProp>();
   const { sportId, sportName } = route.params;
 
@@ -386,8 +381,7 @@ const SportProfile = () => {
       Alert.alert('Error', 'Rating information not available');
       return;
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (navigation as any).navigate('RatingProofs', {
+    navigation.navigate('RatingProofs', {
       playerRatingScoreId: playerRatingScoreId,
       sportName: sportName,
       ratingValue: ratingInfo.scoreValue,

@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useAppNavigation } from '../navigation/hooks';
 import { Text } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
 import { supabase, Logger } from '@rallia/shared-services';
@@ -37,7 +37,7 @@ interface AvailabilityGrid {
 }
 
 const UserProfile = () => {
-  const navigation = useNavigation();
+  const navigation = useAppNavigation();
   const [loading, setLoading] = useState(true);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -641,10 +641,9 @@ const UserProfile = () => {
                 style={[styles.sportCard, !sport.isActive && styles.sportCardInactive]}
                 activeOpacity={0.7}
                 onPress={() => {
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  (navigation as any).navigate('SportProfile', {
+                  navigation.navigate('SportProfile', {
                     sportId: sport.id,
-                    sportName: sport.display_name,
+                    sportName: sport.display_name as 'tennis' | 'pickleball',
                   });
                 }}
               >

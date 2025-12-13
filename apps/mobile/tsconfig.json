@@ -2,6 +2,7 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
+    "jsx": "react-jsx",
     "paths": {
       "@rallia/shared-components": ["../../packages/shared-components/src"],
       "@rallia/shared-constants": ["../../packages/shared-constants/src"],
@@ -11,5 +12,6 @@
       "@rallia/shared-types": ["../../packages/shared-types/src"],
       "@rallia/shared-utils": ["../../packages/shared-utils/src"]
     }
-  }
+  },
+  "include": ["**/*.ts", "**/*.tsx", "*.ts", "*.tsx"]
 }

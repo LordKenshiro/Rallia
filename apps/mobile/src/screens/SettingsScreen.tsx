@@ -13,8 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { Logger } from '@rallia/shared-services';
 import { useTheme } from '../hooks/useTheme';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useAppNavigation } from '../navigation/hooks';
 import { useLocale } from '../context';
 import { useAuth, useTranslation } from '../hooks';
 import type { Locale } from '@rallia/shared-translations';
@@ -31,14 +30,8 @@ import {
 } from '@rallia/design-system';
 import { lightHaptic, warningHaptic } from '@rallia/shared-utils';
 
-type SettingsScreenNavigationProp = NativeStackNavigationProp<{
-  HomeScreen: undefined;
-  UserProfile: undefined;
-  Settings: undefined;
-}>;
-
 const SettingsScreen: React.FC = () => {
-  const navigation = useNavigation<SettingsScreenNavigationProp>();
+  const navigation = useAppNavigation();
   const {
     locale,
     setLocale,
@@ -116,7 +109,7 @@ const SettingsScreen: React.FC = () => {
   };
 
   const handleEditProfile = () => {
-    navigation.navigate('UserProfile');
+    navigation.navigate('UserProfile', {});
   };
 
   // const SettingsItem = ({
