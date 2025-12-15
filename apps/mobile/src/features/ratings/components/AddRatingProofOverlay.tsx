@@ -1,13 +1,8 @@
 import React, { useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  Modal,
-  Animated,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Modal, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
+import { useThemeStyles } from '@rallia/shared-hooks';
 
 interface AddRatingProofOverlayProps {
   visible: boolean;
@@ -20,6 +15,7 @@ const AddRatingProofOverlay: React.FC<AddRatingProofOverlayProps> = ({
   onClose,
   onSelectProofType,
 }) => {
+  const { colors, isDark } = useThemeStyles();
   const [fadeAnim] = useState(new Animated.Value(0));
 
   React.useEffect(() => {
@@ -44,14 +40,14 @@ const AddRatingProofOverlay: React.FC<AddRatingProofOverlayProps> = ({
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <TouchableOpacity
-        style={styles.overlay}
+        style={[
+          styles.overlay,
+          {
+            backgroundColor: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+          },
+        ]}
         activeOpacity={1}
         onPress={onClose}
       >
@@ -59,6 +55,7 @@ const AddRatingProofOverlay: React.FC<AddRatingProofOverlayProps> = ({
           style={[
             styles.container,
             {
+              backgroundColor: colors.card,
               opacity: fadeAnim,
               transform: [
                 {
@@ -74,27 +71,21 @@ const AddRatingProofOverlay: React.FC<AddRatingProofOverlayProps> = ({
           <TouchableOpacity activeOpacity={1}>
             {/* Header */}
             <View style={styles.header}>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={onClose}
-              >
-                <Ionicons name="chevron-back" size={28} color="#000" />
+              <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                <Ionicons name="chevron-back" size={28} color={colors.text} />
               </TouchableOpacity>
               <View style={styles.headerSpacer} />
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={onClose}
-              >
-                <Ionicons name="close" size={28} color="#000" />
+              <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                <Ionicons name="close" size={28} color={colors.text} />
               </TouchableOpacity>
             </View>
 
             {/* Title */}
             <View style={styles.titleContainer}>
-              <Text size="xl" weight="bold" color="#000" style={styles.title}>
+              <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
                 Add a new rating proof to
               </Text>
-              <Text size="xl" weight="bold" color="#000" style={styles.title}>
+              <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
                 your player profile
               </Text>
             </View>
@@ -102,60 +93,60 @@ const AddRatingProofOverlay: React.FC<AddRatingProofOverlayProps> = ({
             {/* Options */}
             <View style={styles.optionsContainer}>
               <TouchableOpacity
-                style={styles.optionButton}
+                style={[styles.optionButton, { backgroundColor: colors.primary }]}
                 onPress={() => handleSelectType('external_link')}
                 activeOpacity={0.7}
               >
-                <Ionicons name="link" size={20} color="#fff" />
-                <Text size="base" weight="medium" color="#fff">
+                <Ionicons name="link" size={20} color={colors.primaryForeground} />
+                <Text size="base" weight="medium" color={colors.primaryForeground}>
                   External Link
                 </Text>
-                <Ionicons name="chevron-forward" size={20} color="#fff" />
+                <Ionicons name="chevron-forward" size={20} color={colors.primaryForeground} />
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.optionButton}
+                style={[styles.optionButton, { backgroundColor: colors.primary }]}
                 onPress={() => handleSelectType('video')}
                 activeOpacity={0.7}
               >
-                <Ionicons name="videocam" size={20} color="#fff" />
-                <Text size="base" weight="medium" color="#fff">
+                <Ionicons name="videocam" size={20} color={colors.primaryForeground} />
+                <Text size="base" weight="medium" color={colors.primaryForeground}>
                   Video Recording
                 </Text>
-                <Ionicons name="chevron-forward" size={20} color="#fff" />
+                <Ionicons name="chevron-forward" size={20} color={colors.primaryForeground} />
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.optionButton}
+                style={[styles.optionButton, { backgroundColor: colors.primary }]}
                 onPress={() => handleSelectType('image')}
                 activeOpacity={0.7}
               >
-                <Ionicons name="image" size={20} color="#fff" />
-                <Text size="base" weight="medium" color="#fff">
+                <Ionicons name="image" size={20} color={colors.primaryForeground} />
+                <Text size="base" weight="medium" color={colors.primaryForeground}>
                   Image
                 </Text>
-                <Ionicons name="chevron-forward" size={20} color="#fff" />
+                <Ionicons name="chevron-forward" size={20} color={colors.primaryForeground} />
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.optionButton}
+                style={[styles.optionButton, { backgroundColor: colors.primary }]}
                 onPress={() => handleSelectType('document')}
                 activeOpacity={0.7}
               >
-                <Ionicons name="document-text" size={20} color="#fff" />
-                <Text size="base" weight="medium" color="#fff">
+                <Ionicons name="document-text" size={20} color={colors.primaryForeground} />
+                <Text size="base" weight="medium" color={colors.primaryForeground}>
                   Document
                 </Text>
-                <Ionicons name="chevron-forward" size={20} color="#fff" />
+                <Ionicons name="chevron-forward" size={20} color={colors.primaryForeground} />
               </TouchableOpacity>
 
               {/* Close Button */}
               <TouchableOpacity
-                style={styles.closeActionButton}
+                style={[styles.closeActionButton, { backgroundColor: colors.inputBackground }]}
                 onPress={onClose}
                 activeOpacity={0.7}
               >
-                <Text size="base" weight="medium" color="#EF6F7B">
+                <Text size="base" weight="medium" color={colors.primary}>
                   Close
                 </Text>
               </TouchableOpacity>
@@ -170,13 +161,13 @@ const AddRatingProofOverlay: React.FC<AddRatingProofOverlayProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    // backgroundColor is set inline based on theme (isDark)
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   container: {
-    backgroundColor: '#fff',
+    // backgroundColor is set inline based on theme (colors.card)
     borderRadius: 20,
     width: '100%',
     maxWidth: 400,
@@ -211,7 +202,7 @@ const styles = StyleSheet.create({
   optionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#EF6F7B', // Coral color from the design
+    // backgroundColor is set inline based on theme (colors.primary)
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 12,
@@ -221,7 +212,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFE8EA', // Light coral/pink background
+    // backgroundColor is set inline based on theme (colors.inputBackground)
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 12,

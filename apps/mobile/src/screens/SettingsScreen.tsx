@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { Logger } from '@rallia/shared-services';
-import { useTheme } from '../hooks/useTheme';
+import { useTheme } from '@rallia/shared-hooks';
 import { useAppNavigation } from '../navigation/hooks';
 import { useLocale } from '../context';
 import { useAuth, useTranslation } from '../hooks';
@@ -25,9 +25,10 @@ import {
   radiusPixels,
   primary,
   neutral,
-  base,
   status,
 } from '@rallia/design-system';
+
+const BASE_WHITE = '#ffffff';
 import { lightHaptic, warningHaptic } from '@rallia/shared-utils';
 
 const SettingsScreen: React.FC = () => {
@@ -65,7 +66,7 @@ const SettingsScreen: React.FC = () => {
       buttonInactive: themeColors.muted,
       buttonActive: isDark ? primary[500] : primary[600],
       buttonTextInactive: themeColors.mutedForeground,
-      buttonTextActive: base.white,
+      buttonTextActive: BASE_WHITE,
       deleteButtonBg: isDark ? `${status.error.DEFAULT}20` : `${status.error.light}15`,
       deleteButtonText: status.error.DEFAULT,
     }),
@@ -369,6 +370,11 @@ const SettingsScreen: React.FC = () => {
               onPress={() => {
                 warningHaptic();
                 signOut();
+                // Reset to Main - Home screen shows sign-in prompt when not authenticated
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: 'Main' }],
+                });
               }}
               activeOpacity={0.7}
             >

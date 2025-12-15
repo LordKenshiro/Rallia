@@ -44,3 +44,4 @@ $$;
 
 -- Add comment for documentation
 COMMENT ON FUNCTION search_facilities_nearby IS 'Search facilities by sport, sorted by distance from user location. Supports text search on facility name.';
+

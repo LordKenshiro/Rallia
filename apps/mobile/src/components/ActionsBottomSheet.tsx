@@ -3,9 +3,12 @@
  *
  * This bottom sheet opens when the center tab button is pressed.
  * It displays different content based on authentication state:
- * - Guest: Auth form to sign in/sign up
- * - Authenticated (not onboarded): Continue onboarding
+ * - Guest: AuthWizard for sign in/sign up
+ * - Authenticated (not onboarded): OnboardingWizard to complete profile
  * - Onboarded: Actions wizard for creating matches, groups, etc.
+ *
+ * Content mode is managed by ActionsSheetContext as the single source of truth,
+ * eliminating race conditions and complex state synchronization.
  *
  * When "Create Match" is pressed, the MatchCreationWizard slides in.
  */
@@ -19,12 +22,7 @@ import Animated, {
   withSpring,
   interpolate,
 } from 'react-native-reanimated';
-import {
-  BottomSheetModal,
-  BottomSheetScrollView,
-  BottomSheetBackdrop,
-  BottomSheetView,
-} from '@gorhom/bottom-sheet';
+import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
@@ -33,16 +31,19 @@ import {
   darkTheme,
   spacingPixels,
   radiusPixels,
-  fontSizePixels,
   primary,
   neutral,
-  base,
+  status,
 } from '@rallia/design-system';
+
+const BASE_WHITE = '#ffffff';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
-import { useActionsSheet, useOverlay } from '../context';
-import { useAuth, useTranslation, type TranslationKey } from '../hooks';
-import { useTheme } from '../hooks/useTheme';
+import { useActionsSheet } from '../context';
+import { useTranslation, type TranslationKey } from '../hooks';
+import { useTheme } from '@rallia/shared-hooks';
 import { MatchCreationWizard } from '../features/matches';
+import { AuthWizard } from '../features/auth';
+import { OnboardingWizard } from '../features/onboarding/components/wizard';
 
 // =============================================================================
 // TYPES
@@ -61,105 +62,16 @@ interface ThemeColors {
   buttonInactive: string;
   buttonTextActive: string;
   buttonTextInactive: string;
+  // Extended colors for auth/onboarding wizards
+  progressActive: string;
+  progressInactive: string;
+  inputBackground: string;
+  inputBorder: string;
+  inputBorderFocused: string;
+  error: string;
+  success: string;
+  divider: string;
 }
-
-// =============================================================================
-// CONTENT COMPONENTS
-// =============================================================================
-
-/**
- * Auth content - Shown to guests
- */
-interface AuthContentProps {
-  onSignIn: () => void;
-  onSignUp: () => void;
-  colors: ThemeColors;
-  t: (key: TranslationKey) => string;
-}
-
-const AuthContent: React.FC<AuthContentProps> = ({ onSignIn, onSignUp, colors, t }) => {
-  return (
-    <View style={styles.contentContainer}>
-      <View style={styles.header}>
-        <Ionicons name="person-circle-outline" size={64} color={colors.buttonActive} />
-        <Text size="2xl" weight="bold" color={colors.text} style={styles.title}>
-          {t('actions.welcome')}
-        </Text>
-        <Text size="base" color={colors.textSecondary} style={styles.subtitle}>
-          {t('actions.welcomeSubtitle')}
-        </Text>
-      </View>
-
-      <View style={styles.buttonGroup}>
-        <TouchableOpacity
-          style={[styles.primaryButton, { backgroundColor: colors.buttonActive }]}
-          onPress={() => {
-            lightHaptic();
-            onSignUp();
-          }}
-          activeOpacity={0.7}
-        >
-          <Text size="lg" weight="semibold" color={colors.buttonTextActive}>
-            {t('auth.signUp')}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.secondaryButton, { backgroundColor: colors.buttonInactive }]}
-          onPress={() => {
-            lightHaptic();
-            onSignIn();
-          }}
-          activeOpacity={0.7}
-        >
-          <Text size="lg" weight="semibold" color={colors.buttonActive}>
-            {t('auth.signIn')}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-};
-
-/**
- * Onboarding content - Shown to authenticated users who haven't completed onboarding
- */
-interface OnboardingContentProps {
-  onContinue: () => void;
-  colors: ThemeColors;
-  t: (key: TranslationKey) => string;
-}
-
-const OnboardingContent: React.FC<OnboardingContentProps> = ({ onContinue, colors, t }) => {
-  return (
-    <View style={styles.contentContainer}>
-      <View style={styles.header}>
-        <Ionicons name="rocket-outline" size={64} color={colors.buttonActive} />
-        <Text size="2xl" weight="bold" color={colors.text} style={styles.title}>
-          {t('actions.completeProfile')}
-        </Text>
-        <Text size="base" color={colors.textSecondary} style={styles.subtitle}>
-          {t('actions.completeProfileSubtitle')}
-        </Text>
-      </View>
-
-      <View style={styles.buttonGroup}>
-        <TouchableOpacity
-          style={[styles.primaryButton, { backgroundColor: colors.buttonActive }]}
-          onPress={() => {
-            lightHaptic();
-            onContinue();
-          }}
-          activeOpacity={0.7}
-        >
-          <Text size="lg" weight="semibold" color={colors.buttonTextActive}>
-            {t('actions.continueSetup')}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-};
 
 /**
  * Action item for the actions wizard
@@ -316,14 +228,13 @@ const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 const MAX_SHEET_HEIGHT = SCREEN_HEIGHT * 0.9; // 90% of screen height
 
 export const ActionsBottomSheet: React.FC = () => {
-  const { sheetRef, closeSheet } = useActionsSheet();
-  const { session } = useAuth();
-  const { needsOnboarding, startOnboarding, startLogin, resumeOnboarding } = useOverlay();
+  // Get contentMode and setContentMode from context - single source of truth
+  const { sheetRef, closeSheet, contentMode, setContentMode, refreshProfile } = useActionsSheet();
   const { theme } = useTheme();
   const { t } = useTranslation();
   const isDark = theme === 'dark';
 
-  // Wizard state
+  // Wizard state for match creation (local, only for slide animation)
   const [showWizard, setShowWizard] = useState(false);
 
   // Animation value for slide transition
@@ -344,7 +255,16 @@ export const ActionsBottomSheet: React.FC = () => {
       buttonInactive: themeColors.muted,
       buttonActive: isDark ? primary[500] : primary[600],
       buttonTextInactive: themeColors.mutedForeground,
-      buttonTextActive: base.white,
+      buttonTextActive: BASE_WHITE,
+      // Extended colors for auth/onboarding wizards
+      progressActive: isDark ? primary[500] : primary[600],
+      progressInactive: themeColors.muted,
+      inputBackground: isDark ? neutral[800] : neutral[100],
+      inputBorder: isDark ? neutral[700] : neutral[200],
+      inputBorderFocused: isDark ? primary[500] : primary[600],
+      error: status.error.DEFAULT,
+      success: status.success.DEFAULT,
+      divider: isDark ? neutral[700] : neutral[200],
     }),
     [themeColors, isDark]
   );
@@ -357,23 +277,34 @@ export const ActionsBottomSheet: React.FC = () => {
     []
   );
 
-  // Handle sign in action
-  const handleSignIn = useCallback(() => {
-    closeSheet();
-    startLogin();
-  }, [closeSheet, startLogin]);
+  // Handle auth success - simple and direct
+  const handleAuthSuccess = useCallback(
+    (needsOnboarding: boolean) => {
+      if (needsOnboarding) {
+        // Transition to onboarding - smooth, same sheet stays open
+        setContentMode('onboarding');
+      } else {
+        // Returning user with completed onboarding - close sheet
+        successHaptic();
+        closeSheet();
+      }
+    },
+    [setContentMode, closeSheet]
+  );
 
-  // Handle sign up action
-  const handleSignUp = useCallback(() => {
+  // Handle onboarding complete
+  const handleOnboardingComplete = useCallback(async () => {
+    successHaptic();
+    // Refresh profile to update onboarding_completed status before closing
+    // This ensures the next openSheet() call computes the correct mode
+    await refreshProfile();
     closeSheet();
-    startOnboarding();
-  }, [closeSheet, startOnboarding]);
+  }, [closeSheet, refreshProfile]);
 
-  // Handle continue onboarding action
-  const handleContinueOnboarding = useCallback(() => {
+  // Handle going back from auth/onboarding - closes sheet
+  const handleBackToActionsLanding = useCallback(() => {
     closeSheet();
-    resumeOnboarding();
-  }, [closeSheet, resumeOnboarding]);
+  }, [closeSheet]);
 
   // Handle create match - show wizard with slide animation
   const handleCreateMatch = useCallback(() => {
@@ -405,33 +336,31 @@ export const ActionsBottomSheet: React.FC = () => {
     [closeSheet, slideProgress]
   );
 
-  // Handle sheet dismiss - reset wizard state
+  // Handle sheet dismiss - just reset local wizard state
   const handleSheetDismiss = useCallback(() => {
     setShowWizard(false);
     slideProgress.value = 0;
+    // Note: contentMode is reset by openSheet when the sheet is opened again
   }, [slideProgress]);
 
   // Handle keyboard dismissal to restore sheet position
-  // This ensures the sheet restores when keyboard is dismissed by tapping outside
   useEffect(() => {
-    if (!showWizard) return;
+    const isWizardActive = showWizard || contentMode === 'auth' || contentMode === 'onboarding';
+    if (!isWizardActive) return;
 
     let hideTimeout: NodeJS.Timeout;
 
     const handleKeyboardHide = () => {
-      // Clear any pending timeout
       if (hideTimeout) {
         clearTimeout(hideTimeout);
       }
 
-      // Use a small delay to ensure keyboard is fully dismissed
-      // and to avoid conflicts with bottom sheet's internal keyboard handling
       hideTimeout = setTimeout(() => {
         if (sheetRef.current) {
           try {
             sheetRef.current.snapToIndex(0);
-          } catch (error) {
-            // Silently handle any errors (e.g., if sheet is already at that position)
+          } catch {
+            // Silently handle any errors
           }
         }
       }, 150);
@@ -447,7 +376,7 @@ export const ActionsBottomSheet: React.FC = () => {
       keyboardWillHideListener.remove();
       keyboardDidHideListener.remove();
     };
-  }, [showWizard, sheetRef]);
+  }, [showWizard, contentMode, sheetRef]);
 
   // Animated styles for content sliding
   const actionsAnimatedStyle = useAnimatedStyle(() => ({
@@ -468,19 +397,35 @@ export const ActionsBottomSheet: React.FC = () => {
     opacity: interpolate(slideProgress.value, [0, 0.5, 1], [0, 0.5, 1]),
   }));
 
-  // Determine which content to show
+  // Determine which content to show based on contentMode from context
   const renderContent = () => {
-    // Guest user - show auth options
-    if (!session?.user) {
-      return <AuthContent onSignIn={handleSignIn} onSignUp={handleSignUp} colors={colors} t={t} />;
+    if (contentMode === 'auth') {
+      return (
+        <AuthWizard
+          onSuccess={handleAuthSuccess}
+          onClose={closeSheet}
+          onBackToLanding={handleBackToActionsLanding}
+          colors={colors}
+          t={t}
+          isDark={isDark}
+        />
+      );
     }
 
-    // Authenticated but not onboarded - show continue onboarding
-    if (needsOnboarding) {
-      return <OnboardingContent onContinue={handleContinueOnboarding} colors={colors} t={t} />;
+    if (contentMode === 'onboarding') {
+      return (
+        <OnboardingWizard
+          onComplete={handleOnboardingComplete}
+          onClose={closeSheet}
+          onBackToLanding={handleBackToActionsLanding}
+          colors={colors}
+          t={t}
+          isDark={isDark}
+        />
+      );
     }
 
-    // Fully onboarded - show actions wizard or match creation wizard
+    // contentMode === 'actions' - show actions wizard or match creation wizard
     return (
       <View style={styles.slidingContainer}>
         {/* Actions list */}
@@ -507,14 +452,17 @@ export const ActionsBottomSheet: React.FC = () => {
     );
   };
 
+  // Determine if we should use wizard mode (full height, no scroll)
+  const isWizardMode = showWizard || contentMode === 'auth' || contentMode === 'onboarding';
+
   return (
     <BottomSheetModal
       ref={sheetRef}
-      enableDynamicSizing={!showWizard}
-      snapPoints={showWizard ? ['90%'] : undefined}
+      enableDynamicSizing={!isWizardMode}
+      snapPoints={isWizardMode ? ['95%'] : undefined}
       maxDynamicContentSize={MAX_SHEET_HEIGHT}
       backdropComponent={renderBackdrop}
-      enablePanDownToClose={!showWizard}
+      enablePanDownToClose={!isWizardMode}
       handleIndicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
       backgroundStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
       bottomInset={0}
@@ -524,11 +472,14 @@ export const ActionsBottomSheet: React.FC = () => {
       android_keyboardInputMode="adjustResize"
       enableDismissOnClose
     >
-      {showWizard ? (
-        <BottomSheetView style={[styles.sheetContent, { backgroundColor: colors.cardBackground }]}>
+      {/* For wizards (auth, onboarding, match creation), render directly without ScrollView wrapper */}
+      {/* The wizards manage their own internal scrolling */}
+      {isWizardMode ? (
+        <View style={[styles.sheetContent, { backgroundColor: colors.cardBackground }]}>
           {renderContent()}
-        </BottomSheetView>
+        </View>
       ) : (
+        /* For actions content, use BottomSheetScrollView */
         <BottomSheetScrollView
           style={[styles.sheetContent, { backgroundColor: colors.cardBackground }]}
         >
@@ -552,6 +503,12 @@ const styles = StyleSheet.create({
     width: spacingPixels[10],
   },
   sheetContent: {
+    flex: 1,
+  },
+  wizardContent: {
+    flex: 1,
+  },
+  wizardScrollContent: {
     flexGrow: 1,
   },
   slidingContainer: {
@@ -572,32 +529,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[6],
     paddingTop: spacingPixels[2],
     paddingBottom: spacingPixels[8],
-  },
-  header: {
-    alignItems: 'center',
-    paddingVertical: spacingPixels[6],
-  },
-  title: {
-    marginTop: spacingPixels[4],
-    textAlign: 'center',
-  },
-  subtitle: {
-    marginTop: spacingPixels[2],
-    textAlign: 'center',
-  },
-  buttonGroup: {
-    gap: spacingPixels[3],
-    paddingTop: spacingPixels[6],
-  },
-  primaryButton: {
-    paddingVertical: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    alignItems: 'center',
-  },
-  secondaryButton: {
-    paddingVertical: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    alignItems: 'center',
   },
   wizardHeader: {
     paddingVertical: spacingPixels[4],

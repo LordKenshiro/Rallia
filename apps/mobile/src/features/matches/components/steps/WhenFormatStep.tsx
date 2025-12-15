@@ -21,7 +21,7 @@ import { UseFormReturn } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, base } from '@rallia/design-system';
+import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import type { MatchFormSchemaData } from '@rallia/shared-types';
 import type { TranslationKey } from '../../../../hooks/useTranslation';
@@ -84,6 +84,7 @@ interface WhenFormatStepProps {
   };
   t: (key: TranslationKey) => string;
   isDark: boolean;
+  locale: string;
 }
 
 interface OptionButtonProps {
@@ -145,7 +146,13 @@ const OptionButton: React.FC<OptionButtonProps> = ({
 // MAIN COMPONENT
 // =============================================================================
 
-export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({ form, colors, t, isDark }) => {
+export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
+  form,
+  colors,
+  t,
+  isDark,
+  locale,
+}) => {
   const {
     control,
     watch,
@@ -194,14 +201,14 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({ form, colors, t,
   })();
 
   // Format display date
-  const formattedDate = dateValue.toLocaleDateString('en-US', {
+  const formattedDate = dateValue.toLocaleDateString(locale, {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
   });
 
   // Format display time
-  const formattedTime = timeValue.toLocaleTimeString('en-US', {
+  const formattedTime = timeValue.toLocaleTimeString(locale, {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,

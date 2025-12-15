@@ -1,0 +1,191 @@
+/**
+ * AvailabilitiesStep Component
+ *
+ * Last step of onboarding - weekly availability grid.
+ * Migrated from PlayerAvailabilitiesOverlay with theme-aware colors.
+ */
+
+import React from 'react';
+import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { Text } from '@rallia/shared-components';
+import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { selectionHaptic } from '@rallia/shared-utils';
+import type { TranslationKey } from '@rallia/shared-translations';
+import type { OnboardingFormData } from '../../../hooks/useOnboardingWizard';
+
+interface ThemeColors {
+  background: string;
+  cardBackground: string;
+  text: string;
+  textSecondary: string;
+  textMuted: string;
+  border: string;
+  buttonActive: string;
+  buttonInactive: string;
+  buttonTextActive: string;
+}
+
+type TimeSlot = 'AM' | 'PM' | 'EVE';
+type DayOfWeek = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun';
+
+interface AvailabilitiesStepProps {
+  formData: OnboardingFormData;
+  onUpdateFormData: (updates: Partial<OnboardingFormData>) => void;
+  colors: ThemeColors;
+  t: (key: TranslationKey) => string;
+  isDark: boolean;
+}
+
+const DAYS: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const TIME_SLOTS: TimeSlot[] = ['AM', 'PM', 'EVE'];
+
+export const AvailabilitiesStep: React.FC<AvailabilitiesStepProps> = ({
+  formData,
+  onUpdateFormData,
+  colors,
+  t,
+  isDark: _isDark,
+}) => {
+  const toggleAvailability = (day: DayOfWeek, slot: TimeSlot) => {
+    selectionHaptic();
+    const currentAvailabilities = formData.availabilities;
+    const dayAvailability = currentAvailabilities[day] || { AM: false, PM: false, EVE: false };
+
+    onUpdateFormData({
+      availabilities: {
+        ...currentAvailabilities,
+        [day]: {
+          ...dayAvailability,
+          [slot]: !dayAvailability[slot],
+        },
+      },
+    });
+  };
+
+  return (
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+      contentInsetAdjustmentBehavior="automatic"
+    >
+      {/* Title */}
+      <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
+        {t('onboarding.availabilityStep.title' as TranslationKey)}
+      </Text>
+      <Text size="base" color={colors.textSecondary} style={styles.subtitle}>
+        {t('onboarding.availabilityStep.subtitle' as TranslationKey)}
+      </Text>
+
+      {/* Availability Grid */}
+      <View style={styles.gridContainer}>
+        {/* Header Row */}
+        <View style={styles.row}>
+          <View style={styles.dayCell} />
+          {TIME_SLOTS.map(slot => (
+            <View key={slot} style={styles.headerCell}>
+              <Text size="xs" weight="semibold" color={colors.textSecondary}>
+                {slot}
+              </Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Day Rows */}
+        {DAYS.map(day => {
+          const dayAvailability = formData.availabilities[day] || {
+            AM: false,
+            PM: false,
+            EVE: false,
+          };
+
+          return (
+            <View key={day} style={styles.row}>
+              <View style={styles.dayCell}>
+                <Text size="sm" weight="medium" color={colors.text}>
+                  {day}
+                </Text>
+              </View>
+              {TIME_SLOTS.map(slot => {
+                const isSelected = dayAvailability[slot];
+                return (
+                  <TouchableOpacity
+                    key={`${day}-${slot}`}
+                    style={[
+                      styles.timeSlotCell,
+                      {
+                        backgroundColor: isSelected ? colors.buttonActive : colors.buttonInactive,
+                        borderColor: isSelected ? colors.buttonActive : 'transparent',
+                      },
+                    ]}
+                    onPress={() => toggleAvailability(day, slot)}
+                    activeOpacity={0.8}
+                  >
+                    <Text
+                      size="xs"
+                      weight="semibold"
+                      color={isSelected ? colors.buttonTextActive : colors.textSecondary}
+                    >
+                      {slot}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          );
+        })}
+      </View>
+    </ScrollView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[4],
+    paddingBottom: spacingPixels[8],
+    flexGrow: 1,
+  },
+  title: {
+    textAlign: 'center',
+    marginBottom: spacingPixels[2],
+    lineHeight: 28,
+  },
+  subtitle: {
+    textAlign: 'center',
+    marginBottom: spacingPixels[6],
+  },
+  gridContainer: {
+    marginBottom: spacingPixels[6],
+  },
+  row: {
+    flexDirection: 'row',
+    marginBottom: spacingPixels[2],
+    alignItems: 'center',
+  },
+  dayCell: {
+    width: 50,
+    justifyContent: 'center',
+  },
+  headerCell: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  timeSlotCell: {
+    flex: 1,
+    borderRadius: radiusPixels.md,
+    paddingVertical: spacingPixels[3],
+    marginHorizontal: spacingPixels[1],
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+  },
+});
+
+export default AvailabilitiesStep;

@@ -25,8 +25,7 @@ import type {
 // =============================================================================
 
 export type RootStackParamList = {
-  // App entry points
-  Landing: undefined;
+  // App entry point
   Main: NavigatorScreenParams<BottomTabParamList>;
 
   // Shared screens - full screen, hides tabs when navigated to

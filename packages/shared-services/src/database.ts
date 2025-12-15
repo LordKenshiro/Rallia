@@ -689,7 +689,9 @@ export const RatingService = {
     try {
       const { data, error } = await supabase
         .from('player_rating_score')
-        .insert(rating)
+        .upsert(rating, {
+          onConflict: 'player_id,rating_score_id',
+        })
         .select()
         .single();
 
@@ -1057,15 +1059,20 @@ export const OnboardingService = {
 
         if (scoreError) throw scoreError;
 
-        // Insert player rating
+        // Upsert player rating (insert or update if exists)
         const { data, error } = await supabase
           .from('player_rating_score')
-          .insert({
-            player_id: userId,
-            rating_score_id: ratingScore.id,
-            source: 'self_reported', // All onboarding ratings are self-reported
-            is_certified: false,
-          })
+          .upsert(
+            {
+              player_id: userId,
+              rating_score_id: ratingScore.id,
+              source: 'self_reported', // All onboarding ratings are self-reported
+              is_certified: false,
+            },
+            {
+              onConflict: 'player_id,rating_score_id',
+            }
+          )
           .select()
           .single();
 
@@ -1083,6 +1090,7 @@ export const OnboardingService = {
 
   /**
    * Save player availability from AvailabilityOverlay
+   * Uses upsert to handle resubmissions gracefully
    */
   async saveAvailability(
     availabilities: OnboardingAvailability[]
@@ -1100,9 +1108,10 @@ export const OnboardingService = {
         is_active: availability.is_active,
       }));
 
+      // Use upsert to handle resubmissions (user navigating back and submitting again)
       const { data, error } = await supabase
         .from('player_availability')
-        .insert(availabilityData)
+        .upsert(availabilityData, { onConflict: 'player_id,day,period' })
         .select();
 
       if (error) throw error;

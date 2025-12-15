@@ -1,6 +1,7 @@
-import { withDangerousMod } from '@expo/config-plugins';
-import fs from 'fs';
-import path from 'path';
+/* eslint-disable @typescript-eslint/no-var-requires */
+const { withDangerousMod } = require('@expo/config-plugins');
+const fs = require('fs');
+const path = require('path');
 
 /**
  * Plugin to fix the Folly coroutine issue in React Native 0.81+
@@ -51,4 +52,4 @@ const withFollyFix = config => {
   ]);
 };
 
-export default withFollyFix;
+module.exports = withFollyFix;

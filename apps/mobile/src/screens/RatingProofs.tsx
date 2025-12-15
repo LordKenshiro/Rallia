@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -15,6 +15,17 @@ import { supabase, Logger } from '@rallia/shared-services';
 import { RatingProofWithFile, RatingProofsScreenParams } from '@rallia/shared-types';
 import AddRatingProofOverlay from '../features/ratings/components/AddRatingProofOverlay';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
+import { useThemeStyles, useTranslation } from '../hooks';
+import { formatDateShort } from '../utils/dateFormatting';
+import {
+  spacingPixels,
+  radiusPixels,
+  fontSizePixels,
+  fontWeightNumeric,
+  shadowsNative,
+  status,
+  primary,
+} from '@rallia/design-system';
 
 type RatingProofsRouteProp = RouteProp<{ RatingProofs: RatingProofsScreenParams }, 'RatingProofs'>;
 
@@ -22,11 +33,35 @@ const RatingProofs: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute<RatingProofsRouteProp>();
   const { playerRatingScoreId, sportName: _sportName, ratingValue, isOwnProfile } = route.params;
+  const { colors, shadows } = useThemeStyles();
+  const { locale } = useTranslation();
 
   const [proofs, setProofs] = useState<RatingProofWithFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter] = useState<'all' | 'approved' | 'pending' | 'rejected'>('all');
   const [showAddProofOverlay, setShowAddProofOverlay] = useState(false);
+
+  // Define handleAddProof before useLayoutEffect that uses it
+  const handleAddProof = useCallback(() => {
+    setShowAddProofOverlay(true);
+  }, []);
+
+  // Configure header right button for add action
+  useLayoutEffect(() => {
+    if (isOwnProfile) {
+      navigation.setOptions({
+        headerRight: () => (
+          <TouchableOpacity onPress={handleAddProof} style={{ marginRight: spacingPixels[2] }}>
+            <Ionicons name="add" size={28} color={colors.headerForeground} />
+          </TouchableOpacity>
+        ),
+      });
+    } else {
+      navigation.setOptions({
+        headerRight: undefined,
+      });
+    }
+  }, [isOwnProfile, navigation, colors.headerForeground, handleAddProof]);
 
   useEffect(() => {
     fetchProofs();
@@ -75,10 +110,6 @@ const RatingProofs: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleAddProof = () => {
-    setShowAddProofOverlay(true);
   };
 
   const handleSelectProofType = (type: 'external_link' | 'video' | 'image' | 'document') => {
@@ -147,16 +178,16 @@ const RatingProofs: React.FC = () => {
     return 'Proof';
   };
 
-  const getVerificationBadge = (status: string) => {
-    switch (status) {
+  const getVerificationBadge = (proofStatus: string) => {
+    switch (proofStatus) {
       case 'approved':
-        return { text: 'Verified', color: '#4CAF50' };
+        return { text: 'Verified', color: status.success.DEFAULT };
       case 'rejected':
-        return { text: 'Rejected', color: '#F44336' };
+        return { text: 'Rejected', color: status.error.DEFAULT };
       case 'pending':
-        return { text: 'Unverified', color: '#FF9800' };
+        return { text: 'Unverified', color: status.warning.DEFAULT };
       default:
-        return { text: 'Pending', color: '#999' };
+        return { text: 'Pending', color: colors.textMuted };
     }
   };
 
@@ -164,28 +195,26 @@ const RatingProofs: React.FC = () => {
     const verificationBadge = getVerificationBadge(item.status);
 
     return (
-      <View style={styles.proofCard}>
+      <View
+        style={[styles.proofCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+      >
         {/* Card Header */}
         <View style={styles.cardHeader}>
           <View style={styles.cardLeft}>
-            <Text size="base" weight="semibold" color="#000">
+            <Text size="base" weight="semibold" color={colors.text}>
               {item.title}
             </Text>
             <View style={styles.dateRow}>
-              <Ionicons name="calendar-outline" size={14} color="#999" />
-              <Text size="sm" color="#999" style={styles.dateText}>
-                {new Date(item.created_at).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
+              <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
+              <Text size="sm" color={colors.textMuted} style={styles.dateText}>
+                {formatDateShort(item.created_at, locale)}
               </Text>
             </View>
           </View>
 
           {/* Rating Badge */}
-          <View style={styles.ratingBadge}>
-            <Text size="sm" weight="bold" color="#fff">
+          <View style={[styles.ratingBadge, { backgroundColor: colors.primary }]}>
+            <Text size="sm" weight="bold" color={colors.primaryForeground}>
               {ratingValue.toFixed(1)}
             </Text>
           </View>
@@ -193,13 +222,13 @@ const RatingProofs: React.FC = () => {
 
         {/* Badges Row */}
         <View style={styles.badgesRow}>
-          <View style={[styles.typeBadge, { backgroundColor: '#4DB8A8' }]}>
-            <Text size="xs" weight="medium" color="#fff">
+          <View style={[styles.typeBadge, { backgroundColor: colors.primary }]}>
+            <Text size="xs" weight="medium" color={colors.primaryForeground}>
               {getProofTypeBadge(item)}
             </Text>
           </View>
           <View style={[styles.verificationBadge, { backgroundColor: verificationBadge.color }]}>
-            <Text size="xs" weight="medium" color="#fff">
+            <Text size="xs" weight="medium" color={colors.primaryForeground}>
               {verificationBadge.text}
             </Text>
           </View>
@@ -209,10 +238,10 @@ const RatingProofs: React.FC = () => {
         {isOwnProfile && (
           <View style={styles.actionIcons}>
             <TouchableOpacity style={styles.iconButton} onPress={() => handleEditProof(item)}>
-              <Ionicons name="pencil" size={20} color="#666" />
+              <Ionicons name="pencil" size={20} color={colors.textMuted} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.iconButton} onPress={() => handleDeleteProof(item.id)}>
-              <Ionicons name="trash-outline" size={20} color="#EF6F7B" />
+              <Ionicons name="trash-outline" size={20} color={colors.error} />
             </TouchableOpacity>
           </View>
         )}
@@ -222,11 +251,11 @@ const RatingProofs: React.FC = () => {
 
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="folder-open-outline" size={64} color="#CCC" />
-      <Text size="lg" weight="semibold" color="#999" style={styles.emptyTitle}>
+      <Ionicons name="folder-open-outline" size={64} color={colors.textMuted} />
+      <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
         No Proofs Yet
       </Text>
-      <Text size="sm" color="#999" style={styles.emptyText}>
+      <Text size="sm" color={colors.textMuted} style={styles.emptyText}>
         {isOwnProfile
           ? 'Add proof of your rating to help others verify your skill level'
           : 'This user has not added any rating proofs yet'}
@@ -240,37 +269,24 @@ const RatingProofs: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Mint Green Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={28} color="#000" />
-        </TouchableOpacity>
-        <Text size="lg" weight="semibold" color="#000">
-          Rating Proofs
-        </Text>
-        {isOwnProfile && (
-          <TouchableOpacity style={styles.headerButton} onPress={handleAddProof}>
-            <Ionicons name="add" size={28} color="#000" />
-          </TouchableOpacity>
-        )}
-        {!isOwnProfile && <View style={styles.headerButton} />}
-      </View>
-
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['bottom']}
+    >
       {/* Content */}
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4DB8A8" />
+        <View style={[styles.loadingContainer, { backgroundColor: colors.card }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
-        <View style={styles.content}>
+        <View style={[styles.content, { backgroundColor: colors.card }]}>
           {/* Title Section */}
-          <View style={styles.titleSection}>
-            <Text size="lg" weight="bold" color="#000">
+          <View style={[styles.titleSection, { backgroundColor: colors.card }]}>
+            <Text size="lg" weight="bold" color={colors.text}>
               My Rating Proofs
             </Text>
             <TouchableOpacity>
-              <Ionicons name="information-circle-outline" size={24} color="#666" />
+              <Ionicons name="information-circle-outline" size={24} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
 
@@ -299,108 +315,87 @@ const RatingProofs: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#A8E6CF', // Mint green
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   content: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   titleSection: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#fff',
+    paddingHorizontal: spacingPixels[5],
+    paddingVertical: spacingPixels[4],
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
   },
   listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingHorizontal: spacingPixels[5],
+    paddingBottom: spacingPixels[5],
   },
   proofCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    borderRadius: radiusPixels.xl,
+    padding: spacingPixels[4],
+    marginBottom: spacingPixels[3],
+    ...shadowsNative.sm,
     shadowOpacity: 0.08,
     shadowRadius: 3,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    // borderColor will be set dynamically using colors.border
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: spacingPixels[3],
   },
   cardLeft: {
     flex: 1,
-    marginRight: 12,
+    marginRight: spacingPixels[3],
   },
   dateRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: spacingPixels[1],
   },
   dateText: {
-    marginLeft: 4,
+    marginLeft: spacingPixels[1],
   },
   ratingBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#4DB8A8', // Teal
+    width: spacingPixels[9],
+    height: spacingPixels[9],
+    borderRadius: radiusPixels.full,
     justifyContent: 'center',
     alignItems: 'center',
   },
   badgesRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
+    gap: spacingPixels[2],
+    marginBottom: spacingPixels[3],
   },
   typeBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: spacingPixels[2.5],
+    paddingVertical: spacingPixels[1],
+    borderRadius: radiusPixels.xl,
   },
   verificationBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: spacingPixels[2.5],
+    paddingVertical: spacingPixels[1],
+    borderRadius: radiusPixels.xl,
   },
   actionIcons: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: 16,
+    gap: spacingPixels[4],
   },
   iconButton: {
-    width: 32,
-    height: 32,
+    width: spacingPixels[8],
+    height: spacingPixels[8],
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -408,20 +403,20 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingVertical: 60,
+    paddingHorizontal: spacingPixels[8],
+    paddingVertical: 60, // 15 * 4px base unit
   },
   emptyTitle: {
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: spacingPixels[4],
+    marginBottom: spacingPixels[2],
   },
   emptyText: {
     textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 24,
+    lineHeight: fontSizePixels.sm * 1.43,
+    marginBottom: spacingPixels[6],
   },
   emptyButton: {
-    minWidth: 200,
+    minWidth: 200, // 50 * 4px base unit
   },
 });
 

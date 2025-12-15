@@ -12,11 +12,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
-import { COLORS } from '@rallia/shared-constants';
 import DatabaseService, { OnboardingService, SportService, Logger } from '@rallia/shared-services';
 import type { OnboardingRating } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
+import { useThemeStyles } from '@rallia/shared-hooks';
+import { primary } from '@rallia/design-system';
 
 interface PickleballRatingOverlayProps {
   visible: boolean;
@@ -36,7 +37,6 @@ interface Rating {
   display_label: string;
   description: string;
   skill_level: 'beginner' | 'intermediate' | 'advanced' | 'professional' | null;
-  isHighlighted?: boolean;
 }
 
 const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
@@ -50,6 +50,7 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
   initialRating,
   onSave,
 }) => {
+  const { colors, isDark } = useThemeStyles();
   const [selectedRating, setSelectedRating] = useState<string | null>(initialRating || null);
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -87,8 +88,6 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
           display_label: rating.display_label,
           description: rating.description,
           skill_level: rating.skill_level,
-          // Highlight DUPR 4.5 (advanced level)
-          isHighlighted: rating.score_value === 4.5,
         }));
 
         setRatings(transformedRatings);
@@ -220,25 +219,30 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
 
         {/* Back Button */}
         <TouchableOpacity style={styles.backButton} onPress={onBack || onClose} activeOpacity={0.7}>
-          <Text style={styles.backButtonText}>←</Text>
+          <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
         </TouchableOpacity>
 
         {/* Title */}
-        <Text style={styles.title}>
+        <Text style={[styles.title, { color: colors.text }]}>
           {mode === 'edit' ? 'Update your pickleball rating' : 'Tell us about your game'}
         </Text>
 
         {/* Sport Badge */}
-        <View style={styles.sportBadge}>
-          <Text style={styles.sportBadgeText}>Pickleball</Text>
+        <View style={[styles.sportBadge, { backgroundColor: colors.primary }]}>
+          <Text style={[styles.sportBadgeText, { color: colors.primaryForeground }]}>
+            Pickleball
+          </Text>
         </View>
 
         {/* Subtitle with DUPR link */}
-        <Text style={styles.subtitle}>
+        <Text style={[styles.subtitle, { color: colors.textMuted }]}>
           {mode === 'edit' ? (
             <>
               Learn more about the{' '}
-              <Text style={styles.link} onPress={() => Linking.openURL('https://mydupr.com/')}>
+              <Text
+                style={[styles.link, { color: colors.primary }]}
+                onPress={() => Linking.openURL('https://mydupr.com/')}
+              >
                 DUPR rating system
               </Text>
             </>
@@ -251,8 +255,10 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
         <ScrollView style={styles.ratingList} showsVerticalScrollIndicator={false}>
           {isLoading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={COLORS.primary} />
-              <Text style={styles.loadingText}>Loading ratings...</Text>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={[styles.loadingText, { color: colors.textMuted }]}>
+                Loading ratings...
+              </Text>
             </View>
           ) : (
             <View style={styles.ratingGrid}>
@@ -261,8 +267,14 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
                   key={rating.id}
                   style={[
                     styles.ratingCard,
-                    rating.isHighlighted && styles.ratingCardHighlighted,
-                    selectedRating === rating.id && styles.ratingCardSelected,
+                    { backgroundColor: colors.inputBackground },
+                    selectedRating === rating.id && [
+                      styles.ratingCardSelected,
+                      {
+                        borderColor: colors.primary,
+                        backgroundColor: isDark ? colors.inputBackground : primary[50],
+                      },
+                    ],
                   ]}
                   onPress={() => {
                     selectionHaptic();
@@ -274,14 +286,15 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
                     <Ionicons
                       name={getRatingIcon(rating.skill_level ?? 'intermediate')}
                       size={20}
-                      color={selectedRating === rating.id ? '#fff' : COLORS.primary}
+                      color={colors.primary}
                       style={{ marginRight: 8 }}
                     />
                     <Text
                       style={[
                         styles.ratingLevel,
-                        rating.isHighlighted && styles.ratingLevelHighlighted,
-                        selectedRating === rating.id && styles.ratingLevelSelected,
+                        {
+                          color: selectedRating === rating.id ? colors.text : colors.text,
+                        },
                       ]}
                     >
                       {(rating.skill_level ?? 'intermediate').charAt(0).toUpperCase() +
@@ -291,8 +304,9 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
                   <Text
                     style={[
                       styles.ratingDupr,
-                      rating.isHighlighted && styles.ratingDuprHighlighted,
-                      selectedRating === rating.id && styles.ratingDuprSelected,
+                      {
+                        color: selectedRating === rating.id ? colors.text : colors.textMuted,
+                      },
                     ]}
                   >
                     {rating.display_label}
@@ -300,8 +314,9 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
                   <Text
                     style={[
                       styles.ratingDescription,
-                      rating.isHighlighted && styles.ratingDescriptionHighlighted,
-                      selectedRating === rating.id && styles.ratingDescriptionSelected,
+                      {
+                        color: selectedRating === rating.id ? colors.text : colors.textMuted,
+                      },
                     ]}
                   >
                     {rating.description}
@@ -316,19 +331,24 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
         <TouchableOpacity
           style={[
             styles.continueButton,
-            (!selectedRating || isSaving) && styles.continueButtonDisabled,
+            { backgroundColor: colors.primary },
+            (!selectedRating || isSaving) && [
+              styles.continueButtonDisabled,
+              { backgroundColor: colors.buttonInactive },
+            ],
           ]}
           onPress={handleContinue}
           activeOpacity={selectedRating && !isSaving ? 0.8 : 1}
           disabled={!selectedRating || isSaving}
         >
           {isSaving ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <ActivityIndicator size="small" color={colors.primaryForeground} />
           ) : (
             <Text
               style={[
                 styles.continueButtonText,
-                !selectedRating && styles.continueButtonTextDisabled,
+                { color: colors.primaryForeground },
+                !selectedRating && [styles.continueButtonTextDisabled, { color: colors.textMuted }],
               ]}
             >
               {mode === 'edit' ? 'Save' : 'Continue'}
@@ -354,17 +374,14 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 24,
-    color: '#333',
   },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
     textAlign: 'center',
     marginBottom: 15,
   },
   sportBadge: {
-    backgroundColor: COLORS.primary,
     paddingHorizontal: 20,
     paddingVertical: 6,
     borderRadius: 16,
@@ -372,13 +389,11 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   sportBadgeText: {
-    color: '#fff',
     fontSize: 14,
     fontWeight: '600',
   },
   subtitle: {
     fontSize: 14,
-    color: '#666',
     marginBottom: 15,
   },
   ratingList: {
@@ -393,7 +408,6 @@ const styles = StyleSheet.create({
   },
   ratingCard: {
     width: '48%',
-    backgroundColor: '#F5F5F5',
     borderRadius: 12,
     padding: 12,
     marginBottom: 10,
@@ -401,55 +415,50 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   ratingCardHighlighted: {
-    backgroundColor: COLORS.primary,
+    // backgroundColor applied inline
   },
   ratingCardSelected: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primaryLight,
+    // borderColor and backgroundColor applied inline
   },
   ratingLevel: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 4,
   },
   ratingLevelHighlighted: {
-    color: '#fff',
+    // color applied inline
   },
   ratingLevelSelected: {
-    color: COLORS.primary,
+    // color applied inline
   },
   ratingDupr: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#666',
     marginBottom: 6,
   },
   ratingDuprHighlighted: {
-    color: '#E0F9F7',
+    // color applied inline
   },
   ratingDuprSelected: {
-    color: COLORS.primary,
+    // color applied inline
   },
   ratingDescription: {
     fontSize: 11,
-    color: '#666',
     lineHeight: 16,
   },
   ratingDescriptionHighlighted: {
-    color: '#fff',
+    // color applied inline
   },
   ratingDescriptionSelected: {
-    color: '#333',
+    // color applied inline
   },
   continueButton: {
-    backgroundColor: COLORS.accent,
     borderRadius: 10,
     paddingVertical: 16,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 10,
-    shadowColor: '#000',
+    shadowColor: 'rgba(0, 0, 0, 0.2)',
     shadowOffset: {
       width: 0,
       height: 2,
@@ -459,17 +468,15 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   continueButtonDisabled: {
-    backgroundColor: '#D3D3D3',
     shadowOpacity: 0,
     elevation: 0,
   },
   continueButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
   continueButtonTextDisabled: {
-    color: '#999',
+    // color applied inline
   },
   loadingContainer: {
     flex: 1,
@@ -480,12 +487,11 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: '#666',
   },
   link: {
-    color: COLORS.primary,
     textDecorationLine: 'underline',
     fontWeight: '600',
+    // color will be set dynamically
   },
 });
 

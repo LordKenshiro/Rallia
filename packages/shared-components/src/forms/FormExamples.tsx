@@ -1,21 +1,15 @@
 /**
  * Form Components Usage Examples
- * 
+ *
  * This file demonstrates how to build complete forms using the
  * Input, Select, and Button components from the shared-components package.
  */
 
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
-import {
-  Input,
-  Select,
-  Button,
-  Heading,
-  Text,
-  SelectOption,
-} from '@rallia/shared-components';
-import { colors, spacing } from '@rallia/shared-constants';
+import { Input, Select, Button, Heading, Text, SelectOption } from '@rallia/shared-components';
+import { COLORS } from '@rallia/shared-constants';
+import { colors, spacing } from '../theme';
 
 // Example 1: Simple Contact Form
 export const ContactForm: React.FC = () => {
@@ -56,15 +50,16 @@ export const ContactForm: React.FC = () => {
         Fill out the form below and we'll get back to you soon.
       </Text>
 
-      <Input
-        label="Name"
-        value={name}
-        onChangeText={setName}
-        error={errors.name}
-        required
-        placeholder="Enter your name"
-        style={styles.marginTop}
-      />
+      <View style={styles.marginTop}>
+        <Input
+          label="Name"
+          value={name}
+          onChangeText={setName}
+          error={errors.name}
+          required
+          placeholder="Enter your name"
+        />
+      </View>
 
       <Input
         label="Email"
@@ -226,13 +221,7 @@ export const MatchCreationForm: React.FC = () => {
         placeholder="Saturday Morning Game"
       />
 
-      <Select
-        label="Sport"
-        value={sport}
-        onChange={setSport}
-        options={sportOptions}
-        required
-      />
+      <Select label="Sport" value={sport} onChange={setSport} options={sportOptions} required />
 
       <Select
         label="Skill Level"
@@ -262,8 +251,8 @@ export const MatchCreationForm: React.FC = () => {
         numberOfLines={3}
       />
 
-      <Button 
-        variant="primary" 
+      <Button
+        variant="primary"
         onPress={() => console.log('Create Match')}
         fullWidth
         style={styles.marginTop}
@@ -294,11 +283,7 @@ export const SearchForm: React.FC = () => {
         onChangeText={setSearchQuery}
         placeholder="Search..."
         leftIcon={<Text>🔍</Text>}
-        rightIcon={
-          searchQuery ? (
-            <Text onPress={() => setSearchQuery('')}>✕</Text>
-          ) : null
-        }
+        rightIcon={searchQuery ? <Text onPress={() => setSearchQuery('')}>✕</Text> : null}
       />
 
       <View style={styles.filterRow}>

@@ -43,7 +43,16 @@
     "codeExpired": "Code expiré. Veuillez en demander un nouveau.",
     "invalidCode": "Code invalide. Veuillez réessayer.",
     "welcomeBack": "Bon retour!",
-    "createAccount": "Créez un compte pour commencer"
+    "createAccount": "Créez un compte pour commencer",
+    "enterCode": "Entrer le code",
+    "codeSentTo": "Nous avons envoyé un code de vérification à",
+    "termsText": "En continuant, vous acceptez les Conditions d'utilisation de Rallia.",
+    "orDivider": "OU",
+    "step": "Étape {current} de {total}",
+    "stepNames": {
+      "email": "Courriel",
+      "verify": "Vérifier"
+    }
   },
   "navigation": {
     "home": "Accueil",
@@ -64,6 +73,15 @@
     "markAsRead": "Marquer comme lu",
     "delete": "Supprimer",
     "timeAgo": "il y a {time}",
+    "signInRequired": "Connexion requise",
+    "signInPrompt": "Veuillez vous connecter pour voir vos notifications",
+    "time": {
+      "justNow": "À l'instant",
+      "today": "Aujourd'hui",
+      "yesterday": "Hier",
+      "thisWeek": "Cette semaine",
+      "earlier": "Plus tôt"
+    },
     "types": {
       "match_invitation": "Invitation de match",
       "reminder": "Rappel",
@@ -104,17 +122,75 @@
     "phone": "Téléphone",
     "birthDate": "Date de naissance",
     "gender": "Genre",
-    "male": "Homme",
-    "female": "Femme",
-    "other": "Autre",
-    "preferNotToSay": "Préfère ne pas dire",
     "profilePicture": "Photo de profil",
     "changePhoto": "Changer la photo",
     "removePhoto": "Supprimer la photo",
     "sportProfiles": "Profils sportifs",
     "ratings": "Classements",
     "matches": "Matchs",
-    "reviews": "Avis"
+    "reviews": "Avis",
+    "notSet": "Non défini",
+    "sections": {
+      "personalInformation": "MES INFORMATIONS PERSONNELLES",
+      "playerInformation": "MES INFORMATIONS DE JOUEUR",
+      "sports": "MES SPORTS",
+      "availabilities": "MES DISPONIBILITÉS",
+      "rating": "MON CLASSEMENT",
+      "preferences": "MES PRÉFÉRENCES"
+    },
+    "fields": {
+      "fullName": "Nom complet",
+      "email": "Courriel",
+      "phoneNumber": "Numéro de téléphone",
+      "dateOfBirth": "Date de naissance",
+      "playingHand": "Main de jeu",
+      "maxTravelDistance": "Distance de déplacement maximale",
+      "matchDuration": "Durée du match",
+      "matchType": "Type de match",
+      "facility": "Installation",
+      "playingStyle": "Style de jeu",
+      "playAttributes": "Attributs de jeu"
+    },
+    "status": {
+      "active": "Actif",
+      "inactive": "Inactif",
+      "certified": "Certifié",
+      "noBio": "Pas encore de bio",
+      "noSports": "Aucun sport disponible",
+      "noRating": "Aucune information de classement pour le moment",
+      "noRatingSubtext": "Configurez votre classement pour commencer à jouer"
+    },
+    "loading": {
+      "profile": "Chargement du profil...",
+      "sportProfile": "Chargement du profil {sport}..."
+    },
+    "uploading": "Téléversement...",
+    "joined": "Rejoint",
+    "username": "nom d'utilisateur",
+    "user": "Utilisateur",
+    "doYouPlay": "Jouez-vous au {sport}?",
+    "activateSportMessage": "Activez {sport} pour voir et gérer votre classement et vos préférences",
+    "rating": {
+      "skillLevel": "Niveau de compétence",
+      "score": "Score",
+      "references": "{count} Références",
+      "peerRating": "{count} Évaluation par les pairs",
+      "ratingProof": "{count} Preuve de classement",
+      "requestReference": "Demander une référence",
+      "requestPeerRating": "Demander une évaluation par les pairs",
+      "manageRatingProofs": "Gérer les preuves de classement"
+    },
+    "genderValues": {
+      "male": "Homme",
+      "female": "Femme",
+      "other": "Non-binaire",
+      "preferNotToSay": "Préfère ne pas dire"
+    },
+    "hand": {
+      "left": "Gauche",
+      "right": "Droite",
+      "both": "Les deux"
+    }
   },
   "onboarding": {
     "welcome": "Bienvenue sur Rallia",
@@ -140,7 +216,65 @@
     "preferences": "Préférences",
     "preferencesSubtitle": "Définissez vos préférences de jeu",
     "allSet": "Vous êtes prêt!",
-    "allSetSubtitle": "Commencez à trouver des matchs maintenant"
+    "allSetSubtitle": "Commencez à trouver des matchs maintenant",
+    "step": "Étape {current} de {total}",
+    "stepNames": {
+      "personal": "À propos de vous",
+      "sports": "Sports",
+      "tennisRating": "Classement Tennis",
+      "pickleballRating": "Classement Pickleball",
+      "preferences": "Préférences",
+      "availability": "Disponibilité"
+    },
+    "personalInfoStep": {
+      "title": "Parlez-nous de vous",
+      "fullName": "Nom complet",
+      "fullNamePlaceholder": "Entrez votre nom complet",
+      "username": "Nom d'utilisateur",
+      "usernamePlaceholder": "Choisissez un nom d'utilisateur",
+      "usernameHelper": "Maximum 10 caractères, sans espaces",
+      "dateOfBirth": "Date de naissance",
+      "gender": "Genre",
+      "genderPlaceholder": "Sélectionnez votre genre",
+      "phoneNumber": "Numéro de téléphone",
+      "required": "*"
+    },
+    "sportSelectionStep": {
+      "title": "Quels sports souhaitez-vous pratiquer?",
+      "subtitle": "Sélectionnez tous ceux qui s'appliquent"
+    },
+    "ratingStep": {
+      "tennisTitle": "Parlez-nous de votre jeu",
+      "pickleballTitle": "Parlez-nous de votre jeu",
+      "ntrpSubtitle": "Classement NTRP",
+      "duprSubtitle": "Classement DUPR"
+    },
+    "preferencesStep": {
+      "title": "Parlez-nous de vos préférences",
+      "playingHand": "Main de jeu préférée",
+      "left": "Gauche",
+      "right": "Droite",
+      "both": "Les deux",
+      "travelDistance": "Distance de déplacement maximale",
+      "matchDuration": "Durée de match préférée",
+      "matchType": "Type de match préféré",
+      "casual": "Récréatif",
+      "competitive": "Compétitif",
+      "sameForAll": "Identique pour tous les sports"
+    },
+    "availabilityStep": {
+      "title": "Parlez-nous de votre horaire",
+      "subtitle": "Sélectionnez vos disponibilités",
+      "am": "AM",
+      "pm": "PM",
+      "eve": "SOIR"
+    },
+    "success": {
+      "title": "Bienvenue sur Rallia!",
+      "subtitle": "Votre compte a été créé avec succès.",
+      "getStarted": "Commencer"
+    },
+    "complete": "Terminer"
   },
   "matches": {
     "title": "Matchs",
@@ -186,7 +320,38 @@
     "unauthorized": "Vous n'êtes pas autorisé à effectuer cette action.",
     "notFound": "La ressource demandée n'a pas été trouvée.",
     "validation": "Veuillez vérifier vos données et réessayer.",
-    "unknown": "Une erreur inattendue s'est produite."
+    "unknown": "Une erreur inattendue s'est produite.",
+    "requestTimeout": "Délai d'attente de la requête",
+    "permissionsDenied": "Permissions refusées",
+    "userNotAuthenticated": "Utilisateur non authentifié",
+    "noPrimarySport": "Aucun sport principal trouvé. Veuillez d'abord définir un sport principal.",
+    "mustBeLoggedIn": "Vous devez être connecté pour créer un match."
+  },
+  "chat": {
+    "empty": "Aucun message pour le moment"
+  },
+  "map": {
+    "placeholder": "Vue carte"
+  },
+  "community": {
+    "placeholder": "Connectez-vous avec d'autres joueurs"
+  },
+  "match": {
+    "placeholder": "Écran de match - Prêt pour votre implémentation"
+  },
+  "alerts": {
+    "success": "Succès",
+    "error": "Erreur",
+    "availabilitiesUpdated": "Vos disponibilités ont été mises à jour!",
+    "peerRatingRequestsSent": "Demandes d'évaluation par les pairs envoyées à {count} joueur(s)",
+    "referenceRequestsSent": "Demandes de référence envoyées à {count} joueur(s)",
+    "failedToSendPeerRatingRequests": "Échec de l'envoi des demandes d'évaluation par les pairs",
+    "failedToSendReferenceRequests": "Échec de l'envoi des demandes de référence",
+    "sportActivated": "{sport} activé avec succès!",
+    "sportDeactivated": "{sport} désactivé",
+    "sportAdded": "{sport} ajouté et activé avec succès!",
+    "sportNotAdded": "{sport} non ajouté",
+    "preferencesUpdated": "Préférences mises à jour avec succès"
   },
   "actions": {
     "welcome": "Bienvenue sur Rallia",
@@ -334,6 +499,10 @@
     }
   },
   "home": {
+    "welcomeBack": "Bon retour! 👋",
+    "yourMatches": "🎾 Vos matchs",
+    "signInPrompt": "Vous devez vous connecter pour créer et accéder à vos matchs",
+    "user": "Utilisateur",
     "subtitle": "La meilleure façon de trouver votre prochain partenaire de tennis ou de pickleball",
     "header": {
       "ctaButton": "Rejoindre la liste"

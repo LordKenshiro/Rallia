@@ -2,8 +2,10 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image, Modal, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 import { useProfile, usePlayerSports } from '@rallia/shared-hooks';
 import { Text } from './foundation/Text.native';
+import { primary, lightTheme, darkTheme } from '@rallia/design-system';
 
 interface Sport {
   id: string;
@@ -14,15 +16,46 @@ interface Sport {
 interface AppHeaderProps {
   backgroundColor?: string;
   Logo?: React.ComponentType<{ width: number; height: number }>;
+  /** Theme colors - if not provided, uses design system defaults */
+  themeColors?: {
+    headerBackground: string;
+    text: string;
+    textMuted: string;
+    primary: string;
+    primaryForeground: string;
+    card: string;
+    border: string;
+    icon: string;
+  };
+  /** Whether dark mode is active */
+  isDark?: boolean;
 }
 
-const AppHeader: React.FC<AppHeaderProps> = ({ backgroundColor = '#C8F2EF', Logo }) => {
-  const navigation = useNavigation();
-  
+const AppHeader: React.FC<AppHeaderProps> = ({
+  backgroundColor,
+  Logo,
+  themeColors,
+  isDark = false,
+}) => {
+  // Use theme colors if provided, otherwise use design system defaults
+  const colors = themeColors || {
+    headerBackground: isDark ? darkTheme.card : lightTheme.card,
+    text: isDark ? darkTheme.foreground : lightTheme.foreground,
+    textMuted: isDark ? darkTheme.mutedForeground : lightTheme.mutedForeground,
+    primary: isDark ? primary[500] : primary[600],
+    primaryForeground: '#ffffff', // base.white
+    card: isDark ? darkTheme.card : lightTheme.card,
+    border: isDark ? darkTheme.border : lightTheme.border,
+    icon: isDark ? darkTheme.foreground : lightTheme.foreground,
+  };
+
+  // Use provided backgroundColor or theme headerBackground
+  const navigation = useNavigation<NavigationProp<ParamListBase>>();
+
   // Use custom hooks for data fetching
   const { profile, refetch: refetchProfile } = useProfile();
   const { playerSports, refetch: refetchPlayerSports } = usePlayerSports();
-  
+
   const [userSports, setUserSports] = useState<Sport[]>([]);
   const [selectedSport, setSelectedSport] = useState<Sport | null>(null);
   const [showSportDropdown, setShowSportDropdown] = useState(false);
@@ -48,8 +81,8 @@ const AppHeader: React.FC<AppHeaderProps> = ({ backgroundColor = '#C8F2EF', Logo
   useEffect(() => {
     if (playerSports && playerSports.length > 0) {
       const sports: Sport[] = [];
-      
-      playerSports.forEach((ps) => {
+
+      playerSports.forEach(ps => {
         const sportData = Array.isArray(ps.sport) ? ps.sport[0] : ps.sport;
         if (sportData && typeof sportData === 'object') {
           sports.push({
@@ -59,14 +92,14 @@ const AppHeader: React.FC<AppHeaderProps> = ({ backgroundColor = '#C8F2EF', Logo
           });
         }
       });
-      
+
       setUserSports(sports);
-      
+
       // Set first sport as default if none selected
       if (!selectedSport && sports.length > 0) {
         setSelectedSport(sports[0]);
       }
-      
+
       console.log('🏆 User sports loaded:', sports);
     } else {
       setUserSports([]);
@@ -91,7 +124,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ backgroundColor = '#C8F2EF', Logo
   const handleProfilePress = () => {
     // Only navigate if logged in
     if (!isLoggedIn) return;
-    (navigation as any).navigate('UserProfile');
+    navigation.navigate('UserProfile');
   };
 
   const handleNotificationsPress = () => {
@@ -103,7 +136,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ backgroundColor = '#C8F2EF', Logo
   const handleSettingsPress = () => {
     // Only navigate if logged in
     if (!isLoggedIn) return;
-    (navigation as any).navigate('Settings');
+    navigation.navigate('Settings');
   };
 
   return (
@@ -114,11 +147,14 @@ const AppHeader: React.FC<AppHeaderProps> = ({ backgroundColor = '#C8F2EF', Logo
           {isLoggedIn && (
             <TouchableOpacity style={styles.iconButton} onPress={handleProfilePress}>
               {profilePictureUrl && !imageLoadError ? (
-                <Image 
-                  source={{ uri: profilePictureUrl }} 
+                <Image
+                  source={{ uri: profilePictureUrl }}
                   style={styles.profileImage}
-                  onError={(error) => {
-                    console.error('❌ AppHeader - Failed to load profile image:', error.nativeEvent.error);
+                  onError={error => {
+                    console.error(
+                      '❌ AppHeader - Failed to load profile image:',
+                      error.nativeEvent.error
+                    );
                     setImageLoadError(true);
                   }}
                   onLoad={() => {
@@ -127,28 +163,28 @@ const AppHeader: React.FC<AppHeaderProps> = ({ backgroundColor = '#C8F2EF', Logo
                   }}
                 />
               ) : (
-                <Ionicons name="person-circle-outline" size={28} color="#333" />
+                <Ionicons name="person-circle-outline" size={28} color={colors.icon} />
               )}
             </TouchableOpacity>
           )}
-          
+
           {Logo && <Logo width={100} height={30} />}
         </View>
 
         {/* Center - Sport Selector */}
         <View style={styles.centerSection}>
           {selectedSport && userSports.length > 0 && (
-            <TouchableOpacity 
-              style={styles.sportSelector}
+            <TouchableOpacity
+              style={[styles.sportSelector, { backgroundColor: colors.primary }]}
               onPress={() => setShowSportDropdown(!showSportDropdown)}
             >
-              <Text color="#fff" weight="semibold" size="sm">
+              <Text color={colors.primaryForeground} weight="semibold" size="sm">
                 {selectedSport.display_name}
               </Text>
-              <Ionicons 
-                name={showSportDropdown ? "chevron-up" : "chevron-down"} 
-                size={16} 
-                color="#fff" 
+              <Ionicons
+                name={showSportDropdown ? 'chevron-up' : 'chevron-down'}
+                size={16}
+                color={colors.primaryForeground}
               />
             </TouchableOpacity>
           )}
@@ -159,11 +195,11 @@ const AppHeader: React.FC<AppHeaderProps> = ({ backgroundColor = '#C8F2EF', Logo
           {isLoggedIn && (
             <>
               <TouchableOpacity style={styles.iconButton} onPress={handleNotificationsPress}>
-                <Ionicons name="notifications-outline" size={24} color="#333" />
+                <Ionicons name="notifications-outline" size={24} color={colors.icon} />
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.iconButton} onPress={handleSettingsPress}>
-                <Ionicons name="settings-outline" size={24} color="#333" />
+                <Ionicons name="settings-outline" size={24} color={colors.icon} />
               </TouchableOpacity>
             </>
           )}
@@ -178,30 +214,34 @@ const AppHeader: React.FC<AppHeaderProps> = ({ backgroundColor = '#C8F2EF', Logo
           animationType="fade"
           onRequestClose={() => setShowSportDropdown(false)}
         >
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.modalOverlay}
             activeOpacity={1}
             onPress={() => setShowSportDropdown(false)}
           >
-            <View style={styles.dropdownContainer}>
+            <View style={[styles.dropdownContainer, { backgroundColor: colors.card }]}>
               <ScrollView>
-                {userSports.map((sport) => (
+                {userSports.map(sport => (
                   <TouchableOpacity
                     key={sport.id}
                     style={[
                       styles.dropdownItem,
-                      selectedSport?.id === sport.id && styles.dropdownItemSelected
+                      {
+                        borderBottomColor: colors.border,
+                        backgroundColor:
+                          selectedSport?.id === sport.id ? colors.card : 'transparent',
+                      },
                     ]}
                     onPress={() => handleSportSelect(sport)}
                   >
-                    <Text 
-                      color={selectedSport?.id === sport.id ? '#FF7B9C' : '#333'}
+                    <Text
+                      color={selectedSport?.id === sport.id ? colors.primary : colors.text}
                       weight={selectedSport?.id === sport.id ? 'semibold' : 'regular'}
                     >
                       {sport.display_name}
                     </Text>
                     {selectedSport?.id === sport.id && (
-                      <Ionicons name="checkmark" size={20} color="#FF7B9C" />
+                      <Ionicons name="checkmark" size={20} color={colors.primary} />
                     )}
                   </TouchableOpacity>
                 ))}
@@ -243,16 +283,16 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#E0E0E0',
+    // backgroundColor will be set dynamically
   },
   sportSelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FF7B9C',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
     gap: 6,
+    // backgroundColor will be set dynamically
   },
   rightIcons: {
     flexDirection: 'row',
@@ -268,11 +308,10 @@ const styles = StyleSheet.create({
     paddingTop: 80,
   },
   dropdownContainer: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     minWidth: 200,
     maxHeight: 300,
-    shadowColor: '#000',
+    shadowColor: 'rgba(0, 0, 0, 0.25)',
     shadowOffset: {
       width: 0,
       height: 2,
@@ -280,6 +319,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+    // backgroundColor will be set dynamically
   },
   dropdownItem: {
     flexDirection: 'row',
@@ -288,10 +328,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    // borderBottomColor and backgroundColor will be set dynamically
   },
   dropdownItemSelected: {
-    backgroundColor: '#FFF5F7',
+    // backgroundColor will be set dynamically
   },
 });
 

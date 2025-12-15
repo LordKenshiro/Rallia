@@ -2,18 +2,31 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 import { useProfile } from '@rallia/shared-hooks';
+import { lightHaptic } from '@rallia/shared-utils';
+import { neutral, spacingPixels } from '@rallia/design-system';
 
 interface ProfilePictureButtonProps {
   size?: number;
+  /** Optional custom onPress handler. If provided, this will be used instead of default navigation. */
+  onPress?: () => void;
+  /** Whether dark mode is active */
+  isDark?: boolean;
 }
 
-const ProfilePictureButton: React.FC<ProfilePictureButtonProps> = ({ size = 28 }) => {
-  const navigation = useNavigation();
+const ProfilePictureButton: React.FC<ProfilePictureButtonProps> = ({
+  size = 28,
+  onPress,
+  isDark = false,
+}) => {
+  const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const { profile, refetch } = useProfile();
   const [imageLoadError, setImageLoadError] = useState(false);
 
   const profilePictureUrl = profile?.profile_picture_url || null;
+  const iconColor = isDark ? neutral[50] : neutral[900];
+  const placeholderBg = isDark ? neutral[700] : neutral[200];
 
   useEffect(() => {
     if (profile) {
@@ -29,19 +42,32 @@ const ProfilePictureButton: React.FC<ProfilePictureButtonProps> = ({ size = 28 }
   );
 
   const handlePress = () => {
-    (navigation as any).navigate('UserProfile');
+    lightHaptic();
+    if (onPress) {
+      onPress();
+    } else {
+      navigation.navigate('UserProfile');
+    }
   };
 
   return (
     <TouchableOpacity style={styles.button} onPress={handlePress}>
       {profilePictureUrl && !imageLoadError ? (
-        <Image 
-          source={{ uri: profilePictureUrl }} 
-          style={[styles.profileImage, { width: size, height: size, borderRadius: size / 2 }]}
+        <Image
+          source={{ uri: profilePictureUrl }}
+          style={[
+            styles.profileImage,
+            {
+              width: size,
+              height: size,
+              borderRadius: size / 2,
+              backgroundColor: placeholderBg,
+            },
+          ]}
           onError={() => setImageLoadError(true)}
         />
       ) : (
-        <Ionicons name="person-circle-outline" size={size} color="#333" />
+        <Ionicons name="person-circle-outline" size={size} color={iconColor} />
       )}
     </TouchableOpacity>
   );
@@ -49,12 +75,10 @@ const ProfilePictureButton: React.FC<ProfilePictureButtonProps> = ({ size = 28 }
 
 const styles = StyleSheet.create({
   button: {
-    padding: 4,
-    marginLeft: 8,
+    padding: spacingPixels[1],
+    marginLeft: spacingPixels[2],
   },
-  profileImage: {
-    backgroundColor: '#E0E0E0',
-  },
+  profileImage: {},
 });
 
 export default ProfilePictureButton;

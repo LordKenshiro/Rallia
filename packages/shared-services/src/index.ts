@@ -4,7 +4,8 @@
 
 export * from './supabase';
 export * from './database';
-export * from './verification';
+// verification.ts is deprecated - use useAuth hook from @rallia/shared-hooks instead
+// export * from './verification';
 export * from './usta';
 export * from './dupr';
 export * from './logger';

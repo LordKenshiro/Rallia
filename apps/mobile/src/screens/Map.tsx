@@ -3,9 +3,13 @@ import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader, LocationPermissionOverlay } from '@rallia/shared-components';
 import { Logger } from '@rallia/shared-services';
-import RalliaLogo from '../../assets/images/light mode logo.svg';
+import { useThemeStyles, useTranslation } from '../hooks';
+import { fontSizePixels } from '@rallia/design-system';
+import RalliaLogo from '../../assets/images/logo-dark.svg';
 
 const Map = () => {
+  const { colors } = useThemeStyles();
+  const { t } = useTranslation();
   const [showLocationPermission, setShowLocationPermission] = useState(false);
 
   const handleAcceptLocation = () => {
@@ -19,9 +23,11 @@ const Map = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.mapContainer}>
-        <Text style={styles.placeholderText}>Map View</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      <View style={[styles.mapContainer, { backgroundColor: colors.card }]}>
+        <Text style={[styles.placeholderText, { color: colors.textMuted }]}>
+          {t('map.placeholder')}
+        </Text>
       </View>
 
       <LocationPermissionOverlay
@@ -36,19 +42,16 @@ const Map = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   mapContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#e8f5e9',
   },
   placeholderText: {
-    fontSize: 18,
-    color: '#666',
+    fontSize: fontSizePixels.lg,
+    textAlign: 'center',
   },
 });
 
 export default Map;
-

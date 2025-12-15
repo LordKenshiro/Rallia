@@ -10,11 +10,11 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay, Text, Heading, Button, Spinner } from '@rallia/shared-components';
-import { COLORS } from '@rallia/shared-constants';
 import { Sport } from '@rallia/shared-types';
 import DatabaseService, { Logger } from '@rallia/shared-services';
 import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
+import { useThemeStyles } from '@rallia/shared-hooks';
 
 interface SportSelectionOverlayProps {
   visible: boolean;
@@ -33,6 +33,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
   currentStep = 1,
   totalSteps = 8,
 }) => {
+  const { colors } = useThemeStyles();
   const [selectedSportIds, setSelectedSportIds] = useState<string[]>([]); // Store IDs for database operations
   const [sports, setSports] = useState<Sport[]>([]);
   const [isLoadingSports, setIsLoadingSports] = useState(true);
@@ -236,7 +237,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
         <Heading level={2} style={styles.title}>
           Which sports would you like to play?
         </Heading>
-        <Text variant="caption" color="#666" style={styles.subtitle}>
+        <Text variant="caption" color={colors.textMuted} style={styles.subtitle}>
           Select all that apply
         </Text>
 
@@ -245,7 +246,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
           {isLoadingSports ? (
             <View style={styles.loadingContainer}>
               <Spinner size="lg" />
-              <Text size="sm" color="#666" style={styles.loadingText}>
+              <Text size="sm" color={colors.textMuted} style={styles.loadingText}>
                 Loading sports...
               </Text>
             </View>
@@ -268,7 +269,10 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
               return (
                 <TouchableOpacity
                   key={sport.id}
-                  style={[styles.sportCard, isSelected && styles.sportCardSelected]}
+                  style={[
+                    styles.sportCard,
+                    { borderColor: isSelected ? colors.primary : 'transparent' },
+                  ]}
                   onPress={() => toggleSport(sport.id)}
                   activeOpacity={0.8}
                 >
@@ -285,10 +289,12 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
 
                   {/* Sport Name */}
                   <View style={styles.sportNameContainer}>
-                    <Text size="xl" weight="bold" color="#fff">
+                    <Text size="xl" weight="bold" color={colors.primaryForeground}>
                       {sport.display_name}
                     </Text>
-                    {isSelected && <Ionicons name="checkmark" size={24} color="#fff" />}
+                    {isSelected && (
+                      <Ionicons name="checkmark" size={24} color={colors.primaryForeground} />
+                    )}
                   </View>
                 </TouchableOpacity>
               );
@@ -342,10 +348,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
     borderWidth: 3,
-    borderColor: 'transparent',
+    // borderColor will be set dynamically
   },
   sportCardSelected: {
-    borderColor: COLORS.primary,
+    // borderColor will be set dynamically
   },
   sportImageContainer: {
     width: '100%',
@@ -375,8 +381,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   continueButton: {
-    backgroundColor: COLORS.buttonPrimary,
     marginTop: 10,
+    // backgroundColor handled by Button component
   },
 });
 

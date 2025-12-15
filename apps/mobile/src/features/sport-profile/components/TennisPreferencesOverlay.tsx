@@ -19,6 +19,7 @@ import {
   PLAY_ATTRIBUTE_LABELS,
 } from '@rallia/shared-types';
 import { selectionHaptic, mediumHaptic } from '../../../utils/haptics';
+import { useThemeStyles } from '@rallia/shared-hooks';
 
 interface TennisPreferencesOverlayProps {
   visible: boolean;
@@ -44,6 +45,7 @@ export const TennisPreferencesOverlay: React.FC<TennisPreferencesOverlayProps> =
   onSave,
   initialPreferences = {},
 }) => {
+  const { colors } = useThemeStyles();
   const [matchDuration, setMatchDuration] = useState<string | undefined>(
     initialPreferences.matchDuration
   );
@@ -114,38 +116,53 @@ export const TennisPreferencesOverlay: React.FC<TennisPreferencesOverlayProps> =
           {
             opacity: fadeAnim,
             transform: [{ translateY: slideAnim }],
+            backgroundColor: colors.card,
           },
         ]}
       >
         {/* Header with back and close buttons */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={onClose} activeOpacity={0.7}>
-            <Text style={styles.backButtonText}>←</Text>
+            <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.closeButton} onPress={onClose} activeOpacity={0.7}>
-            <Ionicons name="close" size={24} color="#333" />
+            <Ionicons name="close" size={24} color={colors.text} />
           </TouchableOpacity>
         </View>
 
         {/* Title */}
-        <Text style={styles.title}>Update your tennis preferences</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Update your tennis preferences</Text>
 
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           {/* Match Duration */}
           <View style={styles.section}>
-            <Text style={styles.label}>Match Duration</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Match Duration</Text>
             <View style={styles.chipsContainer}>
               {MATCH_DURATIONS.map(duration => (
                 <TouchableOpacity
                   key={duration}
-                  style={[styles.chip, matchDuration === duration && styles.chipSelected]}
+                  style={[
+                    styles.chip,
+                    { backgroundColor: colors.inputBackground },
+                    matchDuration === duration && [
+                      styles.chipSelected,
+                      { backgroundColor: colors.primary },
+                    ],
+                  ]}
                   onPress={() => {
                     selectionHaptic();
                     setMatchDuration(duration);
                   }}
                 >
                   <Text
-                    style={[styles.chipText, matchDuration === duration && styles.chipTextSelected]}
+                    style={[
+                      styles.chipText,
+                      { color: colors.textMuted },
+                      matchDuration === duration && [
+                        styles.chipTextSelected,
+                        { color: colors.primaryForeground },
+                      ],
+                    ]}
                   >
                     {duration}
                   </Text>
@@ -156,18 +173,34 @@ export const TennisPreferencesOverlay: React.FC<TennisPreferencesOverlayProps> =
 
           {/* Match Type */}
           <View style={styles.section}>
-            <Text style={styles.label}>Match Type</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Match Type</Text>
             <View style={styles.chipsContainer}>
               {MATCH_TYPES.map(type => (
                 <TouchableOpacity
                   key={type}
-                  style={[styles.chip, matchType === type && styles.chipSelected]}
+                  style={[
+                    styles.chip,
+                    { backgroundColor: colors.inputBackground },
+                    matchType === type && [
+                      styles.chipSelected,
+                      { backgroundColor: colors.primary },
+                    ],
+                  ]}
                   onPress={() => {
                     selectionHaptic();
                     setMatchType(type);
                   }}
                 >
-                  <Text style={[styles.chipText, matchType === type && styles.chipTextSelected]}>
+                  <Text
+                    style={[
+                      styles.chipText,
+                      { color: colors.textMuted },
+                      matchType === type && [
+                        styles.chipTextSelected,
+                        { color: colors.primaryForeground },
+                      ],
+                    ]}
+                  >
                     {type}
                   </Text>
                 </TouchableOpacity>
@@ -177,19 +210,24 @@ export const TennisPreferencesOverlay: React.FC<TennisPreferencesOverlayProps> =
 
           {/* Court */}
           <View style={styles.section}>
-            <Text style={styles.label}>Court</Text>
-            <View style={styles.inputContainer}>
+            <Text style={[styles.label, { color: colors.text }]}>Court</Text>
+            <View
+              style={[
+                styles.inputContainer,
+                { backgroundColor: colors.inputBackground, borderColor: colors.border },
+              ]}
+            >
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: colors.text }]}
                 placeholder="e.g., Jeanne-Mance Park"
-                placeholderTextColor={COLORS.gray}
+                placeholderTextColor={colors.textMuted}
                 value={court}
                 onChangeText={setCourt}
               />
               <Ionicons
                 name="chevron-down"
                 size={20}
-                color={COLORS.gray}
+                color={colors.textMuted}
                 style={styles.inputIcon}
               />
             </View>
@@ -197,15 +235,24 @@ export const TennisPreferencesOverlay: React.FC<TennisPreferencesOverlayProps> =
 
           {/* Play Style */}
           <View style={styles.section}>
-            <Text style={styles.label}>Play Style</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Play Style</Text>
             <TouchableOpacity
-              style={styles.inputContainer}
+              style={[
+                styles.inputContainer,
+                { backgroundColor: colors.inputBackground, borderColor: colors.border },
+              ]}
               onPress={() => {
                 selectionHaptic();
                 setShowPlayStyleDropdown(!showPlayStyleDropdown);
               }}
             >
-              <Text style={[styles.input, !playStyle && styles.placeholder, styles.dropdownText]}>
+              <Text
+                style={[
+                  styles.input,
+                  styles.dropdownText,
+                  { color: playStyle ? colors.text : colors.textMuted },
+                ]}
+              >
                 {playStyle
                   ? PLAY_STYLES.find(s => s.value === playStyle)?.label
                   : 'Select your play style'}
@@ -213,32 +260,45 @@ export const TennisPreferencesOverlay: React.FC<TennisPreferencesOverlayProps> =
               <Ionicons
                 name={showPlayStyleDropdown ? 'chevron-up' : 'chevron-down'}
                 size={20}
-                color={COLORS.gray}
+                color={colors.textMuted}
                 style={styles.inputIcon}
               />
             </TouchableOpacity>
 
             {showPlayStyleDropdown && (
-              <View style={styles.dropdown}>
+              <View
+                style={[
+                  styles.dropdown,
+                  { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                ]}
+              >
                 {PLAY_STYLES.map(style => (
                   <TouchableOpacity
                     key={style.value}
                     style={[
                       styles.dropdownItem,
-                      playStyle === style.value && styles.dropdownItemSelected,
+                      { borderBottomColor: colors.border },
+                      playStyle === style.value && [
+                        styles.dropdownItemSelected,
+                        { backgroundColor: colors.card },
+                      ],
                     ]}
                     onPress={() => handleSelectPlayStyle(style.value)}
                   >
                     <Text
                       style={[
                         styles.dropdownItemText,
-                        playStyle === style.value && styles.dropdownItemTextSelected,
+                        { color: colors.text },
+                        playStyle === style.value && [
+                          styles.dropdownItemTextSelected,
+                          { color: colors.primary, fontWeight: '600' },
+                        ],
                       ]}
                     >
                       {style.label}
                     </Text>
                     {playStyle === style.value && (
-                      <Ionicons name="checkmark" size={20} color={COLORS.primary} />
+                      <Ionicons name="checkmark" size={20} color={colors.primary} />
                     )}
                   </TouchableOpacity>
                 ))}
@@ -248,22 +308,32 @@ export const TennisPreferencesOverlay: React.FC<TennisPreferencesOverlayProps> =
 
           {/* Play Attributes */}
           <View style={styles.section}>
-            <Text style={styles.label}>Play Attributes</Text>
-            <Text style={styles.sublabel}>Select all that apply</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Play Attributes</Text>
+            <Text style={[styles.sublabel, { color: colors.textMuted }]}>
+              Select all that apply
+            </Text>
             <View style={styles.chipsContainer}>
               {PLAY_ATTRIBUTES.map(attribute => (
                 <TouchableOpacity
                   key={attribute.value}
                   style={[
                     styles.attributeChip,
-                    playAttributes.includes(attribute.value) && styles.attributeChipSelected,
+                    { backgroundColor: colors.inputBackground },
+                    playAttributes.includes(attribute.value) && [
+                      styles.attributeChipSelected,
+                      { backgroundColor: colors.primary },
+                    ],
                   ]}
                   onPress={() => handleTogglePlayAttribute(attribute.value)}
                 >
                   <Text
                     style={[
                       styles.chipText,
-                      playAttributes.includes(attribute.value) && styles.chipTextSelected,
+                      { color: colors.textMuted },
+                      playAttributes.includes(attribute.value) && [
+                        styles.chipTextSelected,
+                        { color: colors.primaryForeground },
+                      ],
                     ]}
                   >
                     {attribute.label}
@@ -276,12 +346,22 @@ export const TennisPreferencesOverlay: React.FC<TennisPreferencesOverlayProps> =
 
         {/* Save Button */}
         <TouchableOpacity
-          style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
+          style={[
+            styles.saveButton,
+            { backgroundColor: colors.primary },
+            !canSave && [styles.saveButtonDisabled, { backgroundColor: colors.buttonInactive }],
+          ]}
           onPress={handleSave}
           disabled={!canSave}
           activeOpacity={0.8}
         >
-          <Text style={[styles.saveButtonText, !canSave && styles.saveButtonTextDisabled]}>
+          <Text
+            style={[
+              styles.saveButtonText,
+              { color: colors.primaryForeground },
+              !canSave && [styles.saveButtonTextDisabled, { color: colors.textMuted }],
+            ]}
+          >
             Save
           </Text>
         </TouchableOpacity>
@@ -308,7 +388,6 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 28,
-    color: '#333',
     fontWeight: '300',
   },
   closeButton: {
@@ -321,7 +400,6 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
     marginBottom: 24,
-    color: '#000',
     textAlign: 'center',
   },
   scrollView: {
@@ -333,12 +411,10 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.dark,
     marginBottom: 12,
   },
   sublabel: {
     fontSize: 14,
-    color: COLORS.gray,
     marginBottom: 12,
     marginTop: -8,
   },
@@ -350,7 +426,6 @@ const styles = StyleSheet.create({
   },
   chip: {
     flex: 1,
-    backgroundColor: COLORS.primaryLight,
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: 'center',
@@ -361,56 +436,48 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: '#E8F5F3',
     borderWidth: 0,
     marginBottom: 8,
     marginRight: 8,
   },
   attributeChipSelected: {
-    backgroundColor: '#2C7A6B',
+    // backgroundColor applied inline
   },
   chipSelected: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    // backgroundColor and borderColor applied inline
   },
   chipText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
   },
   chipTextSelected: {
-    color: '#fff',
+    // color applied inline
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.veryLightGray,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: COLORS.lightGray,
     paddingHorizontal: 12,
   },
   input: {
     flex: 1,
     paddingVertical: 12,
     fontSize: 16,
-    color: COLORS.dark,
   },
   dropdownText: {
     paddingVertical: 14,
   },
   placeholder: {
-    color: COLORS.gray,
+    // color applied inline
   },
   inputIcon: {
     marginLeft: 8,
   },
   dropdown: {
     marginTop: 8,
-    backgroundColor: COLORS.veryLightGray,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: COLORS.lightGray,
     overflow: 'hidden',
   },
   dropdownItem: {
@@ -420,21 +487,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.lightGray,
   },
   dropdownItemSelected: {
-    backgroundColor: COLORS.backgroundLight,
+    // backgroundColor applied inline
   },
   dropdownItemText: {
     fontSize: 16,
-    color: COLORS.dark,
   },
   dropdownItemTextSelected: {
-    fontWeight: '600',
-    color: COLORS.primary,
+    // fontWeight and color applied inline
   },
   saveButton: {
-    backgroundColor: '#F5A5A5',
     borderRadius: 12,
     paddingVertical: 16,
     justifyContent: 'center',
@@ -442,15 +505,13 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   saveButtonDisabled: {
-    backgroundColor: '#D3D3D3',
     opacity: 0.5,
   },
   saveButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
   saveButtonTextDisabled: {
-    color: '#999',
+    // color applied inline
   },
 });

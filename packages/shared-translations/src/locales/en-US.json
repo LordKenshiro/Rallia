@@ -43,7 +43,16 @@
     "codeExpired": "Code expired. Please request a new one.",
     "invalidCode": "Invalid code. Please try again.",
     "welcomeBack": "Welcome back!",
-    "createAccount": "Create an account to get started"
+    "createAccount": "Create an account to get started",
+    "enterCode": "Enter code",
+    "codeSentTo": "We sent an email verification code to",
+    "termsText": "By continuing, you agree to Rallia's Terms of Use.",
+    "orDivider": "OR",
+    "step": "Step {current} of {total}",
+    "stepNames": {
+      "email": "Email",
+      "verify": "Verify"
+    }
   },
   "navigation": {
     "home": "Home",
@@ -64,6 +73,15 @@
     "markAsRead": "Mark as read",
     "delete": "Delete",
     "timeAgo": "{time} ago",
+    "signInRequired": "Sign In Required",
+    "signInPrompt": "Please sign in to view your notifications",
+    "time": {
+      "justNow": "Just now",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "thisWeek": "This Week",
+      "earlier": "Earlier"
+    },
     "types": {
       "match_invitation": "Match Invitation",
       "reminder": "Reminder",
@@ -104,17 +122,75 @@
     "phone": "Phone",
     "birthDate": "Birth Date",
     "gender": "Gender",
-    "male": "Male",
-    "female": "Female",
-    "other": "Other",
-    "preferNotToSay": "Prefer not to say",
     "profilePicture": "Profile Picture",
     "changePhoto": "Change Photo",
     "removePhoto": "Remove Photo",
     "sportProfiles": "Sport Profiles",
     "ratings": "Ratings",
     "matches": "Matches",
-    "reviews": "Reviews"
+    "reviews": "Reviews",
+    "notSet": "Not set",
+    "sections": {
+      "personalInformation": "MY PERSONAL INFORMATION",
+      "playerInformation": "MY PLAYER INFORMATION",
+      "sports": "MY SPORTS",
+      "availabilities": "MY AVAILABILITIES",
+      "rating": "MY RATING",
+      "preferences": "MY PREFERENCES"
+    },
+    "fields": {
+      "fullName": "Full Name",
+      "email": "Email",
+      "phoneNumber": "Phone Number",
+      "dateOfBirth": "Date of Birth",
+      "playingHand": "Playing Hand",
+      "maxTravelDistance": "Max Travel Distance",
+      "matchDuration": "Match Duration",
+      "matchType": "Match Type",
+      "facility": "Facility",
+      "playingStyle": "Playing Style",
+      "playAttributes": "Play Attributes"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "certified": "Certified",
+      "noBio": "No bio yet",
+      "noSports": "No sports available",
+      "noRating": "No rating information yet",
+      "noRatingSubtext": "Set up your rating to start playing"
+    },
+    "loading": {
+      "profile": "Loading profile...",
+      "sportProfile": "Loading {sport} profile..."
+    },
+    "uploading": "Uploading...",
+    "joined": "Joined",
+    "username": "username",
+    "user": "User",
+    "doYouPlay": "Do you play {sport}?",
+    "activateSportMessage": "Activate {sport} to view and manage your rating and preferences",
+    "rating": {
+      "skillLevel": "Skill Level",
+      "score": "Score",
+      "references": "{count} References",
+      "peerRating": "{count} Peer Rating",
+      "ratingProof": "{count} Rating Proof",
+      "requestReference": "Request reference",
+      "requestPeerRating": "Request peer rating",
+      "manageRatingProofs": "Manage rating proofs"
+    },
+    "genderValues": {
+      "male": "Male",
+      "female": "Female",
+      "other": "Non-binary",
+      "preferNotToSay": "Prefer not to say"
+    },
+    "hand": {
+      "left": "Left",
+      "right": "Right",
+      "both": "Both"
+    }
   },
   "onboarding": {
     "welcome": "Welcome to Rallia",
@@ -140,7 +216,65 @@
     "preferences": "Preferences",
     "preferencesSubtitle": "Set your playing preferences",
     "allSet": "You're all set!",
-    "allSetSubtitle": "Start finding matches now"
+    "allSetSubtitle": "Start finding matches now",
+    "step": "Step {current} of {total}",
+    "stepNames": {
+      "personal": "About You",
+      "sports": "Sports",
+      "tennisRating": "Tennis Rating",
+      "pickleballRating": "Pickleball Rating",
+      "preferences": "Preferences",
+      "availability": "Availability"
+    },
+    "personalInfoStep": {
+      "title": "Tell us about yourself",
+      "fullName": "Full Name",
+      "fullNamePlaceholder": "Enter your full name",
+      "username": "Username",
+      "usernamePlaceholder": "Choose a username",
+      "usernameHelper": "Max 10 characters, no spaces",
+      "dateOfBirth": "Date of Birth",
+      "gender": "Gender",
+      "genderPlaceholder": "Select your gender",
+      "phoneNumber": "Phone Number",
+      "required": "*"
+    },
+    "sportSelectionStep": {
+      "title": "Which sports would you like to play?",
+      "subtitle": "Select all that apply"
+    },
+    "ratingStep": {
+      "tennisTitle": "Tell us about your game",
+      "pickleballTitle": "Tell us about your game",
+      "ntrpSubtitle": "NTRP Rating",
+      "duprSubtitle": "DUPR Rating"
+    },
+    "preferencesStep": {
+      "title": "Tell us about your preferences",
+      "playingHand": "Preferred Playing Hand",
+      "left": "Left",
+      "right": "Right",
+      "both": "Both",
+      "travelDistance": "Maximum Travel Distance",
+      "matchDuration": "Preferred Match Duration",
+      "matchType": "Preferred Match Type",
+      "casual": "Casual",
+      "competitive": "Competitive",
+      "sameForAll": "Same for all sports"
+    },
+    "availabilityStep": {
+      "title": "Tell us about your schedule",
+      "subtitle": "Select your availabilities",
+      "am": "AM",
+      "pm": "PM",
+      "eve": "EVE"
+    },
+    "success": {
+      "title": "Welcome to Rallia!",
+      "subtitle": "Your account was created successfully.",
+      "getStarted": "Get Started"
+    },
+    "complete": "Complete"
   },
   "matches": {
     "title": "Matches",
@@ -186,7 +320,38 @@
     "unauthorized": "You are not authorized to perform this action.",
     "notFound": "The requested resource was not found.",
     "validation": "Please check your input and try again.",
-    "unknown": "An unexpected error occurred."
+    "unknown": "An unexpected error occurred.",
+    "requestTimeout": "Request timeout",
+    "permissionsDenied": "Permissions denied",
+    "userNotAuthenticated": "User not authenticated",
+    "noPrimarySport": "No primary sport found. Please set a primary sport first.",
+    "mustBeLoggedIn": "You must be logged in to create a match."
+  },
+  "chat": {
+    "empty": "No messages yet"
+  },
+  "map": {
+    "placeholder": "Map View"
+  },
+  "community": {
+    "placeholder": "Connect with other players"
+  },
+  "match": {
+    "placeholder": "Match Screen - Ready for your implementation"
+  },
+  "alerts": {
+    "success": "Success",
+    "error": "Error",
+    "availabilitiesUpdated": "Your availabilities have been updated!",
+    "peerRatingRequestsSent": "Peer rating requests sent to {count} player(s)",
+    "referenceRequestsSent": "Reference requests sent to {count} player(s)",
+    "failedToSendPeerRatingRequests": "Failed to send peer rating requests",
+    "failedToSendReferenceRequests": "Failed to send reference requests",
+    "sportActivated": "{sport} activated successfully!",
+    "sportDeactivated": "{sport} deactivated",
+    "sportAdded": "{sport} added and activated successfully!",
+    "sportNotAdded": "{sport} not added",
+    "preferencesUpdated": "Preferences updated successfully"
   },
   "actions": {
     "welcome": "Welcome to Rallia",
@@ -334,6 +499,10 @@
     }
   },
   "home": {
+    "welcomeBack": "Welcome back! 👋",
+    "yourMatches": "🎾 Your Matches",
+    "signInPrompt": "You must sign in to create and access your matches",
+    "user": "User",
     "subtitle": "The best way to find your next tennis or pickleball partner",
     "header": {
       "ctaButton": "Join Waitlist"

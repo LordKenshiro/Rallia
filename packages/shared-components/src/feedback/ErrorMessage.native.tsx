@@ -63,18 +63,18 @@ export interface ErrorMessageProps {
 
 /**
  * ErrorMessage component for displaying errors with optional retry functionality
- * 
+ *
  * @example
  * ```tsx
  * // Basic error message
  * <ErrorMessage message="Failed to load data" />
- * 
+ *
  * // Error with retry
  * <ErrorMessage
  *   message="Network request failed"
  *   onRetry={() => refetch()}
  * />
- * 
+ *
  * // Custom title and retry text
  * <ErrorMessage
  *   title="Connection Error"
@@ -82,14 +82,14 @@ export interface ErrorMessageProps {
  *   onRetry={() => refetch()}
  *   retryText="Reconnect"
  * />
- * 
+ *
  * // Inline error (for forms)
  * <ErrorMessage
  *   variant="inline"
  *   message="Email is required"
  *   showIcon={false}
  * />
- * 
+ *
  * // Centered full-screen error
  * <ErrorMessage
  *   variant="centered"
@@ -98,7 +98,7 @@ export interface ErrorMessageProps {
  *   icon="😕"
  *   onRetry={() => refetch()}
  * />
- * 
+ *
  * // Custom icon
  * <ErrorMessage
  *   message="Authentication failed"
@@ -135,8 +135,8 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
     },
     centered: {
       flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: 'center' as const,
+      alignItems: 'center' as const,
       padding: spacing[6], // 24px
     },
   }[variant];
@@ -145,12 +145,7 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
 
   return (
     <View
-      style={[
-        styles.container,
-        containerStyle,
-        isCentered && styles.centeredContainer,
-        style,
-      ]}
+      style={[styles.container, containerStyle, isCentered && styles.centeredContainer, style]}
       testID={testID}
     >
       <VStack
@@ -160,42 +155,26 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
         {/* Icon */}
         {showIcon && (
           <View style={[styles.iconContainer, isCentered && styles.centeredIcon]}>
-            {typeof icon === 'string' ? (
-              <Text size="2xl">{icon}</Text>
-            ) : (
-              icon
-            )}
+            {typeof icon === 'string' ? <Text size="2xl">{icon}</Text> : icon}
           </View>
         )}
 
         {/* Title (only show if not inline) */}
         {!isInline && (
-          <Text
-            weight="semibold"
-            size="lg"
-            color={colors.error}
-            style={{ textAlign }}
-          >
+          <Text weight="semibold" size="lg" color={colors.error} style={{ textAlign }}>
             {title}
           </Text>
         )}
 
         {/* Error message */}
-        <Text
-          color={isInline ? colors.error : colors.gray[700]}
-          style={{ textAlign }}
-        >
+        <Text color={isInline ? colors.error : colors.gray[700]} style={{ textAlign }}>
           {message}
         </Text>
 
         {/* Retry button */}
         {onRetry && (
           <View style={isCentered ? styles.centeredButton : undefined}>
-            <Button
-              variant="outline"
-              size={isInline ? 'sm' : 'md'}
-              onPress={onRetry}
-            >
+            <Button variant="outline" size={isInline ? 'sm' : 'md'} onPress={onRetry}>
               {retryText}
             </Button>
           </View>

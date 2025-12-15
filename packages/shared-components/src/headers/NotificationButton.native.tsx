@@ -1,6 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { lightHaptic } from '@rallia/shared-utils';
 
 interface NotificationButtonProps {
   /** Callback when button is pressed */
@@ -26,6 +27,7 @@ const NotificationButton: React.FC<NotificationButtonProps> = ({
   badgeTextColor = '#fff',
 }) => {
   const handlePress = () => {
+    lightHaptic();
     if (onPress) {
       onPress();
     } else {

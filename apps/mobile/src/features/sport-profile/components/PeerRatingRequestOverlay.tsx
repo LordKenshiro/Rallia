@@ -14,6 +14,7 @@ import { Overlay, Text } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
 import { supabase, Logger } from '@rallia/shared-services';
 import { selectionHaptic, mediumHaptic } from '../../../utils/haptics';
+import { useThemeStyles } from '@rallia/shared-hooks';
 
 interface PeerRatingRequestOverlayProps {
   visible: boolean;
@@ -38,6 +39,7 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
   sportId,
   onSendRequests,
 }) => {
+  const { colors } = useThemeStyles();
   const [players, setPlayers] = useState<Player[]>([]);
   const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
   const [selectedPlayers, setSelectedPlayers] = useState<Set<string>>(new Set());
@@ -250,7 +252,14 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
     return (
       <TouchableOpacity
         key={player.id}
-        style={[styles.playerCard, isSelected && styles.playerCardSelected]}
+        style={[
+          styles.playerCard,
+          { backgroundColor: colors.inputBackground },
+          isSelected && [
+            styles.playerCardSelected,
+            { borderColor: colors.primary, backgroundColor: colors.inputBackground },
+          ],
+        ]}
         onPress={() => togglePlayerSelection(player.id)}
         activeOpacity={0.8}
       >
@@ -259,27 +268,35 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
           {player.profile_picture_url ? (
             <Image source={{ uri: player.profile_picture_url }} style={styles.avatar} />
           ) : (
-            <View style={[styles.avatar, styles.avatarPlaceholder]}>
-              <Ionicons name="person" size={24} color="#999" />
+            <View
+              style={[styles.avatar, styles.avatarPlaceholder, { backgroundColor: colors.divider }]}
+            >
+              <Ionicons name="person" size={24} color={colors.textMuted} />
             </View>
           )}
           {isSelected && (
-            <View style={styles.checkmarkContainer}>
-              <Ionicons name="checkmark-circle" size={24} color={COLORS.primary} />
+            <View style={[styles.checkmarkContainer, { backgroundColor: colors.card }]}>
+              <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
             </View>
           )}
         </View>
 
         {/* Player Info */}
         <View style={styles.playerInfo}>
-          <Text style={styles.playerName}>{player.full_name}</Text>
-          {player.display_name && <Text style={styles.playerUsername}>@{player.display_name}</Text>}
+          <Text style={[styles.playerName, { color: colors.text }]}>{player.full_name}</Text>
+          {player.display_name && (
+            <Text style={[styles.playerUsername, { color: colors.textMuted }]}>
+              @{player.display_name}
+            </Text>
+          )}
         </View>
 
         {/* Rating Badge */}
         {player.rating && (
-          <View style={styles.ratingBadge}>
-            <Text style={styles.ratingText}>{player.rating}</Text>
+          <View style={[styles.ratingBadge, { backgroundColor: colors.primary }]}>
+            <Text style={[styles.ratingText, { color: colors.primaryForeground }]}>
+              {player.rating}
+            </Text>
           </View>
         )}
       </TouchableOpacity>
@@ -304,18 +321,18 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
         ]}
       >
         {/* Title */}
-        <Text style={styles.title}>Request peer ratings</Text>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.title, { color: colors.text }]}>Request peer ratings</Text>
+        <Text style={[styles.subtitle, { color: colors.textMuted }]}>
           Request ratings from players you've competed with to validate your skill level
         </Text>
 
         {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
+        <View style={[styles.searchContainer, { backgroundColor: colors.inputBackground }]}>
+          <Ionicons name="search" size={20} color={colors.textMuted} style={styles.searchIcon} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: colors.text }]}
             placeholder="Search players..."
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
             autoCapitalize="none"
@@ -323,7 +340,7 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
-              <Ionicons name="close-circle" size={20} color="#999" />
+              <Ionicons name="close-circle" size={20} color={colors.textMuted} />
             </TouchableOpacity>
           )}
         </View>
@@ -332,14 +349,16 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
         <ScrollView style={styles.playersList} showsVerticalScrollIndicator={false}>
           {loading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={COLORS.primary} />
-              <Text style={styles.loadingText}>Loading players...</Text>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={[styles.loadingText, { color: colors.textMuted }]}>
+                Loading players...
+              </Text>
             </View>
           ) : filteredPlayers.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="people-outline" size={64} color="#CCC" />
-              <Text style={styles.emptyText}>No players found</Text>
-              <Text style={styles.emptySubtext}>
+              <Ionicons name="people-outline" size={64} color={colors.textMuted} />
+              <Text style={[styles.emptyText, { color: colors.textMuted }]}>No players found</Text>
+              <Text style={[styles.emptySubtext, { color: colors.textMuted }]}>
                 {players.length === 0
                   ? 'Complete matches to request peer ratings'
                   : 'Try a different search term'}
@@ -356,18 +375,27 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
         <TouchableOpacity
           style={[
             styles.sendButton,
-            (selectedPlayers.size === 0 || sending) && styles.sendButtonDisabled,
+            { backgroundColor: colors.primary },
+            (selectedPlayers.size === 0 || sending) && [
+              styles.sendButtonDisabled,
+              { backgroundColor: colors.buttonInactive },
+            ],
           ]}
           onPress={handleSendRequests}
           disabled={selectedPlayers.size === 0 || sending}
           activeOpacity={0.8}
         >
           {sending ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.primaryForeground} />
           ) : (
             <>
-              <Ionicons name="paper-plane" size={18} color="#fff" style={styles.sendIcon} />
-              <Text style={styles.sendButtonText}>
+              <Ionicons
+                name="paper-plane"
+                size={18}
+                color={colors.primaryForeground}
+                style={styles.sendIcon}
+              />
+              <Text style={[styles.sendButtonText, { color: colors.primaryForeground }]}>
                 Send {selectedPlayers.size > 0 ? `(${selectedPlayers.size})` : 'Requests'}
               </Text>
             </>
@@ -386,13 +414,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
-    color: '#666',
     textAlign: 'center',
     marginBottom: 20,
     paddingHorizontal: 20,
@@ -401,7 +427,6 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
     borderRadius: 12,
     paddingHorizontal: 12,
     marginBottom: 16,
@@ -413,7 +438,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#333',
   },
   clearButton: {
     padding: 4,
@@ -428,7 +452,6 @@ const styles = StyleSheet.create({
   playerCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
@@ -436,8 +459,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   playerCardSelected: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primaryLight || '#E0F9F7',
+    // borderColor and backgroundColor applied inline
   },
   avatarContainer: {
     position: 'relative',
@@ -449,7 +471,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
   },
   avatarPlaceholder: {
-    backgroundColor: '#E5E5E5',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -457,7 +478,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: -4,
     right: -4,
-    backgroundColor: '#fff',
     borderRadius: 12,
   },
   playerInfo: {
@@ -466,26 +486,21 @@ const styles = StyleSheet.create({
   playerName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 2,
   },
   playerUsername: {
     fontSize: 13,
-    color: '#666',
   },
   ratingBadge: {
-    backgroundColor: COLORS.primary,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
   },
   ratingText: {
-    color: '#fff',
     fontSize: 14,
     fontWeight: '600',
   },
   sendButton: {
-    backgroundColor: COLORS.accent,
     borderRadius: 12,
     paddingVertical: 16,
     flexDirection: 'row',
@@ -501,7 +516,6 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   sendButtonDisabled: {
-    backgroundColor: '#D3D3D3',
     shadowOpacity: 0,
     elevation: 0,
   },
@@ -509,7 +523,6 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   sendButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -522,7 +535,6 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: '#666',
   },
   emptyContainer: {
     flex: 1,
@@ -533,13 +545,11 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#999',
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#999',
     textAlign: 'center',
     paddingHorizontal: 40,
   },

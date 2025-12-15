@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Modal,
@@ -13,6 +13,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { neutral } from '@rallia/design-system';
+import { useThemeStyles } from '@rallia/shared-hooks';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -46,11 +48,23 @@ const Overlay: React.FC<OverlayProps> = ({
   alignTop = false,
 }) => {
   const insets = useSafeAreaInsets();
-  
+  const { colors, isDark } = useThemeStyles();
+
+  // Get theme colors for compatibility
+  const themeColors = useMemo(() => {
+    return {
+      background: colors.background,
+      foreground: colors.foreground,
+      card: colors.card,
+      border: colors.border,
+      mutedForeground: colors.textMuted,
+    };
+  }, [colors]);
+
   // Calculate overlay height: 2/3 of screen height for bottom overlays
   const twoThirdsHeight = Math.round(SCREEN_HEIGHT * 0.67);
   const overlayHeight = twoThirdsHeight - insets.bottom; // Account for bottom safe area
-  
+
   const handleBackdropPress = () => {
     if (dismissOnBackdropPress) {
       onClose();
@@ -74,7 +88,7 @@ const Overlay: React.FC<OverlayProps> = ({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
@@ -83,6 +97,9 @@ const Overlay: React.FC<OverlayProps> = ({
           <View
             style={[
               styles.overlay,
+              {
+                backgroundColor: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+              },
               type === 'center' && styles.overlayCentered,
               type === 'center' && alignTop && styles.overlayTop,
             ]}
@@ -91,9 +108,9 @@ const Overlay: React.FC<OverlayProps> = ({
               <View
                 style={[
                   styles.container,
+                  { backgroundColor: darkBackground ? neutral[900] : themeColors.card },
                   type === 'center' && styles.containerCenter,
-                  darkBackground && styles.containerDark,
-                  type === 'bottom' && { 
+                  type === 'bottom' && {
                     height: overlayHeight,
                     paddingBottom: insets.bottom + 20, // Safe area + padding
                   },
@@ -104,15 +121,17 @@ const Overlay: React.FC<OverlayProps> = ({
                   <View style={styles.header}>
                     {showBackButton && (
                       <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
-                        <Ionicons name="chevron-back" size={24} color="#333" />
+                        <Ionicons name="chevron-back" size={24} color={themeColors.foreground} />
                       </TouchableOpacity>
                     )}
 
-                    {title && <View style={styles.titleBar} />}
+                    {title && (
+                      <View style={[styles.titleBar, { backgroundColor: themeColors.border }]} />
+                    )}
 
                     {showCloseButton && (
                       <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                        <Ionicons name="close" size={24} color="#333" />
+                        <Ionicons name="close" size={24} color={themeColors.foreground} />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -147,7 +166,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    // backgroundColor is set inline based on theme (isDark)
     justifyContent: 'flex-end',
   },
   overlayCentered: {
@@ -159,10 +178,10 @@ const styles = StyleSheet.create({
     paddingTop: 60, // Space from top of screen
   },
   container: {
-    backgroundColor: '#fff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     // Height is set dynamically in component for bottom type
+    // backgroundColor is set inline based on theme
   },
   containerCenter: {
     borderRadius: 16,
@@ -171,9 +190,6 @@ const styles = StyleSheet.create({
     width: '85%',
     paddingVertical: 24,
     paddingHorizontal: 24,
-  },
-  containerDark: {
-    backgroundColor: '#2C2C2E',
   },
   header: {
     flexDirection: 'row',
@@ -192,8 +208,8 @@ const styles = StyleSheet.create({
   titleBar: {
     width: 60,
     height: 4,
-    backgroundColor: '#333',
     borderRadius: 2,
+    // backgroundColor is set inline based on theme
   },
   scrollView: {
     flex: 1,

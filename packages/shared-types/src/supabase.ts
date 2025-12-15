@@ -2580,6 +2580,23 @@ export type Database = {
         Args: { p_match_id: string; p_player_id: string };
         Returns: boolean;
       };
+      search_facilities_nearby: {
+        Args: {
+          p_latitude: number;
+          p_limit?: number;
+          p_longitude: number;
+          p_offset?: number;
+          p_search_query?: string;
+          p_sport_id: string;
+        };
+        Returns: {
+          address: string;
+          city: string;
+          distance_meters: number;
+          id: string;
+          name: string;
+        }[];
+      };
     };
     Enums: {
       account_status: 'active' | 'suspended' | 'deleted' | 'pending_verification';

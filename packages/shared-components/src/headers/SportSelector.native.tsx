@@ -17,9 +17,9 @@ import {
   radiusPixels,
   primary,
   neutral,
-  base,
-  durationSeconds,
+  duration,
 } from '@rallia/design-system';
+import { lightHaptic, selectionHaptic } from '@rallia/shared-utils';
 
 export interface Sport {
   id: string;
@@ -52,13 +52,14 @@ const SportSelector: React.FC<SportSelectorProps> = ({
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const buttonScaleAnim = useRef(new Animated.Value(1)).current;
 
   // Theme-aware colors
   const themeColors = isDark ? darkTheme : lightTheme;
   const colors = {
     // Selector button
     selectorBg: primary[500],
-    selectorText: base.white,
+    selectorText: '#ffffff', // base.white
 
     // Dropdown
     dropdownBg: themeColors.card,
@@ -74,7 +75,7 @@ const SportSelector: React.FC<SportSelectorProps> = ({
 
     // Icons
     checkmark: primary[500],
-    chevron: base.white,
+    chevron: '#ffffff', // base.white
   };
 
   // Animate dropdown open/close
@@ -83,7 +84,7 @@ const SportSelector: React.FC<SportSelectorProps> = ({
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: durationSeconds.fast * 1000,
+          duration: duration.fast,
           useNativeDriver: true,
         }),
         Animated.spring(scaleAnim, {
@@ -97,12 +98,12 @@ const SportSelector: React.FC<SportSelectorProps> = ({
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 0,
-          duration: durationSeconds.fast * 1000,
+          duration: duration.fast,
           useNativeDriver: true,
         }),
         Animated.timing(scaleAnim, {
           toValue: 0.9,
-          duration: durationSeconds.fast * 1000,
+          duration: duration.fast,
           useNativeDriver: true,
         }),
       ]).start();
@@ -110,11 +111,13 @@ const SportSelector: React.FC<SportSelectorProps> = ({
   }, [showDropdown, fadeAnim, scaleAnim]);
 
   const handleSportSelect = (sport: Sport) => {
+    selectionHaptic();
     onSelectSport(sport);
     setShowDropdown(false);
   };
 
   const handleClose = () => {
+    lightHaptic();
     setShowDropdown(false);
   };
 
@@ -126,25 +129,54 @@ const SportSelector: React.FC<SportSelectorProps> = ({
   // Only show dropdown toggle if user has multiple sports
   const hasMultipleSports = userSports.length > 1;
 
+  const handleButtonPress = () => {
+    if (hasMultipleSports) {
+      lightHaptic();
+      // Animate button press
+      Animated.sequence([
+        Animated.timing(buttonScaleAnim, {
+          toValue: 0.95,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(buttonScaleAnim, {
+          toValue: 1,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+      ]).start();
+      setShowDropdown(!showDropdown);
+    }
+  };
+
   return (
     <>
-      <TouchableOpacity
-        style={[styles.selector, { backgroundColor: colors.selectorBg }]}
-        onPress={() => hasMultipleSports && setShowDropdown(!showDropdown)}
-        activeOpacity={hasMultipleSports ? 0.8 : 1}
-        disabled={!hasMultipleSports}
+      <Animated.View
+        style={[
+          styles.selectorWrapper,
+          {
+            transform: [{ scale: buttonScaleAnim }],
+          },
+        ]}
       >
-        <Text color={colors.selectorText} weight="semibold" size="sm">
-          {selectedSport.display_name}
-        </Text>
-        {hasMultipleSports && (
-          <Ionicons
-            name={showDropdown ? 'chevron-up' : 'chevron-down'}
-            size={14}
-            color={colors.chevron}
-          />
-        )}
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.selector, { backgroundColor: colors.selectorBg }]}
+          onPress={handleButtonPress}
+          activeOpacity={hasMultipleSports ? 0.85 : 1}
+          disabled={!hasMultipleSports}
+        >
+          <Text color={colors.selectorText} weight="semibold" size="xs">
+            {selectedSport.display_name}
+          </Text>
+          {hasMultipleSports && (
+            <Ionicons
+              name={showDropdown ? 'chevron-up' : 'chevron-down'}
+              size={12}
+              color={colors.chevron}
+            />
+          )}
+        </TouchableOpacity>
+      </Animated.View>
 
       <Modal
         visible={showDropdown}
@@ -259,13 +291,31 @@ const SportSelector: React.FC<SportSelectorProps> = ({
 };
 
 const styles = StyleSheet.create({
+  selectorWrapper: {
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
   selector: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[1.5],
+    paddingHorizontal: spacingPixels[2.5],
+    paddingVertical: spacingPixels[1],
     borderRadius: radiusPixels.full,
-    gap: spacingPixels[1.5],
+    gap: spacingPixels[1],
+    shadowColor: primary[500],
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
   },
   modalOverlay: {
     flex: 1,

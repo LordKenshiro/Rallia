@@ -11,11 +11,14 @@
   },
   "peerDependencies": {
     "react": "*",
-    "@tanstack/react-query": "^5.0.0"
+    "@tanstack/react-query": "^5.0.0",
+    "react-native": "*",
+    "@react-native-async-storage/async-storage": "*"
   },
   "dependencies": {
     "@rallia/shared-services": "*",
-    "@rallia/shared-types": "*"
+    "@rallia/shared-types": "*",
+    "@rallia/design-system": "*"
   },
   "devDependencies": {
     "@tanstack/react-query": "^5.0.0",

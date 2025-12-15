@@ -5,6 +5,10 @@ import { Logger } from '@rallia/shared-utils';
  * Verification Service
  * Handles email verification code generation, sending, and validation
  * Uses Supabase Edge Functions to securely send emails via Resend
+ *
+ * @deprecated This entire module is deprecated. Use the `useAuth` hook from `@rallia/shared-hooks` instead.
+ * The Supabase SDK provides native OTP support via `signInWithOtp()` and `verifyOtp()` methods
+ * which are simpler, more secure, and don't require custom Edge Functions.
  */
 
 /**
@@ -21,6 +25,9 @@ const getSupabaseFunctionUrl = (functionName: string): string => {
 /**
  * Send verification code via Supabase Edge Function
  * The Edge Function handles rate limiting, code generation, storage, and email sending
+ *
+ * @deprecated Use the `useAuth` hook from `@rallia/shared-hooks` with `signInWithEmail()` instead.
+ * The Supabase SDK handles OTP sending natively without needing custom Edge Functions.
  */
 export const sendVerificationCode = async (
   email: string,
@@ -78,6 +85,9 @@ export const sendVerificationCode = async (
 
 /**
  * Verify the code entered by the user via Supabase Edge Function
+ *
+ * @deprecated Use the `useAuth` hook from `@rallia/shared-hooks` with `verifyOtp()` instead.
+ * The Supabase SDK handles OTP verification natively without needing custom Edge Functions.
  */
 export const verifyCode = async (
   email: string,
@@ -146,6 +156,9 @@ const generatePasswordFromEmail = (email: string): string => {
 /**
  * Authenticate user after email verification
  * This function handles both new users and existing users
+ *
+ * @deprecated Use the `useAuth` hook from `@rallia/shared-hooks` with `verifyOtp()` instead.
+ * The Supabase SDK OTP flow automatically creates sessions without needing deterministic passwords.
  */
 export const authenticateAfterVerification = async (
   email: string
@@ -223,7 +236,9 @@ export const authenticateAfterVerification = async (
 
 /**
  * Create Supabase Auth user and confirm email
- * @deprecated Use authenticateAfterVerification instead
+ *
+ * @deprecated Use the `useAuth` hook from `@rallia/shared-hooks` with `signInWithEmail()` and `verifyOtp()` instead.
+ * The Supabase SDK OTP flow handles user creation automatically.
  */
 export const createAuthUser = async (
   email: string,
@@ -347,7 +362,9 @@ export const createAuthUser = async (
 
 /**
  * Login existing Supabase Auth user
- * @deprecated Use authenticateAfterVerification instead
+ *
+ * @deprecated Use the `useAuth` hook from `@rallia/shared-hooks` with `signInWithEmail()` and `verifyOtp()` instead.
+ * The Supabase SDK OTP flow handles login automatically.
  */
 export const loginAuthUser = async (
   email: string,

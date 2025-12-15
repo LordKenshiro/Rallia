@@ -11,10 +11,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { useTheme } from '../hooks/useTheme';
+import { useTheme } from '@rallia/shared-hooks';
 import { useAuth } from '../hooks';
-import { useTranslation } from '../hooks/useTranslation';
-import { useOverlay } from '../context';
+import { useTranslation, type TranslationOptions } from '../hooks/useTranslation';
+import type { TranslationKey } from '@rallia/shared-translations';
+import { useActionsSheet } from '../context';
 import {
   Notification,
   NOTIFICATION_TYPE_ICONS,
@@ -30,12 +31,17 @@ import {
   radiusPixels,
   primary,
   neutral,
-  base,
 } from '@rallia/design-system';
+
+const BASE_WHITE = '#ffffff';
 import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
 
 // Helper function to format relative time
-function formatRelativeTime(dateString: string): string {
+function formatRelativeTime(
+  dateString: string,
+  t: (key: TranslationKey, options?: TranslationOptions) => string,
+  locale: string
+): string {
   const date = new Date(dateString);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -45,15 +51,15 @@ function formatRelativeTime(dateString: string): string {
   const diffDay = Math.floor(diffHour / 24);
 
   if (diffSec < 60) {
-    return 'Just now';
+    return t('notifications.time.justNow');
   } else if (diffMin < 60) {
-    return `${diffMin}m ago`;
+    return t('notifications.timeAgo', { time: `${diffMin}m` });
   } else if (diffHour < 24) {
-    return `${diffHour}h ago`;
+    return t('notifications.timeAgo', { time: `${diffHour}h` });
   } else if (diffDay < 7) {
-    return `${diffDay}d ago`;
+    return t('notifications.timeAgo', { time: `${diffDay}d` });
   } else {
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(locale, {
       month: 'short',
       day: 'numeric',
     });
@@ -61,7 +67,10 @@ function formatRelativeTime(dateString: string): string {
 }
 
 // Helper function to get date section key
-function getDateSectionKey(dateString: string): string {
+function getDateSectionKey(
+  dateString: string,
+  t: (key: TranslationKey, options?: TranslationOptions) => string
+): string {
   const date = new Date(dateString);
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -73,25 +82,31 @@ function getDateSectionKey(dateString: string): string {
   const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
   if (dateOnly.getTime() >= today.getTime()) {
-    return 'Today';
+    return t('notifications.time.today');
   } else if (dateOnly.getTime() >= yesterday.getTime()) {
-    return 'Yesterday';
+    return t('notifications.time.yesterday');
   } else if (dateOnly.getTime() >= thisWeekStart.getTime()) {
-    return 'This Week';
+    return t('notifications.time.thisWeek');
   } else {
-    return 'Earlier';
+    return t('notifications.time.earlier');
   }
 }
 
 // Group notifications by date
 function groupNotificationsByDate(
-  notifications: Notification[]
+  notifications: Notification[],
+  t: (key: TranslationKey, options?: TranslationOptions) => string
 ): { title: string; data: Notification[] }[] {
   const groups: Record<string, Notification[]> = {};
-  const order = ['Today', 'Yesterday', 'This Week', 'Earlier'];
+  const order = [
+    t('notifications.time.today'),
+    t('notifications.time.yesterday'),
+    t('notifications.time.thisWeek'),
+    t('notifications.time.earlier'),
+  ];
 
   notifications.forEach(notification => {
-    const key = getDateSectionKey(notification.created_at);
+    const key = getDateSectionKey(notification.created_at, t);
     if (!groups[key]) {
       groups[key] = [];
     }
@@ -109,6 +124,8 @@ interface NotificationCardProps {
   onPress: () => void;
   onDelete: () => void;
   isDark: boolean;
+  t: (key: TranslationKey, options?: TranslationOptions) => string;
+  locale: string;
 }
 
 const NotificationCard: React.FC<NotificationCardProps> = ({
@@ -116,6 +133,8 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
   onPress,
   onDelete,
   isDark,
+  t,
+  locale,
 }) => {
   const isUnread = !notification.read_at;
   const notificationType = notification.type;
@@ -191,7 +210,7 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
             </Text>
           )}
           <Text size="xs" color={cardColors.textSecondary} style={styles.timeText}>
-            {formatRelativeTime(notification.created_at)}
+            {formatRelativeTime(notification.created_at, t, locale)}
           </Text>
         </View>
 
@@ -214,8 +233,8 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
 const Notifications: React.FC = () => {
   const { session, isAuthenticated, loading: isLoadingAuth } = useAuth();
   const { theme } = useTheme();
-  const { t } = useTranslation();
-  const { startLogin } = useOverlay();
+  const { t, locale } = useTranslation();
+  const { openSheet } = useActionsSheet();
   const isDark = theme === 'dark';
 
   // Theme-aware colors from design system
@@ -230,7 +249,7 @@ const Notifications: React.FC = () => {
       icon: themeColors.foreground,
       iconMuted: themeColors.mutedForeground,
       buttonActive: isDark ? primary[500] : primary[600],
-      buttonTextActive: base.white,
+      buttonTextActive: BASE_WHITE,
       border: themeColors.border,
     }),
     [themeColors, isDark]
@@ -254,7 +273,7 @@ const Notifications: React.FC = () => {
   } = useNotificationsWithActions(userId);
 
   // Group notifications by date
-  const sections = useMemo(() => groupNotificationsByDate(notifications), [notifications]);
+  const sections = useMemo(() => groupNotificationsByDate(notifications, t), [notifications, t]);
 
   const handleNotificationPress = useCallback(
     (notification: Notification) => {
@@ -287,9 +306,11 @@ const Notifications: React.FC = () => {
         onPress={() => handleNotificationPress(item)}
         onDelete={() => deleteNotification(item.id)}
         isDark={isDark}
+        t={t}
+        locale={locale}
       />
     ),
-    [handleNotificationPress, markAsRead, deleteNotification, isDark]
+    [handleNotificationPress, markAsRead, deleteNotification, isDark, t, locale]
   );
 
   const renderSectionHeader = useCallback(
@@ -319,13 +340,13 @@ const Notifications: React.FC = () => {
     <View style={[styles.emptyContainer, { backgroundColor: colors.cardBackground }]}>
       <Ionicons name="lock-closed-outline" size={64} color={colors.iconMuted} />
       <RNText style={[styles.signInTitle, { color: colors.textSecondary }]}>
-        Sign In Required
+        {t('notifications.signInRequired')}
       </RNText>
       <RNText style={[styles.signInDescription, { color: colors.textMuted }]}>
-        Please sign in to view your notifications
+        {t('notifications.signInPrompt')}
       </RNText>
       <TouchableOpacity
-        onPress={startLogin}
+        onPress={openSheet}
         style={[styles.signInButton, { backgroundColor: colors.buttonActive }]}
       >
         <Ionicons name="log-in-outline" size={18} color={colors.buttonTextActive} />

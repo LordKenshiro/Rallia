@@ -2,9 +2,9 @@ import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
-import { COLORS } from '@rallia/shared-constants';
 import { Logger } from '@rallia/shared-services';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
+import { useThemeStyles } from '@rallia/shared-hooks';
 
 interface AuthSuccessOverlayProps {
   visible: boolean;
@@ -12,6 +12,7 @@ interface AuthSuccessOverlayProps {
 }
 
 const AuthSuccessOverlay: React.FC<AuthSuccessOverlayProps> = ({ visible, onClose }) => {
+  const { colors } = useThemeStyles();
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
@@ -77,10 +78,10 @@ const AuthSuccessOverlay: React.FC<AuthSuccessOverlayProps> = ({ visible, onClos
         ]}
       >
         {/* Title */}
-        <Text style={styles.title}>Welcome to Rallia!</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Welcome to Rallia!</Text>
 
         {/* Subtitle */}
-        <Text style={styles.subtitle}>
+        <Text style={[styles.subtitle, { color: colors.textMuted }]}>
           Your account was created successfully. Here are some actions you can now take.
         </Text>
 
@@ -88,58 +89,66 @@ const AuthSuccessOverlay: React.FC<AuthSuccessOverlayProps> = ({ visible, onClos
         <View style={styles.actionsContainer}>
           {/* Create a new match */}
           <TouchableOpacity
-            style={styles.actionItem}
+            style={[styles.actionItem, { backgroundColor: colors.inputBackground }]}
             onPress={handleCreateMatch}
             activeOpacity={0.7}
           >
             <View style={styles.actionLeft}>
-              <Ionicons name="tennisball-outline" size={24} color={COLORS.primary} />
+              <Ionicons name="tennisball-outline" size={24} color={colors.primary} />
               <View style={styles.actionTextContainer}>
-                <Text style={styles.actionTitle}>Create a new match</Text>
-                <Text style={styles.actionDescription}>
+                <Text style={[styles.actionTitle, { color: colors.text }]}>Create a new match</Text>
+                <Text style={[styles.actionDescription, { color: colors.textMuted }]}>
                   Create a new match and let other players join
                 </Text>
               </View>
             </View>
-            <Ionicons name="chevron-forward" size={24} color="#999" />
+            <Ionicons name="chevron-forward" size={24} color={colors.textMuted} />
           </TouchableOpacity>
 
           {/* Join a match */}
-          <TouchableOpacity style={styles.actionItem} onPress={handleJoinMatch} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={[styles.actionItem, { backgroundColor: colors.inputBackground }]}
+            onPress={handleJoinMatch}
+            activeOpacity={0.7}
+          >
             <View style={styles.actionLeft}>
-              <Ionicons name="location-outline" size={24} color={COLORS.primary} />
+              <Ionicons name="location-outline" size={24} color={colors.primary} />
               <View style={styles.actionTextContainer}>
-                <Text style={styles.actionTitle}>Join a match</Text>
-                <Text style={styles.actionDescription}>
+                <Text style={[styles.actionTitle, { color: colors.text }]}>Join a match</Text>
+                <Text style={[styles.actionDescription, { color: colors.textMuted }]}>
                   Browse public matches and join a game nearby
                 </Text>
               </View>
             </View>
-            <Ionicons name="chevron-forward" size={24} color="#999" />
+            <Ionicons name="chevron-forward" size={24} color={colors.textMuted} />
           </TouchableOpacity>
 
           {/* Join a community */}
           <TouchableOpacity
-            style={styles.actionItem}
+            style={[styles.actionItem, { backgroundColor: colors.inputBackground }]}
             onPress={handleJoinCommunity}
             activeOpacity={0.7}
           >
             <View style={styles.actionLeft}>
-              <Ionicons name="people-outline" size={24} color={COLORS.primary} />
+              <Ionicons name="people-outline" size={24} color={colors.primary} />
               <View style={styles.actionTextContainer}>
-                <Text style={styles.actionTitle}>Join a community</Text>
-                <Text style={styles.actionDescription}>
+                <Text style={[styles.actionTitle, { color: colors.text }]}>Join a community</Text>
+                <Text style={[styles.actionDescription, { color: colors.textMuted }]}>
                   Create a new match and let other players join
                 </Text>
               </View>
             </View>
-            <Ionicons name="chevron-forward" size={24} color="#999" />
+            <Ionicons name="chevron-forward" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
         {/* Close Button */}
-        <TouchableOpacity style={styles.closeButton} onPress={handleClose} activeOpacity={0.8}>
-          <Text style={styles.closeButtonText}>Close</Text>
+        <TouchableOpacity
+          style={[styles.closeButton, { backgroundColor: colors.primary }]}
+          onPress={handleClose}
+          activeOpacity={0.8}
+        >
+          <Text style={[styles.closeButtonText, { color: colors.primaryForeground }]}>Close</Text>
         </TouchableOpacity>
       </Animated.View>
     </Overlay>
@@ -153,17 +162,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
     textAlign: 'center',
     marginBottom: 12,
+    // color will be set dynamically
   },
   subtitle: {
     fontSize: 14,
-    color: '#666',
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 30,
     paddingHorizontal: 10,
+    // color will be set dynamically
   },
   actionsContainer: {
     marginBottom: 25,
@@ -174,9 +183,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 16,
     paddingHorizontal: 15,
-    backgroundColor: '#F8F8F8',
     borderRadius: 12,
     marginBottom: 12,
+    // backgroundColor will be set dynamically
   },
   actionLeft: {
     flexDirection: 'row',
@@ -190,21 +199,20 @@ const styles = StyleSheet.create({
   actionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 4,
+    // color will be set dynamically
   },
   actionDescription: {
     fontSize: 13,
-    color: '#666',
     lineHeight: 18,
+    // color will be set dynamically
   },
   closeButton: {
-    backgroundColor: COLORS.accent,
     borderRadius: 10,
     paddingVertical: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: COLORS.overlayDark,
+    shadowColor: 'rgba(0, 0, 0, 0.2)',
     shadowOffset: {
       width: 0,
       height: 2,
@@ -212,11 +220,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
+    // backgroundColor will be set dynamically
   },
   closeButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+    // color will be set dynamically
   },
 });
 

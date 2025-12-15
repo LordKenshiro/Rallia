@@ -16,8 +16,20 @@ import type { RouteProp } from '@react-navigation/native';
 import { useAppNavigation } from '../navigation/hooks';
 import type { RootStackParamList } from '../navigation/types';
 import { Text, Button } from '@rallia/shared-components';
-import { COLORS } from '@rallia/shared-constants';
 import { supabase, Logger } from '@rallia/shared-services';
+import { useThemeStyles, useTranslation } from '../hooks';
+import {
+  spacingPixels,
+  radiusPixels,
+  fontSizePixels,
+  fontWeightNumeric,
+  shadowsNative,
+  primary,
+  status,
+} from '@rallia/design-system';
+
+const BASE_BLACK = '#000000';
+
 import * as Haptics from 'expo-haptics';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import TennisRatingOverlay from '../features/onboarding/components/overlays/TennisRatingOverlay';
@@ -58,6 +70,8 @@ const SportProfile = () => {
   const navigation = useAppNavigation();
   const route = useRoute<SportProfileRouteProp>();
   const { sportId, sportName } = route.params;
+  const { colors, shadows, isDark } = useThemeStyles();
+  const { t } = useTranslation();
 
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string>('');
@@ -90,7 +104,7 @@ const SportProfile = () => {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        Alert.alert('Error', 'User not authenticated');
+        Alert.alert(t('alerts.error'), t('errors.userNotAuthenticated'));
         return;
       }
       setUserId(user.id);
@@ -232,7 +246,7 @@ const SportProfile = () => {
       }
     } catch (error) {
       Logger.error('Failed to fetch sport profile data', error as Error, { sportId, sportName });
-      Alert.alert('Error', getNetworkErrorMessage(error));
+      Alert.alert(t('alerts.error'), getNetworkErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -244,7 +258,7 @@ const SportProfile = () => {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        Alert.alert('Error', 'User not authenticated');
+        Alert.alert(t('alerts.error'), t('errors.userNotAuthenticated'));
         return;
       }
 
@@ -329,16 +343,21 @@ const SportProfile = () => {
         Logger.debug('rating_deleted', { ratingId: rating.id });
       }
 
-      // Step 3: Insert the new self_reported rating
-      Logger.debug('inserting_new_rating', { ratingScoreId, playerId: user.id });
+      // Step 3: Upsert the new self_reported rating (insert or update if exists)
+      Logger.debug('upserting_new_rating', { ratingScoreId, playerId: user.id });
       const insertResult = await withTimeout(
         (async () =>
-          supabase.from('player_rating_score').insert({
-            player_id: user.id,
-            rating_score_id: ratingScoreId,
-            source: 'self_reported', // Explicitly self-reported
-            is_certified: false,
-          }))(),
+          supabase.from('player_rating_score').upsert(
+            {
+              player_id: user.id,
+              rating_score_id: ratingScoreId,
+              source: 'self_reported', // Explicitly self-reported
+              is_certified: false,
+            },
+            {
+              onConflict: 'player_id,rating_score_id',
+            }
+          ))(),
         10000,
         'Failed to save rating - connection timeout'
       );
@@ -369,16 +388,16 @@ const SportProfile = () => {
       Logger.debug('sport_profile_data_refreshed', { sportId });
 
       // Show success message
-      Alert.alert('Success', 'Your rating has been updated!');
+      Alert.alert(t('alerts.success'), t('alerts.availabilitiesUpdated'));
     } catch (error) {
       Logger.error('Failed to save rating', error as Error, { sportId, ratingScoreId });
-      Alert.alert('Error', getNetworkErrorMessage(error));
+      Alert.alert(t('alerts.error'), getNetworkErrorMessage(error));
     }
   };
 
   const handleManageProofs = () => {
     if (!playerRatingScoreId || !ratingInfo) {
-      Alert.alert('Error', 'Rating information not available');
+      Alert.alert(t('alerts.error'), t('errors.notFound'));
       return;
     }
     navigation.navigate('RatingProofs', {
@@ -397,7 +416,7 @@ const SportProfile = () => {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        Alert.alert('Error', 'User not authenticated');
+        Alert.alert(t('alerts.error'), t('errors.userNotAuthenticated'));
         return;
       }
 
@@ -419,13 +438,13 @@ const SportProfile = () => {
 
         // Show success message
         const message = newValue
-          ? `${sportName} activated successfully!`
-          : `${sportName} deactivated`;
+          ? t('alerts.sportActivated', { sport: sportName })
+          : t('alerts.sportDeactivated', { sport: sportName });
 
         if (Platform.OS === 'android') {
           ToastAndroid.show(message, ToastAndroid.SHORT);
         } else {
-          Alert.alert('Success', message);
+          Alert.alert(t('alerts.success'), message);
         }
 
         // Refresh data if activated
@@ -459,11 +478,11 @@ const SportProfile = () => {
           setIsActive(true);
 
           // Show success message
-          const message = `${sportName} added and activated successfully!`;
+          const message = t('alerts.sportAdded', { sport: sportName });
           if (Platform.OS === 'android') {
             ToastAndroid.show(message, ToastAndroid.SHORT);
           } else {
-            Alert.alert('Success', message);
+            Alert.alert(t('alerts.success'), message);
           }
 
           // Refresh data to load ratings and preferences
@@ -474,23 +493,23 @@ const SportProfile = () => {
 
           // Optional: Show a subtle message
           if (Platform.OS === 'android') {
-            ToastAndroid.show(`${sportName} not added`, ToastAndroid.SHORT);
+            ToastAndroid.show(t('alerts.sportNotAdded', { sport: sportName }), ToastAndroid.SHORT);
           }
         }
       }
     } catch (error) {
       Logger.error('Failed to toggle sport active status', error as Error, { sportId, sportName });
-      Alert.alert('Error', getNetworkErrorMessage(error));
+      Alert.alert(t('alerts.error'), getNetworkErrorMessage(error));
     }
   };
 
   const formatMatchDuration = (duration: string | null): string => {
-    if (!duration) return 'Not set';
+    if (!duration) return t('profile.notSet');
     return duration.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   const formatMatchType = (type: string | null): string => {
-    if (!type) return 'Not set';
+    if (!type) return t('profile.notSet');
     return type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
@@ -506,13 +525,13 @@ const SportProfile = () => {
       // For now, just show a success message
       if (Platform.OS === 'android') {
         ToastAndroid.show(
-          `Peer rating requests sent to ${selectedPlayerIds.length} player(s)`,
+          t('alerts.peerRatingRequestsSent', { count: selectedPlayerIds.length }),
           ToastAndroid.SHORT
         );
       } else {
         Alert.alert(
-          'Success',
-          `Peer rating requests sent to ${selectedPlayerIds.length} player(s)`
+          t('alerts.success'),
+          t('alerts.peerRatingRequestsSent', { count: selectedPlayerIds.length })
         );
       }
 
@@ -522,7 +541,7 @@ const SportProfile = () => {
         count: selectedPlayerIds.length,
         sportId,
       });
-      Alert.alert('Error', 'Failed to send peer rating requests');
+      Alert.alert(t('alerts.error'), t('alerts.failedToSendPeerRatingRequests'));
     }
   };
 
@@ -535,13 +554,13 @@ const SportProfile = () => {
       // For now, just show a success message
       if (Platform.OS === 'android') {
         ToastAndroid.show(
-          `Reference requests sent to ${selectedPlayerIds.length} certified player(s)`,
+          t('alerts.referenceRequestsSent', { count: selectedPlayerIds.length }),
           ToastAndroid.SHORT
         );
       } else {
         Alert.alert(
-          'Success',
-          `Reference requests sent to ${selectedPlayerIds.length} certified player(s)`
+          t('alerts.success'),
+          t('alerts.referenceRequestsSent', { count: selectedPlayerIds.length })
         );
       }
 
@@ -551,7 +570,7 @@ const SportProfile = () => {
         count: selectedPlayerIds.length,
         sportId,
       });
-      Alert.alert('Error', 'Failed to send reference requests');
+      Alert.alert(t('alerts.error'), t('alerts.failedToSendReferenceRequests'));
     }
   };
 
@@ -564,7 +583,7 @@ const SportProfile = () => {
   }) => {
     try {
       if (!playerSportId) {
-        Alert.alert('Error', 'Player sport profile not found');
+        Alert.alert(t('alerts.error'), t('errors.notFound'));
         return;
       }
 
@@ -599,63 +618,91 @@ const SportProfile = () => {
 
       // Show success message
       if (Platform.OS === 'android') {
-        ToastAndroid.show('Preferences updated successfully', ToastAndroid.SHORT);
+        ToastAndroid.show(t('alerts.preferencesUpdated'), ToastAndroid.SHORT);
       } else {
-        Alert.alert('Success', 'Preferences updated successfully');
+        Alert.alert(t('alerts.success'), t('alerts.availabilitiesUpdated'));
       }
 
       // Refresh data
       await fetchSportProfileData();
     } catch (error) {
       Logger.error('Failed to save sport preferences', error as Error, { sportId, playerSportId });
-      Alert.alert('Error', getNetworkErrorMessage(error));
+      Alert.alert(t('alerts.error'), getNetworkErrorMessage(error));
     }
   };
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading {sportName} profile...</Text>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.textMuted }]}>
+            {t('profile.loading.sportProfile', { sport: sportName })}
+          </Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Do you play this sport? Toggle */}
-        <View style={styles.card}>
-          <Text style={styles.questionText}>Do you play {sportName}?</Text>
+        <View style={[styles.card, { backgroundColor: colors.card }]}>
+          <Text style={[styles.questionText, { color: colors.text }]}>
+            {t('profile.doYouPlay', { sport: sportName })}
+          </Text>
           <View style={styles.toggleContainer}>
             <TouchableOpacity
-              style={[styles.toggleButton, isActive && styles.toggleButtonActive]}
+              style={[
+                styles.toggleButton,
+                {
+                  borderColor: colors.border,
+                  backgroundColor: colors.inputBackground,
+                },
+                isActive && [
+                  styles.toggleButtonActive,
+                  { backgroundColor: colors.primary, borderColor: colors.primary },
+                ],
+              ]}
               onPress={() => handleToggleActive(true)}
             >
               <Text
-                style={
-                  isActive
-                    ? [styles.toggleButtonText, styles.toggleButtonTextActive]
-                    : styles.toggleButtonText
-                }
+                style={[
+                  styles.toggleButtonText,
+                  { color: colors.textMuted },
+                  ...(isActive
+                    ? [styles.toggleButtonTextActive, { color: colors.primaryForeground }]
+                    : []),
+                ]}
               >
-                Yes
+                {t('common.yes')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.toggleButton, !isActive && styles.toggleButtonInactive]}
+              style={[
+                styles.toggleButton,
+                {
+                  borderColor: colors.border,
+                  backgroundColor: colors.inputBackground,
+                },
+                !isActive && [
+                  styles.toggleButtonInactive,
+                  { backgroundColor: colors.error, borderColor: colors.error },
+                ],
+              ]}
               onPress={() => handleToggleActive(false)}
             >
               <Text
-                style={
-                  !isActive
-                    ? [styles.toggleButtonText, styles.toggleButtonTextActive]
-                    : styles.toggleButtonText
-                }
+                style={[
+                  styles.toggleButtonText,
+                  { color: colors.textMuted },
+                  ...(!isActive
+                    ? [styles.toggleButtonTextActive, { color: colors.primaryForeground }]
+                    : []),
+                ]}
               >
-                No
+                {t('common.no')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -664,9 +711,9 @@ const SportProfile = () => {
         {/* Show blank space when not active */}
         {!isActive && (
           <View style={styles.inactiveContainer}>
-            <Ionicons name="information-circle-outline" size={48} color="#ccc" />
-            <Text style={styles.inactiveText}>
-              Activate {sportName} to view and manage your rating and preferences
+            <Ionicons name="information-circle-outline" size={48} color={colors.textMuted} />
+            <Text style={[styles.inactiveText, { color: colors.textMuted }]}>
+              {t('profile.activateSportMessage', { sport: sportName })}
             </Text>
           </View>
         )}
@@ -675,7 +722,9 @@ const SportProfile = () => {
         {isActive && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>MY RATING</Text>
+              <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+                {t('profile.sections.rating')}
+              </Text>
               <TouchableOpacity
                 style={styles.editIconButton}
                 onPress={() => {
@@ -687,41 +736,57 @@ const SportProfile = () => {
                   }
                 }}
               >
-                <Ionicons name="create-outline" size={20} color={COLORS.primary} />
+                <Ionicons name="create-outline" size={20} color={colors.primary} />
               </TouchableOpacity>
             </View>
 
-            <View style={styles.card}>
+            <View style={[styles.card, { backgroundColor: colors.card }]}>
               {ratingInfo ? (
                 <>
                   {/* Rating Level Display */}
                   <View style={styles.ratingDisplay}>
-                    <View style={styles.ratingBadgeLarge}>
-                      <Text style={styles.ratingLevelText}>{ratingInfo.displayLabel}</Text>
-                      <Text style={styles.ratingTypeText}>{ratingInfo.ratingTypeName}</Text>
+                    <View
+                      style={[styles.ratingBadgeLarge, { backgroundColor: colors.inputBackground }]}
+                    >
+                      <Text style={[styles.ratingLevelText, { color: colors.text }]}>
+                        {ratingInfo.displayLabel}
+                      </Text>
+                      <Text style={[styles.ratingTypeText, { color: colors.textMuted }]}>
+                        {ratingInfo.ratingTypeName}
+                      </Text>
                     </View>
                     {ratingInfo.isVerified && (
                       <View style={styles.verifiedBadge}>
-                        <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-                        <Text style={styles.verifiedText}>Certified</Text>
+                        <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                        <Text style={[styles.verifiedText, { color: colors.text }]}>
+                          {t('profile.status.certified')}
+                        </Text>
                       </View>
                     )}
                   </View>
 
                   {/* Rating Description */}
                   {ratingInfo.description && (
-                    <Text style={styles.ratingDescription}>{ratingInfo.description}</Text>
+                    <Text style={[styles.ratingDescription, { color: colors.textMuted }]}>
+                      {ratingInfo.description}
+                    </Text>
                   )}
 
                   {/* Rating Details */}
-                  <View style={styles.ratingDetails}>
+                  <View style={[styles.ratingDetails, { borderTopColor: colors.border }]}>
                     <View style={styles.ratingDetailRow}>
-                      <Text style={styles.detailLabel}>Skill Level:</Text>
-                      <Text style={styles.detailValue}>{ratingInfo.skillLevel || 'N/A'}</Text>
+                      <Text style={[styles.detailLabel, { color: colors.textMuted }]}>
+                        {t('profile.rating.skillLevel')}:
+                      </Text>
+                      <Text style={[styles.detailValue, { color: colors.text }]}>
+                        {ratingInfo.skillLevel || 'N/A'}
+                      </Text>
                     </View>
                     <View style={styles.ratingDetailRow}>
-                      <Text style={styles.detailLabel}>Score:</Text>
-                      <Text style={styles.detailValue}>
+                      <Text style={[styles.detailLabel, { color: colors.textMuted }]}>
+                        {t('profile.rating.score')}:
+                      </Text>
+                      <Text style={[styles.detailValue, { color: colors.text }]}>
                         {ratingInfo.scoreValue} / {ratingInfo.maxValue}
                       </Text>
                     </View>
@@ -734,27 +799,66 @@ const SportProfile = () => {
                       size="sm"
                       onPress={() => {}}
                       style={styles.actionButton}
-                      leftIcon={<Ionicons name="people" size={16} color={COLORS.primary} />}
+                      isDark={isDark}
+                      themeColors={{
+                        primary: colors.primary,
+                        primaryForeground: colors.primaryForeground,
+                        buttonActive: colors.buttonActive,
+                        buttonInactive: colors.buttonInactive,
+                        buttonTextActive: colors.buttonTextActive,
+                        buttonTextInactive: colors.buttonTextInactive,
+                        text: colors.text,
+                        textMuted: colors.textMuted,
+                        border: colors.border,
+                        background: colors.background,
+                      }}
+                      leftIcon={<Ionicons name="people" size={16} color={colors.primary} />}
                     >
-                      6 References
+                      {t('profile.rating.references', { count: 6 })}
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onPress={() => {}}
                       style={styles.actionButton}
-                      leftIcon={<Ionicons name="star" size={16} color={COLORS.primary} />}
+                      isDark={isDark}
+                      themeColors={{
+                        primary: colors.primary,
+                        primaryForeground: colors.primaryForeground,
+                        buttonActive: colors.buttonActive,
+                        buttonInactive: colors.buttonInactive,
+                        buttonTextActive: colors.buttonTextActive,
+                        buttonTextInactive: colors.buttonTextInactive,
+                        text: colors.text,
+                        textMuted: colors.textMuted,
+                        border: colors.border,
+                        background: colors.background,
+                      }}
+                      leftIcon={<Ionicons name="star" size={16} color={colors.primary} />}
                     >
-                      2 Peer Rating
+                      {t('profile.rating.peerRating', { count: 2 })}
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onPress={() => {}}
                       style={styles.actionButton}
-                      leftIcon={<Ionicons name="document-text" size={16} color={COLORS.primary} />}
+                      isDark={isDark}
+                      themeColors={{
+                        primary: colors.primary,
+                        primaryForeground: colors.primaryForeground,
+                        buttonActive: colors.buttonActive,
+                        buttonInactive: colors.buttonInactive,
+                        buttonTextActive: colors.buttonTextActive,
+                        buttonTextInactive: colors.buttonTextInactive,
+                        text: colors.text,
+                        textMuted: colors.textMuted,
+                        border: colors.border,
+                        background: colors.background,
+                      }}
+                      leftIcon={<Ionicons name="document-text" size={16} color={colors.primary} />}
                     >
-                      1 Rating Proof
+                      {t('profile.rating.ratingProof', { count: 1 })}
                     </Button>
                   </View>
 
@@ -765,34 +869,44 @@ const SportProfile = () => {
                       size="md"
                       onPress={() => setShowReferenceRequestOverlay(true)}
                       style={[styles.requestButton, styles.coralButton]}
-                      leftIcon={<Ionicons name="add-circle" size={18} color="#fff" />}
+                      leftIcon={
+                        <Ionicons name="add-circle" size={18} color={colors.primaryForeground} />
+                      }
                     >
-                      Request reference
+                      {t('profile.rating.requestReference')}
                     </Button>
                     <Button
                       variant="primary"
                       size="md"
                       onPress={() => setShowPeerRatingRequestOverlay(true)}
                       style={[styles.requestButton, styles.coralButton]}
-                      leftIcon={<Ionicons name="add-circle" size={18} color="#fff" />}
+                      leftIcon={
+                        <Ionicons name="add-circle" size={18} color={colors.primaryForeground} />
+                      }
                     >
-                      Request peer rating
+                      {t('profile.rating.requestPeerRating')}
                     </Button>
                     <Button
                       variant="primary"
                       size="md"
                       onPress={handleManageProofs}
                       style={[styles.requestButton, styles.coralButton]}
-                      leftIcon={<Ionicons name="folder-open" size={18} color="#fff" />}
+                      leftIcon={
+                        <Ionicons name="folder-open" size={18} color={colors.primaryForeground} />
+                      }
                     >
-                      Manage rating proofs
+                      {t('profile.rating.manageRatingProofs')}
                     </Button>
                   </View>
                 </>
               ) : (
                 <View style={styles.noRatingContainer}>
-                  <Text style={styles.noRatingText}>No rating information yet</Text>
-                  <Text style={styles.noRatingSubtext}>Set up your rating to start playing</Text>
+                  <Text style={[styles.noRatingText, { color: colors.text }]}>
+                    {t('profile.status.noRating')}
+                  </Text>
+                  <Text style={[styles.noRatingSubtext, { color: colors.textMuted }]}>
+                    {t('profile.status.noRatingSubtext')}
+                  </Text>
                 </View>
               )}
             </View>
@@ -803,7 +917,9 @@ const SportProfile = () => {
         {isActive && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>MY PREFERENCES</Text>
+              <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+                {t('profile.sections.preferences')}
+              </Text>
               <TouchableOpacity
                 style={styles.editIconButton}
                 onPress={() => {
@@ -811,45 +927,69 @@ const SportProfile = () => {
                   setShowPreferencesOverlay(true);
                 }}
               >
-                <Ionicons name="create-outline" size={20} color={COLORS.primary} />
+                <Ionicons name="create-outline" size={20} color={colors.primary} />
               </TouchableOpacity>
             </View>
 
-            <View style={styles.card}>
+            <View style={[styles.card, { backgroundColor: colors.card }]}>
               {/* Match Duration */}
-              <View style={styles.preferenceRow}>
-                <Text style={styles.preferenceLabel}>Match Duration</Text>
-                <Text style={styles.preferenceValue}>
+              <View style={[styles.preferenceRow, { borderBottomColor: colors.border }]}>
+                <Text style={[styles.preferenceLabel, { color: colors.textMuted }]}>
+                  {t('profile.fields.matchDuration')}
+                </Text>
+                <Text style={[styles.preferenceValue, { color: colors.text }]}>
                   {formatMatchDuration(preferences.matchDuration)}
                 </Text>
               </View>
 
               {/* Match Type */}
-              <View style={styles.preferenceRow}>
-                <Text style={styles.preferenceLabel}>Match Type</Text>
-                <Text style={styles.preferenceValue}>{formatMatchType(preferences.matchType)}</Text>
+              <View style={[styles.preferenceRow, { borderBottomColor: colors.border }]}>
+                <Text style={[styles.preferenceLabel, { color: colors.textMuted }]}>
+                  {t('profile.fields.matchType')}
+                </Text>
+                <Text style={[styles.preferenceValue, { color: colors.text }]}>
+                  {formatMatchType(preferences.matchType)}
+                </Text>
               </View>
 
               {/* Facility */}
-              <View style={styles.preferenceRow}>
-                <Text style={styles.preferenceLabel}>Facility</Text>
-                <Text style={styles.preferenceValue}>{preferences.facilityName || 'Not set'}</Text>
+              <View style={[styles.preferenceRow, { borderBottomColor: colors.border }]}>
+                <Text style={[styles.preferenceLabel, { color: colors.textMuted }]}>
+                  {t('profile.fields.facility')}
+                </Text>
+                <Text style={[styles.preferenceValue, { color: colors.text }]}>
+                  {preferences.facilityName || t('profile.notSet')}
+                </Text>
               </View>
 
               {/* Playing Style (for Tennis: Server & Volley, etc.) */}
               <View style={styles.preferenceRow}>
-                <Text style={styles.preferenceLabel}>Playing Style</Text>
-                <Text style={styles.preferenceValue}>{preferences.playingStyle || 'Not set'}</Text>
+                <Text style={[styles.preferenceLabel, { color: colors.textMuted }]}>
+                  {t('profile.fields.playingStyle')}
+                </Text>
+                <Text style={[styles.preferenceValue, { color: colors.text }]}>
+                  {preferences.playingStyle || t('profile.notSet')}
+                </Text>
               </View>
 
               {/* Play Attributes */}
               {playAttributes.length > 0 && (
-                <View style={styles.playAttributesContainer}>
-                  <Text style={styles.playAttributesTitle}>Play Attributes</Text>
+                <View style={[styles.playAttributesContainer, { borderTopColor: colors.border }]}>
+                  <Text style={[styles.playAttributesTitle, { color: colors.textMuted }]}>
+                    {t('profile.fields.playAttributes')}
+                  </Text>
                   <View style={styles.attributeTags}>
                     {playAttributes.map((attr, index) => (
-                      <View key={index} style={styles.attributeTag}>
-                        <Text style={styles.attributeTagText}>{attr.attributeValue}</Text>
+                      <View
+                        key={index}
+                        style={[
+                          styles.attributeTag,
+                          { backgroundColor: isDark ? primary[900] : primary[50] },
+                        ]}
+                      >
+                        <Text style={[styles.attributeTagText, { color: colors.primary }]}>
+                          {attr.attributeValue}
+                        </Text>
                       </View>
                     ))}
                   </View>
@@ -900,7 +1040,7 @@ const SportProfile = () => {
       />
 
       {/* Tennis Preferences Overlay */}
-      {sportName === 'Tennis' && (
+      {sportName.toLowerCase() === 'tennis' && (
         <TennisPreferencesOverlay
           visible={showPreferencesOverlay}
           onClose={() => setShowPreferencesOverlay(false)}
@@ -921,7 +1061,7 @@ const SportProfile = () => {
       )}
 
       {/* Pickleball Preferences Overlay */}
-      {sportName === 'Pickleball' && (
+      {sportName.toLowerCase() === 'pickleball' && (
         <PickleballPreferencesOverlay
           visible={showPreferencesOverlay}
           onClose={() => setShowPreferencesOverlay(false)}
@@ -947,7 +1087,6 @@ const SportProfile = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
   },
   header: {
     flexDirection: 'row',
@@ -955,9 +1094,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
   },
   backButton: {
     padding: 0,
@@ -966,7 +1103,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
     textAlign: 'center',
   },
   loadingContainer: {
@@ -977,7 +1113,6 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: '#666',
   },
   scrollView: {
     flex: 1,
@@ -986,11 +1121,10 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   card: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: BASE_BLACK,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -999,7 +1133,6 @@ const styles = StyleSheet.create({
   questionText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 12,
     textAlign: 'center',
   },
@@ -1013,182 +1146,155 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#E5E5E5',
-    backgroundColor: '#F9F9F9',
     alignItems: 'center',
   },
   toggleButtonActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    // backgroundColor and borderColor applied via inline styles
   },
   toggleButtonInactive: {
-    backgroundColor: '#EF4444',
-    borderColor: '#EF4444',
+    // backgroundColor and borderColor applied via inline styles
   },
   toggleButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#666',
   },
   toggleButtonTextActive: {
-    color: '#fff',
+    // color applied inline
   },
   inactiveContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 48,
-    marginTop: 32,
+    padding: spacingPixels[12],
+    marginTop: spacingPixels[8],
   },
   inactiveText: {
-    fontSize: 16,
-    color: '#999',
+    fontSize: fontSizePixels.base,
     textAlign: 'center',
-    marginTop: 16,
-    lineHeight: 22,
+    marginTop: spacingPixels[4],
+    lineHeight: fontSizePixels.base * 1.375,
   },
   section: {
-    marginBottom: 16,
+    marginBottom: spacingPixels[4],
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacingPixels[3],
   },
   sectionTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#666',
+    fontSize: fontSizePixels.xs,
+    fontWeight: fontWeightNumeric.bold,
     letterSpacing: 1,
   },
   editIconButton: {
-    padding: 4,
+    padding: spacingPixels[1],
   },
   ratingDisplay: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: spacingPixels[4],
   },
   ratingBadgeLarge: {
-    backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingHorizontal: spacingPixels[6],
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.xl,
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: spacingPixels[2],
   },
   ratingLevelText: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: COLORS.primary,
+    fontSize: fontSizePixels['2xl'],
+    fontWeight: fontWeightNumeric.bold,
   },
   ratingTypeText: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
+    fontSize: fontSizePixels.xs,
+    marginTop: spacingPixels[1],
   },
   verifiedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#D1FAE5',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 4,
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[1.5],
+    borderRadius: radiusPixels.full,
+    gap: spacingPixels[1],
   },
   verifiedText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#10B981',
+    fontSize: fontSizePixels.xs,
+    fontWeight: fontWeightNumeric.semibold,
   },
   ratingDescription: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-    marginBottom: 16,
+    fontSize: fontSizePixels.sm,
+    lineHeight: fontSizePixels.sm * 1.43,
+    marginBottom: spacingPixels[4],
     textAlign: 'center',
   },
   ratingDetails: {
     borderTopWidth: 1,
-    borderTopColor: '#E5E5E5',
-    paddingTop: 16,
-    marginBottom: 16,
+    paddingTop: spacingPixels[4],
+    marginBottom: spacingPixels[4],
   },
   ratingDetailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: spacingPixels[2],
   },
   detailLabel: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: fontSizePixels.sm,
   },
   detailValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: fontSizePixels.sm,
+    fontWeight: fontWeightNumeric.semibold,
   },
   actionButtons: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
+    flexDirection: 'column',
+    gap: spacingPixels[2],
+    marginBottom: spacingPixels[4],
   },
   actionButton: {
-    flex: 1,
-    minWidth: '30%',
+    width: '100%',
   },
   requestButtons: {
-    gap: 10,
+    gap: spacingPixels[2.5],
   },
   requestButton: {
     width: '100%',
   },
-  coralButton: {
-    backgroundColor: '#EF6F7B',
-  },
+  coralButton: {},
   noRatingContainer: {
     alignItems: 'center',
-    paddingVertical: 24,
+    paddingVertical: spacingPixels[6],
   },
   noRatingText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 8,
+    fontSize: fontSizePixels.base,
+    fontWeight: fontWeightNumeric.semibold,
+    marginBottom: spacingPixels[2],
   },
   noRatingSubtext: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: fontSizePixels.sm,
   },
   preferenceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: spacingPixels[3],
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
   },
   preferenceLabel: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: fontSizePixels.sm,
   },
   preferenceValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: fontSizePixels.sm,
+    fontWeight: fontWeightNumeric.semibold,
   },
   playAttributesContainer: {
-    marginTop: 16,
-    paddingTop: 16,
+    marginTop: spacingPixels[4],
+    paddingTop: spacingPixels[4],
     borderTopWidth: 1,
-    borderTopColor: '#E5E5E5',
   },
   playAttributesTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 12,
+    fontSize: fontSizePixels.sm,
+    fontWeight: fontWeightNumeric.semibold,
+    marginBottom: spacingPixels[3],
   },
   attributeTags: {
     flexDirection: 'row',
@@ -1196,15 +1302,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   attributeTag: {
-    backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[1.5],
+    borderRadius: radiusPixels.full,
   },
   attributeTagText: {
-    fontSize: 12,
-    color: COLORS.primary,
-    fontWeight: '600',
+    fontSize: fontSizePixels.xs,
+    fontWeight: fontWeightNumeric.semibold,
   },
 });
 

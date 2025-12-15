@@ -13,6 +13,7 @@ import {
   Dimensions,
   Alert,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -33,12 +34,13 @@ import {
   radiusPixels,
   primary,
   neutral,
-  base,
 } from '@rallia/design-system';
+
+const BASE_WHITE = '#ffffff';
 import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
 import { useCreateMatch } from '@rallia/shared-hooks';
 
-import { useTheme } from '../../../hooks/useTheme';
+import { useTheme } from '@rallia/shared-hooks';
 import { useTranslation, type TranslationKey } from '../../../hooks/useTranslation';
 import { useSport } from '../../../context';
 import { useAuth } from '../../../hooks';
@@ -167,6 +169,7 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
         {currentStep === 1 ? (
           <TouchableOpacity
             onPress={() => {
+              Keyboard.dismiss();
               lightHaptic();
               onBackToLanding();
             }}
@@ -179,6 +182,7 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
         ) : (
           <TouchableOpacity
             onPress={() => {
+              Keyboard.dismiss();
               lightHaptic();
               onBack();
             }}
@@ -193,8 +197,8 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
 
       {/* Sport badge */}
       <View style={[styles.sportBadge, { backgroundColor: colors.buttonActive }]}>
-        <Ionicons name="tennisball" size={14} color={base.white} />
-        <Text size="sm" weight="semibold" color={base.white}>
+        <Ionicons name="tennisball" size={14} color={BASE_WHITE} />
+        <Text size="sm" weight="semibold" color={BASE_WHITE}>
           {sportName}
         </Text>
       </View>
@@ -203,6 +207,7 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
       <View style={styles.headerRight}>
         <TouchableOpacity
           onPress={() => {
+            Keyboard.dismiss();
             lightHaptic();
             onClose();
           }}
@@ -227,7 +232,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   onSuccess,
 }) => {
   const { theme } = useTheme();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { session } = useAuth();
   const { selectedSport } = useSport();
   const isDark = theme === 'dark';
@@ -250,7 +255,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     border: themeColors.border,
     buttonActive: isDark ? primary[500] : primary[600],
     buttonInactive: themeColors.muted,
-    buttonTextActive: base.white,
+    buttonTextActive: BASE_WHITE,
     progressActive: isDark ? primary[500] : primary[600],
     progressInactive: themeColors.muted,
   };
@@ -367,6 +372,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
 
   // Navigate to next step
   const goToNextStep = useCallback(async () => {
+    Keyboard.dismiss();
     const isValid = await validateStep(currentStep as 1 | 2 | 3);
 
     if (!isValid) {
@@ -387,6 +393,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
 
   // Navigate to previous step
   const goToPrevStep = useCallback(() => {
+    Keyboard.dismiss();
     lightHaptic();
     if (currentStep > 1) {
       setCurrentStep(prev => prev - 1);
@@ -395,6 +402,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
 
   // Handle form submission
   const handleSubmit = useCallback(async () => {
+    Keyboard.dismiss();
     const isValid = await validateStep(3);
 
     if (!isValid) {
@@ -403,7 +411,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     }
 
     if (!session?.user?.id) {
-      Alert.alert('Error', 'You must be logged in to create a match.');
+      Alert.alert(t('alerts.error'), t('errors.mustBeLoggedIn'));
       return;
     }
 
@@ -446,6 +454,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
 
   // Handle close with confirmation
   const handleClose = useCallback(() => {
+    Keyboard.dismiss();
     // Check if there are unsaved changes:
     // 1. Form is dirty (has changes from initial/loaded values)
     // 2. OR we have unsaved changes since last save
@@ -542,7 +551,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
       <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
         <Animated.View style={[styles.successContainer, successAnimatedStyle]}>
           <View style={[styles.successIcon, { backgroundColor: colors.buttonActive }]}>
-            <Ionicons name="trophy" size={48} color={base.white} />
+            <Ionicons name="trophy" size={48} color={BASE_WHITE} />
           </View>
           <Text size="xl" weight="bold" color={colors.text} style={styles.successTitle}>
             {t('matchCreation.success' as TranslationKey)}
@@ -610,7 +619,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
           >
             {/* Step 1: When & Format */}
             <View style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
-              <WhenFormatStep form={form} colors={colors} t={t} isDark={isDark} />
+              <WhenFormatStep form={form} colors={colors} t={t} isDark={isDark} locale={locale} />
             </View>
 
             {/* Step 2: Where */}
@@ -689,6 +698,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    flexDirection: 'column',
   },
   header: {
     flexDirection: 'row',
@@ -745,6 +755,7 @@ const styles = StyleSheet.create({
   stepsContainer: {
     flexDirection: 'row',
     flex: 1,
+    height: '100%',
   },
   stepWrapper: {
     height: '100%',
@@ -752,6 +763,7 @@ const styles = StyleSheet.create({
   footer: {
     padding: spacingPixels[4],
     borderTopWidth: 1,
+    paddingBottom: spacingPixels[8],
   },
   nextButton: {
     flexDirection: 'row',

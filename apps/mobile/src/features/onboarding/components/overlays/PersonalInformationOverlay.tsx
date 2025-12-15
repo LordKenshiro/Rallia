@@ -15,7 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Overlay, Select, Button, Heading, Text } from '@rallia/shared-components';
-import { useImagePicker } from '../../../../hooks';
+import { useImagePicker, useThemeStyles } from '../../../../hooks';
 import { COLORS } from '@rallia/shared-constants';
 import {
   validateFullName,
@@ -25,7 +25,7 @@ import {
   mediumHaptic,
 } from '@rallia/shared-utils';
 import { OnboardingService, supabase, Logger } from '@rallia/shared-services';
-import { uploadImage } from '../../../../services/imageUpload';
+import { uploadImage, replaceImage } from '../../../../services/imageUpload';
 import type { GenderEnum, GenderType } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
 
@@ -44,6 +44,7 @@ interface PersonalInformationOverlayProps {
     dateOfBirth?: string;
     gender?: string;
     phoneNumber?: string;
+    profilePictureUrl?: string; // Used in edit mode to delete old image when replacing
   };
 }
 
@@ -57,6 +58,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
   mode = 'onboarding', // Default to onboarding mode
   initialData,
 }) => {
+  const { colors } = useThemeStyles();
   const [fullName, setFullName] = useState(initialData?.fullName || '');
   const [username, setUsername] = useState(initialData?.username || '');
   const [email] = useState(initialData?.email || ''); // Email is read-only in edit mode
@@ -195,7 +197,12 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
       // Upload profile picture if a new one was selected
       let uploadedImageUrl: string | null = null;
       if (profileImage) {
-        const { url, error: uploadError } = await uploadImage(profileImage, 'profile-pictures');
+        // In edit mode, use replaceImage to delete the old image
+        // In onboarding mode, use uploadImage (no old image to delete)
+        const oldImageUrl = mode === 'edit' ? initialData?.profilePictureUrl : undefined;
+        const { url, error: uploadError } = oldImageUrl
+          ? await replaceImage(profileImage, oldImageUrl, 'profile-pictures')
+          : await uploadImage(profileImage, 'profile-pictures');
 
         if (uploadError) {
           Logger.error('Failed to upload profile picture', uploadError as Error);
@@ -395,14 +402,17 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         )}
 
         {/* Title */}
-        <Heading level={2} style={styles.title}>
+        <Heading level={2} style={[styles.title, { color: colors.text }]}>
           {mode === 'onboarding' ? 'Tell us about yourself' : 'Update your personal information'}
         </Heading>
 
         {/* Profile Picture Upload - Only show in onboarding mode */}
         {mode === 'onboarding' && (
           <TouchableOpacity
-            style={styles.profilePicContainer}
+            style={[
+              styles.profilePicContainer,
+              { borderColor: colors.primary, backgroundColor: colors.inputBackground },
+            ]}
             activeOpacity={0.8}
             onPress={() => {
               lightHaptic();
@@ -412,68 +422,104 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
             {profileImage ? (
               <Image source={{ uri: profileImage }} style={styles.profileImage} />
             ) : (
-              <Ionicons name="camera" size={32} color="#00B8A9" />
+              <Ionicons name="camera" size={32} color={colors.primary} />
             )}
           </TouchableOpacity>
         )}
 
         {/* Full Name Input - Light green background for both modes */}
         <View style={styles.customInputContainer}>
-          <Text style={styles.customInputLabel}>
-            Full Name <Text style={styles.requiredStar}>*</Text>
+          <Text style={[styles.customInputLabel, { color: colors.text }]}>
+            Full Name <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
           </Text>
           <TextInput
             placeholder="Enter your full name"
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.textMuted}
             value={fullName}
             onChangeText={handleFullNameChange}
-            style={[styles.inputWithIcon, styles.inputField]}
+            style={[
+              styles.inputWithIcon,
+              styles.inputField,
+              {
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.inputBackground,
+                color: colors.text,
+              },
+            ]}
           />
         </View>
 
         {/* Email Input - Only show in edit mode, read-only */}
         {mode === 'edit' && (
           <View style={styles.customInputContainer}>
-            <Text style={styles.customInputLabel}>
-              Email <Text style={styles.requiredStar}>*</Text>
+            <Text style={[styles.customInputLabel, { color: colors.text }]}>
+              Email <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
             </Text>
             <TextInput
               placeholder="Email"
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.textMuted}
               value={email}
               onChangeText={() => {}} // Read-only, no-op
               editable={false}
-              style={[styles.inputWithIcon, styles.inputField, styles.customInputDisabled]}
+              style={[
+                styles.inputWithIcon,
+                styles.inputField,
+                styles.customInputDisabled,
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.inputBackground,
+                  color: colors.text,
+                },
+              ]}
             />
-            <Text style={styles.customHelperText}>This information cannot be modified</Text>
+            <Text style={[styles.customHelperText, { color: colors.textMuted }]}>
+              This information cannot be modified
+            </Text>
           </View>
         )}
 
         {/* Username Input - Light green background for both modes */}
         <View style={styles.customInputContainer}>
-          <Text style={styles.customInputLabel}>
-            Username <Text style={styles.requiredStar}>*</Text>
+          <Text style={[styles.customInputLabel, { color: colors.text }]}>
+            Username <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
           </Text>
           <TextInput
             placeholder="Choose a username"
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.textMuted}
             value={username}
             onChangeText={handleUsernameChange}
             maxLength={10}
-            style={[styles.inputWithIcon, styles.inputField]}
+            style={[
+              styles.inputWithIcon,
+              styles.inputField,
+              {
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.inputBackground,
+                color: colors.text,
+              },
+            ]}
           />
           <View style={styles.inputFooter}>
-            <Text style={styles.customHelperText}>Max 10 characters, no spaces</Text>
-            <Text style={styles.charCount}>{username.length}/10</Text>
+            <Text style={[styles.customHelperText, { color: colors.textMuted }]}>
+              Max 10 characters, no spaces
+            </Text>
+            <Text style={[styles.charCount, { color: colors.textMuted }]}>
+              {username.length}/10
+            </Text>
           </View>
         </View>
 
         {/* Date of Birth Input - Light green background for both modes */}
-        <Text style={styles.customInputLabel}>
-          Date of Birth <Text style={styles.requiredStar}>*</Text>
+        <Text style={[styles.customInputLabel, { color: colors.text }]}>
+          Date of Birth <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
         </Text>
         {Platform.OS === 'web' ? (
-          <View style={styles.inputWithIcon}>
+          <View
+            style={[
+              styles.inputWithIcon,
+              { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
+            ]}
+          >
             <input
               type="date"
               style={{
@@ -482,7 +528,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
                 border: 'none',
                 outline: 'none',
                 backgroundColor: 'transparent',
-                color: '#333',
+                color: colors.text,
                 fontFamily: 'inherit',
               }}
               value={dateOfBirth ? dateOfBirth.toISOString().split('T')[0] : ''}
@@ -496,18 +542,31 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
               min="1900-01-01"
               placeholder="Date of Birth"
             />
-            <Ionicons name="calendar-outline" size={20} color="#999" style={styles.inputIcon} />
+            <Ionicons
+              name="calendar-outline"
+              size={20}
+              color={colors.textMuted}
+              style={styles.inputIcon}
+            />
           </View>
         ) : (
           <TouchableOpacity
-            style={styles.inputWithIcon}
+            style={[
+              styles.inputWithIcon,
+              { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
+            ]}
             onPress={() => setShowDatePicker(true)}
             activeOpacity={0.8}
           >
-            <Text color={dateOfBirth ? '#333' : '#999'} style={{ flex: 1 }}>
+            <Text color={dateOfBirth ? colors.text : colors.textMuted} style={{ flex: 1 }}>
               {dateOfBirth ? formatDate(dateOfBirth) : 'Date of Birth'}
             </Text>
-            <Ionicons name="calendar-outline" size={20} color="#999" style={styles.inputIcon} />
+            <Ionicons
+              name="calendar-outline"
+              size={20}
+              color={colors.textMuted}
+              style={styles.inputIcon}
+            />
           </TouchableOpacity>
         )}
 
@@ -520,10 +579,10 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
             onRequestClose={() => setShowDatePicker(false)}
           >
             <View style={styles.modalOverlay}>
-              <View style={styles.datePickerContainer}>
-                <View style={styles.datePickerHeader}>
+              <View style={[styles.datePickerContainer, { backgroundColor: colors.card }]}>
+                <View style={[styles.datePickerHeader, { borderBottomColor: colors.border }]}>
                   <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                    <Text style={styles.datePickerButton}>Done</Text>
+                    <Text style={[styles.datePickerButton, { color: colors.primary }]}>Done</Text>
                   </TouchableOpacity>
                 </View>
                 <DateTimePicker
@@ -554,8 +613,8 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
 
         {/* Gender Picker - Light green background for both modes */}
         <View style={styles.customInputContainer}>
-          <Text style={styles.customInputLabel}>
-            Gender <Text style={styles.requiredStar}>*</Text>
+          <Text style={[styles.customInputLabel, { color: colors.text }]}>
+            Gender <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
           </Text>
           <Select
             placeholder="Select your gender"
@@ -563,27 +622,40 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
             onChange={setGender}
             options={genderOptions}
             containerStyle={styles.inlineInputContainer}
-            selectStyle={styles.genderSelectStyle}
+            selectStyle={[
+              styles.genderSelectStyle,
+              { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
+            ]}
           />
         </View>
 
         {/* Phone Number Input - Light green background for both modes */}
         <View style={styles.customInputContainer}>
-          <Text style={styles.customInputLabel}>
-            Phone Number <Text style={styles.requiredStar}>*</Text>
+          <Text style={[styles.customInputLabel, { color: colors.text }]}>
+            Phone Number <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
           </Text>
           <TextInput
             placeholder="Enter phone number"
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.textMuted}
             value={phoneNumber}
             onChangeText={handlePhoneNumberChange}
             maxLength={10}
             keyboardType="phone-pad"
-            style={[styles.inputWithIcon, styles.inputField]}
+            style={[
+              styles.inputWithIcon,
+              styles.inputField,
+              {
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.inputBackground,
+                color: colors.text,
+              },
+            ]}
           />
           <View style={styles.inputFooter}>
             <View style={{ flex: 1 }} />
-            <Text style={styles.charCount}>{phoneNumber.length}/10</Text>
+            <Text style={[styles.charCount, { color: colors.textMuted }]}>
+              {phoneNumber.length}/10
+            </Text>
           </View>
         </View>
 
@@ -595,7 +667,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
           style={mode === 'edit' ? styles.saveButtonContainer : styles.continueButton}
         >
           {isSaving ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <ActivityIndicator size="small" color={colors.primaryForeground} />
           ) : mode === 'onboarding' ? (
             'Continue'
           ) : (
@@ -615,7 +687,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
     textAlign: 'center',
     marginBottom: 20, // Reduced from 25 to save space
     lineHeight: 32,
@@ -624,13 +695,11 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: COLORS.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
     marginBottom: 25,
     borderWidth: 2,
-    borderColor: COLORS.primary,
     borderStyle: 'dashed',
     overflow: 'hidden',
   },
@@ -654,11 +723,10 @@ const styles = StyleSheet.create({
   customInputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 8,
   },
   requiredStar: {
-    color: COLORS.accent, // Pink/coral color for required asterisk
+    // Color applied inline
   },
   customInputDisabled: {
     opacity: 0.6,
@@ -667,18 +735,15 @@ const styles = StyleSheet.create({
     marginBottom: 0, // Remove Select's default margin
   },
   genderSelectStyle: {
-    backgroundColor: COLORS.primaryLight, // Light green background to match other inputs
     borderRadius: 10,
     paddingHorizontal: 20,
     paddingVertical: 15,
     marginBottom: 15,
     borderWidth: 1,
-    borderColor: COLORS.primaryLight,
     minHeight: 50, // Match other input heights
   },
   customHelperText: {
     fontSize: 12,
-    color: '#666',
     marginTop: 4,
   },
   inputFooter: {
@@ -688,26 +753,22 @@ const styles = StyleSheet.create({
   },
   charCount: {
     fontSize: 12,
-    color: '#666',
   },
   inputWithIcon: {
-    backgroundColor: COLORS.primaryLight,
     borderRadius: 10,
     paddingHorizontal: 20,
     paddingVertical: 15,
     marginBottom: 15,
     borderWidth: 1,
-    borderColor: COLORS.primaryLight,
   },
   inputField: {
     fontSize: 16,
-    color: '#333',
   },
   inputText: {
     paddingVertical: 0,
   },
   placeholderText: {
-    color: '#999',
+    // Unused style - placeholderTextColor is set inline
   },
   inputIcon: {
     marginLeft: 10,
@@ -718,7 +779,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   datePickerContainer: {
-    backgroundColor: '#fff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: 20,
@@ -729,10 +789,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
   },
   datePickerButton: {
-    color: '#EF6F7B',
     fontSize: 16,
     fontWeight: '600',
   },

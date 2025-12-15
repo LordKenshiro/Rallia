@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@rallia/shared-constants": "*",
+    "@rallia/shared-hooks": "*",
     "@rallia/shared-types": "*"
   },
   "devDependencies": {

@@ -321,3 +321,4 @@ BEGIN
     RAISE WARNING 'Some facility-sport links may be missing!';
   END IF;
 END $$;
+

@@ -44,10 +44,12 @@ export async function uploadImage(
       Logger.debug('Got user ID for image upload', { userId });
     }
 
-    // Create unique filename
+    // Create unique filename with folder structure for RLS policy
+    // RLS policy expects: (storage.foldername(name))[1] = auth.uid()::text
+    // So we must upload to: {userId}/{filename}.ext
     const fileExt = imageUri.split('.').pop()?.split('?')[0] || 'jpg';
-    const fileName = `${userId}-${Date.now()}.${fileExt}`;
-    const filePath = `${fileName}`;
+    const fileName = `${Date.now()}.${fileExt}`;
+    const filePath = `${userId}/${fileName}`;
     const contentType = `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;
 
     let uploadData: ArrayBuffer | Blob;
@@ -125,6 +127,42 @@ export async function uploadImage(
 }
 
 /**
+ * Uploads a new image and deletes the old one (if provided)
+ * Use this when replacing an existing profile picture to avoid orphaned files.
+ *
+ * @param imageUri - Local file URI from image picker
+ * @param oldImageUrl - URL of the existing image to delete (optional)
+ * @param bucket - Storage bucket name (default: 'profile-pictures')
+ * @param userId - User ID for organizing files
+ * @returns Public URL of uploaded image or null if failed
+ *
+ * @example
+ * const { url, error } = await replaceImage(newImageUri, profile.profile_picture_url, 'profile-pictures');
+ */
+export async function replaceImage(
+  imageUri: string,
+  oldImageUrl: string | null | undefined,
+  bucket: string = 'profile-pictures',
+  userId?: string
+): Promise<UploadResult> {
+  // First upload the new image
+  const result = await uploadImage(imageUri, bucket, userId);
+
+  // If upload succeeded and there was an old image, delete it
+  if (result.url && oldImageUrl) {
+    // Delete asynchronously - don't block on this
+    deleteImage(oldImageUrl, bucket).catch(err => {
+      Logger.warn('Failed to delete old image during replace, continuing anyway', {
+        oldImageUrl,
+        error: err,
+      });
+    });
+  }
+
+  return result;
+}
+
+/**
  * Deletes an image from Supabase Storage
  *
  * @param imageUrl - Public URL or file path of the image to delete
@@ -137,19 +175,27 @@ export async function deleteImage(
 ): Promise<boolean> {
   try {
     // Extract file path from public URL
-    const urlParts = imageUrl.split('/');
-    const filePath = urlParts[urlParts.length - 1];
+    // URL format: https://xxx.supabase.co/storage/v1/object/public/{bucket}/{userId}/{filename}
+    // We need to extract: {userId}/{filename}
+    const bucketIndex = imageUrl.indexOf(`/${bucket}/`);
+    if (bucketIndex === -1) {
+      Logger.warn('Could not find bucket in image URL', { imageUrl, bucket });
+      return false;
+    }
+    const filePath = imageUrl.substring(bucketIndex + bucket.length + 2); // +2 for the slashes
 
+    Logger.debug('Deleting image from storage', { bucket, filePath });
     const { error } = await supabase.storage.from(bucket).remove([filePath]);
 
     if (error) {
-      console.error('Error deleting image:', error);
+      Logger.error('Error deleting image from storage', error, { bucket, filePath });
       return false;
     }
 
+    Logger.info('Image deleted successfully', { bucket, filePath });
     return true;
   } catch (error) {
-    console.error('Error deleting image:', error);
+    Logger.error('Error deleting image', error as Error, { imageUrl, bucket });
     return false;
   }
 }

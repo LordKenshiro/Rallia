@@ -7,10 +7,23 @@
  * - Guest: Auth form
  * - Authenticated (not onboarded): Onboarding wizard
  * - Onboarded: Actions wizard (create match, group, etc.)
+ *
+ * The contentMode state is the single source of truth for what content
+ * to display in the sheet, eliminating race conditions.
  */
 
-import React, { createContext, useContext, useRef, useCallback, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useRef,
+  useCallback,
+  useState,
+  useEffect,
+  ReactNode,
+} from 'react';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { useAuth } from '@rallia/shared-hooks';
+import { useProfile } from '@rallia/shared-hooks';
 
 // =============================================================================
 // TYPES
@@ -19,17 +32,26 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 export type ActionsSheetMode = 'auth' | 'onboarding' | 'actions';
 
 interface ActionsSheetContextType {
-  /** Open the Actions bottom sheet */
+  /** Open the Actions bottom sheet, computing initial mode based on auth state */
   openSheet: () => void;
 
   /** Close the Actions bottom sheet */
   closeSheet: () => void;
+
+  /** Current content mode - single source of truth */
+  contentMode: ActionsSheetMode;
+
+  /** Directly set the content mode (used for transitions like auth → onboarding) */
+  setContentMode: (mode: ActionsSheetMode) => void;
 
   /** Snap to a specific index (0 = first snap point, 1 = second, etc.) */
   snapToIndex: (index: number) => void;
 
   /** Reference to the bottom sheet for direct control if needed */
   sheetRef: React.RefObject<BottomSheetModal | null>;
+
+  /** Refresh the profile data (call after onboarding completes to update state) */
+  refreshProfile: () => Promise<void>;
 }
 
 // =============================================================================
@@ -48,24 +70,81 @@ interface ActionsSheetProviderProps {
 
 export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ children }) => {
   const sheetRef = useRef<BottomSheetModal>(null);
+  const { session } = useAuth();
+  const { profile, loading: profileLoading, refetch } = useProfile();
 
+  // Content mode state - single source of truth
+  const [contentMode, setContentMode] = useState<ActionsSheetMode>('auth');
+
+  // Refetch profile when auth state changes
+  useEffect(() => {
+    if (session?.user) {
+      refetch();
+    }
+  }, [session?.user?.id, refetch]);
+
+  /**
+   * Compute the appropriate mode based on current auth/profile state
+   */
+  const computeInitialMode = useCallback((): ActionsSheetMode => {
+    // No session = guest user = show auth
+    if (!session?.user) {
+      return 'auth';
+    }
+
+    // Session exists but profile is still loading or not available = show onboarding
+    // This prevents showing actions before we know the user's onboarding status
+    if (profileLoading || !profile) {
+      return 'onboarding';
+    }
+
+    // Session exists but onboarding not completed = show onboarding
+    if (!profile.onboarding_completed) {
+      return 'onboarding';
+    }
+
+    // Fully onboarded = show actions
+    return 'actions';
+  }, [session?.user, profile, profileLoading]);
+
+  /**
+   * Open the sheet, computing the appropriate initial mode
+   */
   const openSheet = useCallback(() => {
+    const mode = computeInitialMode();
+    setContentMode(mode);
     sheetRef.current?.present();
-  }, []);
+  }, [computeInitialMode]);
 
+  /**
+   * Close the sheet
+   */
   const closeSheet = useCallback(() => {
     sheetRef.current?.dismiss();
   }, []);
 
+  /**
+   * Snap to a specific index
+   */
   const snapToIndex = useCallback((index: number) => {
     sheetRef.current?.snapToIndex(index);
   }, []);
 
+  /**
+   * Refresh the profile data (call after onboarding completes)
+   */
+  const refreshProfile = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
+
   const contextValue: ActionsSheetContextType = {
     openSheet,
     closeSheet,
+    contentMode,
+    setContentMode,
     snapToIndex,
     sheetRef,
+    refreshProfile,
   };
 
   return (
@@ -81,12 +160,21 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
  * Hook to access the Actions sheet controls.
  *
  * @example
- * const { openSheet, closeSheet } = useActionsSheet();
+ * const { openSheet, closeSheet, contentMode, setContentMode } = useActionsSheet();
  *
  * // Open the sheet when center tab is pressed
  * <TouchableOpacity onPress={openSheet}>
  *   <Icon name="add-circle" />
  * </TouchableOpacity>
+ *
+ * // Transition from auth to onboarding after successful auth
+ * const handleAuthSuccess = (needsOnboarding: boolean) => {
+ *   if (needsOnboarding) {
+ *     setContentMode('onboarding');
+ *   } else {
+ *     closeSheet();
+ *   }
+ * };
  */
 export const useActionsSheet = (): ActionsSheetContextType => {
   const context = useContext(ActionsSheetContext);

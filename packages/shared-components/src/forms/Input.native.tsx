@@ -1,9 +1,9 @@
 /**
  * Input Component
- * 
+ *
  * Flexible text input component with label, error handling, and validation.
  * Supports multiple input types and accessibility features.
- * 
+ *
  * @example
  * ```tsx
  * <Input
@@ -34,67 +34,67 @@ export interface InputProps extends Omit<TextInputProps, 'style'> {
    * Input type - affects keyboard and validation
    */
   type?: 'text' | 'email' | 'password' | 'number' | 'phone' | 'url';
-  
+
   /**
    * Input label
    */
   label?: string;
-  
+
   /**
    * Helper text displayed below input
    */
   helperText?: string;
-  
+
   /**
    * Error message - displays in red when present
    */
   error?: string;
-  
+
   /**
    * Whether field is required
    */
   required?: boolean;
-  
+
   /**
    * Whether input is disabled
    */
   disabled?: boolean;
-  
+
   /**
    * Current input value
    */
   value: string;
-  
+
   /**
    * Callback when text changes
    */
   onChangeText: (text: string) => void;
-  
+
   /**
    * Icon to display on the left side
    */
   leftIcon?: React.ReactNode;
-  
+
   /**
    * Icon to display on the right side
    */
   rightIcon?: React.ReactNode;
-  
+
   /**
    * Custom container style
    */
   containerStyle?: ViewStyle;
-  
+
   /**
    * Custom input style
    */
   inputStyle?: ViewStyle;
-  
+
   /**
    * Maximum character length
    */
   maxLength?: number;
-  
+
   /**
    * Whether to show character count
    */
@@ -219,9 +219,9 @@ export const Input: React.FC<InputProps> = ({
         <TextInput
           style={[
             styles.input,
-            leftIcon && styles.inputWithLeftIcon,
-            (rightIcon || isPassword) && styles.inputWithRightIcon,
-            disabled && styles.inputDisabled,
+            leftIcon ? styles.inputWithLeftIcon : undefined,
+            rightIcon || isPassword ? styles.inputWithRightIcon : undefined,
+            disabled ? styles.inputDisabled : undefined,
             inputStyle,
           ]}
           value={value}
@@ -271,11 +271,7 @@ export const Input: React.FC<InputProps> = ({
         </View>
 
         {showCharCount && maxLength && (
-          <Text
-            size="sm"
-            color={isMaxLength ? colors.error : colors.gray}
-            style={styles.charCount}
-          >
+          <Text size="sm" color={isMaxLength ? colors.error : colors.gray} style={styles.charCount}>
             {charCount}/{maxLength}
           </Text>
         )}
