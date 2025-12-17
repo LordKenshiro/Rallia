@@ -977,33 +977,33 @@ export type Database = {
         Row: {
           created_at: string | null;
           id: string;
-          invitation_status: Database['public']['Enums']['member_status'] | null;
           is_host: boolean | null;
           match_id: string;
           player_id: string;
           score: number | null;
+          status: Database['public']['Enums']['match_participant_status_enum'] | null;
           team_number: number | null;
           updated_at: string | null;
         };
         Insert: {
           created_at?: string | null;
           id?: string;
-          invitation_status?: Database['public']['Enums']['member_status'] | null;
           is_host?: boolean | null;
           match_id: string;
           player_id: string;
           score?: number | null;
+          status?: Database['public']['Enums']['match_participant_status_enum'] | null;
           team_number?: number | null;
           updated_at?: string | null;
         };
         Update: {
           created_at?: string | null;
           id?: string;
-          invitation_status?: Database['public']['Enums']['member_status'] | null;
           is_host?: boolean | null;
           match_id?: string;
           player_id?: string;
           score?: number | null;
+          status?: Database['public']['Enums']['match_participant_status_enum'] | null;
           team_number?: number | null;
           updated_at?: string | null;
         };
@@ -2654,6 +2654,14 @@ export type Database = {
       match_duration_enum: '30' | '60' | '90' | '120' | 'custom';
       match_format_enum: 'singles' | 'doubles';
       match_join_mode_enum: 'direct' | 'request';
+      match_participant_status_enum:
+        | 'pending'
+        | 'requested'
+        | 'joined'
+        | 'declined'
+        | 'left'
+        | 'kicked'
+        | 'waitlisted';
       match_status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
       match_type: 'casual' | 'competitive' | 'both';
       match_type_enum: 'practice' | 'competitive' | 'both';
@@ -2892,6 +2900,15 @@ export const Constants = {
       match_duration_enum: ['30', '60', '90', '120', 'custom'],
       match_format_enum: ['singles', 'doubles'],
       match_join_mode_enum: ['direct', 'request'],
+      match_participant_status_enum: [
+        'pending',
+        'requested',
+        'joined',
+        'declined',
+        'left',
+        'kicked',
+        'waitlisted',
+      ],
       match_status: ['scheduled', 'in_progress', 'completed', 'cancelled', 'no_show'],
       match_type: ['casual', 'competitive', 'both'],
       match_type_enum: ['practice', 'competitive', 'both'],
