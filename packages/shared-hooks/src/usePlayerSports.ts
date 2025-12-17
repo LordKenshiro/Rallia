@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@rallia/shared-services';
 import type { Sport } from './useSports';
+import { useAuth } from './useAuth';
 
 /**
  * Player sport data with nested sport information
@@ -35,6 +36,7 @@ export interface PlayerSport {
  * ```
  */
 export const usePlayerSports = (playerId?: string) => {
+  const { session } = useAuth();
   const [playerSports, setPlayerSports] = useState<PlayerSport[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -93,7 +95,7 @@ export const usePlayerSports = (playerId?: string) => {
 
   useEffect(() => {
     fetchPlayerSports();
-  }, [fetchPlayerSports]);
+  }, [session?.user, fetchPlayerSports]);
 
   return {
     playerSports,

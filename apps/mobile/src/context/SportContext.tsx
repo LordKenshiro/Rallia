@@ -44,7 +44,6 @@ export function SportProvider({ children }: SportProviderProps) {
   const { playerSports, loading: playerSportsLoading, refetch } = usePlayerSports();
   const [selectedSport, setSelectedSportState] = useState<Sport | null>(null);
   const [userSports, setUserSports] = useState<Sport[]>([]);
-  const [isInitialized, setIsInitialized] = useState(false);
 
   // Process player sports data into Sport[] format
   useEffect(() => {
@@ -73,15 +72,19 @@ export function SportProvider({ children }: SportProviderProps) {
       setUserSports(sports);
 
       // Initialize selected sport from storage or use primary/first sport
-      if (!isInitialized && sports.length > 0) {
+      console.log('CHECKING INITIALIZATION');
+      console.log('sports', sports);
+      if (sports.length > 0) {
+        console.log('Initializing selected sport');
+        console.log('sports', sports);
+        console.log('primarySport', primarySport);
         initializeSelectedSport(sports, primarySport);
       }
     } else if (!playerSportsLoading) {
       setUserSports([]);
       setSelectedSportState(null);
-      setIsInitialized(true);
     }
-  }, [playerSports, playerSportsLoading, isInitialized]);
+  }, [playerSports, playerSportsLoading]);
 
   const initializeSelectedSport = async (sports: Sport[], primarySport: Sport | null) => {
     try {
@@ -92,7 +95,6 @@ export function SportProvider({ children }: SportProviderProps) {
         const savedSport = sports.find(s => s.id === savedSportId);
         if (savedSport) {
           setSelectedSportState(savedSport);
-          setIsInitialized(true);
           return;
         }
       }
@@ -109,8 +111,6 @@ export function SportProvider({ children }: SportProviderProps) {
       console.error('Failed to initialize selected sport:', error);
       // Fall back to primary or first sport
       setSelectedSportState(primarySport || sports[0] || null);
-    } finally {
-      setIsInitialized(true);
     }
   };
 
@@ -128,7 +128,7 @@ export function SportProvider({ children }: SportProviderProps) {
   const value: SportContextValue = {
     selectedSport,
     userSports,
-    isLoading: playerSportsLoading || !isInitialized,
+    isLoading: playerSportsLoading,
     setSelectedSport,
     refetch,
   };
