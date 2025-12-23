@@ -14,7 +14,7 @@ import { OnboardingService, Logger } from '@rallia/shared-services';
 import type { DayEnum, PeriodEnum, OnboardingAvailability } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles } from '@rallia/shared-hooks';
+import { useThemeStyles } from '../../../../hooks';
 
 interface PlayerAvailabilitiesOverlayProps {
   visible: boolean;

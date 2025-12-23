@@ -2597,6 +2597,20 @@ export type Database = {
           name: string;
         }[];
       };
+      search_matches_nearby: {
+        Args: {
+          p_latitude: number;
+          p_limit?: number;
+          p_longitude: number;
+          p_max_distance_km: number;
+          p_offset?: number;
+          p_sport_id: string;
+        };
+        Returns: {
+          distance_meters: number;
+          match_id: string;
+        }[];
+      };
     };
     Enums: {
       account_status: 'active' | 'suspended' | 'deleted' | 'pending_verification';

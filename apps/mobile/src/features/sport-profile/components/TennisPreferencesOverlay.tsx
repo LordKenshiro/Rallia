@@ -19,7 +19,7 @@ import {
   PLAY_ATTRIBUTE_LABELS,
 } from '@rallia/shared-types';
 import { selectionHaptic, mediumHaptic } from '../../../utils/haptics';
-import { useThemeStyles } from '@rallia/shared-hooks';
+import { useThemeStyles } from '../../../hooks';
 
 interface TennisPreferencesOverlayProps {
   visible: boolean;

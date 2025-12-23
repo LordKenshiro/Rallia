@@ -3,7 +3,7 @@ import { StyleSheet, Animated, Dimensions, Easing } from 'react-native';
 import RalliaLogoDark from '../../assets/images/logo-dark.svg';
 import RalliaLogoLight from '../../assets/images/logo-light.svg';
 import { ANIMATION_DELAYS } from '../constants';
-import { useThemeStyles } from '@rallia/shared-hooks';
+import { useThemeStyles } from '../hooks';
 import { primary } from '@rallia/design-system';
 
 const { width } = Dimensions.get('window');

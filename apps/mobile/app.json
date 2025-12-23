@@ -19,7 +19,8 @@
         "NSPhotoLibraryUsageDescription": "This app requires access to your photo library to select profile pictures.",
         "ITSAppUsesNonExemptEncryption": false
       },
-      "bundleIdentifier": "com.mathisl971.rallia-app"
+      "bundleIdentifier": "com.mathisl971.rallia-app",
+      "appleTeamId": "587DRRMTV8"
     },
     "android": {
       "adaptiveIcon": {
@@ -27,11 +28,6 @@
         "backgroundColor": "#ffffff"
       },
       "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.RECORD_AUDIO",
         "android.permission.CAMERA",
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.READ_EXTERNAL_STORAGE",

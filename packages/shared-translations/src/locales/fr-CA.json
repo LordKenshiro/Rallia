@@ -25,7 +25,15 @@
     "send": "Envoyer",
     "select": "Sélectionner",
     "required": "Requis",
-    "optional": "Optionnel"
+    "optional": "Optionnel",
+    "time": {
+      "now": "Maintenant",
+      "tomorrow": "Demain",
+      "inMinutes": "Dans {minutes} min",
+      "inHours": "Dans {hours}h",
+      "inHoursMinutes": "Dans {hours}h {minutes}m",
+      "timeSeparator": " • "
+    }
   },
   "auth": {
     "signIn": "Connexion",
@@ -337,7 +345,80 @@
     "placeholder": "Connectez-vous avec d'autres joueurs"
   },
   "match": {
-    "placeholder": "Écran de match - Prêt pour votre implémentation"
+    "placeholder": "Écran de match - Prêt pour votre implémentation",
+    "host": "Hôte",
+    "format": {
+      "singles": "Simple",
+      "doubles": "Double"
+    },
+    "status": {
+      "open": "Ouvert",
+      "full": "Complet",
+      "completed": "Terminé",
+      "cancelled": "Annulé",
+      "confirmed": "Confirmé"
+    },
+    "type": {
+      "competitive": "Compétitif",
+      "practice": "Pratique",
+      "both": "Les deux"
+    },
+    "visibility": {
+      "public": "Public",
+      "private": "Privé"
+    },
+    "cost": {
+      "free": "Gratuit",
+      "perPlayer": "{amount}/joueur"
+    },
+    "participants": "{count} joueurs",
+    "participantsNeeded": "{count} requis",
+    "joinMode": {
+      "direct": "Rejoindre",
+      "request": "Demande"
+    },
+    "rating": {
+      "minimum": "{rating}+"
+    },
+    "gender": {
+      "male": "Hommes",
+      "female": "Femmes",
+      "any": "Tous",
+      "other": "Autre",
+      "menOnly": "Hommes seulement",
+      "womenOnly": "Femmes seulement"
+    },
+    "slots": {
+      "full": "Complet",
+      "oneLeft": "1 place restante",
+      "left": "{count} places restantes"
+    },
+    "courtStatus": {
+      "readyToPlay": "Prêt à jouer"
+    }
+  },
+  "matchDetail": {
+    "title": "Détails du match",
+    "host": "Hôte",
+    "hostedBy": "Organisé par",
+    "participants": "Joueurs",
+    "openSpots": "Places disponibles",
+    "court": "Terrain",
+    "estimatedCost": "Coût estimé",
+    "notes": "Notes",
+    "joinNow": "Rejoindre",
+    "requestToJoin": "Demander à rejoindre",
+    "share": "Partager",
+    "shareMessage": "Découvrez ce match sur Rallia!",
+    "distance": "Distance",
+    "away": "de distance",
+    "free": "Gratuit",
+    "perPerson": "par personne",
+    "locationTBD": "Lieu à déterminer",
+    "open": "Ouvert",
+    "competitive": "Compétitif",
+    "practice": "Pratique",
+    "casual": "Récréatif"
   },
   "alerts": {
     "success": "Succès",
@@ -504,6 +585,15 @@
     "signInPrompt": "Vous devez vous connecter pour créer et accéder à vos matchs",
     "user": "Utilisateur",
     "subtitle": "La meilleure façon de trouver votre prochain partenaire de tennis ou de pickleball",
+    "soonAndNearby": "Bientôt et à proximité",
+    "publicMatches": "Matchs publics",
+    "viewAll": "Voir tout",
+    "nearbyEmpty": {
+      "title": "Aucun match à proximité",
+      "description": "Il n'y a pas de matchs à venir dans votre rayon de {distance} km.",
+      "suggestion": "Essayez d'augmenter votre distance maximale de déplacement dans vos paramètres de profil pour voir plus de matchs.",
+      "updateSettings": "Modifier les paramètres"
+    },
     "header": {
       "ctaButton": "Rejoindre la liste"
     },

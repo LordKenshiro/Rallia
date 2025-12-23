@@ -5,6 +5,21 @@ export * from './useAuth';
 export * from './useImagePicker';
 export * from './usePermissions';
 export * from './useTranslation';
-// Theme hooks moved to @rallia/shared-hooks
-export { ThemeProvider, useTheme, useThemeStyles, type ThemeColors } from '@rallia/shared-hooks';
 export * from './useUserLocation';
+
+// Theme hooks - import from native files directly for proper TypeScript resolution
+export {
+  ThemeProvider,
+  useTheme,
+  type ThemePreference,
+  type ResolvedTheme,
+} from '@rallia/shared-hooks/src/useTheme.native';
+export { useThemeStyles, type ThemeColors } from '@rallia/shared-hooks/src/useThemeStyles.native';
+
+// Re-export commonly used shared hooks
+export {
+  usePlayer,
+  useProfile,
+  ProfileProvider,
+  type ProfileContextType,
+} from '@rallia/shared-hooks';

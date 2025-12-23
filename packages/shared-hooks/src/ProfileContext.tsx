@@ -78,16 +78,18 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children, user
         }
 
         // Fetch profile from database
+        // Use maybeSingle() to gracefully handle case where profile doesn't exist yet
         const { data, error: profileError } = await supabase
           .from('profile')
           .select('*')
           .eq('id', finalUserId)
-          .single();
+          .maybeSingle();
 
         if (profileError) {
           throw new Error(profileError.message);
         }
 
+        // data will be null if no profile exists (new user)
         setProfile(data);
       } catch (err) {
         console.error('Error fetching profile:', err);

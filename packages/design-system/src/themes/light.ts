@@ -13,7 +13,7 @@ import { primary, secondary, accent, neutral, base, status } from '../tokens/col
  */
 export const lightTheme = {
   // Core colors
-  background: base.white,
+  background: neutral[50], // Slightly off-white for visual separation from cards
   foreground: neutral[950],
 
   // Card/Surface colors
@@ -76,7 +76,7 @@ export const lightTheme = {
  * Uses oklch color space where appropriate
  */
 export const lightThemeCSSValues = {
-  '--background': 'oklch(1 0 0)',
+  '--background': 'oklch(0.985 0 0)', // neutral[50] - slightly off-white
   '--foreground': 'oklch(0.145 0 0)',
   '--card': 'oklch(1 0 0)',
   '--card-foreground': 'oklch(0.145 0 0)',

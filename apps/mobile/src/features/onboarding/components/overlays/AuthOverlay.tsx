@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
 import { lightHaptic, mediumHaptic, successHaptic } from '@rallia/shared-utils';
 import { ProfileService, Logger } from '@rallia/shared-services';
-import { useAuth } from '@rallia/shared-hooks';
+import { useAuth } from '../../../../hooks';
 import {
   spacingPixels,
   radiusPixels,
@@ -25,7 +25,7 @@ import {
   base,
   status,
 } from '@rallia/design-system';
-import { useThemeStyles } from '@rallia/shared-hooks';
+import { useThemeStyles } from '../../../../hooks';
 
 interface AuthOverlayProps {
   visible: boolean;

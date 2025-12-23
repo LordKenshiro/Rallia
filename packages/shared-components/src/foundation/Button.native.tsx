@@ -108,8 +108,8 @@ export const Button: React.FC<ButtonProps> = ({
     buttonTextInactive: neutral[500],
     text: isDark ? lightTheme.foreground : darkTheme.foreground,
     textMuted: isDark ? lightTheme.mutedForeground : darkTheme.mutedForeground,
-    border: isDark ? lightTheme.border : darkTheme.border,
-    background: isDark ? lightTheme.background : darkTheme.background,
+    border: isDark ? darkTheme.border : lightTheme.border, // Fixed: light mode should use lightTheme.border
+    background: isDark ? darkTheme.background : lightTheme.background, // Fixed: light mode should use lightTheme.background
   };
 
   // Get variant styles

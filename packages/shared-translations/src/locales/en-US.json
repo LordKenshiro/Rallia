@@ -20,6 +20,14 @@
     "search": "Search",
     "filter": "Filter",
     "sort": "Sort",
+    "time": {
+      "now": "Now",
+      "tomorrow": "Tomorrow",
+      "inMinutes": "In {minutes} min",
+      "inHours": "In {hours}h",
+      "inHoursMinutes": "In {hours}h {minutes}m",
+      "timeSeparator": " • "
+    },
     "refresh": "Refresh",
     "submit": "Submit",
     "send": "Send",
@@ -337,7 +345,80 @@
     "placeholder": "Connect with other players"
   },
   "match": {
-    "placeholder": "Match Screen - Ready for your implementation"
+    "placeholder": "Match Screen - Ready for your implementation",
+    "host": "Host",
+    "format": {
+      "singles": "Singles",
+      "doubles": "Doubles"
+    },
+    "status": {
+      "open": "Open",
+      "full": "Full",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "confirmed": "Confirmed"
+    },
+    "type": {
+      "competitive": "Competitive",
+      "practice": "Practice",
+      "both": "Both"
+    },
+    "visibility": {
+      "public": "Public",
+      "private": "Private"
+    },
+    "cost": {
+      "free": "Free",
+      "perPlayer": "{amount}/player"
+    },
+    "participants": "{count} players",
+    "participantsNeeded": "{count} needed",
+    "joinMode": {
+      "direct": "Direct Join",
+      "request": "Request"
+    },
+    "rating": {
+      "minimum": "{rating}+"
+    },
+    "gender": {
+      "male": "Men",
+      "female": "Women",
+      "any": "Any",
+      "other": "Other",
+      "menOnly": "Men Only",
+      "womenOnly": "Women Only"
+    },
+    "slots": {
+      "full": "Full",
+      "oneLeft": "1 spot left",
+      "left": "{count} spots left"
+    },
+    "courtStatus": {
+      "readyToPlay": "Ready to Play"
+    }
+  },
+  "matchDetail": {
+    "title": "Match Details",
+    "host": "Host",
+    "hostedBy": "Hosted by",
+    "participants": "Players",
+    "openSpots": "Open spots",
+    "court": "Court",
+    "estimatedCost": "Estimated cost",
+    "notes": "Notes",
+    "joinNow": "Join Match",
+    "requestToJoin": "Request to Join",
+    "share": "Share",
+    "shareMessage": "Check out this match on Rallia!",
+    "distance": "Distance",
+    "away": "away",
+    "free": "Free",
+    "perPerson": "per person",
+    "locationTBD": "Location TBD",
+    "open": "Open",
+    "competitive": "Competitive",
+    "practice": "Practice",
+    "casual": "Casual"
   },
   "alerts": {
     "success": "Success",
@@ -504,6 +585,15 @@
     "signInPrompt": "You must sign in to create and access your matches",
     "user": "User",
     "subtitle": "The best way to find your next tennis or pickleball partner",
+    "soonAndNearby": "Soon & Nearby",
+    "publicMatches": "Public Matches",
+    "viewAll": "View All",
+    "nearbyEmpty": {
+      "title": "No nearby matches found",
+      "description": "There are no upcoming matches within your {distance} km travel distance.",
+      "suggestion": "Try increasing your maximum travel distance in your profile settings to see more matches.",
+      "updateSettings": "Update Settings"
+    },
     "header": {
       "ctaButton": "Join Waitlist"
     },

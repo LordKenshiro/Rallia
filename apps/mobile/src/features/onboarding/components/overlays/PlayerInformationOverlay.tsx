@@ -15,7 +15,7 @@ import { Overlay, Button, Heading, Text } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
 import { supabase, Logger } from '@rallia/shared-services';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles } from '@rallia/shared-hooks';
+import { useThemeStyles, usePlayer, useProfile } from '../../../../hooks';
 
 interface PlayerInformationOverlayProps {
   visible: boolean;
@@ -34,6 +34,8 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
   initialData,
 }) => {
   const { colors } = useThemeStyles();
+  const { refetch: refetchPlayer } = usePlayer();
+  const { refetch: refetchProfile } = useProfile();
   const [username, setUsername] = useState(initialData?.username || '');
   const [bio, setBio] = useState(initialData?.bio || '');
   const [preferredPlayingHand, setPreferredPlayingHand] = useState<string>(
@@ -141,6 +143,10 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
         });
         // Don't block the save - profile table is already updated
       }
+
+      // Refetch player and profile data to update all consumers
+      await refetchPlayer();
+      await refetchProfile();
 
       // Show success toast
       if (Platform.OS === 'android') {

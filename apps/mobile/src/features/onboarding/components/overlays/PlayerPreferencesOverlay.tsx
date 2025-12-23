@@ -16,7 +16,7 @@ import { OnboardingService, SportService, Logger } from '@rallia/shared-services
 import type { OnboardingPlayerPreferences } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles } from '@rallia/shared-hooks';
+import { useThemeStyles } from '../../../../hooks';
 import { primary, neutral } from '@rallia/design-system';
 
 interface PlayerPreferencesOverlayProps {

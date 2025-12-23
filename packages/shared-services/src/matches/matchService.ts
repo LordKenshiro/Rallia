@@ -4,7 +4,13 @@
  */
 
 import { supabase } from '../supabase';
-import type { Match, TablesInsert } from '@rallia/shared-types';
+import type {
+  Match,
+  TablesInsert,
+  MatchWithDetails,
+  MatchParticipantWithPlayer,
+  Profile,
+} from '@rallia/shared-types';
 
 /**
  * Input data for creating a match
@@ -152,23 +158,40 @@ export async function getMatchWithDetails(matchId: string) {
       sport:sport_id (*),
       facility:facility_id (*),
       court:court_id (*),
+      min_rating_score:min_rating_score_id (*),
       created_by_player:created_by (
         id,
-        profile:profile_id (
-          id,
-          display_name,
-          avatar_url
-        )
+        gender,
+        playing_hand,
+        max_travel_distance,
+        notification_match_requests,
+        notification_messages,
+        notification_reminders,
+        privacy_show_age,
+        privacy_show_location,
+        privacy_show_stats
       ),
       participants:match_participant (
-        *,
+        id,
+        match_id,
+        player_id,
+        status,
+        is_host,
+        score,
+        team_number,
+        created_at,
+        updated_at,
         player:player_id (
           id,
-          profile:profile_id (
-            id,
-            display_name,
-            avatar_url
-          )
+          gender,
+          playing_hand,
+          max_travel_distance,
+          notification_match_requests,
+          notification_messages,
+          notification_reminders,
+          privacy_show_age,
+          privacy_show_location,
+          privacy_show_stats
         )
       )
     `
@@ -183,7 +206,205 @@ export async function getMatchWithDetails(matchId: string) {
     throw new Error(`Failed to get match details: ${error.message}`);
   }
 
+  if (!data) {
+    return null;
+  }
+
+  // Fetch profiles for all players (creator + participants)
+  const playerIds = new Set<string>();
+  if (data.created_by_player?.id) {
+    playerIds.add(data.created_by_player.id);
+  }
+  if (data.participants) {
+    data.participants.forEach((p: MatchParticipantWithPlayer) => {
+      if (p.player?.id) {
+        playerIds.add(p.player.id);
+      }
+    });
+  }
+
+  // Fetch all profiles at once
+  const profileIds = Array.from(playerIds);
+  const profilesMap: Record<string, Profile> = {};
+
+  if (profileIds.length > 0) {
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profile')
+      .select('*')
+      .in('id', profileIds);
+
+    if (!profilesError && profiles) {
+      profiles.forEach(profile => {
+        profilesMap[profile.id] = profile;
+      });
+    }
+  }
+
+  // Attach profiles to players
+  if (data.created_by_player?.id && profilesMap[data.created_by_player.id]) {
+    data.created_by_player.profile = profilesMap[data.created_by_player.id];
+  }
+
+  if (data.participants) {
+    data.participants = data.participants.map((p: MatchParticipantWithPlayer) => {
+      if (p.player?.id && profilesMap[p.player.id]) {
+        p.player.profile = profilesMap[p.player.id];
+      }
+      return p;
+    });
+  }
+
   return data;
+}
+
+/**
+ * Get multiple matches with full details (for match discovery/listing)
+ */
+export async function getMatchesWithDetails(
+  options: {
+    limit?: number;
+    offset?: number;
+    status?: string;
+    visibility?: 'public' | 'private';
+    matchDateFrom?: string;
+    matchDateTo?: string;
+  } = {}
+) {
+  const {
+    limit = 50,
+    offset = 0,
+    status,
+    visibility = 'public',
+    matchDateFrom,
+    matchDateTo,
+  } = options;
+
+  let query = supabase
+    .from('match')
+    .select(
+      `
+      *,
+      sport:sport_id (*),
+      facility:facility_id (*),
+      court:court_id (*),
+      min_rating_score:min_rating_score_id (*),
+      created_by_player:created_by (
+        id,
+        gender,
+        playing_hand,
+        max_travel_distance,
+        notification_match_requests,
+        notification_messages,
+        notification_reminders,
+        privacy_show_age,
+        privacy_show_location,
+        privacy_show_stats
+      ),
+      participants:match_participant (
+        id,
+        match_id,
+        player_id,
+        status,
+        is_host,
+        score,
+        team_number,
+        created_at,
+        updated_at,
+        player:player_id (
+          id,
+          gender,
+          playing_hand,
+          max_travel_distance,
+          notification_match_requests,
+          notification_messages,
+          notification_reminders,
+          privacy_show_age,
+          privacy_show_location,
+          privacy_show_stats
+        )
+      )
+    `
+    )
+    .eq('visibility', visibility)
+    .order('match_date', { ascending: true })
+    .order('start_time', { ascending: true })
+    .range(offset, offset + limit - 1);
+
+  if (status) {
+    query = query.eq('status', status);
+  }
+
+  if (matchDateFrom) {
+    query = query.gte('match_date', matchDateFrom);
+  }
+
+  if (matchDateTo) {
+    query = query.lte('match_date', matchDateTo);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw new Error(`Failed to get matches: ${error.message}`);
+  }
+
+  if (!data || data.length === 0) {
+    return [];
+  }
+
+  // Fetch profiles for all players (creator + participants)
+  const playerIds = new Set<string>();
+  data.forEach((match: MatchWithDetails) => {
+    if (match.created_by_player?.id) {
+      playerIds.add(match.created_by_player.id);
+    }
+    if (match.participants) {
+      match.participants.forEach((p: MatchParticipantWithPlayer) => {
+        if (p.player?.id) {
+          playerIds.add(p.player.id);
+        }
+      });
+    }
+  });
+
+  // Fetch all profiles at once
+  const profileIds = Array.from(playerIds);
+  const profilesMap: Record<string, Profile> = {};
+
+  if (profileIds.length > 0) {
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profile')
+      .select('*')
+      .in('id', profileIds);
+
+    if (!profilesError && profiles) {
+      profiles.forEach(profile => {
+        profilesMap[profile.id] = profile;
+      });
+    }
+  }
+
+  // Attach profiles to players
+  const enrichedData = data.map((match: MatchWithDetails) => {
+    // Attach profile to creator
+    if (match.created_by_player?.id && profilesMap[match.created_by_player.id]) {
+      match.created_by_player.profile = profilesMap[match.created_by_player.id];
+    }
+
+    // Attach profiles to participants
+    if (match.participants) {
+      match.participants = match.participants.map((p: MatchParticipantWithPlayer) => {
+        if (p.player?.id && profilesMap[p.player.id]) {
+          p.player.profile = profilesMap[p.player.id];
+        }
+        return p;
+      });
+    }
+
+    return match;
+  });
+
+  return enrichedData;
 }
 
 /**
@@ -295,6 +516,234 @@ export async function deleteMatch(matchId: string): Promise<void> {
 }
 
 /**
+ * Parameters for searching nearby matches
+ */
+export interface SearchNearbyMatchesParams {
+  latitude: number;
+  longitude: number;
+  maxDistanceKm: number;
+  sportId: string;
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * Result from nearby matches RPC
+ */
+interface NearbyMatchResult {
+  match_id: string;
+  distance_meters: number;
+}
+
+/**
+ * Match with details including distance (for nearby matches)
+ */
+interface MatchWithDetailsAndDistance extends MatchWithDetails {
+  distance_meters: number | null;
+}
+
+/**
+ * Get matches at facilities near a location, within max distance.
+ * Uses PostGIS RPC function for efficient distance filtering.
+ * Returns full match details with distance_meters attached.
+ */
+export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
+  const { latitude, longitude, maxDistanceKm, sportId, limit = 20, offset = 0 } = params;
+
+  // Step 1: Get match IDs within distance using RPC
+  const { data: nearbyResults, error: rpcError } = await supabase.rpc('search_matches_nearby', {
+    p_latitude: latitude,
+    p_longitude: longitude,
+    p_max_distance_km: maxDistanceKm,
+    p_sport_id: sportId,
+    p_limit: limit + 1, // Fetch one extra to check if more exist
+    p_offset: offset,
+  });
+
+  if (rpcError) {
+    throw new Error(`Failed to search nearby matches: ${rpcError.message}`);
+  }
+
+  const results = (nearbyResults ?? []) as NearbyMatchResult[];
+  const hasMore = results.length > limit;
+
+  // Remove the extra item used for pagination check
+  if (hasMore) {
+    results.pop();
+  }
+
+  if (results.length === 0) {
+    return {
+      matches: [],
+      hasMore: false,
+      nextOffset: null,
+    };
+  }
+
+  // Step 2: Fetch full match details for the found IDs
+  const matchIds = results.map(r => r.match_id);
+  const distanceMap = new Map(results.map(r => [r.match_id, r.distance_meters]));
+
+  const { data: matchesData, error: matchError } = await supabase
+    .from('match')
+    .select(
+      `
+      *,
+      sport:sport_id (*),
+      facility:facility_id (*),
+      court:court_id (*),
+      min_rating_score:min_rating_score_id (*),
+      created_by_player:created_by (
+        id,
+        gender,
+        playing_hand,
+        max_travel_distance,
+        notification_match_requests,
+        notification_messages,
+        notification_reminders,
+        privacy_show_age,
+        privacy_show_location,
+        privacy_show_stats
+      ),
+      participants:match_participant (
+        id,
+        match_id,
+        player_id,
+        status,
+        is_host,
+        score,
+        team_number,
+        created_at,
+        updated_at,
+        player:player_id (
+          id,
+          gender,
+          playing_hand,
+          max_travel_distance,
+          notification_match_requests,
+          notification_messages,
+          notification_reminders,
+          privacy_show_age,
+          privacy_show_location,
+          privacy_show_stats
+        )
+      )
+    `
+    )
+    .in('id', matchIds);
+
+  if (matchError) {
+    throw new Error(`Failed to get match details: ${matchError.message}`);
+  }
+
+  if (!matchesData || matchesData.length === 0) {
+    return {
+      matches: [],
+      hasMore: false,
+      nextOffset: null,
+    };
+  }
+
+  // Step 3: Fetch profiles for all players
+  const playerIds = new Set<string>();
+  matchesData.forEach((match: MatchWithDetails) => {
+    if (match.created_by_player?.id) {
+      playerIds.add(match.created_by_player.id);
+    }
+    if (match.participants) {
+      match.participants.forEach((p: MatchParticipantWithPlayer) => {
+        if (p.player?.id) {
+          playerIds.add(p.player.id);
+        }
+      });
+    }
+  });
+
+  const profileIds = Array.from(playerIds);
+  const profilesMap: Record<string, Profile> = {};
+
+  if (profileIds.length > 0) {
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profile')
+      .select('*')
+      .in('id', profileIds);
+
+    if (!profilesError && profiles) {
+      profiles.forEach(profile => {
+        profilesMap[profile.id] = profile;
+      });
+    }
+  }
+
+  // Step 4: Attach profiles and distance to matches, maintain order from RPC
+  const matchMap = new Map<string, MatchWithDetailsAndDistance>();
+  matchesData.forEach((match: MatchWithDetails) => {
+    // Attach profile to creator
+    if (match.created_by_player?.id && profilesMap[match.created_by_player.id]) {
+      match.created_by_player.profile = profilesMap[match.created_by_player.id];
+    }
+
+    // Attach profiles to participants
+    if (match.participants) {
+      match.participants = match.participants.map((p: MatchParticipantWithPlayer) => {
+        if (p.player?.id && profilesMap[p.player.id]) {
+          p.player.profile = profilesMap[p.player.id];
+        }
+        return p;
+      });
+    }
+
+    // Attach distance
+    const matchWithDistance: MatchWithDetailsAndDistance = {
+      ...match,
+      distance_meters: distanceMap.get(match.id) ?? null,
+    };
+
+    matchMap.set(match.id, matchWithDistance);
+  });
+
+  // Maintain order from RPC results (sorted by date/time)
+  const orderedMatches = matchIds
+    .map(id => matchMap.get(id))
+    .filter(Boolean) as MatchWithDetailsAndDistance[];
+
+  // Additional client-side sort to ensure correct ordering by datetime
+  // This handles edge cases where order might not be preserved
+  // We create proper datetime objects by combining date + time
+  orderedMatches.sort((a: MatchWithDetailsAndDistance, b: MatchWithDetailsAndDistance) => {
+    // Create datetime objects by combining date and time
+    // Use string parsing to avoid timezone issues with Date constructor
+    const createDateTime = (match: MatchWithDetailsAndDistance): number => {
+      const dateStr = match.match_date; // Format: YYYY-MM-DD
+      const timeStr = match.start_time; // Format: HH:MM:SS or HH:MM
+
+      // Parse date parts
+      const [year, month, day] = dateStr.split('-').map(Number);
+      // Parse time parts
+      const timeParts = timeStr.split(':').map(Number);
+      const hours = timeParts[0] || 0;
+      const minutes = timeParts[1] || 0;
+
+      // Create date in local timezone
+      const date = new Date(year, month - 1, day, hours, minutes, 0, 0);
+      return date.getTime();
+    };
+
+    const datetimeA = createDateTime(a);
+    const datetimeB = createDateTime(b);
+
+    // Sort by datetime (earlier matches first)
+    return datetimeA - datetimeB;
+  });
+
+  return {
+    matches: orderedMatches,
+    hasMore,
+    nextOffset: hasMore ? offset + limit : null,
+  };
+}
+
+/**
  * Match service object for grouped exports
  */
 export const matchService = {
@@ -302,6 +751,7 @@ export const matchService = {
   getMatch,
   getMatchWithDetails,
   getMatchesByCreator,
+  getNearbyMatches,
   updateMatch,
   cancelMatch,
   deleteMatch,

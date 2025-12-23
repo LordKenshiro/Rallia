@@ -47,13 +47,10 @@ export { default as MatchCard } from './MatchCard.native';
 export { default as AppHeader } from './AppHeader.native';
 export { default as SettingsModal } from './SettingsModal.native';
 
+export type { MatchCardProps } from './MatchCard.native';
+
 // Header Components
-export { 
-  ProfilePictureButton, 
-  NotificationButton, 
-  SettingsButton, 
-  SportSelector 
-} from './headers';
+export { ProfilePictureButton, NotificationButton, SettingsButton, SportSelector } from './headers';
 
 // Overlays
 export { PermissionOverlay, LocationPermissionOverlay, CalendarAccessOverlay } from './overlays';

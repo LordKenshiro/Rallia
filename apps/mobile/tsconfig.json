@@ -7,11 +7,23 @@
       "@rallia/shared-components": ["../../packages/shared-components/src"],
       "@rallia/shared-constants": ["../../packages/shared-constants/src"],
       "@rallia/shared-hooks": ["../../packages/shared-hooks/src"],
+      "@rallia/shared-hooks/useTheme": ["../../packages/shared-hooks/src/useTheme.native.ts"],
+      "@rallia/shared-hooks/useThemeStyles": [
+        "../../packages/shared-hooks/src/useThemeStyles.native.ts"
+      ],
       "@rallia/shared-services": ["../../packages/shared-services/src"],
       "@rallia/shared-translations": ["../../packages/shared-translations/src"],
       "@rallia/shared-types": ["../../packages/shared-types/src"],
       "@rallia/shared-utils": ["../../packages/shared-utils/src"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", "*.ts", "*.tsx", "nativewind-env.d.ts"]
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "*.ts",
+    "*.tsx",
+    "nativewind-env.d.ts",
+    "../../packages/shared-hooks/src/**/*.native.ts",
+    "../../packages/shared-components/src/**/*.native.tsx"
+  ]
 }

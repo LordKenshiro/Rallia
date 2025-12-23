@@ -72,12 +72,7 @@ export function SportProvider({ children }: SportProviderProps) {
       setUserSports(sports);
 
       // Initialize selected sport from storage or use primary/first sport
-      console.log('CHECKING INITIALIZATION');
-      console.log('sports', sports);
       if (sports.length > 0) {
-        console.log('Initializing selected sport');
-        console.log('sports', sports);
-        console.log('primarySport', primarySport);
         initializeSelectedSport(sports, primarySport);
       }
     } else if (!playerSportsLoading) {

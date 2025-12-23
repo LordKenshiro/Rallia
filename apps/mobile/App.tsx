@@ -5,6 +5,7 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { StatusBar } from 'expo-status-bar';
 import AppNavigator from './src/navigation/AppNavigator';
 import { ActionsBottomSheet } from './src/components/ActionsBottomSheet';
+import { MatchDetailSheet } from './src/components/MatchDetailSheet';
 import { SplashOverlay } from './src/components/SplashOverlay';
 import { ErrorBoundary } from '@rallia/shared-components';
 import { ThemeProvider, useTheme } from '@rallia/shared-hooks';
@@ -14,8 +15,9 @@ import {
   LocaleProvider,
   ActionsSheetProvider,
   SportProvider,
+  MatchDetailSheetProvider,
 } from './src/context';
-import { ProfileProvider } from '@rallia/shared-hooks';
+import { ProfileProvider, PlayerProvider } from '@rallia/shared-hooks';
 
 const queryClient = new QueryClient();
 
@@ -37,6 +39,8 @@ function AppContent() {
       </NavigationContainer>
       {/* Actions Bottom Sheet - renders above navigation */}
       <ActionsBottomSheet />
+      {/* Match Detail Bottom Sheet - shows when match card is pressed */}
+      <MatchDetailSheet />
       {/* Splash overlay - renders on top of everything */}
       <SplashOverlay />
     </>
@@ -59,15 +63,19 @@ export default function App() {
             <LocaleProvider>
               <ThemeProvider>
                 <ProfileProvider>
-                  <SportProvider>
-                    <OverlayProvider>
-                      <ActionsSheetProvider>
-                        <BottomSheetModalProvider>
-                          <AppContent />
-                        </BottomSheetModalProvider>
-                      </ActionsSheetProvider>
-                    </OverlayProvider>
-                  </SportProvider>
+                  <PlayerProvider>
+                    <SportProvider>
+                      <OverlayProvider>
+                        <ActionsSheetProvider>
+                          <MatchDetailSheetProvider>
+                            <BottomSheetModalProvider>
+                              <AppContent />
+                            </BottomSheetModalProvider>
+                          </MatchDetailSheetProvider>
+                        </ActionsSheetProvider>
+                      </OverlayProvider>
+                    </SportProvider>
+                  </PlayerProvider>
                 </ProfileProvider>
               </ThemeProvider>
             </LocaleProvider>

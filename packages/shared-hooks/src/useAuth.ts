@@ -57,15 +57,22 @@ export const useAuth = (options?: UseAuthOptions) => {
     // Get initial session and validate it
     const initializeSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
         if (session) {
           // Validate session by checking if user still exists in database
-          const { data: { user }, error } = await supabase.auth.getUser();
-          
+          const {
+            data: { user },
+            error,
+          } = await supabase.auth.getUser();
+
           if (error || !user) {
             // Session exists but user was deleted - clear the invalid session
-            console.warn('⚠️ Invalid session detected (user deleted from database). Clearing session...');
+            console.warn(
+              '⚠️ Invalid session detected (user deleted from database). Clearing session...'
+            );
             await supabase.auth.signOut();
             setSession(null);
           } else {

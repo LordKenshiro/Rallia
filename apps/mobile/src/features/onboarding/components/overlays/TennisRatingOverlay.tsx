@@ -16,7 +16,7 @@ import DatabaseService, { OnboardingService, SportService, Logger } from '@ralli
 import type { OnboardingRating } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles } from '@rallia/shared-hooks';
+import { useThemeStyles } from '../../../../hooks';
 import { primary } from '@rallia/design-system';
 
 interface TennisRatingOverlayProps {

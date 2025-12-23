@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
 import { Logger } from '@rallia/shared-services';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles } from '@rallia/shared-hooks';
+import { useThemeStyles } from '../../../../hooks';
 
 interface AuthSuccessOverlayProps {
   visible: boolean;

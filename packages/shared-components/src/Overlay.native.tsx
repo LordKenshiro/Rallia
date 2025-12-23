@@ -14,7 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { neutral } from '@rallia/design-system';
-import { useThemeStyles } from '@rallia/shared-hooks';
+import { useThemeStyles } from '@rallia/shared-hooks/src/useThemeStyles.native';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 

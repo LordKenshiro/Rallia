@@ -29,6 +29,7 @@ import { useAuth, useThemeStyles } from '../hooks';
 import { useTheme } from '@rallia/shared-hooks';
 import { useAppNavigation } from './hooks';
 import { spacingPixels, fontSizePixels, fontWeightNumeric } from '@rallia/design-system';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 // Screens
 import Home from '../screens/Home';
@@ -54,6 +55,7 @@ import type {
   CommunityStackParamList,
   ChatStackParamList,
 } from './types';
+import PublicMatches from '../features/matches/screens/PublicMatches';
 
 // =============================================================================
 // TYPED NAVIGATORS
@@ -237,14 +239,53 @@ function useMainScreenOptions() {
 // =============================================================================
 
 /**
+ * Map icon button for header right
+ */
+function MapIconButton() {
+  const navigation = useAppNavigation();
+  const { colors } = useThemeStyles();
+
+  return (
+    <TouchableOpacity
+      onPress={() => navigation.navigate('Map')}
+      style={{ marginRight: spacingPixels[2] }}
+      activeOpacity={0.7}
+    >
+      <Ionicons name="map" size={24} color={colors.headerForeground} />
+    </TouchableOpacity>
+  );
+}
+
+/**
+ * Header options for PublicMatches screen
+ */
+function usePublicMatchesScreenOptions() {
+  const { colors } = useThemeStyles();
+  const sharedOptions = getSharedScreenOptions(colors);
+
+  return ({ navigation }: { navigation: NativeStackNavigationProp<HomeStackParamList> }) => ({
+    ...sharedOptions,
+    headerTitle: 'Public Matches',
+    headerLeft: () => <ThemedBackButton navigation={navigation} />,
+    headerRight: () => <MapIconButton />,
+  });
+}
+
+/**
  * Home Stack - Match discovery and player's own matches
  */
 function HomeStack() {
   const mainScreenOptions = useMainScreenOptions();
+  const publicMatchesOptions = usePublicMatchesScreenOptions();
   return (
     <HomeStackNavigator.Navigator id="HomeStack">
       <HomeStackNavigator.Screen name="HomeScreen" component={Home} options={mainScreenOptions} />
       {/* Future screens: PlayerMatches, PublicMatches */}
+      <HomeStackNavigator.Screen
+        name="PublicMatches"
+        component={PublicMatches}
+        options={publicMatchesOptions}
+      />
     </HomeStackNavigator.Navigator>
   );
 }
@@ -541,12 +582,10 @@ export default function AppNavigator() {
       <RootStack.Screen
         name="Map"
         component={Map}
-        options={({ navigation }) => ({
-          ...sharedOptions,
-          headerTitle: 'Map',
+        options={{
+          headerShown: false,
           presentation: 'fullScreenModal' as const,
-          headerLeft: () => <ThemedBackButton navigation={navigation} icon="close" />,
-        })}
+        }}
       />
 
       <RootStack.Screen
