@@ -56,6 +56,7 @@ import type {
   ChatStackParamList,
 } from './types';
 import PublicMatches from '../features/matches/screens/PublicMatches';
+import PlayerMatches from '../features/matches/screens/PlayerMatches';
 
 // =============================================================================
 // TYPED NAVIGATORS
@@ -263,11 +264,33 @@ function usePublicMatchesScreenOptions() {
   const { colors } = useThemeStyles();
   const sharedOptions = getSharedScreenOptions(colors);
 
-  return ({ navigation }: { navigation: NativeStackNavigationProp<HomeStackParamList> }) => ({
+  return ({
+    navigation,
+  }: {
+    navigation: NativeStackNavigationProp<HomeStackParamList, 'PublicMatches'>;
+  }) => ({
     ...sharedOptions,
     headerTitle: 'Public Matches',
     headerLeft: () => <ThemedBackButton navigation={navigation} />,
     headerRight: () => <MapIconButton />,
+  });
+}
+
+/**
+ * Header options for PlayerMatches screen
+ */
+function usePlayerMatchesScreenOptions() {
+  const { colors } = useThemeStyles();
+  const sharedOptions = getSharedScreenOptions(colors);
+
+  return ({
+    navigation,
+  }: {
+    navigation: NativeStackNavigationProp<HomeStackParamList, 'PlayerMatches'>;
+  }) => ({
+    ...sharedOptions,
+    headerTitle: 'My Matches',
+    headerLeft: () => <ThemedBackButton navigation={navigation} />,
   });
 }
 
@@ -277,14 +300,19 @@ function usePublicMatchesScreenOptions() {
 function HomeStack() {
   const mainScreenOptions = useMainScreenOptions();
   const publicMatchesOptions = usePublicMatchesScreenOptions();
+  const playerMatchesOptions = usePlayerMatchesScreenOptions();
   return (
     <HomeStackNavigator.Navigator id="HomeStack">
       <HomeStackNavigator.Screen name="HomeScreen" component={Home} options={mainScreenOptions} />
-      {/* Future screens: PlayerMatches, PublicMatches */}
       <HomeStackNavigator.Screen
         name="PublicMatches"
         component={PublicMatches}
         options={publicMatchesOptions}
+      />
+      <HomeStackNavigator.Screen
+        name="PlayerMatches"
+        component={PlayerMatches}
+        options={playerMatchesOptions}
       />
     </HomeStackNavigator.Navigator>
   );

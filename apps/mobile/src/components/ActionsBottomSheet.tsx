@@ -38,12 +38,14 @@ import {
 
 const BASE_WHITE = '#ffffff';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
-import { useActionsSheet } from '../context';
+import { useActionsSheet, useMatchDetailSheet } from '../context';
 import { useTranslation, type TranslationKey } from '../hooks';
 import { useTheme } from '@rallia/shared-hooks';
+import { getMatchWithDetails } from '@rallia/shared-services';
 import { MatchCreationWizard } from '../features/matches';
 import { AuthWizard } from '../features/auth';
 import { OnboardingWizard } from '../features/onboarding/components/wizard';
+import { navigateFromOutside } from '../navigation';
 
 // =============================================================================
 // TYPES
@@ -230,6 +232,7 @@ const MAX_SHEET_HEIGHT = SCREEN_HEIGHT * 0.9; // 90% of screen height
 export const ActionsBottomSheet: React.FC = () => {
   // Get contentMode and setContentMode from context - single source of truth
   const { sheetRef, closeSheet, contentMode, setContentMode, refreshProfile } = useActionsSheet();
+  const { openSheet: openMatchDetail } = useMatchDetailSheet();
   const { theme } = useTheme();
   const { t } = useTranslation();
   const isDark = theme === 'dark';
@@ -324,16 +327,31 @@ export const ActionsBottomSheet: React.FC = () => {
 
   // Handle wizard success
   const handleWizardSuccess = useCallback(
-    (matchId: string) => {
+    async (matchId: string) => {
       successHaptic();
-      // Close the sheet and navigate to match detail
+      // Close the sheet and reset wizard state
       closeSheet();
       setShowWizard(false);
       slideProgress.value = 0;
-      // TODO: Navigate to match detail screen
-      console.log('Match created:', matchId);
+
+      // Fetch the match details and open the match detail sheet
+      try {
+        const matchDetails = await getMatchWithDetails(matchId);
+        if (matchDetails) {
+          // Navigate to PlayerMatches screen first (using ref-based navigation for outside NavigationContainer)
+          navigateFromOutside('PlayerMatches');
+          // Small delay to ensure navigation completes before opening sheet
+          setTimeout(() => {
+            openMatchDetail(matchDetails);
+          }, 300);
+        }
+      } catch (error) {
+        console.error('Failed to fetch match details:', error);
+        // Still navigate to PlayerMatches even if fetch fails
+        navigateFromOutside('PlayerMatches');
+      }
     },
-    [closeSheet, slideProgress]
+    [closeSheet, slideProgress, openMatchDetail]
   );
 
   // Handle sheet dismiss - just reset local wizard state

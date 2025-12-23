@@ -744,6 +744,185 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
 }
 
 /**
+ * Parameters for fetching player's matches
+ */
+export interface GetPlayerMatchesParams {
+  userId: string;
+  timeFilter: 'upcoming' | 'past';
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * Get matches where the user is either the creator or a confirmed participant.
+ * Supports filtering by upcoming/past and pagination.
+ * Returns full match details with profiles.
+ */
+export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams) {
+  const { userId, timeFilter, limit = 20, offset = 0 } = params;
+
+  // Get today's date in YYYY-MM-DD format for comparison
+  const today = new Date().toISOString().split('T')[0];
+
+  // First, get match IDs where user is a participant (any status - confirmed, pending, etc.)
+  const { data: participantMatches, error: participantError } = await supabase
+    .from('match_participant')
+    .select('match_id')
+    .eq('player_id', userId);
+
+  if (participantError) {
+    throw new Error(`Failed to get participant matches: ${participantError.message}`);
+  }
+
+  const participantMatchIds = (participantMatches ?? []).map(p => p.match_id);
+
+  // Build the query for matches
+  // Important: Apply filters BEFORE ordering and range for correct results
+  const isUpcoming = timeFilter === 'upcoming';
+
+  // Start with base select
+  let query = supabase.from('match').select(
+    `
+      *,
+      sport:sport_id (*),
+      facility:facility_id (*),
+      court:court_id (*),
+      min_rating_score:min_rating_score_id (*),
+      created_by_player:created_by (
+        id,
+        gender,
+        playing_hand,
+        max_travel_distance,
+        notification_match_requests,
+        notification_messages,
+        notification_reminders,
+        privacy_show_age,
+        privacy_show_location,
+        privacy_show_stats
+      ),
+      participants:match_participant (
+        id,
+        match_id,
+        player_id,
+        status,
+        is_host,
+        score,
+        team_number,
+        created_at,
+        updated_at,
+        player:player_id (
+          id,
+          gender,
+          playing_hand,
+          max_travel_distance,
+          notification_match_requests,
+          notification_messages,
+          notification_reminders,
+          privacy_show_age,
+          privacy_show_location,
+          privacy_show_stats
+        )
+      )
+    `
+  );
+
+  // Apply date filter first
+  if (isUpcoming) {
+    query = query.gte('match_date', today);
+  } else {
+    query = query.lt('match_date', today);
+  }
+
+  // Filter by user being creator OR participant
+  if (participantMatchIds.length > 0) {
+    query = query.or(`created_by.eq.${userId},id.in.(${participantMatchIds.join(',')})`);
+  } else {
+    query = query.eq('created_by', userId);
+  }
+
+  // Apply ordering and pagination last
+  query = query
+    .order('match_date', { ascending: isUpcoming })
+    .order('start_time', { ascending: isUpcoming })
+    .range(offset, offset + limit);
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw new Error(`Failed to get player matches: ${error.message}`);
+  }
+
+  if (!data || data.length === 0) {
+    return {
+      matches: [],
+      hasMore: false,
+      nextOffset: null,
+    };
+  }
+
+  const hasMore = data.length > limit;
+  const matchesData = hasMore ? data.slice(0, limit) : data;
+
+  // Fetch profiles for all players (creator + participants)
+  const playerIds = new Set<string>();
+  matchesData.forEach((match: MatchWithDetails) => {
+    if (match.created_by_player?.id) {
+      playerIds.add(match.created_by_player.id);
+    }
+    if (match.participants) {
+      match.participants.forEach((p: MatchParticipantWithPlayer) => {
+        if (p.player?.id) {
+          playerIds.add(p.player.id);
+        }
+      });
+    }
+  });
+
+  // Fetch all profiles at once
+  const profileIds = Array.from(playerIds);
+  const profilesMap: Record<string, Profile> = {};
+
+  if (profileIds.length > 0) {
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profile')
+      .select('*')
+      .in('id', profileIds);
+
+    if (!profilesError && profiles) {
+      profiles.forEach(profile => {
+        profilesMap[profile.id] = profile;
+      });
+    }
+  }
+
+  // Attach profiles to players
+  const enrichedData = matchesData.map((match: MatchWithDetails) => {
+    // Attach profile to creator
+    if (match.created_by_player?.id && profilesMap[match.created_by_player.id]) {
+      match.created_by_player.profile = profilesMap[match.created_by_player.id];
+    }
+
+    // Attach profiles to participants
+    if (match.participants) {
+      match.participants = match.participants.map((p: MatchParticipantWithPlayer) => {
+        if (p.player?.id && profilesMap[p.player.id]) {
+          p.player.profile = profilesMap[p.player.id];
+        }
+        return p;
+      });
+    }
+
+    return match;
+  });
+
+  return {
+    matches: enrichedData as MatchWithDetails[],
+    hasMore,
+    nextOffset: hasMore ? offset + limit : null,
+  };
+}
+
+/**
  * Match service object for grouped exports
  */
 export const matchService = {
@@ -751,6 +930,7 @@ export const matchService = {
   getMatch,
   getMatchWithDetails,
   getMatchesByCreator,
+  getPlayerMatchesWithDetails,
   getNearbyMatches,
   updateMatch,
   cancelMatch,

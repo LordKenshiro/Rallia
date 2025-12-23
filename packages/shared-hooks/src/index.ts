@@ -17,6 +17,7 @@ export * from './useNotifications';
 export * from './useCreateMatch';
 export * from './useMatches';
 export * from './useNearbyMatches';
+export * from './usePlayerMatches';
 export * from './useRatingScoresForSport';
 export * from './useFacilitySearch';
 

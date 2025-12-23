@@ -44,10 +44,12 @@ export type { BadgeProps } from './feedback/Badge.native';
 // Base Components
 export { default as Overlay } from './Overlay.native';
 export { default as MatchCard } from './MatchCard.native';
+export { default as MyMatchCard } from './MyMatchCard.native';
 export { default as AppHeader } from './AppHeader.native';
 export { default as SettingsModal } from './SettingsModal.native';
 
 export type { MatchCardProps } from './MatchCard.native';
+export type { MyMatchCardProps } from './MyMatchCard.native';
 
 // Header Components
 export { ProfilePictureButton, NotificationButton, SettingsButton, SportSelector } from './headers';

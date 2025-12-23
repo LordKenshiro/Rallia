@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -7,10 +7,11 @@ import {
   RefreshControl,
   ActivityIndicator,
   TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { MatchCard, Text, Heading, Button, Spinner } from '@rallia/shared-components';
+import { MatchCard, MyMatchCard, Text, Heading, Button, Spinner } from '@rallia/shared-components';
 import {
   useAuth,
   useThemeStyles,
@@ -19,8 +20,15 @@ import {
   type TranslationKey,
 } from '../hooks';
 import { useOverlay, useActionsSheet, useSport, useMatchDetailSheet } from '../context';
-import { useProfile, useTheme, usePlayer, useNearbyMatches } from '@rallia/shared-hooks';
+import {
+  useProfile,
+  useTheme,
+  usePlayer,
+  useNearbyMatches,
+  usePlayerMatches,
+} from '@rallia/shared-hooks';
 import type { NearbyMatch } from '@rallia/shared-hooks';
+import type { MatchWithDetails } from '@rallia/shared-types';
 import { Logger } from '@rallia/shared-services';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { useHomeNavigation, useAppNavigation } from '../navigation/hooks';
@@ -57,7 +65,7 @@ const Home = () => {
   // Use TanStack Query hook for fetching nearby matches with infinite scrolling
   // Query refetches automatically when sportId changes (included in query key)
   const {
-    matches,
+    matches: allNearbyMatches,
     isLoading: loadingMatches,
     isRefetching,
     isFetchingNextPage,
@@ -72,6 +80,36 @@ const Home = () => {
     sportId: selectedSport?.id,
     limit: 20,
     enabled: showNearbySection,
+  });
+
+  // Filter out matches where user is creator or participant (these show in "My Matches" section)
+  const matches = useMemo(() => {
+    if (!session?.user?.id) return allNearbyMatches;
+
+    return allNearbyMatches.filter(match => {
+      // Exclude if user is the creator
+      if (match.created_by === session.user.id) return false;
+
+      // Exclude if user is a participant
+      const isParticipant = match.participants?.some(
+        p => p.player_id === session.user.id && p.status === 'joined'
+      );
+      if (isParticipant) return false;
+
+      return true;
+    });
+  }, [allNearbyMatches, session?.user?.id]);
+
+  // Use TanStack Query hook for fetching player's upcoming matches
+  const {
+    matches: myMatches,
+    isLoading: loadingMyMatches,
+    refetch: refetchMyMatches,
+  } = usePlayerMatches({
+    userId: session?.user?.id,
+    timeFilter: 'upcoming',
+    limit: 5,
+    enabled: !!session?.user?.id,
   });
 
   const [showWelcome, setShowWelcome] = useState(true);
@@ -220,6 +258,89 @@ const Home = () => {
     );
   }, [colors.text, colors.primary, navigation, t]);
 
+  // Render "My Matches" section with horizontal scroll
+  const renderMyMatchesSection = useCallback(() => {
+    // Only show for authenticated users
+    if (!session) return null;
+
+    return (
+      <View style={styles.myMatchesSection}>
+        {/* Header with title and "See All" button */}
+        <View style={[styles.sectionHeader]}>
+          <Text size="xl" weight="bold" color={colors.text}>
+            {t('home.myMatches' as TranslationKey)}
+          </Text>
+          <TouchableOpacity
+            style={styles.viewAllButton}
+            onPress={() => navigation.navigate('PlayerMatches')}
+            activeOpacity={0.7}
+          >
+            <Text size="base" weight="medium" color={colors.primary}>
+              {t('home.viewAll')}
+            </Text>
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color={colors.primary}
+              style={styles.chevronIcon}
+            />
+          </TouchableOpacity>
+        </View>
+
+        {/* Content: horizontal scroll or empty state */}
+        {loadingMyMatches ? (
+          <View style={styles.myMatchesLoading}>
+            <ActivityIndicator size="small" color={colors.primary} />
+          </View>
+        ) : myMatches.length === 0 ? (
+          <View style={styles.myMatchesEmpty}>
+            <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
+            <Text size="sm" color={colors.textMuted} style={styles.myMatchesEmptyText}>
+              {t('home.myMatchesEmpty.title' as TranslationKey)}
+            </Text>
+            <Text size="xs" color={colors.textMuted} style={styles.myMatchesEmptyDescription}>
+              {t('home.myMatchesEmpty.description' as TranslationKey)}
+            </Text>
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.myMatchesScrollContent}
+          >
+            {myMatches.slice(0, 5).map((match: MatchWithDetails) => (
+              <MyMatchCard
+                key={match.id}
+                match={match}
+                isDark={isDark}
+                t={
+                  t as (key: string, options?: Record<string, string | number | boolean>) => string
+                }
+                locale={locale}
+                onPress={() => {
+                  Logger.logUserAction('my_match_pressed', { matchId: match.id });
+                  openMatchDetail(match);
+                }}
+              />
+            ))}
+          </ScrollView>
+        )}
+      </View>
+    );
+  }, [
+    session,
+    colors.text,
+    colors.primary,
+    colors.textMuted,
+    t,
+    navigation,
+    loadingMyMatches,
+    myMatches,
+    isDark,
+    locale,
+    openMatchDetail,
+  ]);
+
   // Render list header (welcome section for logged-in users)
   const renderListHeader = useCallback(() => {
     const headerComponents = [];
@@ -245,29 +366,35 @@ const Home = () => {
           </Button>
         </View>
       );
-    } else if (showWelcome) {
-      headerComponents.push(
-        <Animated.View
-          key="welcome"
-          style={[
-            styles.welcomeSection,
-            {
-              backgroundColor: colors.headerBackground,
-              opacity: welcomeOpacity,
-            },
-          ]}
-        >
-          <Text size="lg" weight="bold" color={colors.text} style={styles.welcomeText}>
-            {t('home.welcomeBack')}
-          </Text>
-          <Text size="sm" color={colors.textMuted}>
-            {displayName || session.user.email?.split('@')[0] || t('home.user')}
-          </Text>
-        </Animated.View>
-      );
+    } else {
+      // Show welcome message for logged-in users
+      if (showWelcome) {
+        headerComponents.push(
+          <Animated.View
+            key="welcome"
+            style={[
+              styles.welcomeSection,
+              {
+                backgroundColor: colors.headerBackground,
+                opacity: welcomeOpacity,
+              },
+            ]}
+          >
+            <Text size="lg" weight="bold" color={colors.text} style={styles.welcomeText}>
+              {t('home.welcomeBack')}
+            </Text>
+            <Text size="sm" color={colors.textMuted}>
+              {displayName || session.user.email?.split('@')[0] || t('home.user')}
+            </Text>
+          </Animated.View>
+        );
+      }
+
+      // Add "My Matches" section for authenticated users
+      headerComponents.push(<View key="my-matches">{renderMyMatchesSection()}</View>);
     }
 
-    // Only show section header if we have location (nearby section is visible)
+    // Only show "Soon & Nearby" section header if we have location
     if (showNearbySection) {
       headerComponents.push(<View key="section-header">{renderSectionHeader()}</View>);
     }
@@ -286,6 +413,7 @@ const Home = () => {
     openSheet,
     welcomeOpacity,
     displayName,
+    renderMyMatchesSection,
     renderSectionHeader,
   ]);
 
@@ -342,7 +470,12 @@ const Home = () => {
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
-              onRefresh={refetch}
+              onRefresh={() => {
+                refetch();
+                if (session?.user?.id) {
+                  refetchMyMatches();
+                }
+              }}
               tintColor={colors.primary}
               colors={[colors.primary]}
             />
@@ -440,6 +573,35 @@ const styles = StyleSheet.create({
   },
   chevronIcon: {
     marginLeft: spacingPixels[1],
+  },
+  myMatchesSection: {
+    marginTop: spacingPixels[2],
+  },
+  myMatchesLoading: {
+    padding: spacingPixels[8],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  myMatchesEmpty: {
+    padding: spacingPixels[6],
+    marginHorizontal: spacingPixels[4],
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radiusPixels.xl,
+  },
+  myMatchesEmptyText: {
+    marginTop: spacingPixels[2],
+    textAlign: 'center',
+  },
+  myMatchesEmptyDescription: {
+    marginTop: spacingPixels[1],
+    textAlign: 'center',
+  },
+  myMatchesScrollContent: {
+    paddingLeft: spacingPixels[4],
+    paddingRight: spacingPixels[4],
+    paddingBottom: spacingPixels[2],
+    gap: spacingPixels[2],
   },
 });
 

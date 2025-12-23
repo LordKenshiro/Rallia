@@ -22,6 +22,7 @@
     "sort": "Sort",
     "time": {
       "now": "Now",
+      "today": "Today",
       "tomorrow": "Tomorrow",
       "inMinutes": "In {minutes} min",
       "inHours": "In {hours}h",
@@ -588,6 +589,11 @@
     "soonAndNearby": "Soon & Nearby",
     "publicMatches": "Public Matches",
     "viewAll": "View All",
+    "myMatches": "My Matches",
+    "myMatchesEmpty": {
+      "title": "No upcoming matches",
+      "description": "Create a match or join one to see it here"
+    },
     "nearbyEmpty": {
       "title": "No nearby matches found",
       "description": "There are no upcoming matches within your {distance} km travel distance.",
@@ -775,6 +781,31 @@
           "answer": "Rallia will be available as a web app, iOS app, and Android app. You'll be able to access your account and schedule matches from any device."
         }
       }
+    }
+  },
+  "playerMatches": {
+    "title": "My Matches",
+    "tabs": {
+      "upcoming": "Upcoming",
+      "past": "Past"
+    },
+    "time": {
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "thisWeek": "This Week",
+      "nextWeek": "Next Week",
+      "later": "Later",
+      "yesterday": "Yesterday",
+      "lastWeek": "Last Week",
+      "earlier": "Earlier"
+    },
+    "emptyUpcoming": {
+      "title": "No upcoming matches",
+      "description": "Create a new match or browse public matches to get started"
+    },
+    "emptyPast": {
+      "title": "No past matches",
+      "description": "Your completed matches will appear here"
     }
   },
   "winter": {
