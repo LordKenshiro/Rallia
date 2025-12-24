@@ -125,9 +125,17 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children, user
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      // Handle all auth events that indicate a valid session
+      // INITIAL_SESSION fires when app loads with existing session
+      // SIGNED_IN fires on fresh login
+      // TOKEN_REFRESHED fires when the JWT is refreshed
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         if (session?.user && (!userId || userId === session.user.id)) {
           await fetchProfile();
+        } else if (!session?.user) {
+          // Session event but no user - clear profile state
+          setProfile(null);
+          setLoading(false);
         }
       } else if (event === 'SIGNED_OUT') {
         setProfile(null);

@@ -124,9 +124,17 @@ export const PlayerProvider: React.FC<PlayerProviderProps> = ({ children }) => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      // Handle all auth events that indicate a valid session
+      // INITIAL_SESSION fires when app loads with existing session
+      // SIGNED_IN fires on fresh login
+      // TOKEN_REFRESHED fires when the JWT is refreshed
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         if (session?.user) {
           await fetchPlayer();
+        } else {
+          // Session exists but no user - clear player state
+          setPlayer(null);
+          setLoading(false);
         }
       } else if (event === 'SIGNED_OUT') {
         setPlayer(null);

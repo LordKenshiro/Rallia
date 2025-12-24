@@ -36,7 +36,7 @@ export interface PlayerSport {
  * ```
  */
 export const usePlayerSports = (playerId?: string) => {
-  const { session } = useAuth();
+  const { session, loading: authLoading } = useAuth();
   const [playerSports, setPlayerSports] = useState<PlayerSport[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -54,7 +54,6 @@ export const usePlayerSports = (playerId?: string) => {
 
       if (!targetPlayerId) {
         setPlayerSports([]);
-        setLoading(false);
         return;
       }
 
@@ -94,12 +93,21 @@ export const usePlayerSports = (playerId?: string) => {
   }, [playerId]);
 
   useEffect(() => {
-    fetchPlayerSports();
-  }, [session?.user, fetchPlayerSports]);
+    // Wait for auth to finish loading before fetching
+    // This prevents race conditions where we fetch before auth is ready
+    if (authLoading) {
+      return;
+    }
 
+    // Fetch player sports when auth is ready
+    fetchPlayerSports();
+  }, [authLoading, session?.user?.id, fetchPlayerSports]);
+
+  // Return loading as true if auth is still loading OR if we haven't fetched yet
+  // This ensures we show loading state until data is actually ready
   return {
     playerSports,
-    loading,
+    loading: authLoading || loading,
     error,
     refetch: fetchPlayerSports,
   };
