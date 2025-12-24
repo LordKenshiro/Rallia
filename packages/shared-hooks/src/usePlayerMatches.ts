@@ -30,6 +30,8 @@ export interface UsePlayerMatchesOptions {
   userId: string | undefined;
   /** Filter by upcoming or past matches */
   timeFilter: 'upcoming' | 'past';
+  /** Optional sport ID to filter matches by */
+  sportId?: string;
   /** Maximum number of matches to fetch per page */
   limit?: number;
   /** Enable/disable the query */
@@ -60,14 +62,14 @@ export interface UsePlayerMatchesOptions {
  * ```
  */
 export function usePlayerMatches(options: UsePlayerMatchesOptions) {
-  const { userId, timeFilter, limit = DEFAULT_PAGE_SIZE, enabled = true } = options;
+  const { userId, timeFilter, sportId, limit = DEFAULT_PAGE_SIZE, enabled = true } = options;
 
   // Only enable query when we have userId
   const hasRequiredParams = userId !== undefined;
 
   const query = useInfiniteQuery<PlayerMatchesPage, Error>({
-    // Include timeFilter in query key to refetch when filter changes
-    queryKey: matchKeys.list('player', { userId, timeFilter, limit }),
+    // Include timeFilter and sportId in query key to refetch when they change
+    queryKey: matchKeys.list('player', { userId, timeFilter, sportId, limit }),
     queryFn: async ({ pageParam = 0 }) => {
       if (!hasRequiredParams) {
         return { matches: [], nextOffset: null, hasMore: false };
@@ -76,6 +78,7 @@ export function usePlayerMatches(options: UsePlayerMatchesOptions) {
       const result = await getPlayerMatchesWithDetails({
         userId: userId!,
         timeFilter,
+        sportId,
         limit,
         offset: pageParam as number,
       });

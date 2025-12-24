@@ -101,6 +101,7 @@ const Home = () => {
   }, [allNearbyMatches, session?.user?.id]);
 
   // Use TanStack Query hook for fetching player's upcoming matches
+  // Filters by selected sport to match the Soon & Nearby section
   const {
     matches: myMatches,
     isLoading: loadingMyMatches,
@@ -108,6 +109,7 @@ const Home = () => {
   } = usePlayerMatches({
     userId: session?.user?.id,
     timeFilter: 'upcoming',
+    sportId: selectedSport?.id,
     limit: 5,
     enabled: !!session?.user?.id,
   });

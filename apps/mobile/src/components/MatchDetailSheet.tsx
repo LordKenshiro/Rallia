@@ -14,8 +14,17 @@
  */
 
 import * as React from 'react';
-import { useCallback, useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity, Image, Share, Linking, Platform } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  Share,
+  Linking,
+  Platform,
+  Alert,
+} from 'react-native';
 import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,11 +39,18 @@ import {
   neutral,
   status,
 } from '@rallia/design-system';
-import { lightHaptic, mediumHaptic, selectionHaptic } from '@rallia/shared-utils';
+import {
+  lightHaptic,
+  mediumHaptic,
+  selectionHaptic,
+  successHaptic,
+  errorHaptic,
+} from '@rallia/shared-utils';
 import { useMatchDetailSheet } from '../context/MatchDetailSheetContext';
 import { useTranslation, type TranslationKey } from '../hooks';
-import { useTheme, useAuth, usePlayer } from '@rallia/shared-hooks';
+import { useTheme, useAuth, usePlayer, useMatchActions } from '@rallia/shared-hooks';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
+import { ConfirmationModal } from './ConfirmationModal';
 
 const BASE_WHITE = '#ffffff';
 
@@ -163,7 +179,7 @@ function formatDistance(meters: number | null | undefined): string | null {
 }
 
 /**
- * Get participant info
+ * Get participant info - only counts active participants
  */
 function getParticipantInfo(match: MatchDetailData): {
   current: number;
@@ -171,7 +187,9 @@ function getParticipantInfo(match: MatchDetailData): {
   spotsLeft: number;
 } {
   const total = match.format === 'doubles' ? 4 : 2;
-  const current = (match.participants?.length ?? 0) + 1; // +1 for creator
+  // Only count joined participants for display (not requested, pending, waitlisted, left, etc.)
+  const joinedParticipants = match.participants?.filter(p => p.status === 'joined') ?? [];
+  const current = joinedParticipants.length + 1; // +1 for creator
   const spotsLeft = Math.max(0, total - current);
   return { current, total, spotsLeft };
 }
@@ -270,6 +288,62 @@ export const MatchDetailSheet: React.FC = () => {
   const isDark = theme === 'dark';
   const playerId = player?.id;
 
+  // Confirmation modal states
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+
+  // Match actions hook
+  const { joinMatch, leaveMatch, cancelMatch, isJoining, isLeaving, isCancelling, joinResult } =
+    useMatchActions(selectedMatch?.id, {
+      onJoinSuccess: result => {
+        successHaptic();
+        closeSheet();
+        if (result.status === 'joined') {
+          Alert.alert(
+            t('alerts.success' as TranslationKey),
+            t('matchActions.joinSuccess' as TranslationKey)
+          );
+        } else {
+          Alert.alert(
+            t('alerts.success' as TranslationKey),
+            t('matchActions.requestSent' as TranslationKey)
+          );
+        }
+      },
+      onJoinError: error => {
+        errorHaptic();
+        Alert.alert(t('alerts.error' as TranslationKey), error.message);
+      },
+      onLeaveSuccess: () => {
+        successHaptic();
+        setShowLeaveModal(false);
+        closeSheet();
+        Alert.alert(
+          t('alerts.success' as TranslationKey),
+          t('matchActions.leaveSuccess' as TranslationKey)
+        );
+      },
+      onLeaveError: error => {
+        errorHaptic();
+        setShowLeaveModal(false);
+        Alert.alert(t('alerts.error' as TranslationKey), error.message);
+      },
+      onCancelSuccess: () => {
+        successHaptic();
+        setShowCancelModal(false);
+        closeSheet();
+        Alert.alert(
+          t('alerts.success' as TranslationKey),
+          t('matchActions.cancelSuccess' as TranslationKey)
+        );
+      },
+      onCancelError: error => {
+        errorHaptic();
+        setShowCancelModal(false);
+        Alert.alert(t('alerts.error' as TranslationKey), error.message);
+      },
+    });
+
   // Theme colors
   const themeColors = isDark ? darkTheme : lightTheme;
   const colors = useMemo<ThemeColors>(
@@ -328,25 +402,42 @@ export const MatchDetailSheet: React.FC = () => {
 
   // Handle join match
   const handleJoinMatch = useCallback(() => {
-    if (!selectedMatch) return;
+    if (!selectedMatch || !playerId) return;
     mediumHaptic();
-    // TODO: Implement join match flow
-    console.log('Join match:', selectedMatch.id);
-  }, [selectedMatch]);
+    joinMatch(playerId);
+  }, [selectedMatch, playerId, joinMatch]);
 
-  // Handle leave match
+  // Handle leave match - opens confirmation modal
   const handleLeaveMatch = useCallback(() => {
     if (!selectedMatch) return;
     mediumHaptic();
-    // TODO: Implement leave match flow
-    console.log('Leave match:', selectedMatch.id);
+    setShowLeaveModal(true);
   }, [selectedMatch]);
+
+  // Confirm leave match
+  const handleConfirmLeave = useCallback(() => {
+    if (!playerId) return;
+    leaveMatch(playerId);
+  }, [playerId, leaveMatch]);
+
+  // Handle cancel match - opens confirmation modal (host only)
+  const handleCancelMatch = useCallback(() => {
+    if (!selectedMatch) return;
+    mediumHaptic();
+    setShowCancelModal(true);
+  }, [selectedMatch]);
+
+  // Confirm cancel match
+  const handleConfirmCancel = useCallback(() => {
+    if (!playerId) return;
+    cancelMatch(playerId);
+  }, [playerId, cancelMatch]);
 
   // Handle edit match
   const handleEditMatch = useCallback(() => {
     if (!selectedMatch) return;
     mediumHaptic();
-    // TODO: Implement edit match flow
+    // TODO: Implement edit match flow - navigate to edit screen
     console.log('Edit match:', selectedMatch.id);
   }, [selectedMatch]);
 
@@ -416,7 +507,12 @@ export const MatchDetailSheet: React.FC = () => {
     t('matchDetail.host' as TranslationKey);
   const isFull = participantInfo.spotsLeft === 0;
   const isCreator = playerId === match.created_by;
-  const isParticipant = match.participants?.some(p => p.player_id === playerId) || isCreator;
+  // Check if user is an active participant (not left, declined, or kicked)
+  const activeStatuses = ['joined', 'requested', 'pending', 'waitlisted'];
+  const isParticipant =
+    match.participants?.some(
+      p => p.player_id === playerId && activeStatuses.includes(p.status ?? '')
+    ) || isCreator;
 
   // Build participant avatars list
   const participantAvatars: Array<{
@@ -434,15 +530,17 @@ export const MatchDetailSheet: React.FC = () => {
     isEmpty: false,
   });
 
-  // Other participants
-  match.participants?.forEach((p, i) => {
-    participantAvatars.push({
-      key: p.id || `participant-${i}`,
-      avatarUrl: p.player?.profile?.profile_picture_url,
-      isHost: false,
-      isEmpty: false,
+  // Other participants (only joined ones - not requested, pending, etc.)
+  match.participants
+    ?.filter(p => p.status === 'joined')
+    .forEach((p, i) => {
+      participantAvatars.push({
+        key: p.id || `participant-${i}`,
+        avatarUrl: p.player?.profile?.profile_picture_url,
+        isHost: false,
+        isEmpty: false,
+      });
     });
-  });
 
   // Empty slots
   for (let i = 0; i < participantInfo.spotsLeft; i++) {
@@ -481,8 +579,8 @@ export const MatchDetailSheet: React.FC = () => {
   };
   const statusBadge = getStatusBadge();
 
-  // Determine action button
-  const renderActionButton = () => {
+  // Determine action button(s)
+  const renderActionButtons = () => {
     // Prepare theme colors for Button component
     const buttonThemeColors = {
       primary: colors.primary,
@@ -497,20 +595,41 @@ export const MatchDetailSheet: React.FC = () => {
       background: colors.cardBackground,
     };
 
+    // Destructive button theme colors
+    const destructiveThemeColors = {
+      ...buttonThemeColors,
+      primary: status.error.DEFAULT,
+      buttonActive: status.error.DEFAULT,
+    };
+
+    // Host: Edit + Cancel buttons
     if (isCreator) {
       return (
-        <Button
-          variant="outline"
-          onPress={handleEditMatch}
-          style={styles.actionButton}
-          themeColors={buttonThemeColors}
-          isDark={isDark}
-        >
-          {t('common.edit' as TranslationKey)}
-        </Button>
+        <>
+          <Button
+            variant="outline"
+            onPress={handleEditMatch}
+            style={styles.actionButton}
+            themeColors={buttonThemeColors}
+            isDark={isDark}
+          >
+            {t('common.edit' as TranslationKey)}
+          </Button>
+          <Button
+            variant="outline"
+            onPress={handleCancelMatch}
+            style={styles.cancelButton}
+            themeColors={destructiveThemeColors}
+            isDark={isDark}
+            loading={isCancelling}
+          >
+            {t('matches.cancelMatch' as TranslationKey)}
+          </Button>
+        </>
       );
     }
 
+    // Participant (not host): Leave button
     if (isParticipant) {
       return (
         <Button
@@ -519,12 +638,14 @@ export const MatchDetailSheet: React.FC = () => {
           style={styles.actionButton}
           themeColors={buttonThemeColors}
           isDark={isDark}
+          loading={isLeaving}
         >
           {t('matches.leaveMatch' as TranslationKey)}
         </Button>
       );
     }
 
+    // Match is full
     if (isFull) {
       return (
         <Button variant="primary" disabled style={styles.actionButton}>
@@ -533,16 +654,30 @@ export const MatchDetailSheet: React.FC = () => {
       );
     }
 
+    // Request to join mode
     if (match.join_mode === 'request') {
       return (
-        <Button variant="primary" onPress={handleJoinMatch} style={styles.actionButton}>
+        <Button
+          variant="primary"
+          onPress={handleJoinMatch}
+          style={styles.actionButton}
+          loading={isJoining}
+          disabled={isJoining || !playerId}
+        >
           {t('matchDetail.requestToJoin' as TranslationKey)}
         </Button>
       );
     }
 
+    // Direct join
     return (
-      <Button variant="primary" onPress={handleJoinMatch} style={styles.actionButton}>
+      <Button
+        variant="primary"
+        onPress={handleJoinMatch}
+        style={styles.actionButton}
+        loading={isJoining}
+        disabled={isJoining || !playerId}
+      >
         {t('matchDetail.joinNow' as TranslationKey)}
       </Button>
     );
@@ -826,7 +961,7 @@ export const MatchDetailSheet: React.FC = () => {
           },
         ]}
       >
-        {renderActionButton()}
+        {renderActionButtons()}
         <TouchableOpacity
           style={[styles.shareButton, { backgroundColor: isDark ? neutral[800] : neutral[100] }]}
           onPress={handleShare}
@@ -835,6 +970,41 @@ export const MatchDetailSheet: React.FC = () => {
           <Ionicons name="share-outline" size={22} color={colors.text} />
         </TouchableOpacity>
       </View>
+
+      {/* Leave Match Confirmation Modal */}
+      <ConfirmationModal
+        visible={showLeaveModal}
+        onClose={() => setShowLeaveModal(false)}
+        onConfirm={handleConfirmLeave}
+        title={t('matchActions.leaveConfirmTitle' as TranslationKey)}
+        message={t('matchActions.leaveConfirmMessage' as TranslationKey)}
+        confirmLabel={t('matches.leaveMatch' as TranslationKey)}
+        cancelLabel={t('common.cancel' as TranslationKey)}
+        destructive
+        isLoading={isLeaving}
+      />
+
+      {/* Cancel Match Confirmation Modal */}
+      <ConfirmationModal
+        visible={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        onConfirm={handleConfirmCancel}
+        title={t('matchActions.cancelConfirmTitle' as TranslationKey)}
+        message={t('matchActions.cancelConfirmMessage' as TranslationKey, {
+          count: participantInfo.current,
+        })}
+        additionalInfo={
+          participantInfo.current > 1
+            ? t('matchActions.cancelWarning' as TranslationKey, {
+                count: participantInfo.current - 1,
+              })
+            : undefined
+        }
+        confirmLabel={t('matches.cancelMatch' as TranslationKey)}
+        cancelLabel={t('common.goBack' as TranslationKey)}
+        destructive
+        isLoading={isCancelling}
+      />
     </BottomSheetModal>
   );
 };
@@ -1024,6 +1194,10 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
+  },
+  cancelButton: {
+    flex: 0,
+    paddingHorizontal: spacingPixels[4],
   },
   shareButton: {
     width: spacingPixels[12],

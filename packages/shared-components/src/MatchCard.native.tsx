@@ -208,7 +208,7 @@ function getCourtDisplay(match: MatchWithDetails): string | null {
 }
 
 /**
- * Calculate player slots info
+ * Calculate player slots info - only counts joined participants
  */
 function getParticipantInfo(match: MatchWithDetails): {
   current: number;
@@ -216,7 +216,9 @@ function getParticipantInfo(match: MatchWithDetails): {
   spotsLeft: number;
 } {
   const total = match.format === 'doubles' ? 4 : 2;
-  const current = (match.participants?.length ?? 0) + 1; // +1 for creator
+  // Only count joined participants (not requested, pending, waitlisted, left, etc.)
+  const joinedParticipants = match.participants?.filter(p => p.status === 'joined') ?? [];
+  const current = joinedParticipants.length + 1; // +1 for creator
   const spotsLeft = Math.max(0, total - current);
   return { current, total, spotsLeft };
 }
@@ -335,7 +337,8 @@ interface PlayerSlotsProps {
  */
 const PlayerSlots: React.FC<PlayerSlotsProps> = ({ match, participantInfo, colors, isDark, t }) => {
   const creatorProfile = match.created_by_player?.profile;
-  const participants = match.participants ?? [];
+  // Only include joined participants
+  const joinedParticipants = match.participants?.filter(p => p.status === 'joined') ?? [];
 
   // Build slots array
   const slots: Array<{
@@ -351,9 +354,9 @@ const PlayerSlots: React.FC<PlayerSlotsProps> = ({ match, participantInfo, color
     isHost: true,
   });
 
-  // Add participant slots
+  // Add participant slots (only joined participants)
   for (let i = 0; i < participantInfo.total - 1; i++) {
-    const participant = participants[i];
+    const participant = joinedParticipants[i];
     slots.push({
       filled: !!participant,
       avatarUrl: participant?.player?.profile?.profile_picture_url,

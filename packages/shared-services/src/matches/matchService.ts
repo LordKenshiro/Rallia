@@ -9,6 +9,7 @@ import type {
   TablesInsert,
   MatchWithDetails,
   MatchParticipantWithPlayer,
+  MatchParticipant,
   Profile,
 } from '@rallia/shared-types';
 
@@ -487,9 +488,39 @@ export async function updateMatch(
 }
 
 /**
- * Cancel a match
+ * Cancel a match (host only)
+ *
+ * @param matchId - The ID of the match to cancel
+ * @param userId - The ID of the user attempting to cancel (must be the creator)
+ * @throws Error if user is not the creator or match is already cancelled/completed
  */
-export async function cancelMatch(matchId: string): Promise<Match> {
+export async function cancelMatch(matchId: string, userId?: string): Promise<Match> {
+  // First, verify the user is authorized to cancel (must be the creator)
+  const { data: match, error: fetchError } = await supabase
+    .from('match')
+    .select('created_by, status')
+    .eq('id', matchId)
+    .single();
+
+  if (fetchError || !match) {
+    throw new Error('Match not found');
+  }
+
+  // Check authorization if userId is provided
+  if (userId && match.created_by !== userId) {
+    throw new Error('Only the host can cancel this match');
+  }
+
+  // Check if match is already cancelled or completed
+  if (match.status === 'cancelled') {
+    throw new Error('Match is already cancelled');
+  }
+
+  if (match.status === 'completed') {
+    throw new Error('Cannot cancel a completed match');
+  }
+
+  // Perform the cancellation
   const { data, error } = await supabase
     .from('match')
     .update({ status: 'cancelled' })
@@ -513,6 +544,204 @@ export async function deleteMatch(matchId: string): Promise<void> {
   if (error) {
     throw new Error(`Failed to delete match: ${error.message}`);
   }
+}
+
+// =============================================================================
+// MATCH PARTICIPANT ACTIONS
+// =============================================================================
+
+/**
+ * Join match result with status info
+ */
+export interface JoinMatchResult {
+  participant: MatchParticipant;
+  status: 'joined' | 'requested';
+}
+
+/**
+ * Join a match as a participant.
+ * - For direct join mode: Creates participant with 'joined' status
+ * - For request join mode: Creates participant with 'requested' status (pending host approval)
+ *
+ * @throws Error if match is full, already joined, or match not found
+ */
+export async function joinMatch(matchId: string, playerId: string): Promise<JoinMatchResult> {
+  // First, get match details to check join_mode and capacity
+  const { data: match, error: matchError } = await supabase
+    .from('match')
+    .select(
+      `
+      id,
+      format,
+      join_mode,
+      status,
+      created_by,
+      participants:match_participant (
+        id,
+        player_id,
+        status
+      )
+    `
+    )
+    .eq('id', matchId)
+    .single();
+
+  if (matchError || !match) {
+    throw new Error('Match not found');
+  }
+
+  // Check match is still open
+  if (match.status === 'cancelled' || match.status === 'completed') {
+    throw new Error('Match is no longer available');
+  }
+
+  // Check if player is the creator (creators can't join their own match as participant)
+  if (match.created_by === playerId) {
+    throw new Error('You are the host of this match');
+  }
+
+  // Check if player already has a participant record
+  const existingParticipant = match.participants?.find(
+    (p: { player_id: string; status: string }) => p.player_id === playerId
+  );
+
+  // If they have an active participation, they can't join again
+  if (
+    existingParticipant &&
+    existingParticipant.status !== 'left' &&
+    existingParticipant.status !== 'declined'
+  ) {
+    throw new Error('You are already in this match');
+  }
+
+  // Calculate spots: format determines total capacity (singles=2, doubles=4)
+  // Creator counts as 1, participants with 'joined' status fill remaining spots
+  const totalSpots = match.format === 'doubles' ? 4 : 2;
+  const joinedParticipants =
+    match.participants?.filter((p: { status: string }) => p.status === 'joined').length ?? 0;
+  // Creator takes 1 spot, so available = total - 1 (creator) - joined participants
+  const availableSpots = totalSpots - 1 - joinedParticipants;
+
+  if (availableSpots <= 0 && match.join_mode === 'direct') {
+    throw new Error('Match is full');
+  }
+
+  // Determine status based on join mode
+  const participantStatus = match.join_mode === 'request' ? 'requested' : 'joined';
+
+  let participant: MatchParticipant;
+
+  // If user previously left/declined, update the existing record instead of inserting
+  if (existingParticipant) {
+    const { data: updatedParticipant, error: updateError } = await supabase
+      .from('match_participant')
+      .update({
+        status: participantStatus,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('match_id', matchId)
+      .eq('player_id', playerId)
+      .select()
+      .single();
+
+    if (updateError) {
+      throw new Error(`Failed to rejoin match: ${updateError.message}`);
+    }
+    participant = updatedParticipant as MatchParticipant;
+  } else {
+    // Insert new participant record
+    const { data: newParticipant, error: insertError } = await supabase
+      .from('match_participant')
+      .insert({
+        match_id: matchId,
+        player_id: playerId,
+        status: participantStatus,
+        is_host: false,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      // Handle unique constraint violation (shouldn't happen but just in case)
+      if (insertError.code === '23505') {
+        throw new Error('You are already in this match');
+      }
+      throw new Error(`Failed to join match: ${insertError.message}`);
+    }
+    participant = newParticipant as MatchParticipant;
+  }
+
+  return {
+    participant: participant as MatchParticipant,
+    status: participantStatus,
+  };
+}
+
+/**
+ * Leave a match as a participant.
+ * Updates the participant status to 'left' (soft delete to preserve history).
+ *
+ * @throws Error if user is the host, not a participant, or match not found
+ */
+export async function leaveMatch(matchId: string, playerId: string): Promise<void> {
+  // First check if user is the match creator (hosts cannot leave, they must cancel)
+  const { data: match, error: matchError } = await supabase
+    .from('match')
+    .select('created_by')
+    .eq('id', matchId)
+    .single();
+
+  if (matchError || !match) {
+    throw new Error('Match not found');
+  }
+
+  if (match.created_by === playerId) {
+    throw new Error('Hosts cannot leave their own match. Cancel it instead.');
+  }
+
+  // Update status to 'left'
+  const { data, error } = await supabase
+    .from('match_participant')
+    .update({ status: 'left' })
+    .eq('match_id', matchId)
+    .eq('player_id', playerId)
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      throw new Error('You are not a participant in this match');
+    }
+    throw new Error(`Failed to leave match: ${error.message}`);
+  }
+
+  if (!data) {
+    throw new Error('You are not a participant in this match');
+  }
+}
+
+/**
+ * Get a player's participation status in a match
+ */
+export async function getParticipantStatus(
+  matchId: string,
+  playerId: string
+): Promise<MatchParticipant | null> {
+  const { data, error } = await supabase
+    .from('match_participant')
+    .select('*')
+    .eq('match_id', matchId)
+    .eq('player_id', playerId)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      return null;
+    }
+    throw new Error(`Failed to get participant status: ${error.message}`);
+  }
+
+  return data as MatchParticipant;
 }
 
 /**
@@ -749,6 +978,8 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
 export interface GetPlayerMatchesParams {
   userId: string;
   timeFilter: 'upcoming' | 'past';
+  /** Optional sport ID to filter matches by */
+  sportId?: string;
   limit?: number;
   offset?: number;
 }
@@ -759,16 +990,18 @@ export interface GetPlayerMatchesParams {
  * Returns full match details with profiles.
  */
 export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams) {
-  const { userId, timeFilter, limit = 20, offset = 0 } = params;
+  const { userId, timeFilter, sportId, limit = 20, offset = 0 } = params;
 
   // Get today's date in YYYY-MM-DD format for comparison
   const today = new Date().toISOString().split('T')[0];
 
-  // First, get match IDs where user is a participant (any status - confirmed, pending, etc.)
+  // First, get match IDs where user is an ACTIVE participant
+  // Exclude left, declined, kicked statuses
   const { data: participantMatches, error: participantError } = await supabase
     .from('match_participant')
     .select('match_id')
-    .eq('player_id', userId);
+    .eq('player_id', userId)
+    .in('status', ['joined', 'requested', 'pending', 'waitlisted']);
 
   if (participantError) {
     throw new Error(`Failed to get participant matches: ${participantError.message}`);
@@ -831,6 +1064,19 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
     query = query.gte('match_date', today);
   } else {
     query = query.lt('match_date', today);
+  }
+
+  // Apply sport filter if provided
+  if (sportId) {
+    query = query.eq('sport_id', sportId);
+  }
+
+  // Exclude cancelled matches - only show matches that are happening
+  query = query.neq('status', 'cancelled');
+
+  // For upcoming matches, also exclude completed matches
+  if (isUpcoming) {
+    query = query.neq('status', 'completed');
   }
 
   // Filter by user being creator OR participant
@@ -1162,6 +1408,10 @@ export const matchService = {
   updateMatch,
   cancelMatch,
   deleteMatch,
+  // Participant actions
+  joinMatch,
+  leaveMatch,
+  getParticipantStatus,
 };
 
 export default matchService;

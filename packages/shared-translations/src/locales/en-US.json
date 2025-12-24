@@ -9,6 +9,7 @@
     "delete": "Delete",
     "edit": "Edit",
     "back": "Back",
+    "goBack": "Go Back",
     "next": "Next",
     "done": "Done",
     "continue": "Continue",
@@ -306,6 +307,17 @@
     "leaveMatch": "Leave Match",
     "cancelMatch": "Cancel Match",
     "matchDetails": "Match Details"
+  },
+  "matchActions": {
+    "joinSuccess": "You've joined the match!",
+    "requestSent": "Request sent to host",
+    "leaveSuccess": "You've left the match",
+    "cancelSuccess": "Match cancelled",
+    "leaveConfirmTitle": "Leave Match?",
+    "leaveConfirmMessage": "You will be removed from this match.",
+    "cancelConfirmTitle": "Cancel Match?",
+    "cancelConfirmMessage": "This will cancel the match for all participants.",
+    "cancelWarning": "{count} other player(s) will be notified"
   },
   "ratings": {
     "title": "Ratings",

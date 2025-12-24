@@ -16,6 +16,7 @@ export * from './usePlayer';
 export * from './useNotifications';
 export * from './useCreateMatch';
 export * from './useMatches';
+export * from './useMatchActions';
 export * from './useNearbyMatches';
 export * from './usePlayerMatches';
 export * from './usePublicMatches';
