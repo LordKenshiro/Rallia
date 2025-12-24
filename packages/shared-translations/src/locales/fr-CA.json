@@ -808,6 +808,79 @@
       "description": "Vos matchs terminés apparaîtront ici"
     }
   },
+  "publicMatches": {
+    "title": "Matchs publics",
+    "searchPlaceholder": "Rechercher matchs, lieux, joueurs...",
+    "filters": {
+      "format": {
+        "label": "Format",
+        "all": "Tous",
+        "singles": "Simple",
+        "doubles": "Double"
+      },
+      "matchType": {
+        "label": "Type",
+        "all": "Tous",
+        "practice": "Pratique",
+        "competitive": "Compétitif"
+      },
+      "dateRange": {
+        "label": "Quand",
+        "all": "Tout moment",
+        "today": "Aujourd'hui",
+        "week": "Cette semaine",
+        "weekend": "Fin de semaine"
+      },
+      "timeOfDay": {
+        "label": "Heure",
+        "all": "Toutes",
+        "morning": "Matin",
+        "afternoon": "Après-midi",
+        "evening": "Soir"
+      },
+      "skillLevel": {
+        "label": "Niveau",
+        "all": "Tous",
+        "beginner": "Débutant",
+        "intermediate": "Intermédiaire",
+        "advanced": "Avancé"
+      },
+      "gender": {
+        "label": "Genre",
+        "all": "Tous",
+        "male": "Homme",
+        "female": "Femme"
+      },
+      "cost": {
+        "label": "Coût",
+        "all": "Tous",
+        "free": "Gratuit",
+        "paid": "Payant"
+      },
+      "joinMode": {
+        "label": "Inscription",
+        "all": "Toutes",
+        "direct": "Directe",
+        "request": "Sur demande"
+      },
+      "distance": {
+        "label": "Distance"
+      },
+      "reset": "Réinitialiser"
+    },
+    "empty": {
+      "title": "Aucun match trouvé",
+      "description": "Essayez d'ajuster vos filtres ou revenez plus tard",
+      "noFilters": {
+        "title": "Aucun match public à proximité",
+        "description": "Soyez le premier à créer un match dans votre région!"
+      }
+    },
+    "results": {
+      "count": "{count} matchs",
+      "countSingular": "1 match"
+    }
+  },
   "winter": {
     "title": "Crise des terrains intérieurs en hiver - Rallia",
     "subtitle": "Résoudre la pénurie de terrains intérieurs pour les joueurs canadiens de tennis et pickleball",

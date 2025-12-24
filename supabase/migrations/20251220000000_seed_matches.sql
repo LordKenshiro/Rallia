@@ -5,6 +5,9 @@
 -- NOTE: This migration runs AFTER match creation fields are added (20251213)
 -- ============================================================================
 
+-- Enable pgcrypto extension for password hashing (crypt and gen_salt functions)
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
+
 -- ============================================================================
 -- 1. CREATE SEED USERS (auth.users, profile, player)
 -- ============================================================================
@@ -52,7 +55,7 @@ BEGIN
       new_user_id,
       '00000000-0000-0000-0000-000000000000',
       profile_emails[i],
-      crypt('password123', gen_salt('bf')),
+      extensions.crypt('password123', extensions.gen_salt('bf')),
       NOW(),
       '{"provider": "email", "providers": ["email"]}'::jsonb,
       jsonb_build_object('email', profile_emails[i], 'email_verified', true),

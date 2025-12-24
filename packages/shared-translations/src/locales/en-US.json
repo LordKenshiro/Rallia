@@ -808,6 +808,79 @@
       "description": "Your completed matches will appear here"
     }
   },
+  "publicMatches": {
+    "title": "Public Matches",
+    "searchPlaceholder": "Search matches, locations, players...",
+    "filters": {
+      "format": {
+        "label": "Format",
+        "all": "All",
+        "singles": "Singles",
+        "doubles": "Doubles"
+      },
+      "matchType": {
+        "label": "Type",
+        "all": "All",
+        "practice": "Practice",
+        "competitive": "Competitive"
+      },
+      "dateRange": {
+        "label": "When",
+        "all": "Any time",
+        "today": "Today",
+        "week": "This week",
+        "weekend": "Weekend"
+      },
+      "timeOfDay": {
+        "label": "Time",
+        "all": "Any",
+        "morning": "Morning",
+        "afternoon": "Afternoon",
+        "evening": "Evening"
+      },
+      "skillLevel": {
+        "label": "Level",
+        "all": "Any",
+        "beginner": "Beginner",
+        "intermediate": "Intermediate",
+        "advanced": "Advanced"
+      },
+      "gender": {
+        "label": "Gender",
+        "all": "Any",
+        "male": "Male",
+        "female": "Female"
+      },
+      "cost": {
+        "label": "Cost",
+        "all": "Any",
+        "free": "Free",
+        "paid": "Paid"
+      },
+      "joinMode": {
+        "label": "Join",
+        "all": "Any",
+        "direct": "Direct",
+        "request": "Request"
+      },
+      "distance": {
+        "label": "Distance"
+      },
+      "reset": "Reset"
+    },
+    "empty": {
+      "title": "No matches found",
+      "description": "Try adjusting your filters or check back later",
+      "noFilters": {
+        "title": "No public matches nearby",
+        "description": "Be the first to create a match in your area!"
+      }
+    },
+    "results": {
+      "count": "{count} matches",
+      "countSingular": "1 match"
+    }
+  },
   "winter": {
     "title": "Winter Indoor Court Crisis - Rallia",
     "subtitle": "Solving the indoor court shortage for Canadian tennis and pickleball players",

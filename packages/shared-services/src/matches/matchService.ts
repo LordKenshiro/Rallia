@@ -923,6 +923,232 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
 }
 
 /**
+ * Parameters for searching public matches with filters
+ */
+export interface SearchPublicMatchesParams {
+  latitude: number;
+  longitude: number;
+  maxDistanceKm: number;
+  sportId: string;
+  searchQuery?: string;
+  format?: 'all' | 'singles' | 'doubles';
+  matchType?: 'all' | 'practice' | 'competitive';
+  dateRange?: 'all' | 'today' | 'week' | 'weekend';
+  timeOfDay?: 'all' | 'morning' | 'afternoon' | 'evening';
+  skillLevel?: 'all' | 'beginner' | 'intermediate' | 'advanced';
+  gender?: 'all' | 'male' | 'female';
+  cost?: 'all' | 'free' | 'paid';
+  joinMode?: 'all' | 'direct' | 'request';
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * Result from public matches RPC
+ */
+interface PublicMatchResult {
+  match_id: string;
+  distance_meters: number;
+}
+
+/**
+ * Get public matches with search and filters.
+ * Uses PostGIS RPC function for efficient distance filtering and text search.
+ * Returns full match details with distance_meters attached.
+ */
+export async function getPublicMatches(params: SearchPublicMatchesParams) {
+  const {
+    latitude,
+    longitude,
+    maxDistanceKm,
+    sportId,
+    searchQuery,
+    format = 'all',
+    matchType = 'all',
+    dateRange = 'all',
+    timeOfDay = 'all',
+    skillLevel = 'all',
+    gender = 'all',
+    cost = 'all',
+    joinMode = 'all',
+    limit = 20,
+    offset = 0,
+  } = params;
+
+  // Step 1: Get match IDs using RPC with filters
+  const { data: matchResults, error: rpcError } = await supabase.rpc('search_public_matches', {
+    p_latitude: latitude,
+    p_longitude: longitude,
+    p_max_distance_km: maxDistanceKm,
+    p_sport_id: sportId,
+    p_search_query: searchQuery || null,
+    p_format: format === 'all' ? null : format,
+    p_match_type: matchType === 'all' ? null : matchType,
+    p_date_range: dateRange === 'all' ? null : dateRange,
+    p_time_of_day: timeOfDay === 'all' ? null : timeOfDay,
+    p_skill_level: skillLevel === 'all' ? null : skillLevel,
+    p_gender: gender === 'all' ? null : gender,
+    p_cost: cost === 'all' ? null : cost,
+    p_join_mode: joinMode === 'all' ? null : joinMode,
+    p_limit: limit + 1, // Fetch one extra to check if more exist
+    p_offset: offset,
+  });
+
+  if (rpcError) {
+    throw new Error(`Failed to search public matches: ${rpcError.message}`);
+  }
+
+  const results = (matchResults ?? []) as PublicMatchResult[];
+  const hasMore = results.length > limit;
+
+  // Remove the extra item used for pagination check
+  if (hasMore) {
+    results.pop();
+  }
+
+  if (results.length === 0) {
+    return {
+      matches: [],
+      hasMore: false,
+      nextOffset: null,
+    };
+  }
+
+  // Step 2: Fetch full match details for the found IDs
+  const matchIds = results.map(r => r.match_id);
+  const distanceMap = new Map(results.map(r => [r.match_id, r.distance_meters]));
+
+  const { data: matchesData, error: matchError } = await supabase
+    .from('match')
+    .select(
+      `
+      *,
+      sport:sport_id (*),
+      facility:facility_id (*),
+      court:court_id (*),
+      min_rating_score:min_rating_score_id (*),
+      created_by_player:created_by (
+        id,
+        gender,
+        playing_hand,
+        max_travel_distance,
+        notification_match_requests,
+        notification_messages,
+        notification_reminders,
+        privacy_show_age,
+        privacy_show_location,
+        privacy_show_stats
+      ),
+      participants:match_participant (
+        id,
+        match_id,
+        player_id,
+        status,
+        is_host,
+        score,
+        team_number,
+        created_at,
+        updated_at,
+        player:player_id (
+          id,
+          gender,
+          playing_hand,
+          max_travel_distance,
+          notification_match_requests,
+          notification_messages,
+          notification_reminders,
+          privacy_show_age,
+          privacy_show_location,
+          privacy_show_stats
+        )
+      )
+    `
+    )
+    .in('id', matchIds);
+
+  if (matchError) {
+    throw new Error(`Failed to get match details: ${matchError.message}`);
+  }
+
+  if (!matchesData || matchesData.length === 0) {
+    return {
+      matches: [],
+      hasMore: false,
+      nextOffset: null,
+    };
+  }
+
+  // Step 3: Fetch profiles for all players
+  const playerIds = new Set<string>();
+  matchesData.forEach((match: MatchWithDetails) => {
+    if (match.created_by_player?.id) {
+      playerIds.add(match.created_by_player.id);
+    }
+    if (match.participants) {
+      match.participants.forEach((p: MatchParticipantWithPlayer) => {
+        if (p.player?.id) {
+          playerIds.add(p.player.id);
+        }
+      });
+    }
+  });
+
+  const profileIds = Array.from(playerIds);
+  const profilesMap: Record<string, Profile> = {};
+
+  if (profileIds.length > 0) {
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profile')
+      .select('*')
+      .in('id', profileIds);
+
+    if (!profilesError && profiles) {
+      profiles.forEach(profile => {
+        profilesMap[profile.id] = profile;
+      });
+    }
+  }
+
+  // Step 4: Attach profiles and distance to matches, maintain order from RPC
+  const matchMap = new Map<string, MatchWithDetailsAndDistance>();
+  matchesData.forEach((match: MatchWithDetails) => {
+    // Attach profile to creator
+    if (match.created_by_player?.id && profilesMap[match.created_by_player.id]) {
+      match.created_by_player.profile = profilesMap[match.created_by_player.id];
+    }
+
+    // Attach profiles to participants
+    if (match.participants) {
+      match.participants = match.participants.map((p: MatchParticipantWithPlayer) => {
+        if (p.player?.id && profilesMap[p.player.id]) {
+          p.player.profile = profilesMap[p.player.id];
+        }
+        return p;
+      });
+    }
+
+    // Attach distance
+    const matchWithDistance: MatchWithDetailsAndDistance = {
+      ...match,
+      distance_meters: distanceMap.get(match.id) ?? null,
+    };
+
+    matchMap.set(match.id, matchWithDistance);
+  });
+
+  // Maintain order from RPC results (sorted by date/time)
+  const orderedMatches = matchIds
+    .map(id => matchMap.get(id))
+    .filter(Boolean) as MatchWithDetailsAndDistance[];
+
+  return {
+    matches: orderedMatches,
+    hasMore,
+    nextOffset: hasMore ? offset + limit : null,
+  };
+}
+
+/**
  * Match service object for grouped exports
  */
 export const matchService = {
@@ -932,6 +1158,7 @@ export const matchService = {
   getMatchesByCreator,
   getPlayerMatchesWithDetails,
   getNearbyMatches,
+  getPublicMatches,
   updateMatch,
   cancelMatch,
   deleteMatch,

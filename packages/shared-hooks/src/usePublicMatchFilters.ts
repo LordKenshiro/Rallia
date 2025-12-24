@@ -1,0 +1,300 @@
+/**
+ * usePublicMatchFilters Hook
+ * Manages filter state for the public matches screen.
+ * Provides debounced search and filter setters.
+ */
+
+import { useState, useCallback, useMemo } from 'react';
+import { useDebounce } from './useDebounce';
+
+/**
+ * Available format filter values
+ */
+export type FormatFilter = 'all' | 'singles' | 'doubles';
+
+/**
+ * Available match type filter values
+ */
+export type MatchTypeFilter = 'all' | 'practice' | 'competitive';
+
+/**
+ * Available date range filter values
+ */
+export type DateRangeFilter = 'all' | 'today' | 'week' | 'weekend';
+
+/**
+ * Available time of day filter values
+ */
+export type TimeOfDayFilter = 'all' | 'morning' | 'afternoon' | 'evening';
+
+/**
+ * Available skill level filter values
+ */
+export type SkillLevelFilter = 'all' | 'beginner' | 'intermediate' | 'advanced';
+
+/**
+ * Available gender preference filter values
+ */
+export type GenderFilter = 'all' | 'male' | 'female';
+
+/**
+ * Available cost filter values
+ */
+export type CostFilter = 'all' | 'free' | 'paid';
+
+/**
+ * Available join mode filter values
+ */
+export type JoinModeFilter = 'all' | 'direct' | 'request';
+
+/**
+ * Available distance filter values (in km)
+ */
+export type DistanceFilter = 5 | 10 | 25 | 50 | 100;
+
+/**
+ * All available distance options
+ */
+export const DISTANCE_OPTIONS: DistanceFilter[] = [5, 10, 25, 50, 100];
+
+/**
+ * Default distance filter value
+ */
+export const DEFAULT_DISTANCE: DistanceFilter = 25;
+
+/**
+ * Find the closest distance option to a given value
+ */
+export function findClosestDistanceOption(value: number): DistanceFilter {
+  let closest = DISTANCE_OPTIONS[0];
+  let minDiff = Math.abs(value - closest);
+
+  for (const option of DISTANCE_OPTIONS) {
+    const diff = Math.abs(value - option);
+    if (diff < minDiff) {
+      minDiff = diff;
+      closest = option;
+    }
+  }
+
+  return closest;
+}
+
+/**
+ * Public match filter state
+ */
+export interface PublicMatchFilters {
+  searchQuery: string;
+  format: FormatFilter;
+  matchType: MatchTypeFilter;
+  dateRange: DateRangeFilter;
+  timeOfDay: TimeOfDayFilter;
+  skillLevel: SkillLevelFilter;
+  gender: GenderFilter;
+  cost: CostFilter;
+  joinMode: JoinModeFilter;
+  distance: DistanceFilter;
+}
+
+/**
+ * Options for the usePublicMatchFilters hook
+ */
+export interface UsePublicMatchFiltersOptions {
+  /** Debounce delay for search in milliseconds (default: 300) */
+  debounceMs?: number;
+  /** Initial filter values */
+  initialFilters?: Partial<PublicMatchFilters>;
+  /** Initial distance from player preference (will be rounded to nearest option) */
+  initialDistanceKm?: number;
+}
+
+/**
+ * Return type for usePublicMatchFilters hook
+ */
+export interface UsePublicMatchFiltersReturn {
+  /** Current filter state */
+  filters: PublicMatchFilters;
+  /** Debounced search query for API calls */
+  debouncedSearchQuery: string;
+  /** Whether any filter is active (not default) */
+  hasActiveFilters: boolean;
+  /** Number of active filters (excluding search and distance) */
+  activeFilterCount: number;
+  /** Set the search query */
+  setSearchQuery: (query: string) => void;
+  /** Set the format filter */
+  setFormat: (format: FormatFilter) => void;
+  /** Set the match type filter */
+  setMatchType: (matchType: MatchTypeFilter) => void;
+  /** Set the date range filter */
+  setDateRange: (dateRange: DateRangeFilter) => void;
+  /** Set the time of day filter */
+  setTimeOfDay: (timeOfDay: TimeOfDayFilter) => void;
+  /** Set the skill level filter */
+  setSkillLevel: (skillLevel: SkillLevelFilter) => void;
+  /** Set the gender filter */
+  setGender: (gender: GenderFilter) => void;
+  /** Set the cost filter */
+  setCost: (cost: CostFilter) => void;
+  /** Set the join mode filter */
+  setJoinMode: (joinMode: JoinModeFilter) => void;
+  /** Set the distance filter */
+  setDistance: (distance: DistanceFilter) => void;
+  /** Reset all filters to defaults */
+  resetFilters: () => void;
+  /** Clear just the search query */
+  clearSearch: () => void;
+}
+
+/**
+ * Hook for managing public match filter state.
+ * Provides debounced search and convenient setters for each filter.
+ */
+export function usePublicMatchFilters(
+  options: UsePublicMatchFiltersOptions = {}
+): UsePublicMatchFiltersReturn {
+  const { debounceMs = 300, initialFilters, initialDistanceKm } = options;
+
+  // Calculate initial distance from player preference or use default
+  const initialDistance = initialDistanceKm
+    ? findClosestDistanceOption(initialDistanceKm)
+    : DEFAULT_DISTANCE;
+
+  // Default filter values
+  const defaultFilters: PublicMatchFilters = {
+    searchQuery: '',
+    format: 'all',
+    matchType: 'all',
+    dateRange: 'all',
+    timeOfDay: 'all',
+    skillLevel: 'all',
+    gender: 'all',
+    cost: 'all',
+    joinMode: 'all',
+    distance: initialDistance,
+  };
+
+  // Initialize filters with defaults merged with any initial values
+  const [filters, setFilters] = useState<PublicMatchFilters>({
+    ...defaultFilters,
+    ...initialFilters,
+  });
+
+  // Store default distance for reset
+  const [defaultDistance] = useState(initialDistance);
+
+  // Debounce the search query
+  const debouncedSearchQuery = useDebounce(filters.searchQuery, debounceMs);
+
+  // Calculate if any filter is active (not default) - distance is not considered "active" for UI purposes
+  const hasActiveFilters = useMemo(() => {
+    return (
+      filters.searchQuery !== '' ||
+      filters.format !== 'all' ||
+      filters.matchType !== 'all' ||
+      filters.dateRange !== 'all' ||
+      filters.timeOfDay !== 'all' ||
+      filters.skillLevel !== 'all' ||
+      filters.gender !== 'all' ||
+      filters.cost !== 'all' ||
+      filters.joinMode !== 'all'
+    );
+  }, [filters]);
+
+  // Count active filters (excluding search and distance)
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.format !== 'all') count++;
+    if (filters.matchType !== 'all') count++;
+    if (filters.dateRange !== 'all') count++;
+    if (filters.timeOfDay !== 'all') count++;
+    if (filters.skillLevel !== 'all') count++;
+    if (filters.gender !== 'all') count++;
+    if (filters.cost !== 'all') count++;
+    if (filters.joinMode !== 'all') count++;
+    return count;
+  }, [filters]);
+
+  // Individual setters
+  const setSearchQuery = useCallback((searchQuery: string) => {
+    setFilters(prev => ({ ...prev, searchQuery }));
+  }, []);
+
+  const setFormat = useCallback((format: FormatFilter) => {
+    setFilters(prev => ({ ...prev, format }));
+  }, []);
+
+  const setMatchType = useCallback((matchType: MatchTypeFilter) => {
+    setFilters(prev => ({ ...prev, matchType }));
+  }, []);
+
+  const setDateRange = useCallback((dateRange: DateRangeFilter) => {
+    setFilters(prev => ({ ...prev, dateRange }));
+  }, []);
+
+  const setTimeOfDay = useCallback((timeOfDay: TimeOfDayFilter) => {
+    setFilters(prev => ({ ...prev, timeOfDay }));
+  }, []);
+
+  const setSkillLevel = useCallback((skillLevel: SkillLevelFilter) => {
+    setFilters(prev => ({ ...prev, skillLevel }));
+  }, []);
+
+  const setGender = useCallback((gender: GenderFilter) => {
+    setFilters(prev => ({ ...prev, gender }));
+  }, []);
+
+  const setCost = useCallback((cost: CostFilter) => {
+    setFilters(prev => ({ ...prev, cost }));
+  }, []);
+
+  const setJoinMode = useCallback((joinMode: JoinModeFilter) => {
+    setFilters(prev => ({ ...prev, joinMode }));
+  }, []);
+
+  const setDistance = useCallback((distance: DistanceFilter) => {
+    setFilters(prev => ({ ...prev, distance }));
+  }, []);
+
+  // Reset all filters to defaults (uses player's initial distance preference)
+  const resetFilters = useCallback(() => {
+    setFilters({
+      searchQuery: '',
+      format: 'all',
+      matchType: 'all',
+      dateRange: 'all',
+      timeOfDay: 'all',
+      skillLevel: 'all',
+      gender: 'all',
+      cost: 'all',
+      joinMode: 'all',
+      distance: defaultDistance,
+    });
+  }, [defaultDistance]);
+
+  // Clear just search
+  const clearSearch = useCallback(() => {
+    setFilters(prev => ({ ...prev, searchQuery: '' }));
+  }, []);
+
+  return {
+    filters,
+    debouncedSearchQuery,
+    hasActiveFilters,
+    activeFilterCount,
+    setSearchQuery,
+    setFormat,
+    setMatchType,
+    setDateRange,
+    setTimeOfDay,
+    setSkillLevel,
+    setGender,
+    setCost,
+    setJoinMode,
+    setDistance,
+    resetFilters,
+    clearSearch,
+  };
+}
+
+export default usePublicMatchFilters;
