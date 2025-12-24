@@ -24,6 +24,7 @@ import React, {
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useAuth } from '@rallia/shared-hooks';
 import { useProfile } from '@rallia/shared-hooks';
+import type { MatchDetailData } from './MatchDetailSheetContext';
 
 // =============================================================================
 // TYPES
@@ -34,6 +35,9 @@ export type ActionsSheetMode = 'auth' | 'onboarding' | 'actions';
 interface ActionsSheetContextType {
   /** Open the Actions bottom sheet, computing initial mode based on auth state */
   openSheet: () => void;
+
+  /** Open the Actions bottom sheet in edit mode with pre-filled match data */
+  openSheetForEdit: (match: MatchDetailData) => void;
 
   /** Close the Actions bottom sheet */
   closeSheet: () => void;
@@ -52,6 +56,12 @@ interface ActionsSheetContextType {
 
   /** Refresh the profile data (call after onboarding completes to update state) */
   refreshProfile: () => Promise<void>;
+
+  /** The match being edited (null if creating new match) */
+  editMatchData: MatchDetailData | null;
+
+  /** Clear the edit match data (call when closing sheet or completing edit) */
+  clearEditMatch: () => void;
 }
 
 // =============================================================================
@@ -75,6 +85,9 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
 
   // Content mode state - single source of truth
   const [contentMode, setContentMode] = useState<ActionsSheetMode>('auth');
+
+  // Edit match state - holds match data when editing
+  const [editMatchData, setEditMatchData] = useState<MatchDetailData | null>(null);
 
   // Refetch profile when auth state changes
   useEffect(() => {
@@ -111,16 +124,37 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
    * Open the sheet, computing the appropriate initial mode
    */
   const openSheet = useCallback(() => {
+    setEditMatchData(null); // Clear any previous edit data
     const mode = computeInitialMode();
     setContentMode(mode);
     sheetRef.current?.present();
   }, [computeInitialMode]);
 
   /**
+   * Open the sheet in edit mode with pre-filled match data
+   */
+  const openSheetForEdit = useCallback((match: MatchDetailData) => {
+    setEditMatchData(match);
+    setContentMode('actions'); // Always show actions mode when editing
+    sheetRef.current?.present();
+  }, []);
+
+  /**
+   * Clear the edit match data
+   */
+  const clearEditMatch = useCallback(() => {
+    setEditMatchData(null);
+  }, []);
+
+  /**
    * Close the sheet
    */
   const closeSheet = useCallback(() => {
     sheetRef.current?.dismiss();
+    // Clear edit data after a delay to allow dismiss animation
+    setTimeout(() => {
+      setEditMatchData(null);
+    }, 300);
   }, []);
 
   /**
@@ -139,12 +173,15 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
 
   const contextValue: ActionsSheetContextType = {
     openSheet,
+    openSheetForEdit,
     closeSheet,
     contentMode,
     setContentMode,
     snapToIndex,
     sheetRef,
     refreshProfile,
+    editMatchData,
+    clearEditMatch,
   };
 
   return (

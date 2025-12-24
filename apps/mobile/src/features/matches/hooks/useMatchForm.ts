@@ -16,6 +16,7 @@ import {
   type Step1FormData,
   type Step2FormData,
   type Step3FormData,
+  type MatchWithDetails,
 } from '@rallia/shared-types';
 
 /**
@@ -97,6 +98,98 @@ export function calculateEndTime(
   endDate.setMinutes(minutes + durationMinutes);
 
   return endDate.toTimeString().slice(0, 5);
+}
+
+/**
+ * Calculate duration from start and end times
+ * Returns the closest standard duration or 'custom' if not standard
+ */
+function calculateDurationFromTimes(
+  startTime: string,
+  endTime: string
+): { duration: MatchFormSchemaData['duration']; customMinutes?: number } {
+  const [startH, startM] = startTime.split(':').map(Number);
+  const [endH, endM] = endTime.split(':').map(Number);
+
+  const startMinutes = startH * 60 + startM;
+  const endMinutes = endH * 60 + endM;
+  const diffMinutes = endMinutes - startMinutes;
+
+  // Check for standard durations
+  const standardDurations = ['30', '60', '90', '120'] as const;
+  for (const d of standardDurations) {
+    if (diffMinutes === parseInt(d, 10)) {
+      return { duration: d };
+    }
+  }
+
+  // Non-standard duration
+  return { duration: 'custom', customMinutes: diffMinutes > 0 ? diffMinutes : 60 };
+}
+
+/**
+ * Convert a Match object to form data for editing
+ * Maps database field names to form field names
+ */
+export function matchToFormData(
+  match: MatchWithDetails,
+  timezone: string
+): Partial<MatchFormSchemaData> {
+  // Map court_status database values to form values
+  const courtStatusMap: Record<string, 'booked' | 'to_book' | 'tbd' | undefined> = {
+    reserved: 'booked',
+    to_reserve: 'to_book',
+  };
+
+  // Map cost_split_type database values to form values
+  const costSplitMap: Record<string, 'equal' | 'creator_pays' | 'custom'> = {
+    host_pays: 'creator_pays',
+    split_equal: 'equal',
+    custom: 'custom',
+  };
+
+  // Map player_expectation database values to form values
+  const playerExpectationMap: Record<string, 'practice' | 'competitive' | 'both'> = {
+    casual: 'practice',
+    competitive: 'competitive',
+    both: 'both',
+  };
+
+  // Calculate duration from start/end times
+  const { duration, customMinutes } = calculateDurationFromTimes(match.start_time, match.end_time);
+
+  return {
+    sportId: match.sport_id,
+    matchDate: match.match_date,
+    startTime: match.start_time,
+    endTime: match.end_time,
+    timezone: match.timezone || timezone,
+    duration,
+    customDurationMinutes: customMinutes,
+    format: (match.format as 'singles' | 'doubles') || 'singles',
+    playerExpectation: match.player_expectation
+      ? playerExpectationMap[match.player_expectation] || 'both'
+      : 'both',
+    locationType: (match.location_type as 'facility' | 'custom' | 'tbd') || 'tbd',
+    facilityId: match.facility_id || undefined,
+    courtId: match.court_id || undefined,
+    locationName: match.location_name || undefined,
+    locationAddress: match.location_address || undefined,
+    courtStatus: match.court_status ? courtStatusMap[match.court_status] : undefined,
+    isCourtFree: match.is_court_free ?? true,
+    costSplitType: match.cost_split_type ? costSplitMap[match.cost_split_type] || 'equal' : 'equal',
+    estimatedCost: match.estimated_cost ?? undefined,
+    minRatingScoreId: match.min_rating_score_id || undefined,
+    preferredOpponentGender: match.preferred_opponent_gender as
+      | 'male'
+      | 'female'
+      | 'other'
+      | 'any'
+      | undefined,
+    visibility: (match.visibility as 'public' | 'private') || 'public',
+    joinMode: (match.join_mode as 'direct' | 'request') || 'direct',
+    notes: match.notes || undefined,
+  };
 }
 
 interface UseMatchFormOptions {

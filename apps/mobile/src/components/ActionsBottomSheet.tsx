@@ -231,7 +231,15 @@ const MAX_SHEET_HEIGHT = SCREEN_HEIGHT * 0.9; // 90% of screen height
 
 export const ActionsBottomSheet: React.FC = () => {
   // Get contentMode and setContentMode from context - single source of truth
-  const { sheetRef, closeSheet, contentMode, setContentMode, refreshProfile } = useActionsSheet();
+  const {
+    sheetRef,
+    closeSheet,
+    contentMode,
+    setContentMode,
+    refreshProfile,
+    editMatchData,
+    clearEditMatch,
+  } = useActionsSheet();
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
   const { theme } = useTheme();
   const { t } = useTranslation();
@@ -239,6 +247,9 @@ export const ActionsBottomSheet: React.FC = () => {
 
   // Wizard state for match creation (local, only for slide animation)
   const [showWizard, setShowWizard] = useState(false);
+
+  // If we have editMatchData, we're in edit mode - show wizard immediately
+  const isEditMode = !!editMatchData;
 
   // Animation value for slide transition
   const slideProgress = useSharedValue(0);
@@ -318,12 +329,19 @@ export const ActionsBottomSheet: React.FC = () => {
 
   // Handle wizard close - slide back to actions list
   const handleWizardClose = useCallback(() => {
+    // If in edit mode, close the sheet entirely
+    if (isEditMode) {
+      clearEditMatch();
+      closeSheet();
+      return;
+    }
+
     slideProgress.value = withSpring(0, { damping: 80, stiffness: 600, overshootClamping: false });
     // Wait for animation to complete before hiding wizard
     setTimeout(() => {
       setShowWizard(false);
     }, 300);
-  }, [slideProgress]);
+  }, [slideProgress, isEditMode, clearEditMatch, closeSheet]);
 
   // Handle wizard success
   const handleWizardSuccess = useCallback(
@@ -333,6 +351,7 @@ export const ActionsBottomSheet: React.FC = () => {
       closeSheet();
       setShowWizard(false);
       slideProgress.value = 0;
+      clearEditMatch();
 
       // Fetch the match details and open the match detail sheet
       try {
@@ -351,15 +370,16 @@ export const ActionsBottomSheet: React.FC = () => {
         navigateFromOutside('PlayerMatches');
       }
     },
-    [closeSheet, slideProgress, openMatchDetail]
+    [closeSheet, slideProgress, openMatchDetail, clearEditMatch]
   );
 
   // Handle sheet dismiss - just reset local wizard state
   const handleSheetDismiss = useCallback(() => {
     setShowWizard(false);
     slideProgress.value = 0;
+    clearEditMatch();
     // Note: contentMode is reset by openSheet when the sheet is opened again
-  }, [slideProgress]);
+  }, [slideProgress, clearEditMatch]);
 
   // Handle keyboard dismissal to restore sheet position
   useEffect(() => {
@@ -443,7 +463,19 @@ export const ActionsBottomSheet: React.FC = () => {
       );
     }
 
-    // contentMode === 'actions' - show actions wizard or match creation wizard
+    // contentMode === 'actions' - show actions wizard or match creation/edit wizard
+    // If in edit mode, show wizard directly without the actions list
+    if (isEditMode) {
+      return (
+        <MatchCreationWizard
+          onClose={closeSheet}
+          onBackToLanding={handleWizardClose}
+          onSuccess={handleWizardSuccess}
+          editMatch={editMatchData}
+        />
+      );
+    }
+
     return (
       <View style={styles.slidingContainer}>
         {/* Actions list */}
@@ -471,7 +503,8 @@ export const ActionsBottomSheet: React.FC = () => {
   };
 
   // Determine if we should use wizard mode (full height, no scroll)
-  const isWizardMode = showWizard || contentMode === 'auth' || contentMode === 'onboarding';
+  const isWizardMode =
+    showWizard || isEditMode || contentMode === 'auth' || contentMode === 'onboarding';
 
   return (
     <BottomSheetModal

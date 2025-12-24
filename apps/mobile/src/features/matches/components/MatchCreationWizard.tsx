@@ -38,13 +38,13 @@ import {
 
 const BASE_WHITE = '#ffffff';
 import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
-import { useCreateMatch } from '@rallia/shared-hooks';
+import { useCreateMatch, useUpdateMatch } from '@rallia/shared-hooks';
 
 import { useTheme } from '@rallia/shared-hooks';
 import { useTranslation, type TranslationKey } from '../../../hooks/useTranslation';
-import { useSport } from '../../../context';
+import { useSport, type MatchDetailData } from '../../../context';
 import { useAuth } from '../../../hooks';
-import { useMatchForm, useMatchDraft, calculateEndTime } from '../hooks';
+import { useMatchForm, useMatchDraft, calculateEndTime, matchToFormData } from '../hooks';
 
 import { WhenFormatStep } from './steps/WhenFormatStep';
 import { WhereStep } from './steps/WhereStep';
@@ -63,8 +63,10 @@ interface MatchCreationWizardProps {
   onClose: () => void;
   /** Callback to go back to the action sheet landing slide */
   onBackToLanding: () => void;
-  /** Callback when match is created successfully */
+  /** Callback when match is created/updated successfully */
   onSuccess?: (matchId: string) => void;
+  /** If provided, wizard is in edit mode with pre-filled data */
+  editMatch?: MatchDetailData;
 }
 
 interface ThemeColors {
@@ -230,12 +232,16 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   onClose,
   onBackToLanding,
   onSuccess,
+  editMatch,
 }) => {
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
   const { session } = useAuth();
   const { selectedSport } = useSport();
   const isDark = theme === 'dark';
+
+  // Determine if we're in edit mode
+  const isEditMode = !!editMatch;
 
   // State
   const [currentStep, setCurrentStep] = useState(1);
@@ -261,15 +267,25 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   };
 
   // Form state
-  const sportId = selectedSport?.id ?? '';
+  const sportId = editMatch?.sport_id ?? selectedSport?.id ?? '';
   // Get device timezone from calendar settings (memoized to avoid re-renders)
   const timezone = useMemo(() => {
     const calendars = Localization.getCalendars();
     return calendars[0]?.timeZone || 'UTC';
   }, []);
+
+  // Calculate initial values from editMatch if in edit mode
+  const initialValues = useMemo(() => {
+    if (editMatch) {
+      return matchToFormData(editMatch, timezone);
+    }
+    return undefined;
+  }, [editMatch, timezone]);
+
   const { form, values, isDirty, validateStep, resetForm, loadFromDraft } = useMatchForm({
     sportId,
     timezone,
+    initialValues,
   });
 
   // Draft persistence
@@ -287,7 +303,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   const [successMatchId, setSuccessMatchId] = useState<string | null>(null);
 
   // Match creation mutation
-  const { createMatch, isCreating, isSuccess, createdMatch, error } = useCreateMatch({
+  const { createMatch, isCreating } = useCreateMatch({
     onSuccess: match => {
       // Add a small delay so the creation doesn't feel too instant
       // This gives the user time to see the loading state
@@ -304,6 +320,24 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     },
   });
 
+  // Match update mutation (for edit mode)
+  const { updateMatch, isUpdating } = useUpdateMatch({
+    onSuccess: match => {
+      setTimeout(() => {
+        successHaptic();
+        setSuccessMatchId(match.id);
+        setShowSuccess(true);
+      }, 800);
+    },
+    onError: err => {
+      warningHaptic();
+      Alert.alert(t('matchCreation.updateError' as TranslationKey), err.message);
+    },
+  });
+
+  // Combined loading state
+  const isSubmitting = isCreating || isUpdating;
+
   // Animation values
   const translateX = useSharedValue(0);
   const gestureTranslateX = useSharedValue(0);
@@ -312,7 +346,14 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   const hasCheckedDraft = useRef(false);
 
   // Check for draft on mount (only once, after loading completes)
+  // Skip draft handling when in edit mode
   useEffect(() => {
+    // Skip draft handling in edit mode
+    if (isEditMode) {
+      hasCheckedDraft.current = true;
+      return;
+    }
+
     // Only check once on initial mount
     if (hasCheckedDraft.current) return;
 
@@ -352,7 +393,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
       // No draft exists (loading complete, no draft found), mark as checked
       hasCheckedDraft.current = true;
     }
-  }, [isDraftLoading, hasDraft, draft, sportId]);
+  }, [isDraftLoading, hasDraft, draft, sportId, isEditMode]);
 
   // Track form changes to detect unsaved modifications
   useEffect(() => {
@@ -381,15 +422,19 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     }
 
     lightHaptic();
-    saveDraft(values, currentStep + 1, sportId);
-    // Mark as saved
-    lastSavedStep.current = currentStep + 1;
-    hasUnsavedChanges.current = false;
+
+    // Only save draft when not in edit mode
+    if (!isEditMode) {
+      saveDraft(values, currentStep + 1, sportId);
+      // Mark as saved
+      lastSavedStep.current = currentStep + 1;
+      hasUnsavedChanges.current = false;
+    }
 
     if (currentStep < TOTAL_STEPS) {
       setCurrentStep(prev => prev + 1);
     }
-  }, [currentStep, validateStep, values, sportId, saveDraft]);
+  }, [currentStep, validateStep, values, sportId, saveDraft, isEditMode]);
 
   // Navigate to previous step
   const goToPrevStep = useCallback(() => {
@@ -422,7 +467,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
       values.customDurationMinutes
     );
 
-    createMatch({
+    const matchData = {
       sportId: values.sportId,
       createdBy: session.user.id,
       matchDate: values.matchDate,
@@ -449,12 +494,45 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
       visibility: values.visibility,
       joinMode: values.joinMode,
       notes: values.notes,
-    });
-  }, [validateStep, values, session, createMatch]);
+    };
+
+    if (isEditMode && editMatch) {
+      // Update existing match
+      updateMatch({
+        matchId: editMatch.id,
+        updates: matchData,
+      });
+    } else {
+      // Create new match
+      createMatch(matchData);
+    }
+  }, [validateStep, values, session, createMatch, updateMatch, isEditMode, editMatch]);
 
   // Handle close with confirmation
   const handleClose = useCallback(() => {
     Keyboard.dismiss();
+
+    // In edit mode, just ask if they want to discard changes (no draft saving)
+    if (isEditMode) {
+      if (isDirty) {
+        Alert.alert(
+          t('matchCreation.discardChanges' as TranslationKey),
+          t('matchCreation.discardEditMessage' as TranslationKey),
+          [
+            { text: t('matchCreation.keepEditing' as TranslationKey), style: 'cancel' },
+            {
+              text: t('matchCreation.discardChanges' as TranslationKey),
+              style: 'destructive',
+              onPress: onClose,
+            },
+          ]
+        );
+      } else {
+        onClose();
+      }
+      return;
+    }
+
     // Check if there are unsaved changes:
     // 1. Form is dirty (has changes from initial/loaded values)
     // 2. OR we have unsaved changes since last save
@@ -495,7 +573,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     } else {
       onClose();
     }
-  }, [isDirty, values, currentStep, sportId, saveDraft, clearDraft, onClose, t]);
+  }, [isDirty, values, currentStep, sportId, saveDraft, clearDraft, onClose, t, isEditMode]);
 
   // Swipe gesture handler
   const panGesture = Gesture.Pan()
@@ -551,13 +629,21 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
       <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
         <Animated.View style={[styles.successContainer, successAnimatedStyle]}>
           <View style={[styles.successIcon, { backgroundColor: colors.buttonActive }]}>
-            <Ionicons name="trophy" size={48} color={BASE_WHITE} />
+            <Ionicons
+              name={isEditMode ? 'checkmark-circle' : 'trophy'}
+              size={48}
+              color={BASE_WHITE}
+            />
           </View>
           <Text size="xl" weight="bold" color={colors.text} style={styles.successTitle}>
-            {t('matchCreation.success' as TranslationKey)}
+            {isEditMode
+              ? t('matchCreation.updateSuccess' as TranslationKey)
+              : t('matchCreation.success' as TranslationKey)}
           </Text>
           <Text size="base" color={colors.textMuted} style={styles.successDescription}>
-            {t('matchCreation.successDescription' as TranslationKey)}
+            {isEditMode
+              ? t('matchCreation.updateSuccessDescription' as TranslationKey)
+              : t('matchCreation.successDescription' as TranslationKey)}
           </Text>
           <View style={styles.successButtons}>
             <TouchableOpacity
@@ -568,23 +654,25 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                 {t('matchCreation.viewMatch' as TranslationKey)}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.successButton, { backgroundColor: colors.buttonInactive }]}
-              onPress={() => {
-                // Reset animations and state for next creation
-                successOpacity.value = 0;
-                successScale.value = 0.8;
-                formOpacity.value = 1;
-                setShowSuccess(false);
-                setSuccessMatchId(null);
-                resetForm();
-                setCurrentStep(1);
-              }}
-            >
-              <Text size="base" weight="semibold" color={colors.buttonActive}>
-                {t('matchCreation.createAnother' as TranslationKey)}
-              </Text>
-            </TouchableOpacity>
+            {!isEditMode && (
+              <TouchableOpacity
+                style={[styles.successButton, { backgroundColor: colors.buttonInactive }]}
+                onPress={() => {
+                  // Reset animations and state for next creation
+                  successOpacity.value = 0;
+                  successScale.value = 0.8;
+                  formOpacity.value = 1;
+                  setShowSuccess(false);
+                  setSuccessMatchId(null);
+                  resetForm();
+                  setCurrentStep(1);
+                }}
+              >
+                <Text size="base" weight="semibold" color={colors.buttonActive}>
+                  {t('matchCreation.createAnother' as TranslationKey)}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </Animated.View>
       </View>
@@ -667,19 +755,25 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
             style={[
               styles.nextButton,
               { backgroundColor: colors.buttonActive },
-              isCreating && styles.buttonDisabled,
+              isSubmitting && styles.buttonDisabled,
             ]}
             onPress={handleSubmit}
-            disabled={isCreating}
-            accessibilityLabel={t('matchCreation.createMatch' as TranslationKey)}
+            disabled={isSubmitting}
+            accessibilityLabel={
+              isEditMode
+                ? t('matchCreation.saveChanges' as TranslationKey)
+                : t('matchCreation.createMatch' as TranslationKey)
+            }
             accessibilityRole="button"
           >
-            {isCreating ? (
+            {isSubmitting ? (
               <ActivityIndicator color={colors.buttonTextActive} />
             ) : (
               <>
                 <Text size="lg" weight="semibold" color={colors.buttonTextActive}>
-                  {t('matchCreation.createMatch' as TranslationKey)}
+                  {isEditMode
+                    ? t('matchCreation.saveChanges' as TranslationKey)
+                    : t('matchCreation.createMatch' as TranslationKey)}
                 </Text>
                 <Ionicons name="checkmark" size={20} color={colors.buttonTextActive} />
               </>

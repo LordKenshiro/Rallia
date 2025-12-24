@@ -445,30 +445,64 @@ export async function updateMatch(
   matchId: string,
   updates: Partial<CreateMatchInput>
 ): Promise<Match> {
+  // Map playerExpectation to match_type enum values (same as createMatch)
+  const matchTypeMap: Record<string, 'casual' | 'competitive' | 'both'> = {
+    practice: 'casual',
+    competitive: 'competitive',
+    both: 'both',
+  };
+
+  // Map costSplitType to database enum values (same as createMatch)
+  const costSplitMap: Record<string, 'host_pays' | 'split_equal' | 'custom'> = {
+    creator_pays: 'host_pays',
+    equal: 'split_equal',
+    custom: 'custom',
+  };
+
+  // Map courtStatus to database enum values (same as createMatch)
+  const courtStatusMap: Record<string, 'reserved' | 'to_reserve' | null> = {
+    booked: 'reserved',
+    to_book: 'to_reserve',
+    tbd: null,
+  };
+
   // Map input to database fields
   const updateData: Record<string, unknown> = {};
 
   if (updates.matchDate !== undefined) updateData.match_date = updates.matchDate;
   if (updates.startTime !== undefined) updateData.start_time = updates.startTime;
   if (updates.endTime !== undefined) updateData.end_time = updates.endTime;
-  if (updates.format !== undefined) {
-    updateData.format = updates.format;
-    updateData.match_type = updates.format === 'doubles' ? 'doubles' : 'singles';
-  }
-  if (updates.playerExpectation !== undefined)
+  if (updates.timezone !== undefined) updateData.timezone = updates.timezone;
+  if (updates.format !== undefined) updateData.format = updates.format;
+  if (updates.playerExpectation !== undefined) {
+    // player_expectation stores the raw value (practice/competitive/both)
     updateData.player_expectation = updates.playerExpectation;
+    // match_type stores the mapped value (casual/competitive/both) - same as createMatch
+    updateData.match_type = matchTypeMap[updates.playerExpectation] ?? 'both';
+  }
   if (updates.duration !== undefined) updateData.duration = updates.duration;
   if (updates.customDurationMinutes !== undefined)
     updateData.custom_duration_minutes = updates.customDurationMinutes;
   if (updates.locationType !== undefined) updateData.location_type = updates.locationType;
-  if (updates.facilityId !== undefined) updateData.facility_id = updates.facilityId;
-  if (updates.courtId !== undefined) updateData.court_id = updates.courtId;
-  if (updates.locationName !== undefined) updateData.location_name = updates.locationName;
-  if (updates.locationAddress !== undefined) updateData.location_address = updates.locationAddress;
-  if (updates.courtStatus !== undefined) updateData.court_status = updates.courtStatus;
+  if (updates.facilityId !== undefined)
+    updateData.facility_id = emptyToUndefined(updates.facilityId);
+  if (updates.courtId !== undefined) updateData.court_id = emptyToUndefined(updates.courtId);
+  if (updates.locationName !== undefined)
+    updateData.location_name = emptyToUndefined(updates.locationName);
+  if (updates.locationAddress !== undefined)
+    updateData.location_address = emptyToUndefined(updates.locationAddress);
+  if (updates.courtStatus !== undefined) {
+    updateData.court_status = courtStatusMap[updates.courtStatus] ?? null;
+  }
   if (updates.isCourtFree !== undefined) updateData.is_court_free = updates.isCourtFree;
-  if (updates.costSplitType !== undefined) updateData.cost_split_type = updates.costSplitType;
+  if (updates.costSplitType !== undefined) {
+    updateData.cost_split_type = costSplitMap[updates.costSplitType] ?? 'split_equal';
+  }
   if (updates.estimatedCost !== undefined) updateData.estimated_cost = updates.estimatedCost;
+  if (updates.minRatingScoreId !== undefined)
+    updateData.min_rating_score_id = emptyToUndefined(updates.minRatingScoreId);
+  if (updates.preferredOpponentGender !== undefined)
+    updateData.preferred_opponent_gender = updates.preferredOpponentGender;
   if (updates.visibility !== undefined) updateData.visibility = updates.visibility;
   if (updates.joinMode !== undefined) updateData.join_mode = updates.joinMode;
   if (updates.notes !== undefined) updateData.notes = updates.notes;

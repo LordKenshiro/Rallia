@@ -47,6 +47,7 @@ import {
   errorHaptic,
 } from '@rallia/shared-utils';
 import { useMatchDetailSheet } from '../context/MatchDetailSheetContext';
+import { useActionsSheet } from '../context/ActionsSheetContext';
 import { useTranslation, type TranslationKey } from '../hooks';
 import { useTheme, useAuth, usePlayer, useMatchActions } from '@rallia/shared-hooks';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
@@ -281,6 +282,7 @@ const ParticipantAvatar: React.FC<ParticipantAvatarProps> = ({
 
 export const MatchDetailSheet: React.FC = () => {
   const { sheetRef, closeSheet, selectedMatch } = useMatchDetailSheet();
+  const { openSheetForEdit } = useActionsSheet();
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
   const { session } = useAuth();
@@ -433,13 +435,13 @@ export const MatchDetailSheet: React.FC = () => {
     cancelMatch(playerId);
   }, [playerId, cancelMatch]);
 
-  // Handle edit match
+  // Handle edit match - opens the match creation wizard in edit mode
   const handleEditMatch = useCallback(() => {
     if (!selectedMatch) return;
     mediumHaptic();
-    // TODO: Implement edit match flow - navigate to edit screen
-    console.log('Edit match:', selectedMatch.id);
-  }, [selectedMatch]);
+    closeSheet(); // Close the detail sheet first
+    openSheetForEdit(selectedMatch); // Open actions sheet in edit mode
+  }, [selectedMatch, closeSheet, openSheetForEdit]);
 
   // Handle open in maps
   const handleOpenMaps = useCallback(() => {
