@@ -1,29 +1,15 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { AppHeader, LocationPermissionOverlay } from '@rallia/shared-components';
-import { Logger } from '@rallia/shared-services';
 import { useThemeStyles, useTranslation } from '../hooks';
 import { fontSizePixels, spacingPixels } from '@rallia/design-system';
 import { useAppNavigation } from '../navigation/hooks';
-import RalliaLogo from '../../assets/images/logo-dark.svg';
 
 const Map = () => {
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
   const navigation = useAppNavigation();
-  const [showLocationPermission, setShowLocationPermission] = useState(false);
-
-  const handleAcceptLocation = () => {
-    Logger.logUserAction('location_permission_accepted');
-    setShowLocationPermission(false);
-  };
-
-  const handleRefuseLocation = () => {
-    Logger.logUserAction('location_permission_refused');
-    setShowLocationPermission(false);
-  };
 
   const handleClose = () => {
     navigation.goBack();
@@ -47,12 +33,6 @@ const Map = () => {
           <Ionicons name="close" size={24} color={colors.text} />
         </TouchableOpacity>
       </View>
-
-      <LocationPermissionOverlay
-        visible={showLocationPermission}
-        onAccept={handleAcceptLocation}
-        onRefuse={handleRefuseLocation}
-      />
     </SafeAreaView>
   );
 };

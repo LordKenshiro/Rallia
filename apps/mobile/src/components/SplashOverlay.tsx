@@ -8,13 +8,18 @@ import { primary } from '@rallia/design-system';
 
 const { width } = Dimensions.get('window');
 
+interface SplashOverlayProps {
+  /** Callback fired when the splash animation has completely finished */
+  onAnimationComplete?: () => void;
+}
+
 /**
  * SplashOverlay - Animated splash overlay shown on app launch
  *
  * Renders on top of the entire app and fades out after the animation completes.
  * This avoids navigation transitions since it's an overlay, not a screen.
  */
-export function SplashOverlay() {
+export function SplashOverlay({ onAnimationComplete }: SplashOverlayProps) {
   const { colors, isDark } = useThemeStyles();
   const [isVisible, setIsVisible] = useState(true);
 
@@ -100,6 +105,8 @@ export function SplashOverlay() {
         useNativeDriver: true,
       }).start(() => {
         setIsVisible(false);
+        // Notify parent that splash animation is complete
+        onAnimationComplete?.();
       });
     }, ANIMATION_DELAYS.SPLASH_DURATION);
 
@@ -113,6 +120,7 @@ export function SplashOverlay() {
     circle2Scale,
     circle2Opacity,
     exitOpacity,
+    onAnimationComplete,
   ]);
 
   // Don't render anything after animation completes

@@ -17,6 +17,7 @@ import {
   ActionsSheetProvider,
   SportProvider,
   MatchDetailSheetProvider,
+  useOverlay,
 } from './src/context';
 import { ProfileProvider, PlayerProvider } from '@rallia/shared-hooks';
 
@@ -31,6 +32,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 function AppContent() {
   const { theme } = useTheme();
+  const { setSplashComplete } = useOverlay();
 
   return (
     <>
@@ -43,7 +45,7 @@ function AppContent() {
       {/* Match Detail Bottom Sheet - shows when match card is pressed */}
       <MatchDetailSheet />
       {/* Splash overlay - renders on top of everything */}
-      <SplashOverlay />
+      <SplashOverlay onAnimationComplete={() => setSplashComplete(true)} />
     </>
   );
 }

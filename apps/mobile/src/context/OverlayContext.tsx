@@ -1,9 +1,9 @@
 /**
- * OverlayContext - Permission overlay management
+ * OverlayContext - Permission management
  *
- * This context only manages permission overlays (Location, Calendar).
- * Auth and onboarding flows are handled by ActionsSheetContext via
- * the AuthWizard and OnboardingWizard components.
+ * This context manages requesting native permissions (Location, Calendar)
+ * after the splash animation completes. It uses native OS permission dialogs
+ * directly instead of custom overlays.
  */
 
 import React, {
@@ -12,10 +12,10 @@ import React, {
   useState,
   useCallback,
   useEffect,
+  useRef,
   ReactNode,
 } from 'react';
 import { Logger } from '@rallia/shared-services';
-import { LocationPermissionOverlay, CalendarAccessOverlay } from '@rallia/shared-components';
 import { ANIMATION_DELAYS } from '../constants';
 import { usePermissions } from '../hooks';
 
@@ -26,6 +26,8 @@ import { usePermissions } from '../hooks';
 interface OverlayContextType {
   /** Notify that we're on home screen (safe to show permission overlays) */
   setOnHomeScreen: (isOnHome: boolean) => void;
+  /** Notify that splash animation has completed */
+  setSplashComplete: (complete: boolean) => void;
 }
 
 // =============================================================================
@@ -49,102 +51,86 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
     shouldShowCalendarOverlay,
     requestLocationPermission,
     requestCalendarPermission,
-    markLocationAsked,
-    markCalendarAsked,
     loading: permissionsLoading,
   } = usePermissions();
 
   // ==========================================================================
-  // PERMISSION OVERLAYS STATE
+  // STATE
   // ==========================================================================
-  const [showLocationPermission, setShowLocationPermission] = useState(false);
-  const [showCalendarAccess, setShowCalendarAccess] = useState(false);
   const [isOnHomeScreen, setIsOnHomeScreen] = useState(false);
+  const [isSplashComplete, setIsSplashComplete] = useState(false);
+
+  // Track if we've already requested permissions this session
+  const hasRequestedPermissions = useRef(false);
 
   // ==========================================================================
-  // AUTO-SHOW PERMISSIONS WHEN ON HOME SCREEN
+  // REQUEST NATIVE PERMISSIONS AFTER SPLASH COMPLETES
   // ==========================================================================
   useEffect(() => {
-    // Only show permission overlays when:
-    // 1. We're on the Home screen (not Splash)
+    // Only request permissions when:
+    // 1. Splash animation has completed
     // 2. Permissions are loaded
-    // 3. User hasn't been asked yet AND permission not already granted
-    if (isOnHomeScreen && !permissionsLoading) {
-      if (shouldShowLocationOverlay && !showLocationPermission && !showCalendarAccess) {
-        const timer = setTimeout(() => {
-          Logger.logNavigation('show_overlay', {
-            overlay: 'LocationPermissionOverlay',
-            trigger: 'auto_home',
-          });
-          setShowLocationPermission(true);
-        }, 500); // Small delay to let the UI settle
+    // 3. We haven't already requested this session
+    if (isSplashComplete && !permissionsLoading && !hasRequestedPermissions.current) {
+      hasRequestedPermissions.current = true;
 
-        return () => clearTimeout(timer);
-      }
+      const requestPermissions = async () => {
+        // Small delay after splash to let the UI settle
+        await new Promise(resolve => setTimeout(resolve, ANIMATION_DELAYS.SHORT_DELAY));
+
+        // Request location permission if needed
+        if (shouldShowLocationOverlay) {
+          Logger.logNavigation('request_native_permission', {
+            permission: 'location',
+            trigger: 'post_splash',
+          });
+          const locationGranted = await requestLocationPermission();
+          Logger.logUserAction('permission_result', {
+            permission: 'location',
+            granted: locationGranted,
+          });
+
+          // Small delay between permission dialogs
+          await new Promise(resolve => setTimeout(resolve, ANIMATION_DELAYS.OVERLAY_STAGGER));
+        }
+
+        // Request calendar permission if needed
+        if (shouldShowCalendarOverlay) {
+          Logger.logNavigation('request_native_permission', {
+            permission: 'calendar',
+            trigger: 'post_splash',
+          });
+          const calendarGranted = await requestCalendarPermission();
+          Logger.logUserAction('permission_result', {
+            permission: 'calendar',
+            granted: calendarGranted,
+          });
+        }
+      };
+
+      requestPermissions();
     }
   }, [
-    isOnHomeScreen,
+    isSplashComplete,
     permissionsLoading,
     shouldShowLocationOverlay,
-    showLocationPermission,
-    showCalendarAccess,
+    shouldShowCalendarOverlay,
+    requestLocationPermission,
+    requestCalendarPermission,
   ]);
 
   // ==========================================================================
-  // PERMISSION HANDLERS (with native permission requests)
-  // ==========================================================================
-
-  const handleAcceptLocation = useCallback(async () => {
-    // Request actual native location permission
-    const granted = await requestLocationPermission();
-    Logger.logUserAction('permission_result', { permission: 'location', granted });
-
-    setShowLocationPermission(false);
-
-    // Show calendar overlay if needed
-    setTimeout(() => {
-      if (shouldShowCalendarOverlay) {
-        setShowCalendarAccess(true);
-      }
-    }, ANIMATION_DELAYS.OVERLAY_STAGGER);
-  }, [requestLocationPermission, shouldShowCalendarOverlay]);
-
-  const handleRefuseLocation = useCallback(async () => {
-    // Mark as asked but don't request native permission
-    await markLocationAsked();
-    Logger.logUserAction('permission_refused', { permission: 'location' });
-
-    setShowLocationPermission(false);
-
-    // Show calendar overlay if needed
-    setTimeout(() => {
-      if (shouldShowCalendarOverlay) {
-        setShowCalendarAccess(true);
-      }
-    }, ANIMATION_DELAYS.OVERLAY_STAGGER);
-  }, [markLocationAsked, shouldShowCalendarOverlay]);
-
-  const handleAcceptCalendar = useCallback(async () => {
-    // Request actual native calendar permission
-    const granted = await requestCalendarPermission();
-    Logger.logUserAction('permission_result', { permission: 'calendar', granted });
-    setShowCalendarAccess(false);
-  }, [requestCalendarPermission]);
-
-  const handleRefuseCalendar = useCallback(async () => {
-    // Mark as asked but don't request native permission
-    await markCalendarAsked();
-    Logger.logUserAction('permission_refused', { permission: 'calendar' });
-    setShowCalendarAccess(false);
-  }, [markCalendarAsked]);
-
-  // ==========================================================================
-  // HOME SCREEN NOTIFICATION
+  // STATE HANDLERS
   // ==========================================================================
 
   const handleSetOnHomeScreen = useCallback((isOnHome: boolean) => {
     Logger.logNavigation('home_screen_state', { isOnHome });
     setIsOnHomeScreen(isOnHome);
+  }, []);
+
+  const handleSetSplashComplete = useCallback((complete: boolean) => {
+    Logger.logNavigation('splash_complete', { complete });
+    setIsSplashComplete(complete);
   }, []);
 
   // ==========================================================================
@@ -153,31 +139,14 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
 
   const contextValue: OverlayContextType = {
     setOnHomeScreen: handleSetOnHomeScreen,
+    setSplashComplete: handleSetSplashComplete,
   };
 
   // ==========================================================================
   // RENDER
   // ==========================================================================
 
-  return (
-    <OverlayContext.Provider value={contextValue}>
-      {children}
-
-      {/* Location Permission Overlay */}
-      <LocationPermissionOverlay
-        visible={showLocationPermission}
-        onAccept={handleAcceptLocation}
-        onRefuse={handleRefuseLocation}
-      />
-
-      {/* Calendar Access Overlay */}
-      <CalendarAccessOverlay
-        visible={showCalendarAccess}
-        onAccept={handleAcceptCalendar}
-        onRefuse={handleRefuseCalendar}
-      />
-    </OverlayContext.Provider>
-  );
+  return <OverlayContext.Provider value={contextValue}>{children}</OverlayContext.Provider>;
 };
 
 // =============================================================================
