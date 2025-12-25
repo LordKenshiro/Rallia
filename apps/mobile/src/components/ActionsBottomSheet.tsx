@@ -133,34 +133,18 @@ const ActionsContent: React.FC<ActionsContentProps> = ({ onClose, onCreateMatch,
     onClose();
   };
 
-  const handleCreateGroup = () => {
-    // TODO: Navigate to create group flow
+  const handleCreateNetwork = () => {
+    // TODO: Navigate to create network flow (combines groups and communities)
     onClose();
   };
 
-  const handleCreateCommunity = () => {
-    // TODO: Navigate to create community flow
-    onClose();
-  };
-
-  const handleCreateTournament = () => {
-    // TODO: Navigate to create tournament flow
-    onClose();
-  };
-
-  const handleCreateLeague = () => {
-    // TODO: Navigate to create league flow
+  const handleCreateEvent = () => {
+    // TODO: Navigate to create event flow (combines tournaments and leagues)
     onClose();
   };
 
   return (
     <View style={styles.contentContainer}>
-      <View style={[styles.wizardHeader, { borderBottomColor: colors.border }]}>
-        <Text size="xl" weight="bold" color={colors.text} style={{ textAlign: 'center' }}>
-          {t('actions.quickActions')}
-        </Text>
-      </View>
-
       <View style={styles.actionsList}>
         <ActionItem
           icon="tennisball-outline"
@@ -188,33 +172,17 @@ const ActionsContent: React.FC<ActionsContentProps> = ({ onClose, onCreateMatch,
 
         <ActionItem
           icon="people-outline"
-          title={t('actions.createGroup')}
-          description={t('actions.createGroupDescription')}
-          onPress={handleCreateGroup}
-          colors={colors}
-        />
-
-        <ActionItem
-          icon="people-outline"
-          title={t('actions.createCommunity')}
-          description={t('actions.createCommunityDescription')}
-          onPress={handleCreateCommunity}
+          title={t('actions.createNetwork')}
+          description={t('actions.createNetworkDescription')}
+          onPress={handleCreateNetwork}
           colors={colors}
         />
 
         <ActionItem
           icon="trophy-outline"
-          title={t('actions.createTournament')}
-          description={t('actions.createTournamentDescription')}
-          onPress={handleCreateTournament}
-          colors={colors}
-        />
-
-        <ActionItem
-          icon="trophy-outline"
-          title={t('actions.createLeague')}
-          description={t('actions.createLeagueDescription')}
-          onPress={handleCreateLeague}
+          title={t('actions.createEvent')}
+          description={t('actions.createEventDescription')}
+          onPress={handleCreateEvent}
           colors={colors}
         />
       </View>
@@ -580,10 +548,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[6],
     paddingTop: spacingPixels[2],
     paddingBottom: spacingPixels[8],
-  },
-  wizardHeader: {
-    paddingVertical: spacingPixels[4],
-    borderBottomWidth: 1,
   },
   actionsList: {
     paddingTop: spacingPixels[2],
