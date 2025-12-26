@@ -68,6 +68,8 @@ function getDefaultValues(sportId: string, timezone: string): MatchFormSchemaDat
     courtId: undefined,
     locationName: undefined,
     locationAddress: undefined,
+    customLatitude: undefined,
+    customLongitude: undefined,
 
     // Step 3: Preferences
     courtStatus: undefined,
@@ -175,6 +177,9 @@ export function matchToFormData(
     courtId: match.court_id || undefined,
     locationName: match.location_name || undefined,
     locationAddress: match.location_address || undefined,
+    // Custom location coordinates
+    customLatitude: match.custom_latitude != null ? Number(match.custom_latitude) : undefined,
+    customLongitude: match.custom_longitude != null ? Number(match.custom_longitude) : undefined,
     courtStatus: match.court_status ? courtStatusMap[match.court_status] : undefined,
     isCourtFree: match.is_court_free ?? true,
     costSplitType: match.cost_split_type ? costSplitMap[match.cost_split_type] || 'equal' : 'equal',
@@ -342,6 +347,8 @@ export function useMatchForm(options: UseMatchFormOptions): UseMatchFormReturn {
             courtId: values.courtId,
             locationName: values.locationName,
             locationAddress: values.locationAddress,
+            customLatitude: values.customLatitude,
+            customLongitude: values.customLongitude,
           };
         case 3:
           return {
@@ -387,7 +394,15 @@ function getStepFields(step: 1 | 2 | 3): (keyof MatchFormSchemaData)[] {
         'playerExpectation',
       ];
     case 2:
-      return ['locationType', 'facilityId', 'courtId', 'locationName', 'locationAddress'];
+      return [
+        'locationType',
+        'facilityId',
+        'courtId',
+        'locationName',
+        'locationAddress',
+        'customLatitude',
+        'customLongitude',
+      ];
     case 3:
       return [
         'courtStatus',

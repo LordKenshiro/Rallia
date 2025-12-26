@@ -38,6 +38,8 @@ export interface CreateMatchInput {
   courtId?: string;
   locationName?: string;
   locationAddress?: string;
+  customLatitude?: number;
+  customLongitude?: number;
 
   // Court & cost
   courtStatus?: 'booked' | 'to_book' | 'tbd';
@@ -108,6 +110,8 @@ export async function createMatch(input: CreateMatchInput): Promise<Match> {
     court_id: emptyToUndefined(input.courtId),
     location_name: emptyToUndefined(input.locationName),
     location_address: emptyToUndefined(input.locationAddress),
+    custom_latitude: input.customLatitude,
+    custom_longitude: input.customLongitude,
     court_status: input.courtStatus ? courtStatusMap[input.courtStatus] : null,
     is_court_free: input.isCourtFree ?? true,
     cost_split_type: costSplitMap[input.costSplitType ?? 'equal'] ?? 'split_equal',
@@ -491,6 +495,8 @@ export async function updateMatch(
     updateData.location_name = emptyToUndefined(updates.locationName);
   if (updates.locationAddress !== undefined)
     updateData.location_address = emptyToUndefined(updates.locationAddress);
+  if (updates.customLatitude !== undefined) updateData.custom_latitude = updates.customLatitude;
+  if (updates.customLongitude !== undefined) updateData.custom_longitude = updates.customLongitude;
   if (updates.courtStatus !== undefined) {
     updateData.court_status = courtStatusMap[updates.courtStatus] ?? null;
   }

@@ -13,8 +13,12 @@ import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
-import { useFacilitySearch } from '@rallia/shared-hooks';
-import type { MatchFormSchemaData, FacilitySearchResult } from '@rallia/shared-types';
+import { useFacilitySearch, usePlacesAutocomplete } from '@rallia/shared-hooks';
+import type {
+  MatchFormSchemaData,
+  FacilitySearchResult,
+  PlacePrediction,
+} from '@rallia/shared-types';
 import type { TranslationKey, TranslationOptions } from '../../../../hooks/useTranslation';
 import { useUserLocation } from '../../../../hooks/useUserLocation';
 import { supabase } from '../../../../lib/supabase';
@@ -199,6 +203,87 @@ const SelectedFacility: React.FC<SelectedFacilityProps> = ({ facility, onClear, 
 );
 
 // =============================================================================
+// PLACE PREDICTION ITEM
+// =============================================================================
+
+interface PlaceItemProps {
+  place: PlacePrediction;
+  onSelect: (place: PlacePrediction) => void;
+  colors: WhereStepProps['colors'];
+}
+
+const PlaceItem: React.FC<PlaceItemProps> = ({ place, onSelect, colors }) => (
+  <TouchableOpacity
+    style={[
+      styles.facilityItem,
+      { backgroundColor: colors.buttonInactive, borderColor: colors.border },
+    ]}
+    onPress={() => {
+      lightHaptic();
+      onSelect(place);
+    }}
+    activeOpacity={0.7}
+  >
+    <View style={styles.placeItemIcon}>
+      <Ionicons name="location" size={18} color={colors.buttonActive} />
+    </View>
+    <View style={styles.facilityItemContent}>
+      <Text size="base" weight="medium" color={colors.text} numberOfLines={1}>
+        {place.name}
+      </Text>
+      {place.address && (
+        <Text size="sm" color={colors.textMuted} numberOfLines={1}>
+          {place.address}
+        </Text>
+      )}
+    </View>
+  </TouchableOpacity>
+);
+
+// =============================================================================
+// SELECTED PLACE DISPLAY
+// =============================================================================
+
+interface SelectedPlaceProps {
+  name: string;
+  address?: string;
+  onClear: () => void;
+  colors: WhereStepProps['colors'];
+}
+
+const SelectedPlace: React.FC<SelectedPlaceProps> = ({ name, address, onClear, colors }) => (
+  <View
+    style={[
+      styles.selectedFacility,
+      { backgroundColor: `${colors.buttonActive}15`, borderColor: colors.buttonActive },
+    ]}
+  >
+    <View style={styles.selectedFacilityContent}>
+      <Ionicons name="location" size={20} color={colors.buttonActive} />
+      <View style={styles.selectedFacilityText}>
+        <Text size="base" weight="semibold" color={colors.text}>
+          {name}
+        </Text>
+        {address && (
+          <Text size="sm" color={colors.textMuted} numberOfLines={2}>
+            {address}
+          </Text>
+        )}
+      </View>
+    </View>
+    <TouchableOpacity
+      onPress={() => {
+        lightHaptic();
+        onClear();
+      }}
+      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+    >
+      <Ionicons name="close-circle" size={24} color={colors.textMuted} />
+    </TouchableOpacity>
+  </View>
+);
+
+// =============================================================================
 // MAIN COMPONENT
 // =============================================================================
 
@@ -224,12 +309,25 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
   // Track which facility ID we've already fetched to avoid duplicate fetches
   const fetchedFacilityIdRef = useRef<string | null>(null);
 
+  // Local state for custom location search
+  const [placeSearchQuery, setPlaceSearchQuery] = useState('');
+  const [hasSelectedPlace, setHasSelectedPlace] = useState(false);
+
   // Reset state when sportId changes (when switching sports)
   useEffect(() => {
     setSelectedFacility(null);
     fetchedFacilityIdRef.current = null;
     setSearchQuery('');
+    setPlaceSearchQuery('');
+    setHasSelectedPlace(false);
   }, [sportId]);
+
+  // Sync hasSelectedPlace when resuming a draft with custom location
+  useEffect(() => {
+    if (locationType === 'custom' && locationName && !hasSelectedPlace) {
+      setHasSelectedPlace(true);
+    }
+  }, [locationType, locationName, hasSelectedPlace]);
 
   // Get user location
   const { location, loading: locationLoading, error: locationError } = useUserLocation();
@@ -252,6 +350,23 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
     searchQuery,
     enabled: locationType === 'facility' && (!selectedFacility || needsToFindFacility),
   });
+
+  // Places autocomplete hook for custom location search
+  const {
+    predictions: placePredictions,
+    isLoading: placesLoading,
+    error: placesError,
+    clearPredictions,
+    getPlaceDetails,
+  } = usePlacesAutocomplete({
+    searchQuery: placeSearchQuery,
+    latitude: location?.latitude,
+    longitude: location?.longitude,
+    enabled: locationType === 'custom' && !hasSelectedPlace,
+  });
+
+  // State for fetching place details
+  const [isFetchingPlaceDetails, setIsFetchingPlaceDetails] = useState(false);
 
   // Sync selectedFacility with form's facilityId when resuming a draft or when preferred facility is set
   useEffect(() => {
@@ -365,15 +480,66 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
     setSearchQuery('');
   }, [setValue]);
 
+  // Handle place selection from autocomplete
+  const handleSelectPlace = useCallback(
+    async (place: PlacePrediction) => {
+      successHaptic();
+      setHasSelectedPlace(true);
+      setPlaceSearchQuery('');
+      clearPredictions();
+
+      // Set form values immediately with available data
+      setValue('locationName', place.name, { shouldValidate: true, shouldDirty: true });
+      setValue('locationAddress', place.address || undefined, { shouldDirty: true });
+
+      // Fetch place details to get coordinates
+      setIsFetchingPlaceDetails(true);
+      try {
+        const details = await getPlaceDetails(place.placeId);
+        if (details) {
+          // Update address if we got a better one from details
+          if (details.address) {
+            setValue('locationAddress', details.address, { shouldDirty: true });
+          }
+          // Store coordinates
+          setValue('customLatitude', details.latitude, { shouldDirty: true });
+          setValue('customLongitude', details.longitude, { shouldDirty: true });
+        }
+      } catch (error) {
+        console.error('Failed to fetch place details:', error);
+        // Continue without coordinates - the match can still be created
+      } finally {
+        setIsFetchingPlaceDetails(false);
+      }
+    },
+    [setValue, clearPredictions, getPlaceDetails]
+  );
+
+  // Handle clearing selected place
+  const handleClearPlace = useCallback(() => {
+    setHasSelectedPlace(false);
+    setValue('locationName', undefined, { shouldValidate: true, shouldDirty: true });
+    setValue('locationAddress', undefined, { shouldDirty: true });
+    setValue('customLatitude', undefined, { shouldDirty: true });
+    setValue('customLongitude', undefined, { shouldDirty: true });
+    setPlaceSearchQuery('');
+    clearPredictions();
+  }, [setValue, clearPredictions]);
+
   // Handle location type changes - reset fields appropriately
   const handleLocationTypeChange = useCallback(
     (newLocationType: 'facility' | 'custom' | 'tbd') => {
       lightHaptic();
 
       if (newLocationType === 'facility') {
-        // Switching to facility: clear custom location fields
+        // Switching to facility: clear custom location fields and place search
         setValue('locationName', undefined, { shouldDirty: true });
         setValue('locationAddress', undefined, { shouldDirty: true });
+        setValue('customLatitude', undefined, { shouldDirty: true });
+        setValue('customLongitude', undefined, { shouldDirty: true });
+        setPlaceSearchQuery('');
+        setHasSelectedPlace(false);
+        clearPredictions();
       } else if (newLocationType === 'custom') {
         // Switching to custom: clear facility fields
         setSelectedFacility(null);
@@ -383,6 +549,11 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
         // Clear locationName and locationAddress that might have been set by facility selection
         setValue('locationName', undefined, { shouldDirty: true });
         setValue('locationAddress', undefined, { shouldDirty: true });
+        setValue('customLatitude', undefined, { shouldDirty: true });
+        setValue('customLongitude', undefined, { shouldDirty: true });
+        setPlaceSearchQuery('');
+        setHasSelectedPlace(false);
+        clearPredictions();
       } else if (newLocationType === 'tbd') {
         // Switching to TBD: clear both facility and custom location fields
         setSelectedFacility(null);
@@ -390,12 +561,17 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
         setValue('facilityId', undefined, { shouldValidate: true, shouldDirty: true });
         setValue('locationName', undefined, { shouldDirty: true });
         setValue('locationAddress', undefined, { shouldDirty: true });
+        setValue('customLatitude', undefined, { shouldDirty: true });
+        setValue('customLongitude', undefined, { shouldDirty: true });
         setSearchQuery('');
+        setPlaceSearchQuery('');
+        setHasSelectedPlace(false);
+        clearPredictions();
       }
 
       setValue('locationType', newLocationType, { shouldValidate: true, shouldDirty: true });
     },
-    [setValue]
+    [setValue, clearPredictions]
   );
 
   // Handle infinite scroll via ScrollView
@@ -622,76 +798,161 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
 
       {/* Custom location input (when locationType === 'custom') */}
       {locationType === 'custom' && (
-        <>
-          <View style={styles.fieldGroup}>
-            <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-              {t('matchCreation.fields.locationName' as TranslationKey)}
-            </Text>
-            <BottomSheetTextInput
-              style={[
-                styles.textInput,
-                {
-                  borderColor: errors.locationName ? '#ef4444' : colors.border,
-                  backgroundColor: colors.buttonInactive,
-                  color: colors.text,
-                },
-              ]}
-              value={locationName ?? ''}
-              onChangeText={text =>
-                setValue('locationName', text, { shouldValidate: true, shouldDirty: true })
-              }
-              placeholder={t('matchCreation.fields.locationNamePlaceholder' as TranslationKey)}
-              placeholderTextColor={colors.textMuted}
-            />
-            {errors.locationName && (
-              <Text size="xs" color="#ef4444" style={styles.errorText}>
-                {errors.locationName.message}
-              </Text>
-            )}
-          </View>
+        <View style={styles.fieldGroup}>
+          <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
+            {t('matchCreation.fields.searchLocation' as TranslationKey)}
+          </Text>
 
-          <View ref={addressFieldRef} style={styles.fieldGroup}>
-            <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-              {t('matchCreation.fields.locationAddress' as TranslationKey)}
-            </Text>
-            <BottomSheetTextInput
-              style={[
-                styles.textInput,
-                {
-                  borderColor: colors.border,
-                  backgroundColor: colors.buttonInactive,
-                  color: colors.text,
-                },
-              ]}
-              value={locationAddress ?? ''}
-              onChangeText={text => setValue('locationAddress', text, { shouldDirty: true })}
-              placeholder={t('matchCreation.fields.locationAddressPlaceholder' as TranslationKey)}
-              placeholderTextColor={colors.textMuted}
-              multiline
-              numberOfLines={2}
-              onFocus={() => {
-                // Scroll to address field with extra offset to ensure it's well above keyboard
-                // Use a delay to allow keyboard animation to start
-                setTimeout(() => {
-                  addressFieldRef.current?.measureLayout(
-                    scrollViewRef.current as unknown as number,
-                    (x: number, y: number, _width: number, _height: number) => {
-                      // Scroll to show the field with extra padding above it (200px)
-                      scrollViewRef.current?.scrollTo({
-                        y: Math.max(0, y - 200),
-                        animated: true,
-                      });
-                    },
-                    () => {
-                      // Fallback: scroll to end if measure fails
-                      scrollViewRef.current?.scrollToEnd({ animated: true });
-                    }
-                  );
-                }, 300);
-              }}
+          {/* Show selected place or search UI */}
+          {hasSelectedPlace && locationName ? (
+            <SelectedPlace
+              name={locationName}
+              address={locationAddress}
+              onClear={handleClearPlace}
+              colors={colors}
             />
-          </View>
-        </>
+          ) : (
+            <>
+              {/* Search input */}
+              <View
+                style={[
+                  styles.searchInputContainer,
+                  {
+                    borderColor: errors.locationName ? '#ef4444' : colors.border,
+                    backgroundColor: colors.buttonInactive,
+                  },
+                ]}
+              >
+                <Ionicons name="search-outline" size={20} color={colors.textMuted} />
+                <BottomSheetTextInput
+                  style={[styles.searchInput, { color: colors.text }]}
+                  value={placeSearchQuery}
+                  onChangeText={setPlaceSearchQuery}
+                  placeholder={t(
+                    'matchCreation.fields.searchLocationPlaceholder' as TranslationKey
+                  )}
+                  placeholderTextColor={colors.textMuted}
+                  autoCorrect={false}
+                />
+                {placeSearchQuery.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setPlaceSearchQuery('');
+                      clearPredictions();
+                    }}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+                  </TouchableOpacity>
+                )}
+              </View>
+              {errors.locationName && (
+                <Text size="xs" color="#ef4444" style={styles.errorText}>
+                  {errors.locationName.message}
+                </Text>
+              )}
+
+              {/* Loading state */}
+              {placesLoading && (
+                <View style={styles.emptyState}>
+                  <ActivityIndicator size="small" color={colors.buttonActive} />
+                  <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
+                    {t('matchCreation.fields.searchingPlaces' as TranslationKey)}
+                  </Text>
+                </View>
+              )}
+
+              {/* Error state */}
+              {placesError && !placesLoading && (
+                <View style={styles.emptyState}>
+                  <Ionicons name="alert-circle-outline" size={32} color={colors.textMuted} />
+                  <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
+                    {t('matchCreation.fields.failedToSearchPlaces' as TranslationKey)}
+                  </Text>
+                </View>
+              )}
+
+              {/* Place predictions list */}
+              {placePredictions.length > 0 && !placesLoading && (
+                <View style={styles.facilityListContainer}>
+                  {placePredictions.map(place => (
+                    <PlaceItem
+                      key={place.placeId}
+                      place={place}
+                      onSelect={handleSelectPlace}
+                      colors={colors}
+                    />
+                  ))}
+                </View>
+              )}
+
+              {/* No results state */}
+              {placeSearchQuery.length >= 2 &&
+                placePredictions.length === 0 &&
+                !placesLoading &&
+                !placesError && (
+                  <View style={styles.emptyState}>
+                    <Ionicons name="search-outline" size={32} color={colors.textMuted} />
+                    <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
+                      {t('matchCreation.fields.noPlacesFound' as TranslationKey)}
+                    </Text>
+                  </View>
+                )}
+
+              {/* Manual entry hint */}
+              {placeSearchQuery.length === 0 && (
+                <View style={styles.hintContainer}>
+                  <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />
+                  <Text size="xs" color={colors.textMuted}>
+                    {t('matchCreation.fields.searchLocationHint' as TranslationKey)}
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+
+          {/* Manual address edit (when place is selected) */}
+          {hasSelectedPlace && (
+            <View ref={addressFieldRef} style={styles.addressEditContainer}>
+              <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
+                {t('matchCreation.fields.locationAddress' as TranslationKey)}
+              </Text>
+              <BottomSheetTextInput
+                style={[
+                  styles.textInput,
+                  {
+                    borderColor: colors.border,
+                    backgroundColor: colors.buttonInactive,
+                    color: colors.text,
+                  },
+                ]}
+                value={locationAddress ?? ''}
+                onChangeText={text => setValue('locationAddress', text, { shouldDirty: true })}
+                placeholder={t('matchCreation.fields.locationAddressPlaceholder' as TranslationKey)}
+                placeholderTextColor={colors.textMuted}
+                multiline
+                numberOfLines={2}
+                onFocus={() => {
+                  // Scroll to address field with extra offset to ensure it's well above keyboard
+                  setTimeout(() => {
+                    addressFieldRef.current?.measureLayout(
+                      scrollViewRef.current as unknown as number,
+                      (x: number, y: number, _width: number, _height: number) => {
+                        scrollViewRef.current?.scrollTo({
+                          y: Math.max(0, y - 200),
+                          animated: true,
+                        });
+                      },
+                      () => {
+                        scrollViewRef.current?.scrollToEnd({ animated: true });
+                      }
+                    );
+                  }, 300);
+                }}
+              />
+            </View>
+          )}
+        </View>
       )}
 
       {/* TBD info message */}
@@ -783,6 +1044,14 @@ const styles = StyleSheet.create({
   facilityItemContent: {
     flex: 1,
   },
+  placeItemIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: radiusPixels.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacingPixels[2],
+  },
   distanceBadge: {
     marginLeft: spacingPixels[2],
   },
@@ -833,6 +1102,16 @@ const styles = StyleSheet.create({
   footerLoader: {
     alignItems: 'center',
     paddingVertical: spacingPixels[4],
+  },
+  hintContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    marginTop: spacingPixels[2],
+    paddingHorizontal: spacingPixels[1],
+  },
+  addressEditContainer: {
+    marginTop: spacingPixels[4],
   },
 });
 

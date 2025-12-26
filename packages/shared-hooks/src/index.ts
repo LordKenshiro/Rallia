@@ -24,6 +24,7 @@ export * from './usePublicMatches';
 export * from './usePublicMatchFilters';
 export * from './useRatingScoresForSport';
 export * from './useFacilitySearch';
+export * from './usePlacesAutocomplete';
 
 // Platform-specific exports - Metro resolves .native.ts for React Native builds
 // Web bundlers will use the stub .ts files which throw helpful errors at runtime

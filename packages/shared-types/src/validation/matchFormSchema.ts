@@ -101,6 +101,8 @@ export const step2Schema = z
     courtId: z.string().optional(),
     locationName: z.string().optional(),
     locationAddress: z.string().optional(),
+    customLatitude: z.number().optional(),
+    customLongitude: z.number().optional(),
   })
   .superRefine((data, ctx) => {
     // Validate based on location type
@@ -167,6 +169,8 @@ export const matchFormSchema = z
     courtId: z.string().optional(),
     locationName: z.string().optional(),
     locationAddress: z.string().optional(),
+    customLatitude: z.number().optional(),
+    customLongitude: z.number().optional(),
 
     // Step 3: Preferences
     courtStatus: courtStatusSchema.optional(),

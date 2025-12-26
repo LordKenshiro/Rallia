@@ -80,6 +80,23 @@ export interface FacilityCardDisplay {
   amenities?: string[];
 }
 
+/**
+ * Place prediction from Google Places Autocomplete API
+ * Used for location search in match creation
+ */
+export interface PlacePrediction {
+  /** Google Place ID for fetching additional details */
+  placeId: string;
+  /** Display name of the place (e.g., "Jeanne Mance Tennis Park") */
+  name: string;
+  /** Formatted address of the place */
+  address: string;
+  /** Latitude coordinate (if available) */
+  latitude?: number;
+  /** Longitude coordinate (if available) */
+  longitude?: number;
+}
+
 // ============================================
 // NAVIGATION PARAMS
 // ============================================

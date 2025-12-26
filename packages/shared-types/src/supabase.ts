@@ -840,6 +840,8 @@ export type Database = {
           created_at: string | null;
           created_by: string;
           custom_duration_minutes: number | null;
+          custom_latitude: number | null;
+          custom_longitude: number | null;
           duration: Database['public']['Enums']['match_duration_enum'] | null;
           end_time: string;
           estimated_cost: number | null;
@@ -848,6 +850,7 @@ export type Database = {
           id: string;
           is_court_free: boolean | null;
           join_mode: Database['public']['Enums']['match_join_mode_enum'] | null;
+          location: unknown;
           location_address: string | null;
           location_name: string | null;
           location_type: Database['public']['Enums']['location_type_enum'] | null;
@@ -872,6 +875,8 @@ export type Database = {
           created_at?: string | null;
           created_by: string;
           custom_duration_minutes?: number | null;
+          custom_latitude?: number | null;
+          custom_longitude?: number | null;
           duration?: Database['public']['Enums']['match_duration_enum'] | null;
           end_time: string;
           estimated_cost?: number | null;
@@ -880,6 +885,7 @@ export type Database = {
           id?: string;
           is_court_free?: boolean | null;
           join_mode?: Database['public']['Enums']['match_join_mode_enum'] | null;
+          location?: unknown;
           location_address?: string | null;
           location_name?: string | null;
           location_type?: Database['public']['Enums']['location_type_enum'] | null;
@@ -904,6 +910,8 @@ export type Database = {
           created_at?: string | null;
           created_by?: string;
           custom_duration_minutes?: number | null;
+          custom_latitude?: number | null;
+          custom_longitude?: number | null;
           duration?: Database['public']['Enums']['match_duration_enum'] | null;
           end_time?: string;
           estimated_cost?: number | null;
@@ -912,6 +920,7 @@ export type Database = {
           id?: string;
           is_court_free?: boolean | null;
           join_mode?: Database['public']['Enums']['match_join_mode_enum'] | null;
+          location?: unknown;
           location_address?: string | null;
           location_name?: string | null;
           location_type?: Database['public']['Enums']['location_type_enum'] | null;
@@ -1819,6 +1828,7 @@ export type Database = {
           is_primary: boolean | null;
           player_id: string;
           preferred_court: string | null;
+          preferred_facility_id: string | null;
           preferred_match_duration: Database['public']['Enums']['match_duration'] | null;
           preferred_match_type: Database['public']['Enums']['match_type'] | null;
           preferred_play_attributes: Database['public']['Enums']['play_attribute_enum'][] | null;
@@ -1833,6 +1843,7 @@ export type Database = {
           is_primary?: boolean | null;
           player_id: string;
           preferred_court?: string | null;
+          preferred_facility_id?: string | null;
           preferred_match_duration?: Database['public']['Enums']['match_duration'] | null;
           preferred_match_type?: Database['public']['Enums']['match_type'] | null;
           preferred_play_attributes?: Database['public']['Enums']['play_attribute_enum'][] | null;
@@ -1847,6 +1858,7 @@ export type Database = {
           is_primary?: boolean | null;
           player_id?: string;
           preferred_court?: string | null;
+          preferred_facility_id?: string | null;
           preferred_match_duration?: Database['public']['Enums']['match_duration'] | null;
           preferred_match_type?: Database['public']['Enums']['match_type'] | null;
           preferred_play_attributes?: Database['public']['Enums']['play_attribute_enum'][] | null;
@@ -1860,6 +1872,13 @@ export type Database = {
             columns: ['player_id'];
             isOneToOne: false;
             referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'player_sport_preferred_facility_id_fkey';
+            columns: ['preferred_facility_id'];
+            isOneToOne: false;
+            referencedRelation: 'facility';
             referencedColumns: ['id'];
           },
           {
@@ -2605,6 +2624,29 @@ export type Database = {
           p_max_distance_km: number;
           p_offset?: number;
           p_sport_id: string;
+        };
+        Returns: {
+          distance_meters: number;
+          match_id: string;
+        }[];
+      };
+      search_public_matches: {
+        Args: {
+          p_cost?: string;
+          p_date_range?: string;
+          p_format?: string;
+          p_gender?: string;
+          p_join_mode?: string;
+          p_latitude: number;
+          p_limit?: number;
+          p_longitude: number;
+          p_match_type?: string;
+          p_max_distance_km: number;
+          p_offset?: number;
+          p_search_query?: string;
+          p_skill_level?: string;
+          p_sport_id: string;
+          p_time_of_day?: string;
         };
         Returns: {
           distance_meters: number;

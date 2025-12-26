@@ -597,6 +597,8 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
       courtId: values.courtId,
       locationName: values.locationName,
       locationAddress: values.locationAddress,
+      customLatitude: values.customLatitude,
+      customLongitude: values.customLongitude,
       courtStatus: values.courtStatus,
       isCourtFree: values.isCourtFree,
       costSplitType: values.costSplitType,

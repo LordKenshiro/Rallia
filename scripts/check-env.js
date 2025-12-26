@@ -52,7 +52,7 @@ const ENV_REQUIREMENTS = {
   mobile: {
     file: 'apps/mobile/.env',
     required: ['EXPO_PUBLIC_SUPABASE_URL', 'EXPO_PUBLIC_SUPABASE_ANON_KEY'],
-    optional: ['SENTRY_DSN', 'STRIPE_PUBLISHABLE_KEY'],
+    optional: ['SENTRY_DSN', 'STRIPE_PUBLISHABLE_KEY', 'EXPO_PUBLIC_GOOGLE_PLACES_API_KEY'],
   },
 };
 
