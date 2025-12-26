@@ -5,7 +5,7 @@
  * Handles location type selection and facility/custom location input.
  */
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { UseFormReturn } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,7 +15,7 @@ import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
 import { useFacilitySearch } from '@rallia/shared-hooks';
 import type { MatchFormSchemaData, FacilitySearchResult } from '@rallia/shared-types';
-import type { TranslationKey } from '../../../../hooks/useTranslation';
+import type { TranslationKey, TranslationOptions } from '../../../../hooks/useTranslation';
 import { useUserLocation } from '../../../../hooks/useUserLocation';
 
 // =============================================================================
@@ -34,7 +34,7 @@ interface WhereStepProps {
     buttonTextActive: string;
     cardBackground: string;
   };
-  t: (key: TranslationKey) => string;
+  t: (key: TranslationKey, options?: TranslationOptions) => string;
   isDark: boolean;
   sportId: string | undefined;
 }
@@ -223,6 +223,8 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
   const { location, loading: locationLoading, error: locationError } = useUserLocation();
 
   // Facility search hook
+  // Enable search if we need to find a facility from draft (facilityId exists but selectedFacility is null)
+  const needsToFindFacility = locationType === 'facility' && !!facilityId && !selectedFacility;
   const {
     facilities,
     isLoading: facilitiesLoading,
@@ -236,8 +238,19 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
     latitude: location?.latitude,
     longitude: location?.longitude,
     searchQuery,
-    enabled: locationType === 'facility' && !selectedFacility,
+    enabled: locationType === 'facility' && (!selectedFacility || needsToFindFacility),
   });
+
+  // Sync selectedFacility with form's facilityId when resuming a draft
+  useEffect(() => {
+    if (facilityId && !selectedFacility && facilities.length > 0) {
+      // Find the facility in the loaded facilities list
+      const foundFacility = facilities.find(f => f.id === facilityId);
+      if (foundFacility) {
+        setSelectedFacility(foundFacility);
+      }
+    }
+  }, [facilityId, selectedFacility, facilities]);
 
   // Handle facility selection
   const handleSelectFacility = useCallback(
@@ -322,7 +335,9 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
         <View style={styles.emptyState}>
           <ActivityIndicator size="small" color={colors.buttonActive} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {locationLoading ? 'Getting your location...' : 'Searching facilities...'}
+            {locationLoading
+              ? t('matchCreation.fields.gettingLocation' as TranslationKey)
+              : t('matchCreation.fields.searchingFacilities' as TranslationKey)}
           </Text>
         </View>
       );
@@ -333,7 +348,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
         <View style={styles.emptyState}>
           <Ionicons name="location-outline" size={32} color={colors.textMuted} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            Location access needed to find nearby facilities
+            {t('matchCreation.fields.locationAccessNeeded' as TranslationKey)}
           </Text>
         </View>
       );
@@ -344,7 +359,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
         <View style={styles.emptyState}>
           <Ionicons name="alert-circle-outline" size={32} color={colors.textMuted} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            Failed to load facilities
+            {t('matchCreation.fields.failedToLoadFacilities' as TranslationKey)}
           </Text>
         </View>
       );
@@ -355,7 +370,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
         <View style={styles.emptyState}>
           <Ionicons name="search-outline" size={32} color={colors.textMuted} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            No facilities found for "{searchQuery}"
+            {t('matchCreation.fields.noFacilitiesFound' as TranslationKey, { query: searchQuery })}
           </Text>
         </View>
       );
@@ -366,7 +381,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
         <View style={styles.emptyState}>
           <Ionicons name="business-outline" size={32} color={colors.textMuted} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            No facilities available for this sport
+            {t('matchCreation.fields.noFacilitiesAvailable' as TranslationKey)}
           </Text>
         </View>
       );
@@ -418,7 +433,9 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
           <LocationTypeCard
             icon="business-outline"
             title={t('matchCreation.fields.locationTypeFacility' as TranslationKey)}
-            description="Choose from available facilities"
+            description={t(
+              'matchCreation.fields.locationTypeFacilityDescription' as TranslationKey
+            )}
             selected={locationType === 'facility'}
             onPress={() => handleLocationTypeChange('facility')}
             colors={colors}
@@ -427,7 +444,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
           <LocationTypeCard
             icon="location-outline"
             title={t('matchCreation.fields.locationTypeCustom' as TranslationKey)}
-            description="Enter a custom address"
+            description={t('matchCreation.fields.locationTypeCustomDescription' as TranslationKey)}
             selected={locationType === 'custom'}
             onPress={() => handleLocationTypeChange('custom')}
             colors={colors}
@@ -436,7 +453,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
           <LocationTypeCard
             icon="help-circle-outline"
             title={t('matchCreation.fields.locationTypeTbd' as TranslationKey)}
-            description="Decide later with participants"
+            description={t('matchCreation.fields.locationTypeTbdDescription' as TranslationKey)}
             selected={locationType === 'tbd'}
             onPress={() => handleLocationTypeChange('tbd')}
             colors={colors}
@@ -508,12 +525,6 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
                 renderEmptyState()
               )}
             </>
-          )}
-
-          {errors.facilityId && (
-            <Text size="xs" color="#ef4444" style={styles.errorText}>
-              {errors.facilityId.message}
-            </Text>
           )}
         </View>
       )}
@@ -602,8 +613,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
         >
           <Ionicons name="information-circle-outline" size={20} color={colors.buttonActive} />
           <Text size="sm" color={colors.textSecondary} style={styles.infoText}>
-            You can finalize the location later after participants join. They'll be notified when
-            you update it.
+            {t('matchCreation.fields.tbdLocationInfo' as TranslationKey)}
           </Text>
         </View>
       )}

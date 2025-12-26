@@ -45,6 +45,8 @@ import { useTranslation, type TranslationKey } from '../../../hooks/useTranslati
 import { useSport, type MatchDetailData } from '../../../context';
 import { useAuth } from '../../../hooks';
 import { useMatchForm, useMatchDraft, calculateEndTime, matchToFormData } from '../hooks';
+import { supabase } from '../../../lib/supabase';
+import type { MatchFormSchemaData } from '@rallia/shared-types';
 
 import { WhenFormatStep } from './steps/WhenFormatStep';
 import { WhereStep } from './steps/WhereStep';
@@ -274,13 +276,78 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     return calendars[0]?.timeZone || 'UTC';
   }, []);
 
-  // Calculate initial values from editMatch if in edit mode
+  // State for player preferences
+  const [playerPreferences, setPlayerPreferences] = useState<Partial<MatchFormSchemaData> | null>(
+    null
+  );
+  const [preferencesLoading, setPreferencesLoading] = useState(true);
+
+  // Fetch player preferences for the selected sport
+  useEffect(() => {
+    if (isEditMode || !session?.user?.id || !sportId) {
+      setPreferencesLoading(false);
+      return;
+    }
+
+    const fetchPlayerPreferences = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('player_sport')
+          .select('preferred_match_duration, preferred_match_type')
+          .eq('player_id', session.user.id)
+          .eq('sport_id', sportId)
+          .maybeSingle();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('Failed to fetch player preferences:', error);
+          setPreferencesLoading(false);
+          return;
+        }
+
+        if (data) {
+          // Map preferences to form values
+          const mappedPreferences: Partial<MatchFormSchemaData> = {};
+
+          // Map duration: '1h' → '60', '1.5h' → '90', '2h' → '120'
+          if (data.preferred_match_duration) {
+            const durationMap: Record<string, '30' | '60' | '90' | '120'> = {
+              '1h': '60',
+              '1.5h': '90',
+              '2h': '120',
+            };
+            mappedPreferences.duration = durationMap[data.preferred_match_duration] || '60';
+          }
+
+          // Map match type: 'casual' → 'practice', 'competitive' → 'competitive', 'both' → 'both'
+          if (data.preferred_match_type) {
+            const typeMap: Record<string, 'practice' | 'competitive' | 'both'> = {
+              casual: 'practice',
+              competitive: 'competitive',
+              both: 'both',
+            };
+            mappedPreferences.playerExpectation = typeMap[data.preferred_match_type] || 'both';
+          }
+
+          setPlayerPreferences(mappedPreferences);
+        }
+      } catch (error) {
+        console.error('Error fetching player preferences:', error);
+      } finally {
+        setPreferencesLoading(false);
+      }
+    };
+
+    fetchPlayerPreferences();
+  }, [session?.user?.id, sportId, isEditMode]);
+
+  // Calculate initial values from editMatch if in edit mode, or merge with player preferences
   const initialValues = useMemo(() => {
     if (editMatch) {
       return matchToFormData(editMatch, timezone);
     }
-    return undefined;
-  }, [editMatch, timezone]);
+    // Merge player preferences with defaults (will be handled in useMatchForm)
+    return playerPreferences || undefined;
+  }, [editMatch, timezone, playerPreferences]);
 
   const { form, values, isDirty, validateStep, resetForm, loadFromDraft } = useMatchForm({
     sportId,
@@ -297,6 +364,26 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     isDraftForSport,
     isLoading: isDraftLoading,
   } = useMatchDraft();
+
+  // Apply player preferences to form when they're loaded (only if not in edit mode and no draft)
+  useEffect(() => {
+    if (
+      isEditMode ||
+      preferencesLoading ||
+      !playerPreferences ||
+      hasDraft ||
+      Object.keys(playerPreferences).length === 0
+    ) {
+      return;
+    }
+
+    // Apply preferences to form
+    Object.entries(playerPreferences).forEach(([key, value]) => {
+      if (value !== undefined) {
+        form.setValue(key as keyof MatchFormSchemaData, value as never, { shouldDirty: false });
+      }
+    });
+  }, [playerPreferences, preferencesLoading, isEditMode, hasDraft, form]);
 
   // Delayed success state for smoother UX
   const [showSuccess, setShowSuccess] = useState(false);
@@ -414,6 +501,16 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   // Navigate to next step
   const goToNextStep = useCallback(async () => {
     Keyboard.dismiss();
+
+    // Special handling for step 2: show alert if facility is not selected
+    if (currentStep === 2 && values.locationType === 'facility' && !values.facilityId) {
+      warningHaptic();
+      Alert.alert(t('matchCreation.validation.facilityRequired' as TranslationKey), '', [
+        { text: t('common.ok' as TranslationKey) },
+      ]);
+      return;
+    }
+
     const isValid = await validateStep(currentStep as 1 | 2 | 3);
 
     if (!isValid) {
@@ -434,7 +531,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     if (currentStep < TOTAL_STEPS) {
       setCurrentStep(prev => prev + 1);
     }
-  }, [currentStep, validateStep, values, sportId, saveDraft, isEditMode]);
+  }, [currentStep, validateStep, values, sportId, saveDraft, isEditMode, t]);
 
   // Navigate to previous step
   const goToPrevStep = useCallback(() => {
@@ -628,6 +725,21 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     return (
       <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
         <Animated.View style={[styles.successContainer, successAnimatedStyle]}>
+          {/* Close button */}
+          <TouchableOpacity
+            onPress={() => {
+              lightHaptic();
+              onClose();
+            }}
+            style={[
+              styles.successCloseButton,
+              { backgroundColor: isDark ? neutral[800] : neutral[100] },
+            ]}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="close" size={20} color={colors.textMuted} />
+          </TouchableOpacity>
+
           <View style={[styles.successIcon, { backgroundColor: colors.buttonActive }]}>
             <Ionicons
               name={isEditMode ? 'checkmark-circle' : 'trophy'}
@@ -875,6 +987,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacingPixels[6],
+    position: 'relative',
+  },
+  successCloseButton: {
+    position: 'absolute',
+    top: spacingPixels[4],
+    right: spacingPixels[4],
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   successIcon: {
     width: 80,

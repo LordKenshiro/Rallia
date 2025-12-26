@@ -22,7 +22,7 @@ import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import { useRatingScoresForSport } from '@rallia/shared-hooks';
 import type { MatchFormSchemaData } from '@rallia/shared-types';
-import type { TranslationKey } from '../../../../hooks/useTranslation';
+import type { TranslationKey, TranslationOptions } from '../../../../hooks/useTranslation';
 
 // =============================================================================
 // TYPES
@@ -40,7 +40,7 @@ interface PreferencesStepProps {
     buttonTextActive: string;
     cardBackground: string;
   };
-  t: (key: TranslationKey) => string;
+  t: (key: TranslationKey, options?: TranslationOptions) => string;
   isDark: boolean;
   /** Sport name for fetching rating scores (e.g., "tennis", "pickleball") */
   sportName?: string;
@@ -149,6 +149,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
   const isCourtFree = watch('isCourtFree');
   const costSplitType = watch('costSplitType');
   const estimatedCost = watch('estimatedCost');
+  const format = watch('format');
   const visibility = watch('visibility');
   const joinMode = watch('joinMode');
   const preferredOpponentGender = watch('preferredOpponentGender');
@@ -235,6 +236,10 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
             onValueChange={value => {
               lightHaptic();
               setValue('isCourtFree', value, { shouldValidate: true, shouldDirty: true });
+              // Clear estimated cost when toggling back to free
+              if (value) {
+                setValue('estimatedCost', undefined, { shouldDirty: true });
+              }
             }}
             trackColor={{ false: colors.border, true: colors.buttonActive }}
             thumbColor={colors.buttonTextActive}
@@ -248,7 +253,9 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
           {/* Estimated cost input */}
           <View style={styles.fieldGroup}>
             <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-              {t('matchCreation.fields.estimatedCost' as TranslationKey)}
+              {costSplitType === 'equal'
+                ? t('matchCreation.fields.estimatedCostTotalEqual' as TranslationKey)
+                : t('matchCreation.fields.estimatedCostTotalCreator' as TranslationKey)}
             </Text>
             <View
               style={[
@@ -256,7 +263,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                 { borderColor: colors.border, backgroundColor: colors.cardBackground },
               ]}
             >
-              <Text size="lg" weight="semibold" color={colors.textMuted}>
+              <Text size="base" weight="medium" color={colors.textMuted}>
                 $
               </Text>
               <BottomSheetTextInput
@@ -268,11 +275,27 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                     shouldDirty: true,
                   });
                 }}
-                placeholder={t('matchCreation.fields.estimatedCostPlaceholder' as TranslationKey)}
+                placeholder={t(
+                  'matchCreation.fields.estimatedCostPlaceholderTotal' as TranslationKey
+                )}
                 placeholderTextColor={colors.textMuted}
                 keyboardType="decimal-pad"
               />
             </View>
+            {costSplitType === 'equal' && estimatedCost && (
+              <Text size="xs" color={colors.textMuted} style={styles.costHelperText}>
+                {(() => {
+                  const playerCount = format === 'doubles' ? 4 : 2;
+                  const perPerson = Math.ceil(estimatedCost / playerCount);
+                  return (
+                    t('matchCreation.fields.estimatedCostHelper' as TranslationKey, {
+                      amount: perPerson,
+                      count: playerCount,
+                    }) || `Per person: ~$${perPerson} (estimated for ${playerCount} players)`
+                  );
+                })()}
+              </Text>
+            )}
           </View>
 
           {/* Cost split type */}
@@ -284,7 +307,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
               <OptionCard
                 icon="people-outline"
                 title={t('matchCreation.fields.costSplitEqual' as TranslationKey)}
-                description="Split cost equally among all players"
+                description={t('matchCreation.fields.costSplitEqualDescription' as TranslationKey)}
                 selected={costSplitType === 'equal'}
                 onPress={() =>
                   setValue('costSplitType', 'equal', { shouldValidate: true, shouldDirty: true })
@@ -294,7 +317,9 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
               <OptionCard
                 icon="person-outline"
                 title={t('matchCreation.fields.costSplitCreator' as TranslationKey)}
-                description="You cover the full cost"
+                description={t(
+                  'matchCreation.fields.costSplitCreatorDescription' as TranslationKey
+                )}
                 selected={costSplitType === 'creator_pays'}
                 onPress={() =>
                   setValue('costSplitType', 'creator_pays', {
@@ -319,7 +344,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
             <OptionCard
               icon="checkmark-circle-outline"
               title={t('matchCreation.fields.courtStatusBooked' as TranslationKey)}
-              description="Court is already reserved for this match"
+              description={t('matchCreation.fields.courtStatusBookedDescription' as TranslationKey)}
               selected={courtStatus === 'booked'}
               onPress={() =>
                 setValue('courtStatus', 'booked', { shouldValidate: true, shouldDirty: true })
@@ -329,7 +354,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
             <OptionCard
               icon="calendar-outline"
               title={t('matchCreation.fields.courtStatusToBook' as TranslationKey)}
-              description="Court still needs to be reserved"
+              description={t('matchCreation.fields.courtStatusToBookDescription' as TranslationKey)}
               selected={courtStatus === 'to_book' || !courtStatus}
               onPress={() =>
                 setValue('courtStatus', 'to_book', { shouldValidate: true, shouldDirty: true })
@@ -553,7 +578,9 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                         color={isSelected ? colors.buttonActive : colors.textMuted}
                         style={styles.ratingSkillLevel}
                       >
-                        {score.skillLevel.charAt(0).toUpperCase() + score.skillLevel.slice(1, 3)}
+                        {t(
+                          `matchCreation.fields.skillLevelAbbr.${score.skillLevel}` as TranslationKey
+                        )}
                       </Text>
                     )}
                   </TouchableOpacity>
@@ -705,9 +732,12 @@ const styles = StyleSheet.create({
   },
   costInput: {
     flex: 1,
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '500',
     padding: 0,
+  },
+  costHelperText: {
+    marginTop: spacingPixels[1],
   },
   notesInput: {
     padding: spacingPixels[4],

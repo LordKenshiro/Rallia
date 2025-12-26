@@ -63,7 +63,7 @@ function getDefaultValues(sportId: string, timezone: string): MatchFormSchemaDat
     playerExpectation: 'both',
 
     // Step 2: Where
-    locationType: 'tbd',
+    locationType: 'facility',
     facilityId: undefined,
     courtId: undefined,
     locationName: undefined,
