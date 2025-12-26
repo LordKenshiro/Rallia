@@ -7,7 +7,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
-import { UseFormReturn } from 'react-hook-form';
+import { UseFormReturn, useWatch } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Text } from '@rallia/shared-components';
@@ -17,6 +17,7 @@ import { useFacilitySearch } from '@rallia/shared-hooks';
 import type { MatchFormSchemaData, FacilitySearchResult } from '@rallia/shared-types';
 import type { TranslationKey, TranslationOptions } from '../../../../hooks/useTranslation';
 import { useUserLocation } from '../../../../hooks/useUserLocation';
+import { supabase } from '../../../../lib/supabase';
 
 // =============================================================================
 // TYPES
@@ -203,21 +204,32 @@ const SelectedFacility: React.FC<SelectedFacilityProps> = ({ facility, onClear, 
 
 export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, sportId }) => {
   const {
-    watch,
     setValue,
+    control,
     formState: { errors },
   } = form;
 
-  const locationType = watch('locationType');
-  const locationName = watch('locationName');
-  const locationAddress = watch('locationAddress');
-  const facilityId = watch('facilityId');
+  // Use useWatch for reliable reactivity when form values change from parent components
+  const locationType = useWatch({ control, name: 'locationType' });
+  const locationName = useWatch({ control, name: 'locationName' });
+  const locationAddress = useWatch({ control, name: 'locationAddress' });
+  const facilityId = useWatch({ control, name: 'facilityId' });
 
   // Local state for search and selected facility
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFacility, setSelectedFacility] = useState<FacilitySearchResult | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const addressFieldRef = useRef<View>(null);
+
+  // Track which facility ID we've already fetched to avoid duplicate fetches
+  const fetchedFacilityIdRef = useRef<string | null>(null);
+
+  // Reset state when sportId changes (when switching sports)
+  useEffect(() => {
+    setSelectedFacility(null);
+    fetchedFacilityIdRef.current = null;
+    setSearchQuery('');
+  }, [sportId]);
 
   // Get user location
   const { location, loading: locationLoading, error: locationError } = useUserLocation();
@@ -241,16 +253,92 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
     enabled: locationType === 'facility' && (!selectedFacility || needsToFindFacility),
   });
 
-  // Sync selectedFacility with form's facilityId when resuming a draft
+  // Sync selectedFacility with form's facilityId when resuming a draft or when preferred facility is set
   useEffect(() => {
-    if (facilityId && !selectedFacility && facilities.length > 0) {
-      // Find the facility in the loaded facilities list
+    // Skip if no facilityId or already have the correct facility selected
+    if (!facilityId || (selectedFacility && selectedFacility.id === facilityId)) {
+      return;
+    }
+
+    // First, try to find the facility in the loaded facilities list
+    if (facilities.length > 0) {
       const foundFacility = facilities.find(f => f.id === facilityId);
       if (foundFacility) {
         setSelectedFacility(foundFacility);
+        fetchedFacilityIdRef.current = facilityId;
+        return;
       }
     }
-  }, [facilityId, selectedFacility, facilities]);
+
+    // Skip if we've already fetched this facility ID (prevents duplicate fetches)
+    if (fetchedFacilityIdRef.current === facilityId) {
+      return;
+    }
+
+    // Mark as fetching to prevent duplicate requests
+    fetchedFacilityIdRef.current = facilityId;
+
+    // If not found in loaded facilities, fetch it directly from the database
+    // This handles the case when preferred_facility_id is set but the facility
+    // isn't in the search results (e.g., it's far away or filtered out)
+    const fetchPreferredFacility = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('facility')
+          .select('id, name, address, city, latitude, longitude')
+          .eq('id', facilityId)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('Failed to fetch preferred facility:', error);
+          return;
+        }
+
+        if (data) {
+          // Calculate distance if we have user location
+          let distance_meters: number | null = null;
+          if (
+            location?.latitude &&
+            location?.longitude &&
+            data.latitude !== null &&
+            data.longitude !== null
+          ) {
+            // Simple haversine distance calculation
+            const R = 6371000; // Earth radius in meters
+            const lat1 = (location.latitude * Math.PI) / 180;
+            const lat2 = (Number(data.latitude) * Math.PI) / 180;
+            const deltaLat = ((Number(data.latitude) - location.latitude) * Math.PI) / 180;
+            const deltaLon = ((Number(data.longitude) - location.longitude) * Math.PI) / 180;
+
+            const a =
+              Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+              Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            distance_meters = R * c;
+          }
+
+          const facilityResult: FacilitySearchResult = {
+            id: data.id,
+            name: data.name,
+            address: data.address,
+            city: data.city,
+            distance_meters,
+          };
+
+          setSelectedFacility(facilityResult);
+          // Also update form values for display
+          setValue('locationName', data.name, { shouldDirty: false });
+          const fullAddress = [data.address, data.city].filter(Boolean).join(', ');
+          setValue('locationAddress', fullAddress || undefined, { shouldDirty: false });
+        }
+      } catch (error) {
+        console.error('Error fetching preferred facility:', error);
+      }
+    };
+
+    fetchPreferredFacility();
+  }, [facilityId, selectedFacility, facilities, location, setValue]);
 
   // Handle facility selection
   const handleSelectFacility = useCallback(
@@ -270,6 +358,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
   // Handle clearing selected facility
   const handleClearFacility = useCallback(() => {
     setSelectedFacility(null);
+    fetchedFacilityIdRef.current = null; // Reset so we can re-fetch if needed
     setValue('facilityId', undefined, { shouldValidate: true, shouldDirty: true });
     setValue('locationName', undefined, { shouldDirty: true });
     setValue('locationAddress', undefined, { shouldDirty: true });
@@ -288,6 +377,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
       } else if (newLocationType === 'custom') {
         // Switching to custom: clear facility fields
         setSelectedFacility(null);
+        fetchedFacilityIdRef.current = null; // Reset so we can re-fetch if needed
         setValue('facilityId', undefined, { shouldValidate: true, shouldDirty: true });
         setSearchQuery('');
         // Clear locationName and locationAddress that might have been set by facility selection
@@ -296,6 +386,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
       } else if (newLocationType === 'tbd') {
         // Switching to TBD: clear both facility and custom location fields
         setSelectedFacility(null);
+        fetchedFacilityIdRef.current = null; // Reset so we can re-fetch if needed
         setValue('facilityId', undefined, { shouldValidate: true, shouldDirty: true });
         setValue('locationName', undefined, { shouldDirty: true });
         setValue('locationAddress', undefined, { shouldDirty: true });

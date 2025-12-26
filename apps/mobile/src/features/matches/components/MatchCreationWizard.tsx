@@ -282,6 +282,12 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   );
   const [preferencesLoading, setPreferencesLoading] = useState(true);
 
+  // Reset preferences when sportId changes (handles sport switching)
+  useEffect(() => {
+    setPlayerPreferences(null);
+    setPreferencesLoading(true);
+  }, [sportId]);
+
   // Fetch player preferences for the selected sport
   useEffect(() => {
     if (isEditMode || !session?.user?.id || !sportId) {
@@ -293,7 +299,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
       try {
         const { data, error } = await supabase
           .from('player_sport')
-          .select('preferred_match_duration, preferred_match_type')
+          .select('preferred_match_duration, preferred_match_type, preferred_facility_id')
           .eq('player_id', session.user.id)
           .eq('sport_id', sportId)
           .maybeSingle();
@@ -326,6 +332,12 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
               both: 'both',
             };
             mappedPreferences.playerExpectation = typeMap[data.preferred_match_type] || 'both';
+          }
+
+          // Map preferred facility: if preferred_facility_id exists, set locationType to 'facility' and facilityId
+          if (data.preferred_facility_id) {
+            mappedPreferences.locationType = 'facility';
+            mappedPreferences.facilityId = data.preferred_facility_id;
           }
 
           setPlayerPreferences(mappedPreferences);
@@ -365,13 +377,16 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     isLoading: isDraftLoading,
   } = useMatchDraft();
 
-  // Apply player preferences to form when they're loaded (only if not in edit mode and no draft)
+  // Apply player preferences to form when they're loaded (only if not in edit mode and no draft for this sport)
   useEffect(() => {
+    // Skip if there's a draft for the current sport (user might want to resume it)
+    const hasDraftForCurrentSport = hasDraft && isDraftForSport(sportId);
+
     if (
       isEditMode ||
       preferencesLoading ||
       !playerPreferences ||
-      hasDraft ||
+      hasDraftForCurrentSport ||
       Object.keys(playerPreferences).length === 0
     ) {
       return;
@@ -383,7 +398,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
         form.setValue(key as keyof MatchFormSchemaData, value as never, { shouldDirty: false });
       }
     });
-  }, [playerPreferences, preferencesLoading, isEditMode, hasDraft, form]);
+  }, [playerPreferences, preferencesLoading, isEditMode, hasDraft, isDraftForSport, sportId, form]);
 
   // Delayed success state for smoother UX
   const [showSuccess, setShowSuccess] = useState(false);

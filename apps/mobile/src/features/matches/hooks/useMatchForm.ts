@@ -4,7 +4,7 @@
  * Provides smart defaults, per-step validation, and form persistence.
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useEffect, useRef } from 'react';
 import { useForm, UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -262,6 +262,17 @@ export function useMatchForm(options: UseMatchFormOptions): UseMatchFormReturn {
 
   const { watch, trigger, formState, reset, setValue } = form;
   const values = watch();
+
+  // Reset form when sportId changes (handles sport switching)
+  // Use a ref to track the previous sportId and only reset on actual changes
+  const prevSportIdRef = useRef(sportId);
+  useEffect(() => {
+    if (prevSportIdRef.current !== sportId) {
+      prevSportIdRef.current = sportId;
+      // Reset to new defaults when sport changes
+      reset(getDefaultValues(sportId, timezone));
+    }
+  }, [sportId, timezone, reset]);
 
   // Validate a specific step
   const validateStep = useCallback(
