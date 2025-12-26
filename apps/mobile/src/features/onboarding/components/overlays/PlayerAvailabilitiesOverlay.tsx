@@ -56,15 +56,15 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
   const days: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const timeSlots: TimeSlot[] = ['AM', 'PM', 'EVE'];
 
-  // Default availabilities for onboarding mode
+  // Default availabilities for onboarding mode (all unselected)
   const defaultAvailabilities: WeeklyAvailability = {
-    Mon: { AM: true, PM: false, EVE: false },
+    Mon: { AM: false, PM: false, EVE: false },
     Tue: { AM: false, PM: false, EVE: false },
-    Wed: { AM: false, PM: true, EVE: false },
-    Thu: { AM: false, PM: true, EVE: false },
-    Fri: { AM: false, PM: true, EVE: false },
-    Sat: { AM: true, PM: false, EVE: false },
-    Sun: { AM: false, PM: false, EVE: true },
+    Wed: { AM: false, PM: false, EVE: false },
+    Thu: { AM: false, PM: false, EVE: false },
+    Fri: { AM: false, PM: false, EVE: false },
+    Sat: { AM: false, PM: false, EVE: false },
+    Sun: { AM: false, PM: false, EVE: false },
   };
 
   // Initialize availabilities: use initialData for edit mode, defaults for onboarding
