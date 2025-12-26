@@ -25,3 +25,4 @@ WHERE location_type = 'custom' AND custom_latitude IS NOT NULL AND custom_longit
 COMMENT ON COLUMN match.custom_latitude IS 'Latitude coordinate for custom locations (when location_type=custom). Populated from Google Places API.';
 COMMENT ON COLUMN match.custom_longitude IS 'Longitude coordinate for custom locations (when location_type=custom). Populated from Google Places API.';
 
+

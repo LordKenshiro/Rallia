@@ -660,6 +660,9 @@ CREATE TABLE waitlist_signup (
 -- ============================================================================
 -- TRIGGER FUNCTION: handle_new_user
 -- ============================================================================
+-- Creates a profile when a new user signs up.
+-- For social auth (Google, Facebook, Apple, etc.): Extracts full_name, display_name, and avatar from OAuth metadata.
+-- For email OTP signup: Only populates email field, leaves full_name and display_name as NULL for user to fill in later.
 
 CREATE OR REPLACE FUNCTION handle_new_user() RETURNS TRIGGER
     LANGUAGE plpgsql SECURITY DEFINER
@@ -667,33 +670,53 @@ CREATE OR REPLACE FUNCTION handle_new_user() RETURNS TRIGGER
 AS $$
 DECLARE
     provider text;
-    full_name text;
-    display_name text;
-    avatar_url text;
+    user_full_name text;
+    user_display_name text;
+    user_avatar_url text;
     user_email text;
+    is_social_auth boolean;
 BEGIN
+    -- Determine provider (defaults to 'email' for email/password or OTP)
     provider := COALESCE(new.raw_app_meta_data->>'provider', 'email');
     
-    full_name := NULL;
-    display_name := NULL;
-    avatar_url := NULL;
+    -- Check if this is a social auth provider
+    is_social_auth := provider IN (
+        'google', 'facebook', 'apple', 'azure', 'microsoft',
+        'twitter', 'github', 'gitlab', 'linkedin', 'linkedin_oidc',
+        'discord', 'slack', 'spotify', 'twitch', 'bitbucket', 'notion', 'zoom'
+    );
+    
+    -- Default values - all NULL for email OTP signups
+    user_full_name := NULL;
+    user_display_name := NULL;
+    user_avatar_url := NULL;
     user_email := new.email;
     
-    IF provider IN ('google', 'azure', 'microsoft') THEN
-        IF new.raw_user_meta_data IS NOT NULL THEN
-            full_name := new.raw_user_meta_data->>'full_name';
-            display_name := COALESCE(
-                new.raw_user_meta_data->>'preferred_username',
-                new.raw_user_meta_data->>'name',
-                new.raw_user_meta_data->>'email'
-            );
-            avatar_url := new.raw_user_meta_data->>'avatar_url';
-        END IF;
+    -- Only extract OAuth metadata for social auth providers
+    IF is_social_auth AND new.raw_user_meta_data IS NOT NULL THEN
+        -- Extract full name from various possible fields
+        user_full_name := COALESCE(
+            new.raw_user_meta_data->>'full_name',
+            new.raw_user_meta_data->>'name'
+        );
+        
+        -- Extract display name / username from various possible fields
+        user_display_name := COALESCE(
+            new.raw_user_meta_data->>'preferred_username',
+            new.raw_user_meta_data->>'user_name',
+            new.raw_user_meta_data->>'nickname',
+            new.raw_user_meta_data->>'name'
+        );
+        
+        -- Extract avatar URL from various possible fields
+        user_avatar_url := COALESCE(
+            new.raw_user_meta_data->>'avatar_url',
+            new.raw_user_meta_data->>'picture'
+        );
     END IF;
     
-    IF display_name IS NULL AND new.email IS NOT NULL THEN
-        display_name := new.email;
-    END IF;
+    -- NOTE: For email OTP signups, we intentionally do NOT set display_name to email.
+    -- The profile will have NULL for full_name and display_name, which the user can fill in later.
     
     INSERT INTO public.profile (
         id, email, full_name, display_name, avatar_url,
@@ -701,11 +724,14 @@ BEGIN
         created_at, updated_at
     )
     VALUES (
-        new.id, user_email, full_name, display_name, avatar_url,
+        new.id, user_email, user_full_name, user_display_name, user_avatar_url,
         'en-CA', 'America/Toronto', false, true, now(), now()
     )
     ON CONFLICT (id) DO UPDATE SET
         email = COALESCE(EXCLUDED.email, profile.email),
+        full_name = COALESCE(NULLIF(EXCLUDED.full_name, ''), profile.full_name),
+        display_name = COALESCE(NULLIF(EXCLUDED.display_name, ''), profile.display_name),
+        avatar_url = COALESCE(NULLIF(EXCLUDED.avatar_url, ''), profile.avatar_url),
         updated_at = now();
     
     RETURN new;
