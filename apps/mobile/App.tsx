@@ -1,8 +1,17 @@
+/**
+ * IMPORTANT: Initialize Supabase with AsyncStorage FIRST
+ * This must be the first import that touches @rallia/shared-services
+ * to ensure the supabase client is properly configured before any hooks use it.
+ */
+import './src/lib/supabase';
+
+import type { PropsWithChildren } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { StatusBar } from 'expo-status-bar';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AppNavigator from './src/navigation/AppNavigator';
 import { navigationRef } from './src/navigation';
 import { ActionsBottomSheet } from './src/components/ActionsBottomSheet';
@@ -12,6 +21,8 @@ import { ErrorBoundary } from '@rallia/shared-components';
 import { ThemeProvider, useTheme } from '@rallia/shared-hooks';
 import { Logger } from './src/services/logger';
 import {
+  AuthProvider,
+  useAuth,
   OverlayProvider,
   LocaleProvider,
   ActionsSheetProvider,
@@ -21,14 +32,27 @@ import {
 } from './src/context';
 import { ProfileProvider, PlayerProvider } from '@rallia/shared-hooks';
 
+// Import NativeWind global styles
+import './global.css';
+
 const queryClient = new QueryClient();
 
-// IMPORTANT: Initialize Supabase with AsyncStorage before any other code runs
-import './src/lib/supabase';
+/**
+ * AuthenticatedProviders - Wraps providers that need userId from auth context.
+ * This component sits inside AuthProvider and passes userId to ProfileProvider and PlayerProvider.
+ */
+function AuthenticatedProviders({ children }: PropsWithChildren) {
+  const { user } = useAuth();
+  const userId = user?.id;
 
-// Import NativeWind global styles (will be available after nativewind is installed)
-import './global.css';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+  return (
+    <ProfileProvider userId={userId}>
+      <PlayerProvider userId={userId}>
+        <SportProvider userId={userId}>{children}</SportProvider>
+      </PlayerProvider>
+    </ProfileProvider>
+  );
+}
 
 function AppContent() {
   const { theme } = useTheme();
@@ -65,21 +89,19 @@ export default function App() {
           <QueryClientProvider client={queryClient}>
             <LocaleProvider>
               <ThemeProvider>
-                <ProfileProvider>
-                  <PlayerProvider>
-                    <SportProvider>
-                      <OverlayProvider>
-                        <ActionsSheetProvider>
-                          <MatchDetailSheetProvider>
-                            <BottomSheetModalProvider>
-                              <AppContent />
-                            </BottomSheetModalProvider>
-                          </MatchDetailSheetProvider>
-                        </ActionsSheetProvider>
-                      </OverlayProvider>
-                    </SportProvider>
-                  </PlayerProvider>
-                </ProfileProvider>
+                <AuthProvider>
+                  <AuthenticatedProviders>
+                    <OverlayProvider>
+                      <ActionsSheetProvider>
+                        <MatchDetailSheetProvider>
+                          <BottomSheetModalProvider>
+                            <AppContent />
+                          </BottomSheetModalProvider>
+                        </MatchDetailSheetProvider>
+                      </ActionsSheetProvider>
+                    </OverlayProvider>
+                  </AuthenticatedProviders>
+                </AuthProvider>
               </ThemeProvider>
             </LocaleProvider>
           </QueryClientProvider>

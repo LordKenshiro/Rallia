@@ -1,6 +1,27 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { supabase as sharedSupabase } from '@rallia/shared-services';
-import type { Session, AuthError, Provider, SupabaseClient } from '@supabase/supabase-js';
+/**
+ * AuthContext - Centralized authentication state management
+ *
+ * Following Supabase's recommended pattern for React Native:
+ * https://supabase.com/docs/guides/auth/quickstarts/with-expo-react-native-social-auth
+ *
+ * Features:
+ * - Single source of truth for auth state across the app
+ * - AppState listener for proper token refresh handling
+ * - Session validation to detect deleted users
+ * - Proper cleanup on unmount
+ */
+
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  PropsWithChildren,
+} from 'react';
+import { AppState, AppStateStatus } from 'react-native';
+import { supabase } from '../lib/supabase';
+import type { Session, AuthError, Provider } from '@supabase/supabase-js';
 
 /** Supported OAuth providers */
 export type OAuthProvider = 'google' | 'apple' | 'facebook' | 'azure';
@@ -13,43 +34,45 @@ export type AuthResult = {
 
 /** Options for OAuth sign-in */
 export type OAuthSignInOptions = {
-  /** The redirect URL after OAuth authentication (platform-specific) */
   redirectTo?: string;
-  /** Additional scopes to request from the provider */
   scopes?: string;
-  /** Skip the browser redirect (useful for mobile with native auth) */
   skipBrowserRedirect?: boolean;
 };
 
 /** Options for email OTP sign-in */
 export type EmailOtpOptions = {
-  /** The redirect URL for magic link emails (platform-specific) */
   emailRedirectTo?: string;
-  /** Whether to create a new user if one doesn't exist */
   shouldCreateUser?: boolean;
 };
 
-/** Options for the useAuth hook */
-export type UseAuthOptions = {
-  /**
-   * Custom Supabase client to use instead of the shared service client.
-   * Use this in Next.js apps to pass the SSR-aware browser client for proper cookie handling.
-   */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  client?: SupabaseClient<any, any, any>;
+/** Auth context value type */
+export type AuthContextType = {
+  // State
+  session: Session | null;
+  loading: boolean;
+  isAuthenticated: boolean;
+  user: Session['user'] | null;
+
+  // Auth methods
+  signInWithProvider: (
+    provider: OAuthProvider,
+    options?: OAuthSignInOptions
+  ) => Promise<AuthResult>;
+  signInWithEmail: (email: string, options?: EmailOtpOptions) => Promise<AuthResult>;
+  verifyOtp: (email: string, token: string) => Promise<AuthResult>;
+  signOut: () => Promise<AuthResult>;
 };
 
-/**
- * Custom hook for managing authentication state
- * Handles session management, auth state changes, and sign-in flows
- * Compatible with both Next.js (web) and Expo (mobile)
- *
- * @param options - Optional configuration including custom Supabase client
- */
-export const useAuth = (options?: UseAuthOptions) => {
-  // Use custom client if provided, otherwise fall back to shared service client
-  const supabase = useMemo(() => options?.client ?? sharedSupabase, [options?.client]);
+// Create context with undefined default (will throw if used outside provider)
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/**
+ * AuthProvider - Wraps the app and provides auth state via context
+ *
+ * This should be placed near the top of the component tree, after
+ * any providers it depends on (like QueryClientProvider).
+ */
+export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -58,8 +81,6 @@ export const useAuth = (options?: UseAuthOptions) => {
 
     /**
      * Fetch and validate the initial session
-     * Following Supabase's recommended pattern from the docs:
-     * https://supabase.com/docs/guides/auth/quickstarts/with-expo-react-native-social-auth
      */
     const fetchSession = async () => {
       try {
@@ -80,7 +101,6 @@ export const useAuth = (options?: UseAuthOptions) => {
           } = await supabase.auth.getUser();
 
           if (userError || !user) {
-            // Session exists but user was deleted - clear the invalid session
             console.warn(
               '⚠️ Invalid session detected (user deleted from database). Clearing session...'
             );
@@ -93,7 +113,6 @@ export const useAuth = (options?: UseAuthOptions) => {
               setSession(null);
             }
           } else {
-            // Valid session
             if (isSubscribed) {
               setSession(initialSession);
             }
@@ -116,13 +135,11 @@ export const useAuth = (options?: UseAuthOptions) => {
     // Fetch initial session
     fetchSession();
 
-    // Subscribe to auth state changes for subsequent updates
+    // Subscribe to auth state changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, newSession) => {
       console.log('Auth state change:', _event);
-      // Update session on any auth state change
-      // The subscription handles sign-in, sign-out, token refresh, etc.
       setSession(newSession);
     });
 
@@ -130,13 +147,43 @@ export const useAuth = (options?: UseAuthOptions) => {
       isSubscribed = false;
       subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, []);
+
+  /**
+   * AppState listener for token refresh handling
+   *
+   * Supabase Auth automatically refreshes tokens, but in React Native
+   * we need to manually start/stop this based on app foreground state.
+   * This prevents unnecessary network requests when the app is in background
+   * and ensures tokens are refreshed when the app becomes active.
+   */
+  useEffect(() => {
+    const handleAppStateChange = (state: AppStateStatus) => {
+      if (state === 'active') {
+        // App came to foreground - start auto refresh
+        supabase.auth.startAutoRefresh();
+      } else {
+        // App went to background - stop auto refresh
+        supabase.auth.stopAutoRefresh();
+      }
+    };
+
+    // Subscribe to app state changes
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    // Start auto refresh initially if app is active
+    if (AppState.currentState === 'active') {
+      supabase.auth.startAutoRefresh();
+    }
+
+    return () => {
+      subscription.remove();
+      supabase.auth.stopAutoRefresh();
+    };
+  }, []);
 
   /**
    * Sign in with an OAuth provider (Google, Apple, or Facebook)
-   * @param provider - The OAuth provider to use
-   * @param options - Configuration options for the OAuth flow
-   * @returns Promise resolving to success status and optional error
    */
   const signInWithProvider = useCallback(
     async (provider: OAuthProvider, options?: OAuthSignInOptions): Promise<AuthResult> => {
@@ -164,14 +211,11 @@ export const useAuth = (options?: UseAuthOptions) => {
         };
       }
     },
-    [supabase]
+    []
   );
 
   /**
    * Send an OTP code to the user's email
-   * @param email - The user's email address
-   * @param options - Configuration options for the OTP email
-   * @returns Promise resolving to success status and optional error
    */
   const signInWithEmail = useCallback(
     async (email: string, options?: EmailOtpOptions): Promise<AuthResult> => {
@@ -198,44 +242,37 @@ export const useAuth = (options?: UseAuthOptions) => {
         };
       }
     },
-    [supabase]
+    []
   );
 
   /**
    * Verify an OTP code sent to the user's email
-   * @param email - The user's email address
-   * @param token - The 6-digit OTP code
-   * @returns Promise resolving to success status and optional error
    */
-  const verifyOtp = useCallback(
-    async (email: string, token: string): Promise<AuthResult> => {
-      try {
-        const { error } = await supabase.auth.verifyOtp({
-          email,
-          token,
-          type: 'email',
-        });
+  const verifyOtp = useCallback(async (email: string, token: string): Promise<AuthResult> => {
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: 'email',
+      });
 
-        if (error) {
-          console.error('OTP verification error:', error);
-          return { success: false, error };
-        }
-
-        return { success: true };
-      } catch (error) {
-        console.error('Unexpected OTP verification error:', error);
-        return {
-          success: false,
-          error: error instanceof Error ? error : new Error('Unknown error'),
-        };
+      if (error) {
+        console.error('OTP verification error:', error);
+        return { success: false, error };
       }
-    },
-    [supabase]
-  );
+
+      return { success: true };
+    } catch (error) {
+      console.error('Unexpected OTP verification error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error : new Error('Unknown error'),
+      };
+    }
+  }, []);
 
   /**
    * Sign out the current user
-   * @returns Promise resolving to success status and optional error
    */
   const signOut = useCallback(async (): Promise<AuthResult> => {
     try {
@@ -252,9 +289,9 @@ export const useAuth = (options?: UseAuthOptions) => {
         error: error instanceof Error ? error : new Error('Unknown error'),
       };
     }
-  }, [supabase]);
+  }, []);
 
-  return {
+  const value: AuthContextType = {
     // State
     session,
     loading,
@@ -267,4 +304,28 @@ export const useAuth = (options?: UseAuthOptions) => {
     verifyOtp,
     signOut,
   };
-};
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+/**
+ * useAuth hook - Access auth state and methods from any component
+ *
+ * Must be used within an AuthProvider.
+ *
+ * @example
+ * ```tsx
+ * const { session, loading, signOut } = useAuth();
+ *
+ * if (loading) return <Spinner />;
+ * if (!session) return <LoginScreen />;
+ * return <HomeScreen user={session.user} />;
+ * ```
+ */
+export function useAuth(): AuthContextType {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}

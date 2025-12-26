@@ -7,8 +7,9 @@
 
 import { useState, useCallback } from 'react';
 import { Alert } from 'react-native';
-import { useAuth } from '@rallia/shared-hooks';
-import { ProfileService, Logger, supabase } from '@rallia/shared-services';
+import { useAuth } from '../../../hooks';
+import { ProfileService, Logger } from '@rallia/shared-services';
+import { supabase } from '../../../lib/supabase';
 import { lightHaptic, mediumHaptic, successHaptic } from '@rallia/shared-utils';
 
 interface UseAuthWizardReturn {

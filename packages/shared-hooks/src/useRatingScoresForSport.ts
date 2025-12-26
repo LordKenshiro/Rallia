@@ -65,15 +65,17 @@ interface RatingScoresWithPlayer {
 
 /**
  * Hook to fetch rating scores for a sport's primary rating system
- * Also fetches the current player's rating to use as the default selection.
+ * Also fetches the player's rating to use as the default selection.
  *
  * @param sportName - The name of the sport (e.g., "tennis", "pickleball")
  * @param sportId - Optional sport ID for fetching player's rating
+ * @param userId - Optional user ID for fetching player's rating. Pass user?.id from your auth context.
  * @returns Rating scores, loading state, error, and player's current rating
  *
  * @example
  * ```tsx
- * const { ratingScores, isLoading, hasRatingSystem, playerRatingScoreId } = useRatingScoresForSport('tennis', sportId);
+ * const { user } = useAuth();
+ * const { ratingScores, isLoading, hasRatingSystem, playerRatingScoreId } = useRatingScoresForSport('tennis', sportId, user?.id);
  *
  * // playerRatingScoreId can be used as default for minRatingScoreId
  * useEffect(() => {
@@ -85,12 +87,13 @@ interface RatingScoresWithPlayer {
  */
 export function useRatingScoresForSport(
   sportName: string | undefined,
-  sportId?: string
+  sportId?: string,
+  userId?: string
 ): UseRatingScoresForSportResult {
   const ratingSystemCode = sportName ? getRatingSystemForSport(sportName) : null;
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['ratingScoresWithPlayer', sportName, sportId, ratingSystemCode],
+    queryKey: ['ratingScoresWithPlayer', sportName, sportId, ratingSystemCode, userId],
     queryFn: async (): Promise<RatingScoresWithPlayer> => {
       if (!sportName || !ratingSystemCode) {
         return { ratingScores: [], playerRatingScoreId: null };
@@ -111,61 +114,56 @@ export function useRatingScoresForSport(
         description: score.description || null,
       }));
 
-      // Fetch the current player's rating for this sport
+      // Fetch the player's rating for this sport (if userId provided)
       let playerRatingScoreId: string | null = null;
 
-      if (sportId) {
+      if (sportId && userId) {
         try {
-          const {
-            data: { user },
-          } = await supabase.auth.getUser();
-          if (user) {
-            // Get player's rating for this sport's rating system
-            const { data: playerRatings } = await supabase
-              .from('player_rating_score')
-              .select(
-                `
-                rating_score_id,
-                rating_score!player_rating_scores_rating_score_id_fkey (
-                  id,
-                  rating_system (
-                    sport_id,
-                    code
-                  )
-                )
+          // Get player's rating for this sport's rating system
+          const { data: playerRatings } = await supabase
+            .from('player_rating_score')
+            .select(
               `
+              rating_score_id,
+              rating_score!player_rating_scores_rating_score_id_fkey (
+                id,
+                rating_system (
+                  sport_id,
+                  code
+                )
               )
-              .eq('player_id', user.id);
+            `
+            )
+            .eq('player_id', userId);
 
-            // Find the rating for this sport and rating system
-            if (playerRatings) {
-              const matchingRating = playerRatings.find(pr => {
-                // rating_score is returned as an array by Supabase
-                const ratingScores = Array.isArray(pr.rating_score)
-                  ? pr.rating_score
-                  : pr.rating_score
-                    ? [pr.rating_score]
+          // Find the rating for this sport and rating system
+          if (playerRatings) {
+            const matchingRating = playerRatings.find(pr => {
+              // rating_score is returned as an array by Supabase
+              const ratingScores = Array.isArray(pr.rating_score)
+                ? pr.rating_score
+                : pr.rating_score
+                  ? [pr.rating_score]
+                  : [];
+
+              // Check each rating_score's rating_system
+              return ratingScores.some(ratingScore => {
+                // rating_system is also returned as an array by Supabase
+                const ratingSystems = Array.isArray(ratingScore?.rating_system)
+                  ? ratingScore.rating_system
+                  : ratingScore?.rating_system
+                    ? [ratingScore.rating_system]
                     : [];
 
-                // Check each rating_score's rating_system
-                return ratingScores.some(ratingScore => {
-                  // rating_system is also returned as an array by Supabase
-                  const ratingSystems = Array.isArray(ratingScore?.rating_system)
-                    ? ratingScore.rating_system
-                    : ratingScore?.rating_system
-                      ? [ratingScore.rating_system]
-                      : [];
-
-                  return ratingSystems.some(
-                    ratingSystem =>
-                      ratingSystem?.sport_id === sportId && ratingSystem?.code === ratingSystemCode
-                  );
-                });
+                return ratingSystems.some(
+                  ratingSystem =>
+                    ratingSystem?.sport_id === sportId && ratingSystem?.code === ratingSystemCode
+                );
               });
+            });
 
-              if (matchingRating) {
-                playerRatingScoreId = matchingRating.rating_score_id;
-              }
+            if (matchingRating) {
+              playerRatingScoreId = matchingRating.rating_score_id;
             }
           }
         } catch (err) {

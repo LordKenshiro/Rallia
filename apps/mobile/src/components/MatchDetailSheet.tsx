@@ -49,7 +49,7 @@ import {
 import { useMatchDetailSheet } from '../context/MatchDetailSheetContext';
 import { useActionsSheet } from '../context/ActionsSheetContext';
 import { useTranslation, type TranslationKey } from '../hooks';
-import { useTheme, useAuth, usePlayer, useMatchActions } from '@rallia/shared-hooks';
+import { useTheme, usePlayer, useMatchActions } from '@rallia/shared-hooks';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import { ConfirmationModal } from './ConfirmationModal';
 
@@ -285,7 +285,6 @@ export const MatchDetailSheet: React.FC = () => {
   const { openSheetForEdit } = useActionsSheet();
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
-  const { session } = useAuth();
   const { player } = usePlayer();
   const isDark = theme === 'dark';
   const playerId = player?.id;

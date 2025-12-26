@@ -54,7 +54,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 
   // Use custom hooks for data fetching
   const { profile, refetch: refetchProfile } = useProfile();
-  const { playerSports, refetch: refetchPlayerSports } = usePlayerSports();
+  const { playerSports, refetch: refetchPlayerSports } = usePlayerSports(profile?.id);
 
   const [userSports, setUserSports] = useState<Sport[]>([]);
   const [selectedSport, setSelectedSport] = useState<Sport | null>(null);

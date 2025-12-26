@@ -859,6 +859,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                 isDark={isDark}
                 sportName={selectedSport?.name}
                 sportId={selectedSport?.id}
+                userId={session?.user?.id}
               />
             </View>
           </Animated.View>

@@ -38,10 +38,12 @@ const SportContext = createContext<SportContextValue | undefined>(undefined);
 
 interface SportProviderProps {
   children: ReactNode;
+  /** The authenticated user's ID. Pass from your auth context. */
+  userId?: string;
 }
 
-export function SportProvider({ children }: SportProviderProps) {
-  const { playerSports, loading: playerSportsLoading, refetch } = usePlayerSports();
+export function SportProvider({ children, userId }: SportProviderProps) {
+  const { playerSports, loading: playerSportsLoading, refetch } = usePlayerSports(userId);
   const [selectedSport, setSelectedSportState] = useState<Sport | null>(null);
   const [userSports, setUserSports] = useState<Sport[]>([]);
 

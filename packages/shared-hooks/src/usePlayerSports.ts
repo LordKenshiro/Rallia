@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@rallia/shared-services';
 import type { Sport } from './useSports';
-import { useAuth } from './useAuth';
 
 /**
  * Player sport data with nested sport information
@@ -19,12 +18,13 @@ export interface PlayerSport {
  * Custom hook for fetching player's sports with sport details
  * Eliminates duplicate player sports fetching code across components
  *
- * @param playerId - Optional player ID to fetch. If not provided, fetches current authenticated user's sports
+ * @param playerId - The player ID to fetch sports for. Pass user?.id from your auth context.
  * @returns Object containing player sports array, loading state, error, and refetch function
  *
  * @example
  * ```tsx
- * const { playerSports, loading, error, refetch } = usePlayerSports();
+ * const { user } = useAuth();
+ * const { playerSports, loading, error, refetch } = usePlayerSports(user?.id);
  *
  * if (loading) return <Spinner />;
  * if (error) return <ErrorMessage message={error.message} />;
@@ -35,27 +35,22 @@ export interface PlayerSport {
  * });
  * ```
  */
-export const usePlayerSports = (playerId?: string) => {
-  const { session, loading: authLoading } = useAuth();
+export const usePlayerSports = (playerId: string | undefined) => {
   const [playerSports, setPlayerSports] = useState<PlayerSport[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   const fetchPlayerSports = useCallback(async () => {
+    // No playerId means not authenticated - return empty
+    if (!playerId) {
+      setPlayerSports([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
-
-      // Get current authenticated user if no playerId provided
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const targetPlayerId = playerId || user?.id;
-
-      if (!targetPlayerId) {
-        setPlayerSports([]);
-        return;
-      }
 
       // Fetch player's sports with sport details
       const { data, error: sportsError } = await supabase
@@ -76,7 +71,7 @@ export const usePlayerSports = (playerId?: string) => {
           )
         `
         )
-        .eq('player_id', targetPlayerId);
+        .eq('player_id', playerId);
 
       if (sportsError) {
         throw new Error(sportsError.message);
@@ -92,22 +87,14 @@ export const usePlayerSports = (playerId?: string) => {
     }
   }, [playerId]);
 
+  // Fetch when playerId changes
   useEffect(() => {
-    // Wait for auth to finish loading before fetching
-    // This prevents race conditions where we fetch before auth is ready
-    if (authLoading) {
-      return;
-    }
-
-    // Fetch player sports when auth is ready
     fetchPlayerSports();
-  }, [authLoading, session?.user?.id, fetchPlayerSports]);
+  }, [fetchPlayerSports]);
 
-  // Return loading as true if auth is still loading OR if we haven't fetched yet
-  // This ensures we show loading state until data is actually ready
   return {
     playerSports,
-    loading: authLoading || loading,
+    loading,
     error,
     refetch: fetchPlayerSports,
   };

@@ -46,6 +46,8 @@ interface PreferencesStepProps {
   sportName?: string;
   /** Sport ID for fetching player's current rating */
   sportId?: string;
+  /** User ID for fetching player's current rating */
+  userId?: string;
 }
 
 interface OptionCardProps {
@@ -139,6 +141,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
   isDark,
   sportName,
   sportId,
+  userId,
 }) => {
   const {
     watch,
@@ -170,7 +173,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
     isLoading: isLoadingRatings,
     hasRatingSystem,
     playerRatingScoreId,
-  } = useRatingScoresForSport(sportName, sportId);
+  } = useRatingScoresForSport(sportName, sportId, userId);
 
   // Track if we've set the default rating to avoid overwriting user selection
   const hasSetDefaultRating = useRef(false);

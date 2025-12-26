@@ -59,34 +59,32 @@ const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 
 interface PlayerProviderProps {
   children: ReactNode;
+  /** The authenticated user's ID. Pass from your auth context. */
+  userId: string | undefined;
 }
 
-export const PlayerProvider: React.FC<PlayerProviderProps> = ({ children }) => {
+export const PlayerProvider: React.FC<PlayerProviderProps> = ({ children, userId }) => {
   const [player, setPlayer] = useState<Player | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   const fetchPlayer = useCallback(async () => {
+    // No userId means not authenticated - clear player
+    if (!userId) {
+      setPlayer(null);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
 
-      // Get current authenticated user
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user?.id) {
-        setPlayer(null);
-        setLoading(false);
-        return;
-      }
-
-      // Fetch player from database
+      // Fetch player from database using provided userId
       const { data, error: playerError } = await supabase
         .from('player')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', userId)
         .single();
 
       if (playerError) {
@@ -107,45 +105,16 @@ export const PlayerProvider: React.FC<PlayerProviderProps> = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   // Refetch player data
   const refetch = useCallback(async () => {
     await fetchPlayer();
   }, [fetchPlayer]);
 
-  // Initial fetch
+  // Fetch when userId changes (including initial mount and sign in/out)
   useEffect(() => {
     fetchPlayer();
-  }, [fetchPlayer]);
-
-  // Listen for auth state changes and refetch player
-  useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // Handle all auth events that indicate a valid session
-      // INITIAL_SESSION fires when app loads with existing session
-      // SIGNED_IN fires on fresh login
-      // TOKEN_REFRESHED fires when the JWT is refreshed
-      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        if (session?.user) {
-          await fetchPlayer();
-        } else {
-          // Session exists but no user - clear player state
-          setPlayer(null);
-          setLoading(false);
-        }
-      } else if (event === 'SIGNED_OUT') {
-        setPlayer(null);
-        setLoading(false);
-        setError(null);
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
   }, [fetchPlayer]);
 
   // Calculate max travel distance with fallback to default

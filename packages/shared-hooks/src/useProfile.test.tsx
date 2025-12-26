@@ -1,6 +1,6 @@
 /**
  * Tests for useProfile hook
- * 
+ *
  * Tests cover:
  * - Initial loading state
  * - Successful profile fetch
@@ -10,8 +10,9 @@
  */
 
 import { renderHook, waitFor } from '@testing-library/react';
-import { useProfile } from './useProfile';
+import { useProfile, ProfileProvider } from './useProfile';
 import { supabase } from '@rallia/shared-services';
+import React from 'react';
 
 // Mock Supabase
 jest.mock('@rallia/shared-services');
@@ -48,22 +49,23 @@ describe('useProfile', () => {
 
   describe('Initial State', () => {
     it('should start with loading true and null profile', () => {
-      // Mock successful auth but delay profile fetch
-      (supabase.auth.getUser as jest.Mock).mockResolvedValue({
-        data: { user: mockUser },
-      });
-
       (supabase.from as jest.Mock).mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockImplementation(() => 
-              new Promise(resolve => setTimeout(() => resolve({ data: mockProfile }), 100))
-            ),
+            maybeSingle: jest
+              .fn()
+              .mockImplementation(
+                () => new Promise(resolve => setTimeout(() => resolve({ data: mockProfile }), 100))
+              ),
           }),
         }),
       });
 
-      const { result } = renderHook(() => useProfile());
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <ProfileProvider userId={mockUser.id}>{children}</ProfileProvider>
+      );
+
+      const { result } = renderHook(() => useProfile(), { wrapper });
 
       expect(result.current.loading).toBe(true);
       expect(result.current.profile).toBeNull();
@@ -73,14 +75,10 @@ describe('useProfile', () => {
 
   describe('Successful Profile Fetch', () => {
     it('should fetch profile for authenticated user', async () => {
-      (supabase.auth.getUser as jest.Mock).mockResolvedValue({
-        data: { user: mockUser },
-      });
-
       (supabase.from as jest.Mock).mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({
+            maybeSingle: jest.fn().mockResolvedValue({
               data: mockProfile,
               error: null,
             }),
@@ -88,7 +86,11 @@ describe('useProfile', () => {
         }),
       });
 
-      const { result } = renderHook(() => useProfile());
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <ProfileProvider userId={mockUser.id}>{children}</ProfileProvider>
+      );
+
+      const { result } = renderHook(() => useProfile(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -96,20 +98,15 @@ describe('useProfile', () => {
 
       expect(result.current.profile).toEqual(mockProfile);
       expect(result.current.error).toBeNull();
-      expect(supabase.auth.getUser).toHaveBeenCalledTimes(1);
     });
 
-    it('should fetch profile for specific user ID', async () => {
+    it('should fetch profile for specific user ID using refetchForUser', async () => {
       const targetUserId = 'user-456';
-
-      (supabase.auth.getUser as jest.Mock).mockResolvedValue({
-        data: { user: mockUser },
-      });
 
       (supabase.from as jest.Mock).mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({
+            maybeSingle: jest.fn().mockResolvedValue({
               data: { ...mockProfile, id: targetUserId },
               error: null,
             }),
@@ -117,25 +114,43 @@ describe('useProfile', () => {
         }),
       });
 
-      const { result } = renderHook(() => useProfile(targetUserId));
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <ProfileProvider userId={mockUser.id}>{children}</ProfileProvider>
+      );
+
+      const { result } = renderHook(() => useProfile(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
       });
 
-      expect(result.current.profile?.id).toBe(targetUserId);
-      // Hook calls getUser but uses provided userId for profile fetch
-      expect(supabase.auth.getUser).toHaveBeenCalled();
+      // Use refetchForUser to fetch a different user's profile
+      (supabase.from as jest.Mock).mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            maybeSingle: jest.fn().mockResolvedValue({
+              data: { ...mockProfile, id: targetUserId },
+              error: null,
+            }),
+          }),
+        }),
+      });
+
+      await result.current.refetchForUser(targetUserId);
+
+      await waitFor(() => {
+        expect(result.current.profile?.id).toBe(targetUserId);
+      });
     });
   });
 
   describe('Error Handling', () => {
-    it('should handle auth error gracefully', async () => {
-      (supabase.auth.getUser as jest.Mock).mockResolvedValue({
-        data: { user: null },
-      });
+    it('should handle missing userId gracefully', async () => {
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <ProfileProvider userId={undefined}>{children}</ProfileProvider>
+      );
 
-      const { result } = renderHook(() => useProfile());
+      const { result } = renderHook(() => useProfile(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -146,10 +161,6 @@ describe('useProfile', () => {
     });
 
     it('should handle profile fetch error', async () => {
-      (supabase.auth.getUser as jest.Mock).mockResolvedValue({
-        data: { user: mockUser },
-      });
-
       const mockError = {
         message: 'Profile not found',
         code: '404',
@@ -158,7 +169,7 @@ describe('useProfile', () => {
       (supabase.from as jest.Mock).mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({
+            maybeSingle: jest.fn().mockResolvedValue({
               data: null,
               error: mockError,
             }),
@@ -166,7 +177,11 @@ describe('useProfile', () => {
         }),
       });
 
-      const { result } = renderHook(() => useProfile());
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <ProfileProvider userId={mockUser.id}>{children}</ProfileProvider>
+      );
+
+      const { result } = renderHook(() => useProfile(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -178,11 +193,19 @@ describe('useProfile', () => {
     });
 
     it('should handle unexpected errors during fetch', async () => {
-      (supabase.auth.getUser as jest.Mock).mockRejectedValue(
-        new Error('Network error')
+      (supabase.from as jest.Mock).mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            maybeSingle: jest.fn().mockRejectedValue(new Error('Network error')),
+          }),
+        }),
+      });
+
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <ProfileProvider userId={mockUser.id}>{children}</ProfileProvider>
       );
 
-      const { result } = renderHook(() => useProfile());
+      const { result } = renderHook(() => useProfile(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -196,14 +219,10 @@ describe('useProfile', () => {
 
   describe('Refetch Functionality', () => {
     it('should allow manual refetch', async () => {
-      (supabase.auth.getUser as jest.Mock).mockResolvedValue({
-        data: { user: mockUser },
-      });
-
       (supabase.from as jest.Mock).mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({
+            maybeSingle: jest.fn().mockResolvedValue({
               data: mockProfile,
               error: null,
             }),
@@ -211,7 +230,11 @@ describe('useProfile', () => {
         }),
       });
 
-      const { result } = renderHook(() => useProfile());
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <ProfileProvider userId={mockUser.id}>{children}</ProfileProvider>
+      );
+
+      const { result } = renderHook(() => useProfile(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -219,20 +242,13 @@ describe('useProfile', () => {
 
       expect(result.current.profile).toEqual(mockProfile);
 
-      // Clear mocks to track refetch call
-      jest.clearAllMocks();
-
       // Update mock to return updated profile
       const updatedProfile = { ...mockProfile, display_name: 'Updated Name' };
-      
-      (supabase.auth.getUser as jest.Mock).mockResolvedValue({
-        data: { user: mockUser },
-      });
 
       (supabase.from as jest.Mock).mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({
+            maybeSingle: jest.fn().mockResolvedValue({
               data: updatedProfile,
               error: null,
             }),
@@ -246,19 +262,13 @@ describe('useProfile', () => {
       await waitFor(() => {
         expect(result.current.profile?.display_name).toBe('Updated Name');
       });
-
-      expect(supabase.auth.getUser).toHaveBeenCalledTimes(1);
     });
 
     it('should handle refetch errors', async () => {
-      (supabase.auth.getUser as jest.Mock).mockResolvedValue({
-        data: { user: mockUser },
-      });
-
       (supabase.from as jest.Mock).mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({
+            maybeSingle: jest.fn().mockResolvedValue({
               data: mockProfile,
               error: null,
             }),
@@ -266,7 +276,11 @@ describe('useProfile', () => {
         }),
       });
 
-      const { result } = renderHook(() => useProfile());
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <ProfileProvider userId={mockUser.id}>{children}</ProfileProvider>
+      );
+
+      const { result } = renderHook(() => useProfile(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -276,7 +290,7 @@ describe('useProfile', () => {
       (supabase.from as jest.Mock).mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({
+            maybeSingle: jest.fn().mockResolvedValue({
               data: null,
               error: { message: 'Refetch failed' },
             }),
@@ -293,11 +307,11 @@ describe('useProfile', () => {
   });
 
   describe('User ID Changes', () => {
-    it('should refetch when userId prop changes', async () => {
+    it('should refetch when ProfileProvider userId changes', async () => {
       (supabase.from as jest.Mock).mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({
+            maybeSingle: jest.fn().mockResolvedValue({
               data: mockProfile,
               error: null,
             }),
@@ -305,10 +319,21 @@ describe('useProfile', () => {
         }),
       });
 
-      const { result, rerender } = renderHook(
-        ({ userId }) => useProfile(userId),
-        { initialProps: { userId: 'user-123' } }
-      );
+      const wrapper = ({
+        children,
+        userId,
+      }: {
+        children: React.ReactNode;
+        userId?: string | undefined;
+      }) => <ProfileProvider userId={userId}>{children}</ProfileProvider>;
+
+      const { result, rerender } = renderHook(() => useProfile(), {
+        wrapper: wrapper as React.ComponentType<{
+          children: React.ReactNode;
+          userId?: string | undefined;
+        }>,
+        initialProps: { userId: 'user-123' },
+      });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -316,13 +341,26 @@ describe('useProfile', () => {
 
       expect(result.current.profile?.id).toBe('user-123');
 
-      // Change userId
+      // Update mock for new userId
+      (supabase.from as jest.Mock).mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            maybeSingle: jest.fn().mockResolvedValue({
+              data: { ...mockProfile, id: 'user-456' },
+              error: null,
+            }),
+          }),
+        }),
+      });
+
+      // Change userId in provider
       rerender({ userId: 'user-456' });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
       });
 
+      expect(result.current.profile?.id).toBe('user-456');
       // Should have fetched new profile
       expect(supabase.from).toHaveBeenCalledTimes(2);
     });

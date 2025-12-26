@@ -2,8 +2,9 @@
  * Custom hook for fetching and managing user profile data
  * Uses ProfileContext to provide a single source of truth for profile state
  *
- * @param userId - Optional user ID to fetch. If not provided, fetches current authenticated user
- *                 Note: For other users' profiles, consider using refetchForUser or a separate hook
+ * Note: The ProfileProvider must be given the userId from your auth context.
+ * For other users' profiles, use refetchForUser.
+ *
  * @returns Object containing profile data, loading state, error, and refetch function
  *
  * @example

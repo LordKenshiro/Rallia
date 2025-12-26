@@ -22,8 +22,8 @@ import React, {
   ReactNode,
 } from 'react';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { useAuth } from '@rallia/shared-hooks';
 import { useProfile } from '@rallia/shared-hooks';
+import { useAuth } from './AuthContext';
 import type { MatchDetailData } from './MatchDetailSheetContext';
 
 // =============================================================================

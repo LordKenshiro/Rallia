@@ -50,8 +50,8 @@ const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
 interface ProfileProviderProps {
   children: ReactNode;
-  /** Optional user ID to fetch. If not provided, fetches current authenticated user */
-  userId?: string;
+  /** The authenticated user's ID. Pass from your auth context. */
+  userId: string | undefined;
 }
 
 export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children, userId }) => {
@@ -61,23 +61,20 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children, user
 
   const fetchProfile = useCallback(
     async (targetUserId?: string) => {
+      const finalUserId = targetUserId || userId;
+
+      // No userId means not authenticated - clear profile
+      if (!finalUserId) {
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         setError(null);
 
-        // Get current authenticated user if no userId provided
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        const finalUserId = targetUserId || userId || user?.id;
-
-        if (!finalUserId) {
-          setProfile(null);
-          setLoading(false);
-          return;
-        }
-
-        // Fetch profile from database
+        // Fetch profile from database using provided userId
         // Use maybeSingle() to gracefully handle case where profile doesn't exist yet
         const { data, error: profileError } = await supabase
           .from('profile')
@@ -115,39 +112,10 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children, user
     [fetchProfile]
   );
 
-  // Initial fetch and refetch when userId prop changes
+  // Fetch when userId changes (including initial mount and sign in/out)
   useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
-
-  // Listen for auth state changes and refetch profile
-  useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // Handle all auth events that indicate a valid session
-      // INITIAL_SESSION fires when app loads with existing session
-      // SIGNED_IN fires on fresh login
-      // TOKEN_REFRESHED fires when the JWT is refreshed
-      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        if (session?.user && (!userId || userId === session.user.id)) {
-          await fetchProfile();
-        } else if (!session?.user) {
-          // Session event but no user - clear profile state
-          setProfile(null);
-          setLoading(false);
-        }
-      } else if (event === 'SIGNED_OUT') {
-        setProfile(null);
-        setLoading(false);
-        setError(null);
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [userId, fetchProfile]);
 
   const contextValue: ProfileContextType = {
     profile,
@@ -168,9 +136,8 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children, user
  * Hook to access the profile context.
  * Returns the current user's profile data, loading state, error, and refetch function.
  *
- * @param userId - Optional user ID parameter (kept for backward compatibility).
- *                 Currently, the context only manages the current authenticated user's profile.
- *                 For fetching other users' profiles, use refetchForUser or create a separate hook.
+ * Note: The ProfileProvider must be given the userId from your auth context.
+ * For fetching other users' profiles, use refetchForUser.
  *
  * @example
  * ```tsx
@@ -182,20 +149,11 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children, user
  * return <Text>{profile?.full_name}</Text>;
  * ```
  */
-export const useProfile = (userId?: string): ProfileContextType => {
+export const useProfile = (): ProfileContextType => {
   const context = useContext(ProfileContext);
 
   if (context === undefined) {
     throw new Error('useProfile must be used within a ProfileProvider');
-  }
-
-  // Note: userId parameter is kept for backward compatibility but currently
-  // the context only manages the current user's profile. If you need to fetch
-  // another user's profile, use refetchForUser or create a separate hook.
-  if (userId && context.profile?.id !== userId) {
-    console.warn(
-      "useProfile called with userId parameter. The context only manages the current user's profile. Use refetchForUser if you need to fetch another user's profile."
-    );
   }
 
   return context;

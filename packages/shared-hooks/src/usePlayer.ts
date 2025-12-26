@@ -3,6 +3,8 @@
  * Custom hook for fetching and managing the current user's player data.
  * Uses PlayerContext to provide a single source of truth for player state.
  *
+ * Note: The PlayerProvider must be given the userId from your auth context.
+ *
  * @example
  * ```tsx
  * const { player, maxTravelDistanceKm, loading, refetch } = usePlayer();
