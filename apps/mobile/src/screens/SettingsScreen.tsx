@@ -367,9 +367,9 @@ const SettingsScreen: React.FC = () => {
           <View style={[styles.actionButtons, { backgroundColor: colors.cardBackground }]}>
             <TouchableOpacity
               style={[styles.signOutButton, { backgroundColor: colors.buttonInactive }]}
-              onPress={() => {
+              onPress={async () => {
                 warningHaptic();
-                signOut();
+                await signOut();
                 // Reset to Main - Home screen shows sign-in prompt when not authenticated
                 navigation.reset({
                   index: 0,
