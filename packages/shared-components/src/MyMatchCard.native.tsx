@@ -2,6 +2,8 @@
  * MyMatchCard Component - Compact Card for "My Matches" Section
  *
  * A minimal, reminder-focused card showing only essential info:
+ * - Dynamic gradient backgrounds based on match type
+ * - Premium styling for "Ready to Play" matches
  * - Date/time prominently displayed
  * - Location (brief)
  * - Participant avatars
@@ -20,7 +22,10 @@ import {
   radiusPixels,
   primary,
   secondary,
+  accent,
   neutral,
+  status,
+  base,
 } from '@rallia/design-system';
 import type { MatchWithDetails } from '@rallia/shared-types';
 import {
@@ -29,6 +34,139 @@ import {
   formatDateInTimezone,
   getProfilePictureUrl,
 } from '@rallia/shared-utils';
+
+// =============================================================================
+// DYNAMIC GRADIENT PALETTES (using design system tokens)
+// =============================================================================
+
+/**
+ * Match type color palettes for dynamic backgrounds
+ * Built from @rallia/design-system tokens for consistency
+ * Shared with MatchCard for consistency across components
+ */
+const MATCH_PALETTES = {
+  // Competitive matches - secondary palette (coral/red tones)
+  competitive: {
+    light: {
+      gradientStart: secondary[50],
+      gradientMid: secondary[100],
+      gradientEnd: neutral[50],
+      accentStart: secondary[500],
+      accentEnd: secondary[400],
+    },
+    dark: {
+      gradientStart: secondary[950],
+      gradientMid: secondary[900],
+      gradientEnd: neutral[950],
+      accentStart: secondary[400],
+      accentEnd: secondary[300],
+    },
+  },
+  // Practice matches - info/blue palette (calm, focused)
+  practice: {
+    light: {
+      gradientStart: '#f0f9ff', // sky-50 - complements status.info
+      gradientMid: '#e0f2fe', // sky-100
+      gradientEnd: neutral[50],
+      accentStart: status.info.DEFAULT,
+      accentEnd: status.info.light,
+    },
+    dark: {
+      gradientStart: '#0c1929', // dark sky-tinted
+      gradientMid: '#0a1420', // darker sky-tinted
+      gradientEnd: neutral[950],
+      accentStart: status.info.light,
+      accentEnd: status.info.DEFAULT,
+    },
+  },
+  // Casual matches - primary palette (teal/mint - fresh, relaxed)
+  casual: {
+    light: {
+      gradientStart: primary[50],
+      gradientMid: primary[100],
+      gradientEnd: neutral[50],
+      accentStart: primary[500],
+      accentEnd: primary[400],
+    },
+    dark: {
+      gradientStart: primary[950],
+      gradientMid: primary[900],
+      gradientEnd: neutral[950],
+      accentStart: primary[400],
+      accentEnd: primary[300],
+    },
+  },
+  // Urgent matches (< 3 hours) - red-orange warning palette (distinct from gold)
+  urgent: {
+    light: {
+      gradientStart: '#fff5f0', // warm red-tinted white
+      gradientMid: '#ffe4d6', // light coral/orange
+      gradientEnd: neutral[50],
+      accentStart: status.warning.DEFAULT, // #f59e0b - amber
+      accentEnd: status.error.DEFAULT, // #ef4444 - red
+    },
+    dark: {
+      gradientStart: '#2d1a14', // dark red-tinted
+      gradientMid: '#261712', // darker red-tinted
+      gradientEnd: neutral[950],
+      accentStart: status.warning.light, // #fbbf24 - lighter amber
+      accentEnd: status.error.light, // #f87171 - lighter red
+    },
+  },
+  // Default - balanced primary/secondary gradient
+  default: {
+    light: {
+      gradientStart: primary[50],
+      gradientMid: `${primary[100]}80`, // 50% opacity blend
+      gradientEnd: neutral[50],
+      accentStart: primary[500],
+      accentEnd: secondary[500],
+    },
+    dark: {
+      gradientStart: primary[950],
+      gradientMid: primary[900],
+      gradientEnd: neutral[950],
+      accentStart: primary[400],
+      accentEnd: secondary[400],
+    },
+  },
+} as const;
+
+/**
+ * Premium/Gold card colors for "Ready to Play" matches
+ * Rich, luxurious gold palette - distinct from urgent amber/red
+ * Uses deeper, richer gold tones for premium feel
+ */
+const GOLD_COLORS = {
+  light: '#FFE55C', // Bright gold - more vibrant than accent
+  base: '#FFD700', // Classic gold - richer than accent[400]
+  dark: '#FFC107', // Deep gold - warmer than accent[500]
+  deepGold: '#D4AF37', // Rich gold - more luxurious
+  bronze: '#CD7F32', // Bronze accent - adds depth
+  shimmer: '#FFF8DC', // Cream shimmer - softer than accent[50]
+} as const;
+
+/**
+ * Determine which color palette to use based on match characteristics
+ */
+type PaletteType = 'competitive' | 'practice' | 'casual' | 'urgent' | 'default';
+
+function getMatchPalette(playerExpectation: string | null, isUrgent: boolean): PaletteType {
+  // Urgent matches take priority - they need attention
+  if (isUrgent) {
+    return 'urgent';
+  }
+
+  // Then check player expectation
+  switch (playerExpectation) {
+    case 'competitive':
+      return 'competitive';
+    case 'practice':
+      return 'practice';
+    default:
+      return 'casual';
+  }
+}
 
 // =============================================================================
 // CONSTANTS
@@ -73,8 +211,6 @@ interface ThemeColors {
 // HELPER FUNCTIONS
 // =============================================================================
 
-const BASE_WHITE = '#ffffff';
-
 /**
  * Get compact time display for the card
  * Shows date and time with city name
@@ -109,16 +245,74 @@ function getCompactTimeDisplay(
 
 interface GradientStripProps {
   isDark: boolean;
+  isReadyToPlay?: boolean;
+  palette: PaletteType;
 }
 
-const GradientStrip: React.FC<GradientStripProps> = ({ isDark }) => (
-  <LinearGradient
-    colors={isDark ? [primary[500], secondary[500]] : [primary[600], secondary[500]]}
-    start={{ x: 0, y: 0 }}
-    end={{ x: 1, y: 0 }}
-    style={styles.gradientStrip}
-  />
-);
+/**
+ * Gradient accent strip - uses palette colors or gold for premium cards
+ */
+const GradientStrip: React.FC<GradientStripProps> = ({ isDark, isReadyToPlay, palette }) => {
+  const paletteColors = MATCH_PALETTES[palette][isDark ? 'dark' : 'light'];
+
+  const colors: [string, string, ...string[]] = isReadyToPlay
+    ? [
+        GOLD_COLORS.bronze,
+        GOLD_COLORS.base,
+        GOLD_COLORS.light,
+        GOLD_COLORS.base,
+        GOLD_COLORS.bronze,
+      ]
+    : [paletteColors.accentStart, paletteColors.accentEnd];
+
+  return (
+    <LinearGradient
+      colors={colors}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 0 }}
+      style={[styles.gradientStrip, isReadyToPlay && styles.gradientStripPremium]}
+    />
+  );
+};
+
+interface CardBackgroundProps {
+  isDark: boolean;
+  isReadyToPlay?: boolean;
+  palette: PaletteType;
+}
+
+/**
+ * Dynamic gradient background that creates the "color bleed" effect
+ * Premium cards get special gold-tinted glassmorphism effect
+ */
+const CardBackground: React.FC<CardBackgroundProps> = ({ isDark, isReadyToPlay, palette }) => {
+  const paletteColors = MATCH_PALETTES[palette][isDark ? 'dark' : 'light'];
+
+  if (isReadyToPlay) {
+    // Premium glassmorphism-inspired background with rich gold tint
+    // Uses richer gold colors distinct from urgent amber/red
+    return (
+      <LinearGradient
+        colors={
+          isDark
+            ? ['#3D3422', '#2A2418', neutral[950]] // Rich dark gold-tinted gradient
+            : [GOLD_COLORS.shimmer, '#FFFBF0', base.white] // Rich light gold-tinted gradient
+        }
+        locations={[0, 0.4, 1]}
+        style={styles.cardBackgroundGradient}
+      />
+    );
+  }
+
+  // Dynamic gradient based on match type
+  return (
+    <LinearGradient
+      colors={[paletteColors.gradientStart, paletteColors.gradientMid, paletteColors.gradientEnd]}
+      locations={[0, 0.35, 1]}
+      style={styles.cardBackgroundGradient}
+    />
+  );
+};
 
 interface ParticipantAvatarsProps {
   match: MatchWithDetails;
@@ -198,7 +392,7 @@ const ParticipantAvatars: React.FC<ParticipantAvatarsProps> = ({ match, colors, 
             </View>
             {isHost && (
               <View style={[styles.hostBadge, { backgroundColor: colors.secondary }]}>
-                <Ionicons name="star" size={5} color={BASE_WHITE} />
+                <Ionicons name="star" size={5} color={base.white} />
               </View>
             )}
           </View>
@@ -212,7 +406,7 @@ const ParticipantAvatars: React.FC<ParticipantAvatarsProps> = ({ match, colors, 
             { marginLeft: -8, backgroundColor: colors.primary },
           ]}
         >
-          <Text size="xs" weight="bold" color={BASE_WHITE}>
+          <Text size="xs" weight="bold" color={base.white}>
             +{extraCount}
           </Text>
         </View>
@@ -226,6 +420,9 @@ const ParticipantAvatars: React.FC<ParticipantAvatarsProps> = ({ match, colors, 
 // =============================================================================
 
 const MyMatchCard: React.FC<MyMatchCardProps> = ({ match, onPress, isDark, t, locale }) => {
+  // Check if this is a "Ready to Play" match (court already reserved)
+  const isReadyToPlay = match.court_status === 'reserved';
+
   const themeColors = isDark ? darkTheme : lightTheme;
   const colors: ThemeColors = useMemo(
     () => ({
@@ -248,38 +445,65 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({ match, onPress, isDark, t, lo
     t
   );
 
+  // Determine color palette based on match characteristics
+  const palette = getMatchPalette(match.player_expectation, isUrgent);
+  const paletteColors = MATCH_PALETTES[palette][isDark ? 'dark' : 'light'];
+
   // Get location - check facility first, then custom location, fallback to TBD
   const locationName = match.facility?.name ?? match.location_name ?? t('matchDetail.locationTBD');
+
+  // Dynamic border color based on palette and ready-to-play status
+  const dynamicBorderColor = isReadyToPlay
+    ? GOLD_COLORS.deepGold
+    : isDark
+      ? `${paletteColors.accentStart}40` // 25% opacity accent border in dark mode
+      : `${paletteColors.accentStart}20`; // 12% opacity accent border in light mode
 
   return (
     <TouchableOpacity
       style={[
         styles.card,
         {
-          backgroundColor: colors.cardBackground,
-          borderColor: colors.border,
+          backgroundColor: 'transparent', // Background handled by gradient
+          borderColor: dynamicBorderColor,
         },
+        isReadyToPlay && styles.premiumCard,
       ]}
       onPress={onPress}
       activeOpacity={0.85}
       accessibilityRole="button"
-      accessibilityLabel={`Match ${dayLabel} at ${timeLabel}`}
+      accessibilityLabel={`Match ${dayLabel} at ${timeLabel}${isReadyToPlay ? ' - Ready to Play' : ''}`}
     >
-      <GradientStrip isDark={isDark} />
+      {/* Dynamic gradient background */}
+      <CardBackground isDark={isDark} isReadyToPlay={isReadyToPlay} palette={palette} />
+
+      {/* Gradient accent strip */}
+      <GradientStrip isDark={isDark} isReadyToPlay={isReadyToPlay} palette={palette} />
 
       <View style={styles.content}>
         {/* Day label */}
         <Text
           size="xs"
           weight="semibold"
-          color={isUrgent ? colors.secondary : colors.textMuted}
+          color={
+            isUrgent
+              ? MATCH_PALETTES.urgent[isDark ? 'dark' : 'light'].accentStart
+              : colors.textMuted
+          }
           style={styles.dayLabel}
         >
           {dayLabel.toUpperCase()}
         </Text>
 
-        {/* Time - prominent */}
-        <Text size="lg" weight="bold" color={colors.text} numberOfLines={1}>
+        {/* Time - prominent, uses palette color for urgent */}
+        <Text
+          size="lg"
+          weight="bold"
+          color={
+            isUrgent ? MATCH_PALETTES.urgent[isDark ? 'dark' : 'light'].accentStart : colors.text
+          }
+          numberOfLines={1}
+        >
           {timeLabel}
         </Text>
 
@@ -306,21 +530,45 @@ const styles = StyleSheet.create({
   card: {
     width: CARD_WIDTH,
     borderRadius: radiusPixels.lg,
-    borderWidth: 1,
+    borderWidth: 1.5,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+
+  // Premium "Ready to Play" card styles
+  premiumCard: {
+    borderWidth: 2,
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 6,
+    shadowColor: GOLD_COLORS.base,
+  },
+
+  // Dynamic gradient background
+  cardBackgroundGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
   },
 
   gradientStrip: {
     height: 3,
+    zIndex: 1,
+  },
+  gradientStripPremium: {
+    height: 5, // Slightly taller for premium cards
   },
 
   content: {
     padding: spacingPixels[3],
+    zIndex: 1,
   },
 
   dayLabel: {
@@ -369,7 +617,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: BASE_WHITE,
+    borderColor: base.white,
   },
 
   avatarImage: {
