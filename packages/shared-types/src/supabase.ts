@@ -834,6 +834,7 @@ export type Database = {
       match: {
         Row: {
           booking_id: string | null;
+          cancelled_at: string | null;
           cost_split_type: Database['public']['Enums']['cost_split_type_enum'] | null;
           court_id: string | null;
           court_status: Database['public']['Enums']['court_status_enum'] | null;
@@ -869,6 +870,7 @@ export type Database = {
         };
         Insert: {
           booking_id?: string | null;
+          cancelled_at?: string | null;
           cost_split_type?: Database['public']['Enums']['cost_split_type_enum'] | null;
           court_id?: string | null;
           court_status?: Database['public']['Enums']['court_status_enum'] | null;
@@ -904,6 +906,7 @@ export type Database = {
         };
         Update: {
           booking_id?: string | null;
+          cancelled_at?: string | null;
           cost_split_type?: Database['public']['Enums']['cost_split_type_enum'] | null;
           court_id?: string | null;
           court_status?: Database['public']['Enums']['court_status_enum'] | null;
@@ -2526,6 +2529,18 @@ export type Database = {
           value: string;
         }[];
       };
+      get_player_matches: {
+        Args: {
+          p_limit?: number;
+          p_offset?: number;
+          p_player_id: string;
+          p_sport_id?: string;
+          p_time_filter?: string;
+        };
+        Returns: {
+          match_id: string;
+        }[];
+      };
       get_players_by_play_attributes: {
         Args: {
           p_play_attributes: Database['public']['Enums']['play_attribute_enum'][];
@@ -2599,6 +2614,7 @@ export type Database = {
         Args: { p_match_id: string; p_player_id: string };
         Returns: boolean;
       };
+      is_public_match: { Args: { p_match_id: string }; Returns: boolean };
       search_facilities_nearby: {
         Args: {
           p_latitude: number;
@@ -2717,7 +2733,8 @@ export type Database = {
         | 'declined'
         | 'left'
         | 'kicked'
-        | 'waitlisted';
+        | 'waitlisted'
+        | 'refused';
       match_status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
       match_type: 'casual' | 'competitive' | 'both';
       match_type_enum: 'practice' | 'competitive' | 'both';
@@ -2964,6 +2981,7 @@ export const Constants = {
         'left',
         'kicked',
         'waitlisted',
+        'refused',
       ],
       match_status: ['scheduled', 'in_progress', 'completed', 'cancelled', 'no_show'],
       match_type: ['casual', 'competitive', 'both'],

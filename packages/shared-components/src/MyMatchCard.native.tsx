@@ -23,6 +23,12 @@ import {
   neutral,
 } from '@rallia/design-system';
 import type { MatchWithDetails } from '@rallia/shared-types';
+import {
+  formatTimeInTimezone,
+  getTimeDifferenceFromNow,
+  formatDateInTimezone,
+  getProfilePictureUrl,
+} from '@rallia/shared-utils';
 
 // =============================================================================
 // CONSTANTS
@@ -71,57 +77,28 @@ const BASE_WHITE = '#ffffff';
 
 /**
  * Get compact time display for the card
+ * Shows date and time with city name
  */
 function getCompactTimeDisplay(
   dateString: string,
   startTime: string,
+  timezone: string,
   locale: string,
   t: (key: string, options?: TranslationOptions) => string
 ): { dayLabel: string; timeLabel: string; isUrgent: boolean } {
-  const now = new Date();
-  const [year, month, day] = dateString.split('-').map(Number);
-  const matchDate = new Date(year, month - 1, day);
-  const [startHours, startMinutes] = startTime.split(':').map(Number);
-  const matchStartDateTime = new Date(year, month - 1, day, startHours, startMinutes || 0, 0, 0);
+  const tz = timezone || 'UTC';
 
-  const msDiff = matchStartDateTime.getTime() - now.getTime();
+  // Calculate time difference to determine if urgent (within 3 hours)
+  const msDiff = getTimeDifferenceFromNow(dateString, startTime, tz);
   const hoursDiff = Math.floor(msDiff / (1000 * 60 * 60));
-
-  // Format time
-  const timeFormatter = new Intl.DateTimeFormat(locale, {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  });
-  const timeLabel = timeFormatter.format(matchStartDateTime);
-
-  // Determine day label
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  const matchDateNormalized = new Date(year, month - 1, day);
-  matchDateNormalized.setHours(0, 0, 0, 0);
-
-  let dayLabel: string;
   const isUrgent = hoursDiff >= 0 && hoursDiff < 3;
 
-  if (matchDateNormalized.getTime() === today.getTime()) {
-    dayLabel = t('common.time.today');
-  } else if (matchDateNormalized.getTime() === tomorrow.getTime()) {
-    dayLabel = t('common.time.tomorrow');
-  } else {
-    // Show weekday for this week, date for later
-    const daysDiff = Math.floor(
-      (matchDateNormalized.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    if (daysDiff < 7) {
-      dayLabel = matchDate.toLocaleDateString(locale, { weekday: 'short' });
-    } else {
-      dayLabel = matchDate.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
-    }
-  }
+  // Format date
+  const dayLabel = formatDateInTimezone(dateString, tz, locale, { month: 'short', day: 'numeric' });
+
+  // Format time in the match's timezone (without city name)
+  const timeResult = formatTimeInTimezone(dateString, startTime, tz, locale);
+  const timeLabel = timeResult.formattedTime; // e.g., "2:00 PM"
 
   return { dayLabel, timeLabel, isUrgent };
 }
@@ -178,18 +155,19 @@ const ParticipantAvatars: React.FC<ParticipantAvatarsProps> = ({ match, colors, 
   }
 
   // Build avatars list (creator first, then other participants)
+  // Normalize URLs to use current environment's Supabase URL
   const avatars: Array<{ url?: string }> = [];
   const creatorProfile = match.created_by_player?.profile;
 
   // Add creator
   avatars.push({
-    url: creatorProfile?.profile_picture_url ?? undefined,
+    url: getProfilePictureUrl(creatorProfile?.profile_picture_url) ?? undefined,
   });
 
   // Add other participants
   for (const participant of otherParticipants) {
     avatars.push({
-      url: participant.player?.profile?.profile_picture_url ?? undefined,
+      url: getProfilePictureUrl(participant.player?.profile?.profile_picture_url) ?? undefined,
     });
   }
 
@@ -198,22 +176,34 @@ const ParticipantAvatars: React.FC<ParticipantAvatarsProps> = ({ match, colors, 
 
   return (
     <View style={styles.avatarsRow}>
-      {visibleAvatars.map((avatar, index) => (
-        <View
-          key={index}
-          style={[
-            styles.avatar,
-            index > 0 && { marginLeft: -8 },
-            { backgroundColor: colors.avatarPlaceholder, borderColor: colors.cardBackground },
-          ]}
-        >
-          {avatar.url ? (
-            <Image source={{ uri: avatar.url }} style={styles.avatarImage} />
-          ) : (
-            <Ionicons name="person" size={12} color={isDark ? neutral[400] : neutral[500]} />
-          )}
-        </View>
-      ))}
+      {visibleAvatars.map((avatar, index) => {
+        const isHost = index === 0;
+        return (
+          <View key={index} style={styles.avatarWrapper}>
+            <View
+              style={[
+                styles.avatar,
+                index > 0 && { marginLeft: -8 },
+                {
+                  backgroundColor: avatar.url ? colors.primary : colors.avatarPlaceholder,
+                  borderColor: isHost ? colors.secondary : colors.cardBackground,
+                },
+              ]}
+            >
+              {avatar.url ? (
+                <Image source={{ uri: avatar.url }} style={styles.avatarImage} />
+              ) : (
+                <Ionicons name="person" size={12} color={isDark ? neutral[400] : neutral[500]} />
+              )}
+            </View>
+            {isHost && (
+              <View style={[styles.hostBadge, { backgroundColor: colors.secondary }]}>
+                <Ionicons name="star" size={5} color={BASE_WHITE} />
+              </View>
+            )}
+          </View>
+        );
+      })}
       {extraCount > 0 && (
         <View
           style={[
@@ -253,12 +243,13 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({ match, onPress, isDark, t, lo
   const { dayLabel, timeLabel, isUrgent } = getCompactTimeDisplay(
     match.match_date,
     match.start_time,
+    match.timezone,
     locale,
     t
   );
 
-  // Get location - just facility name, brief
-  const locationName = match.facility?.name ?? t('matchDetail.locationTBD');
+  // Get location - check facility first, then custom location, fallback to TBD
+  const locationName = match.facility?.name ?? match.location_name ?? t('matchDetail.locationTBD');
 
   return (
     <TouchableOpacity
@@ -354,6 +345,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
+  avatarWrapper: {
+    position: 'relative',
+  },
+
   avatar: {
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
@@ -362,6 +357,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+  },
+
+  hostBadge: {
+    position: 'absolute',
+    bottom: -2,
+    left: -2,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: BASE_WHITE,
   },
 
   avatarImage: {

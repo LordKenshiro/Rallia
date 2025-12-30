@@ -78,6 +78,7 @@ function getUpcomingDateSectionKey(
 
 /**
  * Get the section key for a match date (for past matches)
+ * Now includes "Today" since matches can be past once their end_time has passed
  */
 function getPastDateSectionKey(
   matchDate: string,
@@ -93,7 +94,10 @@ function getPastDateSectionKey(
 
   const matchDateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
-  if (matchDateOnly.getTime() === yesterday.getTime()) {
+  // Check for today first (matches that ended earlier today)
+  if (matchDateOnly.getTime() === today.getTime()) {
+    return t('playerMatches.time.today' as TranslationKey);
+  } else if (matchDateOnly.getTime() === yesterday.getTime()) {
     return t('playerMatches.time.yesterday' as TranslationKey);
   } else if (matchDateOnly >= lastWeekStart) {
     return t('playerMatches.time.lastWeek' as TranslationKey);
@@ -124,6 +128,7 @@ function groupMatchesByDate(
           t('playerMatches.time.later' as TranslationKey),
         ]
       : [
+          t('playerMatches.time.today' as TranslationKey),
           t('playerMatches.time.yesterday' as TranslationKey),
           t('playerMatches.time.lastWeek' as TranslationKey),
           t('playerMatches.time.earlier' as TranslationKey),
@@ -209,13 +214,14 @@ export default function PlayerMatches() {
         isDark={isDark}
         t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
         locale={locale}
+        currentPlayerId={session?.user?.id}
         onPress={() => {
           Logger.logUserAction('player_match_pressed', { matchId: item.id });
           openMatchDetail(item);
         }}
       />
     ),
-    [isDark, t, locale, openMatchDetail]
+    [isDark, t, locale, openMatchDetail, session?.user?.id]
   );
 
   // Render section header

@@ -74,7 +74,7 @@ export default function PublicMatches() {
 
   // Get user location and preferences
   const { location: _realLocation } = useUserLocation();
-  const { maxTravelDistanceKm, loading: playerLoading } = usePlayer();
+  const { player, loading: playerLoading } = usePlayer();
   const { selectedSport, isLoading: sportLoading } = useSport();
 
   // TODO: Remove this hardcoded Montreal location after testing
@@ -82,7 +82,7 @@ export default function PublicMatches() {
   const location = MONTREAL_DEV_LOCATION; // Use hardcoded location for testing
   // const location = _realLocation; // Uncomment to use real location
 
-  // Filter state - initialize distance with player's preference
+  // Filter state - default is no distance filter (shows all location types)
   const {
     filters,
     debouncedSearchQuery,
@@ -99,9 +99,7 @@ export default function PublicMatches() {
     setDistance,
     resetFilters,
     clearSearch,
-  } = usePublicMatchFilters({
-    initialDistanceKm: maxTravelDistanceKm,
-  });
+  } = usePublicMatchFilters();
 
   // Determine if we should enable the query
   const showMatches = !!location && !!selectedSport;
@@ -159,13 +157,14 @@ export default function PublicMatches() {
         isDark={isDark}
         t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
         locale={locale}
+        currentPlayerId={player?.id}
         onPress={() => {
           Logger.logUserAction('public_match_pressed', { matchId: item.id });
           openMatchDetail(item);
         }}
       />
     ),
-    [isDark, t, locale, openMatchDetail]
+    [isDark, t, locale, openMatchDetail, player?.id]
   );
 
   // Check if we're loading due to filter/search changes (not initial load)

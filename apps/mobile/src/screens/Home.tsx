@@ -49,7 +49,7 @@ const Home = () => {
 
   // Get user's current location and player preferences for nearby matches
   const { location: _realLocation } = useUserLocation();
-  const { maxTravelDistanceKm, loading: playerLoading } = usePlayer();
+  const { player, maxTravelDistanceKm, loading: playerLoading } = usePlayer();
   const { selectedSport, isLoading: sportLoading } = useSport();
 
   // TODO: Remove this hardcoded Montreal location after testing
@@ -172,13 +172,14 @@ const Home = () => {
         isDark={isDark}
         t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
         locale={locale}
+        currentPlayerId={player?.id}
         onPress={() => {
           Logger.logUserAction('match_pressed', { matchId: item.id });
           openMatchDetail(item);
         }}
       />
     ),
-    [isDark, t, locale, openMatchDetail]
+    [isDark, t, locale, openMatchDetail, player?.id]
   );
 
   // Render footer with loading indicator

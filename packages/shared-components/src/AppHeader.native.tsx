@@ -1,9 +1,10 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image, Modal, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 import { useProfile, usePlayerSports } from '@rallia/shared-hooks';
+import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { Text } from './foundation/Text.native';
 import { primary, lightTheme, darkTheme } from '@rallia/design-system';
 
@@ -64,8 +65,12 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   // Check if user is logged in (profile exists)
   const isLoggedIn = !!profile;
 
-  // Extract profile picture URL from profile data
-  const profilePictureUrl = profile?.profile_picture_url || null;
+  // Extract and normalize profile picture URL
+  // This ensures the URL uses the current environment's Supabase URL
+  const profilePictureUrl = useMemo(
+    () => getProfilePictureUrl(profile?.profile_picture_url),
+    [profile?.profile_picture_url]
+  );
 
   // Debug profile picture URL and reset error state when URL changes
   useEffect(() => {

@@ -27,6 +27,17 @@
     "select": "Sélectionner",
     "required": "Requis",
     "optional": "Optionnel",
+    "showLess": "Afficher moins",
+    "gender": {
+      "label": "Genre",
+      "male": "Homme",
+      "female": "Femme"
+    },
+    "playingHand": {
+      "label": "Main de jeu",
+      "left": "Gauche",
+      "right": "Droite"
+    },
     "time": {
       "now": "Maintenant",
       "today": "Aujourd'hui",
@@ -317,7 +328,32 @@
     "leaveConfirmMessage": "Vous serez retiré de ce match.",
     "cancelConfirmTitle": "Annuler le match?",
     "cancelConfirmMessage": "Cela annulera le match pour tous les participants.",
-    "cancelWarning": "{count} autre(s) joueur(s) seront notifiés"
+    "cancelWarning": "{count} autre(s) joueur(s) seront notifiés",
+    "acceptRequest": "Accepter",
+    "rejectRequest": "Refuser",
+    "acceptSuccess": "Joueur accepté",
+    "rejectSuccess": "Demande refusée",
+    "rejectConfirmTitle": "Refuser la demande?",
+    "rejectConfirmMessage": "Ce joueur ne pourra plus demander à rejoindre ce match.",
+    "pendingRequests": "Demandes en attente",
+    "cancelRequest": "Annuler la demande",
+    "cancelRequestSuccess": "Votre demande a été annulée",
+    "cancelRequestConfirmTitle": "Annuler la demande?",
+    "cancelRequestConfirmMessage": "Votre demande pour rejoindre ce match sera retirée.",
+    "showMoreRequests": "Afficher {count} de plus",
+    "matchFullCannotAccept": "Match complet",
+    "requestPending": "Votre demande est en attente d'approbation par l'hôte",
+    "waitlistedInfo": "Vous êtes sur la liste d'attente. Vous serez notifié si une place se libère.",
+    "joinWaitlist": "Rejoindre la liste d'attente",
+    "leaveWaitlist": "Quitter la liste d'attente",
+    "waitlistSuccess": "Vous avez été ajouté à la liste d'attente!",
+    "leaveWaitlistSuccess": "Vous avez quitté la liste d'attente",
+    "requesterDetails": "Détails du demandeur",
+    "viewDetails": "Voir les détails",
+    "kickParticipant": "Retirer le joueur",
+    "kickSuccess": "Le joueur a été retiré du match",
+    "kickConfirmTitle": "Retirer le joueur?",
+    "kickConfirmMessage": "Ce joueur sera retiré du match et sera notifié."
   },
   "ratings": {
     "title": "Classements",
@@ -369,7 +405,18 @@
       "full": "Complet",
       "completed": "Terminé",
       "cancelled": "Annulé",
-      "confirmed": "Confirmé"
+      "confirmed": "Confirmé",
+      "inProgress": "En cours"
+    },
+    "participantStatus": {
+      "pending": "En attente",
+      "requested": "Demandé",
+      "joined": "Rejoint",
+      "declined": "Refusé",
+      "refused": "Refusé",
+      "left": "Quitté",
+      "kicked": "Expulsé",
+      "waitlisted": "Liste d'attente"
     },
     "type": {
       "competitive": "Compétitif",
@@ -408,6 +455,19 @@
     },
     "courtStatus": {
       "readyToPlay": "Prêt à jouer"
+    },
+    "cta": {
+      "join": "Rejoindre",
+      "askToJoin": "Demander",
+      "full": "Complet",
+      "view": "Voir",
+      "viewResults": "Résultats",
+      "cancelled": "Annulé",
+      "edit": "Modifier",
+      "leave": "Quitter",
+      "pending": "En attente d'approbation",
+      "waitlisted": "Sur liste d'attente",
+      "joinWaitlist": "Rejoindre la liste d'attente"
     }
   },
   "matchDetail": {
@@ -421,6 +481,10 @@
     "notes": "Notes",
     "joinNow": "Rejoindre",
     "requestToJoin": "Demander à rejoindre",
+    "matchEnded": "Ce match est terminé",
+    "matchCompleted": "Match terminé",
+    "matchCancelled": "Ce match a été annulé",
+    "matchInProgress": "Match en cours",
     "share": "Partager",
     "shareMessage": "Découvrez ce match sur Rallia!",
     "distance": "Distance",
@@ -908,7 +972,8 @@
         "request": "Sur demande"
       },
       "distance": {
-        "label": "Distance"
+        "label": "Distance",
+        "all": "Tout"
       },
       "reset": "Réinitialiser"
     },

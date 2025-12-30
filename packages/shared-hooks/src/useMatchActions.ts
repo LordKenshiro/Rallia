@@ -5,8 +5,17 @@
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { joinMatch, leaveMatch, cancelMatch, type JoinMatchResult } from '@rallia/shared-services';
-import type { Match } from '@rallia/shared-types';
+import {
+  joinMatch,
+  leaveMatch,
+  cancelMatch,
+  acceptJoinRequest,
+  rejectJoinRequest,
+  cancelJoinRequest,
+  kickParticipant,
+  type JoinMatchResult,
+} from '@rallia/shared-services';
+import type { Match, MatchParticipant } from '@rallia/shared-types';
 import { matchKeys } from './useCreateMatch';
 
 /**
@@ -42,6 +51,46 @@ export interface UseMatchActionsOptions {
    * Callback when cancel fails
    */
   onCancelError?: (error: Error) => void;
+
+  /**
+   * Callback when accept request succeeds
+   */
+  onAcceptSuccess?: (participant: MatchParticipant) => void;
+
+  /**
+   * Callback when accept request fails
+   */
+  onAcceptError?: (error: Error) => void;
+
+  /**
+   * Callback when reject request succeeds
+   */
+  onRejectSuccess?: (participant: MatchParticipant) => void;
+
+  /**
+   * Callback when reject request fails
+   */
+  onRejectError?: (error: Error) => void;
+
+  /**
+   * Callback when cancel request succeeds (requester cancelling their own request)
+   */
+  onCancelRequestSuccess?: (participant: MatchParticipant) => void;
+
+  /**
+   * Callback when cancel request fails
+   */
+  onCancelRequestError?: (error: Error) => void;
+
+  /**
+   * Callback when kick participant succeeds (host kicking a joined participant)
+   */
+  onKickSuccess?: (participant: MatchParticipant) => void;
+
+  /**
+   * Callback when kick participant fails
+   */
+  onKickError?: (error: Error) => void;
 }
 
 /**
@@ -88,6 +137,14 @@ export function useMatchActions(matchId: string | undefined, options: UseMatchAc
     onLeaveError,
     onCancelSuccess,
     onCancelError,
+    onAcceptSuccess,
+    onAcceptError,
+    onRejectSuccess,
+    onRejectError,
+    onCancelRequestSuccess,
+    onCancelRequestError,
+    onKickSuccess,
+    onKickError,
   } = options;
 
   const queryClient = useQueryClient();
@@ -158,6 +215,82 @@ export function useMatchActions(matchId: string | undefined, options: UseMatchAc
     },
   });
 
+  // Accept Join Request Mutation - requires participantId and hostId
+  const acceptMutation = useMutation<
+    MatchParticipant,
+    Error,
+    { participantId: string; hostId: string }
+  >({
+    mutationFn: async ({ participantId, hostId }) => {
+      if (!matchId) throw new Error('Match ID is required');
+      return acceptJoinRequest(matchId, participantId, hostId);
+    },
+    onSuccess: async participant => {
+      // Wait for cache invalidation before calling success callback
+      await invalidateMatchQueries();
+      onAcceptSuccess?.(participant);
+    },
+    onError: error => {
+      onAcceptError?.(error);
+    },
+  });
+
+  // Reject Join Request Mutation - requires participantId and hostId
+  const rejectMutation = useMutation<
+    MatchParticipant,
+    Error,
+    { participantId: string; hostId: string }
+  >({
+    mutationFn: async ({ participantId, hostId }) => {
+      if (!matchId) throw new Error('Match ID is required');
+      return rejectJoinRequest(matchId, participantId, hostId);
+    },
+    onSuccess: async participant => {
+      // Wait for cache invalidation before calling success callback
+      await invalidateMatchQueries();
+      onRejectSuccess?.(participant);
+    },
+    onError: error => {
+      onRejectError?.(error);
+    },
+  });
+
+  // Cancel Join Request Mutation - for requesters cancelling their own request
+  const cancelRequestMutation = useMutation<MatchParticipant, Error, string>({
+    mutationFn: async (playerId: string) => {
+      if (!matchId) throw new Error('Match ID is required');
+      return cancelJoinRequest(matchId, playerId);
+    },
+    onSuccess: async participant => {
+      // Wait for cache invalidation before calling success callback
+      await invalidateMatchQueries();
+      onCancelRequestSuccess?.(participant);
+    },
+    onError: error => {
+      onCancelRequestError?.(error);
+    },
+  });
+
+  // Kick Participant Mutation - for host kicking a joined participant
+  const kickMutation = useMutation<
+    MatchParticipant,
+    Error,
+    { participantId: string; hostId: string }
+  >({
+    mutationFn: async ({ participantId, hostId }) => {
+      if (!matchId) throw new Error('Match ID is required');
+      return kickParticipant(matchId, participantId, hostId);
+    },
+    onSuccess: async participant => {
+      // Wait for cache invalidation before calling success callback
+      await invalidateMatchQueries();
+      onKickSuccess?.(participant);
+    },
+    onError: error => {
+      onKickError?.(error);
+    },
+  });
+
   return {
     // Join actions
     /**
@@ -189,11 +322,61 @@ export function useMatchActions(matchId: string | undefined, options: UseMatchAc
     isCancelling: cancelMutation.isPending,
     cancelError: cancelMutation.error,
 
+    // Accept request actions (host only)
+    /**
+     * Accept a join request (host only)
+     * @param params.participantId - The participant record ID
+     * @param params.hostId - The host's player ID
+     */
+    acceptRequest: acceptMutation.mutate,
+    acceptRequestAsync: acceptMutation.mutateAsync,
+    isAccepting: acceptMutation.isPending,
+    acceptError: acceptMutation.error,
+
+    // Reject request actions (host only)
+    /**
+     * Reject a join request (host only)
+     * @param params.participantId - The participant record ID
+     * @param params.hostId - The host's player ID
+     */
+    rejectRequest: rejectMutation.mutate,
+    rejectRequestAsync: rejectMutation.mutateAsync,
+    isRejecting: rejectMutation.isPending,
+    rejectError: rejectMutation.error,
+
+    // Cancel request actions (requester only)
+    /**
+     * Cancel a pending join request (requester only)
+     * @param playerId - The player's ID
+     */
+    cancelRequest: cancelRequestMutation.mutate,
+    cancelRequestAsync: cancelRequestMutation.mutateAsync,
+    isCancellingRequest: cancelRequestMutation.isPending,
+    cancelRequestError: cancelRequestMutation.error,
+
+    // Kick participant actions (host only)
+    /**
+     * Kick a joined participant (host only)
+     * @param params.participantId - The participant record ID
+     * @param params.hostId - The host's player ID
+     */
+    kickParticipant: kickMutation.mutate,
+    kickParticipantAsync: kickMutation.mutateAsync,
+    isKicking: kickMutation.isPending,
+    kickError: kickMutation.error,
+
     // Combined loading state
     /**
      * Whether any action is in progress
      */
-    isLoading: joinMutation.isPending || leaveMutation.isPending || cancelMutation.isPending,
+    isLoading:
+      joinMutation.isPending ||
+      leaveMutation.isPending ||
+      cancelMutation.isPending ||
+      acceptMutation.isPending ||
+      rejectMutation.isPending ||
+      cancelRequestMutation.isPending ||
+      kickMutation.isPending,
 
     // Reset all mutations
     /**
@@ -203,6 +386,10 @@ export function useMatchActions(matchId: string | undefined, options: UseMatchAc
       joinMutation.reset();
       leaveMutation.reset();
       cancelMutation.reset();
+      acceptMutation.reset();
+      rejectMutation.reset();
+      cancelRequestMutation.reset();
+      kickMutation.reset();
     },
   };
 }

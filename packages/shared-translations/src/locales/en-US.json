@@ -35,7 +35,18 @@
     "send": "Send",
     "select": "Select",
     "required": "Required",
-    "optional": "Optional"
+    "optional": "Optional",
+    "showLess": "Show less",
+    "gender": {
+      "label": "Gender",
+      "male": "Male",
+      "female": "Female"
+    },
+    "playingHand": {
+      "label": "Playing Hand",
+      "left": "Left",
+      "right": "Right"
+    }
   },
   "auth": {
     "signIn": "Sign In",
@@ -317,7 +328,32 @@
     "leaveConfirmMessage": "You will be removed from this match.",
     "cancelConfirmTitle": "Cancel Match?",
     "cancelConfirmMessage": "This will cancel the match for all participants.",
-    "cancelWarning": "{count} other player(s) will be notified"
+    "cancelWarning": "{count} other player(s) will be notified",
+    "acceptRequest": "Accept",
+    "rejectRequest": "Decline",
+    "acceptSuccess": "Player accepted",
+    "rejectSuccess": "Request declined",
+    "rejectConfirmTitle": "Decline Request?",
+    "rejectConfirmMessage": "This player won't be able to request again for this match.",
+    "pendingRequests": "Pending Requests",
+    "cancelRequest": "Cancel Request",
+    "cancelRequestSuccess": "Your join request has been cancelled",
+    "cancelRequestConfirmTitle": "Cancel Request?",
+    "cancelRequestConfirmMessage": "Your request to join this match will be withdrawn.",
+    "showMoreRequests": "Show {count} more",
+    "matchFullCannotAccept": "Match full",
+    "requestPending": "Your request to join is pending approval from the host",
+    "waitlistedInfo": "You're on the waitlist. You'll be notified if a spot opens up.",
+    "joinWaitlist": "Join Waitlist",
+    "leaveWaitlist": "Leave Waitlist",
+    "waitlistSuccess": "You've been added to the waitlist!",
+    "leaveWaitlistSuccess": "You've left the waitlist",
+    "requesterDetails": "Requester Details",
+    "viewDetails": "View details",
+    "kickParticipant": "Remove Player",
+    "kickSuccess": "Player has been removed from the match",
+    "kickConfirmTitle": "Remove Player?",
+    "kickConfirmMessage": "This player will be removed from the match and notified."
   },
   "ratings": {
     "title": "Ratings",
@@ -369,7 +405,18 @@
       "full": "Full",
       "completed": "Completed",
       "cancelled": "Cancelled",
-      "confirmed": "Confirmed"
+      "confirmed": "Confirmed",
+      "inProgress": "In Progress"
+    },
+    "participantStatus": {
+      "pending": "Pending",
+      "requested": "Requested",
+      "joined": "Joined",
+      "declined": "Declined",
+      "refused": "Refused",
+      "left": "Left",
+      "kicked": "Kicked",
+      "waitlisted": "Waitlisted"
     },
     "type": {
       "competitive": "Competitive",
@@ -408,6 +455,19 @@
     },
     "courtStatus": {
       "readyToPlay": "Ready to Play"
+    },
+    "cta": {
+      "join": "Join",
+      "askToJoin": "Ask to Join",
+      "full": "Full",
+      "view": "View",
+      "viewResults": "Results",
+      "cancelled": "Cancelled",
+      "edit": "Edit",
+      "leave": "Leave",
+      "pending": "Pending Approval",
+      "waitlisted": "On Waitlist",
+      "joinWaitlist": "Join Waitlist"
     }
   },
   "matchDetail": {
@@ -421,6 +481,10 @@
     "notes": "Notes",
     "joinNow": "Join Match",
     "requestToJoin": "Request to Join",
+    "matchEnded": "This match has ended",
+    "matchCompleted": "Match completed",
+    "matchCancelled": "This match was cancelled",
+    "matchInProgress": "Match in progress",
     "share": "Share",
     "shareMessage": "Check out this match on Rallia!",
     "distance": "Distance",
@@ -908,7 +972,8 @@
         "request": "Request"
       },
       "distance": {
-        "label": "Distance"
+        "label": "Distance",
+        "all": "All"
       },
       "reset": "Reset"
     },

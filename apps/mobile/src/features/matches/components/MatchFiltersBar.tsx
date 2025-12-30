@@ -244,6 +244,7 @@ export function MatchFiltersBar({
   };
 
   // Count active filters (non-default selections)
+  // Distance default is 'all' (no distance filter)
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (format !== 'all') count++;
@@ -254,10 +255,17 @@ export function MatchFiltersBar({
     if (gender !== 'all') count++;
     if (cost !== 'all') count++;
     if (joinMode !== 'all') count++;
-    // Distance default is typically 25, adjust if different
-    if (distance !== DISTANCE_OPTIONS[1]) count++;
+    if (distance !== 'all') count++;
     return count;
   }, [format, matchType, dateRange, timeOfDay, skillLevel, gender, cost, joinMode, distance]);
+
+  // Helper to get distance label
+  const getDistanceLabel = (option: DistanceFilter): string => {
+    if (option === 'all') {
+      return t('publicMatches.filters.distance.all' as TranslationKey);
+    }
+    return `${option} km`;
+  };
 
   // Handle reset with haptic feedback
   const handleReset = useCallback(() => {
@@ -324,16 +332,20 @@ export function MatchFiltersBar({
         <FilterGroup
           title={t('publicMatches.filters.distance.label' as TranslationKey)}
           isDark={isDark}
-          hasActiveSelection={distance !== DISTANCE_OPTIONS[1]}
+          hasActiveSelection={distance !== 'all'}
         >
           {DISTANCE_OPTIONS.map(option => (
             <FilterChip
-              key={option}
-              label={`${option} km`}
+              key={String(option)}
+              label={getDistanceLabel(option)}
               isActive={distance === option}
               onPress={() => onDistanceChange(option)}
               isDark={isDark}
-              accessibilityLabel={`Distance ${option} kilometers`}
+              accessibilityLabel={
+                option === 'all'
+                  ? t('publicMatches.filters.distance.all' as TranslationKey)
+                  : `Distance ${option} kilometers`
+              }
             />
           ))}
         </FilterGroup>

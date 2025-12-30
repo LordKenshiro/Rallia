@@ -6,6 +6,62 @@ export interface UploadResult {
 }
 
 /**
+ * Get the Supabase URL from environment variables
+ * This ensures we always use the current environment's URL
+ */
+function getSupabaseUrl(): string {
+  return process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+}
+
+/**
+ * Construct a public URL for a storage file
+ * Uses the current environment's Supabase URL instead of the one from the client
+ *
+ * This is important because when running locally, the client might be configured
+ * with a local IP address (e.g., http://192.168.1.157:54321) that won't work
+ * when the device is on a different network or when switching to production.
+ *
+ * @param bucket - Storage bucket name
+ * @param filePath - Path to the file within the bucket
+ * @returns Full public URL for the file
+ */
+export function getStoragePublicUrl(bucket: string, filePath: string): string {
+  const supabaseUrl = getSupabaseUrl();
+  return `${supabaseUrl}/storage/v1/object/public/${bucket}/${filePath}`;
+}
+
+/**
+ * Convert a stored profile picture URL to use the current environment's Supabase URL
+ *
+ * This is useful when displaying images that were uploaded in a different environment
+ * (e.g., uploaded locally but now viewing in production, or vice versa)
+ *
+ * @param storedUrl - The URL stored in the database (may have old/different base URL)
+ * @param bucket - Storage bucket name (default: 'profile-pictures')
+ * @returns URL with the current environment's Supabase base URL
+ */
+export function normalizeStorageUrl(
+  storedUrl: string | null | undefined,
+  bucket: string = 'profile-pictures'
+): string | null {
+  if (!storedUrl) return null;
+
+  // Extract the file path from the stored URL
+  // URL format: https://xxx.supabase.co/storage/v1/object/public/{bucket}/{userId}/{filename}
+  const bucketPath = `/storage/v1/object/public/${bucket}/`;
+  const pathIndex = storedUrl.indexOf(bucketPath);
+
+  if (pathIndex === -1) {
+    // URL doesn't match expected format, return as-is
+    Logger.warn('Could not normalize storage URL - unexpected format', { storedUrl, bucket });
+    return storedUrl;
+  }
+
+  const filePath = storedUrl.substring(pathIndex + bucketPath.length);
+  return getStoragePublicUrl(bucket, filePath);
+}
+
+/**
  * Uploads an image to Supabase Storage and returns the public URL
  *
  * @param imageUri - Local file URI from image picker (file:///, content:///, data:, etc.)
@@ -113,10 +169,9 @@ export async function uploadImage(
       throw uploadError;
     }
 
-    // Get public URL
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from(bucket).getPublicUrl(filePath);
+    // Get public URL using the helper function
+    // This ensures we always use the current environment's Supabase URL
+    const publicUrl = getStoragePublicUrl(bucket, filePath);
 
     Logger.info('Image uploaded successfully', { publicUrl, userId });
     return { url: publicUrl, error: null };

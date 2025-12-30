@@ -49,27 +49,33 @@ export type JoinModeFilter = 'all' | 'direct' | 'request';
 
 /**
  * Available distance filter values (in km)
+ * 'all' means no distance filter - fetch all location types
  */
-export type DistanceFilter = 5 | 10 | 25 | 50 | 100;
+export type DistanceFilter = 'all' | 2 | 5 | 10;
 
 /**
- * All available distance options
+ * All available distance options (numeric values only for iteration)
  */
-export const DISTANCE_OPTIONS: DistanceFilter[] = [5, 10, 25, 50, 100];
+export const DISTANCE_OPTIONS_NUMERIC: (2 | 5 | 10)[] = [2, 5, 10];
 
 /**
- * Default distance filter value
+ * All available distance options including 'all'
  */
-export const DEFAULT_DISTANCE: DistanceFilter = 25;
+export const DISTANCE_OPTIONS: DistanceFilter[] = ['all', 2, 5, 10];
 
 /**
- * Find the closest distance option to a given value
+ * Default distance filter value (no distance filter = all locations)
  */
-export function findClosestDistanceOption(value: number): DistanceFilter {
-  let closest = DISTANCE_OPTIONS[0];
+export const DEFAULT_DISTANCE: DistanceFilter = 'all';
+
+/**
+ * Find the closest numeric distance option to a given value
+ */
+export function findClosestDistanceOption(value: number): 2 | 5 | 10 {
+  let closest = DISTANCE_OPTIONS_NUMERIC[0];
   let minDiff = Math.abs(value - closest);
 
-  for (const option of DISTANCE_OPTIONS) {
+  for (const option of DISTANCE_OPTIONS_NUMERIC) {
     const diff = Math.abs(value - option);
     if (diff < minDiff) {
       minDiff = diff;
@@ -78,6 +84,13 @@ export function findClosestDistanceOption(value: number): DistanceFilter {
   }
 
   return closest;
+}
+
+/**
+ * Check if a distance filter is numeric (has a distance constraint)
+ */
+export function isNumericDistanceFilter(distance: DistanceFilter): distance is 2 | 5 | 10 {
+  return typeof distance === 'number';
 }
 
 /**
@@ -104,8 +117,6 @@ export interface UsePublicMatchFiltersOptions {
   debounceMs?: number;
   /** Initial filter values */
   initialFilters?: Partial<PublicMatchFilters>;
-  /** Initial distance from player preference (will be rounded to nearest option) */
-  initialDistanceKm?: number;
 }
 
 /**
@@ -153,12 +164,10 @@ export interface UsePublicMatchFiltersReturn {
 export function usePublicMatchFilters(
   options: UsePublicMatchFiltersOptions = {}
 ): UsePublicMatchFiltersReturn {
-  const { debounceMs = 300, initialFilters, initialDistanceKm } = options;
+  const { debounceMs = 300, initialFilters } = options;
 
-  // Calculate initial distance from player preference or use default
-  const initialDistance = initialDistanceKm
-    ? findClosestDistanceOption(initialDistanceKm)
-    : DEFAULT_DISTANCE;
+  // Default is 'all' (no distance filter)
+  const initialDistance: DistanceFilter = DEFAULT_DISTANCE;
 
   // Default filter values
   const defaultFilters: PublicMatchFilters = {

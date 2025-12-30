@@ -29,7 +29,7 @@ import {
 } from '@rallia/design-system';
 
 const BASE_WHITE = '#ffffff';
-import { lightHaptic, warningHaptic } from '@rallia/shared-utils';
+import { lightHaptic, warningHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
 
 const SettingsScreen: React.FC = () => {
   const navigation = useAppNavigation();
@@ -165,7 +165,10 @@ const SettingsScreen: React.FC = () => {
           <View style={[styles.profileGroup, { backgroundColor: colors.cardBackground }]}>
             <View style={[styles.profileSection, { backgroundColor: colors.cardBackground }]}>
               {profile?.profile_picture_url ? (
-                <Image source={{ uri: profile.profile_picture_url }} style={styles.profileImage} />
+                <Image
+                  source={{ uri: getProfilePictureUrl(profile.profile_picture_url) || '' }}
+                  style={styles.profileImage}
+                />
               ) : (
                 <View style={styles.profileImagePlaceholder}>
                   <Ionicons name="person" size={32} color={colors.iconMuted} />

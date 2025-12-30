@@ -38,6 +38,9 @@ interface MatchDetailSheetContextType {
 
   /** Reference to the bottom sheet for direct control if needed */
   sheetRef: React.RefObject<BottomSheetModal | null>;
+
+  /** Update the selected match */
+  updateSelectedMatch: (match: MatchDetailData) => void;
 }
 
 // =============================================================================
@@ -77,11 +80,19 @@ export const MatchDetailSheetProvider: React.FC<MatchDetailSheetProviderProps> =
     }, 300);
   }, []);
 
+  /**
+   * Update the selected match
+   */
+  const updateSelectedMatch = useCallback((match: MatchDetailData) => {
+    setSelectedMatch(match);
+  }, []);
+
   const contextValue: MatchDetailSheetContextType = {
     openSheet,
     closeSheet,
     selectedMatch,
     sheetRef,
+    updateSelectedMatch,
   };
 
   return (

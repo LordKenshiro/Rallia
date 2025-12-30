@@ -16,6 +16,7 @@ import { supabase, Logger } from '@rallia/shared-services';
 import { replaceImage } from '../services/imageUpload';
 import { useImagePicker, useThemeStyles, useTranslation } from '../hooks';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
+import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { formatDate as formatDateUtil, formatDateMonthYear } from '../utils/dateFormatting';
 import PersonalInformationOverlay from '../features/onboarding/components/overlays/PersonalInformationOverlay';
 import PlayerInformationOverlay from '../features/onboarding/components/overlays/PlayerInformationOverlay';
@@ -554,7 +555,9 @@ const UserProfile = () => {
           >
             {profile?.profile_picture_url || newProfileImage ? (
               <Image
-                source={{ uri: newProfileImage || profile?.profile_picture_url || '' }}
+                source={{
+                  uri: newProfileImage || getProfilePictureUrl(profile?.profile_picture_url) || '',
+                }}
                 style={styles.profileImage}
               />
             ) : (

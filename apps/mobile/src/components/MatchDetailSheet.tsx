@@ -45,6 +45,13 @@ import {
   selectionHaptic,
   successHaptic,
   errorHaptic,
+  formatTimeRangeInTimezone,
+  formatTimeInTimezone,
+  getTimeDifferenceFromNow,
+  getMatchEndTimeDifferenceFromNow,
+  formatDateInTimezone,
+  getProfilePictureUrl,
+  deriveMatchStatus,
 } from '@rallia/shared-utils';
 import { useMatchDetailSheet } from '../context/MatchDetailSheetContext';
 import { useActionsSheet } from '../context/ActionsSheetContext';
@@ -52,8 +59,20 @@ import { useTranslation, type TranslationKey } from '../hooks';
 import { useTheme, usePlayer, useMatchActions } from '@rallia/shared-hooks';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import { ConfirmationModal } from './ConfirmationModal';
+import { RequesterDetailsModal } from './RequesterDetailsModal';
+import type { PlayerWithProfile, MatchParticipantWithPlayer } from '@rallia/shared-types';
 
 const BASE_WHITE = '#ffffff';
+
+// Premium/Gold card colors for "Ready to Play" matches
+const GOLD_COLORS = {
+  light: '#FFE55C',
+  base: '#FFD700',
+  dark: '#FFA500',
+  deepGold: '#B8860B',
+  bronze: '#CD7F32',
+  shimmer: '#FFF8DC',
+} as const;
 
 // =============================================================================
 // TYPES
@@ -77,6 +96,7 @@ interface ThemeColors {
   slotEmptyBorder: string;
   icon: string;
   iconMuted: string;
+  avatarPlaceholder: string;
 }
 
 // =============================================================================
@@ -84,88 +104,39 @@ interface ThemeColors {
 // =============================================================================
 
 /**
- * Get relative time display for match date/time
+ * Get time display for match date/time
+ * Returns time without timezone (timezone shown separately)
  */
 function getRelativeTimeDisplay(
   dateString: string,
   startTime: string,
   endTime: string,
+  timezone: string,
   locale: string,
   t: (key: TranslationKey, options?: Record<string, string | number | boolean>) => string
-): { label: string; isUrgent: boolean; fullDate: string } {
-  const now = new Date();
+): { label: string; timezoneCity: string; isUrgent: boolean; fullDate: string } {
+  const tz = timezone || 'UTC';
 
-  // Parse date string properly to avoid timezone issues
-  const [year, month, day] = dateString.split('-').map(Number);
-  const matchDate = new Date(year, month - 1, day);
-
-  const [startHours, startMinutes] = startTime.split(':').map(Number);
-  const [endHours, endMinutes] = endTime.split(':').map(Number);
-
-  // Create full match datetime in local timezone
-  const matchStartDateTime = new Date(year, month - 1, day, startHours, startMinutes || 0, 0, 0);
-  const matchEndDateTime = new Date(year, month - 1, day, endHours, endMinutes || 0, 0, 0);
-
-  // Calculate time differences
-  const msDiff = matchStartDateTime.getTime() - now.getTime();
-  const minutesDiff = Math.floor(msDiff / (1000 * 60));
+  // Calculate time difference to determine if urgent (within 3 hours)
+  const msDiff = getTimeDifferenceFromNow(dateString, startTime, tz);
   const hoursDiff = Math.floor(msDiff / (1000 * 60 * 60));
-  const daysDiff = Math.floor(msDiff / (1000 * 60 * 60 * 24));
+  const isUrgent = hoursDiff >= 0 && hoursDiff < 3;
 
-  // Format time range
-  const timeFormatter = new Intl.DateTimeFormat(locale, {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  });
-  const formattedStartTime = timeFormatter.format(matchStartDateTime);
-  const formattedEndTime = timeFormatter.format(matchEndDateTime);
-  const timeRange = `${formattedStartTime} - ${formattedEndTime}`;
-  const separator = t('common.time.timeSeparator');
+  // Format time range without timezone city (extract separately)
+  const startResult = formatTimeInTimezone(dateString, startTime, tz, locale);
+  const endResult = formatTimeInTimezone(dateString, endTime, tz, locale);
+  const timeRange = `${startResult.formattedTime} - ${endResult.formattedTime}`;
+  const timezoneCity = startResult.tzCity;
 
-  // Full date for display
-  const fullDate = matchDate.toLocaleDateString(locale, {
+  // Full date for display in the match's timezone
+  const fullDate = formatDateInTimezone(dateString, tz, locale, {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
     year: 'numeric',
   });
 
-  // Determine relative label
-  if (minutesDiff < 0) {
-    return { label: timeRange, isUrgent: false, fullDate };
-  }
-
-  if (minutesDiff === 0) {
-    return { label: `${t('common.time.now')} - ${formattedEndTime}`, isUrgent: true, fullDate };
-  }
-
-  if (minutesDiff < 60) {
-    return {
-      label: `${t('common.time.inMinutes', { minutes: minutesDiff })} - ${timeRange}`,
-      isUrgent: true,
-      fullDate,
-    };
-  }
-
-  if (hoursDiff < 24) {
-    return {
-      label: `${t('common.time.inHours', { hours: hoursDiff })} - ${timeRange}`,
-      isUrgent: true,
-      fullDate,
-    };
-  }
-
-  if (daysDiff === 1) {
-    return { label: `${t('common.time.tomorrow')} - ${timeRange}`, isUrgent: false, fullDate };
-  }
-
-  if (daysDiff <= 6) {
-    const weekday = matchDate.toLocaleDateString(locale, { weekday: 'long' });
-    return { label: `${weekday} - ${timeRange}`, isUrgent: false, fullDate };
-  }
-
-  return { label: timeRange, isUrgent: false, fullDate };
+  return { label: timeRange, timezoneCity, isUrgent, fullDate };
 }
 
 /**
@@ -256,14 +227,18 @@ const ParticipantAvatar: React.FC<ParticipantAvatarProps> = ({
               borderWidth: 2,
               borderColor: colors.slotEmptyBorder,
             }
-          : { backgroundColor: colors.primary },
+          : {
+              backgroundColor: avatarUrl ? colors.primary : colors.avatarPlaceholder,
+              borderWidth: 2,
+              borderColor: colors.cardBackground,
+            },
         isHost && { borderWidth: 2, borderColor: colors.secondary },
       ]}
     >
       {!isEmpty && avatarUrl ? (
         <Image source={{ uri: avatarUrl }} style={styles.participantAvatarImage} />
       ) : !isEmpty ? (
-        <Ionicons name="person" size={18} color={BASE_WHITE} />
+        <Ionicons name="person" size={18} color={isDark ? neutral[400] : neutral[500]} />
       ) : (
         <Ionicons name="add" size={20} color={colors.slotEmptyBorder} />
       )}
@@ -281,7 +256,7 @@ const ParticipantAvatar: React.FC<ParticipantAvatarProps> = ({
 // =============================================================================
 
 export const MatchDetailSheet: React.FC = () => {
-  const { sheetRef, closeSheet, selectedMatch } = useMatchDetailSheet();
+  const { sheetRef, closeSheet, selectedMatch, updateSelectedMatch } = useMatchDetailSheet();
   const { openSheetForEdit } = useActionsSheet();
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
@@ -292,58 +267,171 @@ export const MatchDetailSheet: React.FC = () => {
   // Confirmation modal states
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectingParticipantId, setRejectingParticipantId] = useState<string | null>(null);
+  const [showCancelRequestModal, setShowCancelRequestModal] = useState(false);
+  const [showKickModal, setShowKickModal] = useState(false);
+  const [kickingParticipantId, setKickingParticipantId] = useState<string | null>(null);
+
+  // Collapse/expand state for pending requests
+  const [showAllRequests, setShowAllRequests] = useState(false);
+
+  // Requester details modal state
+  const [selectedRequester, setSelectedRequester] = useState<MatchParticipantWithPlayer | null>(
+    null
+  );
+  const [showRequesterModal, setShowRequesterModal] = useState(false);
 
   // Match actions hook
-  const { joinMatch, leaveMatch, cancelMatch, isJoining, isLeaving, isCancelling, joinResult } =
-    useMatchActions(selectedMatch?.id, {
-      onJoinSuccess: result => {
-        successHaptic();
-        closeSheet();
-        if (result.status === 'joined') {
-          Alert.alert(
-            t('alerts.success' as TranslationKey),
-            t('matchActions.joinSuccess' as TranslationKey)
-          );
-        } else {
-          Alert.alert(
-            t('alerts.success' as TranslationKey),
-            t('matchActions.requestSent' as TranslationKey)
-          );
-        }
-      },
-      onJoinError: error => {
-        errorHaptic();
-        Alert.alert(t('alerts.error' as TranslationKey), error.message);
-      },
-      onLeaveSuccess: () => {
-        successHaptic();
-        setShowLeaveModal(false);
-        closeSheet();
+  const {
+    joinMatch,
+    leaveMatch,
+    cancelMatch,
+    acceptRequest,
+    rejectRequest,
+    cancelRequest,
+    kickParticipant,
+    isJoining,
+    isLeaving,
+    isCancelling,
+    isAccepting,
+    isRejecting,
+    isCancellingRequest,
+    isKicking,
+    joinResult,
+  } = useMatchActions(selectedMatch?.id, {
+    onJoinSuccess: result => {
+      successHaptic();
+      closeSheet();
+      if (result.status === 'joined') {
         Alert.alert(
           t('alerts.success' as TranslationKey),
-          t('matchActions.leaveSuccess' as TranslationKey)
+          t('matchActions.joinSuccess' as TranslationKey)
         );
-      },
-      onLeaveError: error => {
-        errorHaptic();
-        setShowLeaveModal(false);
-        Alert.alert(t('alerts.error' as TranslationKey), error.message);
-      },
-      onCancelSuccess: () => {
-        successHaptic();
-        setShowCancelModal(false);
-        closeSheet();
+      } else if (result.status === 'waitlisted') {
         Alert.alert(
           t('alerts.success' as TranslationKey),
-          t('matchActions.cancelSuccess' as TranslationKey)
+          t('matchActions.waitlistSuccess' as TranslationKey)
         );
-      },
-      onCancelError: error => {
-        errorHaptic();
-        setShowCancelModal(false);
-        Alert.alert(t('alerts.error' as TranslationKey), error.message);
-      },
-    });
+      } else {
+        Alert.alert(
+          t('alerts.success' as TranslationKey),
+          t('matchActions.requestSent' as TranslationKey)
+        );
+      }
+    },
+    onJoinError: error => {
+      errorHaptic();
+      Alert.alert(t('alerts.error' as TranslationKey), error.message);
+    },
+    onLeaveSuccess: () => {
+      successHaptic();
+      setShowLeaveModal(false);
+      closeSheet();
+      Alert.alert(
+        t('alerts.success' as TranslationKey),
+        t('matchActions.leaveSuccess' as TranslationKey)
+      );
+    },
+    onLeaveError: error => {
+      errorHaptic();
+      setShowLeaveModal(false);
+      Alert.alert(t('alerts.error' as TranslationKey), error.message);
+    },
+    onCancelSuccess: () => {
+      successHaptic();
+      setShowCancelModal(false);
+      closeSheet();
+      Alert.alert(
+        t('alerts.success' as TranslationKey),
+        t('matchActions.cancelSuccess' as TranslationKey)
+      );
+    },
+    onCancelError: error => {
+      errorHaptic();
+      setShowCancelModal(false);
+      Alert.alert(t('alerts.error' as TranslationKey), error.message);
+    },
+    onAcceptSuccess: participant => {
+      successHaptic();
+      if (selectedMatch) {
+        updateSelectedMatch({
+          ...selectedMatch,
+          participants: selectedMatch.participants?.map(p =>
+            p.id === participant.id ? { ...p, status: participant.status } : p
+          ),
+        });
+      }
+      Alert.alert(
+        t('alerts.success' as TranslationKey),
+        t('matchActions.acceptSuccess' as TranslationKey)
+      );
+    },
+    onAcceptError: error => {
+      errorHaptic();
+      Alert.alert(t('alerts.error' as TranslationKey), error.message);
+    },
+    onRejectSuccess: participant => {
+      successHaptic();
+      setShowRejectModal(false);
+      setRejectingParticipantId(null);
+      if (selectedMatch) {
+        updateSelectedMatch({
+          ...selectedMatch,
+          participants: selectedMatch?.participants?.map(p =>
+            p.id === participant.id ? { ...p, status: participant.status } : p
+          ),
+        });
+      }
+      Alert.alert(
+        t('alerts.success' as TranslationKey),
+        t('matchActions.rejectSuccess' as TranslationKey)
+      );
+    },
+    onRejectError: error => {
+      errorHaptic();
+      setShowRejectModal(false);
+      setRejectingParticipantId(null);
+      Alert.alert(t('alerts.error' as TranslationKey), error.message);
+    },
+    onCancelRequestSuccess: () => {
+      successHaptic();
+      setShowCancelRequestModal(false);
+      closeSheet();
+      Alert.alert(
+        t('alerts.success' as TranslationKey),
+        t('matchActions.cancelRequestSuccess' as TranslationKey)
+      );
+    },
+    onCancelRequestError: error => {
+      errorHaptic();
+      setShowCancelRequestModal(false);
+      Alert.alert(t('alerts.error' as TranslationKey), error.message);
+    },
+    onKickSuccess: participant => {
+      successHaptic();
+      setShowKickModal(false);
+      setKickingParticipantId(null);
+      if (selectedMatch) {
+        updateSelectedMatch({
+          ...selectedMatch,
+          participants: selectedMatch.participants?.map(p =>
+            p.id === participant.id ? { ...p, status: participant.status } : p
+          ),
+        });
+      }
+      Alert.alert(
+        t('alerts.success' as TranslationKey),
+        t('matchActions.kickSuccess' as TranslationKey)
+      );
+    },
+    onKickError: error => {
+      errorHaptic();
+      setShowKickModal(false);
+      setKickingParticipantId(null);
+      Alert.alert(t('alerts.error' as TranslationKey), error.message);
+    },
+  });
 
   // Theme colors
   const themeColors = isDark ? darkTheme : lightTheme;
@@ -366,12 +454,13 @@ export const MatchDetailSheet: React.FC = () => {
       slotEmptyBorder: isDark ? neutral[600] : neutral[300],
       icon: themeColors.foreground,
       iconMuted: themeColors.mutedForeground,
+      avatarPlaceholder: isDark ? neutral[700] : neutral[200],
     }),
     [themeColors, isDark]
   );
 
-  // Single snap point at 90% - sheet opens directly at this height
-  const snapPoints = useMemo(() => ['90%'], []);
+  // Single snap point at 98% - sheet opens directly at this height to ensure footer actions are visible
+  const snapPoints = useMemo(() => ['95%'], []);
 
   // Backdrop
   const renderBackdrop = useCallback(
@@ -434,6 +523,46 @@ export const MatchDetailSheet: React.FC = () => {
     cancelMatch(playerId);
   }, [playerId, cancelMatch]);
 
+  // Handle accept join request (host only)
+  const handleAcceptRequest = useCallback(
+    (participantId: string) => {
+      if (!selectedMatch || !playerId) return;
+      lightHaptic();
+      acceptRequest({ participantId, hostId: playerId });
+    },
+    [selectedMatch, playerId, acceptRequest]
+  );
+
+  // Handle reject join request - opens confirmation modal (host only)
+  const handleRejectRequest = useCallback(
+    (participantId: string) => {
+      if (!selectedMatch) return;
+      mediumHaptic();
+      setRejectingParticipantId(participantId);
+      setShowRejectModal(true);
+    },
+    [selectedMatch]
+  );
+
+  // Confirm reject request
+  const handleConfirmReject = useCallback(() => {
+    if (!playerId || !rejectingParticipantId) return;
+    rejectRequest({ participantId: rejectingParticipantId, hostId: playerId });
+  }, [playerId, rejectingParticipantId, rejectRequest]);
+
+  // Handle cancel request - opens confirmation modal (requester only)
+  const handleCancelRequest = useCallback(() => {
+    if (!selectedMatch) return;
+    mediumHaptic();
+    setShowCancelRequestModal(true);
+  }, [selectedMatch]);
+
+  // Confirm cancel request
+  const handleConfirmCancelRequest = useCallback(() => {
+    if (!playerId) return;
+    cancelRequest(playerId);
+  }, [playerId, cancelRequest]);
+
   // Handle edit match - opens the match creation wizard in edit mode
   const handleEditMatch = useCallback(() => {
     if (!selectedMatch) return;
@@ -441,6 +570,58 @@ export const MatchDetailSheet: React.FC = () => {
     closeSheet(); // Close the detail sheet first
     openSheetForEdit(selectedMatch); // Open actions sheet in edit mode
   }, [selectedMatch, closeSheet, openSheetForEdit]);
+
+  // Handle view requester details - opens modal instead of navigating
+  const handleViewRequesterDetails = useCallback((participant: MatchParticipantWithPlayer) => {
+    lightHaptic();
+    setSelectedRequester(participant);
+    setShowRequesterModal(true);
+  }, []);
+
+  // Handle close requester modal
+  const handleCloseRequesterModal = useCallback(() => {
+    setShowRequesterModal(false);
+    // Clear selected requester after animation
+    setTimeout(() => {
+      setSelectedRequester(null);
+    }, 300);
+  }, []);
+
+  // Handle accept from requester modal
+  const handleAcceptFromModal = useCallback(
+    (participantId: string) => {
+      handleAcceptRequest(participantId);
+      handleCloseRequesterModal();
+    },
+    [handleCloseRequesterModal]
+  );
+
+  // Handle reject from requester modal
+  const handleRejectFromModal = useCallback(
+    (participantId: string) => {
+      setRejectingParticipantId(participantId);
+      handleCloseRequesterModal();
+      setShowRejectModal(true);
+    },
+    [handleCloseRequesterModal]
+  );
+
+  // Handle kick participant - opens confirmation modal (host only)
+  const handleKickParticipant = useCallback(
+    (participantId: string) => {
+      if (!selectedMatch) return;
+      mediumHaptic();
+      setKickingParticipantId(participantId);
+      setShowKickModal(true);
+    },
+    [selectedMatch]
+  );
+
+  // Confirm kick participant
+  const handleConfirmKick = useCallback(() => {
+    if (!playerId || !kickingParticipantId) return;
+    kickParticipant({ participantId: kickingParticipantId, hostId: playerId });
+  }, [playerId, kickingParticipantId, kickParticipant]);
 
   // Handle open in maps
   const handleOpenMaps = useCallback(() => {
@@ -482,6 +663,8 @@ export const MatchDetailSheet: React.FC = () => {
       <BottomSheetModal
         ref={sheetRef}
         snapPoints={snapPoints}
+        index={0}
+        enableDynamicSizing={false}
         backdropComponent={renderBackdrop}
         enablePanDownToClose
         handleIndicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
@@ -495,51 +678,134 @@ export const MatchDetailSheet: React.FC = () => {
   // Computed values
   const match = selectedMatch;
   const participantInfo = getParticipantInfo(match);
+
   const {
     label: timeLabel,
+    timezoneCity,
     isUrgent,
     fullDate,
-  } = getRelativeTimeDisplay(match.match_date, match.start_time, match.end_time, locale, t);
+  } = getRelativeTimeDisplay(
+    match.match_date,
+    match.start_time,
+    match.end_time,
+    match.timezone,
+    locale,
+    t
+  );
   const distanceDisplay = formatDistance(match.distance_meters);
   const creatorProfile = match.created_by_player?.profile;
   const creatorName =
-    creatorProfile?.display_name ||
     creatorProfile?.full_name ||
+    creatorProfile?.display_name ||
     t('matchDetail.host' as TranslationKey);
   const isFull = participantInfo.spotsLeft === 0;
   const isCreator = playerId === match.created_by;
-  // Check if user is an active participant (not left, declined, or kicked)
+  // Check if user is an active participant (not left, declined, refused, or kicked)
   const activeStatuses = ['joined', 'requested', 'pending', 'waitlisted'];
   const isParticipant =
     match.participants?.some(
       p => p.player_id === playerId && activeStatuses.includes(p.status ?? '')
     ) || isCreator;
+  // Check if user has a pending request (for showing "Cancel Request" button)
+  const hasPendingRequest = match.participants?.some(
+    p => p.player_id === playerId && p.status === 'requested'
+  );
+  // Check if user is waitlisted (for showing waitlisted banner)
+  const isWaitlisted = match.participants?.some(
+    p => p.player_id === playerId && p.status === 'waitlisted'
+  );
+
+  // Derive match status from attributes instead of using denormalized status field
+  const derivedStatus = deriveMatchStatus({
+    cancelled_at: match.cancelled_at,
+    match_date: match.match_date,
+    start_time: match.start_time,
+    end_time: match.end_time,
+    timezone: match.timezone,
+    result: match.result,
+  });
+  const isCancelled = derivedStatus === 'cancelled';
+  const isInProgress = derivedStatus === 'in_progress';
+  const hasMatchEnded = derivedStatus === 'completed';
+  const hasResult = !!match.result;
+
+  // Get status badge info for display
+  const getStatusBadgeInfo = () => {
+    if (isCancelled) {
+      return {
+        label: t('match.status.cancelled' as TranslationKey),
+        bgColor: neutral[400],
+        textColor: BASE_WHITE,
+        icon: 'close-circle' as keyof typeof Ionicons.glyphMap,
+      };
+    }
+    if (hasResult || hasMatchEnded) {
+      return {
+        label: t('match.status.completed' as TranslationKey),
+        bgColor: colors.statusCompleted,
+        textColor: BASE_WHITE,
+        icon: 'trophy' as keyof typeof Ionicons.glyphMap,
+      };
+    }
+    if (isInProgress) {
+      return {
+        label: t('match.status.inProgress' as TranslationKey),
+        bgColor: status.warning.DEFAULT,
+        textColor: BASE_WHITE,
+        icon: 'play-circle' as keyof typeof Ionicons.glyphMap,
+      };
+    }
+    if (isFull) {
+      return {
+        label: t('match.status.full' as TranslationKey),
+        bgColor: colors.statusFull,
+        textColor: BASE_WHITE,
+        icon: 'people' as keyof typeof Ionicons.glyphMap,
+      };
+    }
+    return {
+      label: t('match.status.open' as TranslationKey),
+      bgColor: colors.statusOpen,
+      textColor: BASE_WHITE,
+      icon: 'checkmark-circle' as keyof typeof Ionicons.glyphMap,
+    };
+  };
+  const statusBadgeInfo = getStatusBadgeInfo();
 
   // Build participant avatars list
   const participantAvatars: Array<{
     key: string;
+    participantId?: string;
     avatarUrl?: string | null;
     isHost: boolean;
     isEmpty: boolean;
+    name?: string;
   }> = [];
 
-  // Host first
+  // Host first - normalize URL to use current environment's Supabase URL
   participantAvatars.push({
     key: 'host',
-    avatarUrl: creatorProfile?.profile_picture_url,
+    avatarUrl: getProfilePictureUrl(creatorProfile?.profile_picture_url),
     isHost: true,
     isEmpty: false,
+    name: creatorName.split(' ')[0],
   });
 
   // Other participants (only joined ones - not requested, pending, etc.)
+  // Normalize URLs to use current environment's Supabase URL
   match.participants
     ?.filter(p => p.status === 'joined')
     .forEach((p, i) => {
+      const participantFullName =
+        p.player?.profile?.full_name || p.player?.profile?.display_name || '';
+      const participantFirstName = participantFullName.split(' ')[0];
       participantAvatars.push({
         key: p.id || `participant-${i}`,
-        avatarUrl: p.player?.profile?.profile_picture_url,
+        participantId: p.id,
+        avatarUrl: getProfilePictureUrl(p.player?.profile?.profile_picture_url),
         isHost: false,
         isEmpty: false,
+        name: participantFirstName,
       });
     });
 
@@ -553,6 +819,35 @@ export const MatchDetailSheet: React.FC = () => {
     });
   }
 
+  // Pending join requests (for host to accept/reject)
+  // Normalize URLs to use current environment's Supabase URL
+  const pendingRequests =
+    match.participants
+      ?.filter(p => p.status === 'requested')
+      .map(p => {
+        const fullName =
+          p.player?.profile?.full_name ||
+          p.player?.profile?.display_name ||
+          t('matchDetail.host' as TranslationKey);
+        // Get sport rating info if available (label and value)
+        const playerWithRating = p.player as PlayerWithProfile | undefined;
+        const ratingLabel = playerWithRating?.sportRatingLabel;
+        const ratingValue = playerWithRating?.sportRatingValue;
+        // Display value if available, otherwise fall back to label
+        const ratingDisplay =
+          ratingValue !== undefined && ratingValue !== null ? ratingValue.toFixed(1) : ratingLabel;
+        return {
+          id: p.id,
+          playerId: p.player_id,
+          name: fullName.split(' ')[0], // Show only first name
+          avatarUrl: getProfilePictureUrl(p.player?.profile?.profile_picture_url),
+          ratingLabel,
+          ratingValue,
+          ratingDisplay,
+          participant: p as MatchParticipantWithPlayer, // Store full participant for modal
+        };
+      }) ?? [];
+
   // Cost display
   const costDisplay = match.is_court_free
     ? t('matchDetail.free' as TranslationKey)
@@ -565,22 +860,15 @@ export const MatchDetailSheet: React.FC = () => {
   const courtName = match.court?.name;
   const address = match.facility?.address || match.location_address;
 
-  // Match status
-  const getStatusBadge = () => {
-    if (match.status === 'completed') {
-      return { label: t('matches.completed' as TranslationKey), bg: colors.statusCompleted };
-    }
-    if (match.status === 'cancelled') {
-      return { label: t('matches.cancelled' as TranslationKey), bg: neutral[400] };
-    }
-    if (isFull) {
-      return { label: t('match.slots.full' as TranslationKey), bg: colors.statusFull };
-    }
-    return { label: t('matchDetail.open' as TranslationKey), bg: colors.statusOpen };
-  };
-  const statusBadge = getStatusBadge();
-
   // Determine action button(s)
+  // Logic priority:
+  // 1. Match has results → Show "View Results" info (no actions)
+  // 2. Match has ended (no results) → Show "Match Ended" info (no actions)
+  // 3. Creator (match not ended) → Edit + Cancel buttons
+  // 4. Participant (match not ended) → Leave button
+  // 5. Match is full → Disabled "Full" button
+  // 6. Request mode → "Request to Join" button
+  // 7. Default → "Join Now" button
   const renderActionButtons = () => {
     // Prepare theme colors for Button component
     const buttonThemeColors = {
@@ -603,7 +891,60 @@ export const MatchDetailSheet: React.FC = () => {
       buttonActive: status.error.DEFAULT,
     };
 
-    // Host: Edit + Cancel buttons
+    // Match is cancelled → Show cancelled info, no actions available
+    if (isCancelled) {
+      return (
+        <View style={styles.matchEndedContainer}>
+          <Ionicons name="close-circle-outline" size={20} color={colors.textMuted} />
+          <Text size="sm" weight="medium" color={colors.textMuted} style={styles.matchEndedText}>
+            {t('matchDetail.matchCancelled' as TranslationKey)}
+          </Text>
+        </View>
+      );
+    }
+
+    // Match has results → No actions available
+    if (hasResult) {
+      return (
+        <View style={styles.matchEndedContainer}>
+          <Ionicons name="trophy-outline" size={20} color={colors.textMuted} />
+          <Text size="sm" weight="medium" color={colors.textMuted} style={styles.matchEndedText}>
+            {t('matchDetail.matchCompleted' as TranslationKey)}
+          </Text>
+        </View>
+      );
+    }
+
+    // Match has ended but no results → No actions available
+    if (hasMatchEnded) {
+      return (
+        <View style={styles.matchEndedContainer}>
+          <Ionicons name="time-outline" size={20} color={colors.textMuted} />
+          <Text size="sm" weight="medium" color={colors.textMuted} style={styles.matchEndedText}>
+            {t('matchDetail.matchEnded' as TranslationKey)}
+          </Text>
+        </View>
+      );
+    }
+
+    // Match is in progress → Show in-progress info, limited actions
+    if (isInProgress) {
+      return (
+        <View style={styles.matchEndedContainer}>
+          <Ionicons name="play-circle-outline" size={20} color={status.warning.DEFAULT} />
+          <Text
+            size="sm"
+            weight="medium"
+            color={status.warning.DEFAULT}
+            style={styles.matchEndedText}
+          >
+            {t('matchDetail.matchInProgress' as TranslationKey)}
+          </Text>
+        </View>
+      );
+    }
+
+    // Host: Edit + Cancel buttons (only if match hasn't ended)
     if (isCreator) {
       return (
         <>
@@ -630,7 +971,39 @@ export const MatchDetailSheet: React.FC = () => {
       );
     }
 
-    // Participant (not host): Leave button
+    // User has pending request: Cancel Request button
+    if (hasPendingRequest) {
+      return (
+        <Button
+          variant="outline"
+          onPress={handleCancelRequest}
+          style={styles.actionButton}
+          themeColors={buttonThemeColors}
+          isDark={isDark}
+          loading={isCancellingRequest}
+        >
+          {t('matchActions.cancelRequest' as TranslationKey)}
+        </Button>
+      );
+    }
+
+    // Waitlisted user: Leave Waitlist button
+    if (isWaitlisted) {
+      return (
+        <Button
+          variant="outline"
+          onPress={handleLeaveMatch}
+          style={styles.actionButton}
+          themeColors={buttonThemeColors}
+          isDark={isDark}
+          loading={isLeaving}
+        >
+          {t('matchActions.leaveWaitlist' as TranslationKey)}
+        </Button>
+      );
+    }
+
+    // Participant (not host, joined): Leave button (only if match hasn't ended)
     if (isParticipant) {
       return (
         <Button
@@ -646,11 +1019,17 @@ export const MatchDetailSheet: React.FC = () => {
       );
     }
 
-    // Match is full
+    // Match is full - offer to join waitlist
     if (isFull) {
       return (
-        <Button variant="primary" disabled style={styles.actionButton}>
-          {t('match.slots.full' as TranslationKey)}
+        <Button
+          variant="primary"
+          onPress={handleJoinMatch}
+          style={styles.actionButton}
+          loading={isJoining}
+          disabled={isJoining || !playerId}
+        >
+          {t('matchActions.joinWaitlist' as TranslationKey)}
         </Button>
       );
     }
@@ -696,6 +1075,7 @@ export const MatchDetailSheet: React.FC = () => {
       ref={sheetRef}
       snapPoints={snapPoints}
       index={0}
+      enableDynamicSizing={false}
       backdropComponent={renderBackdrop}
       enablePanDownToClose
       handleIndicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
@@ -705,25 +1085,27 @@ export const MatchDetailSheet: React.FC = () => {
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <View style={styles.headerTop}>
           <View style={styles.headerTitleSection}>
-            <Text size="xl" weight="bold" color={isUrgent ? colors.secondary : colors.text}>
-              {timeLabel}
-            </Text>
+            {/* Match Time with Status Badge inline */}
+            <View style={styles.timeRow}>
+              <Text size="xl" weight="bold" color={isUrgent ? colors.secondary : colors.text}>
+                {timeLabel}
+              </Text>
+              <Badge
+                label={statusBadgeInfo.label}
+                bgColor={statusBadgeInfo.bgColor}
+                textColor={statusBadgeInfo.textColor}
+                icon={statusBadgeInfo.icon}
+              />
+            </View>
+            {/* Full Date with Timezone */}
             <Text size="sm" color={colors.textMuted} style={styles.fullDate}>
-              {fullDate}
+              {fullDate} • {timezoneCity}
             </Text>
           </View>
           <View style={styles.headerRight}>
-            <View style={[styles.statusBadge, { backgroundColor: statusBadge.bg }]}>
-              <Text size="xs" weight="bold" color={BASE_WHITE}>
-                {statusBadge.label.toUpperCase()}
-              </Text>
-            </View>
             <TouchableOpacity
               onPress={handleCloseSheet}
-              style={[
-                styles.closeButton,
-                { backgroundColor: isDark ? neutral[800] : neutral[100] },
-              ]}
+              style={[styles.closeButton, { backgroundColor: themeColors.muted }]}
               activeOpacity={0.7}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
@@ -737,6 +1119,52 @@ export const MatchDetailSheet: React.FC = () => {
         style={styles.sheetContent}
         contentContainerStyle={styles.scrollContent}
       >
+        {/* Pending Request Banner - shown to requesters with pending status */}
+        {hasPendingRequest && !isCreator && (
+          <View
+            style={[
+              styles.pendingBanner,
+              {
+                backgroundColor: status.warning.DEFAULT + '15',
+                borderColor: status.warning.DEFAULT,
+              },
+            ]}
+          >
+            <Ionicons name="time-outline" size={18} color={status.warning.DEFAULT} />
+            <Text
+              size="sm"
+              weight="medium"
+              color={status.warning.DEFAULT}
+              style={styles.pendingBannerText}
+            >
+              {t('matchActions.requestPending' as TranslationKey)}
+            </Text>
+          </View>
+        )}
+
+        {/* Waitlisted Banner - shown to waitlisted users */}
+        {isWaitlisted && !isCreator && (
+          <View
+            style={[
+              styles.pendingBanner,
+              {
+                backgroundColor: status.info.DEFAULT + '15',
+                borderColor: status.info.DEFAULT,
+              },
+            ]}
+          >
+            <Ionicons name="list-outline" size={18} color={status.info.DEFAULT} />
+            <Text
+              size="sm"
+              weight="medium"
+              color={status.info.DEFAULT}
+              style={styles.pendingBannerText}
+            >
+              {t('matchActions.waitlistedInfo' as TranslationKey)}
+            </Text>
+          </View>
+        )}
+
         {/* Match Info Grid - Moved up for context */}
         <View style={[styles.section, { borderBottomColor: colors.border }]}>
           <View style={styles.badgesGrid}>
@@ -744,14 +1172,14 @@ export const MatchDetailSheet: React.FC = () => {
             {match.court_status === 'reserved' && (
               <Badge
                 label={t('match.courtStatus.readyToPlay' as TranslationKey)}
-                bgColor={status.success.DEFAULT}
+                bgColor={GOLD_COLORS.base}
                 textColor={BASE_WHITE}
                 icon="checkmark-circle"
               />
             )}
 
             {/* Format */}
-            <Badge
+            {/* <Badge
               label={
                 match.format === 'doubles'
                   ? t('match.format.doubles' as TranslationKey)
@@ -760,7 +1188,7 @@ export const MatchDetailSheet: React.FC = () => {
               bgColor={isDark ? neutral[700] : neutral[200]}
               textColor={colors.text}
               icon={match.format === 'doubles' ? 'people' : 'person'}
-            />
+            /> */}
 
             {/* Player expectation */}
             {match.player_expectation && (
@@ -803,7 +1231,7 @@ export const MatchDetailSheet: React.FC = () => {
             )}
 
             {/* Gender preference */}
-            {match.preferred_opponent_gender && (
+            {/* {match.preferred_opponent_gender && (
               <Badge
                 label={
                   match.preferred_opponent_gender === 'male'
@@ -814,7 +1242,7 @@ export const MatchDetailSheet: React.FC = () => {
                 textColor={colors.text}
                 icon={match.preferred_opponent_gender === 'male' ? 'male' : 'female'}
               />
-            )}
+            )} */}
 
             {/* Join mode */}
             {match.join_mode === 'request' && (
@@ -840,22 +1268,36 @@ export const MatchDetailSheet: React.FC = () => {
           <View style={styles.participantsRow}>
             {participantAvatars.map((p, index) => (
               <View key={p.key} style={styles.participantWithLabel}>
-                <ParticipantAvatar
-                  avatarUrl={p.avatarUrl}
-                  isHost={p.isHost}
-                  isEmpty={p.isEmpty}
-                  colors={colors}
-                  isDark={isDark}
-                />
-                {/* Show name for host */}
-                {p.isHost && (
+                <View style={styles.participantAvatarWithAction}>
+                  <ParticipantAvatar
+                    avatarUrl={p.avatarUrl}
+                    isHost={p.isHost}
+                    isEmpty={p.isEmpty}
+                    colors={colors}
+                    isDark={isDark}
+                  />
+                  {/* Kick button for host to remove joined participants (not for host avatar, not for empty slots, not if match ended) */}
+                  {isCreator && !p.isHost && !p.isEmpty && p.participantId && !hasMatchEnded && (
+                    <TouchableOpacity
+                      style={[styles.kickButton, { backgroundColor: status.error.DEFAULT }]}
+                      onPress={() => handleKickParticipant(p.participantId!)}
+                      disabled={isKicking}
+                      activeOpacity={0.7}
+                      hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                    >
+                      <Ionicons name="close" size={10} color={BASE_WHITE} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+                {/* Show name for all non-empty participants */}
+                {!p.isEmpty && p.name && (
                   <Text
                     size="xs"
                     color={colors.textMuted}
                     style={styles.participantLabel}
                     numberOfLines={1}
                   >
-                    {creatorName.split(' ')[0]}
+                    {p.name}
                   </Text>
                 )}
               </View>
@@ -867,6 +1309,173 @@ export const MatchDetailSheet: React.FC = () => {
                 ? t('match.slots.oneLeft' as TranslationKey)
                 : t('match.slots.left' as TranslationKey, { count: participantInfo.spotsLeft })}
             </Text>
+          )}
+
+          {/* Pending Requests Section - only visible to host */}
+          {isCreator && pendingRequests.length > 0 && (
+            <View style={styles.pendingRequestsSection}>
+              <View style={styles.pendingRequestsHeader}>
+                <Text
+                  size="sm"
+                  weight="semibold"
+                  color={colors.secondary}
+                  style={styles.pendingRequestsTitle}
+                >
+                  {t('matchActions.pendingRequests' as TranslationKey)} ({pendingRequests.length})
+                </Text>
+                {isFull && (
+                  <View
+                    style={[styles.matchFullBadge, { backgroundColor: status.info.DEFAULT + '20' }]}
+                  >
+                    <Ionicons name="information-circle" size={12} color={status.info.DEFAULT} />
+                    <Text
+                      size="xs"
+                      weight="medium"
+                      color={status.info.DEFAULT}
+                      style={styles.matchFullBadgeText}
+                    >
+                      {t('matchActions.matchFullCannotAccept' as TranslationKey)}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              {(showAllRequests ? pendingRequests : pendingRequests.slice(0, 3)).map(request => (
+                <View key={request.id} style={styles.pendingRequestRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.pendingRequestInfo,
+                      {
+                        backgroundColor: themeColors.muted,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        borderRadius: radiusPixels.md,
+                        paddingHorizontal: spacingPixels[3],
+                        paddingVertical: spacingPixels[2.5],
+                      },
+                    ]}
+                    onPress={() =>
+                      request.participant && handleViewRequesterDetails(request.participant)
+                    }
+                    activeOpacity={0.6}
+                  >
+                    <View
+                      style={[styles.pendingRequestAvatar, { backgroundColor: colors.primary }]}
+                    >
+                      {request.avatarUrl ? (
+                        <Image
+                          source={{ uri: request.avatarUrl }}
+                          style={styles.pendingRequestAvatarImage}
+                        />
+                      ) : (
+                        <Ionicons name="person" size={16} color={BASE_WHITE} />
+                      )}
+                    </View>
+                    <View style={styles.pendingRequestNameContainer}>
+                      <Text
+                        size="sm"
+                        weight="medium"
+                        color={colors.text}
+                        numberOfLines={1}
+                        style={styles.pendingRequestName}
+                      >
+                        {request.name}
+                      </Text>
+                      {request.ratingDisplay && (
+                        <View
+                          style={[
+                            styles.pendingRequestRatingBadge,
+                            { backgroundColor: colors.primaryLight },
+                          ]}
+                        >
+                          <Ionicons
+                            name="analytics"
+                            size={10}
+                            color={colors.primary}
+                            style={styles.pendingRequestRatingIcon}
+                          />
+                          <Text size="xs" weight="medium" color={colors.primary}>
+                            {request.ratingDisplay}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <View style={styles.pendingRequestViewDetails}>
+                      <Text
+                        size="xs"
+                        weight="medium"
+                        color={colors.primary}
+                        style={styles.viewDetailsText}
+                      >
+                        {t('matchActions.viewDetails' as TranslationKey)}
+                      </Text>
+                      <Ionicons
+                        name="chevron-forward"
+                        size={16}
+                        color={colors.primary}
+                        style={styles.pendingRequestChevron}
+                      />
+                    </View>
+                  </TouchableOpacity>
+                  <View style={styles.pendingRequestActions}>
+                    <TouchableOpacity
+                      style={[
+                        styles.requestActionButton,
+                        styles.acceptButton,
+                        {
+                          backgroundColor: isFull ? neutral[400] : status.success.DEFAULT,
+                        },
+                      ]}
+                      onPress={() => request.id && handleAcceptRequest(request.id)}
+                      disabled={isAccepting || isRejecting || isFull}
+                      activeOpacity={0.7}
+                    >
+                      {isAccepting ? (
+                        <View style={styles.requestActionLoading} />
+                      ) : (
+                        <Ionicons name="checkmark" size={18} color={BASE_WHITE} />
+                      )}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.requestActionButton,
+                        styles.rejectButton,
+                        { backgroundColor: status.error.DEFAULT },
+                      ]}
+                      onPress={() => request.id && handleRejectRequest(request.id)}
+                      disabled={isAccepting || isRejecting}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="close" size={18} color={BASE_WHITE} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+              {/* Show more/less toggle when there are more than 3 requests */}
+              {pendingRequests.length > 3 && (
+                <TouchableOpacity
+                  style={styles.showMoreButton}
+                  onPress={() => {
+                    lightHaptic();
+                    setShowAllRequests(!showAllRequests);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text size="sm" weight="medium" color={colors.primary}>
+                    {showAllRequests
+                      ? t('common.showLess' as TranslationKey)
+                      : t('matchActions.showMoreRequests' as TranslationKey, {
+                          count: pendingRequests.length - 3,
+                        })}
+                  </Text>
+                  <Ionicons
+                    name={showAllRequests ? 'chevron-up' : 'chevron-down'}
+                    size={16}
+                    color={colors.primary}
+                    style={styles.showMoreIcon}
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
           )}
         </View>
 
@@ -964,7 +1573,7 @@ export const MatchDetailSheet: React.FC = () => {
       >
         {renderActionButtons()}
         <TouchableOpacity
-          style={[styles.shareButton, { backgroundColor: isDark ? neutral[800] : neutral[100] }]}
+          style={[styles.shareButton, { backgroundColor: themeColors.muted }]}
           onPress={handleShare}
           activeOpacity={0.7}
         >
@@ -1006,6 +1615,62 @@ export const MatchDetailSheet: React.FC = () => {
         destructive
         isLoading={isCancelling}
       />
+
+      {/* Reject Request Confirmation Modal */}
+      <ConfirmationModal
+        visible={showRejectModal}
+        onClose={() => {
+          setShowRejectModal(false);
+          setRejectingParticipantId(null);
+        }}
+        onConfirm={handleConfirmReject}
+        title={t('matchActions.rejectConfirmTitle' as TranslationKey)}
+        message={t('matchActions.rejectConfirmMessage' as TranslationKey)}
+        confirmLabel={t('matchActions.rejectRequest' as TranslationKey)}
+        cancelLabel={t('common.cancel' as TranslationKey)}
+        destructive
+        isLoading={isRejecting}
+      />
+
+      {/* Cancel Request Confirmation Modal (for requesters) */}
+      <ConfirmationModal
+        visible={showCancelRequestModal}
+        onClose={() => setShowCancelRequestModal(false)}
+        onConfirm={handleConfirmCancelRequest}
+        title={t('matchActions.cancelRequestConfirmTitle' as TranslationKey)}
+        message={t('matchActions.cancelRequestConfirmMessage' as TranslationKey)}
+        confirmLabel={t('matchActions.cancelRequest' as TranslationKey)}
+        cancelLabel={t('common.goBack' as TranslationKey)}
+        destructive
+        isLoading={isCancellingRequest}
+      />
+
+      {/* Requester Details Modal */}
+      <RequesterDetailsModal
+        visible={showRequesterModal}
+        onClose={handleCloseRequesterModal}
+        participant={selectedRequester}
+        onAccept={handleAcceptFromModal}
+        onReject={handleRejectFromModal}
+        isLoading={isAccepting || isRejecting}
+        isMatchFull={isFull}
+      />
+
+      {/* Kick Participant Confirmation Modal */}
+      <ConfirmationModal
+        visible={showKickModal}
+        onClose={() => {
+          setShowKickModal(false);
+          setKickingParticipantId(null);
+        }}
+        onConfirm={handleConfirmKick}
+        title={t('matchActions.kickConfirmTitle' as TranslationKey)}
+        message={t('matchActions.kickConfirmMessage' as TranslationKey)}
+        confirmLabel={t('matchActions.kickParticipant' as TranslationKey)}
+        cancelLabel={t('common.cancel' as TranslationKey)}
+        destructive
+        isLoading={isKicking}
+      />
     </BottomSheetModal>
   );
 };
@@ -1028,6 +1693,21 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: spacingPixels[10],
   },
+  pendingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: spacingPixels[5],
+    marginTop: spacingPixels[3],
+    marginBottom: spacingPixels[1],
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
+    borderRadius: radiusPixels.md,
+    borderWidth: 1,
+  },
+  pendingBannerText: {
+    marginLeft: spacingPixels[2],
+    flex: 1,
+  },
   emptyContent: {
     flex: 1,
   },
@@ -1047,6 +1727,14 @@ const styles = StyleSheet.create({
   headerTitleSection: {
     flex: 1,
     marginRight: spacingPixels[3],
+    alignItems: 'flex-start',
+  },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    flexWrap: 'wrap',
+    marginBottom: spacingPixels[1],
   },
   headerRight: {
     flexDirection: 'row',
@@ -1146,8 +1834,143 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: BASE_WHITE,
   },
+  participantAvatarWithAction: {
+    position: 'relative',
+  },
+  kickButton: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: BASE_WHITE,
+  },
   spotsText: {
     marginTop: spacingPixels[3],
+  },
+
+  // Pending requests (host only)
+  pendingRequestsSection: {
+    marginTop: spacingPixels[4],
+    paddingTop: spacingPixels[3],
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(128, 128, 128, 0.2)',
+  },
+  pendingRequestsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacingPixels[2],
+    flexWrap: 'wrap',
+    gap: spacingPixels[2],
+  },
+  pendingRequestsTitle: {
+    // No margin bottom - now handled by header gap
+  },
+  matchFullBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[2],
+    paddingVertical: spacingPixels[1],
+    borderRadius: radiusPixels.full,
+  },
+  matchFullBadgeText: {
+    marginLeft: spacingPixels[1],
+  },
+  pendingRequestRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacingPixels[2],
+  },
+  pendingRequestInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    minWidth: 0,
+  },
+  pendingRequestAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacingPixels[2],
+    overflow: 'hidden',
+  },
+  pendingRequestAvatarImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+  pendingRequestNameContainer: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+  },
+  pendingRequestName: {
+    flexShrink: 1,
+  },
+  pendingRequestRatingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[1.5],
+    paddingVertical: spacingPixels[0.5],
+    borderRadius: radiusPixels.full,
+    flexShrink: 0,
+  },
+  pendingRequestRatingIcon: {
+    marginRight: spacingPixels[0.5],
+  },
+  pendingRequestViewDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: spacingPixels[2],
+    flexShrink: 0,
+  },
+  viewDetailsText: {
+    marginRight: spacingPixels[1],
+  },
+  pendingRequestChevron: {
+    // Margin handled by viewDetailsText
+  },
+  showMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[2],
+    marginTop: spacingPixels[1],
+  },
+  showMoreIcon: {
+    marginLeft: spacingPixels[1],
+  },
+  pendingRequestActions: {
+    flexDirection: 'row',
+    gap: spacingPixels[2],
+    marginLeft: spacingPixels[2],
+  },
+  requestActionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  acceptButton: {
+    // Background color set dynamically
+  },
+  rejectButton: {
+    // Background color set dynamically
+  },
+  requestActionLoading: {
+    width: 18,
+    height: 18,
   },
 
   // Location row (tappable)
@@ -1206,6 +2029,17 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.lg,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  matchEndedContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[3],
+    gap: spacingPixels[2],
+  },
+  matchEndedText: {
+    textAlign: 'center',
   },
 });
 

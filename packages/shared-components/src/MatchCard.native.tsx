@@ -8,8 +8,8 @@
  * - Match details as primary focus
  */
 
-import React, { useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import React, { useMemo, useEffect, useRef } from 'react';
+import { View, StyleSheet, TouchableOpacity, Image, Animated, Easing } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from './foundation/Text.native';
@@ -24,6 +24,15 @@ import {
   status,
 } from '@rallia/design-system';
 import type { MatchWithDetails } from '@rallia/shared-types';
+import {
+  formatTimeRangeInTimezone,
+  getTimeDifferenceFromNow,
+  getMatchEndTimeDifferenceFromNow,
+  formatDateInTimezone,
+  getProfilePictureUrl,
+  deriveMatchStatus,
+  type DerivedMatchStatus,
+} from '@rallia/shared-utils';
 
 // =============================================================================
 // CONSTANTS
@@ -36,8 +45,15 @@ const GRADIENT_STRIP_HEIGHT = 4;
 // Slot sizes
 const SLOT_SIZE = 32;
 
-// Host avatar in footer
-const HOST_AVATAR_SIZE = 28;
+// Premium/Gold card colors for "Ready to Play" matches
+const GOLD_COLORS = {
+  light: '#FFE55C',
+  base: '#FFD700',
+  dark: '#FFA500',
+  deepGold: '#B8860B',
+  bronze: '#CD7F32',
+  shimmer: '#FFF8DC',
+} as const;
 
 // =============================================================================
 // TYPES
@@ -58,6 +74,8 @@ export interface MatchCardProps {
   t: (key: string, options?: TranslationOptions) => string;
   /** Current locale for date/time formatting */
   locale: string;
+  /** Current user's player ID (to determine owner/participant status) */
+  currentPlayerId?: string;
 }
 
 interface ThemeColors {
@@ -76,6 +94,7 @@ interface ThemeColors {
   statusCompleted: string;
   slotEmpty: string;
   slotEmptyBorder: string;
+  avatarPlaceholder: string;
 }
 
 // =============================================================================
@@ -85,103 +104,35 @@ interface ThemeColors {
 const BASE_WHITE = '#ffffff';
 
 /**
- * Get relative time display for match date/time
- * Returns comprehensive contextual strings like "In 2 hours", "Tomorrow at 6 PM", etc.
+ * Get time display for match date/time
+ * Shows date and time with city name in parentheses
  */
 function getRelativeTimeDisplay(
   dateString: string,
   startTime: string,
   endTime: string,
+  timezone: string,
   locale: string,
   t: (key: string, options?: TranslationOptions) => string
 ): { label: string; isUrgent: boolean } {
-  const now = new Date();
+  const tz = timezone || 'UTC';
 
-  // Parse date string properly to avoid timezone issues
-  // dateString format: "YYYY-MM-DD"
-  // We need to create a date in local timezone, not UTC
-  const [year, month, day] = dateString.split('-').map(Number);
-  const matchDate = new Date(year, month - 1, day); // month is 0-indexed
-
-  const [startHours, startMinutes] = startTime.split(':').map(Number);
-  const [endHours, endMinutes] = endTime.split(':').map(Number);
-
-  // Create full match datetime in local timezone
-  const matchStartDateTime = new Date(year, month - 1, day, startHours, startMinutes || 0, 0, 0);
-  const matchEndDateTime = new Date(year, month - 1, day, endHours, endMinutes || 0, 0, 0);
-
-  // Calculate time differences
-  const msDiff = matchStartDateTime.getTime() - now.getTime();
-  const minutesDiff = Math.floor(msDiff / (1000 * 60));
+  // Calculate time difference to determine if urgent (within 3 hours)
+  const msDiff = getTimeDifferenceFromNow(dateString, startTime, tz);
   const hoursDiff = Math.floor(msDiff / (1000 * 60 * 60));
-  const daysDiff = Math.floor(msDiff / (1000 * 60 * 60 * 24));
+  const isUrgent = hoursDiff >= 0 && hoursDiff < 3;
 
-  // Format time range
-  const timeFormatter = new Intl.DateTimeFormat(locale, {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  });
-  const formattedStartTime = timeFormatter.format(matchStartDateTime);
-  const formattedEndTime = timeFormatter.format(matchEndDateTime);
-  const timeRange = `${formattedStartTime} - ${formattedEndTime}`;
-  const separator = t('common.time.timeSeparator');
-
-  // Determine relative label with comprehensive formatting
-  if (minutesDiff < 0) {
-    // Past match
-    const dateLabel = matchDate.toLocaleDateString(locale, {
-      month: 'short',
-      day: 'numeric',
-    });
-    return { label: `${dateLabel}${separator}${timeRange}`, isUrgent: false };
-  }
-
-  if (minutesDiff === 0) {
-    return { label: `${t('common.time.now')}${separator}${timeRange}`, isUrgent: true };
-  }
-
-  if (minutesDiff < 60) {
-    // Less than an hour
-    return {
-      label: `${t('common.time.inMinutes', { minutes: minutesDiff })}${separator}${timeRange}`,
-      isUrgent: true,
-    };
-  }
-
-  if (hoursDiff < 24) {
-    // Today, show hours and minutes if less than 2 hours
-    if (hoursDiff < 2) {
-      const remainingMinutes = minutesDiff % 60;
-      if (remainingMinutes > 0) {
-        return {
-          label: `${t('common.time.inHoursMinutes', { hours: hoursDiff, minutes: remainingMinutes })}${separator}${timeRange}`,
-          isUrgent: true,
-        };
-      }
-    }
-    return {
-      label: `${t('common.time.inHours', { hours: hoursDiff })}${separator}${timeRange}`,
-      isUrgent: true,
-    };
-  }
-
-  if (daysDiff === 1) {
-    return { label: `${t('common.time.tomorrow')}${separator}${timeRange}`, isUrgent: false };
-  }
-
-  if (daysDiff <= 6) {
-    const weekday = matchDate.toLocaleDateString(locale, { weekday: 'long' });
-    return { label: `${weekday}${separator}${timeRange}`, isUrgent: false };
-  }
-
-  // More than a week away
-  const dateLabel = matchDate.toLocaleDateString(locale, {
-    weekday: 'short',
+  // Format date
+  const dateLabel = formatDateInTimezone(dateString, tz, locale, {
     month: 'short',
     day: 'numeric',
   });
-  return { label: `${dateLabel}${separator}${timeRange}`, isUrgent: false };
+
+  // Format time range in the match's timezone with city name
+  const timeRange = formatTimeRangeInTimezone(dateString, startTime, endTime, tz, locale);
+  const separator = t('common.time.timeSeparator');
+
+  return { label: `${dateLabel}${separator}${timeRange}`, isUrgent };
 }
 
 /**
@@ -225,14 +176,15 @@ function getParticipantInfo(match: MatchWithDetails): {
 
 /**
  * Get status info for badges
+ * Uses derived status instead of denormalized status field
  */
 function getStatusInfo(
-  matchStatus: string | null,
+  derivedStatus: DerivedMatchStatus,
   participantInfo: { current: number; total: number },
   colors: ThemeColors,
   t: (key: string) => string
 ): { label: string; bgColor: string; textColor: string; glowColor: string } {
-  if (matchStatus === 'completed') {
+  if (derivedStatus === 'completed') {
     return {
       label: t('match.status.completed'),
       bgColor: colors.statusCompleted,
@@ -240,12 +192,20 @@ function getStatusInfo(
       glowColor: colors.statusCompleted,
     };
   }
-  if (matchStatus === 'cancelled') {
+  if (derivedStatus === 'cancelled') {
     return {
       label: t('match.status.cancelled'),
       bgColor: neutral[400],
       textColor: BASE_WHITE,
       glowColor: neutral[400],
+    };
+  }
+  if (derivedStatus === 'in_progress') {
+    return {
+      label: t('match.status.inProgress'),
+      bgColor: colors.statusFull, // Orange for in-progress
+      textColor: BASE_WHITE,
+      glowColor: colors.statusFull,
     };
   }
   if (participantInfo.current >= participantInfo.total) {
@@ -303,23 +263,33 @@ function getPlayerExpectationInfo(
 
 interface GradientStripProps {
   isDark: boolean;
+  isReadyToPlay?: boolean;
 }
 
 /**
  * Smooth gradient accent strip at the top of the card
  * Uses expo-linear-gradient for a true gradient effect
+ * Gold gradient for "Ready to Play" matches
  */
-const GradientStrip: React.FC<GradientStripProps> = ({ isDark }) => {
-  const colors: [string, string, ...string[]] = isDark
-    ? [primary[400], primary[300], secondary[300], secondary[400]]
-    : [primary[500], primary[400], secondary[400], secondary[500]];
+const GradientStrip: React.FC<GradientStripProps> = ({ isDark, isReadyToPlay }) => {
+  const colors: [string, string, ...string[]] = isReadyToPlay
+    ? [
+        GOLD_COLORS.bronze,
+        GOLD_COLORS.base,
+        GOLD_COLORS.light,
+        GOLD_COLORS.base,
+        GOLD_COLORS.bronze,
+      ]
+    : isDark
+      ? [primary[400], primary[300], secondary[300], secondary[400]]
+      : [primary[500], primary[400], secondary[400], secondary[500]];
 
   return (
     <LinearGradient
       colors={colors}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 0 }}
-      style={styles.gradientStrip}
+      style={[styles.gradientStrip, isReadyToPlay && styles.gradientStripPremium]}
     />
   );
 };
@@ -348,18 +318,20 @@ const PlayerSlots: React.FC<PlayerSlotsProps> = ({ match, participantInfo, color
   }> = [];
 
   // First slot is always the host/creator
+  // Normalize URL to use current environment's Supabase URL
   slots.push({
     filled: true,
-    avatarUrl: creatorProfile?.profile_picture_url,
+    avatarUrl: getProfilePictureUrl(creatorProfile?.profile_picture_url),
     isHost: true,
   });
 
   // Add participant slots (only joined participants)
+  // Normalize URLs to use current environment's Supabase URL
   for (let i = 0; i < participantInfo.total - 1; i++) {
     const participant = joinedParticipants[i];
     slots.push({
       filled: !!participant,
-      avatarUrl: participant?.player?.profile?.profile_picture_url,
+      avatarUrl: getProfilePictureUrl(participant?.player?.profile?.profile_picture_url),
       isHost: false,
     });
   }
@@ -382,21 +354,23 @@ const PlayerSlots: React.FC<PlayerSlotsProps> = ({ match, participantInfo, color
                 index > 0 && { marginLeft: -8 }, // Overlap avatars
                 slot.filled
                   ? {
-                      backgroundColor: colors.primary,
+                      backgroundColor: slot.avatarUrl ? colors.primary : colors.avatarPlaceholder,
+                      borderWidth: 2,
+                      borderColor: colors.cardBackground,
                     }
                   : {
                       backgroundColor: colors.slotEmpty,
                       borderWidth: 2,
                       borderColor: colors.slotEmptyBorder,
                     },
-                slot.isHost && { borderWidth: 2, borderColor: colors.primary },
+                slot.isHost && { borderWidth: 2, borderColor: colors.secondary },
               ]}
             >
               {slot.filled ? (
                 slot.avatarUrl ? (
                   <Image source={{ uri: slot.avatarUrl }} style={styles.slotAvatar} />
                 ) : (
-                  <Ionicons name="person" size={14} color={BASE_WHITE} />
+                  <Ionicons name="person" size={14} color={isDark ? neutral[400] : neutral[500]} />
                 )
               ) : (
                 <Ionicons name="add" size={16} color={colors.slotEmptyBorder} />
@@ -459,71 +433,165 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ label, bgColor, textColor }) 
   </View>
 );
 
-interface HostFooterProps {
+interface CardFooterProps {
   match: MatchWithDetails;
+  participantInfo: { current: number; total: number; spotsLeft: number };
   colors: ThemeColors;
   isDark: boolean;
-  costDisplay: string | null;
   t: (key: string, options?: TranslationOptions) => string;
+  onPress?: () => void;
+  currentPlayerId?: string;
 }
 
 /**
- * Footer with host info and cost
+ * Footer with CTA button
+ *
+ * CTA Logic (priority order):
+ * 1. Match has ended → "View" (for everyone - no edit/leave allowed)
+ * 2. Match has result → "View Results"
+ * 3. Owner (match not ended) → "Edit"
+ * 4. User has joined (match not ended) → "Leave"
+ * 5. User has pending request → "Pending" (disabled)
+ * 6. Match is full → "Full" (disabled)
+ * 7. Join mode is 'request' → "Ask to Join"
+ * 8. Default → "Join"
  */
-const HostFooter: React.FC<HostFooterProps> = ({ match, colors, isDark, costDisplay, t }) => {
-  const creatorProfile = match.created_by_player?.profile;
-  const creatorName = creatorProfile?.display_name || creatorProfile?.full_name || t('match.host');
+const CardFooter: React.FC<CardFooterProps> = ({
+  match,
+  participantInfo,
+  colors,
+  isDark,
+  t,
+  onPress,
+  currentPlayerId,
+}) => {
+  // Check if match is cancelled (use cancelled_at instead of status)
+  const isCancelled = !!match.cancelled_at;
+
+  // Check if match has ended (end_time has passed in match's timezone)
+  // Account for matches that span midnight (e.g., 11 PM - 1 AM)
+  const matchEndDiff = getMatchEndTimeDifferenceFromNow(
+    match.match_date,
+    match.start_time,
+    match.end_time,
+    match.timezone
+  );
+  const hasMatchEnded = matchEndDiff < 0;
+
+  // Derive match state from data (not from status field)
+  const isFull = participantInfo.spotsLeft === 0;
+  const hasResult = !!match.result;
+
+  // User role checks
+  const isOwner = currentPlayerId
+    ? match.created_by_player?.id === currentPlayerId || match.created_by === currentPlayerId
+    : false;
+
+  const userParticipant = currentPlayerId
+    ? match.participants?.find(
+        p => p.player_id === currentPlayerId || p.player?.id === currentPlayerId
+      )
+    : undefined;
+
+  const hasJoined = userParticipant?.status === 'joined';
+  const hasPendingRequest =
+    userParticipant?.status === 'requested' || userParticipant?.status === 'pending';
+  const isWaitlisted = userParticipant?.status === 'waitlisted';
+
+  // Join mode
+  const isRequestMode = match.join_mode === 'request';
+
+  // Determine button label, style, and icon based on state
+  let ctaLabel: string;
+  let ctaBgColor: string;
+  let ctaTextColor: string;
+  let ctaDisabled = false;
+  let ctaIcon: keyof typeof Ionicons.glyphMap | null = 'arrow-forward';
+
+  if (isCancelled) {
+    // Match is cancelled → Cancelled (disabled, highest priority)
+    ctaLabel = t('match.cta.cancelled');
+    ctaBgColor = isDark ? neutral[700] : neutral[200];
+    ctaTextColor = colors.textMuted;
+    ctaDisabled = true;
+    ctaIcon = null;
+  } else if (hasResult) {
+    // Match with results → View Results (highest priority for completed matches)
+    ctaLabel = t('match.cta.viewResults');
+    ctaBgColor = isDark ? neutral[700] : neutral[200];
+    ctaTextColor = colors.text;
+    ctaIcon = 'eye-outline';
+  } else if (hasMatchEnded) {
+    // Match has ended but no results yet → View (no edit/leave allowed)
+    ctaLabel = t('match.cta.view');
+    ctaBgColor = isDark ? neutral[700] : neutral[200];
+    ctaTextColor = colors.text;
+    ctaIcon = 'eye-outline';
+  } else if (isOwner) {
+    // Owner (match not ended) → Edit
+    ctaLabel = t('match.cta.edit');
+    ctaBgColor = colors.primary;
+    ctaTextColor = BASE_WHITE;
+    ctaIcon = 'create-outline';
+  } else if (isWaitlisted) {
+    // User is waitlisted → On Waitlist (view to see options)
+    ctaLabel = t('match.cta.waitlisted');
+    ctaBgColor = isDark ? neutral[700] : neutral[200];
+    ctaTextColor = colors.text;
+    ctaIcon = 'list-outline';
+  } else if (hasJoined) {
+    // User has joined (match not ended) → Leave
+    ctaLabel = t('match.cta.leave');
+    ctaBgColor = isDark ? neutral[700] : neutral[200];
+    ctaTextColor = status.warning.DEFAULT;
+    ctaIcon = 'exit-outline';
+  } else if (hasPendingRequest) {
+    // User has pending request → Pending (disabled)
+    ctaLabel = t('match.cta.pending');
+    ctaBgColor = isDark ? neutral[700] : neutral[200];
+    ctaTextColor = colors.textMuted;
+    ctaDisabled = true;
+    ctaIcon = 'hourglass-outline';
+  } else if (isFull) {
+    // Match is full → Join Waitlist
+    ctaLabel = t('match.cta.joinWaitlist');
+    ctaBgColor = colors.primary;
+    ctaTextColor = BASE_WHITE;
+    ctaIcon = 'list-outline';
+  } else if (isRequestMode) {
+    // Request mode → Ask to Join
+    ctaLabel = t('match.cta.askToJoin');
+    ctaBgColor = colors.primary;
+    ctaTextColor = BASE_WHITE;
+    ctaIcon = 'hand-left-outline';
+  } else {
+    // Default → Join
+    ctaLabel = t('match.cta.join');
+    ctaBgColor = colors.primary;
+    ctaTextColor = BASE_WHITE;
+    ctaIcon = 'arrow-forward';
+  }
 
   return (
     <View style={[styles.footer, { borderTopColor: colors.border }]}>
-      {/* Host info */}
-      <View style={styles.hostInfo}>
-        <View style={[styles.hostAvatarWrapper, { borderColor: colors.primary }]}>
-          {creatorProfile?.profile_picture_url ? (
-            <Image source={{ uri: creatorProfile.profile_picture_url }} style={styles.hostAvatar} />
-          ) : (
-            <View
-              style={[
-                styles.hostAvatar,
-                styles.avatarPlaceholder,
-                { backgroundColor: isDark ? neutral[700] : neutral[200] },
-              ]}
-            >
-              <Ionicons name="person" size={12} color={isDark ? neutral[400] : neutral[500]} />
-            </View>
-          )}
-        </View>
-        <Text size="xs" weight="medium" color={colors.textMuted} style={styles.hostName}>
-          {creatorName}
+      {/* CTA Button */}
+      <TouchableOpacity
+        style={[
+          styles.ctaButton,
+          { backgroundColor: ctaBgColor },
+          ctaDisabled && styles.ctaButtonDisabled,
+        ]}
+        onPress={onPress}
+        activeOpacity={ctaDisabled ? 1 : 0.8}
+        disabled={ctaDisabled}
+      >
+        {ctaIcon && (
+          <Ionicons name={ctaIcon} size={14} color={ctaTextColor} style={styles.ctaIconLeft} />
+        )}
+        <Text size="sm" weight="bold" color={ctaTextColor}>
+          {ctaLabel}
         </Text>
-      </View>
-
-      {/* Cost */}
-      {costDisplay && (
-        <View
-          style={[
-            styles.costBadge,
-            {
-              backgroundColor: match.is_court_free
-                ? `${status.success.DEFAULT}20`
-                : `${colors.primary}20`,
-            },
-          ]}
-        >
-          <Ionicons
-            name={match.is_court_free ? 'checkmark-circle' : 'cash-outline'}
-            size={12}
-            color={match.is_court_free ? status.success.DEFAULT : colors.primary}
-          />
-          <Text
-            size="xs"
-            weight="semibold"
-            color={match.is_court_free ? status.success.DEFAULT : colors.primary}
-          >
-            {costDisplay}
-          </Text>
-        </View>
-      )}
+      </TouchableOpacity>
     </View>
   );
 };
@@ -532,7 +600,82 @@ const HostFooter: React.FC<HostFooterProps> = ({ match, colors, isDark, costDisp
 // MAIN COMPONENT
 // =============================================================================
 
-const MatchCard: React.FC<MatchCardProps> = ({ match, onPress, isDark, t, locale }) => {
+const MatchCard: React.FC<MatchCardProps> = ({
+  match,
+  onPress,
+  isDark,
+  t,
+  locale,
+  currentPlayerId,
+}) => {
+  // Check if this is a "Ready to Play" match (court already reserved)
+  const isReadyToPlay = match.court_status === 'reserved';
+
+  // Animated glow effect for premium cards - smooth, polished breathing effect
+  const glowAnimation = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (isReadyToPlay) {
+      // Main glow pulse - slower, smoother breathing effect with bezier easing
+      const mainGlow = Animated.loop(
+        Animated.sequence([
+          Animated.timing(glowAnimation, {
+            toValue: 1,
+            duration: 3000,
+            easing: Easing.bezier(0.4, 0, 0.2, 1), // Smooth ease-in-out
+            useNativeDriver: false,
+          }),
+          Animated.timing(glowAnimation, {
+            toValue: 0,
+            duration: 3000,
+            easing: Easing.bezier(0.4, 0, 0.2, 1),
+            useNativeDriver: false,
+          }),
+        ])
+      );
+
+      mainGlow.start();
+      return () => {
+        mainGlow.stop();
+      };
+    }
+  }, [isReadyToPlay, glowAnimation]);
+
+  // Interpolate shadow for outer glow effect
+  const animatedShadowOpacity = glowAnimation.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0.2, 0.5, 0.2],
+  });
+
+  const animatedShadowRadius = glowAnimation.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [16, 28, 16],
+  });
+
+  // Main border color - smooth transition through gold spectrum
+  const animatedBorderColor = glowAnimation.interpolate({
+    inputRange: [0, 0.25, 0.5, 0.75, 1],
+    outputRange: [
+      GOLD_COLORS.deepGold,
+      GOLD_COLORS.bronze,
+      GOLD_COLORS.base,
+      GOLD_COLORS.light,
+      GOLD_COLORS.base,
+    ],
+  });
+
+  // Outer glow border - more subtle, wider
+  const animatedOuterGlowOpacity = glowAnimation.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0.3, 0.6, 0.3],
+  });
+
+  // Inner glow border - subtle highlight
+  const animatedInnerGlowOpacity = glowAnimation.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0.4, 0.8, 0.4],
+  });
+
   // Theme colors
   const themeColors = isDark ? darkTheme : lightTheme;
   const colors: ThemeColors = useMemo(
@@ -552,17 +695,28 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, onPress, isDark, t, locale
       statusCompleted: status.info.DEFAULT,
       slotEmpty: isDark ? neutral[800] : neutral[100],
       slotEmptyBorder: isDark ? neutral[600] : neutral[300],
+      avatarPlaceholder: isDark ? neutral[700] : neutral[200],
     }),
     [themeColors, isDark]
   );
 
   // Computed values
   const participantInfo = getParticipantInfo(match);
-  const statusInfo = getStatusInfo(match.status, participantInfo, colors, t);
+  // Derive status from match attributes instead of using denormalized status field
+  const derivedStatus = deriveMatchStatus({
+    cancelled_at: match.cancelled_at,
+    match_date: match.match_date,
+    start_time: match.start_time,
+    end_time: match.end_time,
+    timezone: match.timezone,
+    result: match.result,
+  });
+  const statusInfo = getStatusInfo(derivedStatus, participantInfo, colors, t);
   const { label: timeLabel, isUrgent } = getRelativeTimeDisplay(
     match.match_date,
     match.start_time,
     match.end_time,
+    match.timezone,
     locale,
     t
   );
@@ -586,33 +740,11 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, onPress, isDark, t, locale
     icon?: keyof typeof Ionicons.glyphMap;
   }> = [];
 
-  // Ready to Play badge (prominent - court already booked)
-  if (match.court_status === 'reserved') {
-    badges.push({
-      key: 'readyToPlay',
-      label: t('match.courtStatus.readyToPlay'),
-      bgColor: status.success.DEFAULT,
-      textColor: BASE_WHITE,
-      icon: 'checkmark-circle',
-    });
-  }
-
   // Player expectation badge
   if (match.player_expectation) {
     badges.push({
       key: 'expectation',
       ...expectationInfo,
-    });
-  }
-
-  // Format badge
-  if (match.format) {
-    badges.push({
-      key: 'format',
-      label: match.format === 'doubles' ? t('match.format.doubles') : t('match.format.singles'),
-      bgColor: isDark ? neutral[700] : neutral[200],
-      textColor: colors.text,
-      icon: match.format === 'doubles' ? 'people' : 'person',
     });
   }
 
@@ -628,110 +760,194 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, onPress, isDark, t, locale
   }
 
   // Join mode badge (request only)
-  if (match.join_mode === 'request') {
-    badges.push({
-      key: 'joinMode',
-      label: t('match.joinMode.request'),
-      bgColor: isDark ? neutral[700] : neutral[200],
-      textColor: colors.text,
-      icon: 'hand-left',
-    });
-  }
+  // if (match.join_mode === 'request') {
+  //   badges.push({
+  //     key: 'joinMode',
+  //     label: t('match.joinMode.request'),
+  //     bgColor: isDark ? neutral[700] : neutral[200],
+  //     textColor: colors.text,
+  //     icon: 'hand-left',
+  //   });
+  // }
 
   // Gender preference badge
-  if (match.preferred_opponent_gender) {
-    const genderLabel =
-      match.preferred_opponent_gender === 'male'
-        ? t('match.gender.menOnly')
-        : t('match.gender.womenOnly');
-    const genderIcon: keyof typeof Ionicons.glyphMap =
-      match.preferred_opponent_gender === 'male' ? 'male' : 'female';
+  // if (match.preferred_opponent_gender) {
+  //   const genderLabel =
+  //     match.preferred_opponent_gender === 'male'
+  //       ? t('match.gender.menOnly')
+  //       : t('match.gender.womenOnly');
+  //   const genderIcon: keyof typeof Ionicons.glyphMap =
+  //     match.preferred_opponent_gender === 'male' ? 'male' : 'female';
+  //   badges.push({
+  //     key: 'gender',
+  //     label: genderLabel,
+  //     bgColor: isDark ? neutral[700] : neutral[200],
+  //     textColor: colors.text,
+  //     icon: genderIcon,
+  //   });
+  // }
+
+  // Cost badge
+  if (costDisplay) {
     badges.push({
-      key: 'gender',
-      label: genderLabel,
-      bgColor: isDark ? neutral[700] : neutral[200],
-      textColor: colors.text,
-      icon: genderIcon,
+      key: 'cost',
+      label: costDisplay,
+      bgColor: match.is_court_free ? `${status.success.DEFAULT}20` : `${colors.primary}20`,
+      textColor: match.is_court_free ? status.success.DEFAULT : colors.primary,
+      icon: match.is_court_free ? 'checkmark-circle' : 'cash-outline',
     });
   }
 
-  return (
-    <TouchableOpacity
-      style={[
-        styles.card,
+  // Wrap in Animated.View for premium glow effect
+  const CardWrapper = isReadyToPlay ? Animated.View : View;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const cardWrapperStyle: any = isReadyToPlay
+    ? [
+        styles.premiumCardWrapper,
         {
-          backgroundColor: colors.cardBackground,
-          borderColor: colors.border,
+          shadowOpacity: animatedShadowOpacity,
+          shadowRadius: animatedShadowRadius,
+          shadowColor: GOLD_COLORS.base,
         },
-      ]}
-      onPress={onPress}
-      activeOpacity={0.85}
-      accessibilityRole="button"
-      accessibilityLabel={`Match ${timeLabel} at ${locationDisplay}`}
-    >
-      {/* Gradient accent strip */}
-      <GradientStrip isDark={isDark} />
+      ]
+    : undefined;
 
-      {/* Main content */}
-      <View style={styles.content}>
-        {/* Time & Status row */}
-        <View style={styles.topRow}>
-          <View style={styles.timeContainer}>
-            <Ionicons
-              name={isUrgent ? 'time' : 'calendar-outline'}
-              size={16}
-              color={isUrgent ? colors.secondary : colors.primary}
+  // Premium card background color - subtle gold tint
+  const cardBackgroundColor = isReadyToPlay
+    ? isDark
+      ? '#2A2418' // Dark gold-tinted background for dark mode
+      : '#FFF9E6' // Light gold-tinted background for light mode
+    : colors.cardBackground;
+
+  return (
+    <CardWrapper style={cardWrapperStyle}>
+      <TouchableOpacity
+        style={[
+          styles.card,
+          {
+            backgroundColor: cardBackgroundColor,
+            borderColor: isReadyToPlay ? GOLD_COLORS.deepGold : colors.border,
+          },
+          isReadyToPlay && styles.premiumCard,
+        ]}
+        onPress={onPress}
+        activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel={`Match ${timeLabel} at ${locationDisplay}${isReadyToPlay ? ' - Ready to Play' : ''}`}
+      >
+        {/* Multi-layer animated gold border for premium cards - creates polished glow effect */}
+        {isReadyToPlay && (
+          <>
+            {/* Outer glow layer - widest, most subtle */}
+            <Animated.View
+              style={[
+                styles.premiumBorderOverlay,
+                styles.premiumBorderOuter,
+                {
+                  borderColor: GOLD_COLORS.base,
+                  opacity: animatedOuterGlowOpacity,
+                },
+              ]}
+              pointerEvents="none"
             />
-            <Text
-              size="base"
-              weight="bold"
-              color={isUrgent ? colors.secondary : colors.text}
-              style={styles.timeText}
-              numberOfLines={1}
-            >
-              {timeLabel}
-            </Text>
-          </View>
-          <StatusBadge {...statusInfo} />
-        </View>
-
-        {/* Location row */}
-        <View style={styles.locationRow}>
-          <Ionicons name="location" size={14} color={colors.textMuted} />
-          <Text size="sm" color={colors.textMuted} numberOfLines={1} style={styles.locationText}>
-            {locationDisplay}
-            {courtDisplay && ` • ${courtDisplay}`}
-          </Text>
-        </View>
-
-        {/* Player slots */}
-        <PlayerSlots
-          match={match}
-          participantInfo={participantInfo}
-          colors={colors}
-          isDark={isDark}
-          t={t}
-        />
-
-        {/* Badges row */}
-        {badges.length > 0 && (
-          <View style={styles.badgesContainer}>
-            {badges.map(badge => (
-              <Badge
-                key={badge.key}
-                label={badge.label}
-                bgColor={badge.bgColor}
-                textColor={badge.textColor}
-                icon={badge.icon}
-              />
-            ))}
-          </View>
+            {/* Main border layer - animated color transition */}
+            <Animated.View
+              style={[
+                styles.premiumBorderOverlay,
+                styles.premiumBorderMain,
+                {
+                  borderColor: animatedBorderColor,
+                },
+              ]}
+              pointerEvents="none"
+            />
+            {/* Inner glow layer - subtle highlight */}
+            <Animated.View
+              style={[
+                styles.premiumBorderOverlay,
+                styles.premiumBorderInner,
+                {
+                  borderColor: GOLD_COLORS.light,
+                  opacity: animatedInnerGlowOpacity,
+                },
+              ]}
+              pointerEvents="none"
+            />
+          </>
         )}
 
-        {/* Footer with host and cost */}
-        <HostFooter match={match} colors={colors} isDark={isDark} costDisplay={costDisplay} t={t} />
-      </View>
-    </TouchableOpacity>
+        {/* Gradient accent strip */}
+        <GradientStrip isDark={isDark} isReadyToPlay={isReadyToPlay} />
+
+        {/* Main content */}
+        <View style={styles.content}>
+          {/* Time & Status row */}
+          <View style={styles.topRow}>
+            <View style={styles.timeContainer}>
+              <Ionicons
+                name={isUrgent ? 'time' : 'calendar-outline'}
+                size={16}
+                color={isUrgent ? colors.secondary : colors.primary}
+              />
+              <Text
+                size="base"
+                weight="bold"
+                color={isUrgent ? colors.secondary : colors.text}
+                style={styles.timeText}
+                numberOfLines={1}
+              >
+                {timeLabel}
+              </Text>
+            </View>
+            {/* <StatusBadge {...statusInfo} /> */}
+          </View>
+
+          {/* Location row */}
+          <View style={styles.locationRow}>
+            <Ionicons name="location" size={14} color={colors.textMuted} />
+            <Text size="sm" color={colors.textMuted} numberOfLines={1} style={styles.locationText}>
+              {locationDisplay}
+              {courtDisplay && ` • ${courtDisplay}`}
+            </Text>
+          </View>
+
+          {/* Player slots */}
+          <PlayerSlots
+            match={match}
+            participantInfo={participantInfo}
+            colors={colors}
+            isDark={isDark}
+            t={t}
+          />
+
+          {/* Badges row */}
+          {badges.length > 0 && (
+            <View style={styles.badgesContainer}>
+              {badges.map(badge => (
+                <Badge
+                  key={badge.key}
+                  label={badge.label}
+                  bgColor={badge.bgColor}
+                  textColor={badge.textColor}
+                  icon={badge.icon}
+                />
+              ))}
+            </View>
+          )}
+
+          {/* Footer with CTA */}
+          <CardFooter
+            match={match}
+            participantInfo={participantInfo}
+            colors={colors}
+            isDark={isDark}
+            t={t}
+            onPress={onPress}
+            currentPlayerId={currentPlayerId}
+          />
+        </View>
+      </TouchableOpacity>
+    </CardWrapper>
   );
 };
 
@@ -754,9 +970,51 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
+  // Premium "Ready to Play" card styles
+  premiumCardWrapper: {
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 8,
+  },
+  premiumCard: {
+    borderWidth: 2,
+    // Add subtle inner glow effect with background
+  },
+  premiumBorderOverlay: {
+    position: 'absolute',
+    borderRadius: radiusPixels.xl,
+    zIndex: 10,
+  },
+  premiumBorderOuter: {
+    top: -3,
+    left: -3,
+    right: -3,
+    bottom: -3,
+    borderWidth: 3,
+    zIndex: 8,
+  },
+  premiumBorderMain: {
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderWidth: 2.5,
+    zIndex: 11,
+  },
+  premiumBorderInner: {
+    top: 1,
+    left: 1,
+    right: 1,
+    bottom: 1,
+    borderWidth: 1.5,
+    zIndex: 12,
+  },
+
   // Gradient strip
   gradientStrip: {
     height: GRADIENT_STRIP_HEIGHT,
+  },
+  gradientStripPremium: {
+    height: 6, // Slightly taller for premium cards
   },
 
   // Content
@@ -871,27 +1129,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: spacingPixels[3],
     borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  hostInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  hostAvatarWrapper: {
-    borderWidth: 1.5,
-    borderRadius: HOST_AVATAR_SIZE / 2 + 2,
-    padding: 1,
-  },
-  hostAvatar: {
-    width: HOST_AVATAR_SIZE,
-    height: HOST_AVATAR_SIZE,
-    borderRadius: HOST_AVATAR_SIZE / 2,
-  },
-  avatarPlaceholder: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  hostName: {
-    marginLeft: spacingPixels[2],
+    gap: spacingPixels[2],
   },
   costBadge: {
     flexDirection: 'row',
@@ -900,6 +1138,25 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[1],
     borderRadius: radiusPixels.full,
     gap: spacingPixels[1],
+  },
+  ctaButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[2],
+    borderRadius: radiusPixels.lg,
+    flex: 1,
+    minWidth: 0, // Allow button to shrink if needed
+  },
+  ctaButtonDisabled: {
+    opacity: 0.6,
+  },
+  ctaIcon: {
+    marginLeft: spacingPixels[1],
+  },
+  ctaIconLeft: {
+    marginRight: spacingPixels[1],
   },
 });
 

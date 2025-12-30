@@ -11,6 +11,7 @@ import type {
   MatchParticipantWithPlayer,
   MatchParticipant,
   Profile,
+  PlayerWithProfile,
 } from '@rallia/shared-types';
 
 /**
@@ -222,8 +223,10 @@ export async function getMatchWithDetails(matchId: string) {
   }
   if (data.participants) {
     data.participants.forEach((p: MatchParticipantWithPlayer) => {
-      if (p.player?.id) {
-        playerIds.add(p.player.id);
+      // Handle both array and object formats from Supabase
+      const playerObj = Array.isArray(p.player) ? p.player[0] : p.player;
+      if (playerObj?.id) {
+        playerIds.add(playerObj.id);
       }
     });
   }
@@ -245,15 +248,116 @@ export async function getMatchWithDetails(matchId: string) {
     }
   }
 
-  // Attach profiles to players
+  // Fetch player ratings for the match's sport (for displaying in request cards)
+  const sportId = data.sport_id;
+  const ratingsMap: Record<string, { label: string; value: number | null }> = {}; // playerId -> rating info
+
+  if (profileIds.length > 0 && sportId) {
+    const { data: ratingsData, error: ratingsError } = await supabase
+      .from('player_rating_score')
+      .select(
+        `
+        player_id,
+        rating_score!player_rating_scores_rating_score_id_fkey!inner (
+          label,
+          value,
+          rating_system!inner (
+            sport_id
+          )
+        )
+      `
+      )
+      .in('player_id', profileIds);
+
+    if (ratingsError) {
+      console.error('[getMatchWithDetails] Error fetching ratings:', ratingsError);
+    }
+
+    if (!ratingsError && ratingsData) {
+      console.log('[getMatchWithDetails] Raw ratings data:', JSON.stringify(ratingsData, null, 2));
+      console.log('[getMatchWithDetails] Looking for sportId:', sportId);
+      console.log('[getMatchWithDetails] Profile IDs queried:', profileIds);
+
+      type RatingResult = {
+        player_id: string;
+        rating_score: { label: string; value: number | null; rating_system: { sport_id: string } };
+      };
+      (ratingsData as unknown as RatingResult[]).forEach(rating => {
+        // Filter to only ratings for this match's sport
+        const ratingScore = rating.rating_score;
+        const ratingSystem = ratingScore?.rating_system;
+        console.log(
+          `[getMatchWithDetails] Rating for player ${rating.player_id}: sport_id=${ratingSystem?.sport_id}, label=${ratingScore?.label}, value=${ratingScore?.value}, match_sport_id=${sportId}`
+        );
+        if (ratingSystem?.sport_id === sportId && ratingScore?.label) {
+          ratingsMap[rating.player_id] = {
+            label: ratingScore.label,
+            value: ratingScore.value,
+          };
+          console.log(
+            `[getMatchWithDetails] Added rating to map for player ${rating.player_id}:`,
+            ratingsMap[rating.player_id]
+          );
+        }
+      });
+    }
+
+    console.log('[getMatchWithDetails] Final ratingsMap:', ratingsMap);
+  }
+
+  // Attach profiles and ratings to players
   if (data.created_by_player?.id && profilesMap[data.created_by_player.id]) {
     data.created_by_player.profile = profilesMap[data.created_by_player.id];
+    const creatorRating = ratingsMap[data.created_by_player.id];
+    if (creatorRating) {
+      data.created_by_player.sportRatingLabel = creatorRating.label;
+      if (creatorRating.value !== null) {
+        data.created_by_player.sportRatingValue = creatorRating.value;
+      }
+    }
   }
 
   if (data.participants) {
     data.participants = data.participants.map((p: MatchParticipantWithPlayer) => {
-      if (p.player?.id && profilesMap[p.player.id]) {
-        p.player.profile = profilesMap[p.player.id];
+      // Handle both array and object formats from Supabase
+      // Supabase can return player as array in some cases
+      const playerObj = Array.isArray(p.player) ? p.player[0] : p.player;
+      const playerId = playerObj?.id;
+
+      console.log(
+        `[getMatchWithDetails] Processing participant: playerId=${playerId}, status=${p.status}, isArray=${Array.isArray(p.player)}`
+      );
+
+      if (playerId && profilesMap[playerId]) {
+        playerObj.profile = profilesMap[playerId];
+      }
+      const participantRating = playerId ? ratingsMap[playerId] : undefined;
+      console.log(`[getMatchWithDetails] Participant ${playerId} rating:`, participantRating);
+      if (participantRating && playerObj) {
+        (
+          playerObj as MatchParticipantWithPlayer['player'] & {
+            sportRatingLabel?: string;
+            sportRatingValue?: number;
+          }
+        ).sportRatingLabel = participantRating.label;
+        if (participantRating.value !== null) {
+          (
+            playerObj as MatchParticipantWithPlayer['player'] & {
+              sportRatingLabel?: string;
+              sportRatingValue?: number;
+            }
+          ).sportRatingValue = participantRating.value;
+        }
+        console.log(`[getMatchWithDetails] Attached rating to participant ${playerId}:`, {
+          sportRatingLabel: playerObj.sportRatingLabel,
+          sportRatingValue: (playerObj as PlayerWithProfile).sportRatingValue,
+        });
+      } else {
+        console.log(`[getMatchWithDetails] No rating found for participant ${playerId}`);
+      }
+      // Ensure player is always an object, not array
+      if (Array.isArray(p.player) && playerObj) {
+        p.player = playerObj;
       }
       return p;
     });
@@ -365,8 +469,10 @@ export async function getMatchesWithDetails(
     }
     if (match.participants) {
       match.participants.forEach((p: MatchParticipantWithPlayer) => {
-        if (p.player?.id) {
-          playerIds.add(p.player.id);
+        // Handle both array and object formats from Supabase
+        const playerObj = Array.isArray(p.player) ? p.player[0] : p.player;
+        if (playerObj?.id) {
+          playerIds.add(playerObj.id);
         }
       });
     }
@@ -399,8 +505,16 @@ export async function getMatchesWithDetails(
     // Attach profiles to participants
     if (match.participants) {
       match.participants = match.participants.map((p: MatchParticipantWithPlayer) => {
-        if (p.player?.id && profilesMap[p.player.id]) {
-          p.player.profile = profilesMap[p.player.id];
+        // Handle both array and object formats from Supabase
+        const playerObj = Array.isArray(p.player) ? p.player[0] : p.player;
+        const playerId = playerObj?.id;
+
+        if (playerId && profilesMap[playerId]) {
+          playerObj.profile = profilesMap[playerId];
+        }
+        // Ensure player is always an object, not array
+        if (Array.isArray(p.player) && playerObj) {
+          p.player = playerObj;
         }
         return p;
       });
@@ -538,7 +652,7 @@ export async function cancelMatch(matchId: string, userId?: string): Promise<Mat
   // First, verify the user is authorized to cancel (must be the creator)
   const { data: match, error: fetchError } = await supabase
     .from('match')
-    .select('created_by, status')
+    .select('created_by, cancelled_at, match_date, start_time, end_time, timezone')
     .eq('id', matchId)
     .single();
 
@@ -551,19 +665,32 @@ export async function cancelMatch(matchId: string, userId?: string): Promise<Mat
     throw new Error('Only the host can cancel this match');
   }
 
-  // Check if match is already cancelled or completed
-  if (match.status === 'cancelled') {
+  // Check if match is already cancelled (use cancelled_at instead of status)
+  if (match.cancelled_at) {
     throw new Error('Match is already cancelled');
   }
 
-  if (match.status === 'completed') {
+  // Check if match has already ended (can't cancel completed matches)
+  // A match is considered completed if its end_time has passed
+  const { getMatchEndTimeDifferenceFromNow } = await import('@rallia/shared-utils');
+  const endTimeDiff = getMatchEndTimeDifferenceFromNow(
+    match.match_date,
+    match.start_time,
+    match.end_time,
+    match.timezone || 'UTC'
+  );
+  if (endTimeDiff < 0) {
     throw new Error('Cannot cancel a completed match');
   }
 
-  // Perform the cancellation
+  // Perform the cancellation - set cancelled_at timestamp
+  // Also update status for backward compatibility until column is dropped
   const { data, error } = await supabase
     .from('match')
-    .update({ status: 'cancelled' })
+    .update({
+      cancelled_at: new Date().toISOString(),
+      status: 'cancelled', // Keep for backward compatibility
+    })
     .eq('id', matchId)
     .select()
     .single();
@@ -595,7 +722,7 @@ export async function deleteMatch(matchId: string): Promise<void> {
  */
 export interface JoinMatchResult {
   participant: MatchParticipant;
-  status: 'joined' | 'requested';
+  status: 'joined' | 'requested' | 'waitlisted';
 }
 
 /**
@@ -614,7 +741,11 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
       id,
       format,
       join_mode,
-      status,
+      cancelled_at,
+      match_date,
+      start_time,
+      end_time,
+      timezone,
       created_by,
       participants:match_participant (
         id,
@@ -630,8 +761,21 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
     throw new Error('Match not found');
   }
 
-  // Check match is still open
-  if (match.status === 'cancelled' || match.status === 'completed') {
+  // Check match is still open using derived status logic
+  // Match is not available if cancelled or if end_time has passed
+  if (match.cancelled_at) {
+    throw new Error('Match is no longer available');
+  }
+
+  // Check if match has already ended
+  const { getMatchEndTimeDifferenceFromNow } = await import('@rallia/shared-utils');
+  const endTimeDiff = getMatchEndTimeDifferenceFromNow(
+    match.match_date,
+    match.start_time,
+    match.end_time,
+    match.timezone || 'UTC'
+  );
+  if (endTimeDiff < 0) {
     throw new Error('Match is no longer available');
   }
 
@@ -646,10 +790,12 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
   );
 
   // If they have an active participation, they can't join again
+  // Allow re-joining if they previously left, declined an invitation, or were refused by host
   if (
     existingParticipant &&
     existingParticipant.status !== 'left' &&
-    existingParticipant.status !== 'declined'
+    existingParticipant.status !== 'declined' &&
+    existingParticipant.status !== 'refused'
   ) {
     throw new Error('You are already in this match');
   }
@@ -662,12 +808,19 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
   // Creator takes 1 spot, so available = total - 1 (creator) - joined participants
   const availableSpots = totalSpots - 1 - joinedParticipants;
 
-  if (availableSpots <= 0 && match.join_mode === 'direct') {
-    throw new Error('Match is full');
-  }
+  // Determine status based on join mode and availability
+  let participantStatus: 'joined' | 'requested' | 'waitlisted';
 
-  // Determine status based on join mode
-  const participantStatus = match.join_mode === 'request' ? 'requested' : 'joined';
+  if (availableSpots <= 0) {
+    // Match is full - add to waitlist
+    participantStatus = 'waitlisted';
+  } else if (match.join_mode === 'request') {
+    // Match has spots but requires host approval
+    participantStatus = 'requested';
+  } else {
+    // Match has spots and allows direct join
+    participantStatus = 'joined';
+  }
 
   let participant: MatchParticipant;
 
@@ -782,6 +935,283 @@ export async function getParticipantStatus(
   }
 
   return data as MatchParticipant;
+}
+
+/**
+ * Accept a join request for a match (host only).
+ * Updates the participant status from 'requested' to 'joined'.
+ *
+ * @param matchId - The match ID
+ * @param participantId - The participant record ID (not player_id)
+ * @param hostId - The ID of the user performing the action (must be match host)
+ * @throws Error if not host, participant not found, not in 'requested' status, or match is full
+ */
+export async function acceptJoinRequest(
+  matchId: string,
+  participantId: string,
+  hostId: string
+): Promise<MatchParticipant> {
+  // First, verify the caller is the match host and get match details
+  const { data: match, error: matchError } = await supabase
+    .from('match')
+    .select(
+      `
+      id,
+      format,
+      created_by,
+      participants:match_participant (
+        id,
+        player_id,
+        status
+      )
+    `
+    )
+    .eq('id', matchId)
+    .single();
+
+  if (matchError || !match) {
+    throw new Error('Match not found');
+  }
+
+  // Verify caller is the host
+  if (match.created_by !== hostId) {
+    throw new Error('Only the match host can accept join requests');
+  }
+
+  // Find the participant record
+  const participant = match.participants?.find(
+    (p: { id: string; status: string }) => p.id === participantId
+  );
+
+  if (!participant) {
+    throw new Error('Join request not found');
+  }
+
+  // Verify the participant has 'requested' status
+  if (participant.status !== 'requested') {
+    throw new Error('This is not a pending join request');
+  }
+
+  // Check if there's capacity to accept
+  const totalSpots = match.format === 'doubles' ? 4 : 2;
+  const joinedParticipants =
+    match.participants?.filter((p: { status: string }) => p.status === 'joined').length ?? 0;
+  // Creator takes 1 spot
+  const availableSpots = totalSpots - 1 - joinedParticipants;
+
+  if (availableSpots <= 0) {
+    throw new Error('Match is full. Cannot accept more players.');
+  }
+
+  // Update the participant status to 'joined'
+  const { data: updatedParticipant, error: updateError } = await supabase
+    .from('match_participant')
+    .update({
+      status: 'joined',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', participantId)
+    .select()
+    .single();
+
+  if (updateError) {
+    throw new Error(`Failed to accept join request: ${updateError.message}`);
+  }
+
+  return updatedParticipant as MatchParticipant;
+}
+
+/**
+ * Reject a join request for a match (host only).
+ * Updates the participant status from 'requested' to 'refused'.
+ *
+ * Note: 'refused' is used when a host rejects a join request.
+ * 'declined' is used when an invited player declines an invitation.
+ *
+ * @param matchId - The match ID
+ * @param participantId - The participant record ID (not player_id)
+ * @param hostId - The ID of the user performing the action (must be match host)
+ * @throws Error if not host, participant not found, or not in 'requested' status
+ */
+export async function rejectJoinRequest(
+  matchId: string,
+  participantId: string,
+  hostId: string
+): Promise<MatchParticipant> {
+  // First, verify the caller is the match host
+  const { data: match, error: matchError } = await supabase
+    .from('match')
+    .select(
+      `
+      id,
+      created_by,
+      participants:match_participant (
+        id,
+        status
+      )
+    `
+    )
+    .eq('id', matchId)
+    .single();
+
+  if (matchError || !match) {
+    throw new Error('Match not found');
+  }
+
+  // Verify caller is the host
+  if (match.created_by !== hostId) {
+    throw new Error('Only the match host can reject join requests');
+  }
+
+  // Find the participant record
+  const participant = match.participants?.find(
+    (p: { id: string; status: string }) => p.id === participantId
+  );
+
+  if (!participant) {
+    throw new Error('Join request not found');
+  }
+
+  // Verify the participant has 'requested' status
+  if (participant.status !== 'requested') {
+    throw new Error('This is not a pending join request');
+  }
+
+  // Update the participant status to 'refused'
+  const { data: updatedParticipant, error: updateError } = await supabase
+    .from('match_participant')
+    .update({
+      status: 'refused',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', participantId)
+    .select()
+    .single();
+
+  if (updateError) {
+    throw new Error(`Failed to reject join request: ${updateError.message}`);
+  }
+
+  return updatedParticipant as MatchParticipant;
+}
+
+/**
+ * Cancel a pending join request (requester only).
+ * Updates the participant status from 'requested' to 'left'.
+ *
+ * @param matchId - The match ID
+ * @param playerId - The ID of the player cancelling their request
+ * @throws Error if participant not found or not in 'requested' status
+ */
+export async function cancelJoinRequest(
+  matchId: string,
+  playerId: string
+): Promise<MatchParticipant> {
+  // First, verify the user has a pending request
+  const { data: participant, error: participantError } = await supabase
+    .from('match_participant')
+    .select('id, status')
+    .eq('match_id', matchId)
+    .eq('player_id', playerId)
+    .single();
+
+  if (participantError || !participant) {
+    throw new Error('Join request not found');
+  }
+
+  // Verify the participant has 'requested' status
+  if (participant.status !== 'requested') {
+    throw new Error('No pending request to cancel');
+  }
+
+  // Update the participant status to 'left'
+  const { data: updatedParticipant, error: updateError } = await supabase
+    .from('match_participant')
+    .update({
+      status: 'left',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', participant.id)
+    .select()
+    .single();
+
+  if (updateError) {
+    throw new Error(`Failed to cancel join request: ${updateError.message}`);
+  }
+
+  return updatedParticipant as MatchParticipant;
+}
+
+/**
+ * Kick a joined participant from a match (host only).
+ * Updates the participant status from 'joined' to 'kicked'.
+ *
+ * @param matchId - The match ID
+ * @param participantId - The participant record ID (not player_id)
+ * @param hostId - The ID of the user performing the action (must be match host)
+ * @throws Error if not host, participant not found, or not in 'joined' status
+ */
+export async function kickParticipant(
+  matchId: string,
+  participantId: string,
+  hostId: string
+): Promise<MatchParticipant> {
+  // First, verify the caller is the match host
+  const { data: match, error: matchError } = await supabase
+    .from('match')
+    .select(
+      `
+      id,
+      created_by,
+      participants:match_participant (
+        id,
+        player_id,
+        status
+      )
+    `
+    )
+    .eq('id', matchId)
+    .single();
+
+  if (matchError || !match) {
+    throw new Error('Match not found');
+  }
+
+  // Verify caller is the host
+  if (match.created_by !== hostId) {
+    throw new Error('Only the match host can kick participants');
+  }
+
+  // Find the participant record
+  const participant = match.participants?.find(
+    (p: { id: string; status: string }) => p.id === participantId
+  );
+
+  if (!participant) {
+    throw new Error('Participant not found');
+  }
+
+  // Verify the participant has 'joined' status
+  if (participant.status !== 'joined') {
+    throw new Error('This participant is not currently joined');
+  }
+
+  // Update the participant status to 'kicked'
+  const { data: updatedParticipant, error: updateError } = await supabase
+    .from('match_participant')
+    .update({
+      status: 'kicked',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', participantId)
+    .select()
+    .single();
+
+  if (updateError) {
+    throw new Error(`Failed to kick participant: ${updateError.message}`);
+  }
+
+  return updatedParticipant as MatchParticipant;
 }
 
 /**
@@ -921,8 +1351,10 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
     }
     if (match.participants) {
       match.participants.forEach((p: MatchParticipantWithPlayer) => {
-        if (p.player?.id) {
-          playerIds.add(p.player.id);
+        // Handle both array and object formats from Supabase
+        const playerObj = Array.isArray(p.player) ? p.player[0] : p.player;
+        if (playerObj?.id) {
+          playerIds.add(playerObj.id);
         }
       });
     }
@@ -944,19 +1376,81 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
     }
   }
 
-  // Step 4: Attach profiles and distance to matches, maintain order from RPC
+  // Fetch player ratings for the match's sport (for displaying in request cards)
+  // All matches in this result are for the same sport (params.sportId)
+  const ratingsMap: Record<string, { label: string; value: number | null }> = {}; // playerId -> rating info
+
+  if (profileIds.length > 0 && sportId) {
+    const { data: ratingsData, error: ratingsError } = await supabase
+      .from('player_rating_score')
+      .select(
+        `
+        player_id,
+        rating_score!player_rating_scores_rating_score_id_fkey!inner (
+          label,
+          value,
+          rating_system!inner (
+            sport_id
+          )
+        )
+      `
+      )
+      .in('player_id', profileIds);
+
+    if (!ratingsError && ratingsData) {
+      type RatingResult = {
+        player_id: string;
+        rating_score: { label: string; value: number | null; rating_system: { sport_id: string } };
+      };
+      (ratingsData as unknown as RatingResult[]).forEach(rating => {
+        // Filter to only ratings for this match's sport
+        const ratingScore = rating.rating_score;
+        const ratingSystem = ratingScore?.rating_system;
+        if (ratingSystem?.sport_id === sportId && ratingScore?.label) {
+          ratingsMap[rating.player_id] = {
+            label: ratingScore.label,
+            value: ratingScore.value,
+          };
+        }
+      });
+    }
+  }
+
+  // Step 4: Attach profiles, ratings, and distance to matches, maintain order from RPC
   const matchMap = new Map<string, MatchWithDetailsAndDistance>();
   matchesData.forEach((match: MatchWithDetails) => {
-    // Attach profile to creator
+    // Attach profile and rating to creator
     if (match.created_by_player?.id && profilesMap[match.created_by_player.id]) {
       match.created_by_player.profile = profilesMap[match.created_by_player.id];
+      const creatorRating = ratingsMap[match.created_by_player.id];
+      if (creatorRating) {
+        (match.created_by_player as PlayerWithProfile).sportRatingLabel = creatorRating.label;
+        if (creatorRating.value !== null) {
+          (match.created_by_player as PlayerWithProfile).sportRatingValue = creatorRating.value;
+        }
+      }
     }
 
-    // Attach profiles to participants
+    // Attach profiles and ratings to participants
     if (match.participants) {
       match.participants = match.participants.map((p: MatchParticipantWithPlayer) => {
-        if (p.player?.id && profilesMap[p.player.id]) {
-          p.player.profile = profilesMap[p.player.id];
+        // Handle both array and object formats from Supabase
+        const playerObj = Array.isArray(p.player) ? p.player[0] : p.player;
+        const playerId = playerObj?.id;
+
+        if (playerId && profilesMap[playerId]) {
+          playerObj.profile = profilesMap[playerId];
+        }
+        const participantRating = playerId ? ratingsMap[playerId] : undefined;
+        if (participantRating && playerObj) {
+          (playerObj as PlayerWithProfile).sportRatingLabel = participantRating.label;
+          if (participantRating.value !== null) {
+            (playerObj as PlayerWithProfile).sportRatingValue = participantRating.value;
+          }
+        }
+        // Ensure player is always an object, not array
+        if (Array.isArray(p.player) && playerObj) {
+          p.player = playerObj;
         }
         return p;
       });
@@ -1032,30 +1526,41 @@ export interface GetPlayerMatchesParams {
 export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams) {
   const { userId, timeFilter, sportId, limit = 20, offset = 0 } = params;
 
-  // Get today's date in YYYY-MM-DD format for comparison
-  const today = new Date().toISOString().split('T')[0];
+  // Use RPC function for timezone-aware filtering based on match END time
+  // This ensures matches are considered "past" when their end_time has passed in the match's timezone
+  const { data: matchIdResults, error: rpcError } = await supabase.rpc('get_player_matches', {
+    p_player_id: userId,
+    p_time_filter: timeFilter,
+    p_sport_id: sportId ?? null,
+    p_limit: limit + 1, // Fetch one extra to check if there are more
+    p_offset: offset,
+  });
 
-  // First, get match IDs where user is an ACTIVE participant
-  // Exclude left, declined, kicked statuses
-  const { data: participantMatches, error: participantError } = await supabase
-    .from('match_participant')
-    .select('match_id')
-    .eq('player_id', userId)
-    .in('status', ['joined', 'requested', 'pending', 'waitlisted']);
-
-  if (participantError) {
-    throw new Error(`Failed to get participant matches: ${participantError.message}`);
+  if (rpcError) {
+    throw new Error(`Failed to get player match IDs: ${rpcError.message}`);
   }
 
-  const participantMatchIds = (participantMatches ?? []).map(p => p.match_id);
+  const matchIds = (matchIdResults ?? []).map((r: { match_id: string }) => r.match_id);
 
-  // Build the query for matches
-  // Important: Apply filters BEFORE ordering and range for correct results
+  if (matchIds.length === 0) {
+    return {
+      matches: [],
+      hasMore: false,
+      nextOffset: null,
+    };
+  }
+
+  // Determine if there are more results
+  const hasMore = matchIds.length > limit;
+  const matchIdsToFetch = hasMore ? matchIds.slice(0, limit) : matchIds;
+
+  // Fetch full match details for the IDs
   const isUpcoming = timeFilter === 'upcoming';
 
-  // Start with base select
-  let query = supabase.from('match').select(
-    `
+  const { data, error } = await supabase
+    .from('match')
+    .select(
+      `
       *,
       sport:sport_id (*),
       facility:facility_id (*),
@@ -1097,42 +1602,10 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
         )
       )
     `
-  );
-
-  // Apply date filter first
-  if (isUpcoming) {
-    query = query.gte('match_date', today);
-  } else {
-    query = query.lt('match_date', today);
-  }
-
-  // Apply sport filter if provided
-  if (sportId) {
-    query = query.eq('sport_id', sportId);
-  }
-
-  // Exclude cancelled matches - only show matches that are happening
-  query = query.neq('status', 'cancelled');
-
-  // For upcoming matches, also exclude completed matches
-  if (isUpcoming) {
-    query = query.neq('status', 'completed');
-  }
-
-  // Filter by user being creator OR participant
-  if (participantMatchIds.length > 0) {
-    query = query.or(`created_by.eq.${userId},id.in.(${participantMatchIds.join(',')})`);
-  } else {
-    query = query.eq('created_by', userId);
-  }
-
-  // Apply ordering and pagination last
-  query = query
+    )
+    .in('id', matchIdsToFetch)
     .order('match_date', { ascending: isUpcoming })
-    .order('start_time', { ascending: isUpcoming })
-    .range(offset, offset + limit);
-
-  const { data, error } = await query;
+    .order('start_time', { ascending: isUpcoming });
 
   if (error) {
     throw new Error(`Failed to get player matches: ${error.message}`);
@@ -1146,8 +1619,7 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
     };
   }
 
-  const hasMore = data.length > limit;
-  const matchesData = hasMore ? data.slice(0, limit) : data;
+  const matchesData = data;
 
   // Fetch profiles for all players (creator + participants)
   const playerIds = new Set<string>();
@@ -1157,8 +1629,10 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
     }
     if (match.participants) {
       match.participants.forEach((p: MatchParticipantWithPlayer) => {
-        if (p.player?.id) {
-          playerIds.add(p.player.id);
+        // Handle both array and object formats from Supabase
+        const playerObj = Array.isArray(p.player) ? p.player[0] : p.player;
+        if (playerObj?.id) {
+          playerIds.add(playerObj.id);
         }
       });
     }
@@ -1181,18 +1655,135 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
     }
   }
 
-  // Attach profiles to players
+  // Fetch player ratings for each match's sport (for displaying in request cards)
+  // Build a map of sportId -> playerId -> rating info
+  const sportRatingsMap: Record<
+    string,
+    Record<string, { label: string; value: number | null }>
+  > = {};
+
+  if (profileIds.length > 0) {
+    // Get unique sport IDs from matches
+    const sportIds = [
+      ...new Set(matchesData.map((m: MatchWithDetails) => m.sport_id).filter(Boolean)),
+    ];
+
+    if (sportIds.length > 0) {
+      const { data: ratingsData, error: ratingsError } = await supabase
+        .from('player_rating_score')
+        .select(
+          `
+        player_id,
+        rating_score!player_rating_scores_rating_score_id_fkey!inner (
+          label,
+          value,
+          rating_system!inner (
+            sport_id
+          )
+        )
+      `
+        )
+        .in('player_id', profileIds);
+
+      if (ratingsError) {
+        console.error('[getPlayerMatchesWithDetails] Error fetching ratings:', ratingsError);
+      }
+
+      if (!ratingsError && ratingsData) {
+        console.log(
+          '[getPlayerMatchesWithDetails] Raw ratings data:',
+          JSON.stringify(ratingsData, null, 2)
+        );
+        console.log('[getPlayerMatchesWithDetails] Profile IDs queried:', profileIds);
+        console.log('[getPlayerMatchesWithDetails] Sport IDs from matches:', sportIds);
+
+        type RatingResult = {
+          player_id: string;
+          rating_score: {
+            label: string;
+            value: number | null;
+            rating_system: { sport_id: string };
+          };
+        };
+        (ratingsData as unknown as RatingResult[]).forEach(rating => {
+          const ratingScore = rating.rating_score;
+          const ratingSystem = ratingScore?.rating_system;
+          console.log(
+            `[getPlayerMatchesWithDetails] Rating for player ${rating.player_id}: sport_id=${ratingSystem?.sport_id}, label=${ratingScore?.label}, value=${ratingScore?.value}`
+          );
+          if (ratingSystem?.sport_id && ratingScore?.label) {
+            if (!sportRatingsMap[ratingSystem.sport_id]) {
+              sportRatingsMap[ratingSystem.sport_id] = {};
+            }
+            sportRatingsMap[ratingSystem.sport_id][rating.player_id] = {
+              label: ratingScore.label,
+              value: ratingScore.value,
+            };
+            console.log(
+              `[getPlayerMatchesWithDetails] Added rating to map for sport ${ratingSystem.sport_id}, player ${rating.player_id}:`,
+              sportRatingsMap[ratingSystem.sport_id][rating.player_id]
+            );
+          }
+        });
+        console.log('[getPlayerMatchesWithDetails] Final sportRatingsMap:', sportRatingsMap);
+      }
+    }
+  }
+
+  // Attach profiles and ratings to players
   const enrichedData = matchesData.map((match: MatchWithDetails) => {
-    // Attach profile to creator
+    const matchSportRatings = sportRatingsMap[match.sport_id] || {};
+
+    // Attach profile and rating to creator
     if (match.created_by_player?.id && profilesMap[match.created_by_player.id]) {
       match.created_by_player.profile = profilesMap[match.created_by_player.id];
+      const creatorRating = matchSportRatings[match.created_by_player.id];
+      if (creatorRating) {
+        (match.created_by_player as PlayerWithProfile).sportRatingLabel = creatorRating.label;
+        if (creatorRating.value !== null) {
+          (match.created_by_player as PlayerWithProfile).sportRatingValue = creatorRating.value;
+        }
+      }
     }
 
-    // Attach profiles to participants
+    // Attach profiles and ratings to participants
     if (match.participants) {
+      console.log(
+        `[getPlayerMatchesWithDetails] Processing match ${match.id} with sport_id ${match.sport_id}`
+      );
+      console.log(`[getPlayerMatchesWithDetails] Match sportRatings:`, matchSportRatings);
       match.participants = match.participants.map((p: MatchParticipantWithPlayer) => {
-        if (p.player?.id && profilesMap[p.player.id]) {
-          p.player.profile = profilesMap[p.player.id];
+        // Handle both array and object formats from Supabase
+        const playerObj = Array.isArray(p.player) ? p.player[0] : p.player;
+        const playerId = playerObj?.id;
+
+        console.log(
+          `[getPlayerMatchesWithDetails] Processing participant: playerId=${playerId}, status=${p.status}, isArray=${Array.isArray(p.player)}`
+        );
+
+        if (playerId && profilesMap[playerId]) {
+          playerObj.profile = profilesMap[playerId];
+        }
+        const participantRating = playerId ? matchSportRatings[playerId] : undefined;
+        console.log(
+          `[getPlayerMatchesWithDetails] Participant ${playerId} rating:`,
+          participantRating
+        );
+        if (participantRating && playerObj) {
+          (playerObj as PlayerWithProfile).sportRatingLabel = participantRating.label;
+          if (participantRating.value !== null) {
+            (playerObj as PlayerWithProfile).sportRatingValue = participantRating.value;
+          }
+          console.log(`[getPlayerMatchesWithDetails] Attached rating to participant ${playerId}:`, {
+            sportRatingLabel: playerObj.sportRatingLabel,
+            sportRatingValue: (playerObj as PlayerWithProfile).sportRatingValue,
+          });
+        } else {
+          console.log(`[getPlayerMatchesWithDetails] No rating found for participant ${playerId}`);
+        }
+        // Ensure player is always an object, not array
+        if (Array.isArray(p.player) && playerObj) {
+          p.player = playerObj;
         }
         return p;
       });
@@ -1214,7 +1805,8 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
 export interface SearchPublicMatchesParams {
   latitude: number;
   longitude: number;
-  maxDistanceKm: number;
+  /** Maximum distance in km, or 'all'/null for no distance filter (shows all location types) */
+  maxDistanceKm: number | 'all' | null;
   sportId: string;
   searchQuery?: string;
   format?: 'all' | 'singles' | 'doubles';
@@ -1240,6 +1832,8 @@ interface PublicMatchResult {
 /**
  * Get public matches with search and filters.
  * Uses PostGIS RPC function for efficient distance filtering and text search.
+ * When maxDistanceKm is 'all' or null, returns matches of all location types.
+ * When maxDistanceKm is a number, only returns facility and custom location matches within that distance.
  * Returns full match details with distance_meters attached.
  */
 export async function getPublicMatches(params: SearchPublicMatchesParams) {
@@ -1261,11 +1855,14 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     offset = 0,
   } = params;
 
+  // Convert 'all' to null for the RPC (null means no distance filter)
+  const distanceForRpc = maxDistanceKm === 'all' || maxDistanceKm === null ? null : maxDistanceKm;
+
   // Step 1: Get match IDs using RPC with filters
   const { data: matchResults, error: rpcError } = await supabase.rpc('search_public_matches', {
     p_latitude: latitude,
     p_longitude: longitude,
-    p_max_distance_km: maxDistanceKm,
+    p_max_distance_km: distanceForRpc,
     p_sport_id: sportId,
     p_search_query: searchQuery || null,
     p_format: format === 'all' ? null : format,
@@ -1372,8 +1969,10 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     }
     if (match.participants) {
       match.participants.forEach((p: MatchParticipantWithPlayer) => {
-        if (p.player?.id) {
-          playerIds.add(p.player.id);
+        // Handle both array and object formats from Supabase
+        const playerObj = Array.isArray(p.player) ? p.player[0] : p.player;
+        if (playerObj?.id) {
+          playerIds.add(playerObj.id);
         }
       });
     }
@@ -1395,19 +1994,81 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     }
   }
 
-  // Step 4: Attach profiles and distance to matches, maintain order from RPC
+  // Fetch player ratings for the match's sport (for displaying in request cards)
+  // All matches in this result are for the same sport (params.sportId)
+  const publicRatingsMap: Record<string, { label: string; value: number | null }> = {}; // playerId -> rating info
+
+  if (profileIds.length > 0 && sportId) {
+    const { data: ratingsData, error: ratingsError } = await supabase
+      .from('player_rating_score')
+      .select(
+        `
+        player_id,
+        rating_score!player_rating_scores_rating_score_id_fkey!inner (
+          label,
+          value,
+          rating_system!inner (
+            sport_id
+          )
+        )
+      `
+      )
+      .in('player_id', profileIds);
+
+    if (!ratingsError && ratingsData) {
+      type RatingResult = {
+        player_id: string;
+        rating_score: { label: string; value: number | null; rating_system: { sport_id: string } };
+      };
+      (ratingsData as unknown as RatingResult[]).forEach(rating => {
+        // Filter to only ratings for this match's sport
+        const ratingScore = rating.rating_score;
+        const ratingSystem = ratingScore?.rating_system;
+        if (ratingSystem?.sport_id === sportId && ratingScore?.label) {
+          publicRatingsMap[rating.player_id] = {
+            label: ratingScore.label,
+            value: ratingScore.value,
+          };
+        }
+      });
+    }
+  }
+
+  // Step 4: Attach profiles, ratings, and distance to matches, maintain order from RPC
   const matchMap = new Map<string, MatchWithDetailsAndDistance>();
   matchesData.forEach((match: MatchWithDetails) => {
-    // Attach profile to creator
+    // Attach profile and rating to creator
     if (match.created_by_player?.id && profilesMap[match.created_by_player.id]) {
       match.created_by_player.profile = profilesMap[match.created_by_player.id];
+      const creatorRating = publicRatingsMap[match.created_by_player.id];
+      if (creatorRating) {
+        (match.created_by_player as PlayerWithProfile).sportRatingLabel = creatorRating.label;
+        if (creatorRating.value !== null) {
+          (match.created_by_player as PlayerWithProfile).sportRatingValue = creatorRating.value;
+        }
+      }
     }
 
-    // Attach profiles to participants
+    // Attach profiles and ratings to participants
     if (match.participants) {
       match.participants = match.participants.map((p: MatchParticipantWithPlayer) => {
-        if (p.player?.id && profilesMap[p.player.id]) {
-          p.player.profile = profilesMap[p.player.id];
+        // Handle both array and object formats from Supabase
+        const playerObj = Array.isArray(p.player) ? p.player[0] : p.player;
+        const playerId = playerObj?.id;
+
+        if (playerId && profilesMap[playerId]) {
+          playerObj.profile = profilesMap[playerId];
+        }
+        const participantRating = playerId ? publicRatingsMap[playerId] : undefined;
+        if (participantRating && playerObj) {
+          (playerObj as PlayerWithProfile).sportRatingLabel = participantRating.label;
+          if (participantRating.value !== null) {
+            (playerObj as PlayerWithProfile).sportRatingValue = participantRating.value;
+          }
+        }
+        // Ensure player is always an object, not array
+        if (Array.isArray(p.player) && playerObj) {
+          p.player = playerObj;
         }
         return p;
       });
@@ -1452,6 +2113,10 @@ export const matchService = {
   joinMatch,
   leaveMatch,
   getParticipantStatus,
+  acceptJoinRequest,
+  rejectJoinRequest,
+  cancelJoinRequest,
+  kickParticipant,
 };
 
 export default matchService;

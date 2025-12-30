@@ -20,3 +20,4 @@ CREATE INDEX IF NOT EXISTS idx_match_location_gist ON match USING GIST (location
 COMMENT ON COLUMN match.location IS 'Geography point for custom locations, auto-computed from custom_latitude/custom_longitude. Use for spatial queries like finding nearby matches.';
 
 
+

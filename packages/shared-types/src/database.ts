@@ -263,6 +263,10 @@ export type WaitlistSignupUpdate = TableUpdate<'waitlist_signup'>;
 /** Player with their profile information */
 export interface PlayerWithProfile extends Player {
   profile: Profile;
+  /** Rating label for the match's sport (populated at runtime for match queries) */
+  sportRatingLabel?: string;
+  /** Rating numeric value for the match's sport (populated at runtime for match queries) */
+  sportRatingValue?: number;
 }
 
 /** Player sport profile with sport details */
@@ -333,7 +337,9 @@ export interface OrganizationMemberWithProfile extends OrganizationMember {
   profile: Profile;
 }
 
-/** Match with full details for display */
+/**
+ * Match with full details for display.
+ */
 export interface MatchWithDetails extends Match {
   sport: Sport;
   created_by_player: PlayerWithProfile;

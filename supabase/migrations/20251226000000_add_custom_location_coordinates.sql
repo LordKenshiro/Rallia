@@ -26,3 +26,4 @@ COMMENT ON COLUMN match.custom_latitude IS 'Latitude coordinate for custom locat
 COMMENT ON COLUMN match.custom_longitude IS 'Longitude coordinate for custom locations (when location_type=custom). Populated from Google Places API.';
 
 
+

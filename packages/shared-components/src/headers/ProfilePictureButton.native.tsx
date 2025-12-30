@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 import { useProfile } from '@rallia/shared-hooks';
-import { lightHaptic } from '@rallia/shared-utils';
+import { lightHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
 import { neutral, spacingPixels } from '@rallia/design-system';
 
 interface ProfilePictureButtonProps {
@@ -24,7 +24,11 @@ const ProfilePictureButton: React.FC<ProfilePictureButtonProps> = ({
   const { profile, refetch } = useProfile();
   const [imageLoadError, setImageLoadError] = useState(false);
 
-  const profilePictureUrl = profile?.profile_picture_url || null;
+  // Normalize profile picture URL to use current environment's Supabase URL
+  const profilePictureUrl = useMemo(
+    () => getProfilePictureUrl(profile?.profile_picture_url),
+    [profile?.profile_picture_url]
+  );
   const iconColor = isDark ? neutral[50] : neutral[900];
   const placeholderBg = isDark ? neutral[700] : neutral[200];
 

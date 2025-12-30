@@ -38,8 +38,8 @@ export interface UsePublicMatchesOptions {
   latitude: number | undefined;
   /** User's current longitude */
   longitude: number | undefined;
-  /** Maximum distance in kilometers to search */
-  maxDistanceKm: number | undefined;
+  /** Maximum distance in km, or 'all' for no distance filter (shows all location types) */
+  maxDistanceKm: number | 'all' | undefined;
   /** Sport ID to filter matches by */
   sportId: string | undefined;
   /** Filter state from usePublicMatchFilters */
@@ -95,6 +95,7 @@ export function usePublicMatches(options: UsePublicMatchesOptions) {
   } = options;
 
   // Only enable query when we have all required params
+  // Note: maxDistanceKm can be 'all' (no distance filter) or a number
   const hasRequiredParams =
     latitude !== undefined &&
     longitude !== undefined &&
@@ -127,7 +128,7 @@ export function usePublicMatches(options: UsePublicMatchesOptions) {
       const result = await getPublicMatches({
         latitude: latitude!,
         longitude: longitude!,
-        maxDistanceKm: maxDistanceKm!,
+        maxDistanceKm: maxDistanceKm!, // Can be 'all' or a number
         sportId: sportId!,
         searchQuery: debouncedSearchQuery || undefined,
         format: filters.format,
