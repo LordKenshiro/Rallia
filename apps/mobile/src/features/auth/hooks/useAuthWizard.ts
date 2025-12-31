@@ -16,8 +16,8 @@ interface UseAuthWizardReturn {
   // State
   email: string;
   setEmail: (email: string) => void;
-  code: string[];
-  setCode: (code: string[]) => void;
+  code: string;
+  setCode: (code: string) => void;
   isLoading: boolean;
   errorMessage: string;
 
@@ -45,20 +45,20 @@ export function useAuthWizard(): UseAuthWizardReturn {
 
   // State
   const [email, setEmail] = useState('');
-  const [code, setCode] = useState<string[]>(['', '', '', '', '', '']);
+  const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   // Computed
   const isEmailValid = isValidEmail(email);
-  const isCodeComplete = code.every(digit => digit !== '') && code.length === 6;
+  const isCodeComplete = code.length === 6;
 
   /**
    * Reset all state
    */
   const resetState = useCallback(() => {
     setEmail('');
-    setCode(['', '', '', '', '', '']);
+    setCode('');
     setErrorMessage('');
     setIsLoading(false);
   }, []);
@@ -135,9 +135,7 @@ export function useAuthWizard(): UseAuthWizardReturn {
     success: boolean;
     needsOnboarding: boolean;
   }> => {
-    const fullCode = code.join('');
-
-    if (fullCode.length !== 6) {
+    if (code.length !== 6) {
       Alert.alert('Error', 'Please enter all 6 digits');
       return { success: false, needsOnboarding: false };
     }
@@ -149,10 +147,10 @@ export function useAuthWizard(): UseAuthWizardReturn {
     try {
       Logger.debug('Verifying OTP via Supabase SDK', {
         emailDomain: email.split('@')[1],
-        codeLength: fullCode.length,
+        codeLength: code.length,
       });
 
-      const result = await verifyOtp(email, fullCode);
+      const result = await verifyOtp(email, code);
 
       if (!result.success) {
         const errorMsg = result.error?.message || 'Invalid verification code';

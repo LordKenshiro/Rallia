@@ -5,7 +5,7 @@
  * Migrated from AuthOverlay with theme-aware colors and i18n support.
  */
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -13,6 +13,7 @@ import {
   TextInput,
   ActivityIndicator,
   ScrollView,
+  Pressable,
 } from 'react-native';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
@@ -38,8 +39,8 @@ interface ThemeColors {
 
 interface OTPVerificationStepProps {
   email: string;
-  code: string[];
-  onCodeChange: (code: string[]) => void;
+  code: string;
+  onCodeChange: (code: string) => void;
   isLoading: boolean;
   errorMessage: string;
   onVerify: () => void;
@@ -64,40 +65,35 @@ export const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
   isDark,
   isActive = true,
 }) => {
-  const codeInputRefs = useRef<(TextInput | null)[]>([]);
+  const hiddenInputRef = useRef<TextInput>(null);
 
-  // Focus first input when step becomes active
+  // Focus hidden input when step becomes active
   useEffect(() => {
-    if (isActive && codeInputRefs.current[0]) {
+    if (isActive && hiddenInputRef.current) {
       // Small delay to ensure the step animation has started
       const timer = setTimeout(() => {
-        codeInputRefs.current[0]?.focus();
+        hiddenInputRef.current?.focus();
       }, 300);
       return () => clearTimeout(timer);
     }
   }, [isActive]);
 
-  const handleCodeDigitChange = (text: string, index: number) => {
-    // Only accept single digit
-    const newDigit = text.replace(/[^0-9]/g, '').slice(-1);
-    const newCode = [...code];
-    newCode[index] = newDigit;
-    onCodeChange(newCode);
+  // Handler for code input changes - memoized for performance
+  const handleCodeChange = useCallback(
+    (text: string) => {
+      // Only accept digits, limit to 6 characters
+      const cleanedCode = text.replace(/[^0-9]/g, '').slice(0, 6);
+      onCodeChange(cleanedCode);
+    },
+    [onCodeChange]
+  );
 
-    // Auto-focus next input if digit entered
-    if (newDigit && index < 5) {
-      codeInputRefs.current[index + 1]?.focus();
-    }
-  };
+  // Focus the hidden input when tapping the code boxes
+  const focusHiddenInput = useCallback(() => {
+    hiddenInputRef.current?.focus();
+  }, []);
 
-  const handleKeyPress = (key: string, index: number, digit: string) => {
-    // Handle backspace to go to previous input
-    if (key === 'Backspace' && !digit && index > 0) {
-      codeInputRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const isCodeComplete = code.every(digit => digit !== '');
+  const isCodeComplete = code.length === 6;
   const canVerify = isCodeComplete && !isLoading;
 
   return (
@@ -120,33 +116,43 @@ export const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
         </Text>
       </Text>
 
-      {/* Code Input Boxes */}
-      <View style={styles.codeInputContainer}>
-        {code.map((digit, index) => (
-          <TextInput
-            key={index}
-            ref={ref => {
-              codeInputRefs.current[index] = ref;
-            }}
-            style={[
-              styles.codeBox,
-              {
-                backgroundColor: digit ? colors.cardBackground : colors.inputBackground,
-                borderColor: digit ? colors.buttonActive : colors.inputBorder,
-                color: colors.text,
-              },
-            ]}
-            value={digit}
-            onChangeText={text => handleCodeDigitChange(text, index)}
-            onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, index, digit)}
-            keyboardType="number-pad"
-            maxLength={1}
-            selectTextOnFocus
-            textAlign="center"
-            editable={isActive}
-          />
-        ))}
-      </View>
+      {/* Hidden TextInput for smooth OTP entry */}
+      <TextInput
+        ref={hiddenInputRef}
+        style={styles.hiddenInput}
+        value={code}
+        onChangeText={handleCodeChange}
+        keyboardType="number-pad"
+        maxLength={6}
+        caretHidden
+        autoComplete="one-time-code"
+        textContentType="oneTimeCode"
+        editable={isActive}
+      />
+
+      {/* Visual Code Display Boxes */}
+      <Pressable style={styles.codeInputContainer} onPress={focusHiddenInput}>
+        {Array.from({ length: 6 }).map((_, index) => {
+          const digit = code[index] || '';
+          const isFilled = digit !== '';
+          return (
+            <View
+              key={index}
+              style={[
+                styles.codeBox,
+                {
+                  backgroundColor: isFilled ? colors.cardBackground : colors.inputBackground,
+                  borderColor: isFilled ? colors.buttonActive : colors.inputBorder,
+                },
+              ]}
+            >
+              <Text size="xl" weight="semibold" color={colors.text}>
+                {digit}
+              </Text>
+            </View>
+          );
+        })}
+      </Pressable>
 
       {/* Resend Code Button */}
       <TouchableOpacity
@@ -214,6 +220,12 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: spacingPixels[6],
   },
+  hiddenInput: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    opacity: 0,
+  },
   codeInputContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -225,8 +237,8 @@ const styles = StyleSheet.create({
     height: 55,
     borderRadius: radiusPixels.md,
     borderWidth: 2,
-    fontSize: 24,
-    fontWeight: '600',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   resendButton: {
     borderRadius: radiusPixels.lg,

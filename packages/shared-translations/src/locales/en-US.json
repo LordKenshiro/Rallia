@@ -46,7 +46,9 @@
       "label": "Playing Hand",
       "left": "Left",
       "right": "Right"
-    }
+    },
+    "verified": "Verified",
+    "lastActive": "Last Active"
   },
   "auth": {
     "signIn": "Sign In",
@@ -344,12 +346,12 @@
     "matchFullCannotAccept": "Match full",
     "requestPending": "Your request to join is pending approval from the host",
     "waitlistedInfo": "You're on the waitlist. You'll be notified if a spot opens up.",
+    "spotOpenedUp": "A spot opened up! You can now join this match.",
     "joinWaitlist": "Join Waitlist",
     "leaveWaitlist": "Leave Waitlist",
     "waitlistSuccess": "You've been added to the waitlist!",
     "leaveWaitlistSuccess": "You've left the waitlist",
     "requesterDetails": "Requester Details",
-    "viewDetails": "View details",
     "kickParticipant": "Remove Player",
     "kickSuccess": "Player has been removed from the match",
     "kickConfirmTitle": "Remove Player?",

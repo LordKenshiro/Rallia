@@ -33,10 +33,9 @@ function formatDateLocal(date: Date): string {
  * Get smart default values for the form
  */
 function getDefaultValues(sportId: string, timezone: string): MatchFormSchemaData {
-  // Calculate tomorrow's date
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = formatDateLocal(tomorrow);
+  // Use today's date
+  const today = new Date();
+  const todayStr = formatDateLocal(today);
 
   // Get next rounded hour
   const now = new Date();
@@ -53,7 +52,7 @@ function getDefaultValues(sportId: string, timezone: string): MatchFormSchemaDat
     sportId,
 
     // Step 1: When & Format
-    matchDate: tomorrowStr,
+    matchDate: todayStr,
     startTime: startTimeStr,
     endTime: endTimeStr,
     timezone, // IANA timezone (auto-detected)

@@ -35,7 +35,7 @@ import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, mediumHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
 import { OnboardingService, SportService, Logger, DatabaseService } from '@rallia/shared-services';
-import { useProfile } from '@rallia/shared-hooks';
+import { useProfile, usePlayer } from '@rallia/shared-hooks';
 import { replaceImage } from '../../../../services/imageUpload';
 import { useImagePicker } from '../../../../hooks';
 import { useSport } from '../../../../context';
@@ -280,6 +280,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
   // Profile hook to refetch profile when onboarding completes
   const { refetch: refetchProfile } = useProfile();
+
+  // Player hook to refetch player when onboarding completes
+  // This is critical: the player record is created during onboarding (savePersonalInfo),
+  // but PlayerContext was initialized with null before the record existed.
+  // Without this refetch, the player stays null until sign out/sign in.
+  const { refetch: refetchPlayer } = usePlayer();
 
   // Sport context to refetch player sports when onboarding completes
   const { refetch: refetchSports, setSelectedSport } = useSport();
@@ -622,9 +628,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             Logger.warn('Failed to mark onboarding as completed', { error: completeError });
           }
 
-          // Refetch profile and sports immediately after marking onboarding as completed
-          // This ensures the header (sport selector) updates right away
-          await refetchProfile();
+          // Refetch profile, player, and sports immediately after marking onboarding as completed
+          // This ensures:
+          // 1. Profile: header updates, onboarding_completed flag is recognized
+          // 2. Player: critical - player was null before onboarding, now exists in DB
+          // 3. Sports: sport selector updates with user's selected sports
+          await Promise.all([refetchProfile(), refetchPlayer()]);
           refetchSports();
 
           successHaptic();
@@ -640,7 +649,15 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       default:
         return true;
     }
-  }, [currentStepId, formData, hasTennis, hasPickleball, refetchProfile, refetchSports]);
+  }, [
+    currentStepId,
+    formData,
+    hasTennis,
+    hasPickleball,
+    refetchProfile,
+    refetchPlayer,
+    refetchSports,
+  ]);
 
   // Handle next button press
   const handleNext = useCallback(async () => {

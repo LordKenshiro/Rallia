@@ -593,7 +593,7 @@ export const MatchDetailSheet: React.FC = () => {
       handleAcceptRequest(participantId);
       handleCloseRequesterModal();
     },
-    [handleCloseRequesterModal]
+    [handleAcceptRequest, handleCloseRequesterModal]
   );
 
   // Handle reject from requester modal
@@ -987,8 +987,8 @@ export const MatchDetailSheet: React.FC = () => {
       );
     }
 
-    // Waitlisted user: Leave Waitlist button
-    if (isWaitlisted) {
+    // Waitlisted user: Show Leave Waitlist only if match is still full
+    if (isWaitlisted && isFull) {
       return (
         <Button
           variant="outline"
@@ -999,6 +999,35 @@ export const MatchDetailSheet: React.FC = () => {
           loading={isLeaving}
         >
           {t('matchActions.leaveWaitlist' as TranslationKey)}
+        </Button>
+      );
+    }
+
+    // Waitlisted user and spot opened up: Show Join/Request button
+    if (isWaitlisted && !isFull) {
+      if (match.join_mode === 'request') {
+        return (
+          <Button
+            variant="primary"
+            onPress={handleJoinMatch}
+            style={styles.actionButton}
+            loading={isJoining}
+            disabled={isJoining || !playerId}
+          >
+            {t('matchDetail.requestToJoin' as TranslationKey)}
+          </Button>
+        );
+      }
+      // Direct join
+      return (
+        <Button
+          variant="primary"
+          onPress={handleJoinMatch}
+          style={styles.actionButton}
+          loading={isJoining}
+          disabled={isJoining || !playerId}
+        >
+          {t('matchDetail.joinNow' as TranslationKey)}
         </Button>
       );
     }
@@ -1148,19 +1177,27 @@ export const MatchDetailSheet: React.FC = () => {
             style={[
               styles.pendingBanner,
               {
-                backgroundColor: status.info.DEFAULT + '15',
-                borderColor: status.info.DEFAULT,
+                backgroundColor: isFull
+                  ? status.info.DEFAULT + '15'
+                  : status.success.DEFAULT + '15',
+                borderColor: isFull ? status.info.DEFAULT : status.success.DEFAULT,
               },
             ]}
           >
-            <Ionicons name="list-outline" size={18} color={status.info.DEFAULT} />
+            <Ionicons
+              name={isFull ? 'list-outline' : 'checkmark-circle-outline'}
+              size={18}
+              color={isFull ? status.info.DEFAULT : status.success.DEFAULT}
+            />
             <Text
               size="sm"
               weight="medium"
-              color={status.info.DEFAULT}
+              color={isFull ? status.info.DEFAULT : status.success.DEFAULT}
               style={styles.pendingBannerText}
             >
-              {t('matchActions.waitlistedInfo' as TranslationKey)}
+              {isFull
+                ? t('matchActions.waitlistedInfo' as TranslationKey)
+                : t('matchActions.spotOpenedUp' as TranslationKey)}
             </Text>
           </View>
         )}
@@ -1340,24 +1377,21 @@ export const MatchDetailSheet: React.FC = () => {
                 )}
               </View>
               {(showAllRequests ? pendingRequests : pendingRequests.slice(0, 3)).map(request => (
-                <View key={request.id} style={styles.pendingRequestRow}>
-                  <TouchableOpacity
-                    style={[
-                      styles.pendingRequestInfo,
-                      {
-                        backgroundColor: themeColors.muted,
-                        borderWidth: 1,
-                        borderColor: colors.border,
-                        borderRadius: radiusPixels.md,
-                        paddingHorizontal: spacingPixels[3],
-                        paddingVertical: spacingPixels[2.5],
-                      },
-                    ]}
-                    onPress={() =>
-                      request.participant && handleViewRequesterDetails(request.participant)
-                    }
-                    activeOpacity={0.6}
-                  >
+                <View
+                  key={request.id}
+                  style={[
+                    styles.pendingRequestInfo,
+                    {
+                      backgroundColor: themeColors.muted,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      borderRadius: radiusPixels.md,
+                      paddingHorizontal: spacingPixels[3],
+                      paddingVertical: spacingPixels[2.5],
+                    },
+                  ]}
+                >
+                  <View style={styles.pendingRequestContent}>
                     <View
                       style={[styles.pendingRequestAvatar, { backgroundColor: colors.primary }]}
                     >
@@ -1399,24 +1433,18 @@ export const MatchDetailSheet: React.FC = () => {
                         </View>
                       )}
                     </View>
-                    <View style={styles.pendingRequestViewDetails}>
-                      <Text
-                        size="xs"
-                        weight="medium"
-                        color={colors.primary}
-                        style={styles.viewDetailsText}
-                      >
-                        {t('matchActions.viewDetails' as TranslationKey)}
-                      </Text>
-                      <Ionicons
-                        name="chevron-forward"
-                        size={16}
-                        color={colors.primary}
-                        style={styles.pendingRequestChevron}
-                      />
-                    </View>
-                  </TouchableOpacity>
+                  </View>
                   <View style={styles.pendingRequestActions}>
+                    <TouchableOpacity
+                      style={[styles.viewDetailsButton, { backgroundColor: colors.primaryLight }]}
+                      onPress={() =>
+                        request.participant && handleViewRequesterDetails(request.participant)
+                      }
+                      activeOpacity={0.7}
+                      hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                    >
+                      <Ionicons name="eye-outline" size={18} color={colors.primary} />
+                    </TouchableOpacity>
                     <TouchableOpacity
                       style={[
                         styles.requestActionButton,
@@ -1881,13 +1909,13 @@ const styles = StyleSheet.create({
   matchFullBadgeText: {
     marginLeft: spacingPixels[1],
   },
-  pendingRequestRow: {
+  pendingRequestInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: spacingPixels[2],
+    marginBottom: spacingPixels[2],
   },
-  pendingRequestInfo: {
+  pendingRequestContent: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
@@ -1928,18 +1956,6 @@ const styles = StyleSheet.create({
   pendingRequestRatingIcon: {
     marginRight: spacingPixels[0.5],
   },
-  pendingRequestViewDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: spacingPixels[2],
-    flexShrink: 0,
-  },
-  viewDetailsText: {
-    marginRight: spacingPixels[1],
-  },
-  pendingRequestChevron: {
-    // Margin handled by viewDetailsText
-  },
   showMoreButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1956,6 +1972,13 @@ const styles = StyleSheet.create({
     marginLeft: spacingPixels[2],
   },
   requestActionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewDetailsButton: {
     width: 36,
     height: 36,
     borderRadius: 18,

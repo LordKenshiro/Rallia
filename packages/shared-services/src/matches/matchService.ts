@@ -790,12 +790,14 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
   );
 
   // If they have an active participation, they can't join again
-  // Allow re-joining if they previously left, declined an invitation, or were refused by host
+  // Allow re-joining if they previously left, declined an invitation, were refused by host, were kicked, or are waitlisted (and spots opened up)
   if (
     existingParticipant &&
     existingParticipant.status !== 'left' &&
     existingParticipant.status !== 'declined' &&
-    existingParticipant.status !== 'refused'
+    existingParticipant.status !== 'refused' &&
+    existingParticipant.status !== 'kicked' &&
+    existingParticipant.status !== 'waitlisted'
   ) {
     throw new Error('You are already in this match');
   }
@@ -959,6 +961,11 @@ export async function acceptJoinRequest(
       id,
       format,
       created_by,
+      cancelled_at,
+      match_date,
+      start_time,
+      end_time,
+      timezone,
       participants:match_participant (
         id,
         player_id,
@@ -971,6 +978,22 @@ export async function acceptJoinRequest(
 
   if (matchError || !match) {
     throw new Error('Match not found');
+  }
+
+  // Check match is still available (not cancelled or completed)
+  if (match.cancelled_at) {
+    throw new Error('Cannot accept requests for a cancelled match');
+  }
+
+  const { getMatchEndTimeDifferenceFromNow } = await import('@rallia/shared-utils');
+  const endTimeDiff = getMatchEndTimeDifferenceFromNow(
+    match.match_date,
+    match.start_time,
+    match.end_time,
+    match.timezone || 'UTC'
+  );
+  if (endTimeDiff < 0) {
+    throw new Error('Cannot accept requests for a completed match');
   }
 
   // Verify caller is the host
@@ -1045,6 +1068,11 @@ export async function rejectJoinRequest(
       `
       id,
       created_by,
+      cancelled_at,
+      match_date,
+      start_time,
+      end_time,
+      timezone,
       participants:match_participant (
         id,
         status
@@ -1056,6 +1084,22 @@ export async function rejectJoinRequest(
 
   if (matchError || !match) {
     throw new Error('Match not found');
+  }
+
+  // Check match is still available (not cancelled or completed)
+  if (match.cancelled_at) {
+    throw new Error('Cannot reject requests for a cancelled match');
+  }
+
+  const { getMatchEndTimeDifferenceFromNow } = await import('@rallia/shared-utils');
+  const endTimeDiff = getMatchEndTimeDifferenceFromNow(
+    match.match_date,
+    match.start_time,
+    match.end_time,
+    match.timezone || 'UTC'
+  );
+  if (endTimeDiff < 0) {
+    throw new Error('Cannot reject requests for a completed match');
   }
 
   // Verify caller is the host
@@ -1163,6 +1207,11 @@ export async function kickParticipant(
       `
       id,
       created_by,
+      cancelled_at,
+      match_date,
+      start_time,
+      end_time,
+      timezone,
       participants:match_participant (
         id,
         player_id,
@@ -1175,6 +1224,22 @@ export async function kickParticipant(
 
   if (matchError || !match) {
     throw new Error('Match not found');
+  }
+
+  // Check match is still available (not cancelled or completed)
+  if (match.cancelled_at) {
+    throw new Error('Cannot kick participants from a cancelled match');
+  }
+
+  const { getMatchEndTimeDifferenceFromNow } = await import('@rallia/shared-utils');
+  const endTimeDiff = getMatchEndTimeDifferenceFromNow(
+    match.match_date,
+    match.start_time,
+    match.end_time,
+    match.timezone || 'UTC'
+  );
+  if (endTimeDiff < 0) {
+    throw new Error('Cannot kick participants from a completed match');
   }
 
   // Verify caller is the host

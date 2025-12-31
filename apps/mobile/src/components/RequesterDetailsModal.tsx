@@ -27,10 +27,9 @@ import {
   primary,
 } from '@rallia/design-system';
 import { Ionicons } from '@expo/vector-icons';
-import { lightHaptic } from '@rallia/shared-utils';
+import { lightHaptic, getProfilePictureUrl, formatRelativeTime } from '@rallia/shared-utils';
 import { useTheme } from '@rallia/shared-hooks';
 import { useTranslation, type TranslationKey } from '../hooks';
-import { getProfilePictureUrl } from '@rallia/shared-utils';
 import type { MatchParticipantWithPlayer } from '@rallia/shared-types';
 import type { PlayerWithProfile } from '@rallia/shared-types';
 
@@ -173,6 +172,13 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
     ? getProfilePictureUrl(profile.profile_picture_url)
     : null;
 
+  // Get verified status (check if field exists - may not be in current schema)
+  const isVerified = (player as unknown as Record<string, unknown>)?.verified === true;
+
+  // Get last active time
+  const lastActiveAt = profile?.last_active_at;
+  const activityDisplay = lastActiveAt ? formatRelativeTime(lastActiveAt) : null;
+
   // Don't render if not visible
   if (!visible) {
     return null;
@@ -254,9 +260,25 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                       />
                     )}
                   </View>
-                  <Text size="xl" weight="bold" style={[styles.name, { color: colors.text }]}>
-                    {fullName}
-                  </Text>
+                  <View style={styles.nameContainer}>
+                    <Text size="xl" weight="bold" style={[styles.name, { color: colors.text }]}>
+                      {fullName}
+                    </Text>
+                    {isVerified && (
+                      <View
+                        style={[styles.verifiedBadge, { backgroundColor: status.success.DEFAULT }]}
+                      >
+                        <Ionicons name="checkmark-circle" size={16} color={BASE_WHITE} />
+                        <Text
+                          size="xs"
+                          weight="semibold"
+                          style={{ color: BASE_WHITE, marginLeft: spacingPixels[1] }}
+                        >
+                          {t('common.verified' as TranslationKey)}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
 
                 {/* Rating Badge */}
@@ -316,6 +338,21 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                         </Text>
                         <Text size="sm" weight="medium" style={{ color: colors.text }}>
                           {playingHandDisplay}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Activity Indicator */}
+                  {activityDisplay && (
+                    <View style={[styles.detailItem, { borderColor: colors.border }]}>
+                      <Ionicons name="time-outline" size={18} color={colors.textMuted} />
+                      <View style={styles.detailContent}>
+                        <Text size="xs" style={{ color: colors.textMuted }}>
+                          {t('common.lastActive' as TranslationKey)}
+                        </Text>
+                        <Text size="sm" weight="medium" style={{ color: colors.text }}>
+                          {activityDisplay}
                         </Text>
                       </View>
                     </View>
@@ -458,8 +495,19 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
   },
+  nameContainer: {
+    alignItems: 'center',
+    gap: spacingPixels[2],
+  },
   name: {
     textAlign: 'center',
+  },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[2],
+    paddingVertical: spacingPixels[1],
+    borderRadius: radiusPixels.full,
   },
   ratingBadge: {
     flexDirection: 'row',

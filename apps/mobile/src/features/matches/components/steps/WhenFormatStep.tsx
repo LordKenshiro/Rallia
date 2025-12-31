@@ -226,6 +226,13 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
     return `${year}-${month}-${day}`;
   };
 
+  // Get today's date at midnight (00:00:00) to allow selecting today
+  const getTodayAtMidnight = (): Date => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+  };
+
   const handleDateChange = (_: unknown, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
       setShowDatePicker(false);
@@ -328,7 +335,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
             mode="date"
             display="default"
             onChange={handleDateChange}
-            minimumDate={new Date()}
+            minimumDate={getTodayAtMidnight()}
           />
         )}
       </View>
@@ -438,7 +445,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
                 mode="date"
                 display="spinner"
                 onChange={handleDateChange}
-                minimumDate={new Date()}
+                minimumDate={getTodayAtMidnight()}
                 themeVariant={isDark ? 'dark' : 'light'}
                 style={styles.iosPicker}
               />

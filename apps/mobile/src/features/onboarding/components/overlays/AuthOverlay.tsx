@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Animated,
   Alert,
   ActivityIndicator,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
@@ -45,12 +46,12 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
 
   const [email, setEmail] = useState('');
   const [step, setStep] = useState<'email' | 'code'>('email');
-  const [code, setCode] = useState(['', '', '', '', '', '']);
+  const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Refs for code input fields
-  const codeInputRefs = useRef<(TextInput | null)[]>([]);
+  // Ref for the hidden OTP input
+  const hiddenInputRef = useRef<TextInput>(null);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -158,9 +159,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
   };
 
   const handleVerifyCode = async () => {
-    const fullCode = code.join('');
-
-    if (fullCode.length !== 6) {
+    if (code.length !== 6) {
       Alert.alert('Error', 'Please enter all 6 digits');
       return;
     }
@@ -172,10 +171,10 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
     try {
       Logger.debug('Verifying OTP via Supabase SDK', {
         emailDomain: email.split('@')[1],
-        codeLength: fullCode.length,
+        codeLength: code.length,
       });
 
-      const result = await verifyOtp(email, fullCode);
+      const result = await verifyOtp(email, code);
 
       if (!result.success) {
         const errorMsg = result.error?.message || 'Invalid verification code';
@@ -269,7 +268,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
     lightHaptic();
     if (step === 'code') {
       setStep('email');
-      setCode(['', '', '', '', '', '']);
+      setCode('');
     } else {
       onClose();
     }
@@ -281,12 +280,35 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
       // Reset after animation completes
       setTimeout(() => {
         setStep('email');
-        setCode(['', '', '', '', '', '']);
+        setCode('');
         setEmail('');
         setErrorMessage('');
       }, 300);
     }
   }, [visible]);
+
+  // Handler for code input changes - memoized for performance
+  const handleCodeChange = useCallback((text: string) => {
+    // Only accept digits, limit to 6 characters
+    const cleanedCode = text.replace(/[^0-9]/g, '').slice(0, 6);
+    setCode(cleanedCode);
+  }, []);
+
+  // Focus the hidden input when tapping the code boxes
+  const focusHiddenInput = useCallback(() => {
+    hiddenInputRef.current?.focus();
+  }, []);
+
+  // Focus hidden input when step changes to 'code'
+  useEffect(() => {
+    if (step === 'code') {
+      // Small delay to ensure the step animation has started
+      const timer = setTimeout(() => {
+        hiddenInputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
 
   return (
     <Overlay visible={visible} onClose={handleBack}>
@@ -414,49 +436,41 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
               <Text style={[styles.emailText, { color: colors.text }]}>{email}</Text>
             </Text>
 
-            {/* Code Input Boxes */}
-            <View style={styles.codeInputContainer}>
-              {code.map((digit, index) => (
-                <TextInput
-                  key={index}
-                  ref={ref => {
-                    codeInputRefs.current[index] = ref;
-                  }}
-                  style={[
-                    styles.codeBox,
-                    {
-                      backgroundColor: digit !== '' ? colors.card : colors.inputBackground,
-                      borderColor: digit !== '' ? colors.primary : colors.inputBorder,
-                      color: colors.text,
-                    },
-                  ]}
-                  value={digit}
-                  onChangeText={text => {
-                    // Only accept single digit
-                    const newDigit = text.replace(/[^0-9]/g, '').slice(-1);
-                    const newCode = [...code];
-                    newCode[index] = newDigit;
-                    setCode(newCode);
+            {/* Hidden TextInput for smooth OTP entry */}
+            <TextInput
+              ref={hiddenInputRef}
+              style={styles.hiddenInput}
+              value={code}
+              onChangeText={handleCodeChange}
+              keyboardType="number-pad"
+              maxLength={6}
+              autoFocus
+              caretHidden
+              autoComplete="one-time-code"
+              textContentType="oneTimeCode"
+            />
 
-                    // Auto-focus next input if digit entered
-                    if (newDigit && index < 5) {
-                      codeInputRefs.current[index + 1]?.focus();
-                    }
-                  }}
-                  onKeyPress={({ nativeEvent }) => {
-                    // Handle backspace to go to previous input
-                    if (nativeEvent.key === 'Backspace' && !digit && index > 0) {
-                      codeInputRefs.current[index - 1]?.focus();
-                    }
-                  }}
-                  keyboardType="number-pad"
-                  maxLength={1}
-                  selectTextOnFocus
-                  textAlign="center"
-                  autoFocus={index === 0 && step === 'code'}
-                />
-              ))}
-            </View>
+            {/* Visual Code Display Boxes */}
+            <Pressable style={styles.codeInputContainer} onPress={focusHiddenInput}>
+              {Array.from({ length: 6 }).map((_, index) => {
+                const digit = code[index] || '';
+                const isFilled = digit !== '';
+                return (
+                  <View
+                    key={index}
+                    style={[
+                      styles.codeBox,
+                      {
+                        backgroundColor: isFilled ? colors.card : colors.inputBackground,
+                        borderColor: isFilled ? colors.primary : colors.inputBorder,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.codeDigit, { color: colors.text }]}>{digit}</Text>
+                  </View>
+                );
+              })}
+            </Pressable>
 
             {/* Resend Code Button */}
             <TouchableOpacity
@@ -592,6 +606,12 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 25,
   },
+  hiddenInput: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    opacity: 0,
+  },
   codeBox: {
     width: 45,
     height: 55,
@@ -599,12 +619,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
-    fontSize: 24,
-    fontWeight: '600',
-    // backgroundColor, borderColor, color will be set dynamically
-  },
-  codeBoxFilled: {
-    // Styles applied dynamically
+    // backgroundColor, borderColor will be set dynamically
   },
   codeDigit: {
     fontSize: 24,

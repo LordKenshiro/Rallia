@@ -38,6 +38,8 @@
       "left": "Gauche",
       "right": "Droite"
     },
+    "verified": "Vérifié",
+    "lastActive": "Dernière activité",
     "time": {
       "now": "Maintenant",
       "today": "Aujourd'hui",
@@ -344,12 +346,12 @@
     "matchFullCannotAccept": "Match complet",
     "requestPending": "Votre demande est en attente d'approbation par l'hôte",
     "waitlistedInfo": "Vous êtes sur la liste d'attente. Vous serez notifié si une place se libère.",
+    "spotOpenedUp": "Une place s'est libérée! Vous pouvez maintenant rejoindre ce match.",
     "joinWaitlist": "Rejoindre la liste d'attente",
     "leaveWaitlist": "Quitter la liste d'attente",
     "waitlistSuccess": "Vous avez été ajouté à la liste d'attente!",
     "leaveWaitlistSuccess": "Vous avez quitté la liste d'attente",
     "requesterDetails": "Détails du demandeur",
-    "viewDetails": "Voir les détails",
     "kickParticipant": "Retirer le joueur",
     "kickSuccess": "Le joueur a été retiré du match",
     "kickConfirmTitle": "Retirer le joueur?",
