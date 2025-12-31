@@ -60,15 +60,24 @@ const GOOGLE_PLACES_API_URL = 'https://places.googleapis.com/v1/places:autocompl
 const GOOGLE_PLACE_DETAILS_URL = 'https://places.googleapis.com/v1/places';
 
 // Get API key from environment
+// In Expo, environment variables prefixed with EXPO_PUBLIC_ are embedded at build time
+// However, in shared packages, we need to access them carefully to ensure they work in production
 const getApiKey = (): string | null => {
-  // For React Native (Expo)
-  if (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY) {
-    return process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
+  // For React Native (Expo) - try process.env access
+  // In Expo SDK 49+, EXPO_PUBLIC_ prefixed vars are embedded at build time
+  if (typeof process !== 'undefined' && process.env) {
+    // Standard process.env access (works in dev and production when properly configured)
+    const apiKey = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
+    if (apiKey) {
+      return apiKey;
+    }
   }
+
   // For Next.js
   if (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY) {
     return process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
   }
+
   return null;
 };
 
@@ -136,7 +145,10 @@ export function usePlacesAutocomplete(
     const apiKey = getApiKey();
 
     if (!apiKey) {
-      console.error('Google Places API key not configured');
+      console.error(
+        'Google Places API key not configured. ' +
+          'Ensure EXPO_PUBLIC_GOOGLE_PLACES_API_KEY is set in EAS secrets for production builds.'
+      );
       return null;
     }
 
@@ -189,7 +201,11 @@ export function usePlacesAutocomplete(
       const apiKey = getApiKey();
 
       if (!apiKey) {
-        setError('Google Places API key not configured');
+        const errorMsg =
+          'Google Places API key not configured. ' +
+          'Ensure EXPO_PUBLIC_GOOGLE_PLACES_API_KEY is set in EAS secrets for production builds.';
+        console.error(errorMsg);
+        setError(errorMsg);
         setIsLoading(false);
         return;
       }
