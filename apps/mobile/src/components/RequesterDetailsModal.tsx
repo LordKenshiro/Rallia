@@ -138,33 +138,15 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
   const profile = player?.profile;
   const fullName = profile?.full_name || profile?.display_name || 'Player';
 
-  // Debug logging
-  console.log('[RequesterDetailsModal] Participant data:', {
-    participantId: participant?.id,
-    playerId: player?.id,
-    isArray: Array.isArray(participant?.player),
-    playerData,
-    playerKeys: player ? Object.keys(player) : [],
-  });
-
   // Get rating from the player object - check both label and value
   // The rating is attached by matchService at runtime when fetching match data
   const ratingLabel = player?.sportRatingLabel;
   const ratingValue = player?.sportRatingValue;
 
-  console.log('[RequesterDetailsModal] Rating data:', {
-    ratingLabel,
-    ratingValue,
-    hasRatingLabel: !!ratingLabel,
-    hasRatingValue: ratingValue !== undefined && ratingValue !== null,
-  });
-
   // Display the rating value if available, falling back to label
   // Format: show the value (numeric) or label (string like "3.5")
   const ratingDisplay =
     ratingValue !== undefined && ratingValue !== null ? ratingValue.toFixed(1) : ratingLabel;
-
-  console.log('[RequesterDetailsModal] Rating display:', ratingDisplay);
 
   const gender = player?.gender;
   const playingHand = player?.playing_hand;

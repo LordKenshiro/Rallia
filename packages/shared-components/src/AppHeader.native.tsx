@@ -72,12 +72,9 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     [profile?.profile_picture_url]
   );
 
-  // Debug profile picture URL and reset error state when URL changes
+  // Reset error state when profile picture URL changes
   useEffect(() => {
     if (profile) {
-      console.log('📸 AppHeader - Profile picture URL:', profilePictureUrl);
-      console.log('📋 AppHeader - Full profile data:', profile);
-      // Reset error state when profile picture URL changes
       setImageLoadError(false);
     }
   }, [profile, profilePictureUrl]);
@@ -104,8 +101,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
       if (!selectedSport && sports.length > 0) {
         setSelectedSport(sports[0]);
       }
-
-      console.log('🏆 User sports loaded:', sports);
     } else {
       setUserSports([]);
       setSelectedSport(null);
@@ -123,7 +118,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   const handleSportSelect = (sport: Sport) => {
     setSelectedSport(sport);
     setShowSportDropdown(false);
-    console.log('Selected sport:', sport.display_name);
   };
 
   const handleProfilePress = () => {
@@ -135,7 +129,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   const handleNotificationsPress = () => {
     // Only handle if logged in
     if (!isLoggedIn) return;
-    console.log('Notifications pressed');
   };
 
   const handleSettingsPress = () => {
@@ -163,7 +156,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                     setImageLoadError(true);
                   }}
                   onLoad={() => {
-                    console.log('✅ AppHeader - Profile image loaded successfully');
                     setImageLoadError(false);
                   }}
                 />

@@ -29,7 +29,5 @@ import { configureSupabaseStorage } from '@rallia/shared-services';
  */
 const configuredClient = configureSupabaseStorage(AsyncStorage);
 
-console.log('✅ Supabase client configured with AsyncStorage');
-
 // Export the configured client for use in the mobile app
 export const supabase = configuredClient;

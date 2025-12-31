@@ -286,8 +286,6 @@ const Notifications: React.FC = () => {
       // Navigate to target based on notification type and target_id
       if (notification.target_id) {
         // TODO: Navigate to specific entity based on notification.type
-        // For now, just log it
-        console.log('Navigate to:', notification.type, notification.target_id);
       }
     },
     [markAsRead]

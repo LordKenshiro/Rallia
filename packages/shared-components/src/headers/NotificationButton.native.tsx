@@ -30,8 +30,6 @@ const NotificationButton: React.FC<NotificationButtonProps> = ({
     lightHaptic();
     if (onPress) {
       onPress();
-    } else {
-      console.log('Notifications pressed');
     }
   };
 

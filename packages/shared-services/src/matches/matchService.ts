@@ -274,10 +274,6 @@ export async function getMatchWithDetails(matchId: string) {
     }
 
     if (!ratingsError && ratingsData) {
-      console.log('[getMatchWithDetails] Raw ratings data:', JSON.stringify(ratingsData, null, 2));
-      console.log('[getMatchWithDetails] Looking for sportId:', sportId);
-      console.log('[getMatchWithDetails] Profile IDs queried:', profileIds);
-
       type RatingResult = {
         player_id: string;
         rating_score: { label: string; value: number | null; rating_system: { sport_id: string } };
@@ -286,23 +282,14 @@ export async function getMatchWithDetails(matchId: string) {
         // Filter to only ratings for this match's sport
         const ratingScore = rating.rating_score;
         const ratingSystem = ratingScore?.rating_system;
-        console.log(
-          `[getMatchWithDetails] Rating for player ${rating.player_id}: sport_id=${ratingSystem?.sport_id}, label=${ratingScore?.label}, value=${ratingScore?.value}, match_sport_id=${sportId}`
-        );
         if (ratingSystem?.sport_id === sportId && ratingScore?.label) {
           ratingsMap[rating.player_id] = {
             label: ratingScore.label,
             value: ratingScore.value,
           };
-          console.log(
-            `[getMatchWithDetails] Added rating to map for player ${rating.player_id}:`,
-            ratingsMap[rating.player_id]
-          );
         }
       });
     }
-
-    console.log('[getMatchWithDetails] Final ratingsMap:', ratingsMap);
   }
 
   // Attach profiles and ratings to players
@@ -324,15 +311,10 @@ export async function getMatchWithDetails(matchId: string) {
       const playerObj = Array.isArray(p.player) ? p.player[0] : p.player;
       const playerId = playerObj?.id;
 
-      console.log(
-        `[getMatchWithDetails] Processing participant: playerId=${playerId}, status=${p.status}, isArray=${Array.isArray(p.player)}`
-      );
-
       if (playerId && profilesMap[playerId]) {
         playerObj.profile = profilesMap[playerId];
       }
       const participantRating = playerId ? ratingsMap[playerId] : undefined;
-      console.log(`[getMatchWithDetails] Participant ${playerId} rating:`, participantRating);
       if (participantRating && playerObj) {
         (
           playerObj as MatchParticipantWithPlayer['player'] & {
@@ -348,12 +330,6 @@ export async function getMatchWithDetails(matchId: string) {
             }
           ).sportRatingValue = participantRating.value;
         }
-        console.log(`[getMatchWithDetails] Attached rating to participant ${playerId}:`, {
-          sportRatingLabel: playerObj.sportRatingLabel,
-          sportRatingValue: (playerObj as PlayerWithProfile).sportRatingValue,
-        });
-      } else {
-        console.log(`[getMatchWithDetails] No rating found for participant ${playerId}`);
       }
       // Ensure player is always an object, not array
       if (Array.isArray(p.player) && playerObj) {
@@ -1755,13 +1731,6 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
       }
 
       if (!ratingsError && ratingsData) {
-        console.log(
-          '[getPlayerMatchesWithDetails] Raw ratings data:',
-          JSON.stringify(ratingsData, null, 2)
-        );
-        console.log('[getPlayerMatchesWithDetails] Profile IDs queried:', profileIds);
-        console.log('[getPlayerMatchesWithDetails] Sport IDs from matches:', sportIds);
-
         type RatingResult = {
           player_id: string;
           rating_score: {
@@ -1773,9 +1742,6 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
         (ratingsData as unknown as RatingResult[]).forEach(rating => {
           const ratingScore = rating.rating_score;
           const ratingSystem = ratingScore?.rating_system;
-          console.log(
-            `[getPlayerMatchesWithDetails] Rating for player ${rating.player_id}: sport_id=${ratingSystem?.sport_id}, label=${ratingScore?.label}, value=${ratingScore?.value}`
-          );
           if (ratingSystem?.sport_id && ratingScore?.label) {
             if (!sportRatingsMap[ratingSystem.sport_id]) {
               sportRatingsMap[ratingSystem.sport_id] = {};
@@ -1784,13 +1750,8 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
               label: ratingScore.label,
               value: ratingScore.value,
             };
-            console.log(
-              `[getPlayerMatchesWithDetails] Added rating to map for sport ${ratingSystem.sport_id}, player ${rating.player_id}:`,
-              sportRatingsMap[ratingSystem.sport_id][rating.player_id]
-            );
           }
         });
-        console.log('[getPlayerMatchesWithDetails] Final sportRatingsMap:', sportRatingsMap);
       }
     }
   }
@@ -1813,38 +1774,20 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
 
     // Attach profiles and ratings to participants
     if (match.participants) {
-      console.log(
-        `[getPlayerMatchesWithDetails] Processing match ${match.id} with sport_id ${match.sport_id}`
-      );
-      console.log(`[getPlayerMatchesWithDetails] Match sportRatings:`, matchSportRatings);
       match.participants = match.participants.map((p: MatchParticipantWithPlayer) => {
         // Handle both array and object formats from Supabase
         const playerObj = Array.isArray(p.player) ? p.player[0] : p.player;
         const playerId = playerObj?.id;
 
-        console.log(
-          `[getPlayerMatchesWithDetails] Processing participant: playerId=${playerId}, status=${p.status}, isArray=${Array.isArray(p.player)}`
-        );
-
         if (playerId && profilesMap[playerId]) {
           playerObj.profile = profilesMap[playerId];
         }
         const participantRating = playerId ? matchSportRatings[playerId] : undefined;
-        console.log(
-          `[getPlayerMatchesWithDetails] Participant ${playerId} rating:`,
-          participantRating
-        );
         if (participantRating && playerObj) {
           (playerObj as PlayerWithProfile).sportRatingLabel = participantRating.label;
           if (participantRating.value !== null) {
             (playerObj as PlayerWithProfile).sportRatingValue = participantRating.value;
           }
-          console.log(`[getPlayerMatchesWithDetails] Attached rating to participant ${playerId}:`, {
-            sportRatingLabel: playerObj.sportRatingLabel,
-            sportRatingValue: (playerObj as PlayerWithProfile).sportRatingValue,
-          });
-        } else {
-          console.log(`[getPlayerMatchesWithDetails] No rating found for participant ${playerId}`);
         }
         // Ensure player is always an object, not array
         if (Array.isArray(p.player) && playerObj) {
