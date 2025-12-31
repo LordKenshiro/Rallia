@@ -324,10 +324,10 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
             mappedPreferences.duration = durationMap[data.preferred_match_duration] || '60';
           }
 
-          // Map match type: 'casual' → 'practice', 'competitive' → 'competitive', 'both' → 'both'
+          // Map match type: form values now match database values directly
           if (data.preferred_match_type) {
-            const typeMap: Record<string, 'practice' | 'competitive' | 'both'> = {
-              casual: 'practice',
+            const typeMap: Record<string, 'casual' | 'competitive' | 'both'> = {
+              casual: 'casual',
               competitive: 'competitive',
               both: 'both',
             };

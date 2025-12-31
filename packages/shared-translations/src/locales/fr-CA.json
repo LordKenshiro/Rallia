@@ -423,6 +423,7 @@
     "type": {
       "competitive": "Compétitif",
       "practice": "Pratique",
+      "casual": "Récréatif",
       "both": "Les deux"
     },
     "visibility": {
@@ -580,7 +581,7 @@
       "formatSingles": "Simple",
       "formatDoubles": "Double",
       "playerExpectation": "Type de match",
-      "playerExpectationPractice": "Pratique / Échange",
+      "playerExpectationCasual": "Récréatif",
       "playerExpectationCompetitive": "Compétitif",
       "playerExpectationBoth": "Les deux",
       "locationType": "Type de lieu",

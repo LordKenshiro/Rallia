@@ -423,6 +423,7 @@
     "type": {
       "competitive": "Competitive",
       "practice": "Practice",
+      "casual": "Casual",
       "both": "Both"
     },
     "visibility": {
@@ -580,7 +581,7 @@
       "formatSingles": "Singles",
       "formatDoubles": "Doubles",
       "playerExpectation": "Match Type",
-      "playerExpectationPractice": "Practice / Rally",
+      "playerExpectationCasual": "Casual",
       "playerExpectationCompetitive": "Competitive",
       "playerExpectationBoth": "Both",
       "locationType": "Location Type",

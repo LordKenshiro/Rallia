@@ -161,8 +161,11 @@ function getMatchPalette(playerExpectation: string | null, isUrgent: boolean): P
   switch (playerExpectation) {
     case 'competitive':
       return 'competitive';
+    case 'casual':
+      return 'casual';
     case 'practice':
-      return 'practice';
+      // Legacy 'practice' values map to 'casual' for consistency
+      return 'casual';
     default:
       return 'casual';
   }

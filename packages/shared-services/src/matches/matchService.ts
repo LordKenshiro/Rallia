@@ -29,7 +29,7 @@ export interface CreateMatchInput {
 
   // Match format
   format?: 'singles' | 'doubles';
-  playerExpectation?: 'practice' | 'competitive' | 'both';
+  playerExpectation?: 'casual' | 'competitive' | 'both';
   duration?: '30' | '60' | '90' | '120' | 'custom';
   customDurationMinutes?: number;
 
@@ -72,8 +72,9 @@ function emptyToUndefined(value: string | undefined): string | undefined {
  */
 export async function createMatch(input: CreateMatchInput): Promise<Match> {
   // Map playerExpectation to match_type enum values
+  // Note: form values now match database enum values directly
   const matchTypeMap: Record<string, 'casual' | 'competitive' | 'both'> = {
-    practice: 'casual',
+    casual: 'casual',
     competitive: 'competitive',
     both: 'both',
   };
@@ -540,8 +541,9 @@ export async function updateMatch(
   updates: Partial<CreateMatchInput>
 ): Promise<Match> {
   // Map playerExpectation to match_type enum values (same as createMatch)
+  // Note: form values now match database enum values directly
   const matchTypeMap: Record<string, 'casual' | 'competitive' | 'both'> = {
-    practice: 'casual',
+    casual: 'casual',
     competitive: 'competitive',
     both: 'both',
   };
@@ -569,7 +571,7 @@ export async function updateMatch(
   if (updates.timezone !== undefined) updateData.timezone = updates.timezone;
   if (updates.format !== undefined) updateData.format = updates.format;
   if (updates.playerExpectation !== undefined) {
-    // player_expectation stores the raw value (practice/competitive/both)
+    // player_expectation stores the raw value (casual/competitive/both)
     updateData.player_expectation = updates.playerExpectation;
     // match_type stores the mapped value (casual/competitive/both) - same as createMatch
     updateData.match_type = matchTypeMap[updates.playerExpectation] ?? 'both';

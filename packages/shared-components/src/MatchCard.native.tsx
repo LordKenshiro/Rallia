@@ -71,6 +71,8 @@ const MATCH_PALETTES = {
     },
   },
   // Practice matches - info/blue palette (calm, focused)
+  // NOTE: Legacy support only - new matches use 'casual' instead
+  // Kept for backward compatibility with existing matches that have 'practice' in database
   // Note: Blue gradients extend beyond core design system palette
   // using standard Tailwind blue scale to complement status.info
   practice: {
@@ -182,8 +184,11 @@ function getMatchPalette(playerExpectation: string | null, isUrgent: boolean): P
   switch (playerExpectation) {
     case 'competitive':
       return 'competitive';
+    case 'casual':
+      return 'casual';
     case 'practice':
-      return 'practice';
+      // Legacy 'practice' values map to 'casual' for consistency
+      return 'casual';
     default:
       return 'casual';
   }
@@ -374,16 +379,24 @@ function getPlayerExpectationInfo(
         textColor: base.white,
         icon: 'trophy',
       };
-    case 'practice':
+    case 'casual':
       return {
-        label: t('match.type.practice'),
-        bgColor: status.success.DEFAULT,
-        textColor: base.white,
-        icon: 'barbell',
+        label: t('match.type.casual'),
+        bgColor: isDark ? neutral[600] : neutral[300],
+        icon: 'happy',
+        textColor: isDark ? neutral[200] : neutral[700],
+      };
+    case 'practice':
+      // Legacy 'practice' values map to 'casual' for consistency
+      return {
+        label: t('match.type.casual'),
+        bgColor: isDark ? neutral[600] : neutral[300],
+        icon: 'happy',
+        textColor: isDark ? neutral[200] : neutral[700],
       };
     default:
       return {
-        label: t('matchDetail.casual'),
+        label: t('match.type.casual'),
         bgColor: isDark ? neutral[600] : neutral[300],
         icon: 'happy',
         textColor: isDark ? neutral[200] : neutral[700],

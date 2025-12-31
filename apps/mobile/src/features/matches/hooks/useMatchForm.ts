@@ -150,8 +150,10 @@ export function matchToFormData(
   };
 
   // Map player_expectation database values to form values
-  const playerExpectationMap: Record<string, 'practice' | 'competitive' | 'both'> = {
-    casual: 'practice',
+  // Handle both legacy 'practice' and new 'casual' values for backward compatibility
+  const playerExpectationMap: Record<string, 'casual' | 'competitive' | 'both'> = {
+    casual: 'casual',
+    practice: 'casual', // Legacy value mapping
     competitive: 'competitive',
     both: 'both',
   };

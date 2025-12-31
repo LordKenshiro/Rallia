@@ -24,7 +24,7 @@ export const matchFormatSchema = z.enum(['singles', 'doubles']);
 /**
  * Player expectation / match type
  */
-export const matchTypeSchema = z.enum(['practice', 'competitive', 'both']);
+export const matchTypeSchema = z.enum(['casual', 'competitive', 'both']);
 
 /**
  * Location type
@@ -66,7 +66,10 @@ export const step1Schema = z
       .min(1, 'Please select a date')
       .refine(
         date => {
-          const selected = new Date(date);
+          // Parse date as local time, not UTC
+          // new Date('YYYY-MM-DD') is interpreted as UTC, causing day shift issues
+          const [year, month, day] = date.split('-').map(Number);
+          const selected = new Date(year, month - 1, day); // month is 0-indexed
           const today = new Date();
           today.setHours(0, 0, 0, 0);
           return selected >= today;
@@ -223,7 +226,10 @@ export const matchFormSchema = z
     }
 
     // Date validation
-    const selectedDate = new Date(data.matchDate);
+    // Parse date as local time, not UTC
+    // new Date('YYYY-MM-DD') is interpreted as UTC, causing day shift issues
+    const [year, month, day] = data.matchDate.split('-').map(Number);
+    const selectedDate = new Date(year, month - 1, day); // month is 0-indexed
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     if (selectedDate < today) {

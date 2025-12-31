@@ -674,10 +674,10 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
         </Text>
         <View style={styles.optionsColumn}>
           <OptionButton
-            label={t('matchCreation.fields.playerExpectationPractice' as TranslationKey)}
-            selected={playerExpectation === 'practice'}
+            label={t('matchCreation.fields.playerExpectationCasual' as TranslationKey)}
+            selected={playerExpectation === 'casual'}
             onPress={() =>
-              setValue('playerExpectation', 'practice', { shouldValidate: true, shouldDirty: true })
+              setValue('playerExpectation', 'casual', { shouldValidate: true, shouldDirty: true })
             }
             colors={colors}
           />
