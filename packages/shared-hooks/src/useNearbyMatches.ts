@@ -41,6 +41,8 @@ export interface UseNearbyMatchesOptions {
   maxDistanceKm: number | undefined;
   /** Sport ID to filter matches by */
   sportId: string | undefined;
+  /** The viewing user's gender for eligibility filtering */
+  userGender?: string | null;
   /** Maximum number of matches to fetch per page */
   limit?: number;
   /** Enable/disable the query */
@@ -80,6 +82,7 @@ export function useNearbyMatches(options: UseNearbyMatchesOptions) {
     longitude,
     maxDistanceKm,
     sportId,
+    userGender,
     limit = DEFAULT_PAGE_SIZE,
     enabled = true,
   } = options;
@@ -92,8 +95,15 @@ export function useNearbyMatches(options: UseNearbyMatchesOptions) {
     sportId !== undefined;
 
   const query = useInfiniteQuery<NearbyMatchesPage, Error>({
-    // Include sportId in query key to refetch when sport changes
-    queryKey: matchKeys.list('nearby', { latitude, longitude, maxDistanceKm, sportId, limit }),
+    // Include sportId and userGender in query key to refetch when they change
+    queryKey: matchKeys.list('nearby', {
+      latitude,
+      longitude,
+      maxDistanceKm,
+      sportId,
+      userGender,
+      limit,
+    }),
     queryFn: async ({ pageParam = 0 }) => {
       if (!hasRequiredParams) {
         return { matches: [], nextOffset: null, hasMore: false };
@@ -104,6 +114,7 @@ export function useNearbyMatches(options: UseNearbyMatchesOptions) {
         longitude: longitude!,
         maxDistanceKm: maxDistanceKm!,
         sportId: sportId!,
+        userGender,
         limit,
         offset: pageParam as number,
       });

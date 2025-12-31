@@ -355,7 +355,8 @@
     "kickParticipant": "Remove Player",
     "kickSuccess": "Player has been removed from the match",
     "kickConfirmTitle": "Remove Player?",
-    "kickConfirmMessage": "This player will be removed from the match and notified."
+    "kickConfirmMessage": "This player will be removed from the match and notified.",
+    "genderMismatch": "This match is restricted to players of a different gender than yours."
   },
   "ratings": {
     "title": "Ratings",
@@ -932,7 +933,7 @@
       "matchType": {
         "label": "Type",
         "all": "All",
-        "practice": "Practice",
+        "casual": "Casual",
         "competitive": "Competitive"
       },
       "dateRange": {

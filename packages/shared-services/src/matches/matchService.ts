@@ -711,7 +711,7 @@ export interface JoinMatchResult {
  * @throws Error if match is full, already joined, or match not found
  */
 export async function joinMatch(matchId: string, playerId: string): Promise<JoinMatchResult> {
-  // First, get match details to check join_mode and capacity
+  // First, get match details to check join_mode, capacity, and gender preference
   const { data: match, error: matchError } = await supabase
     .from('match')
     .select(
@@ -725,6 +725,7 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
       end_time,
       timezone,
       created_by,
+      preferred_opponent_gender,
       participants:match_participant (
         id,
         player_id,
@@ -760,6 +761,25 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
   // Check if player is the creator (creators can't join their own match as participant)
   if (match.created_by === playerId) {
     throw new Error('You are the host of this match');
+  }
+
+  // Check gender eligibility if the match has a gender preference
+  if (match.preferred_opponent_gender) {
+    // Fetch the player's gender
+    const { data: player, error: playerError } = await supabase
+      .from('player')
+      .select('gender')
+      .eq('id', playerId)
+      .single();
+
+    if (playerError) {
+      throw new Error('Could not verify player eligibility');
+    }
+
+    // If player hasn't set their gender, or gender doesn't match, block the join
+    if (!player?.gender || player.gender !== match.preferred_opponent_gender) {
+      throw new Error('GENDER_MISMATCH');
+    }
   }
 
   // Check if player already has a participant record
@@ -1265,6 +1285,8 @@ export interface SearchNearbyMatchesParams {
   longitude: number;
   maxDistanceKm: number;
   sportId: string;
+  /** The viewing user's gender for eligibility filtering */
+  userGender?: string | null;
   limit?: number;
   offset?: number;
 }
@@ -1290,7 +1312,15 @@ interface MatchWithDetailsAndDistance extends MatchWithDetails {
  * Returns full match details with distance_meters attached.
  */
 export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
-  const { latitude, longitude, maxDistanceKm, sportId, limit = 20, offset = 0 } = params;
+  const {
+    latitude,
+    longitude,
+    maxDistanceKm,
+    sportId,
+    userGender,
+    limit = 20,
+    offset = 0,
+  } = params;
 
   // Step 1: Get match IDs within distance using RPC
   const { data: nearbyResults, error: rpcError } = await supabase.rpc('search_matches_nearby', {
@@ -1300,6 +1330,7 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
     p_sport_id: sportId,
     p_limit: limit + 1, // Fetch one extra to check if more exist
     p_offset: offset,
+    p_user_gender: userGender || null, // Pass user's gender for eligibility filtering
   });
 
   if (rpcError) {
@@ -1820,13 +1851,15 @@ export interface SearchPublicMatchesParams {
   sportId: string;
   searchQuery?: string;
   format?: 'all' | 'singles' | 'doubles';
-  matchType?: 'all' | 'practice' | 'competitive';
+  matchType?: 'all' | 'casual' | 'competitive';
   dateRange?: 'all' | 'today' | 'week' | 'weekend';
   timeOfDay?: 'all' | 'morning' | 'afternoon' | 'evening';
   skillLevel?: 'all' | 'beginner' | 'intermediate' | 'advanced';
   gender?: 'all' | 'male' | 'female';
   cost?: 'all' | 'free' | 'paid';
   joinMode?: 'all' | 'direct' | 'request';
+  /** The viewing user's gender for eligibility filtering */
+  userGender?: string | null;
   limit?: number;
   offset?: number;
 }
@@ -1861,6 +1894,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     gender = 'all',
     cost = 'all',
     joinMode = 'all',
+    userGender,
     limit = 20,
     offset = 0,
   } = params;
@@ -1885,6 +1919,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     p_join_mode: joinMode === 'all' ? null : joinMode,
     p_limit: limit + 1, // Fetch one extra to check if more exist
     p_offset: offset,
+    p_user_gender: userGender || null, // Pass user's gender for eligibility filtering
   });
 
   if (rpcError) {

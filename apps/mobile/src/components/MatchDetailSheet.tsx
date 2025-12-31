@@ -322,7 +322,15 @@ export const MatchDetailSheet: React.FC = () => {
     },
     onJoinError: error => {
       errorHaptic();
-      Alert.alert(t('alerts.error' as TranslationKey), error.message);
+      // Handle specific error types with user-friendly messages
+      if (error.message === 'GENDER_MISMATCH') {
+        Alert.alert(
+          t('alerts.error' as TranslationKey),
+          t('matchActions.genderMismatch' as TranslationKey)
+        );
+      } else {
+        Alert.alert(t('alerts.error' as TranslationKey), error.message);
+      }
     },
     onLeaveSuccess: () => {
       successHaptic();
@@ -1233,27 +1241,23 @@ export const MatchDetailSheet: React.FC = () => {
                 label={
                   match.player_expectation === 'competitive'
                     ? t('matchDetail.competitive' as TranslationKey)
-                    : match.player_expectation === 'practice'
-                      ? t('matchDetail.practice' as TranslationKey)
-                      : t('matchDetail.casual' as TranslationKey)
+                    : t('matchDetail.casual' as TranslationKey)
                 }
                 bgColor={
                   match.player_expectation === 'competitive'
                     ? secondary[500]
-                    : match.player_expectation === 'practice'
-                      ? status.success.DEFAULT
-                      : isDark
-                        ? neutral[600]
-                        : neutral[300]
+                    : isDark
+                      ? neutral[600]
+                      : neutral[300]
                 }
-                textColor={BASE_WHITE}
-                icon={
+                textColor={
                   match.player_expectation === 'competitive'
-                    ? 'trophy'
-                    : match.player_expectation === 'practice'
-                      ? 'barbell'
-                      : 'happy'
+                    ? BASE_WHITE
+                    : isDark
+                      ? neutral[200]
+                      : neutral[700]
                 }
+                icon={match.player_expectation === 'competitive' ? 'trophy' : 'happy'}
               />
             )}
 
@@ -1268,18 +1272,20 @@ export const MatchDetailSheet: React.FC = () => {
             )}
 
             {/* Gender preference */}
-            {/* {match.preferred_opponent_gender && (
+            {match.preferred_opponent_gender && (
               <Badge
                 label={
                   match.preferred_opponent_gender === 'male'
                     ? t('match.gender.menOnly' as TranslationKey)
-                    : t('match.gender.womenOnly' as TranslationKey)
+                    : match.preferred_opponent_gender === 'female'
+                      ? t('match.gender.womenOnly' as TranslationKey)
+                      : t('match.gender.other' as TranslationKey)
                 }
                 bgColor={isDark ? neutral[700] : neutral[200]}
                 textColor={colors.text}
                 icon={match.preferred_opponent_gender === 'male' ? 'male' : 'female'}
               />
-            )} */}
+            )}
 
             {/* Join mode */}
             {match.join_mode === 'request' && (

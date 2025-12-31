@@ -355,7 +355,8 @@
     "kickParticipant": "Retirer le joueur",
     "kickSuccess": "Le joueur a été retiré du match",
     "kickConfirmTitle": "Retirer le joueur?",
-    "kickConfirmMessage": "Ce joueur sera retiré du match et sera notifié."
+    "kickConfirmMessage": "Ce joueur sera retiré du match et sera notifié.",
+    "genderMismatch": "Ce match est réservé aux joueurs d'un genre différent du vôtre."
   },
   "ratings": {
     "title": "Classements",
@@ -932,7 +933,7 @@
       "matchType": {
         "label": "Type",
         "all": "Tous",
-        "practice": "Pratique",
+        "casual": "Récréatif",
         "competitive": "Compétitif"
       },
       "dateRange": {

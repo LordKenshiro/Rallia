@@ -104,7 +104,7 @@ export default function PublicMatches() {
   // Determine if we should enable the query
   const showMatches = !!location && !!selectedSport;
 
-  // Fetch public matches - use distance from filters
+  // Fetch public matches - use distance from filters and user's gender for eligibility
   const {
     matches,
     isLoading,
@@ -121,6 +121,7 @@ export default function PublicMatches() {
     sportId: selectedSport?.id,
     filters,
     debouncedSearchQuery,
+    userGender: player?.gender,
     enabled: showMatches,
   });
 

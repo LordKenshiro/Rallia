@@ -46,6 +46,8 @@ export interface UsePublicMatchesOptions {
   filters: PublicMatchFilters;
   /** Debounced search query from usePublicMatchFilters */
   debouncedSearchQuery: string;
+  /** The viewing user's gender for eligibility filtering */
+  userGender?: string | null;
   /** Maximum number of matches to fetch per page */
   limit?: number;
   /** Enable/disable the query */
@@ -90,6 +92,7 @@ export function usePublicMatches(options: UsePublicMatchesOptions) {
     sportId,
     filters,
     debouncedSearchQuery,
+    userGender,
     limit = DEFAULT_PAGE_SIZE,
     enabled = true,
   } = options;
@@ -118,6 +121,7 @@ export function usePublicMatches(options: UsePublicMatchesOptions) {
       gender: filters.gender,
       cost: filters.cost,
       joinMode: filters.joinMode,
+      userGender,
       limit,
     }),
     queryFn: async ({ pageParam = 0 }) => {
@@ -139,6 +143,7 @@ export function usePublicMatches(options: UsePublicMatchesOptions) {
         gender: filters.gender,
         cost: filters.cost,
         joinMode: filters.joinMode,
+        userGender,
         limit,
         offset: pageParam as number,
       });

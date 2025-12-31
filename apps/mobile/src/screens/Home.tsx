@@ -63,7 +63,7 @@ const Home = () => {
   const showNearbySection = !!location && !!selectedSport;
 
   // Use TanStack Query hook for fetching nearby matches with infinite scrolling
-  // Query refetches automatically when sportId changes (included in query key)
+  // Query refetches automatically when sportId or player gender changes (included in query key)
   const {
     matches: allNearbyMatches,
     isLoading: loadingMatches,
@@ -78,6 +78,7 @@ const Home = () => {
     longitude: location?.longitude,
     maxDistanceKm: maxTravelDistanceKm,
     sportId: selectedSport?.id,
+    userGender: player?.gender,
     limit: 20,
     enabled: showNearbySection,
   });

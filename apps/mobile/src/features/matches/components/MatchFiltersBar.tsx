@@ -81,7 +81,7 @@ interface MatchFiltersBarProps {
 
 // Filter option definitions
 const FORMAT_OPTIONS: FormatFilter[] = ['all', 'singles', 'doubles'];
-const MATCH_TYPE_OPTIONS: MatchTypeFilter[] = ['all', 'practice', 'competitive'];
+const MATCH_TYPE_OPTIONS: MatchTypeFilter[] = ['all', 'casual', 'competitive'];
 const DATE_RANGE_OPTIONS: DateRangeFilter[] = ['all', 'today', 'week', 'weekend'];
 const TIME_OF_DAY_OPTIONS: TimeOfDayFilter[] = ['all', 'morning', 'afternoon', 'evening'];
 const SKILL_LEVEL_OPTIONS: SkillLevelFilter[] = ['all', 'beginner', 'intermediate', 'advanced'];

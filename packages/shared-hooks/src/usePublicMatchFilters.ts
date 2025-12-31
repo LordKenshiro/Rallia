@@ -15,7 +15,7 @@ export type FormatFilter = 'all' | 'singles' | 'doubles';
 /**
  * Available match type filter values
  */
-export type MatchTypeFilter = 'all' | 'practice' | 'competitive';
+export type MatchTypeFilter = 'all' | 'casual' | 'competitive';
 
 /**
  * Available date range filter values
