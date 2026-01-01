@@ -223,9 +223,11 @@ export const EnumService = {
       if (error) {
         console.warn('get_match_duration_types RPC not found, using fallback values', error);
         const fallbackData = [
-          { value: '1h', label: '1 hour' },
-          { value: '1.5h', label: '1.5 hours' },
-          { value: '2h', label: '2 hours' },
+          { value: '30', label: '30 Minutes' },
+          { value: '60', label: '1 Hour' },
+          { value: '90', label: '1.5 Hours' },
+          { value: '120', label: '2 Hours' },
+          { value: 'custom', label: 'Custom' },
         ];
         return { data: fallbackData, error: null };
       }
@@ -234,9 +236,11 @@ export const EnumService = {
       return { data: data || [], error: null };
     } catch (error) {
       const fallbackData = [
-        { value: '1h', label: '1 hour' },
-        { value: '1.5h', label: '1.5 hours' },
-        { value: '2h', label: '2 hours' },
+        { value: '30', label: '30 Minutes' },
+        { value: '60', label: '1 Hour' },
+        { value: '90', label: '1.5 Hours' },
+        { value: '120', label: '2 Hours' },
+        { value: 'custom', label: 'Custom' },
       ];
       return { data: fallbackData, error: null };
     }

@@ -31,7 +31,7 @@ BEGIN
   INNER JOIN facility f ON f.id = m.facility_id
   WHERE m.location_type = 'facility'
     AND m.visibility = 'public'
-    AND m.status = 'scheduled'
+    AND m.cancelled_at IS NULL
     AND m.sport_id = p_sport_id  -- Filter by selected sport
     AND f.is_active = TRUE
     AND f.location IS NOT NULL

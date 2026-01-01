@@ -55,7 +55,6 @@ export type MatchVisibilityEnum = DbEnum<'match_visibility_enum'>;
 export type MatchJoinModeEnum = DbEnum<'match_join_mode_enum'>;
 export type CostSplitTypeEnum = DbEnum<'cost_split_type_enum'>;
 export type LocationTypeEnum = DbEnum<'location_type_enum'>;
-export type MatchStatusEnum = DbEnum<'match_status'>;
 
 // Organization & Facility
 export type OrganizationTypeEnum = DbEnum<'organization_type_enum'>;
@@ -103,8 +102,8 @@ export type PlayAttributeEnum = DbEnum<'play_attribute_enum'>;
 export type SkillLevel = DbEnum<'skill_level'>;
 
 // Match (non-suffixed variants)
-export type MatchType = DbEnum<'match_type'>;
-export type MatchDuration = DbEnum<'match_duration'>;
+export type MatchType = DbEnum<'match_type_enum'>;
+export type MatchDuration = DbEnum<'match_duration_enum'>;
 
 // Time & Schedule (non-suffixed variants)
 export type DayOfWeek = DbEnum<'day_of_week'>;

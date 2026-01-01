@@ -213,6 +213,43 @@
       "left": "Gauche",
       "right": "Droite",
       "both": "Les deux"
+    },
+    "preferences": {
+      "updateTennis": "Mettre à jour vos préférences de tennis",
+      "updatePickleball": "Mettre à jour vos préférences de pickleball",
+      "matchDuration": "Durée du match",
+      "matchType": "Type de match",
+      "court": "Terrain",
+      "playStyle": "Style de jeu",
+      "selectAllThatApply": "Sélectionnez tous ceux qui s'appliquent",
+      "selectPlayStyle": "Sélectionnez votre style de jeu",
+      "courtPlaceholder": "ex. Parc Jeanne-Mance",
+      "courtPlaceholderPickleball": "ex. Parc Jarry",
+      "durations": {
+        "30": "30 min",
+        "60": "1h",
+        "90": "1h30",
+        "120": "2h"
+      },
+      "matchTypes": {
+        "casual": "Récréatif",
+        "competitive": "Compétitif",
+        "both": "Les deux"
+      },
+      "playStyles": {
+        "counterpuncher": "Contre-attaqueur",
+        "aggressive_baseliner": "Fond de court agressif",
+        "serve_and_volley": "Service et volée",
+        "all_court": "Tous terrains"
+      },
+      "playAttributes": {
+        "serve_speed_and_placement": "Vitesse et placement du service",
+        "net_play": "Jeu au filet",
+        "court_coverage": "Couverture du terrain",
+        "forehand_power": "Puissance du coup droit",
+        "shot_selection": "Sélection des coups",
+        "spin_control": "Contrôle de l'effet"
+      }
     }
   },
   "onboarding": {

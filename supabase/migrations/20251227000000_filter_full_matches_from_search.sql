@@ -34,7 +34,7 @@ BEGIN
   INNER JOIN facility f ON f.id = m.facility_id
   WHERE m.location_type = 'facility'
     AND m.visibility = 'public'
-    AND m.status = 'scheduled'
+    AND m.cancelled_at IS NULL
     AND m.sport_id = p_sport_id  -- Filter by selected sport
     AND f.is_active = TRUE
     AND f.location IS NOT NULL
@@ -185,7 +185,7 @@ BEGIN
   LEFT JOIN rating_score rs ON rs.id = m.min_rating_score_id
   WHERE m.location_type = 'facility'
     AND m.visibility = 'public'
-    AND m.status = 'scheduled'
+    AND m.cancelled_at IS NULL
     AND m.sport_id = p_sport_id
     AND f.is_active = TRUE
     AND f.location IS NOT NULL
@@ -263,5 +263,6 @@ $$;
 
 -- Add comment for documentation
 COMMENT ON FUNCTION search_public_matches IS 'Search public matches with comprehensive filters. Supports: text search (location, facility, city, notes, creator), format (singles/doubles), match type (practice/competitive), date range (today/week/weekend), time of day (morning/afternoon/evening), skill level (beginner/intermediate/advanced), gender preference, cost (free/paid), and join mode (direct/request). Excludes matches that are already full.';
+
 
 

@@ -43,7 +43,7 @@ CREATE TYPE "public"."match_duration_enum" AS ENUM (
 );
 
 CREATE TYPE "public"."match_type_enum" AS ENUM (
-  'practice',
+  'casual',
   'competitive',
   'both'
 );

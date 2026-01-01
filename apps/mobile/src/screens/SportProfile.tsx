@@ -17,7 +17,8 @@ import { useAppNavigation } from '../navigation/hooks';
 import type { RootStackParamList } from '../navigation/types';
 import { Text, Button } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
-import { useThemeStyles, useTranslation } from '../hooks';
+import { MATCH_DURATION_ENUM_LABELS } from '@rallia/shared-types';
+import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
 import {
   spacingPixels,
   radiusPixels,
@@ -505,12 +506,75 @@ const SportProfile = () => {
 
   const formatMatchDuration = (duration: string | null): string => {
     if (!duration) return t('profile.notSet');
-    return duration.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+    // Use translation keys for enum values
+    const translationKey = `profile.preferences.durations.${duration}`;
+    const translated = t(translationKey as TranslationKey);
+
+    // If translation exists (not the same as key), use it
+    if (translated !== translationKey) {
+      return translated;
+    }
+
+    // Fallback to shared constant for enum values
+    if (duration in MATCH_DURATION_ENUM_LABELS) {
+      return MATCH_DURATION_ENUM_LABELS[duration as keyof typeof MATCH_DURATION_ENUM_LABELS];
+    }
+
+    // Legacy values (for backward compatibility during migration)
+    const legacyMap: Record<string, string> = {
+      '1h': t('matchCreation.duration.60'),
+      '1.5h': t('matchCreation.duration.90'),
+      '2h': t('matchCreation.duration.120'),
+    };
+
+    return legacyMap[duration] || duration.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   const formatMatchType = (type: string | null): string => {
     if (!type) return t('profile.notSet');
+
+    // Use translation keys for match types
+    const translationKey = `profile.preferences.matchTypes.${type.toLowerCase()}`;
+    const translated = t(translationKey as TranslationKey);
+
+    // If translation exists (not the same as key), use it
+    if (translated !== translationKey) {
+      return translated;
+    }
+
+    // Fallback: capitalize first letter of each word
     return type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const formatPlayingStyle = (style: string | null): string => {
+    if (!style) return t('profile.notSet');
+
+    // Use translation keys for play styles
+    const translationKey = `profile.preferences.playStyles.${style}`;
+    const translated = t(translationKey as TranslationKey);
+
+    // If translation exists (not the same as key), use it
+    if (translated !== translationKey) {
+      return translated;
+    }
+
+    // Fallback: capitalize first letter of each word
+    return style.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const formatPlayAttribute = (attribute: string): string => {
+    // Use translation keys for play attributes
+    const translationKey = `profile.preferences.playAttributes.${attribute}`;
+    const translated = t(translationKey as TranslationKey);
+
+    // If translation exists (not the same as key), use it
+    if (translated !== translationKey) {
+      return translated;
+    }
+
+    // Fallback: capitalize first letter of each word
+    return attribute.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   const handleSendPeerRatingRequests = async (selectedPlayerIds: string[]) => {
@@ -968,7 +1032,7 @@ const SportProfile = () => {
                   {t('profile.fields.playingStyle')}
                 </Text>
                 <Text style={[styles.preferenceValue, { color: colors.text }]}>
-                  {preferences.playingStyle || t('profile.notSet')}
+                  {formatPlayingStyle(preferences.playingStyle)}
                 </Text>
               </View>
 
@@ -988,7 +1052,7 @@ const SportProfile = () => {
                         ]}
                       >
                         <Text style={[styles.attributeTagText, { color: colors.primary }]}>
-                          {attr.attributeValue}
+                          {formatPlayAttribute(attr.attributeValue)}
                         </Text>
                       </View>
                     ))}

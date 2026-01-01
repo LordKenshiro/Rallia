@@ -26,7 +26,6 @@ import type {
   LocationTypeEnum,
   MatchDurationEnum,
   MatchTypeEnum,
-  MatchStatusEnum,
 } from './database';
 
 // ============================================
@@ -120,12 +119,15 @@ export const MATCH_TYPE_DESCRIPTIONS: Record<MatchType, string> = {
 // ============================================
 
 /**
- * Human-readable labels for match durations
+ * Human-readable labels for match durations (using match_duration_enum)
+ * @deprecated Use MATCH_DURATION_ENUM_LABELS instead
  */
 export const MATCH_DURATION_LABELS: Record<MatchDuration, string> = {
-  '1h': '1 Hour',
-  '1.5h': '1.5 Hours',
-  '2h': '2 Hours',
+  '30': '30 Minutes',
+  '60': '1 Hour',
+  '90': '1.5 Hours',
+  '120': '2 Hours',
+  custom: 'Custom',
 };
 
 // ============================================
@@ -427,8 +429,8 @@ export const MATCH_DURATION_ENUM_LABELS: Record<MatchDurationEnum, string> = {
  * Used for player expectation in match creation
  */
 export const MATCH_TYPE_ENUM_LABELS: Record<MatchTypeEnum, string> = {
-  practice: 'Practice / Rally',
-  competitive: 'Competitive Match',
+  casual: 'Casual',
+  competitive: 'Competitive',
   both: 'Either',
 };
 
@@ -436,15 +438,22 @@ export const MATCH_TYPE_ENUM_LABELS: Record<MatchTypeEnum, string> = {
  * Descriptions for match type enum (player expectation)
  */
 export const MATCH_TYPE_ENUM_DESCRIPTIONS: Record<MatchTypeEnum, string> = {
-  practice: 'Casual hitting, rallying, or practice session',
+  casual: 'Casual hitting, rallying, or practice session',
   competitive: 'A real match with scoring and competition',
   both: 'Open to either practice or competitive play',
 };
 
 /**
- * Human-readable labels for match status
+ * Derived match status type (not stored in DB, computed from cancelled_at and match_result)
+ * This is a UI-only type for displaying match status
  */
-export const MATCH_STATUS_LABELS: Record<MatchStatusEnum, string> = {
+export type MatchStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
+
+/**
+ * Human-readable labels for match status
+ * Note: Match status is now derived from cancelled_at and match_result, not stored as an enum
+ */
+export const MATCH_STATUS_LABELS: Record<MatchStatus, string> = {
   scheduled: 'Scheduled',
   in_progress: 'In Progress',
   completed: 'Completed',
@@ -455,7 +464,7 @@ export const MATCH_STATUS_LABELS: Record<MatchStatusEnum, string> = {
 /**
  * Icon mapping for match status (Ionicons names)
  */
-export const MATCH_STATUS_ICONS: Record<MatchStatusEnum, string> = {
+export const MATCH_STATUS_ICONS: Record<MatchStatus, string> = {
   scheduled: 'calendar-outline',
   in_progress: 'play-circle-outline',
   completed: 'checkmark-circle-outline',
@@ -466,7 +475,7 @@ export const MATCH_STATUS_ICONS: Record<MatchStatusEnum, string> = {
 /**
  * Color mapping for match status
  */
-export const MATCH_STATUS_COLORS: Record<MatchStatusEnum, string> = {
+export const MATCH_STATUS_COLORS: Record<MatchStatus, string> = {
   scheduled: '#2196F3', // Blue
   in_progress: '#FF9800', // Orange
   completed: '#4CAF50', // Green

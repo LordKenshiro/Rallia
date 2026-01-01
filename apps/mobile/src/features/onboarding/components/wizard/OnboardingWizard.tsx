@@ -537,7 +537,11 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               sportsData.push({
                 sport_id: tennisSport.id,
                 sport_name: 'tennis',
-                preferred_match_duration: formData.tennisMatchDuration,
+                preferred_match_duration: (formData.tennisMatchDuration || '90') as
+                  | '30'
+                  | '60'
+                  | '90'
+                  | '120',
                 preferred_match_type: formData.tennisMatchType,
                 is_primary: true,
               });
@@ -550,7 +554,11 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               sportsData.push({
                 sport_id: pickleballSport.id,
                 sport_name: 'pickleball',
-                preferred_match_duration: formData.pickleballMatchDuration,
+                preferred_match_duration: (formData.pickleballMatchDuration || '90') as
+                  | '30'
+                  | '60'
+                  | '90'
+                  | '120',
                 preferred_match_type: formData.pickleballMatchType,
                 is_primary: !hasTennis,
               });

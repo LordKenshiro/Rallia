@@ -40,9 +40,9 @@ export interface OnboardingFormData {
   // Preferences
   playingHand: 'left' | 'right' | 'both';
   maxTravelDistance: number;
-  matchDuration: '1h' | '1.5h' | '2h'; // Legacy field, kept for backward compatibility
-  tennisMatchDuration: '1h' | '1.5h' | '2h';
-  pickleballMatchDuration: '1h' | '1.5h' | '2h';
+  matchDuration: '30' | '60' | '90' | '120'; // Legacy field, kept for backward compatibility
+  tennisMatchDuration: '30' | '60' | '90' | '120';
+  pickleballMatchDuration: '30' | '60' | '90' | '120';
   tennisMatchType: 'casual' | 'competitive' | 'both';
   pickleballMatchType: 'casual' | 'competitive' | 'both';
 
@@ -104,9 +104,9 @@ const INITIAL_FORM_DATA: OnboardingFormData = {
   pickleballRatingId: null,
   playingHand: 'right',
   maxTravelDistance: 6,
-  matchDuration: '1.5h', // Legacy field
-  tennisMatchDuration: '1.5h',
-  pickleballMatchDuration: '1.5h',
+  matchDuration: '90', // Legacy field (90 = 1.5h)
+  tennisMatchDuration: '90',
+  pickleballMatchDuration: '90',
   tennisMatchType: 'competitive',
   pickleballMatchType: 'competitive',
   availabilities: DEFAULT_AVAILABILITIES,
@@ -261,14 +261,22 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
             }
             // Extract match duration preferences
             if (sport?.name === 'tennis' && ps.preferred_match_duration) {
-              updates.tennisMatchDuration = ps.preferred_match_duration as '1h' | '1.5h' | '2h';
-              updates.matchDuration = ps.preferred_match_duration as '1h' | '1.5h' | '2h'; // Keep legacy field in sync
+              updates.tennisMatchDuration = ps.preferred_match_duration as
+                | '30'
+                | '60'
+                | '90'
+                | '120';
+              updates.matchDuration = ps.preferred_match_duration as '30' | '60' | '90' | '120'; // Keep legacy field in sync
             }
             if (sport?.name === 'pickleball' && ps.preferred_match_duration) {
-              updates.pickleballMatchDuration = ps.preferred_match_duration as '1h' | '1.5h' | '2h';
+              updates.pickleballMatchDuration = ps.preferred_match_duration as
+                | '30'
+                | '60'
+                | '90'
+                | '120';
               // Only update legacy field if tennis duration wasn't set
               if (!updates.tennisMatchDuration) {
-                updates.matchDuration = ps.preferred_match_duration as '1h' | '1.5h' | '2h';
+                updates.matchDuration = ps.preferred_match_duration as '30' | '60' | '90' | '120';
               }
             }
           }

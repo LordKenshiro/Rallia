@@ -213,6 +213,43 @@
       "left": "Left",
       "right": "Right",
       "both": "Both"
+    },
+    "preferences": {
+      "updateTennis": "Update your tennis preferences",
+      "updatePickleball": "Update your pickleball preferences",
+      "matchDuration": "Match Duration",
+      "matchType": "Match Type",
+      "court": "Court",
+      "playStyle": "Play Style",
+      "selectAllThatApply": "Select all that apply",
+      "selectPlayStyle": "Select your play style",
+      "courtPlaceholder": "e.g., Jeanne-Mance Park",
+      "courtPlaceholderPickleball": "e.g., Parc Jarry",
+      "durations": {
+        "30": "30 min",
+        "60": "1h",
+        "90": "1.5h",
+        "120": "2h"
+      },
+      "matchTypes": {
+        "casual": "Casual",
+        "competitive": "Competitive",
+        "both": "Both"
+      },
+      "playStyles": {
+        "counterpuncher": "Counterpuncher",
+        "aggressive_baseliner": "Aggressive Baseliner",
+        "serve_and_volley": "Serve and Volley",
+        "all_court": "All Court"
+      },
+      "playAttributes": {
+        "serve_speed_and_placement": "Serve Speed & Placement",
+        "net_play": "Net Play",
+        "court_coverage": "Court Coverage",
+        "forehand_power": "Forehand Power",
+        "shot_selection": "Shot Selection",
+        "spin_control": "Spin Control"
+      }
     }
   },
   "onboarding": {

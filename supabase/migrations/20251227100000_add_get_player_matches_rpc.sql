@@ -39,8 +39,8 @@ BEGIN
           AND mp.status IN ('joined', 'requested', 'pending', 'waitlisted')
       )
     )
-    -- Exclude cancelled matches
-    AND m.status != 'cancelled'
+    -- Exclude cancelled matches (use cancelled_at instead of status)
+    AND m.cancelled_at IS NULL
     -- Sport filter (optional)
     AND (p_sport_id IS NULL OR m.sport_id = p_sport_id)
     -- Time filter based on match END time
@@ -50,8 +50,8 @@ BEGIN
       CASE 
         WHEN p_time_filter = 'upcoming' THEN
           -- Upcoming: match end_time has NOT passed yet
-          -- Also exclude completed matches
-          m.status != 'completed'
+          -- Also exclude completed matches (check for result existence)
+          NOT EXISTS (SELECT 1 FROM match_result mr WHERE mr.match_id = m.id)
           AND (
             CASE 
               WHEN m.timezone IS NOT NULL THEN
@@ -78,8 +78,8 @@ BEGIN
             END
           )
         WHEN p_time_filter = 'past' THEN
-          -- Past: match end_time HAS passed OR match is completed
-          m.status = 'completed'
+          -- Past: match end_time HAS passed OR match has a result (completed)
+          EXISTS (SELECT 1 FROM match_result mr WHERE mr.match_id = m.id)
           OR (
             CASE 
               WHEN m.timezone IS NOT NULL THEN
@@ -121,6 +121,6 @@ END;
 $$;
 
 -- Add comment for documentation
-COMMENT ON FUNCTION get_player_matches IS 'Get matches for a player (as creator or active participant) with timezone-aware filtering. Uses match end_time to determine if a match is past or upcoming. Upcoming matches are those where end_time has not passed yet. Past matches are those where end_time has passed or status is completed.';
+COMMENT ON FUNCTION get_player_matches IS 'Get matches for a player (as creator or active participant) with timezone-aware filtering. Uses match end_time to determine if a match is past or upcoming. Upcoming matches are those where end_time has not passed yet and no result exists. Past matches are those where end_time has passed or result exists. Uses cancelled_at IS NULL instead of status check.';
 
 

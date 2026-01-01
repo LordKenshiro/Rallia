@@ -37,3 +37,4 @@ USING (is_public_match(match_id));
 COMMENT ON POLICY "match_participant_select_public_match" ON match_participant IS 
 'Allows authenticated users to view participants of public matches, even if they have not joined the match yet. This enables users to see who is already participating in request-to-join matches before they request to join.';
 
+

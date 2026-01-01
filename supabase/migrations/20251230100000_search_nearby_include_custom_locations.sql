@@ -43,7 +43,7 @@ BEGIN
   FROM match m
   LEFT JOIN facility f ON f.id = m.facility_id
   WHERE m.visibility = 'public'
-    AND m.status = 'scheduled'
+    AND m.cancelled_at IS NULL
     AND m.sport_id = p_sport_id
     -- Include both facility and custom location types with valid coordinates
     AND (

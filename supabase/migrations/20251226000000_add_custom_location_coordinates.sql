@@ -27,3 +27,4 @@ COMMENT ON COLUMN match.custom_longitude IS 'Longitude coordinate for custom loc
 
 
 
+

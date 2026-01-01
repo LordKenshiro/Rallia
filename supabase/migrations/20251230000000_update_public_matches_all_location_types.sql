@@ -133,7 +133,7 @@ BEGIN
   LEFT JOIN profile p ON p.id = m.created_by
   LEFT JOIN rating_score rs ON rs.id = m.min_rating_score_id
   WHERE m.visibility = 'public'
-    AND m.status = 'scheduled'
+    AND m.cancelled_at IS NULL
     AND m.sport_id = p_sport_id
     -- Location type logic:
     -- When no distance filter: allow ALL location types

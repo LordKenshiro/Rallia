@@ -13,7 +13,6 @@ CREATE TYPE account_status AS ENUM ('active', 'suspended', 'deleted', 'pending_v
 CREATE TYPE playing_hand AS ENUM ('left', 'right', 'both');
 
 -- Match and Booking Enums
-CREATE TYPE match_status AS ENUM ('scheduled', 'in_progress', 'completed', 'cancelled', 'no_show');
 CREATE TYPE match_type AS ENUM ('casual', 'competitive', 'both');
 CREATE TYPE match_duration AS ENUM ('1h', '1.5h', '2h');
 CREATE TYPE booking_status AS ENUM ('pending', 'confirmed', 'cancelled', 'completed');
@@ -317,7 +316,6 @@ CREATE TABLE match (
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
     match_type match_type NOT NULL,
-    status match_status DEFAULT 'scheduled',
     location_name TEXT,
     location_address TEXT,
     notes TEXT,
@@ -512,7 +510,6 @@ CREATE INDEX idx_player_availability_day_time ON player_availability(day_of_week
 -- Match indexes
 CREATE INDEX idx_match_sport_id ON match(sport_id);
 CREATE INDEX idx_match_date ON match(match_date);
-CREATE INDEX idx_match_status ON match(status);
 CREATE INDEX idx_match_created_by ON match(created_by);
 CREATE INDEX idx_match_participant_match_id ON match_participant(match_id);
 CREATE INDEX idx_match_participant_player_id ON match_participant(player_id);

@@ -11,8 +11,10 @@
 --   4. Default → 'scheduled'
 
 -- =============================================================================
--- STEP 1: Add cancelled_at column
+-- STEP 1: Add cancelled_at column (if not already added)
 -- =============================================================================
+-- Note: cancelled_at was already added in migration 20251213000000_add_match_creation_fields.sql
+-- This step ensures it exists for databases that haven't run that migration yet
 
 ALTER TABLE match ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMPTZ NULL;
 
@@ -21,11 +23,23 @@ COMMENT ON COLUMN match.cancelled_at IS 'Timestamp when the match was cancelled.
 -- =============================================================================
 -- STEP 2: Backfill cancelled_at for existing cancelled matches
 -- =============================================================================
+-- Only backfill if the status column exists (for migrations from old schema)
+-- In fresh resets, status column doesn't exist, so skip this step
 
-UPDATE match 
-SET cancelled_at = updated_at 
-WHERE status = 'cancelled' 
-  AND cancelled_at IS NULL;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'match' 
+    AND column_name = 'status'
+  ) THEN
+    UPDATE match 
+    SET cancelled_at = updated_at 
+    WHERE status = 'cancelled' 
+      AND cancelled_at IS NULL;
+  END IF;
+END $$;
 
 -- =============================================================================
 -- STEP 3: Update search_public_matches RPC
@@ -386,4 +400,5 @@ COMMENT ON FUNCTION get_player_matches IS 'Get matches for a player (as creator 
 CREATE INDEX IF NOT EXISTS idx_match_cancelled_at ON match(cancelled_at) WHERE cancelled_at IS NOT NULL;
 
 COMMENT ON INDEX idx_match_cancelled_at IS 'Partial index for finding cancelled matches efficiently';
+
 

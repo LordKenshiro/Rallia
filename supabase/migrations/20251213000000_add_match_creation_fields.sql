@@ -82,6 +82,11 @@ ALTER TABLE match ADD COLUMN IF NOT EXISTS visibility match_visibility_enum DEFA
 -- Join mode (direct join vs request to join)
 ALTER TABLE match ADD COLUMN IF NOT EXISTS join_mode match_join_mode_enum DEFAULT 'direct';
 
+-- Cancelled timestamp (replaces the status column - NULL means not cancelled)
+ALTER TABLE match ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMPTZ NULL;
+
+COMMENT ON COLUMN match.cancelled_at IS 'Timestamp when the match was cancelled. NULL means the match is not cancelled. Used for deriving match status instead of the legacy status column.';
+
 -- ============================================================================
 -- ADD FOREIGN KEY CONSTRAINTS
 -- ============================================================================

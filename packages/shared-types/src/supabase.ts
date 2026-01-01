@@ -856,14 +856,13 @@ export type Database = {
           location_name: string | null;
           location_type: Database['public']['Enums']['location_type_enum'] | null;
           match_date: string;
-          match_type: Database['public']['Enums']['match_type'];
+          match_type: Database['public']['Enums']['match_type_enum'];
           min_rating_score_id: string | null;
           notes: string | null;
           player_expectation: Database['public']['Enums']['match_type_enum'] | null;
           preferred_opponent_gender: Database['public']['Enums']['gender_type'] | null;
           sport_id: string;
           start_time: string;
-          status: Database['public']['Enums']['match_status'] | null;
           timezone: string;
           updated_at: string | null;
           visibility: Database['public']['Enums']['match_visibility_enum'] | null;
@@ -892,14 +891,13 @@ export type Database = {
           location_name?: string | null;
           location_type?: Database['public']['Enums']['location_type_enum'] | null;
           match_date: string;
-          match_type: Database['public']['Enums']['match_type'];
+          match_type: Database['public']['Enums']['match_type_enum'];
           min_rating_score_id?: string | null;
           notes?: string | null;
           player_expectation?: Database['public']['Enums']['match_type_enum'] | null;
           preferred_opponent_gender?: Database['public']['Enums']['gender_type'] | null;
           sport_id: string;
           start_time: string;
-          status?: Database['public']['Enums']['match_status'] | null;
           timezone?: string;
           updated_at?: string | null;
           visibility?: Database['public']['Enums']['match_visibility_enum'] | null;
@@ -928,14 +926,13 @@ export type Database = {
           location_name?: string | null;
           location_type?: Database['public']['Enums']['location_type_enum'] | null;
           match_date?: string;
-          match_type?: Database['public']['Enums']['match_type'];
+          match_type?: Database['public']['Enums']['match_type_enum'];
           min_rating_score_id?: string | null;
           notes?: string | null;
           player_expectation?: Database['public']['Enums']['match_type_enum'] | null;
           preferred_opponent_gender?: Database['public']['Enums']['gender_type'] | null;
           sport_id?: string;
           start_time?: string;
-          status?: Database['public']['Enums']['match_status'] | null;
           timezone?: string;
           updated_at?: string | null;
           visibility?: Database['public']['Enums']['match_visibility_enum'] | null;
@@ -1832,8 +1829,8 @@ export type Database = {
           player_id: string;
           preferred_court: string | null;
           preferred_facility_id: string | null;
-          preferred_match_duration: Database['public']['Enums']['match_duration'] | null;
-          preferred_match_type: Database['public']['Enums']['match_type'] | null;
+          preferred_match_duration: Database['public']['Enums']['match_duration_enum'] | null;
+          preferred_match_type: Database['public']['Enums']['match_type_enum'] | null;
           preferred_play_attributes: Database['public']['Enums']['play_attribute_enum'][] | null;
           preferred_play_style: Database['public']['Enums']['play_style_enum'] | null;
           sport_id: string;
@@ -1847,8 +1844,8 @@ export type Database = {
           player_id: string;
           preferred_court?: string | null;
           preferred_facility_id?: string | null;
-          preferred_match_duration?: Database['public']['Enums']['match_duration'] | null;
-          preferred_match_type?: Database['public']['Enums']['match_type'] | null;
+          preferred_match_duration?: Database['public']['Enums']['match_duration_enum'] | null;
+          preferred_match_type?: Database['public']['Enums']['match_type_enum'] | null;
           preferred_play_attributes?: Database['public']['Enums']['play_attribute_enum'][] | null;
           preferred_play_style?: Database['public']['Enums']['play_style_enum'] | null;
           sport_id: string;
@@ -1862,8 +1859,8 @@ export type Database = {
           player_id?: string;
           preferred_court?: string | null;
           preferred_facility_id?: string | null;
-          preferred_match_duration?: Database['public']['Enums']['match_duration'] | null;
-          preferred_match_type?: Database['public']['Enums']['match_type'] | null;
+          preferred_match_duration?: Database['public']['Enums']['match_duration_enum'] | null;
+          preferred_match_type?: Database['public']['Enums']['match_type_enum'] | null;
           preferred_play_attributes?: Database['public']['Enums']['play_attribute_enum'][] | null;
           preferred_play_style?: Database['public']['Enums']['play_style_enum'] | null;
           sport_id?: string;
@@ -2640,6 +2637,7 @@ export type Database = {
           p_max_distance_km: number;
           p_offset?: number;
           p_sport_id: string;
+          p_user_gender?: string;
         };
         Returns: {
           distance_meters: number;
@@ -2663,6 +2661,7 @@ export type Database = {
           p_skill_level?: string;
           p_sport_id: string;
           p_time_of_day?: string;
+          p_user_gender?: string;
         };
         Returns: {
           distance_meters: number;
@@ -2722,7 +2721,6 @@ export type Database = {
         | 'growth_prompt';
       invite_status_enum: 'pending' | 'sent' | 'accepted' | 'expired' | 'bounced' | 'cancelled';
       location_type_enum: 'facility' | 'custom' | 'tbd';
-      match_duration: '1h' | '1.5h' | '2h';
       match_duration_enum: '30' | '60' | '90' | '120' | 'custom';
       match_format_enum: 'singles' | 'doubles';
       match_join_mode_enum: 'direct' | 'request';
@@ -2735,9 +2733,7 @@ export type Database = {
         | 'kicked'
         | 'waitlisted'
         | 'refused';
-      match_status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
-      match_type: 'casual' | 'competitive' | 'both';
-      match_type_enum: 'practice' | 'competitive' | 'both';
+      match_type_enum: 'casual' | 'competitive' | 'both';
       match_visibility_enum: 'public' | 'private';
       member_role: 'owner' | 'admin' | 'manager' | 'staff' | 'member';
       member_status: 'active' | 'inactive' | 'pending' | 'suspended';
@@ -2969,7 +2965,6 @@ export const Constants = {
       invite_source_enum: ['manual', 'auto_match', 'invite_list', 'mailing_list', 'growth_prompt'],
       invite_status_enum: ['pending', 'sent', 'accepted', 'expired', 'bounced', 'cancelled'],
       location_type_enum: ['facility', 'custom', 'tbd'],
-      match_duration: ['1h', '1.5h', '2h'],
       match_duration_enum: ['30', '60', '90', '120', 'custom'],
       match_format_enum: ['singles', 'doubles'],
       match_join_mode_enum: ['direct', 'request'],
@@ -2983,9 +2978,7 @@ export const Constants = {
         'waitlisted',
         'refused',
       ],
-      match_status: ['scheduled', 'in_progress', 'completed', 'cancelled', 'no_show'],
-      match_type: ['casual', 'competitive', 'both'],
-      match_type_enum: ['practice', 'competitive', 'both'],
+      match_type_enum: ['casual', 'competitive', 'both'],
       match_visibility_enum: ['public', 'private'],
       member_role: ['owner', 'admin', 'manager', 'staff', 'member'],
       member_status: ['active', 'inactive', 'pending', 'suspended'],

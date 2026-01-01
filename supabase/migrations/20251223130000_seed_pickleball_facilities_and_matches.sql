@@ -95,15 +95,15 @@ BEGIN
     match_type, format, player_expectation, duration, location_type,
     facility_id, location_name, location_address,
     is_court_free, cost_split_type,
-    visibility, join_mode, notes, status, created_at, updated_at
+    visibility, join_mode, notes, created_at, updated_at
   ) VALUES (
     match_id, pickleball_sport_id, user_1, today_date,
     '15:00'::TIME, '17:00'::TIME, 'America/Montreal',
-    'casual', 'doubles', 'practice', '120',
+    'casual', 'doubles', 'casual', '120',
     'facility'::location_type_enum, facility_jarry_id,
     'Parc Jarry Courts', '285 Rue Faillon O, Montreal',
     true, 'split_equal',
-    'public', 'direct', 'Casual pickleball doubles at Jarry!', 'scheduled',
+    'public', 'direct', 'Casual pickleball doubles at Jarry!',
     now_time - INTERVAL '1 day', now_time - INTERVAL '1 day'
   );
   
@@ -114,7 +114,7 @@ BEGIN
     match_type, format, player_expectation, duration, location_type,
     facility_id, location_name, location_address,
     is_court_free, cost_split_type,
-    visibility, join_mode, notes, status, created_at, updated_at
+    visibility, join_mode, notes, created_at, updated_at
   ) VALUES (
     match_id, pickleball_sport_id, user_2, tomorrow_date,
     '09:00'::TIME, '11:00'::TIME, 'America/Montreal',
@@ -122,7 +122,7 @@ BEGIN
     'facility'::location_type_enum, facility_lafontaine_id,
     'Parc La Fontaine Courts', '3933 Avenue du Parc La Fontaine, Montreal',
     true, 'split_equal',
-    'public', 'direct', 'Morning pickleball at La Fontaine - all levels!', 'scheduled',
+    'public', 'direct', 'Morning pickleball at La Fontaine - all levels!',
     now_time - INTERVAL '2 days', now_time - INTERVAL '2 days'
   );
   INSERT INTO match_participant (match_id, player_id, status, is_host, created_at, updated_at)
@@ -135,7 +135,7 @@ BEGIN
     match_type, format, player_expectation, duration, location_type,
     facility_id, location_name, location_address,
     is_court_free, cost_split_type, estimated_cost,
-    visibility, join_mode, notes, status, created_at, updated_at
+    visibility, join_mode, notes, created_at, updated_at
   ) VALUES (
     match_id, pickleball_sport_id, user_3, tomorrow_date,
     '14:00'::TIME, '16:00'::TIME, 'America/Montreal',
@@ -143,7 +143,7 @@ BEGIN
     'facility'::location_type_enum, facility_maisonneuve_id,
     'Parc Maisonneuve Courts', '4601 Rue Sherbrooke Est, Montreal',
     false, 'split_equal', 20.00,
-    'public', 'direct', 'Competitive pickleball doubles!', 'scheduled',
+    'public', 'direct', 'Competitive pickleball doubles!',
     now_time - INTERVAL '3 days', now_time - INTERVAL '3 days'
   );
   
@@ -154,15 +154,15 @@ BEGIN
     match_type, format, player_expectation, duration, location_type,
     facility_id, location_name, location_address,
     is_court_free, cost_split_type,
-    visibility, join_mode, notes, status, created_at, updated_at
+    visibility, join_mode, notes, created_at, updated_at
   ) VALUES (
     match_id, pickleball_sport_id, user_4, in_3_days,
     '16:00'::TIME, '18:00'::TIME, 'America/Montreal',
-    'casual', 'singles', 'practice', '120',
+    'casual', 'singles', 'casual', '120',
     'facility'::location_type_enum, facility_laurier_id,
     'Parc Laurier Courts', 'Rue Laurier Est, Montreal',
     true, 'split_equal',
-    'public', 'direct', 'Pickleball singles practice!', 'scheduled',
+    'public', 'direct', 'Pickleball singles practice!',
     now_time - INTERVAL '1 day', now_time - INTERVAL '1 day'
   );
   
@@ -173,7 +173,7 @@ BEGIN
     match_type, format, player_expectation, duration, location_type,
     facility_id, location_name, location_address,
     is_court_free, cost_split_type,
-    visibility, join_mode, notes, status, created_at, updated_at
+    visibility, join_mode, notes, created_at, updated_at
   ) VALUES (
     match_id, pickleball_sport_id, user_1, in_5_days,
     '19:00'::TIME, '21:00'::TIME, 'America/Montreal',
@@ -181,7 +181,7 @@ BEGIN
     'facility'::location_type_enum, facility_jarry_id,
     'Parc Jarry Courts', '285 Rue Faillon O, Montreal',
     true, 'split_equal',
-    'public', 'direct', 'Evening pickleball session!', 'scheduled',
+    'public', 'direct', 'Evening pickleball session!',
     now_time - INTERVAL '2 days', now_time - INTERVAL '2 days'
   );
   INSERT INTO match_participant (match_id, player_id, status, is_host, created_at, updated_at) VALUES
@@ -203,12 +203,12 @@ BEGIN
   SELECT COUNT(*) INTO pickleball_facility_count 
   FROM match m 
   JOIN sport s ON s.id = m.sport_id 
-  WHERE s.name = 'pickleball' AND m.location_type = 'facility' AND m.status = 'scheduled';
+  WHERE s.name = 'pickleball' AND m.location_type = 'facility' AND m.cancelled_at IS NULL;
   
   SELECT COUNT(*) INTO pickleball_custom_count 
   FROM match m 
   JOIN sport s ON s.id = m.sport_id 
-  WHERE s.name = 'pickleball' AND m.location_type != 'facility' AND m.status = 'scheduled';
+  WHERE s.name = 'pickleball' AND m.location_type != 'facility' AND m.cancelled_at IS NULL;
   
   RAISE NOTICE 'Pickleball matches verification:';
   RAISE NOTICE '  - At facilities: % (will appear in Soon & Nearby)', pickleball_facility_count;

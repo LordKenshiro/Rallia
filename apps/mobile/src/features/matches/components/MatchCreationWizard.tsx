@@ -314,14 +314,14 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
           // Map preferences to form values
           const mappedPreferences: Partial<MatchFormSchemaData> = {};
 
-          // Map duration: '1h' → '60', '1.5h' → '90', '2h' → '120'
+          // Duration values now match directly (no mapping needed)
           if (data.preferred_match_duration) {
-            const durationMap: Record<string, '30' | '60' | '90' | '120'> = {
-              '1h': '60',
-              '1.5h': '90',
-              '2h': '120',
-            };
-            mappedPreferences.duration = durationMap[data.preferred_match_duration] || '60';
+            mappedPreferences.duration = data.preferred_match_duration as
+              | '30'
+              | '60'
+              | '90'
+              | '120'
+              | 'custom';
           }
 
           // Map match type: form values now match database values directly

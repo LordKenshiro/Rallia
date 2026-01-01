@@ -69,7 +69,7 @@ BEGIN
   LEFT JOIN profile p ON p.id = m.created_by
   WHERE m.location_type = 'facility'
     AND m.visibility = 'public'
-    AND m.status = 'scheduled'
+    AND m.cancelled_at IS NULL
     AND m.sport_id = p_sport_id
     AND f.is_active = TRUE
     AND f.location IS NOT NULL

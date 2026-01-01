@@ -87,7 +87,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
   };
 
   // Handle unified match duration change (when "Same for all sports" is checked)
-  const handleUnifiedMatchDurationChange = (value: '1h' | '1.5h' | '2h') => {
+  const handleUnifiedMatchDurationChange = (value: '30' | '60' | '90' | '120') => {
     onUpdateFormData({
       tennisMatchDuration: value,
       pickleballMatchDuration: value,
@@ -203,38 +203,38 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
             <View style={styles.buttonGroup}>
               {renderOptionButton(
                 '1h',
-                '1h',
+                '60',
                 hasTennis ? formData.tennisMatchDuration : formData.pickleballMatchDuration,
                 () =>
                   hasBothSports
-                    ? handleUnifiedMatchDurationChange('1h')
+                    ? handleUnifiedMatchDurationChange('60')
                     : onUpdateFormData({
-                        [hasTennis ? 'tennisMatchDuration' : 'pickleballMatchDuration']: '1h',
-                        matchDuration: '1h', // Keep legacy field in sync
+                        [hasTennis ? 'tennisMatchDuration' : 'pickleballMatchDuration']: '60',
+                        matchDuration: '60', // Keep legacy field in sync
                       })
               )}
               {renderOptionButton(
                 '1.5h',
-                '1.5h',
+                '90',
                 hasTennis ? formData.tennisMatchDuration : formData.pickleballMatchDuration,
                 () =>
                   hasBothSports
-                    ? handleUnifiedMatchDurationChange('1.5h')
+                    ? handleUnifiedMatchDurationChange('90')
                     : onUpdateFormData({
-                        [hasTennis ? 'tennisMatchDuration' : 'pickleballMatchDuration']: '1.5h',
-                        matchDuration: '1.5h', // Keep legacy field in sync
+                        [hasTennis ? 'tennisMatchDuration' : 'pickleballMatchDuration']: '90',
+                        matchDuration: '90', // Keep legacy field in sync
                       })
               )}
               {renderOptionButton(
                 '2h',
-                '2h',
+                '120',
                 hasTennis ? formData.tennisMatchDuration : formData.pickleballMatchDuration,
                 () =>
                   hasBothSports
-                    ? handleUnifiedMatchDurationChange('2h')
+                    ? handleUnifiedMatchDurationChange('120')
                     : onUpdateFormData({
-                        [hasTennis ? 'tennisMatchDuration' : 'pickleballMatchDuration']: '2h',
-                        matchDuration: '2h', // Keep legacy field in sync
+                        [hasTennis ? 'tennisMatchDuration' : 'pickleballMatchDuration']: '120',
+                        matchDuration: '120', // Keep legacy field in sync
                       })
               )}
             </View>
@@ -248,14 +248,14 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                 Tennis
               </Text>
               <View style={styles.buttonGroup}>
-                {renderOptionButton('1h', '1h', formData.tennisMatchDuration, () =>
-                  onUpdateFormData({ tennisMatchDuration: '1h' })
+                {renderOptionButton('1h', '60', formData.tennisMatchDuration, () =>
+                  onUpdateFormData({ tennisMatchDuration: '60' })
                 )}
-                {renderOptionButton('1.5h', '1.5h', formData.tennisMatchDuration, () =>
-                  onUpdateFormData({ tennisMatchDuration: '1.5h' })
+                {renderOptionButton('1.5h', '90', formData.tennisMatchDuration, () =>
+                  onUpdateFormData({ tennisMatchDuration: '90' })
                 )}
-                {renderOptionButton('2h', '2h', formData.tennisMatchDuration, () =>
-                  onUpdateFormData({ tennisMatchDuration: '2h' })
+                {renderOptionButton('2h', '120', formData.tennisMatchDuration, () =>
+                  onUpdateFormData({ tennisMatchDuration: '120' })
                 )}
               </View>
 
@@ -264,14 +264,14 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                 Pickleball
               </Text>
               <View style={styles.buttonGroup}>
-                {renderOptionButton('1h', '1h', formData.pickleballMatchDuration, () =>
-                  onUpdateFormData({ pickleballMatchDuration: '1h' })
+                {renderOptionButton('1h', '60', formData.pickleballMatchDuration, () =>
+                  onUpdateFormData({ pickleballMatchDuration: '60' })
                 )}
-                {renderOptionButton('1.5h', '1.5h', formData.pickleballMatchDuration, () =>
-                  onUpdateFormData({ pickleballMatchDuration: '1.5h' })
+                {renderOptionButton('1.5h', '90', formData.pickleballMatchDuration, () =>
+                  onUpdateFormData({ pickleballMatchDuration: '90' })
                 )}
-                {renderOptionButton('2h', '2h', formData.pickleballMatchDuration, () =>
-                  onUpdateFormData({ pickleballMatchDuration: '2h' })
+                {renderOptionButton('2h', '120', formData.pickleballMatchDuration, () =>
+                  onUpdateFormData({ pickleballMatchDuration: '120' })
                 )}
               </View>
             </>

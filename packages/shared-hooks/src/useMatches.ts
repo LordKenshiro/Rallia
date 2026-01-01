@@ -20,8 +20,6 @@ const DEFAULT_PAGE_SIZE = 20;
  * Filter options for match queries
  */
 export interface MatchFilters {
-  /** Filter by match status */
-  status?: string;
   /** Filter by visibility */
   visibility?: 'public' | 'private';
   /** Filter matches from this date onwards (ISO date string) */
@@ -30,6 +28,8 @@ export interface MatchFilters {
   matchDateTo?: string;
   /** Maximum number of matches to fetch per page */
   limit?: number;
+  /** Filter out cancelled matches (default: true) */
+  excludeCancelled?: boolean;
 }
 
 /**

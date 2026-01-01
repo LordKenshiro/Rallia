@@ -159,7 +159,7 @@ BEGIN
     match_type, format, player_expectation, duration, location_type,
     facility_id, location_name, location_address,
     is_court_free, cost_split_type, estimated_cost,
-    visibility, join_mode, notes, status, created_at, updated_at
+    visibility, join_mode, notes, created_at, updated_at
   ) VALUES (
     match_id, tennis_sport_id, user_1, tomorrow_date,
     '10:00'::TIME, '12:00'::TIME, 'America/Montreal',
@@ -167,7 +167,7 @@ BEGIN
     'facility'::location_type_enum, facility_jarry_id,
     'Parc Jarry Tennis Courts', '285 Rue Faillon O, Montreal',
     false, 'split_equal', 50.00,
-    'private', 'request', 'Private competitive singles - request to join', 'scheduled',
+    'private', 'request', 'Private competitive singles - request to join',
     now_time - INTERVAL '2 days', now_time - INTERVAL '2 days'
   );
   
@@ -178,15 +178,15 @@ BEGIN
     match_type, format, player_expectation, duration, location_type,
     facility_id, location_name, location_address,
     is_court_free, cost_split_type, preferred_opponent_gender,
-    visibility, join_mode, notes, status, created_at, updated_at
+    visibility, join_mode, notes, created_at, updated_at
   ) VALUES (
     match_id, tennis_sport_id, user_2, tomorrow_date,
     '08:00'::TIME, '09:30'::TIME, 'America/Montreal',
-    'casual', 'doubles', 'practice', '90',
+    'casual', 'doubles', 'casual', '90',
     'facility'::location_type_enum, facility_lafontaine_id,
     'Parc La Fontaine Tennis Courts', '3933 Avenue du Parc La Fontaine, Montreal',
     true, 'split_equal', 'female',
-    'public', 'direct', 'Ladies morning doubles - all levels welcome!', 'scheduled',
+    'public', 'direct', 'Ladies morning doubles - all levels welcome!',
     now_time - INTERVAL '3 days', now_time - INTERVAL '3 days'
   );
   INSERT INTO match_participant (match_id, player_id, status, is_host, created_at, updated_at)
@@ -199,7 +199,7 @@ BEGIN
     match_type, format, player_expectation, duration, location_type,
     facility_id, location_name, location_address,
     is_court_free, cost_split_type, estimated_cost, min_rating_score_id,
-    visibility, join_mode, notes, status, created_at, updated_at
+    visibility, join_mode, notes, created_at, updated_at
   ) VALUES (
     match_id, tennis_sport_id, user_3, day_after_tomorrow,
     '14:00'::TIME, '16:00'::TIME, 'America/Montreal',
@@ -207,7 +207,7 @@ BEGIN
     'facility'::location_type_enum, facility_maisonneuve_id,
     'Parc Maisonneuve Tennis Courts', '4601 Rue Sherbrooke Est, Montreal',
     false, 'host_pays', 40.00, tennis_rating_40_id,
-    'public', 'direct', 'I will pay for the court - looking for 4.0+ player!', 'scheduled',
+    'public', 'direct', 'I will pay for the court - looking for 4.0+ player!',
     now_time - INTERVAL '1 day', now_time - INTERVAL '1 day'
   );
   
@@ -218,15 +218,15 @@ BEGIN
     match_type, format, player_expectation, duration, location_type,
     facility_id, location_name, location_address,
     is_court_free, cost_split_type,
-    visibility, join_mode, notes, status, created_at, updated_at
+    visibility, join_mode, notes, created_at, updated_at
   ) VALUES (
     match_id, tennis_sport_id, user_4, in_3_days,
     '06:00'::TIME, '07:00'::TIME, 'America/Montreal',
-    'casual', 'singles', 'practice', '60',
+    'casual', 'singles', 'casual', '60',
     'facility'::location_type_enum, facility_laurier_id,
     'Parc Laurier Tennis Courts', 'Rue Laurier Est, Montreal',
     true, 'split_equal',
-    'public', 'direct', 'Early bird tennis before work!', 'scheduled',
+    'public', 'direct', 'Early bird tennis before work!',
     now_time - INTERVAL '12 hours', now_time - INTERVAL '12 hours'
   );
   
@@ -237,7 +237,7 @@ BEGIN
     match_type, format, player_expectation, duration, location_type,
     facility_id, location_name, location_address,
     is_court_free, cost_split_type, estimated_cost,
-    visibility, join_mode, notes, status, created_at, updated_at
+    visibility, join_mode, notes, created_at, updated_at
   ) VALUES (
     match_id, tennis_sport_id, user_5, in_3_days,
     '21:00'::TIME, '22:30'::TIME, 'America/Montreal',
@@ -245,7 +245,7 @@ BEGIN
     'facility'::location_type_enum, facility_mont_royal_id,
     'Parc du Mont-Royal Tennis Courts', 'Chemin Remembrance, Montreal',
     false, 'split_equal', 35.00,
-    'public', 'direct', 'Evening doubles under the lights!', 'scheduled',
+    'public', 'direct', 'Evening doubles under the lights!',
     now_time - INTERVAL '6 hours', now_time - INTERVAL '6 hours'
   );
   INSERT INTO match_participant (match_id, player_id, status, is_host, created_at, updated_at)
@@ -258,15 +258,15 @@ BEGIN
     match_type, format, player_expectation, duration, location_type,
     facility_id, location_name, location_address,
     is_court_free, cost_split_type, min_rating_score_id,
-    visibility, join_mode, notes, status, created_at, updated_at
+    visibility, join_mode, notes, created_at, updated_at
   ) VALUES (
     match_id, tennis_sport_id, user_6, in_4_days,
     '15:00'::TIME, '16:30'::TIME, 'America/Montreal',
-    'casual', 'singles', 'practice', '90',
+    'casual', 'singles', 'casual', '90',
     'facility'::location_type_enum, facility_ahuntsic_id,
     'Parc Ahuntsic Tennis Courts', '10555 Rue Lajeunesse, Montreal',
     true, 'split_equal', tennis_rating_25_id,
-    'public', 'direct', 'Beginner friendly - just started learning tennis!', 'scheduled',
+    'public', 'direct', 'Beginner friendly - just started learning tennis!',
     now_time - INTERVAL '2 days', now_time - INTERVAL '2 days'
   );
   
@@ -277,7 +277,7 @@ BEGIN
     match_type, format, player_expectation, duration, location_type,
     facility_id, location_name, location_address,
     is_court_free, cost_split_type, estimated_cost, min_rating_score_id,
-    visibility, join_mode, notes, status, created_at, updated_at
+    visibility, join_mode, notes, created_at, updated_at
   ) VALUES (
     match_id, tennis_sport_id, user_7, in_5_days,
     '11:00'::TIME, '13:00'::TIME, 'America/Montreal',
@@ -285,7 +285,7 @@ BEGIN
     'facility'::location_type_enum, facility_angrignon_id,
     'Parc Angrignon Tennis Courts', '3400 Boulevard des Trinitaires, Montreal',
     false, 'split_equal', 60.00, tennis_rating_45_id,
-    'public', 'request', 'Advanced players only! Looking for serious competition.', 'scheduled',
+    'public', 'request', 'Advanced players only! Looking for serious competition.',
     now_time - INTERVAL '1 day', now_time - INTERVAL '1 day'
   );
   
@@ -296,7 +296,7 @@ BEGIN
     match_type, format, player_expectation, duration, location_type,
     location_name, location_address,
     is_court_free, cost_split_type, estimated_cost,
-    visibility, join_mode, notes, status, created_at, updated_at
+    visibility, join_mode, notes, created_at, updated_at
   ) VALUES (
     match_id, tennis_sport_id, user_8, next_week,
     '19:00'::TIME, '21:00'::TIME, 'America/Montreal',
@@ -304,7 +304,7 @@ BEGIN
     'custom'::location_type_enum,
     'Club de Tennis Outremont', '550 Chemin de la Côte-Sainte-Catherine, Montreal',
     false, 'split_equal', 80.00,
-    'public', 'direct', 'Indoor courts at the club - doubles tournament prep', 'scheduled',
+    'public', 'direct', 'Indoor courts at the club - doubles tournament prep',
     now_time - INTERVAL '3 days', now_time - INTERVAL '3 days'
   );
   INSERT INTO match_participant (match_id, player_id, status, is_host, created_at, updated_at) VALUES
@@ -318,7 +318,7 @@ BEGIN
     match_type, format, player_expectation, duration, location_type,
     location_name,
     is_court_free, cost_split_type,
-    visibility, join_mode, notes, status, created_at, updated_at
+    visibility, join_mode, notes, created_at, updated_at
   ) VALUES (
     match_id, tennis_sport_id, user_1, in_4_days,
     '16:00'::TIME, '18:00'::TIME, 'America/Montreal',
@@ -326,7 +326,7 @@ BEGIN
     'tbd'::location_type_enum,
     'TBD - Downtown Montreal area',
     true, 'split_equal',
-    'public', 'direct', 'Location flexible - will decide with partner. Downtown preferred.', 'scheduled',
+    'public', 'direct', 'Location flexible - will decide with partner. Downtown preferred.',
     now_time - INTERVAL '1 day', now_time - INTERVAL '1 day'
   );
   
@@ -337,7 +337,7 @@ BEGIN
     match_type, format, player_expectation, duration, location_type,
     facility_id, location_name, location_address,
     is_court_free, cost_split_type, estimated_cost, preferred_opponent_gender, min_rating_score_id,
-    visibility, join_mode, notes, status, created_at, updated_at
+    visibility, join_mode, notes, created_at, updated_at
   ) VALUES (
     match_id, tennis_sport_id, user_3, next_week,
     '09:00'::TIME, '11:00'::TIME, 'America/Montreal',
@@ -345,7 +345,7 @@ BEGIN
     'facility'::location_type_enum, facility_outremont_id,
     'Parc Outremont Tennis Courts', 'Avenue McEachran, Montreal',
     false, 'split_equal', 45.00, 'male', tennis_rating_35_id,
-    'public', 'direct', 'Mens doubles - 3.5+ level, competitive but fun!', 'scheduled',
+    'public', 'direct', 'Mens doubles - 3.5+ level, competitive but fun!',
     now_time - INTERVAL '4 days', now_time - INTERVAL '4 days'
   );
   INSERT INTO match_participant (match_id, player_id, status, is_host, created_at, updated_at)
@@ -358,15 +358,15 @@ BEGIN
     match_type, format, player_expectation, duration, location_type,
     facility_id, location_name, location_address,
     is_court_free, cost_split_type,
-    visibility, join_mode, notes, status, created_at, updated_at
+    visibility, join_mode, notes, created_at, updated_at
   ) VALUES (
     match_id, tennis_sport_id, user_2, today_date,
     '12:00'::TIME, '13:00'::TIME, 'America/Montreal',
-    'casual', 'singles', 'practice', '60',
+    'casual', 'singles', 'casual', '60',
     'facility'::location_type_enum, facility_jarry_id,
     'Parc Jarry Tennis Courts', '285 Rue Faillon O, Montreal',
     true, 'split_equal',
-    'public', 'direct', 'Quick lunch break hitting session!', 'scheduled',
+    'public', 'direct', 'Quick lunch break hitting session!',
     now_time - INTERVAL '4 hours', now_time - INTERVAL '4 hours'
   );
   
@@ -377,15 +377,15 @@ BEGIN
     match_type, format, player_expectation, duration, location_type,
     facility_id, location_name, location_address,
     is_court_free, cost_split_type,
-    visibility, join_mode, notes, status, created_at, updated_at
+    visibility, join_mode, notes, created_at, updated_at
   ) VALUES (
     match_id, tennis_sport_id, user_4, yesterday_date,
     '17:00'::TIME, '19:00'::TIME, 'America/Montreal',
-    'casual', 'singles', 'practice', '120',
+    'casual', 'singles', 'casual', '120',
     'facility'::location_type_enum, facility_lafontaine_id,
     'Parc La Fontaine Tennis Courts', '3933 Avenue du Parc La Fontaine, Montreal',
     true, 'split_equal',
-    'public', 'direct', 'Had to cancel due to rain', 'cancelled',
+    'public', 'direct', 'Had to cancel due to rain',
     now_time - INTERVAL '5 days', now_time - INTERVAL '1 day'
   );
   
@@ -396,7 +396,7 @@ BEGIN
     match_type, format, player_expectation, duration, location_type,
     facility_id, location_name, location_address,
     is_court_free, cost_split_type, estimated_cost,
-    visibility, join_mode, notes, status, created_at, updated_at
+    visibility, join_mode, notes, created_at, updated_at
   ) VALUES (
     match_id, tennis_sport_id, user_6, today_date,
     TO_CHAR(now_time - INTERVAL '30 minutes', 'HH24:MI')::TIME,
@@ -406,7 +406,7 @@ BEGIN
     'facility'::location_type_enum, facility_jeanne_mance_id,
     'Parc Jeanne-Mance Tennis Courts', 'Avenue du Parc, Montreal',
     false, 'split_equal', 35.00,
-    'public', 'direct', 'Currently playing!', 'in_progress',
+    'public', 'direct', 'Currently playing!',
     now_time - INTERVAL '3 days', now_time - INTERVAL '30 minutes'
   );
   INSERT INTO match_participant (match_id, player_id, status, is_host, created_at, updated_at)
@@ -427,7 +427,7 @@ BEGIN
       match_type, format, player_expectation, duration, location_type,
       location_name, location_address,
       is_court_free, cost_split_type, estimated_cost,
-      visibility, join_mode, notes, status, created_at, updated_at
+      visibility, join_mode, notes, created_at, updated_at
     ) VALUES (
       match_id, pickleball_sport_id, user_1, tomorrow_date,
       '13:00'::TIME, '15:00'::TIME, 'America/Montreal',
@@ -435,7 +435,7 @@ BEGIN
       'custom'::location_type_enum,
       'Centre Sportif Claude-Robillard', '1000 Émile-Journault, Montreal',
       false, 'split_equal', 30.00,
-      'private', 'request', 'Private doubles match - approved players only', 'scheduled',
+      'private', 'request', 'Private doubles match - approved players only',
       now_time - INTERVAL '2 days', now_time - INTERVAL '2 days'
     );
     
@@ -446,15 +446,15 @@ BEGIN
       match_type, format, player_expectation, duration, location_type,
       location_name, location_address,
       is_court_free, cost_split_type, preferred_opponent_gender,
-      visibility, join_mode, notes, status, created_at, updated_at
+      visibility, join_mode, notes, created_at, updated_at
     ) VALUES (
       match_id, pickleball_sport_id, user_5, day_after_tomorrow,
       '10:00'::TIME, '12:00'::TIME, 'America/Montreal',
-      'casual', 'doubles', 'practice', '120',
+      'casual', 'doubles', 'casual', '120',
       'custom'::location_type_enum,
       'YMCA du Parc', '5550 Avenue du Parc, Montreal',
       true, 'split_equal', 'female',
-      'public', 'direct', 'Ladies pickleball morning - beginners welcome!', 'scheduled',
+      'public', 'direct', 'Ladies pickleball morning - beginners welcome!',
       now_time - INTERVAL '3 days', now_time - INTERVAL '3 days'
     );
     INSERT INTO match_participant (match_id, player_id, status, is_host, created_at, updated_at)
@@ -467,7 +467,7 @@ BEGIN
       match_type, format, player_expectation, duration, location_type,
       location_name, location_address,
       is_court_free, cost_split_type, estimated_cost, min_rating_score_id,
-      visibility, join_mode, notes, status, created_at, updated_at
+      visibility, join_mode, notes, created_at, updated_at
     ) VALUES (
       match_id, pickleball_sport_id, user_3, in_3_days,
       '18:00'::TIME, '20:00'::TIME, 'America/Montreal',
@@ -475,7 +475,7 @@ BEGIN
       'custom'::location_type_enum,
       'Complexe Sportif Claude-Robillard', '1000 Émile-Journault, Montreal',
       false, 'split_equal', 40.00, pickleball_rating_40_id,
-      'public', 'request', 'Advanced players only - tournament prep!', 'scheduled',
+      'public', 'request', 'Advanced players only - tournament prep!',
       now_time - INTERVAL '1 day', now_time - INTERVAL '1 day'
     );
     
@@ -486,15 +486,15 @@ BEGIN
       match_type, format, player_expectation, duration, location_type,
       location_name, location_address,
       is_court_free, cost_split_type, min_rating_score_id,
-      visibility, join_mode, notes, status, created_at, updated_at
+      visibility, join_mode, notes, created_at, updated_at
     ) VALUES (
       match_id, pickleball_sport_id, user_4, in_4_days,
       '09:00'::TIME, '10:30'::TIME, 'America/Montreal',
-      'casual', 'doubles', 'practice', '90',
+      'casual', 'doubles', 'casual', '90',
       'custom'::location_type_enum,
       'Parc La Fontaine Courts', '3933 Avenue du Parc La Fontaine, Montreal',
       true, 'split_equal', pickleball_rating_25_id,
-      'public', 'direct', 'Beginner session - learning together!', 'scheduled',
+      'public', 'direct', 'Beginner session - learning together!',
       now_time - INTERVAL '2 days', now_time - INTERVAL '2 days'
     );
     INSERT INTO match_participant (match_id, player_id, status, is_host, created_at, updated_at) VALUES
@@ -508,7 +508,7 @@ BEGIN
       match_type, format, player_expectation, duration, location_type,
       location_name, location_address,
       is_court_free, cost_split_type,
-      visibility, join_mode, notes, status, created_at, updated_at
+      visibility, join_mode, notes, created_at, updated_at
     ) VALUES (
       match_id, pickleball_sport_id, user_6, in_5_days,
       '07:00'::TIME, '08:00'::TIME, 'America/Montreal',
@@ -516,7 +516,7 @@ BEGIN
       'custom'::location_type_enum,
       'Centre Récréatif Saint-Laurent', '1750 Boulevard Thimens, Saint-Laurent',
       true, 'split_equal',
-      'public', 'direct', 'Pickleball singles - great cardio workout!', 'scheduled',
+      'public', 'direct', 'Pickleball singles - great cardio workout!',
       now_time - INTERVAL '1 day', now_time - INTERVAL '1 day'
     );
     
@@ -527,7 +527,7 @@ BEGIN
       match_type, format, player_expectation, duration, location_type,
       location_name, location_address,
       is_court_free, cost_split_type, estimated_cost, min_rating_score_id,
-      visibility, join_mode, notes, status, created_at, updated_at
+      visibility, join_mode, notes, created_at, updated_at
     ) VALUES (
       match_id, pickleball_sport_id, user_7, next_week,
       '16:00'::TIME, '18:00'::TIME, 'America/Montreal',
@@ -535,7 +535,7 @@ BEGIN
       'custom'::location_type_enum,
       'Complexe Sportif Marie-Victorin', '7000 Rue Marie-Victorin, Montreal',
       false, 'host_pays', 35.00, pickleball_rating_35_id,
-      'public', 'direct', 'Need 3 more players - I cover the court cost!', 'scheduled',
+      'public', 'direct', 'Need 3 more players - I cover the court cost!',
       now_time - INTERVAL '2 days', now_time - INTERVAL '2 days'
     );
     
@@ -546,15 +546,15 @@ BEGIN
       match_type, format, player_expectation, duration, location_type,
       location_name, location_address,
       is_court_free, cost_split_type,
-      visibility, join_mode, notes, status, created_at, updated_at
+      visibility, join_mode, notes, created_at, updated_at
     ) VALUES (
       match_id, pickleball_sport_id, user_8, in_3_days,
       '20:00'::TIME, '22:00'::TIME, 'America/Montreal',
-      'casual', 'doubles', 'practice', '120',
+      'casual', 'doubles', 'casual', '120',
       'custom'::location_type_enum,
       'Centre Communautaire Rosemont', '4675 Rue Pierre-de-Coubertin, Montreal',
       true, 'split_equal',
-      'public', 'direct', 'Evening social pickleball - come hang out!', 'scheduled',
+      'public', 'direct', 'Evening social pickleball - come hang out!',
       now_time - INTERVAL '1 day', now_time - INTERVAL '1 day'
     );
     INSERT INTO match_participant (match_id, player_id, status, is_host, created_at, updated_at) VALUES
@@ -568,7 +568,7 @@ BEGIN
       match_type, format, player_expectation, duration, location_type,
       location_name,
       is_court_free, cost_split_type,
-      visibility, join_mode, notes, status, created_at, updated_at
+      visibility, join_mode, notes, created_at, updated_at
     ) VALUES (
       match_id, pickleball_sport_id, user_2, in_4_days,
       '14:00'::TIME, '16:00'::TIME, 'America/Montreal',
@@ -576,7 +576,7 @@ BEGIN
       'tbd'::location_type_enum,
       'TBD - West Island area',
       true, 'split_equal',
-      'public', 'direct', 'Looking for players in West Island - location flexible', 'scheduled',
+      'public', 'direct', 'Looking for players in West Island - location flexible',
       now_time - INTERVAL '1 day', now_time - INTERVAL '1 day'
     );
     
@@ -587,7 +587,7 @@ BEGIN
       match_type, format, player_expectation, duration, location_type,
       location_name, location_address,
       is_court_free, cost_split_type, estimated_cost,
-      visibility, join_mode, notes, status, created_at, updated_at
+      visibility, join_mode, notes, created_at, updated_at
     ) VALUES (
       match_id, pickleball_sport_id, user_4, two_days_ago,
       '11:00'::TIME, '13:00'::TIME, 'America/Montreal',
@@ -595,7 +595,7 @@ BEGIN
       'custom'::location_type_enum,
       'YMCA Centre-Ville', '1440 Rue Stanley, Montreal',
       false, 'split_equal', 25.00,
-      'public', 'direct', 'Great games! Thanks everyone!', 'completed',
+      'public', 'direct', 'Great games! Thanks everyone!',
       now_time - INTERVAL '7 days', now_time - INTERVAL '2 days'
     );
     INSERT INTO match_participant (match_id, player_id, status, is_host, created_at, updated_at) VALUES
@@ -610,7 +610,7 @@ BEGIN
       match_type, format, player_expectation, duration, location_type,
       location_name, location_address,
       is_court_free, cost_split_type, estimated_cost, preferred_opponent_gender, min_rating_score_id,
-      visibility, join_mode, notes, status, created_at, updated_at
+      visibility, join_mode, notes, created_at, updated_at
     ) VALUES (
       match_id, pickleball_sport_id, user_1, in_2_weeks,
       '08:00'::TIME, '10:00'::TIME, 'America/Montreal',
@@ -618,7 +618,7 @@ BEGIN
       'custom'::location_type_enum,
       'Centre Pierre-Charbonneau', '3000 Rue Viau, Montreal',
       false, 'split_equal', 40.00, 'male', pickleball_rating_35_id,
-      'public', 'direct', 'Mens competitive doubles - 3.5+ level', 'scheduled',
+      'public', 'direct', 'Mens competitive doubles - 3.5+ level',
       now_time - INTERVAL '3 days', now_time - INTERVAL '3 days'
     );
     INSERT INTO match_participant (match_id, player_id, status, is_host, created_at, updated_at)
@@ -655,10 +655,10 @@ BEGIN
   SELECT COUNT(*) INTO total_match_count FROM match;
   SELECT COUNT(*) INTO tennis_count FROM match m JOIN sport s ON m.sport_id = s.id WHERE s.name = 'tennis';
   SELECT COUNT(*) INTO pickleball_count FROM match m JOIN sport s ON m.sport_id = s.id WHERE s.name = 'pickleball';
-  SELECT COUNT(*) INTO scheduled_count FROM match WHERE status = 'scheduled';
-  SELECT COUNT(*) INTO completed_count FROM match WHERE status = 'completed';
-  SELECT COUNT(*) INTO cancelled_count FROM match WHERE status = 'cancelled';
-  SELECT COUNT(*) INTO in_progress_count FROM match WHERE status = 'in_progress';
+  SELECT COUNT(*) INTO scheduled_count FROM match WHERE cancelled_at IS NULL AND NOT EXISTS (SELECT 1 FROM match_result mr WHERE mr.match_id = match.id);
+  SELECT COUNT(*) INTO completed_count FROM match WHERE EXISTS (SELECT 1 FROM match_result mr WHERE mr.match_id = match.id);
+  SELECT COUNT(*) INTO cancelled_count FROM match WHERE cancelled_at IS NOT NULL;
+  SELECT COUNT(*) INTO in_progress_count FROM match WHERE cancelled_at IS NULL AND EXISTS (SELECT 1 FROM match_result mr WHERE mr.match_id = match.id);
   SELECT COUNT(*) INTO singles_count FROM match WHERE format = 'singles';
   SELECT COUNT(*) INTO doubles_count FROM match WHERE format = 'doubles';
   SELECT COUNT(*) INTO private_count FROM match WHERE visibility = 'private';

@@ -71,14 +71,6 @@ function emptyToUndefined(value: string | undefined): string | undefined {
  * Create a new match
  */
 export async function createMatch(input: CreateMatchInput): Promise<Match> {
-  // Map playerExpectation to match_type enum values
-  // Note: form values now match database enum values directly
-  const matchTypeMap: Record<string, 'casual' | 'competitive' | 'both'> = {
-    casual: 'casual',
-    competitive: 'competitive',
-    both: 'both',
-  };
-
   // Map costSplitType to database enum values
   const costSplitMap: Record<string, 'host_pays' | 'split_equal' | 'custom'> = {
     creator_pays: 'host_pays',
@@ -102,7 +94,7 @@ export async function createMatch(input: CreateMatchInput): Promise<Match> {
     start_time: input.startTime,
     end_time: input.endTime,
     timezone: input.timezone,
-    match_type: matchTypeMap[input.playerExpectation ?? 'both'] ?? 'both',
+    match_type: input.playerExpectation ?? 'both',
     format: input.format ?? 'singles',
     player_expectation: input.playerExpectation ?? 'both',
     duration: input.duration ?? '60',
@@ -124,7 +116,6 @@ export async function createMatch(input: CreateMatchInput): Promise<Match> {
     visibility: input.visibility ?? 'public',
     join_mode: input.joinMode ?? 'direct',
     notes: emptyToUndefined(input.notes),
-    status: 'scheduled',
   };
 
   const { data, error } = await supabase.from('match').insert(insertData).select().single();
@@ -350,19 +341,20 @@ export async function getMatchesWithDetails(
   options: {
     limit?: number;
     offset?: number;
-    status?: string;
     visibility?: 'public' | 'private';
     matchDateFrom?: string;
     matchDateTo?: string;
+    /** Filter only non-cancelled matches (default: true) */
+    excludeCancelled?: boolean;
   } = {}
 ) {
   const {
     limit = 50,
     offset = 0,
-    status,
     visibility = 'public',
     matchDateFrom,
     matchDateTo,
+    excludeCancelled = true,
   } = options;
 
   let query = supabase
@@ -416,8 +408,10 @@ export async function getMatchesWithDetails(
     .order('start_time', { ascending: true })
     .range(offset, offset + limit - 1);
 
-  if (status) {
-    query = query.eq('status', status);
+  // Filter out cancelled matches by checking cancelled_at is null
+  // Match status is now derived from cancelled_at, match_date, start_time, end_time
+  if (excludeCancelled) {
+    query = query.is('cancelled_at', null);
   }
 
   if (matchDateFrom) {
@@ -508,9 +502,9 @@ export async function getMatchesWithDetails(
  */
 export async function getMatchesByCreator(
   userId: string,
-  options: { status?: string; limit?: number; offset?: number } = {}
+  options: { excludeCancelled?: boolean; limit?: number; offset?: number } = {}
 ): Promise<Match[]> {
-  const { status, limit = 20, offset = 0 } = options;
+  const { excludeCancelled = true, limit = 20, offset = 0 } = options;
 
   let query = supabase
     .from('match')
@@ -520,8 +514,10 @@ export async function getMatchesByCreator(
     .order('start_time', { ascending: true })
     .range(offset, offset + limit - 1);
 
-  if (status) {
-    query = query.eq('status', status);
+  // Filter out cancelled matches by checking cancelled_at is null
+  // Match status is now derived from cancelled_at, match_date, start_time, end_time
+  if (excludeCancelled) {
+    query = query.is('cancelled_at', null);
   }
 
   const { data, error } = await query;
@@ -662,12 +658,10 @@ export async function cancelMatch(matchId: string, userId?: string): Promise<Mat
   }
 
   // Perform the cancellation - set cancelled_at timestamp
-  // Also update status for backward compatibility until column is dropped
   const { data, error } = await supabase
     .from('match')
     .update({
       cancelled_at: new Date().toISOString(),
-      status: 'cancelled', // Keep for backward compatibility
     })
     .eq('id', matchId)
     .select()
