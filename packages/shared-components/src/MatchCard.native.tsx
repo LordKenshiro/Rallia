@@ -654,11 +654,24 @@ const CardFooter: React.FC<CardFooterProps> = ({
     ctaTextColor = colors.text;
     ctaIcon = 'eye-outline';
   } else if (isOwner) {
-    // Owner (match not ended) → Edit (uses palette accent)
-    ctaLabel = t('match.cta.edit');
-    ctaBgColor = colors.paletteCta;
-    ctaTextColor = base.white;
-    ctaIcon = 'create-outline';
+    // Owner (match not ended) - check if participants have joined
+    // Only count joined participants (not the owner themselves)
+    const joinedParticipants = match.participants?.filter(p => p.status === 'joined') ?? [];
+    const hasJoinedParticipants = joinedParticipants.length > 0;
+
+    if (hasJoinedParticipants) {
+      // Only allow cancel when participants have joined
+      ctaLabel = t('match.cta.cancel');
+      ctaBgColor = status.error.DEFAULT;
+      ctaTextColor = base.white;
+      ctaIcon = 'close-circle-outline';
+    } else {
+      // Allow edit when no participants have joined
+      ctaLabel = t('match.cta.edit');
+      ctaBgColor = colors.paletteCta;
+      ctaTextColor = base.white;
+      ctaIcon = 'create-outline';
+    }
   } else if (isWaitlisted) {
     // User is waitlisted → On Waitlist (view to see options)
     ctaLabel = t('match.cta.waitlisted');

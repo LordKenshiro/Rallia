@@ -953,7 +953,28 @@ export const MatchDetailSheet: React.FC = () => {
     }
 
     // Host: Edit + Cancel buttons (only if match hasn't ended)
+    // Edit is only available if no other players have joined
     if (isCreator) {
+      const hasJoinedParticipants =
+        (match.participants?.filter(p => p.status === 'joined')?.length ?? 0) > 0;
+
+      if (hasJoinedParticipants) {
+        // Only show Cancel button when participants have joined
+        return (
+          <Button
+            variant="outline"
+            onPress={handleCancelMatch}
+            style={styles.actionButton}
+            themeColors={destructiveThemeColors}
+            isDark={isDark}
+            loading={isCancelling}
+          >
+            {t('matches.cancelMatch' as TranslationKey)}
+          </Button>
+        );
+      }
+
+      // Show both Edit and Cancel when no participants have joined
       return (
         <>
           <Button
