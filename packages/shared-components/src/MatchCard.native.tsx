@@ -2,9 +2,10 @@
  * MatchCard Component - Vibrant & Sporty Design
  *
  * A high-energy, athletic card design with:
- * - Dynamic gradient backgrounds based on match type
+ * - Dynamic gradient backgrounds based on match type (competitive/casual)
  * - Color bleed effect from accent strip
- * - Glassmorphism for premium "Ready to Play" matches
+ * - Animated gold border for "Ready to Play" matches (preserves base palette)
+ * - Pulsing animation for urgent matches (< 3 hours)
  * - Visual player slot indicators
  * - Match details as primary focus
  */
@@ -25,6 +26,7 @@ import {
   neutral,
   status,
   base,
+  duration,
 } from '@rallia/design-system';
 import type { MatchWithDetails } from '@rallia/shared-types';
 import {
@@ -45,12 +47,12 @@ import {
  * Match type color palettes for dynamic backgrounds
  * Built from @rallia/design-system tokens for consistency
  *
- * Palette Strategy:
+ * Simplified Palette Strategy:
  * - competitive: secondary (coral/red) - warm, energetic
- * - practice: status.info (blue) - calm, focused
  * - casual: primary (teal) - fresh, relaxed
- * - urgent: accent (amber/gold) - attention-grabbing
- * - default: primary + secondary blend
+ *
+ * Note: Urgent matches and ready-to-play status are handled via animations,
+ * not color changes, to preserve the competitive/casual visual identity.
  */
 const MATCH_PALETTES = {
   // Competitive matches - secondary palette (coral/red tones)
@@ -70,27 +72,6 @@ const MATCH_PALETTES = {
       accentEnd: secondary[300], // #f4a6a7
     },
   },
-  // Practice matches - info/blue palette (calm, focused)
-  // NOTE: Legacy support only - new matches use 'casual' instead
-  // Kept for backward compatibility with existing matches that have 'practice' in database
-  // Note: Blue gradients extend beyond core design system palette
-  // using standard Tailwind blue scale to complement status.info
-  practice: {
-    light: {
-      gradientStart: '#f0f9ff', // sky-50 - complements status.info
-      gradientMid: '#e0f2fe', // sky-100
-      gradientEnd: neutral[50],
-      accentStart: status.info.DEFAULT,
-      accentEnd: status.info.light,
-    },
-    dark: {
-      gradientStart: '#0c1929', // dark sky-tinted
-      gradientMid: '#0a1420', // darker sky-tinted
-      gradientEnd: neutral[950],
-      accentStart: status.info.light,
-      accentEnd: status.info.DEFAULT,
-    },
-  },
   // Casual matches - primary palette (teal/mint - fresh, relaxed)
   casual: {
     light: {
@@ -108,40 +89,6 @@ const MATCH_PALETTES = {
       accentEnd: primary[300], // #5eead4
     },
   },
-  // Urgent matches (< 3 hours) - red-orange warning palette (distinct from gold)
-  urgent: {
-    light: {
-      gradientStart: '#fff5f0', // warm red-tinted white
-      gradientMid: '#ffe4d6', // light coral/orange
-      gradientEnd: neutral[50],
-      accentStart: status.warning.DEFAULT, // #f59e0b - amber
-      accentEnd: status.error.DEFAULT, // #ef4444 - red
-    },
-    dark: {
-      gradientStart: '#2d1a14', // dark red-tinted
-      gradientMid: '#261712', // darker red-tinted
-      gradientEnd: neutral[950],
-      accentStart: status.warning.light, // #fbbf24 - lighter amber
-      accentEnd: status.error.light, // #f87171 - lighter red
-    },
-  },
-  // Default - balanced primary/secondary gradient
-  default: {
-    light: {
-      gradientStart: primary[50],
-      gradientMid: `${primary[100]}80`, // 50% opacity blend
-      gradientEnd: neutral[50],
-      accentStart: primary[500],
-      accentEnd: secondary[500],
-    },
-    dark: {
-      gradientStart: primary[950],
-      gradientMid: primary[900],
-      gradientEnd: neutral[950],
-      accentStart: primary[400],
-      accentEnd: secondary[400],
-    },
-  },
 } as const;
 
 // =============================================================================
@@ -156,42 +103,37 @@ const GRADIENT_STRIP_HEIGHT = 4;
 const SLOT_SIZE = 32;
 
 /**
- * Premium/Gold card colors for "Ready to Play" matches
- * Rich, luxurious gold palette - distinct from urgent amber/red
- * Uses deeper, richer gold tones for premium feel
+ * Ready-to-Play colors using design system accent scale
+ * These colors are used for the animated gold border on reserved court matches
  */
-const GOLD_COLORS = {
-  light: '#FFE55C', // Bright gold - more vibrant than accent
-  base: '#FFD700', // Classic gold - richer than accent[400]
-  dark: '#FFC107', // Deep gold - warmer than accent[500]
-  deepGold: '#D4AF37', // Rich gold - more luxurious
-  bronze: '#CD7F32', // Bronze accent - adds depth
-  shimmer: '#FFF8DC', // Cream shimmer - softer than accent[50]
+const READY_TO_PLAY_COLORS = {
+  light: {
+    border: accent[400], // #fbbf24 - main border color
+    glow: accent[300], // #fcd34d - outer glow
+    shimmer: accent[100], // #fef3c7 - inner highlight
+    shadow: accent[500], // #f59e0b - shadow color
+  },
+  dark: {
+    border: accent[500], // #f59e0b - main border color
+    glow: accent[400], // #fbbf24 - outer glow
+    shimmer: accent[200], // #fde68a - inner highlight
+    shadow: accent[600], // #d97706 - shadow color
+  },
 } as const;
 
 /**
- * Determine which color palette to use based on match characteristics
+ * Determine which color palette to use based on match type
+ * Simplified to only competitive vs casual - urgency handled via animation
  */
-type PaletteType = 'competitive' | 'practice' | 'casual' | 'urgent' | 'default';
+type PaletteType = 'competitive' | 'casual';
 
-function getMatchPalette(playerExpectation: string | null, isUrgent: boolean): PaletteType {
-  // Urgent matches take priority - they need attention
-  if (isUrgent) {
-    return 'urgent';
+function getMatchPalette(playerExpectation: string | null): PaletteType {
+  // Competitive matches use secondary (coral) palette
+  if (playerExpectation === 'competitive') {
+    return 'competitive';
   }
-
-  // Then check player expectation
-  switch (playerExpectation) {
-    case 'competitive':
-      return 'competitive';
-    case 'casual':
-      return 'casual';
-    case 'practice':
-      // Legacy 'practice' values map to 'casual' for consistency
-      return 'casual';
-    default:
-      return 'casual';
-  }
+  // All other matches (casual, practice, null) use primary (teal) palette
+  return 'casual';
 }
 
 // =============================================================================
@@ -234,6 +176,10 @@ interface ThemeColors {
   slotEmpty: string;
   slotEmptyBorder: string;
   avatarPlaceholder: string;
+  // Palette-aware colors (set based on competitive/casual)
+  paletteAccent: string;
+  paletteAccentLight: string;
+  paletteCta: string;
 }
 
 // =============================================================================
@@ -365,6 +311,7 @@ function getStatusInfo(
 
 /**
  * Get player expectation display
+ * Uses palette colors for consistency with card design
  */
 function getPlayerExpectationInfo(
   expectation: string | null,
@@ -375,31 +322,32 @@ function getPlayerExpectationInfo(
     case 'competitive':
       return {
         label: t('match.type.competitive'),
-        bgColor: secondary[500],
+        bgColor: isDark ? secondary[600] : secondary[500],
         textColor: base.white,
         icon: 'trophy',
       };
     case 'casual':
+      // Use primary (teal) colors to match the casual card palette
       return {
         label: t('match.type.casual'),
-        bgColor: isDark ? neutral[600] : neutral[300],
+        bgColor: isDark ? primary[700] : primary[500],
+        textColor: base.white,
         icon: 'happy',
-        textColor: isDark ? neutral[200] : neutral[700],
       };
     case 'practice':
       // Legacy 'practice' values map to 'casual' for consistency
       return {
         label: t('match.type.casual'),
-        bgColor: isDark ? neutral[600] : neutral[300],
+        bgColor: isDark ? primary[700] : primary[500],
+        textColor: base.white,
         icon: 'happy',
-        textColor: isDark ? neutral[200] : neutral[700],
       };
     default:
       return {
         label: t('match.type.casual'),
-        bgColor: isDark ? neutral[600] : neutral[300],
+        bgColor: isDark ? primary[700] : primary[500],
+        textColor: base.white,
         icon: 'happy',
-        textColor: isDark ? neutral[200] : neutral[700],
       };
   }
 }
@@ -417,20 +365,15 @@ interface GradientStripProps {
 /**
  * Smooth gradient accent strip at the top of the card
  * Uses expo-linear-gradient for a true gradient effect
- * Gold gradient for "Ready to Play" matches
- * Dynamic colors based on match type palette
+ * Always uses palette colors (competitive/casual) - ready-to-play adds gold border separately
  */
 const GradientStrip: React.FC<GradientStripProps> = ({ isDark, isReadyToPlay, palette }) => {
   const paletteColors = MATCH_PALETTES[palette][isDark ? 'dark' : 'light'];
+  const rtpColors = READY_TO_PLAY_COLORS[isDark ? 'dark' : 'light'];
 
+  // Ready-to-play cards get a gold shimmer gradient overlay on top of palette colors
   const colors: [string, string, ...string[]] = isReadyToPlay
-    ? [
-        GOLD_COLORS.bronze,
-        GOLD_COLORS.base,
-        GOLD_COLORS.light,
-        GOLD_COLORS.base,
-        GOLD_COLORS.bronze,
-      ]
+    ? [rtpColors.shimmer, rtpColors.border, rtpColors.glow, rtpColors.border, rtpColors.shimmer]
     : [paletteColors.accentStart, paletteColors.accentEnd];
 
   return (
@@ -445,34 +388,18 @@ const GradientStrip: React.FC<GradientStripProps> = ({ isDark, isReadyToPlay, pa
 
 interface CardBackgroundProps {
   isDark: boolean;
-  isReadyToPlay?: boolean;
   palette: PaletteType;
 }
 
 /**
  * Dynamic gradient background that creates the "color bleed" effect
  * The accent colors fade into the card background for visual continuity
+ * Always uses palette colors - ready-to-play status is indicated via border, not background
  */
-const CardBackground: React.FC<CardBackgroundProps> = ({ isDark, isReadyToPlay, palette }) => {
+const CardBackground: React.FC<CardBackgroundProps> = ({ isDark, palette }) => {
   const paletteColors = MATCH_PALETTES[palette][isDark ? 'dark' : 'light'];
 
-  if (isReadyToPlay) {
-    // Premium glassmorphism-inspired background with rich gold tint
-    // Uses richer gold colors distinct from urgent amber/red
-    return (
-      <LinearGradient
-        colors={
-          isDark
-            ? ['#3D3422', '#2A2418', neutral[950]] // Rich dark gold-tinted gradient
-            : [GOLD_COLORS.shimmer, '#FFFBF0', base.white] // Rich light gold-tinted gradient
-        }
-        locations={[0, 0.4, 1]}
-        style={styles.cardBackgroundGradient}
-      />
-    );
-  }
-
-  // Dynamic gradient based on match type
+  // Dynamic gradient based on match type (competitive or casual)
   return (
     <LinearGradient
       colors={[paletteColors.gradientStart, paletteColors.gradientMid, paletteColors.gradientEnd]}
@@ -542,16 +469,27 @@ const PlayerSlots: React.FC<PlayerSlotsProps> = ({ match, participantInfo, color
                 index > 0 && { marginLeft: -8 }, // Overlap avatars
                 slot.filled
                   ? {
-                      backgroundColor: slot.avatarUrl ? colors.primary : colors.avatarPlaceholder,
-                      borderWidth: 2,
-                      borderColor: colors.cardBackground,
+                      backgroundColor: slot.avatarUrl
+                        ? colors.paletteAccent
+                        : colors.avatarPlaceholder,
+                      borderWidth: slot.isHost ? 2.5 : 2,
+                      borderColor: slot.isHost ? colors.paletteAccent : colors.paletteAccentLight, // Subtle palette accent for filled avatars
+                      shadowColor: slot.isHost ? colors.paletteAccent : colors.paletteAccentLight,
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: slot.isHost ? 0.3 : 0.15,
+                      shadowRadius: 4,
+                      elevation: slot.isHost ? 3 : 2,
                     }
                   : {
                       backgroundColor: colors.slotEmpty,
                       borderWidth: 2,
                       borderColor: colors.slotEmptyBorder,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 2,
+                      elevation: 1,
                     },
-                slot.isHost && { borderWidth: 2, borderColor: colors.secondary },
               ]}
             >
               {slot.filled ? (
@@ -565,7 +503,7 @@ const PlayerSlots: React.FC<PlayerSlotsProps> = ({ match, participantInfo, color
               )}
             </View>
             {slot.isHost && (
-              <View style={[styles.hostIndicator, { backgroundColor: colors.secondary }]}>
+              <View style={[styles.hostIndicator, { backgroundColor: colors.paletteAccent }]}>
                 <Ionicons name="star" size={6} color={base.white} />
               </View>
             )}
@@ -716,16 +654,16 @@ const CardFooter: React.FC<CardFooterProps> = ({
     ctaTextColor = colors.text;
     ctaIcon = 'eye-outline';
   } else if (isOwner) {
-    // Owner (match not ended) → Edit
+    // Owner (match not ended) → Edit (uses palette accent)
     ctaLabel = t('match.cta.edit');
-    ctaBgColor = colors.primary;
+    ctaBgColor = colors.paletteCta;
     ctaTextColor = base.white;
     ctaIcon = 'create-outline';
   } else if (isWaitlisted) {
     // User is waitlisted → On Waitlist (view to see options)
     ctaLabel = t('match.cta.waitlisted');
-    ctaBgColor = isDark ? neutral[700] : neutral[200];
-    ctaTextColor = colors.text;
+    ctaBgColor = colors.paletteAccentLight;
+    ctaTextColor = colors.paletteAccent;
     ctaIcon = 'list-outline';
   } else if (hasJoined) {
     // User has joined (match not ended) → Leave
@@ -736,26 +674,26 @@ const CardFooter: React.FC<CardFooterProps> = ({
   } else if (hasPendingRequest) {
     // User has pending request → Pending (disabled)
     ctaLabel = t('match.cta.pending');
-    ctaBgColor = isDark ? neutral[700] : neutral[200];
+    ctaBgColor = colors.paletteAccentLight;
     ctaTextColor = colors.textMuted;
     ctaDisabled = true;
     ctaIcon = 'hourglass-outline';
   } else if (isFull) {
-    // Match is full → Join Waitlist
+    // Match is full → Join Waitlist (uses palette accent)
     ctaLabel = t('match.cta.joinWaitlist');
-    ctaBgColor = colors.primary;
+    ctaBgColor = colors.paletteCta;
     ctaTextColor = base.white;
     ctaIcon = 'list-outline';
   } else if (isRequestMode) {
-    // Request mode → Ask to Join
+    // Request mode → Ask to Join (uses palette accent)
     ctaLabel = t('match.cta.askToJoin');
-    ctaBgColor = colors.primary;
+    ctaBgColor = colors.paletteCta;
     ctaTextColor = base.white;
     ctaIcon = 'hand-left-outline';
   } else {
-    // Default → Join
+    // Default → Join (uses palette accent)
     ctaLabel = t('match.cta.join');
-    ctaBgColor = colors.primary;
+    ctaBgColor = colors.paletteCta;
     ctaTextColor = base.white;
     ctaIcon = 'arrow-forward';
   }
@@ -799,23 +737,29 @@ const MatchCard: React.FC<MatchCardProps> = ({
   // Check if this is a "Ready to Play" match (court already reserved)
   const isReadyToPlay = match.court_status === 'reserved';
 
-  // Animated glow effect for premium cards - smooth, polished breathing effect
+  // Get ready-to-play colors from design system
+  const rtpColors = READY_TO_PLAY_COLORS[isDark ? 'dark' : 'light'];
+
+  // Animated glow effect for ready-to-play cards - smooth, polished breathing effect
   const glowAnimation = useRef(new Animated.Value(0)).current;
+
+  // Animated pulse effect for urgent matches
+  const urgentPulseAnimation = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (isReadyToPlay) {
-      // Main glow pulse - slower, smoother breathing effect with bezier easing
+      // Main glow pulse - slower, smoother breathing effect using design system duration
       const mainGlow = Animated.loop(
         Animated.sequence([
           Animated.timing(glowAnimation, {
             toValue: 1,
-            duration: 3000,
+            duration: duration.verySlow * 3, // 2400ms for smooth breathing
             easing: Easing.bezier(0.4, 0, 0.2, 1), // Smooth ease-in-out
             useNativeDriver: false,
           }),
           Animated.timing(glowAnimation, {
             toValue: 0,
-            duration: 3000,
+            duration: duration.verySlow * 3,
             easing: Easing.bezier(0.4, 0, 0.2, 1),
             useNativeDriver: false,
           }),
@@ -829,7 +773,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
     }
   }, [isReadyToPlay, glowAnimation]);
 
-  // Interpolate shadow for outer glow effect
+  // Interpolate shadow for outer glow effect using design system accent colors
   const animatedShadowOpacity = glowAnimation.interpolate({
     inputRange: [0, 0.5, 1],
     outputRange: [0.2, 0.5, 0.2],
@@ -840,22 +784,22 @@ const MatchCard: React.FC<MatchCardProps> = ({
     outputRange: [16, 28, 16],
   });
 
-  // Main border color - smooth transition through gold spectrum
+  // Main border color - smooth transition through gold spectrum using design system accent
   const animatedBorderColor = glowAnimation.interpolate({
     inputRange: [0, 0.25, 0.5, 0.75, 1],
     outputRange: [
-      GOLD_COLORS.deepGold,
-      GOLD_COLORS.bronze,
-      GOLD_COLORS.base,
-      GOLD_COLORS.light,
-      GOLD_COLORS.base,
+      accent[600], // Deep gold
+      accent[500], // Mid gold
+      accent[400], // Bright gold
+      accent[300], // Light gold
+      accent[400], // Back to bright
     ],
   });
 
   // Outer glow border - more subtle, wider
   const animatedOuterGlowOpacity = glowAnimation.interpolate({
     inputRange: [0, 0.5, 1],
-    outputRange: [0.3, 0.6, 0.3],
+    outputRange: [0.3, 0.7, 0.3],
   });
 
   // Inner glow border - subtle highlight
@@ -864,7 +808,11 @@ const MatchCard: React.FC<MatchCardProps> = ({
     outputRange: [0.4, 0.8, 0.4],
   });
 
-  // Theme colors
+  // Determine color palette based on match type (competitive vs casual)
+  const palette = getMatchPalette(match.player_expectation);
+  const isCompetitive = palette === 'competitive';
+
+  // Theme colors with palette-aware accent colors
   const themeColors = isDark ? darkTheme : lightTheme;
   const colors: ThemeColors = useMemo(
     () => ({
@@ -882,10 +830,33 @@ const MatchCard: React.FC<MatchCardProps> = ({
       statusFull: status.warning.DEFAULT,
       statusCompleted: status.info.DEFAULT,
       slotEmpty: isDark ? neutral[800] : neutral[100],
-      slotEmptyBorder: isDark ? neutral[600] : neutral[300],
+      slotEmptyBorder: isDark ? neutral[500] : neutral[400], // Better contrast for empty slots
       avatarPlaceholder: isDark ? neutral[700] : neutral[200],
+      // Palette-aware colors for consistent theming
+      paletteAccent: isCompetitive
+        ? isDark
+          ? secondary[400]
+          : secondary[500]
+        : isDark
+          ? primary[400]
+          : primary[500],
+      // Subtle border color - visible but not overpowering
+      paletteAccentLight: isCompetitive
+        ? isDark
+          ? secondary[700] // Darker in dark mode for visibility
+          : secondary[200] // Slightly more saturated in light mode
+        : isDark
+          ? primary[700]
+          : primary[200],
+      paletteCta: isCompetitive
+        ? isDark
+          ? secondary[500]
+          : secondary[500]
+        : isDark
+          ? primary[500]
+          : primary[600],
     }),
-    [themeColors, isDark]
+    [themeColors, isDark, isCompetitive]
   );
 
   // Computed values
@@ -912,8 +883,68 @@ const MatchCard: React.FC<MatchCardProps> = ({
   const courtDisplay = getCourtDisplay(match);
   const expectationInfo = getPlayerExpectationInfo(match.player_expectation, isDark, t);
 
-  // Determine color palette based on match characteristics
-  const palette = getMatchPalette(match.player_expectation, isUrgent);
+  // Determine animation type:
+  // - "in_progress" = ongoing match = live indicator animation
+  // - "isUrgent" (< 3 hours) but not in_progress = starting soon = countdown animation
+  const isOngoing = derivedStatus === 'in_progress';
+  const isStartingSoon = isUrgent && !isOngoing;
+
+  // Start animation when match is urgent or ongoing
+  useEffect(() => {
+    if (isOngoing || isStartingSoon) {
+      const animationDuration = isOngoing ? duration.extraSlow : duration.verySlow; // Faster for live, slower for countdown
+      const pulseAnim = Animated.loop(
+        Animated.sequence([
+          Animated.timing(urgentPulseAnimation, {
+            toValue: 1,
+            duration: animationDuration,
+            easing: Easing.bezier(0.4, 0, 0.2, 1),
+            useNativeDriver: true,
+          }),
+          Animated.timing(urgentPulseAnimation, {
+            toValue: 0,
+            duration: animationDuration,
+            easing: Easing.bezier(0.4, 0, 0.2, 1),
+            useNativeDriver: true,
+          }),
+        ])
+      );
+
+      pulseAnim.start();
+      return () => {
+        pulseAnim.stop();
+      };
+    }
+  }, [isOngoing, isStartingSoon, urgentPulseAnimation]);
+
+  // "Live indicator" interpolations for ongoing matches
+  // Ring expands outward and fades
+  const liveRingScale = urgentPulseAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 2.5],
+  });
+
+  const liveRingOpacity = urgentPulseAnimation.interpolate({
+    inputRange: [0, 0.3, 1],
+    outputRange: [0.8, 0.4, 0],
+  });
+
+  // Core dot has subtle glow pulse
+  const liveDotOpacity = urgentPulseAnimation.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [1, 0.7, 1],
+  });
+
+  // "Starting soon" interpolations - subtle bouncing chevron
+  const countdownBounce = urgentPulseAnimation.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0, 3, 0], // Subtle horizontal bounce
+  });
+
+  const countdownOpacity = urgentPulseAnimation.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0.6, 1, 0.6],
+  });
 
   // Cost display
   const costDisplay = match.is_court_free
@@ -939,13 +970,13 @@ const MatchCard: React.FC<MatchCardProps> = ({
     });
   }
 
-  // Min rating badge
+  // Min rating badge (uses palette accent for consistency)
   if (match.min_rating_score) {
     badges.push({
       key: 'rating',
       label: match.min_rating_score.label,
-      bgColor: colors.primary,
-      textColor: base.white,
+      bgColor: colors.paletteAccentLight,
+      textColor: colors.paletteAccent,
       icon: 'analytics',
     });
   }
@@ -978,13 +1009,13 @@ const MatchCard: React.FC<MatchCardProps> = ({
   //   });
   // }
 
-  // Cost badge
+  // Cost badge (uses palette accent for consistency)
   if (costDisplay) {
     badges.push({
       key: 'cost',
       label: costDisplay,
-      bgColor: match.is_court_free ? `${status.success.DEFAULT}20` : `${colors.primary}20`,
-      textColor: match.is_court_free ? status.success.DEFAULT : colors.primary,
+      bgColor: match.is_court_free ? `${status.success.DEFAULT}20` : colors.paletteAccentLight,
+      textColor: match.is_court_free ? status.success.DEFAULT : colors.paletteAccent,
       icon: match.is_court_free ? 'checkmark-circle' : 'cash-outline',
     });
   }
@@ -998,15 +1029,16 @@ const MatchCard: React.FC<MatchCardProps> = ({
         {
           shadowOpacity: animatedShadowOpacity,
           shadowRadius: animatedShadowRadius,
-          shadowColor: GOLD_COLORS.base,
+          shadowColor: rtpColors.shadow,
         },
       ]
     : undefined;
 
   // Get dynamic border color based on palette
   const paletteColors = MATCH_PALETTES[palette][isDark ? 'dark' : 'light'];
+  // Ready-to-play uses design system accent colors for border
   const dynamicBorderColor = isReadyToPlay
-    ? GOLD_COLORS.deepGold
+    ? rtpColors.border
     : isDark
       ? `${paletteColors.accentStart}40` // 25% opacity accent border in dark mode
       : `${paletteColors.accentStart}20`; // 12% opacity accent border in light mode
@@ -1027,10 +1059,10 @@ const MatchCard: React.FC<MatchCardProps> = ({
         accessibilityRole="button"
         accessibilityLabel={`Match ${timeLabel} at ${locationDisplay}${isReadyToPlay ? ' - Ready to Play' : ''}`}
       >
-        {/* Dynamic gradient background - creates color bleed effect */}
-        <CardBackground isDark={isDark} isReadyToPlay={isReadyToPlay} palette={palette} />
+        {/* Dynamic gradient background - always uses palette colors (competitive/casual) */}
+        <CardBackground isDark={isDark} palette={palette} />
 
-        {/* Multi-layer animated gold border for premium cards - creates polished glow effect */}
+        {/* Multi-layer animated gold border for ready-to-play cards using design system accent */}
         {isReadyToPlay && (
           <>
             {/* Outer glow layer - widest, most subtle */}
@@ -1039,7 +1071,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
                 styles.premiumBorderOverlay,
                 styles.premiumBorderOuter,
                 {
-                  borderColor: GOLD_COLORS.base,
+                  borderColor: rtpColors.glow,
                   opacity: animatedOuterGlowOpacity,
                 },
               ]}
@@ -1062,7 +1094,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
                 styles.premiumBorderOverlay,
                 styles.premiumBorderInner,
                 {
-                  borderColor: GOLD_COLORS.light,
+                  borderColor: rtpColors.shimmer,
                   opacity: animatedInnerGlowOpacity,
                 },
               ]}
@@ -1079,36 +1111,66 @@ const MatchCard: React.FC<MatchCardProps> = ({
           {/* Time & Status row */}
           <View style={styles.topRow}>
             <View style={styles.timeContainer}>
-              {/* Urgent pulse indicator */}
-              {isUrgent && (
-                <View style={styles.urgentPulseContainer}>
-                  <View
+              {/* "Live" indicator for ongoing matches */}
+              {isOngoing && (
+                <View style={styles.liveIndicatorContainer}>
+                  {/* Expanding ring that fades out */}
+                  <Animated.View
                     style={[
-                      styles.urgentPulseDot,
+                      styles.liveRing,
                       {
-                        backgroundColor:
-                          MATCH_PALETTES.urgent[isDark ? 'dark' : 'light'].accentStart,
+                        backgroundColor: status.error.DEFAULT,
+                        transform: [{ scale: liveRingScale }],
+                        opacity: liveRingOpacity,
+                      },
+                    ]}
+                  />
+                  {/* Solid core dot */}
+                  <Animated.View
+                    style={[
+                      styles.liveDot,
+                      {
+                        backgroundColor: status.error.DEFAULT,
+                        opacity: liveDotOpacity,
                       },
                     ]}
                   />
                 </View>
               )}
+              {/* Bouncing chevron for starting soon */}
+              {isStartingSoon && (
+                <Animated.View
+                  style={[
+                    styles.countdownIndicator,
+                    {
+                      transform: [{ translateX: countdownBounce }],
+                      opacity: countdownOpacity,
+                    },
+                  ]}
+                >
+                  <Ionicons name="chevron-forward" size={14} color={status.warning.DEFAULT} />
+                </Animated.View>
+              )}
               <Ionicons
-                name={isUrgent ? 'time' : 'calendar-outline'}
+                name={isOngoing ? 'radio' : isStartingSoon ? 'time' : 'calendar-outline'}
                 size={16}
                 color={
-                  isUrgent
-                    ? MATCH_PALETTES.urgent[isDark ? 'dark' : 'light'].accentStart
-                    : colors.primary
+                  isOngoing
+                    ? status.error.DEFAULT
+                    : isStartingSoon
+                      ? status.warning.DEFAULT
+                      : colors.paletteAccent
                 }
               />
               <Text
                 size="base"
                 weight="bold"
                 color={
-                  isUrgent
-                    ? MATCH_PALETTES.urgent[isDark ? 'dark' : 'light'].accentStart
-                    : colors.text
+                  isOngoing
+                    ? status.error.DEFAULT
+                    : isStartingSoon
+                      ? status.warning.DEFAULT
+                      : colors.text
                 }
                 style={styles.timeText}
                 numberOfLines={1}
@@ -1269,17 +1331,34 @@ const styles = StyleSheet.create({
     marginLeft: spacingPixels[1.5],
     flexShrink: 1,
   },
-  urgentPulseContainer: {
+  // "Live" indicator styles for ongoing matches
+  liveIndicatorContainer: {
+    width: 10,
+    height: 10,
     marginRight: spacingPixels[1.5],
     alignItems: 'center',
     justifyContent: 'center',
   },
-  urgentPulseDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    // Note: For a true pulsing effect, you'd need to add an Animated wrapper
-    // This static dot still provides a visual cue
+  liveRing: {
+    position: 'absolute',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    // Subtle shadow for depth
+    shadowColor: '#ef4444',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  // "Starting soon" countdown indicator
+  countdownIndicator: {
+    marginRight: spacingPixels[0.5],
   },
 
   // Status badge
@@ -1340,6 +1419,11 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: base.white,
     zIndex: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    elevation: 4,
   },
   spotsText: {
     marginLeft: spacingPixels[2],
