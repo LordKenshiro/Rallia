@@ -14,6 +14,8 @@ export * from './useSports';
 export * from './usePlayerSports';
 export * from './usePlayer';
 export * from './useNotifications';
+export * from './useNotificationRealtime';
+export * from './useNotificationPreferences';
 export * from './useCreateMatch';
 export * from './useUpdateMatch';
 export * from './useMatches';

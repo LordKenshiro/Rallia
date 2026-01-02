@@ -4,6 +4,15 @@
  */
 
 import { supabase } from '../supabase';
+import {
+  notifyMatchJoinRequest,
+  notifyJoinRequestAccepted,
+  notifyJoinRequestRejected,
+  notifyPlayerJoined,
+  notifyPlayerLeft,
+  notifyMatchCancelled,
+  notifyPlayerKicked,
+} from '../notifications/notificationFactory';
 import type {
   Match,
   TablesInsert,
@@ -671,6 +680,34 @@ export async function cancelMatch(matchId: string, userId?: string): Promise<Mat
     throw new Error(`Failed to cancel match: ${error.message}`);
   }
 
+  // Notify all joined participants about the cancellation
+  // First, get all participant IDs (excluding the host who cancelled)
+  const { data: participantsData } = await supabase
+    .from('match_participant')
+    .select('player_id')
+    .eq('match_id', matchId)
+    .eq('status', 'joined');
+
+  if (participantsData && participantsData.length > 0) {
+    const participantIds = participantsData.map(p => p.player_id).filter(id => id !== userId); // Exclude the host
+
+    if (participantIds.length > 0) {
+      // Get sport name for better notification
+      const { data: matchDetails } = await supabase
+        .from('match')
+        .select('sport:sport_id (name)')
+        .eq('id', matchId)
+        .single();
+
+      const sportName = (matchDetails?.sport as { name?: string } | null)?.name ?? 'Match';
+
+      // Send notifications (fire and forget)
+      notifyMatchCancelled(participantIds, matchId, match.match_date, sportName).catch(err => {
+        console.error('Failed to send match cancelled notifications:', err);
+      });
+    }
+  }
+
   return data as Match;
 }
 
@@ -858,6 +895,95 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
     participant = newParticipant as MatchParticipant;
   }
 
+  // Get player name for notifications (player.id = profile.id)
+  const { data: profileData } = await supabase
+    .from('profile')
+    .select('full_name, display_name')
+    .eq('id', playerId)
+    .single();
+
+  // Prefer full_name, fall back to display_name
+  const playerName = profileData?.full_name || profileData?.display_name || 'A player';
+
+  // Send notification to host if this is a join request
+  if (participantStatus === 'requested') {
+    // Notify the host (fire and forget - don't block on notification)
+    notifyMatchJoinRequest(match.created_by, matchId, playerName).catch(err => {
+      console.error('Failed to send join request notification:', err);
+    });
+  }
+
+  // Send notifications to host and participants when a player directly joins (open access)
+  if (participantStatus === 'joined') {
+    // Get all joined participants (excluding the new player)
+    const otherParticipants =
+      match.participants?.filter(
+        (p: { player_id: string; status: string }) =>
+          p.status === 'joined' && p.player_id !== playerId
+      ) ?? [];
+
+    // Collect all user IDs to notify: host + other participants
+    const userIdsToNotify = [
+      match.created_by, // Always notify the host
+      ...otherParticipants.map((p: { player_id: string }) => p.player_id),
+    ];
+
+    // Remove duplicates (in case host is somehow in participants)
+    const uniqueUserIds = [...new Set(userIdsToNotify)];
+
+    if (uniqueUserIds.length > 0) {
+      // Fetch match details for more informative notification
+      const { data: matchDetails } = await supabase
+        .from('match')
+        .select(
+          `
+          sport:sport_id (name),
+          location_type,
+          location_name,
+          match_date,
+          start_time
+        `
+        )
+        .eq('id', matchId)
+        .single();
+
+      const sportName = (matchDetails?.sport as { name?: string } | null)?.name;
+      // Don't include location if it's TBD
+      const locationName =
+        matchDetails?.location_type === 'tbd' ? undefined : matchDetails?.location_name;
+
+      // Format match date
+      let formattedDate: string | undefined;
+      if (matchDetails?.match_date && matchDetails?.start_time) {
+        try {
+          const matchDateTime = new Date(`${matchDetails.match_date}T${matchDetails.start_time}`);
+          formattedDate = matchDateTime.toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+          });
+        } catch {
+          // Fallback to raw date if parsing fails
+          formattedDate = matchDetails.match_date;
+        }
+      }
+
+      // Notify all users (fire and forget - don't block on notification)
+      notifyPlayerJoined(
+        uniqueUserIds,
+        matchId,
+        playerName,
+        sportName,
+        formattedDate,
+        locationName
+      ).catch(err => {
+        console.error('Failed to send player joined notifications:', err);
+      });
+    }
+  }
+
   return {
     participant: participant as MatchParticipant,
     status: participantStatus,
@@ -871,10 +997,19 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
  * @throws Error if user is the host, not a participant, or match not found
  */
 export async function leaveMatch(matchId: string, playerId: string): Promise<void> {
-  // First check if user is the match creator (hosts cannot leave, they must cancel)
+  // First check if user is the match creator and get match details
   const { data: match, error: matchError } = await supabase
     .from('match')
-    .select('created_by')
+    .select(
+      `
+      created_by,
+      sport:sport_id (name),
+      participants:match_participant (
+        player_id,
+        status
+      )
+    `
+    )
     .eq('id', matchId)
     .single();
 
@@ -904,6 +1039,40 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
 
   if (!data) {
     throw new Error('You are not a participant in this match');
+  }
+
+  // Send notifications to host and remaining participants
+  // Get player name for notification
+  const { data: profileData } = await supabase
+    .from('profile')
+    .select('full_name, display_name')
+    .eq('id', playerId)
+    .single();
+
+  const playerName = profileData?.full_name || profileData?.display_name || 'A player';
+  const sportName = (match.sport as { name?: string } | null)?.name;
+
+  // Get all remaining joined participants (excluding the player who left)
+  const remainingParticipants =
+    match.participants?.filter(
+      (p: { player_id: string; status: string }) =>
+        p.status === 'joined' && p.player_id !== playerId
+    ) ?? [];
+
+  // Recipients include the host and remaining joined participants
+  const userIdsToNotify = [
+    match.created_by,
+    ...remainingParticipants.map((p: { player_id: string }) => p.player_id),
+  ];
+
+  // Remove duplicates
+  const uniqueUserIds = [...new Set(userIdsToNotify)];
+
+  if (uniqueUserIds.length > 0) {
+    // Notify all users (fire and forget - don't block on notification)
+    notifyPlayerLeft(uniqueUserIds, matchId, playerName, sportName).catch(err => {
+      console.error('Failed to send player left notifications:', err);
+    });
   }
 }
 
@@ -1033,6 +1202,16 @@ export async function acceptJoinRequest(
     throw new Error(`Failed to accept join request: ${updateError.message}`);
   }
 
+  // Notify the player that their request was accepted (fire and forget)
+  notifyJoinRequestAccepted(
+    participant.player_id,
+    matchId,
+    match.match_date,
+    undefined // sportName - would need additional query to get
+  ).catch(err => {
+    console.error('Failed to send join accepted notification:', err);
+  });
+
   return updatedParticipant as MatchParticipant;
 }
 
@@ -1126,6 +1305,18 @@ export async function rejectJoinRequest(
 
   if (updateError) {
     throw new Error(`Failed to reject join request: ${updateError.message}`);
+  }
+
+  // Get the participant's player_id to notify them
+  const participantRecord = match.participants?.find(
+    (p: { id: string }) => p.id === participantId
+  ) as { player_id: string } | undefined;
+
+  if (participantRecord?.player_id) {
+    // Notify the player that their request was rejected (fire and forget)
+    notifyJoinRequestRejected(participantRecord.player_id, matchId).catch(err => {
+      console.error('Failed to send join rejected notification:', err);
+    });
   }
 
   return updatedParticipant as MatchParticipant;
@@ -1266,6 +1457,17 @@ export async function kickParticipant(
 
   if (updateError) {
     throw new Error(`Failed to kick participant: ${updateError.message}`);
+  }
+
+  // Notify the kicked player (fire and forget)
+  const participantRecord = match.participants?.find(
+    (p: { id: string }) => p.id === participantId
+  ) as { player_id: string } | undefined;
+
+  if (participantRecord?.player_id) {
+    notifyPlayerKicked(participantRecord.player_id, matchId).catch(err => {
+      console.error('Failed to send kicked notification:', err);
+    });
   }
 
   return updatedParticipant as MatchParticipant;

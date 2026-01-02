@@ -87,6 +87,33 @@ export type NotificationTypeEnum = DbEnum<'notification_type_enum'>;
 export type DeliveryChannelEnum = DbEnum<'delivery_channel_enum'>;
 export type DeliveryStatusEnum = DbEnum<'delivery_status_enum'>;
 
+// Extended notification types (added by migration, available after supabase types regeneration)
+// These are the full set of notification types supported by the system
+export type ExtendedNotificationTypeEnum =
+  | NotificationTypeEnum
+  | 'match_join_request'
+  | 'match_join_accepted'
+  | 'match_join_rejected'
+  | 'match_player_joined'
+  | 'match_cancelled'
+  | 'match_updated'
+  | 'match_starting_soon'
+  | 'match_completed'
+  | 'player_kicked'
+  | 'player_left'
+  | 'new_message'
+  | 'friend_request'
+  | 'rating_verified';
+
+// Extended delivery status (added by migration)
+export type ExtendedDeliveryStatusEnum =
+  | DeliveryStatusEnum
+  | 'skipped_preference'
+  | 'skipped_missing_contact';
+
+// Notification priority (added by migration)
+export type NotificationPriorityEnum = 'low' | 'normal' | 'high' | 'urgent';
+
 // Invitations
 export type InviteSourceEnum = DbEnum<'invite_source_enum'>;
 export type InviteStatusEnum = DbEnum<'invite_status_enum'>;
@@ -166,6 +193,37 @@ export type MatchResult = TableRow<'match_result'>;
 // Notification
 export type Notification = TableRow<'notification'>;
 export type DeliveryAttempt = TableRow<'delivery_attempt'>;
+
+// Notification Preference (manual definition until supabase types regenerated)
+// This table stores user preferences for notification delivery per type/channel
+export interface NotificationPreference {
+  id: string;
+  user_id: string;
+  notification_type: ExtendedNotificationTypeEnum;
+  channel: DeliveryChannelEnum;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NotificationPreferenceInsert {
+  id?: string;
+  user_id: string;
+  notification_type: ExtendedNotificationTypeEnum;
+  channel: DeliveryChannelEnum;
+  enabled: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface NotificationPreferenceUpdate {
+  id?: string;
+  user_id?: string;
+  notification_type?: ExtendedNotificationTypeEnum;
+  channel?: DeliveryChannelEnum;
+  enabled?: boolean;
+  updated_at?: string;
+}
 
 // Files
 export type File = TableRow<'file'>;

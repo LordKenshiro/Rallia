@@ -82,6 +82,9 @@ export function useNotifications(
 
 /**
  * Hook for fetching unread notification count
+ *
+ * Note: Polling is disabled since we use Supabase Realtime via useNotificationRealtime
+ * to get instant updates when notifications change.
  */
 export function useUnreadNotificationCount(userId: string | undefined) {
   return useQuery<number, Error>({
@@ -91,10 +94,10 @@ export function useUnreadNotificationCount(userId: string | undefined) {
       return getUnreadCount(userId);
     },
     enabled: !!userId,
-    staleTime: 1000 * 30, // 30 seconds
+    staleTime: 1000 * 60 * 5, // 5 minutes - realtime handles updates
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
-    refetchInterval: 1000 * 60 * 5, // Refetch every 5 minutes
+    // No polling needed - useNotificationRealtime invalidates cache on changes
   });
 }
 

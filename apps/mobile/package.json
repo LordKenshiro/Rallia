@@ -48,6 +48,7 @@
     "expo-linear-gradient": "^15.0.8",
     "expo-localization": "^17.0.8",
     "expo-location": "~19.0.8",
+    "expo-notifications": "^0.32.15",
     "expo-status-bar": "~3.0.8",
     "expo-updates": "~29.0.13",
     "i18next": "^25.7.2",

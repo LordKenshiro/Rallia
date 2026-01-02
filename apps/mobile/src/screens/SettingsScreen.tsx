@@ -113,35 +113,41 @@ const SettingsScreen: React.FC = () => {
     navigation.navigate('UserProfile', {});
   };
 
-  // const SettingsItem = ({
-  //   icon,
-  //   title,
-  //   onPress,
-  // }: {
-  //   icon: keyof typeof Ionicons.glyphMap;
-  //   title: string;
-  //   onPress: () => void;
-  // }) => (
-  //   <TouchableOpacity
-  //     style={[
-  //       styles.settingsItem,
-  //       { backgroundColor: colors.cardBackground, borderBottomColor: colors.border },
-  //     ]}
-  //     onPress={() => {
-  //       lightHaptic();
-  //       onPress();
-  //     }}
-  //     activeOpacity={0.7}
-  //   >
-  //     <View style={styles.settingsItemLeft}>
-  //       <Ionicons name={icon} size={20} color={colors.icon} />
-  //       <Text size="base" color={colors.text}>
-  //         {title}
-  //       </Text>
-  //     </View>
-  //     <Ionicons name="chevron-forward" size={20} color={colors.iconMuted} />
-  //   </TouchableOpacity>
-  // );
+  const handleNotificationPreferences = () => {
+    lightHaptic();
+    navigation.navigate('NotificationPreferences');
+    Logger.logUserAction('notification_preferences_pressed');
+  };
+
+  const SettingsItem = ({
+    icon,
+    title,
+    onPress,
+  }: {
+    icon: keyof typeof Ionicons.glyphMap;
+    title: string;
+    onPress: () => void;
+  }) => (
+    <TouchableOpacity
+      style={[
+        styles.settingsItem,
+        { backgroundColor: colors.cardBackground, borderBottomColor: colors.border },
+      ]}
+      onPress={() => {
+        lightHaptic();
+        onPress();
+      }}
+      activeOpacity={0.7}
+    >
+      <View style={styles.settingsItemLeft}>
+        <Ionicons name={icon} size={20} color={colors.icon} />
+        <Text size="base" color={colors.text}>
+          {title}
+        </Text>
+      </View>
+      <Ionicons name="chevron-forward" size={20} color={colors.iconMuted} />
+    </TouchableOpacity>
+  );
 
   // Show loading indicator until i18n is ready
   if (!isLocaleReady || authLoading || profileLoading) {
@@ -209,54 +215,15 @@ const SettingsScreen: React.FC = () => {
         )}
 
         {/* Settings Items */}
-        {/* <View style={[styles.settingsGroup, { backgroundColor: colors.cardBackground }]}>
-          {isAuthenticated && (
-            <>
-              <SettingsItem
-                icon="notifications-outline"
-                title={t('settings.notifications')}
-                onPress={() => {
-                  Logger.logUserAction('settings_notifications_pressed');
-                }}
-              />
-              <SettingsItem
-                icon="lock-closed-outline"
-                title={t('settings.privacy')}
-                onPress={() => {
-                  Logger.logUserAction('settings_permissions_pressed');
-                }}
-              />
-              <SettingsItem
-                icon="card-outline"
-                title={t('settings.subscription')}
-                onPress={() => {
-                  Logger.logUserAction('settings_subscription_pressed');
-                }}
-              />
-              <SettingsItem
-                icon="wallet-outline"
-                title={t('settings.payments')}
-                onPress={() => {
-                  Logger.logUserAction('settings_payments_pressed');
-                }}
-              />
-            </>
-          )}
-          <SettingsItem
-            icon="help-circle-outline"
-            title={t('settings.about')}
-            onPress={() => {
-              Logger.logUserAction('settings_help_pressed');
-            }}
-          />
-          <SettingsItem
-            icon="document-text-outline"
-            title={t('settings.termsOfService')}
-            onPress={() => {
-              Logger.logUserAction('settings_terms_pressed');
-            }}
-          />
-        </View> */}
+        {isAuthenticated && (
+          <View style={[styles.settingsGroup, { backgroundColor: colors.cardBackground }]}>
+            <SettingsItem
+              icon="notifications-outline"
+              title={t('settings.notifications')}
+              onPress={handleNotificationPreferences}
+            />
+          </View>
+        )}
 
         {/* Preferred Language */}
         <View style={[styles.preferenceSection, { backgroundColor: colors.cardBackground }]}>

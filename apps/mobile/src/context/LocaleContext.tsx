@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useRef,
   type ReactNode,
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -14,6 +15,7 @@ import {
   defaultLocale,
   isValidLocale,
 } from '@rallia/shared-translations';
+import { supabase } from '@rallia/shared-services';
 import { initI18n, changeLanguage, getDeviceLocale } from '../i18n';
 
 const LOCALE_STORAGE_KEY = '@rallia/locale';
@@ -33,6 +35,8 @@ interface LocaleContextValue {
   availableLocales: typeof locales;
   /** Locale configurations with display names */
   localeConfigs: typeof localeConfigs;
+  /** Sync locale to database for a specific user */
+  syncLocaleToDatabase: (userId: string) => Promise<void>;
 }
 
 const LocaleContext = createContext<LocaleContextValue | undefined>(undefined);
@@ -45,6 +49,33 @@ export function LocaleProvider({ children }: LocaleProviderProps) {
   const [locale, setLocaleState] = useState<Locale>(defaultLocale);
   const [isManuallySet, setIsManuallySet] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  // Track current user ID for syncing locale to database
+  const currentUserIdRef = useRef<string | null>(null);
+
+  /**
+   * Sync the current locale to the database for server-side notifications
+   */
+  const syncLocaleToDatabase = useCallback(
+    async (userId: string) => {
+      if (!userId) return;
+
+      try {
+        const { error } = await supabase
+          .from('profile')
+          .update({ preferred_locale: locale })
+          .eq('id', userId);
+
+        if (error) {
+          console.error('Failed to sync locale to database:', error);
+        } else {
+          currentUserIdRef.current = userId;
+        }
+      } catch (error) {
+        console.error('Failed to sync locale to database:', error);
+      }
+    },
+    [locale]
+  );
 
   // Initialize i18n on mount
   useEffect(() => {
@@ -91,6 +122,18 @@ export function LocaleProvider({ children }: LocaleProviderProps) {
       // Update state
       setLocaleState(newLocale);
       setIsManuallySet(true);
+
+      // Sync to database if we have a user ID
+      if (currentUserIdRef.current) {
+        const { error } = await supabase
+          .from('profile')
+          .update({ preferred_locale: newLocale })
+          .eq('id', currentUserIdRef.current);
+
+        if (error) {
+          console.error('Failed to sync locale to database:', error);
+        }
+      }
     } catch (error) {
       console.error('Failed to set locale:', error);
       throw error;
@@ -108,6 +151,18 @@ export function LocaleProvider({ children }: LocaleProviderProps) {
       // Update state
       setLocaleState(deviceLocale);
       setIsManuallySet(false);
+
+      // Sync to database if we have a user ID
+      if (currentUserIdRef.current) {
+        const { error } = await supabase
+          .from('profile')
+          .update({ preferred_locale: deviceLocale })
+          .eq('id', currentUserIdRef.current);
+
+        if (error) {
+          console.error('Failed to sync locale to database:', error);
+        }
+      }
     } catch (error) {
       console.error('Failed to reset locale:', error);
       throw error;
@@ -122,6 +177,7 @@ export function LocaleProvider({ children }: LocaleProviderProps) {
     resetToDeviceLocale,
     availableLocales: locales,
     localeConfigs,
+    syncLocaleToDatabase,
   };
 
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;

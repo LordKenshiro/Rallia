@@ -37,6 +37,7 @@
     "required": "Required",
     "optional": "Optional",
     "showLess": "Show less",
+    "resetToDefaults": "Reset to Defaults",
     "gender": {
       "label": "Gender",
       "male": "Male",
@@ -107,11 +108,119 @@
     },
     "types": {
       "match_invitation": "Match Invitation",
+      "match_join_request": "Join Request",
+      "match_join_accepted": "Request Accepted",
+      "match_join_rejected": "Request Declined",
+      "match_player_joined": "Player Joined",
+      "match_cancelled": "Match Cancelled",
+      "match_updated": "Match Updated",
+      "match_starting_soon": "Match Starting Soon",
+      "match_completed": "Match Completed",
+      "player_kicked": "Removed from Match",
+      "player_left": "Player Left",
+      "new_message": "New Message",
+      "friend_request": "Friend Request",
+      "rating_verified": "Rating Verified",
       "reminder": "Reminder",
       "payment": "Payment",
       "support": "Support",
       "chat": "Message",
       "system": "System"
+    },
+    "categories": {
+      "match": "Match Notifications",
+      "social": "Social Notifications",
+      "system": "System Notifications"
+    },
+    "channels": {
+      "email": "Email",
+      "push": "Push",
+      "sms": "SMS"
+    },
+    "preferences": {
+      "title": "Notification Preferences",
+      "description": "Choose how you want to be notified for different types of events. Toggle each channel on or off.",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "default": "Default"
+    },
+    "messages": {
+      "match_invitation": {
+        "title": "Match Invitation",
+        "body": "{playerName} invited you to a {sportName} match"
+      },
+      "match_join_request": {
+        "title": "New Join Request",
+        "body": "{playerName} wants to join your match"
+      },
+      "match_join_accepted": {
+        "title": "Join Request Accepted",
+        "body": "Your request to join the match was accepted"
+      },
+      "match_join_rejected": {
+        "title": "Join Request Declined",
+        "body": "Your request to join the match was declined"
+      },
+      "match_player_joined": {
+        "title": "{playerName} Joined",
+        "body": "{playerName} joined your {sportName} match"
+      },
+      "match_cancelled": {
+        "title": "Match Cancelled",
+        "body": "The {sportName} match on {matchDate} has been cancelled"
+      },
+      "match_updated": {
+        "title": "Match Updated",
+        "body": "Match details have been updated"
+      },
+      "match_starting_soon": {
+        "title": "Match Starting Soon",
+        "body": "Your {sportName} match starts in 15 minutes"
+      },
+      "match_completed": {
+        "title": "Match Completed",
+        "body": "Your {sportName} match has been marked as completed"
+      },
+      "player_kicked": {
+        "title": "Removed from Match",
+        "body": "You have been removed from a match"
+      },
+      "player_left": {
+        "title": "{playerName} Left",
+        "body": "{playerName} left your {sportName} match"
+      },
+      "new_message": {
+        "title": "New Message",
+        "body": "{senderName}: {messagePreview}"
+      },
+      "chat": {
+        "title": "New Message",
+        "body": "You have a new message"
+      },
+      "friend_request": {
+        "title": "Friend Request",
+        "body": "{playerName} wants to connect with you"
+      },
+      "rating_verified": {
+        "title": "Rating Verified",
+        "body": "Your {ratingSystemName} rating of {ratingValue} has been verified"
+      },
+      "reminder": {
+        "title": "Reminder",
+        "body": "You have a reminder"
+      },
+      "payment": {
+        "title": "Payment Update",
+        "body": "Payment status update"
+      },
+      "support": {
+        "title": "Support Message",
+        "body": "You have a message from support"
+      },
+      "system": {
+        "title": "System Notification",
+        "body": "System notification"
+      }
     }
   },
   "settings": {
@@ -120,6 +229,7 @@
     "languageDescription": "Choose your preferred language",
     "languageAuto": "System Default",
     "notifications": "Notifications",
+    "notificationsDescription": "Choose how you want to be notified for different types of events. Toggle each channel on or off.",
     "privacy": "Privacy",
     "subscription": "Subscription",
     "payments": "Payments",
@@ -504,6 +614,7 @@
       "view": "View",
       "viewResults": "Results",
       "cancelled": "Cancelled",
+      "cancel": "Cancel",
       "edit": "Edit",
       "leave": "Leave",
       "pending": "Pending Approval",

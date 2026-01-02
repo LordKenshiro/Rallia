@@ -83,3 +83,6 @@ export function getTranslations(locale: Locale): TranslationMessages {
 
 // Re-export types
 export type { Locale, LocaleConfig, TranslationMessages, TranslationKey, TranslationsRecord };
+
+// Re-export server-side utilities
+export { createTranslator, translate, normalizeLocale } from './server';

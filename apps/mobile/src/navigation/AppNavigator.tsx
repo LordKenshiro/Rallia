@@ -42,6 +42,7 @@ import UserProfile from '../screens/UserProfile';
 import SportProfile from '../screens/SportProfile';
 import RatingProofs from '../screens/RatingProofs';
 import Notifications from '../screens/Notifications';
+import NotificationPreferencesScreen from '../screens/NotificationPreferencesScreen';
 
 // Components
 import { ThemeLogo } from '../components/ThemeLogo';
@@ -119,6 +120,7 @@ function SportSelectorWithContext() {
     if (session?.user) {
       refetch();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id, refetch]);
 
   // Refetch profile when actions sheet mode changes from 'onboarding' to 'actions'
@@ -603,6 +605,16 @@ export default function AppNavigator() {
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: 'Notifications',
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="NotificationPreferences"
+        component={NotificationPreferencesScreen}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: 'Notification Preferences',
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />

@@ -12,7 +12,6 @@
 
 import type { NavigatorScreenParams, CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type {
   RatingProofsScreenParams,
   SportProfileScreenParams,
@@ -33,6 +32,7 @@ export type RootStackParamList = {
   SportProfile: SportProfileScreenParams;
   Settings: undefined;
   Notifications: undefined;
+  NotificationPreferences: undefined;
   Map: { focusLocation?: { lat: number; lng: number } } | undefined;
   RatingProofs: RatingProofsScreenParams;
 };

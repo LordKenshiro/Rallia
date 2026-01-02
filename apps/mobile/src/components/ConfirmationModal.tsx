@@ -15,7 +15,7 @@ import {
   TouchableWithoutFeedback,
   ActivityIndicator,
 } from 'react-native';
-import { Text, Button } from '@rallia/shared-components';
+import { Text } from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -127,6 +127,10 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     border: themeColors.border,
     destructive: status.error.DEFAULT,
     destructiveLight: isDark ? status.error.dark : status.error.light,
+    // Warning box uses amber/warning colors for better readability
+    warningBackground: isDark ? 'rgba(251, 191, 36, 0.15)' : 'rgba(245, 158, 11, 0.1)',
+    warningBorder: isDark ? status.warning.light : status.warning.DEFAULT,
+    warningText: isDark ? status.warning.light : status.warning.dark,
   };
 
   // Handle confirm with haptic
@@ -179,25 +183,26 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 {message}
               </Text>
 
-              {/* Additional Info */}
+              {/* Additional Info / Warning Box */}
               {additionalInfo && (
                 <View
                   style={[
                     styles.infoBox,
                     {
                       backgroundColor: destructive
-                        ? colors.destructiveLight
+                        ? colors.warningBackground
                         : isDark
                           ? neutral[800]
                           : neutral[100],
-                      borderColor: destructive ? colors.destructive : colors.border,
+                      borderColor: destructive ? colors.warningBorder : colors.border,
                     },
                   ]}
                 >
                   <Text
                     size="sm"
+                    weight="medium"
                     style={{
-                      color: destructive ? colors.destructive : colors.textMuted,
+                      color: destructive ? colors.warningText : colors.textMuted,
                     }}
                   >
                     {additionalInfo}

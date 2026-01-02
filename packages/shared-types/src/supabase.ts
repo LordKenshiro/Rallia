@@ -1252,7 +1252,9 @@ export type Database = {
           expires_at: string | null;
           id: string;
           payload: Json | null;
+          priority: Database['public']['Enums']['notification_priority_enum'] | null;
           read_at: string | null;
+          scheduled_at: string | null;
           target_id: string | null;
           title: string;
           type: Database['public']['Enums']['notification_type_enum'];
@@ -1265,7 +1267,9 @@ export type Database = {
           expires_at?: string | null;
           id?: string;
           payload?: Json | null;
+          priority?: Database['public']['Enums']['notification_priority_enum'] | null;
           read_at?: string | null;
+          scheduled_at?: string | null;
           target_id?: string | null;
           title: string;
           type: Database['public']['Enums']['notification_type_enum'];
@@ -1278,7 +1282,9 @@ export type Database = {
           expires_at?: string | null;
           id?: string;
           payload?: Json | null;
+          priority?: Database['public']['Enums']['notification_priority_enum'] | null;
           read_at?: string | null;
+          scheduled_at?: string | null;
           target_id?: string | null;
           title?: string;
           type?: Database['public']['Enums']['notification_type_enum'];
@@ -1288,6 +1294,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: 'notification_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      notification_preference: {
+        Row: {
+          channel: Database['public']['Enums']['delivery_channel_enum'];
+          created_at: string;
+          enabled: boolean;
+          id: string;
+          notification_type: Database['public']['Enums']['notification_type_enum'];
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          channel: Database['public']['Enums']['delivery_channel_enum'];
+          created_at?: string;
+          enabled?: boolean;
+          id?: string;
+          notification_type: Database['public']['Enums']['notification_type_enum'];
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          channel?: Database['public']['Enums']['delivery_channel_enum'];
+          created_at?: string;
+          enabled?: boolean;
+          id?: string;
+          notification_type?: Database['public']['Enums']['notification_type_enum'];
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'notification_preference_user_id_fkey';
             columns: ['user_id'];
             isOneToOne: false;
             referencedRelation: 'profile';
@@ -1560,6 +1604,7 @@ export type Database = {
       player: {
         Row: {
           created_at: string | null;
+          expo_push_token: string | null;
           gender: Database['public']['Enums']['gender_type'] | null;
           id: string;
           max_travel_distance: number | null;
@@ -1570,10 +1615,12 @@ export type Database = {
           privacy_show_age: boolean | null;
           privacy_show_location: boolean | null;
           privacy_show_stats: boolean | null;
+          push_notifications_enabled: boolean | null;
           updated_at: string | null;
         };
         Insert: {
           created_at?: string | null;
+          expo_push_token?: string | null;
           gender?: Database['public']['Enums']['gender_type'] | null;
           id: string;
           max_travel_distance?: number | null;
@@ -1584,10 +1631,12 @@ export type Database = {
           privacy_show_age?: boolean | null;
           privacy_show_location?: boolean | null;
           privacy_show_stats?: boolean | null;
+          push_notifications_enabled?: boolean | null;
           updated_at?: string | null;
         };
         Update: {
           created_at?: string | null;
+          expo_push_token?: string | null;
           gender?: Database['public']['Enums']['gender_type'] | null;
           id?: string;
           max_travel_distance?: number | null;
@@ -1598,6 +1647,7 @@ export type Database = {
           privacy_show_age?: boolean | null;
           privacy_show_location?: boolean | null;
           privacy_show_stats?: boolean | null;
+          push_notifications_enabled?: boolean | null;
           updated_at?: string | null;
         };
         Relationships: [
@@ -2603,6 +2653,64 @@ export type Database = {
         Args: { p_player_id: string };
         Returns: string[];
       };
+      insert_notification: {
+        Args: {
+          p_body?: string;
+          p_expires_at?: string;
+          p_payload?: Json;
+          p_priority?: string;
+          p_scheduled_at?: string;
+          p_target_id?: string;
+          p_title?: string;
+          p_type: string;
+          p_user_id: string;
+        };
+        Returns: {
+          body: string | null;
+          created_at: string;
+          expires_at: string | null;
+          id: string;
+          payload: Json | null;
+          priority: Database['public']['Enums']['notification_priority_enum'] | null;
+          read_at: string | null;
+          scheduled_at: string | null;
+          target_id: string | null;
+          title: string;
+          type: Database['public']['Enums']['notification_type_enum'];
+          updated_at: string;
+          user_id: string;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'notification';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      insert_notifications: {
+        Args: { p_notifications: Json };
+        Returns: {
+          body: string | null;
+          created_at: string;
+          expires_at: string | null;
+          id: string;
+          payload: Json | null;
+          priority: Database['public']['Enums']['notification_priority_enum'] | null;
+          read_at: string | null;
+          scheduled_at: string | null;
+          target_id: string | null;
+          title: string;
+          type: Database['public']['Enums']['notification_type_enum'];
+          updated_at: string;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'notification';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
       is_match_creator: {
         Args: { p_match_id: string; p_player_id: string };
         Returns: boolean;
@@ -2697,7 +2805,12 @@ export type Database = {
         | 'saturday'
         | 'sunday';
       delivery_channel_enum: 'email' | 'sms' | 'push';
-      delivery_status_enum: 'pending' | 'success' | 'failed';
+      delivery_status_enum:
+        | 'pending'
+        | 'success'
+        | 'failed'
+        | 'skipped_preference'
+        | 'skipped_missing_contact';
       facility_contact_type_enum: 'general' | 'reservation' | 'maintenance' | 'other';
       facility_type_enum:
         | 'park'
@@ -2740,6 +2853,7 @@ export type Database = {
       message_status: 'sent' | 'delivered' | 'read' | 'failed';
       network_member_status: 'active' | 'pending' | 'blocked' | 'removed';
       network_visibility: 'public' | 'private' | 'friends' | 'club';
+      notification_priority_enum: 'low' | 'normal' | 'high' | 'urgent';
       notification_status: 'unread' | 'read' | 'archived';
       notification_type:
         | 'match_request'
@@ -2754,7 +2868,20 @@ export type Database = {
         | 'payment'
         | 'support'
         | 'chat'
-        | 'system';
+        | 'system'
+        | 'match_join_request'
+        | 'match_join_accepted'
+        | 'match_join_rejected'
+        | 'match_cancelled'
+        | 'match_updated'
+        | 'match_starting_soon'
+        | 'match_completed'
+        | 'player_kicked'
+        | 'new_message'
+        | 'friend_request'
+        | 'rating_verified'
+        | 'match_player_joined'
+        | 'player_left';
       organization_nature_enum: 'public' | 'private';
       organization_type: 'club' | 'facility' | 'league' | 'academy' | 'association';
       organization_type_enum: 'club' | 'municipality' | 'city' | 'association';
@@ -2945,7 +3072,13 @@ export const Constants = {
       day_enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
       day_of_week: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
       delivery_channel_enum: ['email', 'sms', 'push'],
-      delivery_status_enum: ['pending', 'success', 'failed'],
+      delivery_status_enum: [
+        'pending',
+        'success',
+        'failed',
+        'skipped_preference',
+        'skipped_missing_contact',
+      ],
       facility_contact_type_enum: ['general', 'reservation', 'maintenance', 'other'],
       facility_type_enum: [
         'park',
@@ -2985,6 +3118,7 @@ export const Constants = {
       message_status: ['sent', 'delivered', 'read', 'failed'],
       network_member_status: ['active', 'pending', 'blocked', 'removed'],
       network_visibility: ['public', 'private', 'friends', 'club'],
+      notification_priority_enum: ['low', 'normal', 'high', 'urgent'],
       notification_status: ['unread', 'read', 'archived'],
       notification_type: [
         'match_request',
@@ -3001,6 +3135,19 @@ export const Constants = {
         'support',
         'chat',
         'system',
+        'match_join_request',
+        'match_join_accepted',
+        'match_join_rejected',
+        'match_cancelled',
+        'match_updated',
+        'match_starting_soon',
+        'match_completed',
+        'player_kicked',
+        'new_message',
+        'friend_request',
+        'rating_verified',
+        'match_player_joined',
+        'player_left',
       ],
       organization_nature_enum: ['public', 'private'],
       organization_type: ['club', 'facility', 'league', 'academy', 'association'],

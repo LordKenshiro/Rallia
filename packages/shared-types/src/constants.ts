@@ -16,7 +16,9 @@ import type {
   GenderType,
   CourtSurface,
   CourtType,
-  NotificationTypeEnum,
+  ExtendedNotificationTypeEnum,
+  DeliveryChannelEnum,
+  NotificationPriorityEnum,
   // Match Creation enums
   MatchFormatEnum,
   CourtStatusEnum,
@@ -288,25 +290,185 @@ export const RATING_SYSTEM_FULL_NAMES = {
 /**
  * Icon mapping for notification types (Ionicons names)
  */
-export const NOTIFICATION_TYPE_ICONS: Record<NotificationTypeEnum, string> = {
+export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, string> = {
+  // Original types
   match_invitation: 'calendar-outline',
   reminder: 'alarm-outline',
   payment: 'card-outline',
   support: 'help-circle-outline',
   chat: 'chatbubble-outline',
   system: 'information-circle-outline',
+  // Match lifecycle types
+  match_join_request: 'person-add-outline',
+  match_join_accepted: 'checkmark-circle-outline',
+  match_join_rejected: 'close-circle-outline',
+  match_player_joined: 'person-add-outline',
+  match_cancelled: 'calendar-clear-outline',
+  match_updated: 'create-outline',
+  match_starting_soon: 'time-outline',
+  match_completed: 'trophy-outline',
+  player_kicked: 'remove-circle-outline',
+  player_left: 'exit-outline',
+  // Social types
+  new_message: 'chatbubble-ellipses-outline',
+  friend_request: 'people-outline',
+  rating_verified: 'ribbon-outline',
 };
 
 /**
  * Color mapping for notification types
  */
-export const NOTIFICATION_TYPE_COLORS: Record<NotificationTypeEnum, string> = {
+export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, string> = {
+  // Original types
   match_invitation: '#4DB8A8', // Teal
   reminder: '#FF9800', // Orange
   payment: '#4CAF50', // Green
   support: '#2196F3', // Blue
   chat: '#9C27B0', // Purple
   system: '#607D8B', // Blue Grey
+  // Match lifecycle types
+  match_join_request: '#4DB8A8', // Teal
+  match_join_accepted: '#4CAF50', // Green
+  match_join_rejected: '#F44336', // Red
+  match_player_joined: '#4CAF50', // Green
+  match_cancelled: '#F44336', // Red
+  match_updated: '#2196F3', // Blue
+  match_starting_soon: '#FF9800', // Orange
+  match_completed: '#4CAF50', // Green
+  player_kicked: '#F44336', // Red
+  player_left: '#FF9800', // Orange
+  // Social types
+  new_message: '#9C27B0', // Purple
+  friend_request: '#4DB8A8', // Teal
+  rating_verified: '#4CAF50', // Green
+};
+
+/**
+ * Human-readable labels for notification types
+ */
+export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, string> = {
+  match_invitation: 'Match Invitation',
+  reminder: 'Reminder',
+  payment: 'Payment',
+  support: 'Support',
+  chat: 'Chat',
+  system: 'System',
+  match_join_request: 'Join Request',
+  match_join_accepted: 'Request Accepted',
+  match_join_rejected: 'Request Rejected',
+  match_player_joined: 'Player Joined',
+  match_cancelled: 'Match Cancelled',
+  match_updated: 'Match Updated',
+  match_starting_soon: 'Match Starting Soon',
+  match_completed: 'Match Completed',
+  player_kicked: 'Removed from Match',
+  player_left: 'Player Left',
+  new_message: 'New Message',
+  friend_request: 'Friend Request',
+  rating_verified: 'Rating Verified',
+};
+
+/**
+ * Notification type categories for grouping in preferences UI
+ */
+export type NotificationCategory = 'match' | 'social' | 'system';
+
+export const NOTIFICATION_TYPE_CATEGORIES: Record<
+  ExtendedNotificationTypeEnum,
+  NotificationCategory
+> = {
+  // Match category
+  match_invitation: 'match',
+  match_join_request: 'match',
+  match_join_accepted: 'match',
+  match_join_rejected: 'match',
+  match_player_joined: 'match',
+  match_cancelled: 'match',
+  match_updated: 'match',
+  match_starting_soon: 'match',
+  match_completed: 'match',
+  player_kicked: 'match',
+  player_left: 'match',
+  // Social category
+  chat: 'social',
+  new_message: 'social',
+  friend_request: 'social',
+  rating_verified: 'social',
+  // System category
+  reminder: 'system',
+  payment: 'system',
+  support: 'system',
+  system: 'system',
+};
+
+/**
+ * Labels for notification categories
+ */
+export const NOTIFICATION_CATEGORY_LABELS: Record<NotificationCategory, string> = {
+  match: 'Match Notifications',
+  social: 'Social Notifications',
+  system: 'System Notifications',
+};
+
+/**
+ * Labels for delivery channels
+ */
+export const DELIVERY_CHANNEL_LABELS: Record<DeliveryChannelEnum, string> = {
+  email: 'Email',
+  push: 'Push',
+  sms: 'SMS',
+};
+
+/**
+ * Icons for delivery channels (Ionicons names)
+ */
+export const DELIVERY_CHANNEL_ICONS: Record<DeliveryChannelEnum, string> = {
+  email: 'mail-outline',
+  push: 'notifications-outline',
+  sms: 'chatbox-outline',
+};
+
+/**
+ * Labels for notification priority
+ */
+export const NOTIFICATION_PRIORITY_LABELS: Record<NotificationPriorityEnum, string> = {
+  low: 'Low',
+  normal: 'Normal',
+  high: 'High',
+  urgent: 'Urgent',
+};
+
+/**
+ * Default notification preferences matrix
+ * Used when user has no explicit preference set
+ * Key: notification type, Value: { channel: enabled }
+ */
+export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
+  ExtendedNotificationTypeEnum,
+  Record<DeliveryChannelEnum, boolean>
+> = {
+  // Match types - email and push on, sms off by default
+  match_invitation: { email: true, push: true, sms: false },
+  match_join_request: { email: true, push: true, sms: false },
+  match_join_accepted: { email: true, push: true, sms: false },
+  match_join_rejected: { email: true, push: true, sms: false },
+  match_player_joined: { email: false, push: true, sms: false }, // Push only for player joins
+  match_cancelled: { email: true, push: true, sms: true }, // SMS for cancellations
+  match_updated: { email: false, push: true, sms: false },
+  match_starting_soon: { email: false, push: true, sms: true }, // SMS for reminders
+  match_completed: { email: false, push: true, sms: false },
+  player_kicked: { email: true, push: true, sms: false },
+  player_left: { email: false, push: true, sms: false }, // Push only for player leaves
+  // Social types - push only by default
+  chat: { email: false, push: true, sms: false },
+  new_message: { email: false, push: true, sms: false },
+  friend_request: { email: false, push: true, sms: false },
+  rating_verified: { email: true, push: true, sms: false },
+  // System types - email only by default
+  reminder: { email: false, push: true, sms: false },
+  payment: { email: true, push: true, sms: false },
+  support: { email: true, push: false, sms: false },
+  system: { email: true, push: false, sms: false },
 };
 
 // ============================================

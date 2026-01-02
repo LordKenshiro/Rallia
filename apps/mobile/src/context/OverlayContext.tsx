@@ -47,8 +47,10 @@ interface OverlayProviderProps {
 export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) => {
   // Permission handling
   const {
+    shouldShowNotificationOverlay,
     shouldShowLocationOverlay,
     shouldShowCalendarOverlay,
+    requestNotificationPermission,
     requestLocationPermission,
     requestCalendarPermission,
     loading: permissionsLoading,
@@ -57,7 +59,7 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
   // ==========================================================================
   // STATE
   // ==========================================================================
-  const [isOnHomeScreen, setIsOnHomeScreen] = useState(false);
+  const [, setIsOnHomeScreen] = useState(false);
   const [isSplashComplete, setIsSplashComplete] = useState(false);
 
   // Track if we've already requested permissions this session
@@ -77,6 +79,22 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
       const requestPermissions = async () => {
         // Small delay after splash to let the UI settle
         await new Promise(resolve => setTimeout(resolve, ANIMATION_DELAYS.SHORT_DELAY));
+
+        // Request notification permission FIRST (most important for engagement)
+        if (shouldShowNotificationOverlay) {
+          Logger.logNavigation('request_native_permission', {
+            permission: 'notifications',
+            trigger: 'post_splash',
+          });
+          const notificationGranted = await requestNotificationPermission();
+          Logger.logUserAction('permission_result', {
+            permission: 'notifications',
+            granted: notificationGranted,
+          });
+
+          // Small delay between permission dialogs
+          await new Promise(resolve => setTimeout(resolve, ANIMATION_DELAYS.OVERLAY_STAGGER));
+        }
 
         // Request location permission if needed
         if (shouldShowLocationOverlay) {
@@ -113,8 +131,10 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
   }, [
     isSplashComplete,
     permissionsLoading,
+    shouldShowNotificationOverlay,
     shouldShowLocationOverlay,
     shouldShowCalendarOverlay,
+    requestNotificationPermission,
     requestLocationPermission,
     requestCalendarPermission,
   ]);

@@ -28,6 +28,7 @@
     "required": "Requis",
     "optional": "Optionnel",
     "showLess": "Afficher moins",
+    "resetToDefaults": "Réinitialiser",
     "gender": {
       "label": "Genre",
       "male": "Homme",
@@ -107,11 +108,119 @@
     },
     "types": {
       "match_invitation": "Invitation de match",
+      "match_join_request": "Demande de participation",
+      "match_join_accepted": "Demande acceptée",
+      "match_join_rejected": "Demande refusée",
+      "match_player_joined": "Joueur inscrit",
+      "match_cancelled": "Match annulé",
+      "match_updated": "Match mis à jour",
+      "match_starting_soon": "Match imminent",
+      "match_completed": "Match terminé",
+      "player_kicked": "Retiré du match",
+      "player_left": "Joueur parti",
+      "new_message": "Nouveau message",
+      "friend_request": "Demande d'ami",
+      "rating_verified": "Classement vérifié",
       "reminder": "Rappel",
       "payment": "Paiement",
       "support": "Support",
       "chat": "Message",
       "system": "Système"
+    },
+    "categories": {
+      "match": "Notifications de match",
+      "social": "Notifications sociales",
+      "system": "Notifications système"
+    },
+    "channels": {
+      "email": "Courriel",
+      "push": "Push",
+      "sms": "SMS"
+    },
+    "preferences": {
+      "title": "Préférences de notifications",
+      "description": "Choisissez comment vous souhaitez être notifié pour différents types d'événements. Activez ou désactivez chaque canal.",
+      "enabled": "Activé",
+      "disabled": "Désactivé",
+      "default": "Par défaut"
+    },
+    "messages": {
+      "match_invitation": {
+        "title": "Invitation de match",
+        "body": "{playerName} vous a invité à un match de {sportName}"
+      },
+      "match_join_request": {
+        "title": "Nouvelle demande de participation",
+        "body": "{playerName} souhaite rejoindre votre match"
+      },
+      "match_join_accepted": {
+        "title": "Demande acceptée",
+        "body": "Votre demande de participation au match a été acceptée"
+      },
+      "match_join_rejected": {
+        "title": "Demande refusée",
+        "body": "Votre demande de participation au match a été refusée"
+      },
+      "match_player_joined": {
+        "title": "{playerName} a rejoint",
+        "body": "{playerName} a rejoint votre match de {sportName}"
+      },
+      "match_cancelled": {
+        "title": "Match annulé",
+        "body": "Le match de {sportName} du {matchDate} a été annulé"
+      },
+      "match_updated": {
+        "title": "Match mis à jour",
+        "body": "Les détails du match ont été mis à jour"
+      },
+      "match_starting_soon": {
+        "title": "Match imminent",
+        "body": "Votre match de {sportName} commence dans 15 minutes"
+      },
+      "match_completed": {
+        "title": "Match terminé",
+        "body": "Votre match de {sportName} a été marqué comme terminé"
+      },
+      "player_kicked": {
+        "title": "Retiré du match",
+        "body": "Vous avez été retiré d'un match"
+      },
+      "player_left": {
+        "title": "{playerName} est parti",
+        "body": "{playerName} a quitté votre match de {sportName}"
+      },
+      "new_message": {
+        "title": "Nouveau message",
+        "body": "{senderName}: {messagePreview}"
+      },
+      "chat": {
+        "title": "Nouveau message",
+        "body": "Vous avez un nouveau message"
+      },
+      "friend_request": {
+        "title": "Demande d'ami",
+        "body": "{playerName} souhaite se connecter avec vous"
+      },
+      "rating_verified": {
+        "title": "Classement vérifié",
+        "body": "Votre classement {ratingSystemName} de {ratingValue} a été vérifié"
+      },
+      "reminder": {
+        "title": "Rappel",
+        "body": "Vous avez un rappel"
+      },
+      "payment": {
+        "title": "Mise à jour de paiement",
+        "body": "Mise à jour du statut de paiement"
+      },
+      "support": {
+        "title": "Message du support",
+        "body": "Vous avez un message du support"
+      },
+      "system": {
+        "title": "Notification système",
+        "body": "Notification système"
+      }
     }
   },
   "settings": {
@@ -120,6 +229,7 @@
     "languageDescription": "Choisissez votre langue préférée",
     "languageAuto": "Par défaut du système",
     "notifications": "Notifications",
+    "notificationsDescription": "Choisissez comment vous souhaitez être notifié pour différents types d'événements. Activez ou désactivez chaque canal.",
     "privacy": "Confidentialité",
     "subscription": "Abonnement",
     "payments": "Paiements",
@@ -504,6 +614,7 @@
       "view": "Voir",
       "viewResults": "Résultats",
       "cancelled": "Annulé",
+      "cancel": "Annuler",
       "edit": "Modifier",
       "leave": "Quitter",
       "pending": "En attente d'approbation",

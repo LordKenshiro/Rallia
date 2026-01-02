@@ -5,7 +5,7 @@
  */
 import './src/lib/supabase';
 
-import type { PropsWithChildren } from 'react';
+import { useEffect, type PropsWithChildren } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -25,12 +25,14 @@ import {
   useAuth,
   OverlayProvider,
   LocaleProvider,
+  useLocale,
   ActionsSheetProvider,
   SportProvider,
   MatchDetailSheetProvider,
   useOverlay,
 } from './src/context';
-import { ProfileProvider, PlayerProvider } from '@rallia/shared-hooks';
+import { usePushNotifications } from './src/hooks';
+import { ProfileProvider, PlayerProvider, useNotificationRealtime } from '@rallia/shared-hooks';
 
 // Import NativeWind global styles
 import './global.css';
@@ -43,7 +45,24 @@ const queryClient = new QueryClient();
  */
 function AuthenticatedProviders({ children }: PropsWithChildren) {
   const { user } = useAuth();
+  const { syncLocaleToDatabase, isReady: isLocaleReady } = useLocale();
   const userId = user?.id;
+
+  // Register push notifications when user is authenticated
+  // This will save the Expo push token to the player table
+  usePushNotifications(userId);
+
+  // Subscribe to realtime notification updates
+  // This keeps the notification badge in sync with the database
+  useNotificationRealtime(userId);
+
+  // Sync locale to database when user logs in or locale becomes ready
+  // This ensures server-side notifications use the correct locale
+  useEffect(() => {
+    if (userId && isLocaleReady) {
+      syncLocaleToDatabase(userId);
+    }
+  }, [userId, isLocaleReady, syncLocaleToDatabase]);
 
   return (
     <ProfileProvider userId={userId}>
