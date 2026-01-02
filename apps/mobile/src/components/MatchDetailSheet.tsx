@@ -36,6 +36,7 @@ import {
   radiusPixels,
   primary,
   secondary,
+  accent,
   neutral,
   status,
 } from '@rallia/design-system';
@@ -1256,29 +1257,35 @@ export const MatchDetailSheet: React.FC = () => {
               icon={match.format === 'doubles' ? 'people' : 'person'}
             /> */}
 
-            {/* Player expectation */}
+            {/* Player expectation - distinct UI for competitive, casual, and both */}
             {match.player_expectation && (
               <Badge
                 label={
                   match.player_expectation === 'competitive'
                     ? t('matchDetail.competitive' as TranslationKey)
-                    : t('matchDetail.casual' as TranslationKey)
+                    : match.player_expectation === 'casual'
+                      ? t('matchDetail.casual' as TranslationKey)
+                      : t('match.type.both' as TranslationKey) // 'both' - open to any style
                 }
                 bgColor={
                   match.player_expectation === 'competitive'
                     ? secondary[500]
-                    : isDark
-                      ? neutral[600]
-                      : neutral[300]
+                    : match.player_expectation === 'casual'
+                      ? isDark
+                        ? primary[700]
+                        : primary[500]
+                      : isDark
+                        ? accent[600]
+                        : accent[500] // 'both' uses amber/gold
                 }
-                textColor={
+                textColor={BASE_WHITE}
+                icon={
                   match.player_expectation === 'competitive'
-                    ? BASE_WHITE
-                    : isDark
-                      ? neutral[200]
-                      : neutral[700]
+                    ? 'trophy'
+                    : match.player_expectation === 'casual'
+                      ? 'happy'
+                      : 'swap-horizontal' // 'both' uses swap icon
                 }
-                icon={match.player_expectation === 'competitive' ? 'trophy' : 'happy'}
               />
             )}
 

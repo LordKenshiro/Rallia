@@ -103,7 +103,6 @@ export async function createMatch(input: CreateMatchInput): Promise<Match> {
     start_time: input.startTime,
     end_time: input.endTime,
     timezone: input.timezone,
-    match_type: input.playerExpectation ?? 'both',
     format: input.format ?? 'singles',
     player_expectation: input.playerExpectation ?? 'both',
     duration: input.duration ?? '60',
@@ -545,14 +544,6 @@ export async function updateMatch(
   matchId: string,
   updates: Partial<CreateMatchInput>
 ): Promise<Match> {
-  // Map playerExpectation to match_type enum values (same as createMatch)
-  // Note: form values now match database enum values directly
-  const matchTypeMap: Record<string, 'casual' | 'competitive' | 'both'> = {
-    casual: 'casual',
-    competitive: 'competitive',
-    both: 'both',
-  };
-
   // Map costSplitType to database enum values (same as createMatch)
   const costSplitMap: Record<string, 'host_pays' | 'split_equal' | 'custom'> = {
     creator_pays: 'host_pays',
@@ -576,10 +567,7 @@ export async function updateMatch(
   if (updates.timezone !== undefined) updateData.timezone = updates.timezone;
   if (updates.format !== undefined) updateData.format = updates.format;
   if (updates.playerExpectation !== undefined) {
-    // player_expectation stores the raw value (casual/competitive/both)
     updateData.player_expectation = updates.playerExpectation;
-    // match_type stores the mapped value (casual/competitive/both) - same as createMatch
-    updateData.match_type = matchTypeMap[updates.playerExpectation] ?? 'both';
   }
   if (updates.duration !== undefined) updateData.duration = updates.duration;
   if (updates.customDurationMinutes !== undefined)

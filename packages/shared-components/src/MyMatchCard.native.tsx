@@ -10,7 +10,7 @@
  * - Sport-colored accent
  */
 
-import React, { useMemo, useEffect, useRef } from 'react';
+import React, { useMemo, useEffect, useRef, useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image, Animated, Easing } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -45,12 +45,13 @@ import {
  * Match type color palettes for dynamic backgrounds
  * Built from @rallia/design-system tokens for consistency
  *
- * Simplified Palette Strategy:
+ * Palette Strategy:
  * - competitive: secondary (coral/red) - warm, energetic
  * - casual: primary (teal) - fresh, relaxed
+ * - both: accent (amber/gold) - versatile, open to anything
  *
  * Note: Urgent matches and ready-to-play status are handled via animations,
- * not color changes, to preserve the competitive/casual visual identity.
+ * not color changes, to preserve the competitive/casual/both visual identity.
  */
 const MATCH_PALETTES = {
   // Competitive matches - secondary palette (coral/red tones)
@@ -87,6 +88,23 @@ const MATCH_PALETTES = {
       accentEnd: primary[300],
     },
   },
+  // Both (open to any) - accent palette (amber/gold - versatile, flexible)
+  both: {
+    light: {
+      gradientStart: accent[50],
+      gradientMid: accent[100],
+      gradientEnd: neutral[50],
+      accentStart: accent[500],
+      accentEnd: accent[400],
+    },
+    dark: {
+      gradientStart: '#1a1607',
+      gradientMid: '#332d10',
+      gradientEnd: neutral[950],
+      accentStart: accent[400],
+      accentEnd: accent[300],
+    },
+  },
 } as const;
 
 /**
@@ -110,17 +128,23 @@ const READY_TO_PLAY_COLORS = {
 
 /**
  * Determine which color palette to use based on match type
- * Simplified to only competitive vs casual - urgency handled via animation
+ * - competitive: secondary (coral) palette
+ * - casual: primary (teal) palette
+ * - both: accent (amber) palette - distinct from casual
  */
-type PaletteType = 'competitive' | 'casual';
+type PaletteType = 'competitive' | 'casual' | 'both';
 
 function getMatchPalette(playerExpectation: string | null): PaletteType {
   // Competitive matches use secondary (coral) palette
   if (playerExpectation === 'competitive') {
     return 'competitive';
   }
-  // All other matches (casual, practice, null) use primary (teal) palette
-  return 'casual';
+  // Casual matches use primary (teal) palette
+  if (playerExpectation === 'casual') {
+    return 'casual';
+  }
+  // Both or null/undefined uses accent (amber) palette - open to anything
+  return 'both';
 }
 
 // =============================================================================
@@ -382,11 +406,37 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({ match, onPress, isDark, t, lo
   // Animated pulse effect for urgent matches
   const urgentPulseAnimation = useRef(new Animated.Value(0)).current;
 
-  // Determine color palette based on match type only (competitive vs casual)
+  // Determine color palette based on match type (competitive vs casual vs both)
   // Urgency is handled via animation, not color change
   const palette = getMatchPalette(match.player_expectation);
   const paletteColors = MATCH_PALETTES[palette][isDark ? 'dark' : 'light'];
-  const isCompetitive = palette === 'competitive';
+
+  // Get palette-specific accent colors based on match type
+  const getPaletteAccentColors = useCallback(
+    (paletteType: PaletteType) => {
+      switch (paletteType) {
+        case 'competitive':
+          return {
+            accent: isDark ? secondary[400] : secondary[500],
+            accentLight: isDark ? secondary[700] : secondary[200],
+          };
+        case 'casual':
+          return {
+            accent: isDark ? primary[400] : primary[500],
+            accentLight: isDark ? primary[700] : primary[200],
+          };
+        case 'both':
+        default:
+          return {
+            accent: isDark ? accent[400] : accent[500],
+            accentLight: isDark ? accent[700] : accent[200],
+          };
+      }
+    },
+    [isDark]
+  );
+
+  const paletteAccents = getPaletteAccentColors(palette);
 
   const themeColors = isDark ? darkTheme : lightTheme;
   const colors: ThemeColors = useMemo(
@@ -399,23 +449,11 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({ match, onPress, isDark, t, lo
       secondary: isDark ? secondary[400] : secondary[500],
       avatarPlaceholder: isDark ? neutral[700] : neutral[200],
       // Palette-aware colors for consistent theming
-      paletteAccent: isCompetitive
-        ? isDark
-          ? secondary[400]
-          : secondary[500]
-        : isDark
-          ? primary[400]
-          : primary[500],
+      paletteAccent: paletteAccents.accent,
       // Subtle border color - visible but not overpowering
-      paletteAccentLight: isCompetitive
-        ? isDark
-          ? secondary[700] // Darker in dark mode for visibility
-          : secondary[200] // Slightly more saturated in light mode
-        : isDark
-          ? primary[700]
-          : primary[200],
+      paletteAccentLight: paletteAccents.accentLight,
     }),
-    [themeColors, isDark, isCompetitive]
+    [themeColors, isDark, paletteAccents]
   );
 
   const { dayLabel, timeLabel, isUrgent } = getCompactTimeDisplay(

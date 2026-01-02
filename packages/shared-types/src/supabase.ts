@@ -856,10 +856,9 @@ export type Database = {
           location_name: string | null;
           location_type: Database['public']['Enums']['location_type_enum'] | null;
           match_date: string;
-          match_type: Database['public']['Enums']['match_type_enum'];
           min_rating_score_id: string | null;
           notes: string | null;
-          player_expectation: Database['public']['Enums']['match_type_enum'] | null;
+          player_expectation: Database['public']['Enums']['match_type_enum'];
           preferred_opponent_gender: Database['public']['Enums']['gender_type'] | null;
           sport_id: string;
           start_time: string;
@@ -891,10 +890,9 @@ export type Database = {
           location_name?: string | null;
           location_type?: Database['public']['Enums']['location_type_enum'] | null;
           match_date: string;
-          match_type: Database['public']['Enums']['match_type_enum'];
           min_rating_score_id?: string | null;
           notes?: string | null;
-          player_expectation?: Database['public']['Enums']['match_type_enum'] | null;
+          player_expectation?: Database['public']['Enums']['match_type_enum'];
           preferred_opponent_gender?: Database['public']['Enums']['gender_type'] | null;
           sport_id: string;
           start_time: string;
@@ -926,10 +924,9 @@ export type Database = {
           location_name?: string | null;
           location_type?: Database['public']['Enums']['location_type_enum'] | null;
           match_date?: string;
-          match_type?: Database['public']['Enums']['match_type_enum'];
           min_rating_score_id?: string | null;
           notes?: string | null;
-          player_expectation?: Database['public']['Enums']['match_type_enum'] | null;
+          player_expectation?: Database['public']['Enums']['match_type_enum'];
           preferred_opponent_gender?: Database['public']['Enums']['gender_type'] | null;
           sport_id?: string;
           start_time?: string;
@@ -2024,6 +2021,7 @@ export type Database = {
           phone: string | null;
           phone_verified: boolean | null;
           postal_code: string | null;
+          preferred_locale: Database['public']['Enums']['locale_enum'] | null;
           profile_picture_url: string | null;
           province: string | null;
           updated_at: string | null;
@@ -2047,6 +2045,7 @@ export type Database = {
           phone?: string | null;
           phone_verified?: boolean | null;
           postal_code?: string | null;
+          preferred_locale?: Database['public']['Enums']['locale_enum'] | null;
           profile_picture_url?: string | null;
           province?: string | null;
           updated_at?: string | null;
@@ -2070,6 +2069,7 @@ export type Database = {
           phone?: string | null;
           phone_verified?: boolean | null;
           postal_code?: string | null;
+          preferred_locale?: Database['public']['Enums']['locale_enum'] | null;
           profile_picture_url?: string | null;
           province?: string | null;
           updated_at?: string | null;
@@ -2833,6 +2833,7 @@ export type Database = {
         | 'mailing_list'
         | 'growth_prompt';
       invite_status_enum: 'pending' | 'sent' | 'accepted' | 'expired' | 'bounced' | 'cancelled';
+      locale_enum: 'en-US' | 'en-CA' | 'fr-CA' | 'fr-FR';
       location_type_enum: 'facility' | 'custom' | 'tbd';
       match_duration_enum: '30' | '60' | '90' | '120' | 'custom';
       match_format_enum: 'singles' | 'doubles';
@@ -2872,16 +2873,16 @@ export type Database = {
         | 'match_join_request'
         | 'match_join_accepted'
         | 'match_join_rejected'
+        | 'match_player_joined'
         | 'match_cancelled'
         | 'match_updated'
         | 'match_starting_soon'
         | 'match_completed'
         | 'player_kicked'
+        | 'player_left'
         | 'new_message'
         | 'friend_request'
-        | 'rating_verified'
-        | 'match_player_joined'
-        | 'player_left';
+        | 'rating_verified';
       organization_nature_enum: 'public' | 'private';
       organization_type: 'club' | 'facility' | 'league' | 'academy' | 'association';
       organization_type_enum: 'club' | 'municipality' | 'city' | 'association';
@@ -3097,6 +3098,7 @@ export const Constants = {
       gender_type: ['male', 'female', 'other', 'prefer_not_to_say'],
       invite_source_enum: ['manual', 'auto_match', 'invite_list', 'mailing_list', 'growth_prompt'],
       invite_status_enum: ['pending', 'sent', 'accepted', 'expired', 'bounced', 'cancelled'],
+      locale_enum: ['en-US', 'en-CA', 'fr-CA', 'fr-FR'],
       location_type_enum: ['facility', 'custom', 'tbd'],
       match_duration_enum: ['30', '60', '90', '120', 'custom'],
       match_format_enum: ['singles', 'doubles'],
@@ -3138,16 +3140,16 @@ export const Constants = {
         'match_join_request',
         'match_join_accepted',
         'match_join_rejected',
+        'match_player_joined',
         'match_cancelled',
         'match_updated',
         'match_starting_soon',
         'match_completed',
         'player_kicked',
+        'player_left',
         'new_message',
         'friend_request',
         'rating_verified',
-        'match_player_joined',
-        'player_left',
       ],
       organization_nature_enum: ['public', 'private'],
       organization_type: ['club', 'facility', 'league', 'academy', 'association'],
