@@ -753,6 +753,7 @@
       "tbdLocationInfo": "Vous pouvez finaliser le lieu plus tard après que les participants se soient joints. Ils seront notifiés lorsque vous le mettrez à jour.",
       "facility": "Installation",
       "facilityPlaceholder": "Rechercher des installations...",
+      "preferredFacility": "Favori",
       "court": "Terrain",
       "courtPlaceholder": "Sélectionner un terrain",
       "locationName": "Nom du lieu",

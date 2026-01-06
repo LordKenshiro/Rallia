@@ -24,6 +24,7 @@ import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
 import {
   useFacilitySearch,
+  usePreferredFacility,
   usePlacesAutocomplete,
   useCourtAvailability,
 } from '@rallia/shared-hooks';
@@ -268,6 +269,8 @@ interface FacilityItemProps {
   colors: WhereStepProps['colors'];
   t: (key: TranslationKey, options?: TranslationOptions) => string;
   isDark: boolean;
+  /** Whether this is the user's preferred facility */
+  isPreferred?: boolean;
 }
 
 const FacilityItem: React.FC<FacilityItemProps> = ({
@@ -277,6 +280,7 @@ const FacilityItem: React.FC<FacilityItemProps> = ({
   colors,
   t,
   isDark,
+  isPreferred = false,
 }) => {
   // Fetch availability using the provider system
   const { slotsByDate, isLoading, hasProvider } = useCourtAvailability({
@@ -310,9 +314,21 @@ const FacilityItem: React.FC<FacilityItemProps> = ({
         {/* Header row with name and distance */}
         <View style={styles.facilityHeader}>
           <View style={styles.facilityNameContainer}>
-            <Text size="base" weight="medium" color={colors.text} numberOfLines={1}>
-              {facility.name}
-            </Text>
+            <View style={styles.facilityNameRow}>
+              <Text size="base" weight="medium" color={colors.text} numberOfLines={1}>
+                {facility.name}
+              </Text>
+              {isPreferred && (
+                <View
+                  style={[styles.preferredBadge, { backgroundColor: `${colors.buttonActive}20` }]}
+                >
+                  <Ionicons name="star" size={10} color={colors.buttonActive} />
+                  <Text size="xs" weight="semibold" color={colors.buttonActive}>
+                    {t('matchCreation.fields.preferredFacility' as TranslationKey)}
+                  </Text>
+                </View>
+              )}
+            </View>
             <Text size="sm" color={colors.textMuted} numberOfLines={1}>
               {[facility.address, facility.city].filter(Boolean).join(', ')}
             </Text>
@@ -730,7 +746,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
 
   // Facility search hook
   const {
-    facilities,
+    facilities: searchFacilities,
     isLoading: facilitiesLoading,
     isFetching,
     isFetchingNextPage,
@@ -744,6 +760,28 @@ export const WhereStep: React.FC<WhereStepProps> = ({
     searchQuery,
     enabled: locationType === 'facility' && !selectedFacility,
   });
+
+  // Preferred facility hook - fetch the player's preferred facility
+  const { preferredFacility, isLoading: preferredFacilityLoading } = usePreferredFacility({
+    preferredFacilityId,
+    sportId,
+    latitude: location?.latitude,
+    longitude: location?.longitude,
+    enabled: locationType === 'facility' && !selectedFacility && !!preferredFacilityId,
+  });
+
+  // Merge facilities list with preferred facility first, deduplicating
+  const facilities = React.useMemo(() => {
+    if (!preferredFacility) {
+      return searchFacilities;
+    }
+
+    // Filter out the preferred facility from search results to avoid duplicates
+    const filteredFacilities = searchFacilities.filter(f => f.id !== preferredFacility.id);
+
+    // Return preferred facility first, followed by other facilities
+    return [preferredFacility, ...filteredFacilities];
+  }, [preferredFacility, searchFacilities]);
 
   // Places autocomplete hook for custom location search
   const {
@@ -1086,6 +1124,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
                       colors={colors}
                       t={t}
                       isDark={isDark}
+                      isPreferred={facility.id === preferredFacilityId}
                     />
                   ))}
                   {isFetchingNextPage && (
@@ -1386,6 +1425,20 @@ const styles = StyleSheet.create({
   facilityNameContainer: {
     flex: 1,
     marginRight: spacingPixels[2],
+  },
+  facilityNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacingPixels[2],
+  },
+  preferredBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    paddingHorizontal: spacingPixels[2],
+    paddingVertical: spacingPixels[0.5],
+    borderRadius: radiusPixels.full,
   },
   slotsScrollView: {
     marginTop: spacingPixels[2],

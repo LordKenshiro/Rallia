@@ -753,6 +753,7 @@
       "tbdLocationInfo": "You can finalize the location later after participants join. They'll be notified when you update it.",
       "facility": "Facility",
       "facilityPlaceholder": "Search facilities...",
+      "preferredFacility": "Favorite",
       "court": "Court",
       "courtPlaceholder": "Select court",
       "locationName": "Location Name",

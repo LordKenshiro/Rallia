@@ -26,6 +26,7 @@ export * from './usePublicMatches';
 export * from './usePublicMatchFilters';
 export * from './useRatingScoresForSport';
 export * from './useFacilitySearch';
+export * from './usePreferredFacility';
 export * from './useFacilityReservationContact';
 export * from './useCourtAvailability';
 export * from './usePlacesAutocomplete';
