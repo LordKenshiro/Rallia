@@ -21,7 +21,7 @@ import { UseFormReturn } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import type { MatchFormSchemaData } from '@rallia/shared-types';
 import type { TranslationKey } from '../../../../hooks/useTranslation';
@@ -85,6 +85,8 @@ interface WhenFormatStepProps {
   t: (key: TranslationKey) => string;
   isDark: boolean;
   locale: string;
+  /** When true, date/time/duration fields are locked (from booked slot) */
+  isLocked?: boolean;
 }
 
 interface OptionButtonProps {
@@ -152,6 +154,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
   t,
   isDark,
   locale,
+  isLocked = false,
 }) => {
   const {
     control,
@@ -168,8 +171,6 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
   const timezone = watch('timezone');
   const duration = watch('duration');
   const customDurationMinutes = watch('customDurationMinutes');
-  const format = watch('format');
-  const playerExpectation = watch('playerExpectation');
 
   // Get display label for selected timezone
   const selectedTimezoneOption = useMemo(() => {
@@ -294,12 +295,34 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
       {/* Step title */}
       <View style={styles.stepHeader}>
         <Text size="lg" weight="bold" color={colors.text}>
-          {t('matchCreation.step1Title' as TranslationKey)}
+          {t('matchCreation.step2Title' as TranslationKey)}
         </Text>
         <Text size="sm" color={colors.textMuted}>
-          {t('matchCreation.step1Description' as TranslationKey)}
+          {t('matchCreation.step2Description' as TranslationKey)}
         </Text>
       </View>
+
+      {/* Locked banner - shown when date/time came from a booked slot */}
+      {isLocked && (
+        <View
+          style={[
+            styles.lockedBanner,
+            {
+              backgroundColor: isDark ? `${accent[500]}15` : accent[50],
+              borderColor: isDark ? accent[400] : accent[600],
+            },
+          ]}
+        >
+          <Ionicons name="lock-closed" size={16} color={isDark ? accent[400] : accent[600]} />
+          <Text
+            size="sm"
+            color={isDark ? accent[200] : accent[800]}
+            style={styles.lockedBannerText}
+          >
+            {t('matchCreation.fields.lockedFromBooking' as TranslationKey)}
+          </Text>
+        </View>
+      )}
 
       {/* Date picker */}
       <View style={styles.fieldGroup}>
@@ -310,18 +333,26 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
           style={[
             styles.pickerButton,
             { borderColor: colors.border, backgroundColor: colors.buttonInactive },
+            isLocked && styles.pickerButtonLocked,
           ]}
           onPress={() => {
+            if (isLocked) return;
             lightHaptic();
             setTempDate(dateValue);
             setShowDatePicker(true);
           }}
+          disabled={isLocked}
           accessibilityLabel={t('matchCreation.accessibility.selectDate' as TranslationKey)}
         >
-          <Ionicons name="calendar-outline" size={20} color={colors.buttonActive} />
-          <Text size="base" color={colors.text}>
+          <Ionicons
+            name="calendar-outline"
+            size={20}
+            color={isLocked ? colors.textMuted : colors.buttonActive}
+          />
+          <Text size="base" color={isLocked ? colors.textMuted : colors.text}>
             {formattedDate}
           </Text>
+          {isLocked && <Ionicons name="lock-closed" size={14} color={colors.textMuted} />}
         </TouchableOpacity>
         {errors.matchDate && (
           <Text size="xs" color="#ef4444" style={styles.errorText}>
@@ -349,18 +380,26 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
           style={[
             styles.pickerButton,
             { borderColor: colors.border, backgroundColor: colors.buttonInactive },
+            isLocked && styles.pickerButtonLocked,
           ]}
           onPress={() => {
+            if (isLocked) return;
             lightHaptic();
             setTempTime(timeValue);
             setShowTimePicker(true);
           }}
+          disabled={isLocked}
           accessibilityLabel={t('matchCreation.accessibility.selectTime' as TranslationKey)}
         >
-          <Ionicons name="time-outline" size={20} color={colors.buttonActive} />
-          <Text size="base" color={colors.text}>
+          <Ionicons
+            name="time-outline"
+            size={20}
+            color={isLocked ? colors.textMuted : colors.buttonActive}
+          />
+          <Text size="base" color={isLocked ? colors.textMuted : colors.text}>
             {formattedTime}
           </Text>
+          {isLocked && <Ionicons name="lock-closed" size={14} color={colors.textMuted} />}
         </TouchableOpacity>
         {errors.startTime && (
           <Text size="xs" color="#ef4444" style={styles.errorText}>
@@ -388,16 +427,23 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
           style={[
             styles.pickerButton,
             { borderColor: colors.border, backgroundColor: colors.buttonInactive },
+            isLocked && styles.pickerButtonLocked,
           ]}
           onPress={() => {
+            if (isLocked) return;
             lightHaptic();
             setShowTimezonePicker(true);
           }}
+          disabled={isLocked}
           accessibilityLabel={t('matchCreation.accessibility.selectTimezone' as TranslationKey)}
         >
-          <Ionicons name="globe-outline" size={20} color={colors.buttonActive} />
+          <Ionicons
+            name="globe-outline"
+            size={20}
+            color={isLocked ? colors.textMuted : colors.buttonActive}
+          />
           <View style={styles.timezoneTextContainer}>
-            <Text size="base" color={colors.text}>
+            <Text size="base" color={isLocked ? colors.textMuted : colors.text}>
               {selectedTimezoneOption.label}
             </Text>
             {selectedTimezoneOption.offset && (
@@ -406,7 +452,11 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
               </Text>
             )}
           </View>
-          <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
+          {isLocked ? (
+            <Ionicons name="lock-closed" size={14} color={colors.textMuted} />
+          ) : (
+            <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
+          )}
         </TouchableOpacity>
         {errors.timezone && (
           <Text size="xs" color="#ef4444" style={styles.errorText}>
@@ -556,14 +606,18 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
       </Modal>
 
       {/* Duration options */}
-      <View style={styles.fieldGroup}>
-        <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-          {t('matchCreation.fields.duration' as TranslationKey)}
-        </Text>
+      <View style={[styles.fieldGroup, isLocked && styles.fieldGroupLocked]}>
+        <View style={styles.fieldLabelRow}>
+          <Text size="sm" weight="semibold" color={colors.textSecondary}>
+            {t('matchCreation.fields.duration' as TranslationKey)}
+          </Text>
+          {isLocked && <Ionicons name="lock-closed" size={12} color={colors.textMuted} />}
+        </View>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.durationRow}
+          scrollEnabled={!isLocked}
         >
           {(['30', '60', '90', '120'] as const).map(dur => (
             <OptionButton
@@ -571,6 +625,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
               label={t(`matchCreation.duration.${dur}` as TranslationKey)}
               selected={duration === dur}
               onPress={() => {
+                if (isLocked) return;
                 setValue('duration', dur, { shouldValidate: true, shouldDirty: true });
                 // Clear custom duration when switching to preset
                 if (duration === 'custom') {
@@ -583,9 +638,10 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
           <OptionButton
             label={t('matchCreation.duration.custom' as TranslationKey)}
             selected={duration === 'custom'}
-            onPress={() =>
-              setValue('duration', 'custom', { shouldValidate: true, shouldDirty: true })
-            }
+            onPress={() => {
+              if (isLocked) return;
+              setValue('duration', 'custom', { shouldValidate: true, shouldDirty: true });
+            }}
             colors={colors}
           />
         </ScrollView>
@@ -639,69 +695,6 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
           </View>
         )}
       </View>
-
-      {/* Format options */}
-      <View style={styles.fieldGroup}>
-        <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-          {t('matchCreation.fields.format' as TranslationKey)}
-        </Text>
-        <View style={styles.formatRow}>
-          <OptionButton
-            label={t('matchCreation.fields.formatSingles' as TranslationKey)}
-            selected={format === 'singles'}
-            onPress={() =>
-              setValue('format', 'singles', { shouldValidate: true, shouldDirty: true })
-            }
-            colors={colors}
-            flex
-          />
-          <OptionButton
-            label={t('matchCreation.fields.formatDoubles' as TranslationKey)}
-            selected={format === 'doubles'}
-            onPress={() =>
-              setValue('format', 'doubles', { shouldValidate: true, shouldDirty: true })
-            }
-            colors={colors}
-            flex
-          />
-        </View>
-      </View>
-
-      {/* Match type options */}
-      <View style={styles.fieldGroup}>
-        <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-          {t('matchCreation.fields.playerExpectation' as TranslationKey)}
-        </Text>
-        <View style={styles.optionsColumn}>
-          <OptionButton
-            label={t('matchCreation.fields.playerExpectationCasual' as TranslationKey)}
-            selected={playerExpectation === 'casual'}
-            onPress={() =>
-              setValue('playerExpectation', 'casual', { shouldValidate: true, shouldDirty: true })
-            }
-            colors={colors}
-          />
-          <OptionButton
-            label={t('matchCreation.fields.playerExpectationCompetitive' as TranslationKey)}
-            selected={playerExpectation === 'competitive'}
-            onPress={() =>
-              setValue('playerExpectation', 'competitive', {
-                shouldValidate: true,
-                shouldDirty: true,
-              })
-            }
-            colors={colors}
-          />
-          <OptionButton
-            label={t('matchCreation.fields.playerExpectationBoth' as TranslationKey)}
-            selected={playerExpectation === 'both'}
-            onPress={() =>
-              setValue('playerExpectation', 'both', { shouldValidate: true, shouldDirty: true })
-            }
-            colors={colors}
-          />
-        </View>
-      </View>
     </ScrollView>
   );
 };
@@ -721,8 +714,29 @@ const styles = StyleSheet.create({
   stepHeader: {
     marginBottom: spacingPixels[6],
   },
+  lockedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacingPixels[3],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+    marginBottom: spacingPixels[4],
+    gap: spacingPixels[2],
+  },
+  lockedBannerText: {
+    flex: 1,
+  },
   fieldGroup: {
     marginBottom: spacingPixels[5],
+  },
+  fieldGroupLocked: {
+    opacity: 0.7,
+  },
+  fieldLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    marginBottom: spacingPixels[2],
   },
   label: {
     marginBottom: spacingPixels[2],
@@ -734,6 +748,9 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
     gap: spacingPixels[3],
+  },
+  pickerButtonLocked: {
+    opacity: 0.7,
   },
   optionsRow: {
     flexDirection: 'row',
@@ -764,13 +781,6 @@ const styles = StyleSheet.create({
   },
   customDurationHint: {
     marginTop: spacingPixels[1],
-  },
-  formatRow: {
-    flexDirection: 'row',
-    gap: spacingPixels[2],
-  },
-  optionsColumn: {
-    gap: spacingPixels[2],
   },
   optionButton: {
     paddingVertical: spacingPixels[3],

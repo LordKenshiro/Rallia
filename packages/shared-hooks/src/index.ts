@@ -26,6 +26,8 @@ export * from './usePublicMatches';
 export * from './usePublicMatchFilters';
 export * from './useRatingScoresForSport';
 export * from './useFacilitySearch';
+export * from './useFacilityReservationContact';
+export * from './useCourtAvailability';
 export * from './usePlacesAutocomplete';
 
 // Platform-specific exports - Metro resolves .native.ts for React Native builds

@@ -6,14 +6,28 @@
  */
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+  AppState,
+  Linking,
+  Animated,
+} from 'react-native';
 import { UseFormReturn, useWatch } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
-import { useFacilitySearch, usePlacesAutocomplete } from '@rallia/shared-hooks';
+import {
+  useFacilitySearch,
+  usePlacesAutocomplete,
+  useCourtAvailability,
+} from '@rallia/shared-hooks';
+import type { FormattedSlot, CourtOption } from '@rallia/shared-hooks';
 import type {
   MatchFormSchemaData,
   FacilitySearchResult,
@@ -22,10 +36,22 @@ import type {
 import type { TranslationKey, TranslationOptions } from '../../../../hooks/useTranslation';
 import { useUserLocation } from '../../../../hooks/useUserLocation';
 import { supabase } from '../../../../lib/supabase';
+import { BookingConfirmationSheet } from '../BookingConfirmationSheet';
+import { CourtSelectionSheet } from '../CourtSelectionSheet';
 
 // =============================================================================
 // TYPES
 // =============================================================================
+
+/** Data extracted from a booked slot for auto-filling date/time/duration */
+export interface BookedSlotData {
+  matchDate: string;
+  startTime: string;
+  endTime: string;
+  duration: '30' | '60' | '90' | '120' | 'custom';
+  customDurationMinutes?: number;
+  timezone: string;
+}
 
 interface WhereStepProps {
   form: UseFormReturn<MatchFormSchemaData>;
@@ -42,6 +68,12 @@ interface WhereStepProps {
   t: (key: TranslationKey, options?: TranslationOptions) => string;
   isDark: boolean;
   sportId: string | undefined;
+  /** Device timezone (fallback when facility doesn't have one) */
+  deviceTimezone: string;
+  /** Callback when user confirms booking a slot - auto-fills date/time/duration */
+  onSlotBooked?: (slotData: BookedSlotData) => void;
+  /** Optional facility ID to pre-select when step loads */
+  preferredFacilityId?: string;
 }
 
 interface LocationTypeCardProps {
@@ -56,6 +88,45 @@ interface LocationTypeCardProps {
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
+
+/**
+ * Format a date as YYYY-MM-DD in local time
+ */
+function formatDateLocal(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Format a date's time as HH:mm (24-hour format)
+ */
+function formatTime24(date: Date): string {
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+
+/**
+ * Calculate duration in minutes between two dates
+ */
+function calculateDurationMinutes(start: Date, end: Date): number {
+  return Math.round((end.getTime() - start.getTime()) / (1000 * 60));
+}
+
+/**
+ * Map duration minutes to form duration value
+ */
+function mapDurationToFormValue(minutes: number): '30' | '60' | '90' | '120' | 'custom' {
+  const standardDurations = [30, 60, 90, 120] as const;
+  for (const d of standardDurations) {
+    if (minutes === d) {
+      return String(d) as '30' | '60' | '90' | '120';
+    }
+  }
+  return 'custom';
+}
 
 /**
  * Format distance in meters to human-readable string
@@ -123,44 +194,229 @@ const LocationTypeCard: React.FC<LocationTypeCardProps> = ({
 );
 
 // =============================================================================
+// SKELETON COMPONENTS
+// =============================================================================
+
+interface SkeletonProps {
+  width: number | string;
+  height: number;
+  borderRadius?: number;
+  colors: WhereStepProps['colors'];
+  style?: object;
+}
+
+const Skeleton: React.FC<SkeletonProps> = ({ width, height, borderRadius = 4, colors, style }) => {
+  const pulseAnim = React.useRef(new Animated.Value(0.3)).current;
+
+  React.useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 0.7,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0.3,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [pulseAnim]);
+
+  return (
+    <Animated.View
+      style={[
+        {
+          width,
+          height,
+          borderRadius,
+          backgroundColor: colors.border,
+          opacity: pulseAnim,
+        },
+        style,
+      ]}
+    />
+  );
+};
+
+interface SkeletonSlotsProps {
+  colors: WhereStepProps['colors'];
+}
+
+const SkeletonSlots: React.FC<SkeletonSlotsProps> = ({ colors }) => {
+  return (
+    <View style={styles.slotsContainer}>
+      <Skeleton width={56} height={24} borderRadius={12} colors={colors} />
+      <Skeleton width={56} height={24} borderRadius={12} colors={colors} />
+      <Skeleton width={56} height={24} borderRadius={12} colors={colors} />
+    </View>
+  );
+};
+
+// =============================================================================
 // FACILITY ITEM
 // =============================================================================
 
 interface FacilityItemProps {
   facility: FacilitySearchResult;
   onSelect: (facility: FacilitySearchResult) => void;
+  onSlotPress?: (facility: FacilitySearchResult, slot: FormattedSlot) => void;
   colors: WhereStepProps['colors'];
+  t: (key: TranslationKey, options?: TranslationOptions) => string;
+  isDark: boolean;
 }
 
-const FacilityItem: React.FC<FacilityItemProps> = ({ facility, onSelect, colors }) => (
-  <TouchableOpacity
-    style={[
-      styles.facilityItem,
-      { backgroundColor: colors.buttonInactive, borderColor: colors.border },
-    ]}
-    onPress={() => {
+const FacilityItem: React.FC<FacilityItemProps> = ({
+  facility,
+  onSelect,
+  onSlotPress,
+  colors,
+  t,
+  isDark,
+}) => {
+  // Fetch availability using the provider system
+  const { slotsByDate, isLoading, hasProvider } = useCourtAvailability({
+    facilityId: facility.id,
+    dataProviderId: facility.data_provider_id,
+    dataProviderType: facility.data_provider_type,
+    externalProviderId: facility.external_provider_id,
+    bookingUrlTemplate: facility.booking_url_template,
+  });
+
+  const handleSlotPress = (slot: FormattedSlot) => {
+    if (onSlotPress) {
       lightHaptic();
-      onSelect(facility);
-    }}
-    activeOpacity={0.7}
-  >
-    <View style={styles.facilityItemContent}>
-      <Text size="base" weight="medium" color={colors.text} numberOfLines={1}>
-        {facility.name}
-      </Text>
-      <Text size="sm" color={colors.textMuted} numberOfLines={1}>
-        {[facility.address, facility.city].filter(Boolean).join(', ')}
-      </Text>
-    </View>
-    {facility.distance_meters !== null && (
-      <View style={styles.distanceBadge}>
-        <Text size="xs" color={colors.textSecondary}>
-          {formatDistance(facility.distance_meters)}
-        </Text>
+      onSlotPress(facility, slot);
+    }
+  };
+
+  return (
+    <TouchableOpacity
+      style={[
+        styles.facilityItem,
+        { backgroundColor: colors.buttonInactive, borderColor: colors.border },
+      ]}
+      onPress={() => {
+        lightHaptic();
+        onSelect(facility);
+      }}
+      activeOpacity={0.7}
+    >
+      <View style={styles.facilityItemContent}>
+        {/* Header row with name and distance */}
+        <View style={styles.facilityHeader}>
+          <View style={styles.facilityNameContainer}>
+            <Text size="base" weight="medium" color={colors.text} numberOfLines={1}>
+              {facility.name}
+            </Text>
+            <Text size="sm" color={colors.textMuted} numberOfLines={1}>
+              {[facility.address, facility.city].filter(Boolean).join(', ')}
+            </Text>
+          </View>
+          {facility.distance_meters !== null && (
+            <View style={styles.distanceBadge}>
+              <Text size="xs" color={colors.textSecondary}>
+                {formatDistance(facility.distance_meters)}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Skeleton slots while loading */}
+        {hasProvider && isLoading && <SkeletonSlots colors={colors} />}
+
+        {/* Date-sectioned slots with horizontal scroll */}
+        {hasProvider && slotsByDate.length > 0 && !isLoading && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.slotsScrollContent}
+            style={styles.slotsScrollView}
+          >
+            {slotsByDate.map(dateGroup => (
+              <View key={dateGroup.dateKey} style={styles.dateGroup}>
+                <Text
+                  size="xs"
+                  weight="semibold"
+                  color={dateGroup.isToday ? colors.buttonActive : colors.textMuted}
+                  style={styles.dateLabel}
+                >
+                  {dateGroup.dateLabel}
+                </Text>
+                <View style={styles.dateSlotsRow}>
+                  {dateGroup.slots.map((slot, index) => (
+                    <TouchableOpacity
+                      key={`${slot.facilityScheduleId}-${index}`}
+                      style={[
+                        styles.slotChip,
+                        {
+                          backgroundColor: slot.bookingUrl
+                            ? `${colors.buttonActive}15`
+                            : colors.buttonInactive,
+                          borderColor: slot.bookingUrl ? colors.buttonActive : colors.border,
+                        },
+                      ]}
+                      onPress={() => slot.bookingUrl && handleSlotPress(slot)}
+                      disabled={!slot.bookingUrl}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        size="xs"
+                        weight="medium"
+                        color={slot.bookingUrl ? colors.buttonActive : colors.textMuted}
+                      >
+                        {slot.time}
+                      </Text>
+                      {slot.courtCount > 0 && (
+                        <View
+                          style={[
+                            styles.courtCountBadge,
+                            {
+                              backgroundColor: slot.bookingUrl
+                                ? colors.buttonActive
+                                : isDark
+                                  ? colors.border
+                                  : colors.textMuted,
+                            },
+                          ]}
+                        >
+                          <Text
+                            size="xs"
+                            weight="bold"
+                            color={
+                              slot.bookingUrl ? colors.buttonTextActive : colors.buttonInactive
+                            }
+                            style={styles.courtCountText}
+                          >
+                            {slot.courtCount}
+                          </Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+        )}
+
+        {/* Empty state when no slots available */}
+        {hasProvider && slotsByDate.length === 0 && !isLoading && (
+          <View style={styles.emptySlots}>
+            <Ionicons name="calendar-clear-outline" size={14} color={colors.textMuted} />
+            <Text size="xs" color={colors.textMuted}>
+              {t('matchCreation.booking.noSlotsAvailable' as TranslationKey)}
+            </Text>
+          </View>
+        )}
       </View>
-    )}
-  </TouchableOpacity>
-);
+    </TouchableOpacity>
+  );
+};
 
 // =============================================================================
 // SELECTED FACILITY DISPLAY
@@ -287,7 +543,16 @@ const SelectedPlace: React.FC<SelectedPlaceProps> = ({ name, address, onClear, c
 // MAIN COMPONENT
 // =============================================================================
 
-export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, sportId }) => {
+export const WhereStep: React.FC<WhereStepProps> = ({
+  form,
+  colors,
+  t,
+  isDark,
+  sportId,
+  deviceTimezone,
+  onSlotBooked,
+  preferredFacilityId,
+}) => {
   const {
     setValue,
     control,
@@ -306,20 +571,151 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
   const scrollViewRef = useRef<ScrollView>(null);
   const addressFieldRef = useRef<View>(null);
 
-  // Track which facility ID we've already fetched to avoid duplicate fetches
-  const fetchedFacilityIdRef = useRef<string | null>(null);
-
   // Local state for custom location search
   const [placeSearchQuery, setPlaceSearchQuery] = useState('');
   const [hasSelectedPlace, setHasSelectedPlace] = useState(false);
 
+  // Booking confirmation state
+  const [pendingBookingSlot, setPendingBookingSlot] = useState<{
+    facility: FacilitySearchResult;
+    slot: FormattedSlot;
+    selectedCourt?: CourtOption;
+  } | null>(null);
+  const [showBookingConfirmation, setShowBookingConfirmation] = useState(false);
+
+  // Court selection state (when multiple courts available at same time)
+  const [showCourtSelection, setShowCourtSelection] = useState(false);
+  const [courtSelectionData, setCourtSelectionData] = useState<{
+    facility: FacilitySearchResult;
+    slot: FormattedSlot;
+  } | null>(null);
+
+  // Listen for app returning to foreground after external booking
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (nextAppState === 'active' && pendingBookingSlot) {
+        // User returned from booking site, show confirmation
+        setShowBookingConfirmation(true);
+      }
+    });
+
+    return () => subscription.remove();
+  }, [pendingBookingSlot]);
+
+  // Handle slot press - show court selection or open external booking URL
+  const handleSlotPress = useCallback(
+    async (facility: FacilitySearchResult, slot: FormattedSlot) => {
+      if (!slot.bookingUrl) return;
+
+      // If multiple courts available, show selection modal
+      if (slot.courtOptions.length > 1) {
+        setCourtSelectionData({ facility, slot });
+        setShowCourtSelection(true);
+        return;
+      }
+
+      // Single court or no options - open booking URL directly
+      const bookingUrl = slot.courtOptions[0]?.bookingUrl || slot.bookingUrl;
+      const selectedCourt = slot.courtOptions[0];
+
+      // Store the pending booking info
+      setPendingBookingSlot({ facility, slot, selectedCourt });
+
+      // Open external booking URL
+      try {
+        await Linking.openURL(bookingUrl);
+      } catch (error) {
+        console.error('Failed to open booking URL:', error);
+        setPendingBookingSlot(null);
+      }
+    },
+    []
+  );
+
+  // Handle court selection from modal
+  const handleCourtSelect = useCallback(
+    async (court: CourtOption) => {
+      if (!courtSelectionData) return;
+
+      const { facility, slot } = courtSelectionData;
+
+      // Close the court selection modal
+      setShowCourtSelection(false);
+
+      // Store the pending booking info with selected court
+      setPendingBookingSlot({ facility, slot, selectedCourt: court });
+
+      // Open the selected court's booking URL
+      try {
+        await Linking.openURL(court.bookingUrl);
+      } catch (error) {
+        console.error('Failed to open booking URL:', error);
+        setPendingBookingSlot(null);
+      }
+
+      setCourtSelectionData(null);
+    },
+    [courtSelectionData]
+  );
+
+  // Handle court selection cancel
+  const handleCourtSelectionCancel = useCallback(() => {
+    setShowCourtSelection(false);
+    setCourtSelectionData(null);
+  }, []);
+
+  // Handle booking confirmation
+  const handleBookingConfirm = useCallback(() => {
+    if (pendingBookingSlot) {
+      const { facility, slot } = pendingBookingSlot;
+
+      // Update form with the booked facility
+      setValue('facilityId', facility.id);
+      setValue('courtStatus', 'booked');
+      setSelectedFacility(facility);
+
+      // Extract slot data for auto-filling date/time/duration in WhenStep
+      const slotDate = slot.datetime;
+      const matchDate = formatDateLocal(slotDate);
+      const startTime = formatTime24(slotDate);
+      const endTime = formatTime24(slot.endDateTime);
+      const durationMins = calculateDurationMinutes(slot.datetime, slot.endDateTime);
+
+      // Use facility timezone if available, otherwise use device timezone
+      const facilityTimezone = facility.timezone || deviceTimezone;
+
+      // Call parent callback with booking data
+      onSlotBooked?.({
+        matchDate,
+        startTime,
+        endTime,
+        duration: mapDurationToFormValue(durationMins),
+        customDurationMinutes: durationMins,
+        timezone: facilityTimezone,
+      });
+
+      successHaptic();
+    }
+    setShowBookingConfirmation(false);
+    setPendingBookingSlot(null);
+  }, [pendingBookingSlot, setValue, deviceTimezone, onSlotBooked]);
+
+  // Handle booking cancel
+  const handleBookingCancel = useCallback(() => {
+    setShowBookingConfirmation(false);
+    setPendingBookingSlot(null);
+  }, []);
+
   // Reset state when sportId changes (when switching sports)
   useEffect(() => {
     setSelectedFacility(null);
-    fetchedFacilityIdRef.current = null;
     setSearchQuery('');
     setPlaceSearchQuery('');
     setHasSelectedPlace(false);
+    setPendingBookingSlot(null);
+    setShowBookingConfirmation(false);
+    setShowCourtSelection(false);
+    setCourtSelectionData(null);
   }, [sportId]);
 
   // Sync hasSelectedPlace when resuming a draft with custom location
@@ -333,8 +729,6 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
   const { location, loading: locationLoading, error: locationError } = useUserLocation();
 
   // Facility search hook
-  // Enable search if we need to find a facility from draft (facilityId exists but selectedFacility is null)
-  const needsToFindFacility = locationType === 'facility' && !!facilityId && !selectedFacility;
   const {
     facilities,
     isLoading: facilitiesLoading,
@@ -348,7 +742,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
     latitude: location?.latitude,
     longitude: location?.longitude,
     searchQuery,
-    enabled: locationType === 'facility' && (!selectedFacility || needsToFindFacility),
+    enabled: locationType === 'facility' && !selectedFacility,
   });
 
   // Places autocomplete hook for custom location search
@@ -368,93 +762,6 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
   // State for fetching place details
   const [isFetchingPlaceDetails, setIsFetchingPlaceDetails] = useState(false);
 
-  // Sync selectedFacility with form's facilityId when resuming a draft or when preferred facility is set
-  useEffect(() => {
-    // Skip if no facilityId or already have the correct facility selected
-    if (!facilityId || (selectedFacility && selectedFacility.id === facilityId)) {
-      return;
-    }
-
-    // First, try to find the facility in the loaded facilities list
-    if (facilities.length > 0) {
-      const foundFacility = facilities.find(f => f.id === facilityId);
-      if (foundFacility) {
-        setSelectedFacility(foundFacility);
-        fetchedFacilityIdRef.current = facilityId;
-        return;
-      }
-    }
-
-    // Skip if we've already fetched this facility ID (prevents duplicate fetches)
-    if (fetchedFacilityIdRef.current === facilityId) {
-      return;
-    }
-
-    // Mark as fetching to prevent duplicate requests
-    fetchedFacilityIdRef.current = facilityId;
-
-    // If not found in loaded facilities, fetch it directly from the database
-    // This handles the case when preferred_facility_id is set but the facility
-    // isn't in the search results (e.g., it's far away or filtered out)
-    const fetchPreferredFacility = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('facility')
-          .select('id, name, address, city, latitude, longitude')
-          .eq('id', facilityId)
-          .eq('is_active', true)
-          .maybeSingle();
-
-        if (error && error.code !== 'PGRST116') {
-          console.error('Failed to fetch preferred facility:', error);
-          return;
-        }
-
-        if (data) {
-          // Calculate distance if we have user location
-          let distance_meters: number | null = null;
-          if (
-            location?.latitude &&
-            location?.longitude &&
-            data.latitude !== null &&
-            data.longitude !== null
-          ) {
-            // Simple haversine distance calculation
-            const R = 6371000; // Earth radius in meters
-            const lat1 = (location.latitude * Math.PI) / 180;
-            const lat2 = (Number(data.latitude) * Math.PI) / 180;
-            const deltaLat = ((Number(data.latitude) - location.latitude) * Math.PI) / 180;
-            const deltaLon = ((Number(data.longitude) - location.longitude) * Math.PI) / 180;
-
-            const a =
-              Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
-              Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            distance_meters = R * c;
-          }
-
-          const facilityResult: FacilitySearchResult = {
-            id: data.id,
-            name: data.name,
-            address: data.address,
-            city: data.city,
-            distance_meters,
-          };
-
-          setSelectedFacility(facilityResult);
-          // Also update form values for display
-          setValue('locationName', data.name, { shouldDirty: false });
-          const fullAddress = [data.address, data.city].filter(Boolean).join(', ');
-          setValue('locationAddress', fullAddress || undefined, { shouldDirty: false });
-        }
-      } catch (error) {
-        console.error('Error fetching preferred facility:', error);
-      }
-    };
-
-    fetchPreferredFacility();
-  }, [facilityId, selectedFacility, facilities, location, setValue]);
-
   // Handle facility selection
   const handleSelectFacility = useCallback(
     (facility: FacilitySearchResult) => {
@@ -473,7 +780,6 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
   // Handle clearing selected facility
   const handleClearFacility = useCallback(() => {
     setSelectedFacility(null);
-    fetchedFacilityIdRef.current = null; // Reset so we can re-fetch if needed
     setValue('facilityId', undefined, { shouldValidate: true, shouldDirty: true });
     setValue('locationName', undefined, { shouldDirty: true });
     setValue('locationAddress', undefined, { shouldDirty: true });
@@ -530,9 +836,10 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
   const handleLocationTypeChange = useCallback(
     (newLocationType: 'facility' | 'custom' | 'tbd') => {
       lightHaptic();
+      setValue('locationType', newLocationType, { shouldDirty: true });
 
+      // Clear fields based on the new type
       if (newLocationType === 'facility') {
-        // Switching to facility: clear custom location fields and place search
         setValue('locationName', undefined, { shouldDirty: true });
         setValue('locationAddress', undefined, { shouldDirty: true });
         setValue('customLatitude', undefined, { shouldDirty: true });
@@ -541,24 +848,19 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
         setHasSelectedPlace(false);
         clearPredictions();
       } else if (newLocationType === 'custom') {
-        // Switching to custom: clear facility fields
         setSelectedFacility(null);
-        fetchedFacilityIdRef.current = null; // Reset so we can re-fetch if needed
-        setValue('facilityId', undefined, { shouldValidate: true, shouldDirty: true });
-        setSearchQuery('');
-        // Clear locationName and locationAddress that might have been set by facility selection
+        setValue('facilityId', undefined, { shouldDirty: true });
         setValue('locationName', undefined, { shouldDirty: true });
         setValue('locationAddress', undefined, { shouldDirty: true });
         setValue('customLatitude', undefined, { shouldDirty: true });
         setValue('customLongitude', undefined, { shouldDirty: true });
+        setSearchQuery('');
         setPlaceSearchQuery('');
         setHasSelectedPlace(false);
         clearPredictions();
       } else if (newLocationType === 'tbd') {
-        // Switching to TBD: clear both facility and custom location fields
         setSelectedFacility(null);
-        fetchedFacilityIdRef.current = null; // Reset so we can re-fetch if needed
-        setValue('facilityId', undefined, { shouldValidate: true, shouldDirty: true });
+        setValue('facilityId', undefined, { shouldDirty: true });
         setValue('locationName', undefined, { shouldDirty: true });
         setValue('locationAddress', undefined, { shouldDirty: true });
         setValue('customLatitude', undefined, { shouldDirty: true });
@@ -568,8 +870,6 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
         setHasSelectedPlace(false);
         clearPredictions();
       }
-
-      setValue('locationType', newLocationType, { shouldValidate: true, shouldDirty: true });
     },
     [setValue, clearPredictions]
   );
@@ -595,9 +895,12 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
     [hasNextPage, isFetchingNextPage, fetchNextPage]
   );
 
+  // Combined loading state: show loading only when actually fetching data
+  const isLoadingFacilities = facilitiesLoading;
+
   // Render empty state
   const renderEmptyState = useCallback(() => {
-    if (facilitiesLoading || locationLoading) {
+    if (isLoadingFacilities || locationLoading) {
       return (
         <View style={styles.emptyState}>
           <ActivityIndicator size="small" color={colors.buttonActive} />
@@ -656,7 +959,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
 
     return null;
   }, [
-    facilitiesLoading,
+    isLoadingFacilities,
     locationLoading,
     locationError,
     facilitiesError,
@@ -683,10 +986,10 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
       {/* Step title */}
       <View style={styles.stepHeader}>
         <Text size="lg" weight="bold" color={colors.text}>
-          {t('matchCreation.step2Title' as TranslationKey)}
+          {t('matchCreation.step1Title' as TranslationKey)}
         </Text>
         <Text size="sm" color={colors.textMuted}>
-          {t('matchCreation.step2Description' as TranslationKey)}
+          {t('matchCreation.step1Description' as TranslationKey)}
         </Text>
       </View>
 
@@ -779,7 +1082,10 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
                       key={facility.id}
                       facility={facility}
                       onSelect={handleSelectFacility}
+                      onSlotPress={handleSlotPress}
                       colors={colors}
+                      t={t}
+                      isDark={isDark}
                     />
                   ))}
                   {isFetchingNextPage && (
@@ -969,6 +1275,34 @@ export const WhereStep: React.FC<WhereStepProps> = ({ form, colors, t, isDark, s
           </Text>
         </View>
       )}
+
+      {/* Court Selection Sheet */}
+      <CourtSelectionSheet
+        visible={showCourtSelection}
+        courts={courtSelectionData?.slot.courtOptions ?? []}
+        timeLabel={courtSelectionData?.slot.time ?? ''}
+        onSelect={handleCourtSelect}
+        onCancel={handleCourtSelectionCancel}
+        colors={{
+          ...colors,
+          background: isDark ? '#000000' : '#ffffff',
+        }}
+        t={t}
+        isDark={isDark}
+      />
+
+      {/* Booking Confirmation Sheet */}
+      <BookingConfirmationSheet
+        visible={showBookingConfirmation}
+        onConfirm={handleBookingConfirm}
+        onCancel={handleBookingCancel}
+        colors={{
+          ...colors,
+          background: isDark ? '#000000' : '#ffffff',
+        }}
+        t={t}
+        isDark={isDark}
+      />
     </ScrollView>
   );
 };
@@ -1043,6 +1377,70 @@ const styles = StyleSheet.create({
   },
   facilityItemContent: {
     flex: 1,
+  },
+  facilityHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  facilityNameContainer: {
+    flex: 1,
+    marginRight: spacingPixels[2],
+  },
+  slotsScrollView: {
+    marginTop: spacingPixels[2],
+    marginHorizontal: -spacingPixels[3], // Extend to card edges
+  },
+  slotsScrollContent: {
+    paddingHorizontal: spacingPixels[3],
+    gap: spacingPixels[4],
+  },
+  dateGroup: {
+    gap: spacingPixels[1],
+  },
+  dateLabel: {
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontSize: 10,
+  },
+  dateSlotsRow: {
+    flexDirection: 'row',
+    gap: spacingPixels[1.5],
+  },
+  slotsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacingPixels[2],
+    marginTop: spacingPixels[2],
+  },
+  slotChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[2],
+    paddingVertical: spacingPixels[1],
+    borderRadius: radiusPixels.full,
+    borderWidth: 1,
+    gap: spacingPixels[1],
+  },
+  courtCountBadge: {
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacingPixels[0.5],
+  },
+  courtCountText: {
+    fontSize: 10,
+    lineHeight: 12,
+    includeFontPadding: false,
+  },
+  emptySlots: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    marginTop: spacingPixels[2],
+    paddingVertical: spacingPixels[1],
   },
   placeItemIcon: {
     width: 32,

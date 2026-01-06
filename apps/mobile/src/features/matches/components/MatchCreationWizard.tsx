@@ -110,10 +110,10 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ currentStep, totalSteps, colo
     width: `${progress.value}%`,
   }));
 
-  // Get step name for current step
+  // Get step name for current step (order: Where -> When -> Preferences)
   const stepNames = [
-    t('matchCreation.stepNames.when' as TranslationKey),
     t('matchCreation.stepNames.where' as TranslationKey),
+    t('matchCreation.stepNames.when' as TranslationKey),
     t('matchCreation.stepNames.preferences' as TranslationKey),
   ];
   const currentStepName = stepNames[currentStep - 1] || '';
@@ -281,11 +281,25 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     null
   );
   const [preferencesLoading, setPreferencesLoading] = useState(true);
+  // Preferred facility ID from player's profile (persists separately from form's facilityId)
+  const [preferredFacilityId, setPreferredFacilityId] = useState<string | undefined>(undefined);
+
+  // State for booked slot data (when user books a court slot in Step 1)
+  // This locks the date/time/duration/timezone fields in Step 2
+  const [bookedSlotData, setBookedSlotData] = useState<{
+    matchDate: string;
+    startTime: string;
+    endTime: string;
+    duration: '30' | '60' | '90' | '120' | 'custom';
+    customDurationMinutes?: number;
+    timezone: string;
+  } | null>(null);
 
   // Reset preferences when sportId changes (handles sport switching)
   useEffect(() => {
     setPlayerPreferences(null);
     setPreferencesLoading(true);
+    setPreferredFacilityId(undefined);
   }, [sportId]);
 
   // Fetch player preferences for the selected sport
@@ -334,10 +348,12 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
             mappedPreferences.playerExpectation = typeMap[data.preferred_match_type] || 'both';
           }
 
-          // Map preferred facility: if preferred_facility_id exists, set locationType to 'facility' and facilityId
+          // Map preferred facility: if preferred_facility_id exists, set locationType to 'facility'
+          // Note: We don't set facilityId here anymore - the preferred facility is shown first in the list
+          // but not auto-selected. The user can select it if they want.
           if (data.preferred_facility_id) {
             mappedPreferences.locationType = 'facility';
-            mappedPreferences.facilityId = data.preferred_facility_id;
+            setPreferredFacilityId(data.preferred_facility_id);
           }
 
           setPlayerPreferences(mappedPreferences);
@@ -504,6 +520,51 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     }
   }, [isDirty, values]);
 
+  // Helper to format date as YYYY-MM-DD in local time
+  const formatDateLocal = useCallback((date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
+
+  // Clear booked slot data when location type changes away from facility or facility is cleared
+  // This unlocks the WhenFormatStep when user changes location type after booking a slot
+  // Also resets date/time/duration to default values
+  useEffect(() => {
+    // Clear booking if location type is not 'facility' or facilityId is cleared
+    if (values.locationType !== 'facility' || !values.facilityId) {
+      setBookedSlotData(prev => {
+        if (prev) {
+          // Reset date/time/duration to default values
+          const today = new Date();
+          const todayStr = formatDateLocal(today);
+
+          // Get next rounded hour
+          const now = new Date();
+          now.setHours(now.getHours() + 1);
+          now.setMinutes(0);
+          const startTimeStr = now.toTimeString().slice(0, 5);
+
+          // Calculate end time (1 hour later)
+          now.setHours(now.getHours() + 1);
+          const endTimeStr = now.toTimeString().slice(0, 5);
+
+          // Reset form values to defaults
+          form.setValue('matchDate', todayStr, { shouldDirty: true });
+          form.setValue('startTime', startTimeStr, { shouldDirty: true });
+          form.setValue('endTime', endTimeStr, { shouldDirty: true });
+          form.setValue('duration', '60', { shouldDirty: true });
+          form.setValue('customDurationMinutes', undefined, { shouldDirty: true });
+          form.setValue('timezone', timezone, { shouldDirty: true });
+
+          return null;
+        }
+        return prev;
+      });
+    }
+  }, [values.locationType, values.facilityId, form, formatDateLocal, timezone]);
+
   // Animate step changes
   useEffect(() => {
     translateX.value = withSpring(-((currentStep - 1) * SCREEN_WIDTH), {
@@ -517,8 +578,8 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   const goToNextStep = useCallback(async () => {
     Keyboard.dismiss();
 
-    // Special handling for step 2: show alert if facility is not selected
-    if (currentStep === 2 && values.locationType === 'facility' && !values.facilityId) {
+    // Special handling for step 1 (Where): show alert if facility is not selected
+    if (currentStep === 1 && values.locationType === 'facility' && !values.facilityId) {
       warningHaptic();
       Alert.alert(t('matchCreation.validation.facilityRequired' as TranslationKey), '', [
         { text: t('common.ok' as TranslationKey) },
@@ -556,6 +617,41 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
       setCurrentStep(prev => prev - 1);
     }
   }, [currentStep]);
+
+  // Handle slot booking from WhereStep - auto-fills date/time/duration in WhenStep
+  const handleSlotBooked = useCallback(
+    (slotData: {
+      matchDate: string;
+      startTime: string;
+      endTime: string;
+      duration: '30' | '60' | '90' | '120' | 'custom';
+      customDurationMinutes?: number;
+      timezone: string;
+    }) => {
+      // Store the booked slot data (this will lock the fields in WhenStep)
+      setBookedSlotData(slotData);
+
+      // Update form with the booked slot data
+      form.setValue('matchDate', slotData.matchDate, { shouldDirty: true });
+      form.setValue('startTime', slotData.startTime, { shouldDirty: true });
+      form.setValue('endTime', slotData.endTime, { shouldDirty: true });
+      form.setValue('duration', slotData.duration, { shouldDirty: true });
+      if (slotData.customDurationMinutes) {
+        form.setValue('customDurationMinutes', slotData.customDurationMinutes, {
+          shouldDirty: true,
+        });
+      }
+      form.setValue('timezone', slotData.timezone, { shouldDirty: true });
+
+      successHaptic();
+    },
+    [form]
+  );
+
+  // Clear booked slot data when location type changes away from facility or facility is cleared
+  const handleClearBooking = useCallback(() => {
+    setBookedSlotData(null);
+  }, []);
 
   // Handle form submission
   const handleSubmit = useCallback(async () => {
@@ -834,12 +930,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
               animatedStepStyle,
             ]}
           >
-            {/* Step 1: When & Format */}
-            <View style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
-              <WhenFormatStep form={form} colors={colors} t={t} isDark={isDark} locale={locale} />
-            </View>
-
-            {/* Step 2: Where */}
+            {/* Step 1: Where */}
             <View style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
               <WhereStep
                 form={form}
@@ -847,6 +938,21 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                 t={t}
                 isDark={isDark}
                 sportId={selectedSport?.id}
+                deviceTimezone={timezone}
+                onSlotBooked={handleSlotBooked}
+                preferredFacilityId={preferredFacilityId}
+              />
+            </View>
+
+            {/* Step 2: When */}
+            <View style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
+              <WhenFormatStep
+                form={form}
+                colors={colors}
+                t={t}
+                isDark={isDark}
+                locale={locale}
+                isLocked={bookedSlotData !== null}
               />
             </View>
 

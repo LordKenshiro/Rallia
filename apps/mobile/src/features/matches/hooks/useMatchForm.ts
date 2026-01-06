@@ -329,19 +329,12 @@ export function useMatchForm(options: UseMatchFormOptions): UseMatchFormReturn {
   );
 
   // Get data for a specific step
+  // Order: Step 1 = Where, Step 2 = When, Step 3 = Preferences
   const getStepData = useCallback(
     (step: 1 | 2 | 3): Step1FormData | Step2FormData | Step3FormData => {
       switch (step) {
         case 1:
-          return {
-            matchDate: values.matchDate,
-            startTime: values.startTime,
-            duration: values.duration,
-            customDurationMinutes: values.customDurationMinutes,
-            format: values.format,
-            playerExpectation: values.playerExpectation,
-          };
-        case 2:
+          // Step 1: Where
           return {
             locationType: values.locationType,
             facilityId: values.facilityId,
@@ -350,9 +343,21 @@ export function useMatchForm(options: UseMatchFormOptions): UseMatchFormReturn {
             locationAddress: values.locationAddress,
             customLatitude: values.customLatitude,
             customLongitude: values.customLongitude,
-          };
-        case 3:
+          } as Step1FormData;
+        case 2:
+          // Step 2: When
           return {
+            matchDate: values.matchDate,
+            startTime: values.startTime,
+            duration: values.duration,
+            customDurationMinutes: values.customDurationMinutes,
+            timezone: values.timezone,
+          } as Step2FormData;
+        case 3:
+          // Step 3: Preferences (includes format and player expectation)
+          return {
+            format: values.format,
+            playerExpectation: values.playerExpectation,
             courtStatus: values.courtStatus,
             isCourtFree: values.isCourtFree,
             costSplitType: values.costSplitType,
@@ -360,7 +365,7 @@ export function useMatchForm(options: UseMatchFormOptions): UseMatchFormReturn {
             visibility: values.visibility,
             joinMode: values.joinMode,
             notes: values.notes,
-          };
+          } as Step3FormData;
         default:
           return {} as Step1FormData;
       }
@@ -382,19 +387,12 @@ export function useMatchForm(options: UseMatchFormOptions): UseMatchFormReturn {
 
 /**
  * Get the field names for a specific step
+ * Order: Step 1 = Where, Step 2 = When, Step 3 = Preferences (includes format/expectation)
  */
 function getStepFields(step: 1 | 2 | 3): (keyof MatchFormSchemaData)[] {
   switch (step) {
     case 1:
-      return [
-        'matchDate',
-        'startTime',
-        'duration',
-        'customDurationMinutes',
-        'format',
-        'playerExpectation',
-      ];
-    case 2:
+      // Step 1: Where
       return [
         'locationType',
         'facilityId',
@@ -404,8 +402,14 @@ function getStepFields(step: 1 | 2 | 3): (keyof MatchFormSchemaData)[] {
         'customLatitude',
         'customLongitude',
       ];
+    case 2:
+      // Step 2: When (date, time, duration, timezone only - format/expectation moved to step 3)
+      return ['matchDate', 'startTime', 'duration', 'customDurationMinutes', 'timezone'];
     case 3:
+      // Step 3: Preferences (includes format and player expectation)
       return [
+        'format',
+        'playerExpectation',
         'courtStatus',
         'isCourtFree',
         'costSplitType',

@@ -367,6 +367,19 @@ export interface FacilityWithDetails extends Facility {
   sports?: FacilitySport[];
 }
 
+/** Data provider configuration (e.g., Loisir Montreal) */
+export interface DataProvider {
+  id: string;
+  name: string;
+  provider_type: string;
+  api_base_url: string;
+  api_config: Record<string, unknown>;
+  booking_url_template: string | null;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 /** Facility search result from nearby search */
 export interface FacilitySearchResult {
   id: string;
@@ -374,6 +387,16 @@ export interface FacilitySearchResult {
   city: string | null;
   address: string | null;
   distance_meters: number | null;
+  /** Provider ID (resolved from facility or organization) */
+  data_provider_id: string | null;
+  /** Provider type for registry lookup */
+  data_provider_type: string | null;
+  /** Booking URL template with placeholders */
+  booking_url_template: string | null;
+  /** External ID used by the data provider (e.g., Loisir Montreal siteId) */
+  external_provider_id: string | null;
+  /** IANA timezone identifier (e.g., America/Toronto) */
+  timezone: string | null;
 }
 
 /** Paginated facilities response */

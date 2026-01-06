@@ -13,14 +13,15 @@ import {
   ScrollView,
   Switch,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { UseFormReturn } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
-import { useRatingScoresForSport } from '@rallia/shared-hooks';
+import { useRatingScoresForSport, useFacilityReservationContact } from '@rallia/shared-hooks';
 import type { MatchFormSchemaData } from '@rallia/shared-types';
 import type { TranslationKey, TranslationOptions } from '../../../../hooks/useTranslation';
 
@@ -131,6 +132,111 @@ const OptionCard: React.FC<OptionCardProps> = ({
 );
 
 // =============================================================================
+// RESERVATION CONTACT ALERT COMPONENT
+// =============================================================================
+
+interface ReservationContactAlertProps {
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  colors: PreferencesStepProps['colors'];
+  t: (key: TranslationKey, options?: TranslationOptions) => string;
+  isDark: boolean;
+}
+
+const ReservationContactAlert: React.FC<ReservationContactAlertProps> = ({
+  phone,
+  email,
+  website,
+  colors,
+  t,
+  isDark,
+}) => {
+  // Use accent color (amber/gold) for distinct alert styling
+  const alertColor = isDark ? accent[400] : accent[600];
+  const alertBgColor = isDark ? `${accent[500]}15` : accent[50];
+  const alertTextColor = isDark ? accent[200] : accent[800];
+  const buttonBgColor = isDark ? accent[500] : accent[600];
+
+  const handleCall = () => {
+    if (phone) {
+      lightHaptic();
+      Linking.openURL(`tel:${phone}`);
+    }
+  };
+
+  const handleEmail = () => {
+    if (email) {
+      lightHaptic();
+      Linking.openURL(`mailto:${email}`);
+    }
+  };
+
+  const handleWebsite = () => {
+    if (website) {
+      lightHaptic();
+      // Ensure website has protocol
+      const url = website.startsWith('http') ? website : `https://${website}`;
+      Linking.openURL(url);
+    }
+  };
+
+  return (
+    <View
+      style={[styles.reservationAlert, { backgroundColor: alertBgColor, borderColor: alertColor }]}
+    >
+      <View style={styles.reservationAlertHeader}>
+        <Ionicons name="calendar-outline" size={20} color={alertColor} />
+        <Text size="base" weight="semibold" color={alertColor}>
+          {t('matchCreation.fields.reservationContactTitle' as TranslationKey)}
+        </Text>
+      </View>
+      <Text size="sm" color={alertTextColor} style={styles.reservationAlertDescription}>
+        {t('matchCreation.fields.reservationContactDescription' as TranslationKey)}
+      </Text>
+      <View style={styles.reservationAlertActions}>
+        {phone && (
+          <TouchableOpacity
+            style={[styles.reservationActionButton, { backgroundColor: buttonBgColor }]}
+            onPress={handleCall}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="call-outline" size={16} color={colors.buttonTextActive} />
+            <Text size="sm" weight="semibold" color={colors.buttonTextActive}>
+              {t('matchCreation.fields.callFacility' as TranslationKey)}
+            </Text>
+          </TouchableOpacity>
+        )}
+        {email && (
+          <TouchableOpacity
+            style={[styles.reservationActionButton, { backgroundColor: buttonBgColor }]}
+            onPress={handleEmail}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="mail-outline" size={16} color={colors.buttonTextActive} />
+            <Text size="sm" weight="semibold" color={colors.buttonTextActive}>
+              {t('matchCreation.fields.emailFacility' as TranslationKey)}
+            </Text>
+          </TouchableOpacity>
+        )}
+        {website && (
+          <TouchableOpacity
+            style={[styles.reservationActionButton, { backgroundColor: buttonBgColor }]}
+            onPress={handleWebsite}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="globe-outline" size={16} color={colors.buttonTextActive} />
+            <Text size="sm" weight="semibold" color={colors.buttonTextActive}>
+              {t('matchCreation.fields.visitWebsite' as TranslationKey)}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+};
+
+// =============================================================================
 // MAIN COMPONENT
 // =============================================================================
 
@@ -149,10 +255,11 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
     formState: { errors },
   } = form;
 
+  const format = watch('format');
+  const playerExpectation = watch('playerExpectation');
   const isCourtFree = watch('isCourtFree');
   const costSplitType = watch('costSplitType');
   const estimatedCost = watch('estimatedCost');
-  const format = watch('format');
   const visibility = watch('visibility');
   const joinMode = watch('joinMode');
   const preferredOpponentGender = watch('preferredOpponentGender');
@@ -174,6 +281,18 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
     hasRatingSystem,
     playerRatingScoreId,
   } = useRatingScoresForSport(sportName, sportId, userId);
+
+  // Fetch reservation contact for the selected facility
+  const { contact: reservationContact, hasContact: hasReservationContact } =
+    useFacilityReservationContact(locationType === 'facility' ? facilityId : undefined, sportId);
+
+  // Determine if we should show the reservation contact alert
+  // Show only when: facility is selected, court status is 'to_book', and contact exists
+  const showReservationContactAlert =
+    locationType === 'facility' &&
+    !!facilityId &&
+    (courtStatus === 'to_book' || !courtStatus) &&
+    hasReservationContact;
 
   // Track if we've set the default rating to avoid overwriting user selection
   const hasSetDefaultRating = useRef(false);
@@ -220,6 +339,126 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
           {t('matchCreation.step3Description' as TranslationKey)}
         </Text>
       </View>
+
+      {/* Format options (Singles/Doubles) */}
+      <View style={styles.fieldGroup}>
+        <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
+          {t('matchCreation.fields.format' as TranslationKey)}
+        </Text>
+        <View style={styles.formatRow}>
+          <OptionCard
+            icon="person-outline"
+            title={t('matchCreation.fields.formatSingles' as TranslationKey)}
+            selected={format === 'singles'}
+            onPress={() =>
+              setValue('format', 'singles', { shouldValidate: true, shouldDirty: true })
+            }
+            colors={colors}
+            compact
+          />
+          <OptionCard
+            icon="people-outline"
+            title={t('matchCreation.fields.formatDoubles' as TranslationKey)}
+            selected={format === 'doubles'}
+            onPress={() =>
+              setValue('format', 'doubles', { shouldValidate: true, shouldDirty: true })
+            }
+            colors={colors}
+            compact
+          />
+        </View>
+      </View>
+
+      {/* Player expectation options (Casual/Competitive/Both) */}
+      <View style={styles.fieldGroup}>
+        <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
+          {t('matchCreation.fields.playerExpectation' as TranslationKey)}
+        </Text>
+        <View style={styles.optionsColumn}>
+          <OptionCard
+            icon="cafe-outline"
+            title={t('matchCreation.fields.playerExpectationCasual' as TranslationKey)}
+            description={t(
+              'matchCreation.fields.playerExpectationCasualDescription' as TranslationKey
+            )}
+            selected={playerExpectation === 'casual'}
+            onPress={() =>
+              setValue('playerExpectation', 'casual', { shouldValidate: true, shouldDirty: true })
+            }
+            colors={colors}
+          />
+          <OptionCard
+            icon="trophy-outline"
+            title={t('matchCreation.fields.playerExpectationCompetitive' as TranslationKey)}
+            description={t(
+              'matchCreation.fields.playerExpectationCompetitiveDescription' as TranslationKey
+            )}
+            selected={playerExpectation === 'competitive'}
+            onPress={() =>
+              setValue('playerExpectation', 'competitive', {
+                shouldValidate: true,
+                shouldDirty: true,
+              })
+            }
+            colors={colors}
+          />
+          <OptionCard
+            icon="hand-left-outline"
+            title={t('matchCreation.fields.playerExpectationBoth' as TranslationKey)}
+            description={t(
+              'matchCreation.fields.playerExpectationBothDescription' as TranslationKey
+            )}
+            selected={playerExpectation === 'both'}
+            onPress={() =>
+              setValue('playerExpectation', 'both', { shouldValidate: true, shouldDirty: true })
+            }
+            colors={colors}
+          />
+        </View>
+      </View>
+
+      {/* Reservation contact alert (show when facility selected and court needs booking) */}
+      {showReservationContactAlert && reservationContact && (
+        <ReservationContactAlert
+          phone={reservationContact.phone}
+          email={reservationContact.email}
+          website={reservationContact.website}
+          colors={colors}
+          t={t}
+          isDark={isDark}
+        />
+      )}
+
+      {/* Court booking status (only show if location is specified) */}
+      {hasLocationSpecified && (
+        <View style={styles.fieldGroup}>
+          <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
+            {t('matchCreation.fields.courtStatus' as TranslationKey)}
+          </Text>
+          <View style={styles.optionsColumn}>
+            <OptionCard
+              icon="calendar-outline"
+              title={t('matchCreation.fields.courtStatusToBook' as TranslationKey)}
+              description={t('matchCreation.fields.courtStatusToBookDescription' as TranslationKey)}
+              selected={courtStatus === 'to_book' || !courtStatus}
+              onPress={() =>
+                setValue('courtStatus', 'to_book', { shouldValidate: true, shouldDirty: true })
+              }
+              colors={colors}
+            />
+            <OptionCard
+              icon="checkmark-circle-outline"
+              title={t('matchCreation.fields.courtStatusBooked' as TranslationKey)}
+              description={t('matchCreation.fields.courtStatusBookedDescription' as TranslationKey)}
+              selected={courtStatus === 'booked'}
+              onPress={() =>
+                setValue('courtStatus', 'booked', { shouldValidate: true, shouldDirty: true })
+              }
+              colors={colors}
+            />
+          </View>
+        </View>
+      )}
 
       {/* Court cost toggle */}
       <View style={styles.fieldGroup}>
@@ -335,37 +574,6 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
             </View>
           </View>
         </>
-      )}
-
-      {/* Court booking status (only show if location is specified) */}
-      {hasLocationSpecified && (
-        <View style={styles.fieldGroup}>
-          <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-            {t('matchCreation.fields.courtStatus' as TranslationKey)}
-          </Text>
-          <View style={styles.optionsColumn}>
-            <OptionCard
-              icon="checkmark-circle-outline"
-              title={t('matchCreation.fields.courtStatusBooked' as TranslationKey)}
-              description={t('matchCreation.fields.courtStatusBookedDescription' as TranslationKey)}
-              selected={courtStatus === 'booked'}
-              onPress={() =>
-                setValue('courtStatus', 'booked', { shouldValidate: true, shouldDirty: true })
-              }
-              colors={colors}
-            />
-            <OptionCard
-              icon="calendar-outline"
-              title={t('matchCreation.fields.courtStatusToBook' as TranslationKey)}
-              description={t('matchCreation.fields.courtStatusToBookDescription' as TranslationKey)}
-              selected={courtStatus === 'to_book' || !courtStatus}
-              onPress={() =>
-                setValue('courtStatus', 'to_book', { shouldValidate: true, shouldDirty: true })
-              }
-              colors={colors}
-            />
-          </View>
-        </View>
       )}
 
       {/* Visibility options */}
@@ -680,6 +888,10 @@ const styles = StyleSheet.create({
   optionsColumn: {
     gap: spacingPixels[2],
   },
+  formatRow: {
+    flexDirection: 'row',
+    gap: spacingPixels[2],
+  },
   optionCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -788,6 +1000,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
+  },
+  // Reservation contact alert styles
+  reservationAlert: {
+    padding: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+    marginBottom: spacingPixels[5],
+  },
+  reservationAlertHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    marginBottom: spacingPixels[2],
+  },
+  reservationAlertDescription: {
+    marginBottom: spacingPixels[3],
+  },
+  reservationAlertActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacingPixels[2],
+  },
+  reservationActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1.5],
+    paddingVertical: spacingPixels[2],
+    paddingHorizontal: spacingPixels[3],
+    borderRadius: radiusPixels.md,
   },
 });
 

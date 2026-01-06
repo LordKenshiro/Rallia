@@ -53,51 +53,14 @@ export const matchJoinModeSchema = z.enum(['direct', 'request']);
 
 // ============================================
 // STEP SCHEMAS
+// Order: Step 1 = Where, Step 2 = When, Step 3 = Preferences
 // ============================================
 
 /**
- * Step 1: When & Format
- * Fields for date, time, duration, format, and match type
- */
-export const step1Schema = z
-  .object({
-    matchDate: z
-      .string()
-      .min(1, 'Please select a date')
-      .refine(
-        date => {
-          // Parse date as local time, not UTC
-          // new Date('YYYY-MM-DD') is interpreted as UTC, causing day shift issues
-          const [year, month, day] = date.split('-').map(Number);
-          const selected = new Date(year, month - 1, day); // month is 0-indexed
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          return selected >= today;
-        },
-        { message: 'Date must be today or in the future' }
-      ),
-    startTime: z.string().min(1, 'Please select a start time'),
-    duration: matchDurationSchema,
-    customDurationMinutes: z.number().min(15).max(480).optional(),
-    format: matchFormatSchema,
-    playerExpectation: matchTypeSchema,
-  })
-  .superRefine((data, ctx) => {
-    // Custom duration validation
-    if (data.duration === 'custom' && !data.customDurationMinutes) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Please enter a custom duration',
-        path: ['customDurationMinutes'],
-      });
-    }
-  });
-
-/**
- * Step 2: Where
+ * Step 1: Where
  * Fields for location selection
  */
-export const step2Schema = z
+export const step1Schema = z
   .object({
     locationType: locationTypeSchema,
     facilityId: z.string().optional(),
@@ -130,10 +93,49 @@ export const step2Schema = z
   });
 
 /**
+ * Step 2: When
+ * Fields for date, time, duration, and timezone (format/playerExpectation moved to step 3)
+ */
+export const step2Schema = z
+  .object({
+    matchDate: z
+      .string()
+      .min(1, 'Please select a date')
+      .refine(
+        date => {
+          // Parse date as local time, not UTC
+          // new Date('YYYY-MM-DD') is interpreted as UTC, causing day shift issues
+          const [year, month, day] = date.split('-').map(Number);
+          const selected = new Date(year, month - 1, day); // month is 0-indexed
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          return selected >= today;
+        },
+        { message: 'Date must be today or in the future' }
+      ),
+    startTime: z.string().min(1, 'Please select a start time'),
+    duration: matchDurationSchema,
+    customDurationMinutes: z.number().min(15).max(480).optional(),
+    timezone: z.string().min(1, 'Timezone is required'),
+  })
+  .superRefine((data, ctx) => {
+    // Custom duration validation
+    if (data.duration === 'custom' && !data.customDurationMinutes) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Please enter a custom duration',
+        path: ['customDurationMinutes'],
+      });
+    }
+  });
+
+/**
  * Step 3: Preferences
- * Fields for court cost, visibility, join mode, and notes
+ * Fields for format, player expectation, court cost, visibility, join mode, and notes
  */
 export const step3Schema = z.object({
+  format: matchFormatSchema,
+  playerExpectation: matchTypeSchema,
   courtStatus: courtStatusSchema.optional(),
   isCourtFree: z.boolean(),
   costSplitType: costSplitTypeSchema,
@@ -156,17 +158,7 @@ export const matchFormSchema = z
     // Sport (auto-filled from context)
     sportId: z.string().min(1, 'No sport selected'),
 
-    // Step 1: When & Format
-    matchDate: z.string().min(1, 'Please select a date'),
-    startTime: z.string().min(1, 'Please select a start time'),
-    endTime: z.string().optional(), // Calculated from duration
-    timezone: z.string().min(1, 'Timezone is required'), // IANA timezone (auto-detected)
-    duration: matchDurationSchema,
-    customDurationMinutes: z.number().min(15).max(480).optional(),
-    format: matchFormatSchema,
-    playerExpectation: matchTypeSchema,
-
-    // Step 2: Where
+    // Step 1: Where
     locationType: locationTypeSchema,
     facilityId: z.string().optional(),
     courtId: z.string().optional(),
@@ -175,7 +167,17 @@ export const matchFormSchema = z
     customLatitude: z.number().optional(),
     customLongitude: z.number().optional(),
 
-    // Step 3: Preferences
+    // Step 2: When
+    matchDate: z.string().min(1, 'Please select a date'),
+    startTime: z.string().min(1, 'Please select a start time'),
+    endTime: z.string().optional(), // Calculated from duration
+    timezone: z.string().min(1, 'Timezone is required'), // IANA timezone (auto-detected)
+    duration: matchDurationSchema,
+    customDurationMinutes: z.number().min(15).max(480).optional(),
+
+    // Step 3: Preferences (includes format and player expectation)
+    format: matchFormatSchema,
+    playerExpectation: matchTypeSchema,
     courtStatus: courtStatusSchema.optional(),
     isCourtFree: z.boolean(),
     costSplitType: costSplitTypeSchema,

@@ -358,6 +358,42 @@ export type Database = {
           },
         ];
       };
+      data_provider: {
+        Row: {
+          api_base_url: string;
+          api_config: Json | null;
+          booking_url_template: string | null;
+          created_at: string;
+          id: string;
+          is_active: boolean;
+          name: string;
+          provider_type: string;
+          updated_at: string;
+        };
+        Insert: {
+          api_base_url: string;
+          api_config?: Json | null;
+          booking_url_template?: string | null;
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          name: string;
+          provider_type: string;
+          updated_at?: string;
+        };
+        Update: {
+          api_base_url?: string;
+          api_config?: Json | null;
+          booking_url_template?: string | null;
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          name?: string;
+          provider_type?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       delivery_attempt: {
         Row: {
           attempt_number: number;
@@ -417,7 +453,9 @@ export type Database = {
           city: string | null;
           country: Database['public']['Enums']['country_enum'] | null;
           created_at: string;
+          data_provider_id: string | null;
           description: string | null;
+          external_provider_id: string | null;
           facility_type: Database['public']['Enums']['facility_type_enum'] | null;
           id: string;
           is_active: boolean;
@@ -429,6 +467,7 @@ export type Database = {
           organization_id: string;
           postal_code: string | null;
           slug: string;
+          timezone: string | null;
           updated_at: string;
         };
         Insert: {
@@ -438,7 +477,9 @@ export type Database = {
           city?: string | null;
           country?: Database['public']['Enums']['country_enum'] | null;
           created_at?: string;
+          data_provider_id?: string | null;
           description?: string | null;
+          external_provider_id?: string | null;
           facility_type?: Database['public']['Enums']['facility_type_enum'] | null;
           id?: string;
           is_active?: boolean;
@@ -450,6 +491,7 @@ export type Database = {
           organization_id: string;
           postal_code?: string | null;
           slug: string;
+          timezone?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -459,7 +501,9 @@ export type Database = {
           city?: string | null;
           country?: Database['public']['Enums']['country_enum'] | null;
           created_at?: string;
+          data_provider_id?: string | null;
           description?: string | null;
+          external_provider_id?: string | null;
           facility_type?: Database['public']['Enums']['facility_type_enum'] | null;
           id?: string;
           is_active?: boolean;
@@ -471,9 +515,17 @@ export type Database = {
           organization_id?: string;
           postal_code?: string | null;
           slug?: string;
+          timezone?: string | null;
           updated_at?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: 'facility_data_provider_id_fkey';
+            columns: ['data_provider_id'];
+            isOneToOne: false;
+            referencedRelation: 'data_provider';
+            referencedColumns: ['id'];
+          },
           {
             foreignKeyName: 'facility_organization_id_fkey';
             columns: ['organization_id'];
@@ -1342,6 +1394,7 @@ export type Database = {
           city: string | null;
           country: Database['public']['Enums']['country_enum'] | null;
           created_at: string;
+          data_provider_id: string | null;
           description: string | null;
           email: string | null;
           id: string;
@@ -1361,6 +1414,7 @@ export type Database = {
           city?: string | null;
           country?: Database['public']['Enums']['country_enum'] | null;
           created_at?: string;
+          data_provider_id?: string | null;
           description?: string | null;
           email?: string | null;
           id?: string;
@@ -1380,6 +1434,7 @@ export type Database = {
           city?: string | null;
           country?: Database['public']['Enums']['country_enum'] | null;
           created_at?: string;
+          data_provider_id?: string | null;
           description?: string | null;
           email?: string | null;
           id?: string;
@@ -1395,6 +1450,13 @@ export type Database = {
           website?: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: 'organization_data_provider_id_fkey';
+            columns: ['data_provider_id'];
+            isOneToOne: false;
+            referencedRelation: 'data_provider';
+            referencedColumns: ['id'];
+          },
           {
             foreignKeyName: 'organization_owner_id_fkey';
             columns: ['owner_id'];
@@ -2731,10 +2793,15 @@ export type Database = {
         };
         Returns: {
           address: string;
+          booking_url_template: string;
           city: string;
+          data_provider_id: string;
+          data_provider_type: string;
           distance_meters: number;
+          external_provider_id: string;
           id: string;
           name: string;
+          timezone: string;
         }[];
       };
       search_matches_nearby: {
