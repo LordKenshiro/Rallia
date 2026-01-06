@@ -1480,6 +1480,15 @@
         "page": "Page {current} of {total}"
       },
       "createButton": "Create Organization",
+      "bulkActions": {
+        "selected": "{count, plural, =0 {No organizations selected} one {# organization selected} other {# organizations selected}}",
+        "delete": "Delete Selected",
+        "confirmTitle": "Delete Organizations",
+        "confirmDescription": "Are you sure you want to permanently delete {count, plural, one {this organization} other {these # organizations}}? This action cannot be undone and will delete all associated facilities, courts, contacts, and images.",
+        "cancel": "Cancel",
+        "confirmDelete": "Delete",
+        "deleting": "Deleting..."
+      },
       "create": {
         "title": "Create Organization",
         "description": "Create a new organization with facilities, sports, contacts, and courts.",
@@ -1489,6 +1498,7 @@
         "formDescription": "Fill in the details below to create a new organization.",
         "sections": {
           "organization": "Organization Information",
+          "dataProvider": "Data Provider",
           "facilities": "Facilities",
           "facility": "Facility",
           "facilityImages": "Facility Images",
@@ -1503,11 +1513,17 @@
           "orgName": "Organization Name",
           "orgType": "Organization Type",
           "selectOrgType": "Select organization type (optional)",
+          "selectType": "Select Type",
           "orgNature": "Nature",
           "email": "Email",
           "phone": "Phone",
           "website": "Website",
           "description": "Description",
+          "descriptionPlaceholder": "Enter organization description...",
+          "isActive": "Active",
+          "dataProvider": "Data Provider",
+          "selectDataProvider": "Select Data Provider",
+          "dataProviderHint": "Select a data provider for court availability fetching. Leave empty to use organization default.",
           "address": "Address",
           "city": "City",
           "country": "Country",
@@ -1517,6 +1533,11 @@
           "facilityNamePlaceholder": "Enter facility name to search...",
           "facilityType": "Facility Type",
           "selectFacilityType": "Select Facility Type",
+          "facilityDescriptionPlaceholder": "Enter facility description...",
+          "timezone": "Timezone",
+          "selectTimezone": "Select Timezone",
+          "externalProviderId": "External Provider ID",
+          "externalProviderIdPlaceholder": "External ID from data provider (e.g., siteId)",
           "latitude": "Latitude",
           "longitude": "Longitude",
           "contactType": "Contact Type",
@@ -1579,7 +1600,8 @@
           "searchPlace": "Search Google Places"
         },
         "loading": {
-          "sports": "Loading sports..."
+          "sports": "Loading sports...",
+          "dataProviders": "Loading data providers..."
         },
         "hints": {
           "holdCtrlToSelect": "Hold Ctrl/Cmd to select multiple"
@@ -1608,6 +1630,14 @@
         "titleMeta": "Organization Profile - Admin - Rallia",
         "descriptionMeta": "View organization details",
         "updateButton": "Update Organization",
+        "deleteButton": "Delete Organization",
+        "deleteConfirm": {
+          "title": "Delete Organization",
+          "description": "Are you sure you want to permanently delete \"{name}\"? This action cannot be undone and will delete all associated facilities, courts, contacts, and images.",
+          "cancel": "Cancel",
+          "confirm": "Delete Organization",
+          "deleting": "Deleting..."
+        },
         "sections": {
           "organizationInfo": "Organization Information",
           "facilities": "Facilities",
@@ -1653,6 +1683,7 @@
         "formDescription": "Update the details below to modify the organization.",
         "sections": {
           "organization": "Organization Information",
+          "dataProvider": "Data Provider",
           "facilities": "Facilities",
           "facility": "Facility",
           "facilityImages": "Facility Images",
@@ -1667,11 +1698,17 @@
           "orgName": "Organization Name",
           "orgType": "Organization Type",
           "selectOrgType": "Select organization type (optional)",
+          "selectType": "Select Type",
           "orgNature": "Nature",
           "email": "Email",
           "phone": "Phone",
           "website": "Website",
           "description": "Description",
+          "descriptionPlaceholder": "Enter organization description...",
+          "isActive": "Active",
+          "dataProvider": "Data Provider",
+          "selectDataProvider": "Select Data Provider",
+          "dataProviderHint": "Select a data provider for court availability fetching. Leave empty to use organization default.",
           "address": "Address",
           "city": "City",
           "country": "Country",
@@ -1681,6 +1718,11 @@
           "facilityNamePlaceholder": "Enter facility name to search...",
           "facilityType": "Facility Type",
           "selectFacilityType": "Select Facility Type",
+          "facilityDescriptionPlaceholder": "Enter facility description...",
+          "timezone": "Timezone",
+          "selectTimezone": "Select Timezone",
+          "externalProviderId": "External Provider ID",
+          "externalProviderIdPlaceholder": "External ID from data provider (e.g., siteId)",
           "latitude": "Latitude",
           "longitude": "Longitude",
           "contactType": "Contact Type",
@@ -1743,7 +1785,8 @@
           "searchPlace": "Search Google Places"
         },
         "loading": {
-          "sports": "Loading sports..."
+          "sports": "Loading sports...",
+          "dataProviders": "Loading data providers..."
         },
         "hints": {
           "holdCtrlToSelect": "Hold Ctrl/Cmd to select multiple"

@@ -7,10 +7,14 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import {
   Building2,
+  Clock,
   Contact,
+  Database,
   Dumbbell,
+  FileText,
   ImageIcon,
   Layers,
+  Loader2,
   MapPin,
   Plus,
   Search,
@@ -23,7 +27,6 @@ import Image from 'next/image';
 import { useState, useId } from 'react';
 
 import {
-  useOrganizationFormContext,
   useFacilityActions,
   useContactActions,
   useCourtActions,
@@ -37,7 +40,8 @@ interface FacilityCardProps {
 }
 
 export function FacilityCard({ facility, facilityIndex }: FacilityCardProps) {
-  const { orgData, facilities, sports, loadingSports, isUpdateMode } = useFormData();
+  const { orgData, sports, loadingSports, dataProviders, loadingDataProviders, isUpdateMode } =
+    useFormData();
   const {
     handleFacilityChange,
     removeFacility,
@@ -197,6 +201,23 @@ export function FacilityCard({ facility, facilityIndex }: FacilityCardProps) {
           </div>
 
           <div className="bg-muted/20 rounded-lg p-4 space-y-4">
+            {/* Active Status Toggle */}
+            <div className="flex items-center space-x-2 p-3 rounded-lg bg-muted/30">
+              <input
+                type="checkbox"
+                id={`facility-is-active-${instanceId}`}
+                checked={facility.isActive ?? true}
+                onChange={e => handleFacilityChange(facility.id, 'isActive', e.target.checked)}
+                className="rounded border-input h-4 w-4"
+              />
+              <label
+                htmlFor={`facility-is-active-${instanceId}`}
+                className="text-sm font-medium cursor-pointer"
+              >
+                {t('fields.isActive')}
+              </label>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">
@@ -331,6 +352,98 @@ export function FacilityCard({ facility, facilityIndex }: FacilityCardProps) {
                 />
               </div>
             </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                {t('fields.description')}
+              </label>
+              <textarea
+                value={facility.description || ''}
+                onChange={e => handleFacilityChange(facility.id, 'description', e.target.value)}
+                rows={2}
+                className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                placeholder={t('fields.facilityDescriptionPlaceholder')}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Data Provider & Timezone Section */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Database className="h-4 w-4 text-muted-foreground" />
+            <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground m-0">
+              {t('sections.dataProvider')}
+            </h4>
+          </div>
+
+          <div className="bg-muted/20 rounded-lg p-4 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                  {t('fields.timezone')}
+                </label>
+                <select
+                  value={facility.timezone || ''}
+                  onChange={e => handleFacilityChange(facility.id, 'timezone', e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">{t('fields.selectTimezone')}</option>
+                  <option value="America/Toronto">America/Toronto (Eastern)</option>
+                  <option value="America/New_York">America/New_York (Eastern)</option>
+                  <option value="America/Chicago">America/Chicago (Central)</option>
+                  <option value="America/Denver">America/Denver (Mountain)</option>
+                  <option value="America/Los_Angeles">America/Los_Angeles (Pacific)</option>
+                  <option value="America/Vancouver">America/Vancouver (Pacific)</option>
+                  <option value="America/Edmonton">America/Edmonton (Mountain)</option>
+                  <option value="America/Winnipeg">America/Winnipeg (Central)</option>
+                  <option value="America/Halifax">America/Halifax (Atlantic)</option>
+                  <option value="America/St_Johns">America/St_Johns (Newfoundland)</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t('fields.dataProvider')}</label>
+                {loadingDataProviders ? (
+                  <div className="flex items-center gap-2 h-10 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {t('loading.dataProviders')}
+                  </div>
+                ) : (
+                  <select
+                    value={facility.dataProviderId || ''}
+                    onChange={e =>
+                      handleFacilityChange(facility.id, 'dataProviderId', e.target.value || null)
+                    }
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="">{t('fields.selectDataProvider')}</option>
+                    {dataProviders.map(provider => (
+                      <option key={provider.id} value={provider.id}>
+                        {provider.name} ({provider.provider_type})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t('fields.externalProviderId')}</label>
+                <Input
+                  value={facility.externalProviderId || ''}
+                  onChange={e =>
+                    handleFacilityChange(facility.id, 'externalProviderId', e.target.value)
+                  }
+                  className="bg-background"
+                  placeholder={t('fields.externalProviderIdPlaceholder')}
+                />
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground m-0">{t('fields.dataProviderHint')}</p>
           </div>
         </div>
 

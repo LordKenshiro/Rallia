@@ -17,6 +17,8 @@ import {
   CourtRow,
   SurfaceType,
   Sport,
+  DataProvider,
+  InitialFacilityData,
   isExistingImage,
   isNewImage,
 } from '@/components/organization-form/types';
@@ -29,8 +31,10 @@ interface UseOrganizationFormProps {
       slug: string;
       postal_code?: string;
       description?: string;
+      data_provider_id?: string | null;
+      is_active?: boolean;
     };
-    facilities: any[];
+    facilities: InitialFacilityData[];
   };
 }
 
@@ -40,6 +44,8 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
   // ============ STATE ============
   const [sports, setSports] = useState<Sport[]>([]);
   const [loadingSports, setLoadingSports] = useState(true);
+  const [dataProviders, setDataProviders] = useState<DataProvider[]>([]);
+  const [loadingDataProviders, setLoadingDataProviders] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -48,12 +54,12 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
     name: string;
   } | null>(null);
 
-  const [orgSlug, setOrgSlug] = useState(organizationSlug || '');
+  const [orgSlug] = useState(organizationSlug || '');
 
   // Track original facility IDs from database (to distinguish from client-generated ones)
   const [originalFacilityIds] = useState<Set<string>>(() => {
     if (isUpdateMode && initialData) {
-      return new Set(initialData.facilities.map((f: any) => f.id).filter(Boolean));
+      return new Set(initialData.facilities.map(f => f.id).filter(Boolean));
     }
     return new Set();
   });
@@ -73,6 +79,8 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
         website: initialData.organization.website || '',
         type: initialData.organization.type || undefined,
         description: initialData.organization.description || undefined,
+        dataProviderId: initialData.organization.data_provider_id || null,
+        isActive: initialData.organization.is_active ?? true,
       };
     }
     return {
@@ -85,16 +93,18 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
       country: '' as Country,
       postalCode: '',
       website: '',
+      dataProviderId: null,
+      isActive: true,
     };
   });
 
   // Facilities array - initialize based on mode
   const [facilities, setFacilities] = useState<Facility[]>(() => {
     if (isUpdateMode && initialData) {
-      return initialData.facilities.map((facility: any) => {
+      return initialData.facilities.map(facility => {
         // Convert existing images from facility_files joined with files
         const images: UpdateFacilityImage[] =
-          facility.facility_file?.map((ff: any) => ({
+          facility.facility_file?.map(ff => ({
             id: ff.id, // facility_files junction table id
             fileId: ff.files?.id || ff.file_id, // files table id
             url: ff.files?.url || '',
@@ -105,22 +115,22 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
 
         // Convert contacts
         const contacts: FacilityContact[] =
-          facility.facility_contact?.map((contact: any) => ({
+          facility.facility_contact?.map(contact => ({
             id: contact.id || crypto.randomUUID(),
             phone: contact.phone || '',
             email: contact.email || '',
             website: contact.website || '',
-            contactType: contact.contact_type,
-            isPrimary: contact.is_primary,
+            contactType: contact.contact_type as FacilityContact['contactType'],
+            isPrimary: contact.is_primary ?? false,
             sportId: contact.sport_id || null,
           })) || [];
 
         // Convert courts to court rows (group by surface type, lighting, indoor, sports)
         const courtRowsMap = new Map<string, CourtRow>();
-        facility.courts?.forEach((court: any) => {
+        facility.courts?.forEach(court => {
           const sportIds =
             court.court_sport
-              ?.map((cs: any) => cs.sport_id)
+              ?.map(cs => cs.sport_id)
               .sort()
               .join(',') || '';
           const key = `${court.surface_type || ''}-${court.lighting}-${court.indoor}-${sportIds}`;
@@ -131,10 +141,10 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
             courtRowsMap.set(key, {
               id: crypto.randomUUID(),
               surfaceType: (court.surface_type as SurfaceType) || '',
-              lighting: court.lighting,
-              indoor: court.indoor,
+              lighting: court.lighting ?? false,
+              indoor: court.indoor ?? false,
               quantity: 1,
-              sportIds: court.court_sport?.map((cs: any) => cs.sport_id) || [],
+              sportIds: court.court_sport?.map(cs => cs.sport_id) || [],
             });
           }
         });
@@ -151,7 +161,7 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
           postalCode: facility.postal_code || '',
           latitude: facility.latitude?.toString() || '',
           longitude: facility.longitude?.toString() || '',
-          selectedSports: facility.facility_sport?.map((fs: any) => fs.sport_id) || [],
+          selectedSports: facility.facility_sport?.map(fs => fs.sport_id) || [],
           contacts:
             contacts.length > 0
               ? contacts
@@ -167,6 +177,11 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
                   },
                 ],
           courtRows: Array.from(courtRowsMap.values()),
+          description: facility.description || '',
+          timezone: facility.timezone || '',
+          dataProviderId: facility.data_provider_id || null,
+          externalProviderId: facility.external_provider_id || '',
+          isActive: facility.is_active ?? true,
         };
       });
     }
@@ -197,6 +212,11 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
           },
         ],
         courtRows: [],
+        description: '',
+        timezone: '',
+        dataProviderId: null,
+        externalProviderId: '',
+        isActive: true,
       },
     ];
   });
@@ -222,6 +242,26 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
     fetchSports();
   }, []);
 
+  // Fetch data providers on mount
+  useEffect(() => {
+    const fetchDataProviders = async () => {
+      try {
+        const response = await fetch('/api/data-providers');
+        if (response.ok) {
+          const data = await response.json();
+          const fetchedProviders = data.dataProviders || [];
+          setDataProviders(fetchedProviders);
+        }
+      } catch (error) {
+        console.error('Error fetching data providers:', error);
+      } finally {
+        setLoadingDataProviders(false);
+      }
+    };
+
+    fetchDataProviders();
+  }, []);
+
   // ============ HELPERS ============
   const generateSlug = useCallback((name: string): string => {
     return name
@@ -235,8 +275,10 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
   // ============ ORGANIZATION HANDLERS ============
   const handleOrgChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-      const { name, value } = e.target;
-      setOrgData(prev => ({ ...prev, [name]: value }));
+      const { name, value, type } = e.target;
+      const checked = (e.target as HTMLInputElement).checked;
+      const finalValue = type === 'checkbox' ? checked : value;
+      setOrgData(prev => ({ ...prev, [name]: finalValue }));
       setErrorMessage(null);
     },
     []
@@ -244,7 +286,7 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
 
   // ============ FACILITY HANDLERS ============
   const handleFacilityChange = useCallback(
-    (facilityId: string, field: keyof Facility, value: any) => {
+    (facilityId: string, field: keyof Facility, value: Facility[keyof Facility]) => {
       setFacilities(prev => {
         return prev.map(facility =>
           facility.id === facilityId ? { ...facility, [field]: value } : facility
@@ -381,6 +423,11 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
         },
       ],
       courtRows: [],
+      description: '',
+      timezone: '',
+      dataProviderId: null,
+      externalProviderId: '',
+      isActive: true,
     };
     setFacilities(prev => [...prev, newFacility]);
   }, []);
@@ -519,7 +566,12 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
   }, []);
 
   const updateContact = useCallback(
-    (facilityId: string, contactId: string, field: keyof FacilityContact, value: any) => {
+    (
+      facilityId: string,
+      contactId: string,
+      field: keyof FacilityContact,
+      value: FacilityContact[keyof FacilityContact]
+    ) => {
       setFacilities(prev => {
         return prev.map(facility => {
           if (facility.id === facilityId) {
@@ -587,7 +639,7 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
   }, []);
 
   const updateCourtRow = useCallback(
-    (facilityId: string, rowId: string, field: keyof CourtRow, value: any) => {
+    (facilityId: string, rowId: string, field: keyof CourtRow, value: CourtRow[keyof CourtRow]) => {
       setFacilities(prev => {
         return prev.map(facility => {
           if (facility.id === facilityId) {
@@ -652,6 +704,8 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
       country: '' as Country,
       postalCode: '',
       website: '',
+      dataProviderId: null,
+      isActive: true,
     });
     setFacilities([
       {
@@ -679,6 +733,11 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
           },
         ],
         courtRows: [],
+        description: '',
+        timezone: '',
+        dataProviderId: null,
+        externalProviderId: '',
+        isActive: true,
       },
     ]);
     setErrorMessage(null);
@@ -693,6 +752,8 @@ export function useOrganizationForm({ organizationSlug, initialData }: UseOrgani
     // State
     sports,
     loadingSports,
+    dataProviders,
+    loadingDataProviders,
     isSubmitting,
     errorMessage,
     showSuccessModal,

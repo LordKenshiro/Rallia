@@ -10,9 +10,15 @@ interface OrganizationTableRowProps {
     Tables<'organization'>,
     'id' | 'name' | 'email' | 'phone' | 'website' | 'nature' | 'slug' | 'is_active' | 'created_at'
   >;
+  isSelected?: boolean;
+  onSelectChange?: (id: string, selected: boolean) => void;
 }
 
-export function OrganizationTableRow({ organization }: OrganizationTableRowProps) {
+export function OrganizationTableRow({
+  organization,
+  isSelected = false,
+  onSelectChange,
+}: OrganizationTableRowProps) {
   const router = useRouter();
   const t = useTranslations('admin.organizations');
 
@@ -26,8 +32,17 @@ export function OrganizationTableRow({ organization }: OrganizationTableRowProps
     }).format(date);
   };
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
+    // Don't navigate if clicking on checkbox
+    if ((e.target as HTMLElement).closest('input[type="checkbox"]')) {
+      return;
+    }
     router.push(`/admin/organizations/${organization.slug}`);
+  };
+
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    onSelectChange?.(organization.id, e.target.checked);
   };
 
   return (
@@ -35,6 +50,14 @@ export function OrganizationTableRow({ organization }: OrganizationTableRowProps
       onClick={handleClick}
       className="border-b hover:bg-muted/50 transition-colors cursor-pointer"
     >
+      <td className="px-3 py-2 text-sm" onClick={e => e.stopPropagation()}>
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={handleCheckboxChange}
+          className="rounded border-input h-4 w-4"
+        />
+      </td>
       <td className="px-3 py-2 text-sm">
         <span className="font-medium">{organization.name}</span>
       </td>

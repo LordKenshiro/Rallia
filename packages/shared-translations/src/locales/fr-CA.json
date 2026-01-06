@@ -1480,6 +1480,15 @@
         "page": "Page {current} sur {total}"
       },
       "createButton": "Créer une organisation",
+      "bulkActions": {
+        "selected": "{count, plural, =0 {Aucune organisation sélectionnée} one {# organisation sélectionnée} other {# organisations sélectionnées}}",
+        "delete": "Supprimer la sélection",
+        "confirmTitle": "Supprimer les organisations",
+        "confirmDescription": "Êtes-vous sûr de vouloir supprimer définitivement {count, plural, one {cette organisation} other {ces # organisations}}? Cette action est irréversible et supprimera toutes les installations, terrains, contacts et images associés.",
+        "cancel": "Annuler",
+        "confirmDelete": "Supprimer",
+        "deleting": "Suppression..."
+      },
       "create": {
         "title": "Créer une organisation",
         "description": "Créez une nouvelle organisation avec des installations, sports, contacts et terrains.",
@@ -1489,6 +1498,7 @@
         "formDescription": "Remplissez les détails ci-dessous pour créer une nouvelle organisation.",
         "sections": {
           "organization": "Informations de l'organisation",
+          "dataProvider": "Fournisseur de données",
           "facilities": "Installations",
           "facility": "Installation",
           "facilityImages": "Images de l'installation",
@@ -1503,11 +1513,17 @@
           "orgName": "Nom de l'organisation",
           "orgType": "Type d'organisation",
           "selectOrgType": "Sélectionner le type d'organisation (optionnel)",
+          "selectType": "Sélectionner le type",
           "orgNature": "Nature",
           "email": "Courriel",
           "phone": "Téléphone",
           "website": "Site web",
           "description": "Description",
+          "descriptionPlaceholder": "Entrez la description de l'organisation...",
+          "isActive": "Actif",
+          "dataProvider": "Fournisseur de données",
+          "selectDataProvider": "Sélectionner un fournisseur de données",
+          "dataProviderHint": "Sélectionnez un fournisseur de données pour la récupération de disponibilité des terrains. Laissez vide pour utiliser la valeur par défaut de l'organisation.",
           "address": "Adresse",
           "city": "Ville",
           "country": "Pays",
@@ -1517,6 +1533,11 @@
           "facilityNamePlaceholder": "Entrez le nom pour rechercher...",
           "facilityType": "Type d'installation",
           "selectFacilityType": "Sélectionner le type d'installation",
+          "facilityDescriptionPlaceholder": "Entrez la description de l'installation...",
+          "timezone": "Fuseau horaire",
+          "selectTimezone": "Sélectionner le fuseau horaire",
+          "externalProviderId": "ID du fournisseur externe",
+          "externalProviderIdPlaceholder": "ID externe du fournisseur de données (ex. siteId)",
           "latitude": "Latitude",
           "longitude": "Longitude",
           "contactType": "Type de contact",
@@ -1579,7 +1600,8 @@
           "searchPlace": "Rechercher sur Google Places"
         },
         "loading": {
-          "sports": "Chargement des sports..."
+          "sports": "Chargement des sports...",
+          "dataProviders": "Chargement des fournisseurs de données..."
         },
         "hints": {
           "holdCtrlToSelect": "Maintenez Ctrl/Cmd pour sélectionner plusieurs"
@@ -1608,6 +1630,14 @@
         "titleMeta": "Profil de l'organisation - Admin - Rallia",
         "descriptionMeta": "Voir les détails de l'organisation",
         "updateButton": "Mettre à jour l'organisation",
+        "deleteButton": "Supprimer l'organisation",
+        "deleteConfirm": {
+          "title": "Supprimer l'organisation",
+          "description": "Êtes-vous sûr de vouloir supprimer définitivement \"{name}\"? Cette action est irréversible et supprimera toutes les installations, terrains, contacts et images associés.",
+          "cancel": "Annuler",
+          "confirm": "Supprimer l'organisation",
+          "deleting": "Suppression..."
+        },
         "sections": {
           "organizationInfo": "Informations de l'organisation",
           "facilities": "Installations",
@@ -1653,6 +1683,7 @@
         "formDescription": "Mettez à jour les détails ci-dessous pour modifier l'organisation.",
         "sections": {
           "organization": "Informations de l'organisation",
+          "dataProvider": "Fournisseur de données",
           "facilities": "Installations",
           "facility": "Installation",
           "facilityImages": "Images de l'installation",
@@ -1667,11 +1698,17 @@
           "orgName": "Nom de l'organisation",
           "orgType": "Type d'organisation",
           "selectOrgType": "Sélectionner le type d'organisation (optionnel)",
+          "selectType": "Sélectionner le type",
           "orgNature": "Nature",
           "email": "Courriel",
           "phone": "Téléphone",
           "website": "Site web",
           "description": "Description",
+          "descriptionPlaceholder": "Entrez la description de l'organisation...",
+          "isActive": "Actif",
+          "dataProvider": "Fournisseur de données",
+          "selectDataProvider": "Sélectionner un fournisseur de données",
+          "dataProviderHint": "Sélectionnez un fournisseur de données pour la récupération de disponibilité des terrains. Laissez vide pour utiliser la valeur par défaut de l'organisation.",
           "address": "Adresse",
           "city": "Ville",
           "country": "Pays",
@@ -1681,6 +1718,11 @@
           "facilityNamePlaceholder": "Entrez le nom pour rechercher...",
           "facilityType": "Type d'installation",
           "selectFacilityType": "Sélectionner le type d'installation",
+          "facilityDescriptionPlaceholder": "Entrez la description de l'installation...",
+          "timezone": "Fuseau horaire",
+          "selectTimezone": "Sélectionner le fuseau horaire",
+          "externalProviderId": "ID du fournisseur externe",
+          "externalProviderIdPlaceholder": "ID externe du fournisseur de données (ex. siteId)",
           "latitude": "Latitude",
           "longitude": "Longitude",
           "contactType": "Type de contact",
@@ -1743,7 +1785,8 @@
           "searchPlace": "Rechercher sur Google Places"
         },
         "loading": {
-          "sports": "Chargement des sports..."
+          "sports": "Chargement des sports...",
+          "dataProviders": "Chargement des fournisseurs de données..."
         },
         "hints": {
           "holdCtrlToSelect": "Maintenez Ctrl/Cmd pour sélectionner plusieurs"

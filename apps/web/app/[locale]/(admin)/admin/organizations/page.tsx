@@ -1,14 +1,11 @@
-import { OrganizationTableRow } from '@/components/organization-table-row';
-import { SortableTableHeader } from '@/components/sortable-table-header';
-import { TablePagination } from '@/components/table-pagination';
+import { OrganizationsTableClient } from '@/components/organizations-table-client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Link } from '@/i18n/navigation';
 import { buildTableQuery } from '@/lib/supabase-table-query';
 import { createClient } from '@/lib/supabase/server';
 import { parseTableParams } from '@/lib/table-params';
 import { Tables } from '@/types';
-import { Building2, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 
@@ -71,77 +68,15 @@ export default async function AdminOrganizationsPage({
           </Link>
         </div>
 
-        <Card className="overflow-hidden flex flex-col">
-          {result.data.length === 0 ? (
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Building2 className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <p className="text-muted-foreground m-0">{t('table.noOrganizations')}</p>
-            </CardContent>
-          ) : (
-            <>
-              <div className="overflow-x-auto flex-1">
-                <table className="w-full">
-                  <thead className="border-b bg-muted/50">
-                    <tr>
-                      <SortableTableHeader
-                        field="name"
-                        currentSortBy={tableParams.sortBy}
-                        currentSortOrder={tableParams.sortOrder}
-                      >
-                        {t('table.name')}
-                      </SortableTableHeader>
-                      <SortableTableHeader
-                        field="email"
-                        currentSortBy={tableParams.sortBy}
-                        currentSortOrder={tableParams.sortOrder}
-                      >
-                        {t('table.email')}
-                      </SortableTableHeader>
-                      <th className="text-left px-3 py-2 text-sm font-semibold">
-                        {t('table.phone')}
-                      </th>
-                      <th className="text-left px-3 py-2 text-sm font-semibold">
-                        {t('table.website')}
-                      </th>
-                      <SortableTableHeader
-                        field="nature"
-                        currentSortBy={tableParams.sortBy}
-                        currentSortOrder={tableParams.sortOrder}
-                      >
-                        {t('table.nature')}
-                      </SortableTableHeader>
-                      <SortableTableHeader
-                        field="is_active"
-                        currentSortBy={tableParams.sortBy}
-                        currentSortOrder={tableParams.sortOrder}
-                      >
-                        {t('table.status')}
-                      </SortableTableHeader>
-                      <SortableTableHeader
-                        field="created_at"
-                        currentSortBy={tableParams.sortBy}
-                        currentSortOrder={tableParams.sortOrder}
-                      >
-                        {t('table.createdAt')}
-                      </SortableTableHeader>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {result.data.map(org => (
-                      <OrganizationTableRow key={org.id} organization={org} />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <TablePagination
-                currentPage={result.page}
-                totalPages={result.totalPages}
-                totalItems={result.total}
-                pageSize={result.pageSize}
-              />
-            </>
-          )}
-        </Card>
+        <OrganizationsTableClient
+          organizations={result.data}
+          currentPage={result.page}
+          totalPages={result.totalPages}
+          totalItems={result.total}
+          pageSize={result.pageSize}
+          sortBy={tableParams.sortBy ?? undefined}
+          sortOrder={tableParams.sortOrder ?? undefined}
+        />
       </div>
     );
   } catch (error) {
@@ -160,11 +95,9 @@ export default async function AdminOrganizationsPage({
             </Button>
           </Link>
         </div>
-        <Card className="grow overflow-hidden">
-          <CardContent className="pt-6">
-            <p className="text-destructive m-0">{t('table.error')}</p>
-          </CardContent>
-        </Card>
+        <div className="grow overflow-hidden">
+          <p className="text-destructive m-0">{t('table.error')}</p>
+        </div>
       </div>
     );
   }

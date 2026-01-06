@@ -13,17 +13,14 @@ import {
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { useRouter } from '@/i18n/navigation';
-import { Building2, Loader2, Mail, Phone, Plus, Globe } from 'lucide-react';
+import { Building2, Loader2, Mail, Phone, Plus, Globe, Database, FileText } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import {
   OrganizationFormProvider,
   useOrganizationFormContext,
-  useFormSubmission,
   FacilityCard,
   AdminOrganizationFormProps,
-  OrganizationNature,
-  Country,
   ExistingImage,
   NewImage,
   CreateFacility,
@@ -53,6 +50,8 @@ function OrganizationFormContent() {
     setCreatedOrganization,
     resetForm,
     originalFacilityIds,
+    dataProviders,
+    loadingDataProviders,
   } = useOrganizationFormContext();
 
   const t = useTranslations(
@@ -137,7 +136,7 @@ function OrganizationFormContent() {
           };
         }
       });
-      formData.append('facilities', JSON.stringify(facilitiesData));
+      formData.append('facility', JSON.stringify(facilitiesData));
 
       // Add images
       facilities.forEach((facility, facilityIndex) => {
@@ -233,7 +232,22 @@ function OrganizationFormContent() {
             </div>
 
             <div className="bg-muted/20 rounded-lg p-4 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Active Status Toggle */}
+              <div className="flex items-center space-x-2 p-3 rounded-lg bg-muted/30">
+                <input
+                  type="checkbox"
+                  id="org-is-active"
+                  name="isActive"
+                  checked={orgData.isActive ?? true}
+                  onChange={handleOrgChange}
+                  className="rounded border-input h-4 w-4"
+                />
+                <label htmlFor="org-is-active" className="text-sm font-medium cursor-pointer">
+                  {t('fields.isActive')}
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <label htmlFor="org-name" className="text-sm font-medium">
                     {t('fields.orgName')} <span className="text-destructive">*</span>
@@ -262,6 +276,25 @@ function OrganizationFormContent() {
                   >
                     <option value="public">{t('natures.public')}</option>
                     <option value="private">{t('natures.private')}</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="org-type" className="text-sm font-medium">
+                    {t('fields.orgType')}
+                  </label>
+                  <select
+                    id="org-type"
+                    name="type"
+                    value={orgData.type || ''}
+                    onChange={handleOrgChange}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="">{t('fields.selectType')}</option>
+                    <option value="club">{t('types.club')}</option>
+                    <option value="municipality">{t('types.municipality')}</option>
+                    <option value="city">{t('types.city')}</option>
+                    <option value="association">{t('types.association')}</option>
                   </select>
                 </div>
               </div>
@@ -318,6 +351,66 @@ function OrganizationFormContent() {
                     className="bg-background"
                   />
                 </div>
+              </div>
+
+              {/* Description */}
+              <div className="space-y-2">
+                <label
+                  htmlFor="org-description"
+                  className="text-sm font-medium flex items-center gap-2"
+                >
+                  <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                  {t('fields.description')}
+                </label>
+                <textarea
+                  id="org-description"
+                  name="description"
+                  value={orgData.description || ''}
+                  onChange={handleOrgChange}
+                  rows={3}
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  placeholder={t('fields.descriptionPlaceholder')}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Data Provider Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Database className="h-4 w-4 text-muted-foreground" />
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground m-0">
+                {t('sections.dataProvider')}
+              </h3>
+            </div>
+
+            <div className="bg-muted/20 rounded-lg p-4 space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="org-data-provider" className="text-sm font-medium">
+                  {t('fields.dataProvider')}
+                </label>
+                {loadingDataProviders ? (
+                  <div className="flex items-center gap-2 h-10 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {t('loading.dataProviders')}
+                  </div>
+                ) : (
+                  <select
+                    id="org-data-provider"
+                    name="dataProviderId"
+                    value={orgData.dataProviderId || ''}
+                    onChange={handleOrgChange}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="">{t('fields.selectDataProvider')}</option>
+                    {dataProviders.map(provider => (
+                      <option key={provider.id} value={provider.id}>
+                        {provider.name} ({provider.provider_type})
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <p className="text-xs text-muted-foreground m-0">{t('fields.dataProviderHint')}</p>
               </div>
             </div>
           </div>

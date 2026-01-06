@@ -1,6 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { OrganizationDeleteButton } from '@/components/organization-delete-button';
 import { Separator } from '@/components/ui/separator';
 import { Link } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/server';
@@ -37,10 +38,14 @@ type FacilityContact = Pick<
   'id' | 'phone' | 'email' | 'website' | 'contact_type' | 'is_primary'
 >;
 type Sport = Pick<Tables<'sport'>, 'id' | 'name' | 'slug'>;
-type Court = Pick<
-  Tables<'court'>,
-  'id' | 'surface_type' | 'lighting' | 'indoor' | 'name' | 'court_number' | 'availability_status'
-> & {
+type Court = {
+  id: string;
+  surface_type: string | null;
+  lighting: boolean | null;
+  indoor: boolean | null;
+  name: string | null;
+  court_number: number | null;
+  availability_status: string | null;
   court_sport: Array<{
     sport_id: string;
     sport: Sport;
@@ -204,7 +209,25 @@ export default async function OrganizationProfilePage({
 
     // Fetch courts
     const facilityIds = facilities?.map(f => f.id) || [];
-    let courts: any[] = [];
+    type CourtData = {
+      id: string;
+      facility_id: string;
+      surface_type: string | null;
+      lighting: boolean | null;
+      indoor: boolean | null;
+      name: string | null;
+      court_number: number | null;
+      availability_status: string | null;
+      court_sport: Array<{
+        sport_id: string;
+        sport: {
+          id: string;
+          name: string;
+          slug: string;
+        };
+      }>;
+    };
+    let courts: CourtData[] = [];
 
     if (facilityIds.length > 0) {
       const { data: courtsData, error: courtsError } = await supabase
@@ -288,12 +311,15 @@ export default async function OrganizationProfilePage({
           <h1 className="text-3xl font-bold">{organization.name}</h1>
           <p className="text-muted-foreground mt-2 mb-0">{t('description', { slug })}</p>
         </div>
-        <Link href={`/admin/organizations/${slug}/edit`}>
-          <Button>
-            <Edit className="h-4 w-4 mr-2" />
-            {t('updateButton')}
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href={`/admin/organizations/${slug}/edit`}>
+            <Button>
+              <Edit className="h-4 w-4 mr-2" />
+              {t('updateButton')}
+            </Button>
+          </Link>
+          <OrganizationDeleteButton organizationSlug={slug} organizationName={organization.name} />
+        </div>
       </div>
 
       {/* Organization Info */}

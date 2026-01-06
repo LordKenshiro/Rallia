@@ -3,6 +3,15 @@ import { createClient } from '@/lib/supabase/server';
 import { Enums, Tables } from '@/types';
 import { NextRequest, NextResponse } from 'next/server';
 
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
+
+type FacilityFileWithStorage = {
+  id: string;
+  file_id: string;
+  files?: { storage_key: string } | null;
+  file?: { storage_key: string } | null;
+};
+
 type OrganizationNature = Enums<'organization_nature_enum'>;
 type OrganizationType = Enums<'organization_type_enum'> | null;
 type Country = Enums<'country_enum'> | null;
@@ -10,6 +19,7 @@ type ContactType = Enums<'facility_contact_type_enum'>;
 type SurfaceType = Enums<'surface_type_enum'>;
 type AvailabilityStatus = Enums<'availability_enum'>;
 type FileType = Enums<'file_type_enum'>;
+type FacilityType = Enums<'facility_type_enum'> | null;
 
 // Helper to convert empty strings to null for enum fields
 function toNullIfEmpty<T>(value: T | '' | null | undefined): T | null {
@@ -50,11 +60,25 @@ interface FacilityData {
   latitude: string;
   longitude: string;
   selectedSports: string[];
-  images?: any[]; // Image metadata (files sent separately or existing images)
+  images?: Array<{
+    id?: string;
+    fileId?: string;
+    url?: string;
+    thumbnail_url?: string | null;
+    display_order?: number;
+    is_primary?: boolean;
+  }>; // Image metadata (files sent separately or existing images)
   imageCount?: number; // Number of new images to expect
   existingFacilityFileIds?: string[]; // IDs of facility_files junction records to keep
   contacts: FacilityContactData[];
   courtRows: CourtRowData[];
+  description?: string;
+  timezone?: string;
+  dataProviderId?: string | null;
+  externalProviderId?: string;
+  facilityType?: FacilityType;
+  membershipRequired?: boolean;
+  isActive?: boolean;
 }
 
 function generateSlug(name: string): string {
@@ -67,15 +91,16 @@ function generateSlug(name: string): string {
 }
 
 async function ensureUniqueSlug(
-  supabase: any,
+  supabase: SupabaseClient,
   baseSlug: string,
-  table: string,
+  table: 'organization' | 'facility',
   excludeId?: string
 ): Promise<string> {
   let slug = baseSlug;
   let counter = 1;
+  let found = false;
 
-  while (true) {
+  while (!found) {
     let query = supabase.from(table).select('id').eq('slug', slug);
 
     if (excludeId) {
@@ -85,23 +110,33 @@ async function ensureUniqueSlug(
     const { data: existing } = await query.single();
 
     if (!existing) {
+      found = true;
       return slug;
     }
 
     slug = `${baseSlug}-${counter}`;
     counter++;
   }
+
+  return slug;
 }
 
+type FacilityFileEntry = {
+  facility_id: string;
+  file_id: string;
+  display_order: number;
+  is_primary: boolean;
+};
+
 async function uploadFacilityImages(
-  supabase: any,
+  supabase: SupabaseClient,
   facilityId: string,
   facilityIndex: number,
   imageCount: number,
   formData: FormData,
   uploaderId: string,
   startDisplayOrder: number = 0
-): Promise<any[]> {
+): Promise<FacilityFileEntry[]> {
   if (imageCount === 0) return [];
 
   const facilityFileEntries = [];
@@ -152,7 +187,8 @@ async function uploadFacilityImages(
 
     try {
       const result = await Promise.race([uploadPromise, timeoutPromise]);
-      const uploadError = (result as any).error;
+      type UploadResult = { error?: { message?: string; statusCode?: number } };
+      const uploadError = (result as UploadResult).error;
 
       if (uploadError) {
         if (
@@ -182,8 +218,9 @@ async function uploadFacilityImages(
           }`
         );
       }
-    } catch (error: any) {
-      if (error.message?.includes('timeout')) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('timeout')) {
         throw new Error(
           `Upload timeout: The image upload took longer than 60 seconds. File size: ${(
             imageFile.size /
@@ -307,6 +344,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       .update({
         name: organization.name,
         nature: organization.nature as OrganizationNature,
+        type: toNullIfEmpty(organization.type) as OrganizationType,
         email: organization.email || null,
         phone: organization.phone || null,
         slug: orgSlug,
@@ -314,9 +352,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         city: organization.city || null,
         country: toNullIfEmpty(organization.country) as Country,
         postal_code: organization.postalCode || null,
-        type: (organization.type as OrganizationType) || null,
         description: organization.description || null,
         website: organization.website || null,
+        data_provider_id: organization.dataProviderId || null,
+        is_active: organization.isActive ?? true,
         updated_at: new Date().toISOString(),
       })
       .eq('id', existingOrg.id)
@@ -353,7 +392,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         .eq('facility_id', facilityId);
 
       if (courts && courts.length > 0) {
-        const courtIds = courts.map((c: any) => c.id);
+        const courtIds = courts.map((c: { id: string }) => c.id);
         await supabase.from('court_sport').delete().in('court_id', courtIds);
         await supabase.from('court').delete().in('id', courtIds);
       }
@@ -364,12 +403,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       // Delete facility file (junction + file + storage)
       const { data: facilityFiles } = await supabase
         .from('facility_file')
-        .select('id, file_id, files(storage_key)')
+        .select('id, file_id, file(storage_key)')
         .eq('facility_id', facilityId);
 
       if (facilityFiles && facilityFiles.length > 0) {
         // Delete from storage
-        const storageKeys = facilityFiles.map((ff: any) => ff.files?.storage_key).filter(Boolean);
+        const storageKeys = (facilityFiles as FacilityFileWithStorage[])
+          .map(ff => ff.file?.storage_key)
+          .filter((key): key is string => Boolean(key));
         if (storageKeys.length > 0) {
           await supabase.storage.from('facility-images').remove(storageKeys);
         }
@@ -378,7 +419,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         await supabase.from('facility_file').delete().eq('facility_id', facilityId);
 
         // Delete files records
-        const fileIds = facilityFiles.map((ff: any) => ff.file_id);
+        const fileIds = (facilityFiles as FacilityFileWithStorage[]).map(ff => ff.file_id);
         if (fileIds.length > 0) {
           await supabase.from('file').delete().in('id', fileIds);
         }
@@ -430,6 +471,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             location: location,
             latitude: facilityData.latitude ? parseFloat(facilityData.latitude) : null,
             longitude: facilityData.longitude ? parseFloat(facilityData.longitude) : null,
+            description: facilityData.description || null,
+            timezone: facilityData.timezone || null,
+            data_provider_id: facilityData.dataProviderId || null,
+            external_provider_id: facilityData.externalProviderId || null,
+            facility_type: toNullIfEmpty(facilityData.facilityType) as FacilityType,
+            membership_required: facilityData.membershipRequired ?? false,
+            is_active: facilityData.isActive ?? true,
             updated_at: new Date().toISOString(),
           })
           .eq('id', facilityData.id)
@@ -447,7 +495,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         if (facilityData.existingFacilityFileIds) {
           const { data: allFacilityFiles } = await supabase
             .from('facility_file')
-            .select('id, file_id, files(storage_key)')
+            .select('id, file_id, file(storage_key)')
             .eq('facility_id', facility.id);
 
           const filesToDelete =
@@ -457,9 +505,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
           if (filesToDelete.length > 0) {
             // Delete from storage
-            const storageKeys = filesToDelete
-              .map((ff: any) => ff.files?.storage_key)
-              .filter(Boolean);
+            const storageKeys = (filesToDelete as FacilityFileWithStorage[])
+              .map(ff => ff.file?.storage_key)
+              .filter((key): key is string => Boolean(key));
             if (storageKeys.length > 0) {
               await supabase.storage.from('facility-images').remove(storageKeys);
             }
@@ -483,14 +531,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           // Delete all files if no existingFacilityFileIds provided
           const { data: allFacilityFiles } = await supabase
             .from('facility_file')
-            .select('id, file_id, files(storage_key)')
+            .select('id, file_id, file(storage_key)')
             .eq('facility_id', facility.id);
 
           if (allFacilityFiles && allFacilityFiles.length > 0) {
             // Delete from storage
-            const storageKeys = allFacilityFiles
-              .map((ff: any) => ff.files?.storage_key)
-              .filter(Boolean);
+            const storageKeys = (allFacilityFiles as FacilityFileWithStorage[])
+              .map(ff => ff.file?.storage_key)
+              .filter((key): key is string => Boolean(key));
             if (storageKeys.length > 0) {
               await supabase.storage.from('facility-images').remove(storageKeys);
             }
@@ -499,7 +547,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             await supabase.from('facility_file').delete().eq('facility_id', facility.id);
 
             // Delete files records
-            const fileIds = allFacilityFiles.map((ff: any) => ff.file_id);
+            const fileIds = (allFacilityFiles as FacilityFileWithStorage[]).map(ff => ff.file_id);
             if (fileIds.length > 0) {
               await supabase.from('file').delete().in('id', fileIds);
             }
@@ -586,6 +634,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             location: location,
             latitude: facilityData.latitude ? parseFloat(facilityData.latitude) : null,
             longitude: facilityData.longitude ? parseFloat(facilityData.longitude) : null,
+            description: facilityData.description || null,
+            timezone: facilityData.timezone || null,
+            data_provider_id: facilityData.dataProviderId || null,
+            external_provider_id: facilityData.externalProviderId || null,
+            facility_type: toNullIfEmpty(facilityData.facilityType) as FacilityType,
+            membership_required: facilityData.membershipRequired ?? false,
+            is_active: facilityData.isActive ?? true,
           })
           .select()
           .single();
@@ -711,6 +766,140 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           error instanceof Error
             ? error.message
             : 'An error occurred while updating the organization',
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  try {
+    const { slug } = await params;
+    const supabase = await createClient();
+
+    // Check authentication
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user is admin
+    const userIsAdmin = await isAdmin(user.id);
+    if (!userIsAdmin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // Get existing organization
+    const { data: existingOrg, error: orgFetchError } = await supabase
+      .from('organization')
+      .select('id, name')
+      .eq('slug', slug)
+      .single();
+
+    if (orgFetchError || !existingOrg) {
+      return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
+    }
+
+    // Get all facilities for this organization
+    const { data: facilities } = await supabase
+      .from('facility')
+      .select('id')
+      .eq('organization_id', existingOrg.id);
+
+    const facilityIds = facilities?.map(f => f.id) || [];
+
+    // Delete all related data for each facility
+    for (const facilityId of facilityIds) {
+      // Get courts for this facility
+      const { data: courts } = await supabase
+        .from('court')
+        .select('id')
+        .eq('facility_id', facilityId);
+
+      if (courts && courts.length > 0) {
+        const courtIds = courts.map((c: { id: string }) => c.id);
+        // Delete court_sports
+        await supabase.from('court_sport').delete().in('court_id', courtIds);
+        // Delete courts
+        await supabase.from('court').delete().in('id', courtIds);
+      }
+
+      // Delete facility_sports
+      await supabase.from('facility_sport').delete().eq('facility_id', facilityId);
+
+      // Delete facility_contacts
+      await supabase.from('facility_contact').delete().eq('facility_id', facilityId);
+
+      // Delete facility_files and associated files
+      const { data: facilityFiles } = await supabase
+        .from('facility_file')
+        .select('id, file_id, file(storage_key)')
+        .eq('facility_id', facilityId);
+
+      if (facilityFiles && facilityFiles.length > 0) {
+        // Delete from storage
+        const storageKeys = (facilityFiles as FacilityFileWithStorage[])
+          .map(ff => ff.file?.storage_key)
+          .filter((key): key is string => Boolean(key));
+        if (storageKeys.length > 0) {
+          await supabase.storage.from('facility-images').remove(storageKeys);
+        }
+
+        // Delete facility_files junction records
+        await supabase.from('facility_file').delete().eq('facility_id', facilityId);
+
+        // Delete files records
+        const fileIds = (facilityFiles as FacilityFileWithStorage[]).map(ff => ff.file_id);
+        if (fileIds.length > 0) {
+          await supabase.from('file').delete().in('id', fileIds);
+        }
+      }
+    }
+
+    // Delete all facilities
+    if (facilityIds.length > 0) {
+      await supabase.from('facility').delete().in('id', facilityIds);
+    }
+
+    // Delete organization_members
+    await supabase.from('organization_member').delete().eq('organization_id', existingOrg.id);
+
+    // Delete the organization
+    const { error: deleteError } = await supabase
+      .from('organization')
+      .delete()
+      .eq('id', existingOrg.id);
+
+    if (deleteError) {
+      console.error('[Admin Org Delete] Delete error:', deleteError);
+      return NextResponse.json(
+        { error: deleteError.message || 'Failed to delete organization' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: `Organization "${existingOrg.name}" has been permanently deleted`,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('[Admin Org Delete] Unexpected error:', error);
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'An error occurred while deleting the organization',
       },
       { status: 500 }
     );

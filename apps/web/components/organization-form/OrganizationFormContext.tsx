@@ -65,8 +65,24 @@ export function useCourtActions() {
  * Convenience hook for accessing form data
  */
 export function useFormData() {
-  const { orgData, facilities, sports, loadingSports, isUpdateMode } = useOrganizationFormContext();
-  return { orgData, facilities, sports, loadingSports, isUpdateMode };
+  const {
+    orgData,
+    facilities,
+    sports,
+    loadingSports,
+    dataProviders,
+    loadingDataProviders,
+    isUpdateMode,
+  } = useOrganizationFormContext();
+  return {
+    orgData,
+    facilities,
+    sports,
+    loadingSports,
+    dataProviders,
+    loadingDataProviders,
+    isUpdateMode,
+  };
 }
 
 /**
