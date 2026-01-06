@@ -242,7 +242,24 @@
     "theme": "Thème",
     "darkMode": "Mode sombre",
     "lightMode": "Mode clair",
-    "systemTheme": "Système"
+    "systemTheme": "Système",
+    "permissions": "Permissions"
+  },
+  "permissions": {
+    "description": "Gérez les permissions de l'application pour activer les notifications, la découverte de matchs par localisation et la synchronisation du calendrier.",
+    "settingsNote": "Si une permission a été refusée, vous devrez l'activer dans les paramètres de votre appareil.",
+    "types": {
+      "notifications": "Notifications",
+      "location": "Localisation",
+      "calendar": "Calendrier",
+      "photos": "Photos et médias"
+    },
+    "status": {
+      "granted": "Autorisé",
+      "denied": "Refusé",
+      "undetermined": "Non défini",
+      "loading": "Chargement..."
+    }
   },
   "profile": {
     "title": "Profil",

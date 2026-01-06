@@ -33,6 +33,7 @@ export type RootStackParamList = {
   Settings: undefined;
   Notifications: undefined;
   NotificationPreferences: undefined;
+  Permissions: undefined;
   Map: { focusLocation?: { lat: number; lng: number } } | undefined;
   RatingProofs: RatingProofsScreenParams;
 };

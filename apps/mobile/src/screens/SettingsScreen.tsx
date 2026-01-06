@@ -119,6 +119,12 @@ const SettingsScreen: React.FC = () => {
     Logger.logUserAction('notification_preferences_pressed');
   };
 
+  const handlePermissions = () => {
+    lightHaptic();
+    navigation.navigate('Permissions');
+    Logger.logUserAction('permissions_pressed');
+  };
+
   const SettingsItem = ({
     icon,
     title,
@@ -221,6 +227,11 @@ const SettingsScreen: React.FC = () => {
               icon="notifications-outline"
               title={t('settings.notifications')}
               onPress={handleNotificationPreferences}
+            />
+            <SettingsItem
+              icon="shield-checkmark-outline"
+              title={t('settings.permissions')}
+              onPress={handlePermissions}
             />
           </View>
         )}

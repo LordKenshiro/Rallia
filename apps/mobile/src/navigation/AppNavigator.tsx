@@ -43,6 +43,7 @@ import SportProfile from '../screens/SportProfile';
 import RatingProofs from '../screens/RatingProofs';
 import Notifications from '../screens/Notifications';
 import NotificationPreferencesScreen from '../screens/NotificationPreferencesScreen';
+import PermissionsScreen from '../screens/PermissionsScreen';
 
 // Components
 import { ThemeLogo } from '../components/ThemeLogo';
@@ -615,6 +616,16 @@ export default function AppNavigator() {
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: 'Notification Preferences',
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="Permissions"
+        component={PermissionsScreen}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: 'Permissions',
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />

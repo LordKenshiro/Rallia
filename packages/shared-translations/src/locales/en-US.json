@@ -242,7 +242,24 @@
     "theme": "Theme",
     "darkMode": "Dark Mode",
     "lightMode": "Light Mode",
-    "systemTheme": "System"
+    "systemTheme": "System",
+    "permissions": "Permissions"
+  },
+  "permissions": {
+    "description": "Manage app permissions to enable features like notifications, location-based match discovery, and calendar sync.",
+    "settingsNote": "If a permission was denied, you'll need to enable it in your device settings.",
+    "types": {
+      "notifications": "Notifications",
+      "location": "Location",
+      "calendar": "Calendar",
+      "photos": "Photos & Media"
+    },
+    "status": {
+      "granted": "Allowed",
+      "denied": "Denied",
+      "undetermined": "Not Set",
+      "loading": "Loading..."
+    }
   },
   "profile": {
     "title": "Profile",
