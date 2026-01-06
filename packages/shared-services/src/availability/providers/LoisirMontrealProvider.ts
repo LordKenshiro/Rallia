@@ -29,79 +29,86 @@ export class LoisirMontrealProvider extends BaseAvailabilityProvider {
    * @returns Array of normalized availability slots
    */
   async fetchAvailability(params: FetchAvailabilityParams): Promise<AvailabilitySlot[]> {
-    // Check for mock mode (useful for testing during winter when no real slots exist)
-    const useMockData =
-      this.getConfigValue('useMockData', false) ||
-      process.env.EXPO_PUBLIC_USE_MOCK_AVAILABILITY === 'true';
+    // TEMPORARY: Always use mock data in production for now
+    // TODO: Remove this and restore environment variable check when ready
+    console.log('[LoisirMontrealProvider] Using mock data (forced for production)');
+    const mockResponse = generateMockLoisirMontrealResponse(params.dates, params.siteId);
+    return this.parseResponse(mockResponse);
 
-    if (useMockData) {
-      console.log('[LoisirMontrealProvider] Using mock data (EXPO_PUBLIC_USE_MOCK_AVAILABILITY)');
-      const mockResponse = generateMockLoisirMontrealResponse(params.dates, params.siteId);
-      return this.parseResponse(mockResponse);
-    }
-
-    const searchPath = this.getConfigValue('searchPath', '/public/search');
-    const defaultLimit = this.getConfigValue('defaultLimit', 50);
-
-    // Build the URL with cache-busting timestamp
-    const url = `${this.config.apiBaseUrl}${searchPath}?_=${Date.now()}`;
-
-    // Format dates as ISO strings with timezone (as expected by the API)
-    // Input: "2025-06-04" -> Output: "2025-06-04T00:00:00.000-04:00"
-    const formattedDates = params.dates.map(dateStr => {
-      // If already in ISO format with time, use as-is
-      if (dateStr.includes('T')) {
-        return dateStr;
-      }
-      // Otherwise, add time and timezone offset for Montreal (Eastern Time)
-      // Note: This is a simplified approach - in production, consider using a proper timezone library
-      return `${dateStr}T00:00:00.000-04:00`;
-    });
-
-    // Build request body matching Postman format exactly
-    const requestBody: LoisirMontrealSearchRequest = {
-      dates: formattedDates,
-      siteId: params.siteId ?? null,
-      startTime: params.startTime ?? null,
-      endTime: params.endTime ?? null,
-      boroughIds: null,
-      facilityTypeIds: null,
-      searchString: params.searchString ?? null,
-      limit: params.limit ?? defaultLimit,
-      offset: params.offset ?? 0,
-      sortColumn: 'startDateTime',
-      isSortOrderAsc: true,
-    };
-
-    console.log('[LoisirMontrealProvider] Fetching from:', url);
-    console.log('[LoisirMontrealProvider] Request body:', JSON.stringify(requestBody, null, 2));
-
-    try {
-      const response = await this.makeRequest<LoisirMontrealSearchResponse>(url, {
-        method: 'POST',
-        body: requestBody as unknown as Record<string, unknown>,
-        headers: {
-          // Additional headers that might be required by the API
-          'User-Agent': 'Rallia/1.0',
-          Origin: 'https://loisirs.montreal.ca',
-          Referer: 'https://loisirs.montreal.ca/',
-        },
-        timeout: 30000, // 30s timeout for external API
-      });
-
-      console.log(
-        '[LoisirMontrealProvider] Response received, recordCount:',
-        response?.recordCount
-      );
-      return this.parseResponse(response);
-    } catch (error) {
-      console.error('[LoisirMontrealProvider] Failed to fetch availability:', error);
-      // Log more details for debugging
-      if (error instanceof Error) {
-        console.error('[LoisirMontrealProvider] Error details:', error.message, error.name);
-      }
-      return []; // Graceful degradation
-    }
+    // Original code (commented out for now - will be restored later):
+    // // Check for mock mode (useful for testing during winter when no real slots exist)
+    // const useMockData =
+    //   this.getConfigValue('useMockData', false) ||
+    //   process.env.EXPO_PUBLIC_USE_MOCK_AVAILABILITY === 'true';
+    //
+    // if (useMockData) {
+    //   console.log('[LoisirMontrealProvider] Using mock data (EXPO_PUBLIC_USE_MOCK_AVAILABILITY)');
+    //   const mockResponse = generateMockLoisirMontrealResponse(params.dates, params.siteId);
+    //   return this.parseResponse(mockResponse);
+    // }
+    //
+    // const searchPath = this.getConfigValue('searchPath', '/public/search');
+    // const defaultLimit = this.getConfigValue('defaultLimit', 50);
+    //
+    // // Build the URL with cache-busting timestamp
+    // const url = `${this.config.apiBaseUrl}${searchPath}?_=${Date.now()}`;
+    //
+    // // Format dates as ISO strings with timezone (as expected by the API)
+    // // Input: "2025-06-04" -> Output: "2025-06-04T00:00:00.000-04:00"
+    // const formattedDates = params.dates.map(dateStr => {
+    //   // If already in ISO format with time, use as-is
+    //   if (dateStr.includes('T')) {
+    //     return dateStr;
+    //   }
+    //   // Otherwise, add time and timezone offset for Montreal (Eastern Time)
+    //   // Note: This is a simplified approach - in production, consider using a proper timezone library
+    //   return `${dateStr}T00:00:00.000-04:00`;
+    // });
+    //
+    // // Build request body matching Postman format exactly
+    // const requestBody: LoisirMontrealSearchRequest = {
+    //   dates: formattedDates,
+    //   siteId: params.siteId ?? null,
+    //   startTime: params.startTime ?? null,
+    //   endTime: params.endTime ?? null,
+    //   boroughIds: null,
+    //   facilityTypeIds: null,
+    //   searchString: params.searchString ?? null,
+    //   limit: params.limit ?? defaultLimit,
+    //   offset: params.offset ?? 0,
+    //   sortColumn: 'startDateTime',
+    //   isSortOrderAsc: true,
+    // };
+    //
+    // console.log('[LoisirMontrealProvider] Fetching from:', url);
+    // console.log('[LoisirMontrealProvider] Request body:', JSON.stringify(requestBody, null, 2));
+    //
+    // try {
+    //   const response = await this.makeRequest<LoisirMontrealSearchResponse>(url, {
+    //     method: 'POST',
+    //     body: requestBody as unknown as Record<string, unknown>,
+    //     headers: {
+    //       // Additional headers that might be required by the API
+    //       'User-Agent': 'Rallia/1.0',
+    //       Origin: 'https://loisirs.montreal.ca',
+    //       Referer: 'https://loisirs.montreal.ca/',
+    //     },
+    //     timeout: 30000, // 30s timeout for external API
+    //   });
+    //
+    //   console.log(
+    //     '[LoisirMontrealProvider] Response received, recordCount:',
+    //     response?.recordCount
+    //   );
+    //   return this.parseResponse(response);
+    // } catch (error) {
+    //   console.error('[LoisirMontrealProvider] Failed to fetch availability:', error);
+    //   // Log more details for debugging
+    //   if (error instanceof Error) {
+    //     console.error('[LoisirMontrealProvider] Error details:', error.message, error.name);
+    //   }
+    //   return []; // Graceful degradation
+    // }
   }
 
   /**
