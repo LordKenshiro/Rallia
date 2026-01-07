@@ -622,7 +622,8 @@
       "left": "{count} spots left"
     },
     "courtStatus": {
-      "readyToPlay": "Ready to Play"
+      "readyToPlay": "Ready to Play",
+      "courtBooked": "Court Booked"
     },
     "cta": {
       "join": "Join",

@@ -666,6 +666,18 @@ export const MatchDetailSheet: React.FC = () => {
     });
   }, [selectedMatch]);
 
+  // Check if any badges should be displayed (must be before early return for hooks rules)
+  const hasAnyBadges = useMemo(() => {
+    if (!selectedMatch) return false;
+    return (
+      selectedMatch.court_status === 'reserved' ||
+      (selectedMatch.player_expectation && selectedMatch.player_expectation !== 'both') ||
+      (selectedMatch.min_rating_score && selectedMatch.min_rating_score.label) ||
+      !!selectedMatch.preferred_opponent_gender ||
+      selectedMatch.join_mode === 'request'
+    );
+  }, [selectedMatch]);
+
   // Render nothing if no match is selected
   if (!selectedMatch) {
     return (
@@ -1233,99 +1245,89 @@ export const MatchDetailSheet: React.FC = () => {
         )}
 
         {/* Match Info Grid - Moved up for context */}
-        <View style={[styles.section, { borderBottomColor: colors.border }]}>
-          <View style={styles.badgesGrid}>
-            {/* Ready to Play badge (prominent - court already booked) */}
-            {match.court_status === 'reserved' && (
-              <Badge
-                label={t('match.courtStatus.readyToPlay' as TranslationKey)}
-                bgColor={GOLD_COLORS.base}
-                textColor={BASE_WHITE}
-                icon="checkmark-circle"
-              />
-            )}
+        {hasAnyBadges && (
+          <View style={[styles.section, { borderBottomColor: colors.border }]}>
+            <View style={styles.badgesGrid}>
+              {/* Ready to Play badge (prominent - court already booked) */}
+              {match.court_status === 'reserved' && (
+                <Badge
+                  label={t('match.courtStatus.readyToPlay' as TranslationKey)}
+                  bgColor={GOLD_COLORS.base}
+                  textColor={BASE_WHITE}
+                  icon="checkmark-circle"
+                />
+              )}
 
-            {/* Format */}
-            {/* <Badge
-              label={
-                match.format === 'doubles'
-                  ? t('match.format.doubles' as TranslationKey)
-                  : t('match.format.singles' as TranslationKey)
-              }
-              bgColor={isDark ? neutral[700] : neutral[200]}
-              textColor={colors.text}
-              icon={match.format === 'doubles' ? 'people' : 'person'}
-            /> */}
-
-            {/* Player expectation - distinct UI for competitive, casual, and both */}
-            {match.player_expectation && (
-              <Badge
+              {/* Format */}
+              {/* <Badge
                 label={
-                  match.player_expectation === 'competitive'
-                    ? t('matchDetail.competitive' as TranslationKey)
-                    : match.player_expectation === 'casual'
-                      ? t('matchDetail.casual' as TranslationKey)
-                      : t('match.type.both' as TranslationKey) // 'both' - open to any style
+                  match.format === 'doubles'
+                    ? t('match.format.doubles' as TranslationKey)
+                    : t('match.format.singles' as TranslationKey)
                 }
-                bgColor={
-                  match.player_expectation === 'competitive'
-                    ? secondary[500]
-                    : match.player_expectation === 'casual'
-                      ? isDark
+                bgColor={isDark ? neutral[700] : neutral[200]}
+                textColor={colors.text}
+                icon={match.format === 'doubles' ? 'people' : 'person'}
+              /> */}
+
+              {/* Player expectation - distinct UI for competitive, casual, and both */}
+              {match.player_expectation && match.player_expectation !== 'both' && (
+                <Badge
+                  label={
+                    match.player_expectation === 'competitive'
+                      ? t('matchDetail.competitive' as TranslationKey)
+                      : t('matchDetail.casual' as TranslationKey)
+                  }
+                  bgColor={
+                    match.player_expectation === 'competitive'
+                      ? secondary[500]
+                      : isDark
                         ? primary[700]
                         : primary[500]
-                      : isDark
-                        ? accent[600]
-                        : accent[500] // 'both' uses amber/gold
-                }
-                textColor={BASE_WHITE}
-                icon={
-                  match.player_expectation === 'competitive'
-                    ? 'trophy'
-                    : match.player_expectation === 'casual'
-                      ? 'happy'
-                      : 'swap-horizontal' // 'both' uses swap icon
-                }
-              />
-            )}
+                  }
+                  textColor={BASE_WHITE}
+                  icon={match.player_expectation === 'competitive' ? 'trophy' : 'happy'}
+                />
+              )}
 
-            {/* Min rating */}
-            {match.min_rating_score && match.min_rating_score.label && (
-              <Badge
-                label={match.min_rating_score.label}
-                bgColor={colors.primary}
-                textColor={BASE_WHITE}
-                icon="analytics"
-              />
-            )}
+              {/* Min rating */}
+              {match.min_rating_score && match.min_rating_score.label && (
+                <Badge
+                  label={match.min_rating_score.label}
+                  bgColor={colors.primary}
+                  textColor={BASE_WHITE}
+                  icon="analytics"
+                />
+              )}
 
-            {/* Gender preference */}
-            {match.preferred_opponent_gender && (
-              <Badge
-                label={
-                  match.preferred_opponent_gender === 'male'
-                    ? t('match.gender.menOnly' as TranslationKey)
-                    : match.preferred_opponent_gender === 'female'
-                      ? t('match.gender.womenOnly' as TranslationKey)
-                      : t('match.gender.other' as TranslationKey)
-                }
-                bgColor={isDark ? neutral[700] : neutral[200]}
-                textColor={colors.text}
-                icon={match.preferred_opponent_gender === 'male' ? 'male' : 'female'}
-              />
-            )}
+              {/* Gender preference */}
+              {match.preferred_opponent_gender && (
+                <Badge
+                  label={
+                    match.preferred_opponent_gender === 'male'
+                      ? t('match.gender.menOnly' as TranslationKey)
+                      : match.preferred_opponent_gender === 'female'
+                        ? t('match.gender.womenOnly' as TranslationKey)
+                        : t('match.gender.other' as TranslationKey)
+                  }
+                  bgColor={isDark ? neutral[700] : neutral[200]}
+                  textColor={colors.text}
+                  icon={match.preferred_opponent_gender === 'male' ? 'male' : 'female'}
+                />
+              )}
 
-            {/* Join mode */}
-            {match.join_mode === 'request' && (
-              <Badge
-                label={t('match.joinMode.request' as TranslationKey)}
-                bgColor={isDark ? neutral[700] : neutral[200]}
-                textColor={colors.text}
-                icon="hand-left"
-              />
-            )}
+              {/* Join mode */}
+              {match.join_mode === 'request' && (
+                <Badge
+                  label={t('match.joinMode.request' as TranslationKey)}
+                  bgColor={isDark ? neutral[700] : neutral[200]}
+                  textColor={colors.text}
+                  icon="hand-left"
+                />
+              )}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Participants Section - with host inline (marked with star) */}
         <View style={[styles.section, { borderBottomColor: colors.border }]}>

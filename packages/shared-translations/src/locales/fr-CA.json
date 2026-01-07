@@ -297,7 +297,7 @@
       "maxTravelDistance": "Distance de déplacement maximale",
       "matchDuration": "Durée de la partie",
       "matchType": "Type de partie",
-      "facility": "Installation",
+      "facility": "Site de jeu",
       "playingStyle": "Style de jeu",
       "playAttributes": "Attributs de jeu"
     },
@@ -622,7 +622,8 @@
       "left": "{count} places restantes"
     },
     "courtStatus": {
-      "readyToPlay": "Prêt à jouer"
+      "readyToPlay": "Prêt à jouer",
+      "courtBooked": "Terrain Réservé"
     },
     "cta": {
       "join": "Rejoindre",
@@ -755,21 +756,21 @@
       "playerExpectationBothDescription": "Ouvert aux parties récréatives ou compétitives",
       "lockedFromBooking": "Date, heure et durée verrouillées depuis votre réservation",
       "locationType": "Type de lieu",
-      "locationTypeFacility": "Sélectionner une installation",
-      "locationTypeFacilityDescription": "Choisir parmi les installations disponibles",
+      "locationTypeFacility": "Sélectionner un site de jeu",
+      "locationTypeFacilityDescription": "Choisir parmi les sites de jeu disponibles",
       "locationTypeCustom": "Lieu personnalisé",
       "locationTypeCustomDescription": "Entrer une adresse personnalisée",
       "locationTypeTbd": "À déterminer",
       "locationTypeTbdDescription": "Décider plus tard avec les participants",
       "gettingLocation": "Obtention de votre localisation...",
-      "searchingFacilities": "Recherche d'installations...",
-      "locationAccessNeeded": "Nous avons besoin de votre localisation pour trouver les installations à proximité",
-      "failedToLoadFacilities": "Impossible de charger les installations",
-      "noFacilitiesFound": "Aucune installation trouvée pour \"{query}\"",
-      "noFacilitiesAvailable": "Aucune installation disponible pour ce sport",
+      "searchingFacilities": "Recherche de sites de jeu...",
+      "locationAccessNeeded": "Nous avons besoin de votre localisation pour trouver les sites de jeu à proximité",
+      "failedToLoadFacilities": "Impossible de charger les sites de jeu",
+      "noFacilitiesFound": "Aucun site de jeu trouvé pour \"{query}\"",
+      "noFacilitiesAvailable": "Aucun site de jeu disponible pour ce sport",
       "tbdLocationInfo": "Vous pouvez définir le lieu plus tard après que les joueurs se soient joints. Ils seront notifiés lorsque vous le mettrez à jour.",
-      "facility": "Installation",
-      "facilityPlaceholder": "Rechercher des installations...",
+      "facility": "Site de jeu",
+      "facilityPlaceholder": "Rechercher des sites de jeu...",
       "preferredFacility": "Favori",
       "court": "Terrain",
       "courtPlaceholder": "Sélectionner un terrain",
@@ -853,7 +854,7 @@
       "durationRequired": "Veuillez sélectionner une durée",
       "formatRequired": "Veuillez sélectionner un format",
       "locationTypeRequired": "Veuillez sélectionner un type de lieu",
-      "facilityRequired": "Veuillez sélectionner une installation",
+      "facilityRequired": "Veuillez sélectionner un site de jeu",
       "locationNameRequired": "Veuillez entrer un nom de lieu",
       "sportRequired": "Veuillez sélectionner un sport"
     },
@@ -1205,7 +1206,7 @@
       "coreMessage": "Il n'y a tout simplement pas assez de terrains intérieurs pour tous ceux qui veulent jouer.",
       "noCourtNoGame": {
         "title": "Pas de terrain, pas de partie",
-        "description": "Une pénurie d'installations intérieures s'apprête à mettre au banc 6 millions de joueurs canadiens de tennis et de pickleball. Alors que la demande pour ces sports explose, le nombre de terrains intérieurs est resté le même."
+        "description": "Une pénurie de sites de jeu intérieurs s'apprête à mettre au banc 6 millions de joueurs canadiens de tennis et de pickleball. Alors que la demande pour ces sports explose, le nombre de terrains intérieurs est resté le même."
       },
       "bookingCompetition": {
         "title": "Réserver est une compétition",
@@ -1213,7 +1214,7 @@
       },
       "temperatureDrop": {
         "title": "Mis au banc par le froid",
-        "description": "Votre temps de jeu ne devrait pas se terminer simplement parce que la température baisse. Mais sans accès aux installations intérieures, des milliers de joueurs passeront des semaines—ou des mois—sans mettre les pieds sur un terrain."
+        "description": "Votre temps de jeu ne devrait pas se terminer simplement parce que la température baisse. Mais sans accès aux sites de jeu intérieurs, des milliers de joueurs passeront des semaines—ou des mois—sans mettre les pieds sur un terrain."
       }
     },
     "stats": {
@@ -1246,8 +1247,8 @@
         "description": "Soyez notifié quand du temps de jeu se libère. Comblez les annulations de dernière minute pour qu'aucun temps de terrain ne soit gaspillé. Transformez l'annulation de quelqu'un en votre opportunité."
       },
       "unlockPotential": {
-        "title": "Maximisez les installations existantes",
-        "description": "Libérez le plein potentiel des installations existantes tout en défendant la construction future. Chaque terrain devrait être utilisé à sa capacité maximale."
+        "title": "Maximisez les sites de jeu existants",
+        "description": "Libérez le plein potentiel des sites de jeu existants tout en défendant la construction future. Chaque terrain devrait être utilisé à sa capacité maximale."
       }
     },
     "foundingMember": {
@@ -1280,7 +1281,7 @@
       "questions": {
         "whatIsThis": {
           "question": "Comment cela résout-il le problème de terrains intérieurs?",
-          "answer": "Nous aidons les joueurs canadiens de tennis et de pickleball à gérer la pénurie de terrains intérieurs pendant les mois d'hiver. Nous construisons des outils pour aider les joueurs à trouver des partenaires qui ont déjà réservé des terrains, partager les coûts et combler les annulations de dernière minute—maximisant l'utilisation des installations existantes."
+          "answer": "Nous aidons les joueurs canadiens de tennis et de pickleball à gérer la pénurie de terrains intérieurs pendant les mois d'hiver. Nous construisons des outils pour aider les joueurs à trouver des partenaires qui ont déjà réservé des terrains, partager les coûts et combler les annulations de dernière minute—maximisant l'utilisation des sites de jeu existants."
         },
         "foundingMember": {
           "question": "Qu'obtiennent les membres fondateurs?",
@@ -1296,7 +1297,7 @@
         },
         "howHelp": {
           "question": "Comment cela aidera-t-il avec la pénurie de terrains?",
-          "answer": "Bien que nous ne puissions pas construire de nouveaux terrains du jour au lendemain, nous pouvons aider à maximiser l'utilisation des installations existantes. En connectant les joueurs qui ont besoin de terrains avec ceux qui en ont réservé, en partageant les coûts et en comblant les annulations, nous nous assurons que chaque minute de temps de terrain est utilisée."
+          "answer": "Bien que nous ne puissions pas construire de nouveaux terrains du jour au lendemain, nous pouvons aider à maximiser l'utilisation des sites de jeu existants. En connectant les joueurs qui ont besoin de terrains avec ceux qui en ont réservé, en partageant les coûts et en comblant les annulations, nous nous assurons que chaque minute de temps de terrain est utilisée."
         }
       }
     }
@@ -1337,7 +1338,7 @@
   "webOnboarding": {
     "badge": "Commencer",
     "pageTitle": "Créer votre organisation",
-    "pageDescription": "Configurez le profil de votre organisation pour commencer à gérer vos installations et membres",
+    "pageDescription": "Configurez le profil de votre organisation pour commencer à gérer vos sites de jeu et membres",
     "title": "Détails de l'organisation",
     "description": "Remplissez les informations ci-dessous pour créer le profil de votre organisation",
     "basicInfo": "Informations de base",
@@ -1405,7 +1406,7 @@
     "nav": {
       "dashboard": "Tableau de bord",
       "organizations": "Organisations",
-      "facilities": "Installations",
+      "facilities": "Sites de jeu",
       "members": "Membres",
       "settings": "Paramètres",
       "theme": "Thème",
@@ -1484,14 +1485,14 @@
         "selected": "{count, plural, =0 {Aucune organisation sélectionnée} one {# organisation sélectionnée} other {# organisations sélectionnées}}",
         "delete": "Supprimer la sélection",
         "confirmTitle": "Supprimer les organisations",
-        "confirmDescription": "Êtes-vous sûr de vouloir supprimer définitivement {count, plural, one {cette organisation} other {ces # organisations}}? Cette action est irréversible et supprimera toutes les installations, terrains, contacts et images associés.",
+        "confirmDescription": "Êtes-vous sûr de vouloir supprimer définitivement {count, plural, one {cette organisation} other {ces # organisations}}? Cette action est irréversible et supprimera tous les sites de jeu, terrains, contacts et images associés.",
         "cancel": "Annuler",
         "confirmDelete": "Supprimer",
         "deleting": "Suppression..."
       },
       "create": {
         "title": "Créer une organisation",
-        "description": "Créez une nouvelle organisation avec des installations, sports, contacts et terrains.",
+        "description": "Créez une nouvelle organisation avec des sites de jeu, sports, contacts et terrains.",
         "titleMeta": "Créer une organisation - Admin - Rallia",
         "descriptionMeta": "Créez une nouvelle organisation avec toutes les entités associées.",
         "formTitle": "Nouvelle organisation",
@@ -1499,10 +1500,10 @@
         "sections": {
           "organization": "Informations de l'organisation",
           "dataProvider": "Fournisseur de données",
-          "facilities": "Installations",
-          "facility": "Installation",
-          "facilityImages": "Images de l'installation",
-          "facilityInfo": "Informations de l'installation",
+          "facilities": "Sites de jeu",
+          "facility": "Site de jeu",
+          "facilityImages": "Images du site de jeu",
+          "facilityInfo": "Informations du site de jeu",
           "sports": "Sports",
           "contacts": "Contacts",
           "contact": "Contact",
@@ -1529,11 +1530,11 @@
           "country": "Pays",
           "postalCode": "Code postal",
           "selectCountry": "Sélectionner le pays",
-          "facilityName": "Nom de l'installation",
+          "facilityName": "Nom du site de jeu",
           "facilityNamePlaceholder": "Entrez le nom pour rechercher...",
-          "facilityType": "Type d'installation",
-          "selectFacilityType": "Sélectionner le type d'installation",
-          "facilityDescriptionPlaceholder": "Entrez la description de l'installation...",
+          "facilityType": "Type de site de jeu",
+          "selectFacilityType": "Sélectionner le type de site de jeu",
+          "facilityDescriptionPlaceholder": "Entrez la description du site de jeu...",
           "timezone": "Fuseau horaire",
           "selectTimezone": "Sélectionner le fuseau horaire",
           "externalProviderId": "ID du fournisseur externe",
@@ -1552,7 +1553,7 @@
           "indoor": "Intérieur",
           "markAsPrimary": "Définir comme contact principal",
           "selectSportsFirst": "Sélectionnez d'abord les sports ci-dessus",
-          "membershipRequired": "Adhésion requise pour accéder à cette installation"
+          "membershipRequired": "Adhésion requise pour accéder à ce site de jeu"
         },
         "types": {
           "club": "Club",
@@ -1588,7 +1589,7 @@
           "concrete": "Béton"
         },
         "actions": {
-          "addFacility": "Ajouter une installation",
+          "addFacility": "Ajouter un site de jeu",
           "addContact": "Ajouter un contact",
           "addCourtRow": "Ajouter une ligne de terrains",
           "uploadImages": "Cliquez pour télécharger des images",
@@ -1608,10 +1609,10 @@
         },
         "validation": {
           "requiredFields": "Veuillez remplir tous les champs requis",
-          "atLeastOneFacility": "Au moins une installation est requise",
-          "facilityNameRequired": "Le nom de l'installation {index} est requis",
-          "facilitySportsRequired": "L'installation {index} doit avoir au moins un sport sélectionné",
-          "facilityCountryRequired": "Le pays de l'installation {index} est requis"
+          "atLeastOneFacility": "Au moins un site de jeu est requis",
+          "facilityNameRequired": "Le nom du site de jeu {index} est requis",
+          "facilitySportsRequired": "Le site de jeu {index} doit avoir au moins un sport sélectionné",
+          "facilityCountryRequired": "Le pays du site de jeu {index} est requis"
         },
         "error": {
           "createFailed": "Impossible de créer l'organisation"
@@ -1633,15 +1634,15 @@
         "deleteButton": "Supprimer l'organisation",
         "deleteConfirm": {
           "title": "Supprimer l'organisation",
-          "description": "Êtes-vous sûr de vouloir supprimer définitivement \"{name}\"? Cette action est irréversible et supprimera toutes les installations, terrains, contacts et images associés.",
+          "description": "Êtes-vous sûr de vouloir supprimer définitivement \"{name}\"? Cette action est irréversible et supprimera tous les sites de jeu, terrains, contacts et images associés.",
           "cancel": "Annuler",
           "confirm": "Supprimer l'organisation",
           "deleting": "Suppression..."
         },
         "sections": {
           "organizationInfo": "Informations de l'organisation",
-          "facilities": "Installations",
-          "facilityImages": "Images de l'installation",
+          "facilities": "Sites de jeu",
+          "facilityImages": "Images du site de jeu",
           "sports": "Sports",
           "contacts": "Contacts",
           "courts": "Terrains"
@@ -1663,9 +1664,9 @@
           "public": "Publique",
           "private": "Privée"
         },
-        "facility": "Installation",
-        "facilities": "Installations",
-        "noFacilities": "Aucune installation trouvée pour cette organisation",
+        "facility": "Site de jeu",
+        "facilities": "Sites de jeu",
+        "noFacilities": "Aucun site de jeu trouvé pour cette organisation",
         "primary": "Principal",
         "court": "Terrain",
         "courts": "Terrains",
@@ -1676,7 +1677,7 @@
       },
       "update": {
         "title": "Mettre à jour l'organisation",
-        "description": "Mettez à jour les détails de l'organisation, les installations et les informations associées.",
+        "description": "Mettez à jour les détails de l'organisation, les sites de jeu et les informations associées.",
         "titleMeta": "Mettre à jour l'organisation - Admin - Rallia",
         "descriptionMeta": "Mettre à jour les détails de l'organisation.",
         "formTitle": "Mettre à jour l'organisation",
@@ -1684,10 +1685,10 @@
         "sections": {
           "organization": "Informations de l'organisation",
           "dataProvider": "Fournisseur de données",
-          "facilities": "Installations",
-          "facility": "Installation",
-          "facilityImages": "Images de l'installation",
-          "facilityInfo": "Informations de l'installation",
+          "facilities": "Sites de jeu",
+          "facility": "Site de jeu",
+          "facilityImages": "Images du site de jeu",
+          "facilityInfo": "Informations du site de jeu",
           "sports": "Sports",
           "contacts": "Contacts",
           "contact": "Contact",
@@ -1714,11 +1715,11 @@
           "country": "Pays",
           "postalCode": "Code postal",
           "selectCountry": "Sélectionner le pays",
-          "facilityName": "Nom de l'installation",
+          "facilityName": "Nom du site de jeu",
           "facilityNamePlaceholder": "Entrez le nom pour rechercher...",
-          "facilityType": "Type d'installation",
-          "selectFacilityType": "Sélectionner le type d'installation",
-          "facilityDescriptionPlaceholder": "Entrez la description de l'installation...",
+          "facilityType": "Type de site de jeu",
+          "selectFacilityType": "Sélectionner le type de site de jeu",
+          "facilityDescriptionPlaceholder": "Entrez la description du site de jeu...",
           "timezone": "Fuseau horaire",
           "selectTimezone": "Sélectionner le fuseau horaire",
           "externalProviderId": "ID du fournisseur externe",
@@ -1737,7 +1738,7 @@
           "indoor": "Intérieur",
           "markAsPrimary": "Définir comme contact principal",
           "selectSportsFirst": "Sélectionnez d'abord les sports ci-dessus",
-          "membershipRequired": "Adhésion requise pour accéder à cette installation"
+          "membershipRequired": "Adhésion requise pour accéder à ce site de jeu"
         },
         "types": {
           "club": "Club",
@@ -1773,7 +1774,7 @@
           "concrete": "Béton"
         },
         "actions": {
-          "addFacility": "Ajouter une installation",
+          "addFacility": "Ajouter un site de jeu",
           "addContact": "Ajouter un contact",
           "addCourtRow": "Ajouter une ligne de terrains",
           "uploadImages": "Cliquez pour télécharger des images",
@@ -1793,10 +1794,10 @@
         },
         "validation": {
           "requiredFields": "Veuillez remplir tous les champs requis",
-          "atLeastOneFacility": "Au moins une installation est requise",
-          "facilityNameRequired": "Le nom de l'installation {index} est requis",
-          "facilitySportsRequired": "L'installation {index} doit avoir au moins un sport sélectionné",
-          "facilityCountryRequired": "Le pays de l'installation {index} est requis"
+          "atLeastOneFacility": "Au moins un site de jeu est requis",
+          "facilityNameRequired": "Le nom du site de jeu {index} est requis",
+          "facilitySportsRequired": "Le site de jeu {index} doit avoir au moins un sport sélectionné",
+          "facilityCountryRequired": "Le pays du site de jeu {index} est requis"
         },
         "error": {
           "updateFailed": "Impossible de mettre à jour l'organisation",

@@ -1012,11 +1012,25 @@ const MatchCard: React.FC<MatchCardProps> = ({
     icon?: keyof typeof Ionicons.glyphMap;
   }> = [];
 
-  // Player expectation badge
-  if (match.player_expectation) {
+  // Ready to Play badge (when court is already reserved) - shown first
+  if (isReadyToPlay) {
     badges.push({
-      key: 'expectation',
-      ...expectationInfo,
+      key: 'readyToPlay',
+      label: t('match.courtStatus.courtBooked'),
+      bgColor: isDark ? `${rtpColors.border}30` : `${rtpColors.border}20`,
+      textColor: rtpColors.border,
+      icon: 'checkmark-circle',
+    });
+  }
+
+  // Cost badge (uses palette accent for consistency)
+  if (costDisplay) {
+    badges.push({
+      key: 'cost',
+      label: costDisplay,
+      bgColor: match.is_court_free ? `${status.success.DEFAULT}20` : colors.paletteAccentLight,
+      textColor: match.is_court_free ? status.success.DEFAULT : colors.paletteAccent,
+      icon: match.is_court_free ? 'checkmark-circle' : 'cash-outline',
     });
   }
 
@@ -1059,14 +1073,11 @@ const MatchCard: React.FC<MatchCardProps> = ({
   //   });
   // }
 
-  // Cost badge (uses palette accent for consistency)
-  if (costDisplay) {
+  // Player expectation badge (exclude "both" since it's the default)
+  if (match.player_expectation && match.player_expectation !== 'both') {
     badges.push({
-      key: 'cost',
-      label: costDisplay,
-      bgColor: match.is_court_free ? `${status.success.DEFAULT}20` : colors.paletteAccentLight,
-      textColor: match.is_court_free ? status.success.DEFAULT : colors.paletteAccent,
-      icon: match.is_court_free ? 'checkmark-circle' : 'cash-outline',
+      key: 'expectation',
+      ...expectationInfo,
     });
   }
 
