@@ -9,7 +9,7 @@
     "delete": "Supprimer",
     "edit": "Modifier",
     "back": "Retour",
-    "goBack": "Retour",
+    "goBack": "Retourner",
     "next": "Suivant",
     "done": "Terminé",
     "continue": "Continuer",
@@ -28,7 +28,7 @@
     "required": "Requis",
     "optional": "Optionnel",
     "showLess": "Afficher moins",
-    "resetToDefaults": "Réinitialiser",
+    "resetToDefaults": "Réinitialiser aux valeurs par défaut",
     "gender": {
       "label": "Genre",
       "male": "Homme",
@@ -64,8 +64,8 @@
     "verifyCode": "Vérifier le code",
     "resendCode": "Renvoyer le code",
     "codeSent": "Code envoyé à {email}",
-    "codeExpired": "Code expiré. Veuillez en demander un nouveau.",
-    "invalidCode": "Code invalide. Veuillez réessayer.",
+    "codeExpired": "Ce code a expiré. Veuillez en demander un nouveau.",
+    "invalidCode": "Ce code n'est pas correct. Veuillez réessayer.",
     "welcomeBack": "Bon retour!",
     "createAccount": "Créez un compte pour commencer",
     "enterCode": "Entrer le code",
@@ -80,7 +80,7 @@
   },
   "navigation": {
     "home": "Accueil",
-    "matches": "Matchs",
+    "matches": "Parties",
     "map": "Carte",
     "community": "Communauté",
     "profile": "Profil",
@@ -91,7 +91,7 @@
   "notifications": {
     "title": "Notifications",
     "empty": "Aucune notification",
-    "emptyDescription": "Vous verrez ici les invitations de match, les rappels et plus encore",
+    "emptyDescription": "Vous verrez ici les invitations aux parties, les rappels et les mises à jour",
     "unread": "non lu(s)",
     "markAllRead": "Tout marquer comme lu",
     "markAsRead": "Marquer comme lu",
@@ -107,16 +107,16 @@
       "earlier": "Plus tôt"
     },
     "types": {
-      "match_invitation": "Invitation de match",
+      "match_invitation": "Invitation à une partie",
       "match_join_request": "Demande de participation",
       "match_join_accepted": "Demande acceptée",
       "match_join_rejected": "Demande refusée",
       "match_player_joined": "Joueur inscrit",
-      "match_cancelled": "Match annulé",
-      "match_updated": "Match mis à jour",
-      "match_starting_soon": "Match imminent",
-      "match_completed": "Match terminé",
-      "player_kicked": "Retiré du match",
+      "match_cancelled": "Partie annulée",
+      "match_updated": "Partie mise à jour",
+      "match_starting_soon": "Partie imminente",
+      "match_completed": "Partie terminée",
+      "player_kicked": "Retiré de la partie",
       "player_left": "Joueur parti",
       "new_message": "Nouveau message",
       "friend_request": "Demande d'ami",
@@ -128,7 +128,7 @@
       "system": "Système"
     },
     "categories": {
-      "match": "Notifications de match",
+      "match": "Notifications de parties",
       "social": "Notifications sociales",
       "system": "Notifications système"
     },
@@ -139,55 +139,55 @@
     },
     "preferences": {
       "title": "Préférences de notifications",
-      "description": "Choisissez comment vous souhaitez être notifié pour différents types d'événements. Activez ou désactivez chaque canal.",
+      "description": "Choisissez comment vous souhaitez être notifié pour différents événements. Activez ou désactivez chaque option.",
       "enabled": "Activé",
       "disabled": "Désactivé",
       "default": "Par défaut"
     },
     "messages": {
       "match_invitation": {
-        "title": "Invitation de match",
-        "body": "{playerName} vous a invité à un match de {sportName}"
+        "title": "Invitation à une partie",
+        "body": "{playerName} vous a invité à une partie de {sportName}"
       },
       "match_join_request": {
         "title": "Nouvelle demande de participation",
-        "body": "{playerName} souhaite rejoindre votre match"
+        "body": "{playerName} souhaite rejoindre votre partie"
       },
       "match_join_accepted": {
         "title": "Demande acceptée",
-        "body": "Votre demande de participation au match a été acceptée"
+        "body": "Votre demande de participation à la partie a été acceptée"
       },
       "match_join_rejected": {
         "title": "Demande refusée",
-        "body": "Votre demande de participation au match a été refusée"
+        "body": "Votre demande de participation à la partie a été refusée"
       },
       "match_player_joined": {
         "title": "{playerName} a rejoint",
-        "body": "{playerName} a rejoint votre match de {sportName}"
+        "body": "{playerName} a rejoint votre partie de {sportName}"
       },
       "match_cancelled": {
-        "title": "Match annulé",
-        "body": "Le match de {sportName} du {matchDate} a été annulé"
+        "title": "Partie annulée",
+        "body": "La partie de {sportName} du {matchDate} a été annulée"
       },
       "match_updated": {
-        "title": "Match mis à jour",
-        "body": "Les détails du match ont été mis à jour"
+        "title": "Partie mise à jour",
+        "body": "Les détails de la partie ont été mis à jour"
       },
       "match_starting_soon": {
-        "title": "Match imminent",
-        "body": "Votre match de {sportName} commence dans 15 minutes"
+        "title": "Partie imminente",
+        "body": "Votre partie de {sportName} commence dans 15 minutes"
       },
       "match_completed": {
-        "title": "Match terminé",
-        "body": "Votre match de {sportName} a été marqué comme terminé"
+        "title": "Partie terminée",
+        "body": "Votre partie de {sportName} a été marquée comme terminée"
       },
       "player_kicked": {
-        "title": "Retiré du match",
-        "body": "Vous avez été retiré d'un match"
+        "title": "Retiré de la partie",
+        "body": "Vous avez été retiré d'une partie"
       },
       "player_left": {
         "title": "{playerName} est parti",
-        "body": "{playerName} a quitté votre match de {sportName}"
+        "body": "{playerName} a quitté votre partie de {sportName}"
       },
       "new_message": {
         "title": "Nouveau message",
@@ -229,7 +229,7 @@
     "languageDescription": "Choisissez votre langue préférée",
     "languageAuto": "Par défaut du système",
     "notifications": "Notifications",
-    "notificationsDescription": "Choisissez comment vous souhaitez être notifié pour différents types d'événements. Activez ou désactivez chaque canal.",
+    "notificationsDescription": "Choisissez comment vous souhaitez être notifié pour différents événements. Activez ou désactivez chaque option.",
     "privacy": "Confidentialité",
     "subscription": "Abonnement",
     "payments": "Paiements",
@@ -246,8 +246,8 @@
     "permissions": "Permissions"
   },
   "permissions": {
-    "description": "Gérez les permissions de l'application pour activer les notifications, la découverte de matchs par localisation et la synchronisation du calendrier.",
-    "settingsNote": "Si une permission a été refusée, vous devrez l'activer dans les paramètres de votre appareil.",
+    "description": "Gérez les permissions de l'application pour activer les notifications, la recherche de parties près de chez vous et la synchronisation du calendrier.",
+    "settingsNote": "Si vous avez refusé une permission, vous devrez l'activer dans les paramètres de votre appareil.",
     "types": {
       "notifications": "Notifications",
       "location": "Localisation",
@@ -277,7 +277,7 @@
     "removePhoto": "Supprimer la photo",
     "sportProfiles": "Profils sportifs",
     "ratings": "Classements",
-    "matches": "Matchs",
+    "matches": "Parties",
     "reviews": "Avis",
     "notSet": "Non défini",
     "sections": {
@@ -295,8 +295,8 @@
       "dateOfBirth": "Date de naissance",
       "playingHand": "Main de jeu",
       "maxTravelDistance": "Distance de déplacement maximale",
-      "matchDuration": "Durée du match",
-      "matchType": "Type de match",
+      "matchDuration": "Durée de la partie",
+      "matchType": "Type de partie",
       "facility": "Installation",
       "playingStyle": "Style de jeu",
       "playAttributes": "Attributs de jeu"
@@ -307,7 +307,7 @@
       "certified": "Certifié",
       "noBio": "Pas encore de bio",
       "noSports": "Aucun sport disponible",
-      "noRating": "Aucune information de classement pour le moment",
+      "noRating": "Aucun classement pour le moment",
       "noRatingSubtext": "Configurez votre classement pour commencer à jouer"
     },
     "loading": {
@@ -319,7 +319,7 @@
     "username": "nom d'utilisateur",
     "user": "Utilisateur",
     "doYouPlay": "Jouez-vous au {sport}?",
-    "activateSportMessage": "Activez {sport} pour voir et gérer votre classement et vos préférences",
+    "activateSportMessage": "Activez {sport} pour configurer votre classement et vos préférences",
     "rating": {
       "skillLevel": "Niveau de compétence",
       "score": "Score",
@@ -344,8 +344,8 @@
     "preferences": {
       "updateTennis": "Mettre à jour vos préférences de tennis",
       "updatePickleball": "Mettre à jour vos préférences de pickleball",
-      "matchDuration": "Durée du match",
-      "matchType": "Type de match",
+      "matchDuration": "Durée de la partie",
+      "matchType": "Type de partie",
       "court": "Terrain",
       "playStyle": "Style de jeu",
       "selectAllThatApply": "Sélectionnez tous ceux qui s'appliquent",
@@ -381,7 +381,7 @@
   },
   "onboarding": {
     "welcome": "Bienvenue sur Rallia",
-    "welcomeSubtitle": "Trouvez vos partenaires de tennis et pickleball parfaits",
+    "welcomeSubtitle": "Trouvez vos partenaires de tennis et de pickleball parfaits",
     "getStarted": "Commencer",
     "personalInfo": "Informations personnelles",
     "personalInfoSubtitle": "Parlez-nous un peu de vous",
@@ -403,7 +403,7 @@
     "preferences": "Préférences",
     "preferencesSubtitle": "Définissez vos préférences de jeu",
     "allSet": "Vous êtes prêt!",
-    "allSetSubtitle": "Commencez à trouver des matchs maintenant",
+    "allSetSubtitle": "Commencez à trouver des parties",
     "step": "Étape {current} de {total}",
     "stepNames": {
       "personal": "À propos de vous",
@@ -443,8 +443,8 @@
       "right": "Droite",
       "both": "Les deux",
       "travelDistance": "Distance de déplacement maximale",
-      "matchDuration": "Durée de match préférée",
-      "matchType": "Type de match préféré",
+      "matchDuration": "Durée de partie préférée",
+      "matchType": "Type de partie préféré",
       "casual": "Récréatif",
       "competitive": "Compétitif",
       "sameForAll": "Identique pour tous les sports"
@@ -464,10 +464,10 @@
     "complete": "Terminer"
   },
   "matches": {
-    "title": "Matchs",
-    "noMatches": "Aucun match pour le moment",
-    "findMatch": "Trouver un match",
-    "createMatch": "Créer un match",
+    "title": "Parties",
+    "noMatches": "Aucune partie pour le moment",
+    "findMatch": "Trouver une partie",
+    "createMatch": "Créer une partie",
     "upcoming": "À venir",
     "past": "Passés",
     "pending": "En attente",
@@ -480,47 +480,47 @@
     "players": "Joueurs",
     "sport": "Sport",
     "level": "Niveau",
-    "joinMatch": "Rejoindre le match",
-    "leaveMatch": "Quitter le match",
-    "cancelMatch": "Annuler le match",
-    "matchDetails": "Détails du match"
+    "joinMatch": "Rejoindre la partie",
+    "leaveMatch": "Quitter la partie",
+    "cancelMatch": "Annuler la partie",
+    "matchDetails": "Détails de la partie"
   },
   "matchActions": {
-    "joinSuccess": "Vous avez rejoint le match!",
+    "joinSuccess": "Vous avez rejoint la partie!",
     "requestSent": "Demande envoyée à l'hôte",
-    "leaveSuccess": "Vous avez quitté le match",
-    "cancelSuccess": "Match annulé",
-    "leaveConfirmTitle": "Quitter le match?",
-    "leaveConfirmMessage": "Vous serez retiré de ce match.",
-    "cancelConfirmTitle": "Annuler le match?",
-    "cancelConfirmMessage": "Cela annulera le match pour tous les participants.",
+    "leaveSuccess": "Vous avez quitté la partie",
+    "cancelSuccess": "Partie annulée",
+    "leaveConfirmTitle": "Quitter cette partie?",
+    "leaveConfirmMessage": "Vous serez retiré de cette partie.",
+    "cancelConfirmTitle": "Annuler cette partie?",
+    "cancelConfirmMessage": "Cela annulera la partie pour tout le monde.",
     "cancelWarning": "{count} autre(s) joueur(s) seront notifiés",
     "acceptRequest": "Accepter",
     "rejectRequest": "Refuser",
     "acceptSuccess": "Joueur accepté",
     "rejectSuccess": "Demande refusée",
     "rejectConfirmTitle": "Refuser la demande?",
-    "rejectConfirmMessage": "Ce joueur ne pourra plus demander à rejoindre ce match.",
+    "rejectConfirmMessage": "Ce joueur ne pourra plus demander à rejoindre cette partie.",
     "pendingRequests": "Demandes en attente",
     "cancelRequest": "Annuler la demande",
     "cancelRequestSuccess": "Votre demande a été annulée",
     "cancelRequestConfirmTitle": "Annuler la demande?",
-    "cancelRequestConfirmMessage": "Votre demande pour rejoindre ce match sera retirée.",
+    "cancelRequestConfirmMessage": "Votre demande pour rejoindre cette partie sera retirée.",
     "showMoreRequests": "Afficher {count} de plus",
-    "matchFullCannotAccept": "Match complet",
+    "matchFullCannotAccept": "Partie complète",
     "requestPending": "Votre demande est en attente d'approbation par l'hôte",
-    "waitlistedInfo": "Vous êtes sur la liste d'attente. Vous serez notifié si une place se libère.",
-    "spotOpenedUp": "Une place s'est libérée! Vous pouvez maintenant rejoindre ce match.",
+    "waitlistedInfo": "Vous êtes sur la liste d'attente. Nous vous notifierons si une place se libère.",
+    "spotOpenedUp": "Une place s'est libérée! Vous pouvez rejoindre cette partie maintenant.",
     "joinWaitlist": "Rejoindre la liste d'attente",
     "leaveWaitlist": "Quitter la liste d'attente",
     "waitlistSuccess": "Vous avez été ajouté à la liste d'attente!",
     "leaveWaitlistSuccess": "Vous avez quitté la liste d'attente",
     "requesterDetails": "Détails du demandeur",
     "kickParticipant": "Retirer le joueur",
-    "kickSuccess": "Le joueur a été retiré du match",
+    "kickSuccess": "Le joueur a été retiré de la partie",
     "kickConfirmTitle": "Retirer le joueur?",
-    "kickConfirmMessage": "Ce joueur sera retiré du match et sera notifié.",
-    "genderMismatch": "Ce match est réservé aux joueurs d'un genre différent du vôtre."
+    "kickConfirmMessage": "Ce joueur sera retiré de la partie et sera notifié.",
+    "genderMismatch": "Cette partie est réservée aux joueurs d'un genre différent."
   },
   "ratings": {
     "title": "Classements",
@@ -539,17 +539,17 @@
     "dupr": "DUPR"
   },
   "errors": {
-    "networkError": "Erreur réseau. Veuillez vérifier votre connexion.",
-    "serverError": "Erreur serveur. Veuillez réessayer plus tard.",
-    "unauthorized": "Vous n'êtes pas autorisé à effectuer cette action.",
-    "notFound": "La ressource demandée n'a pas été trouvée.",
-    "validation": "Veuillez vérifier vos données et réessayer.",
-    "unknown": "Une erreur inattendue s'est produite.",
-    "requestTimeout": "Délai d'attente de la requête",
-    "permissionsDenied": "Permissions refusées",
-    "userNotAuthenticated": "Utilisateur non authentifié",
-    "noPrimarySport": "Aucun sport principal trouvé. Veuillez d'abord définir un sport principal.",
-    "mustBeLoggedIn": "Vous devez être connecté pour créer un match."
+    "networkError": "Erreur de connexion. Veuillez vérifier votre connexion Internet.",
+    "serverError": "Une erreur s'est produite. Veuillez réessayer plus tard.",
+    "unauthorized": "Vous n'avez pas la permission de faire cela.",
+    "notFound": "Nous n'avons pas trouvé ce que vous cherchez.",
+    "validation": "Veuillez vérifier vos informations et réessayer.",
+    "unknown": "Une erreur inattendue s'est produite. Veuillez réessayer.",
+    "requestTimeout": "Cela prend trop de temps. Veuillez réessayer.",
+    "permissionsDenied": "Permission refusée",
+    "userNotAuthenticated": "Veuillez vous connecter pour continuer",
+    "noPrimarySport": "Veuillez d'abord configurer un sport.",
+    "mustBeLoggedIn": "Veuillez vous connecter pour créer une partie."
   },
   "chat": {
     "empty": "Aucun message pour le moment"
@@ -561,7 +561,7 @@
     "placeholder": "Connectez-vous avec d'autres joueurs"
   },
   "match": {
-    "placeholder": "Écran de match - Prêt pour votre implémentation",
+    "placeholder": "Écran de partie - Prêt pour votre implémentation",
     "host": "Hôte",
     "format": {
       "singles": "Simple",
@@ -640,7 +640,7 @@
     }
   },
   "matchDetail": {
-    "title": "Détails du match",
+    "title": "Détails de la partie",
     "host": "Hôte",
     "hostedBy": "Organisé par",
     "participants": "Joueurs",
@@ -650,12 +650,12 @@
     "notes": "Notes",
     "joinNow": "Rejoindre",
     "requestToJoin": "Demander à rejoindre",
-    "matchEnded": "Ce match est terminé",
-    "matchCompleted": "Match terminé",
-    "matchCancelled": "Ce match a été annulé",
-    "matchInProgress": "Match en cours",
+    "matchEnded": "Cette partie est terminée",
+    "matchCompleted": "Partie terminée",
+    "matchCancelled": "Cette partie a été annulée",
+    "matchInProgress": "Partie en cours",
     "share": "Partager",
-    "shareMessage": "Découvrez ce match sur Rallia!",
+    "shareMessage": "Découvrez cette partie sur Rallia!",
     "distance": "Distance",
     "away": "de distance",
     "free": "Gratuit",
@@ -684,22 +684,22 @@
     "welcome": "Bienvenue sur Rallia",
     "welcomeSubtitle": "Connectez-vous pour commencer à jouer",
     "completeProfile": "Complétez votre profil",
-    "completeProfileSubtitle": "Terminez la configuration pour commencer à trouver des partenaires",
+    "completeProfileSubtitle": "Terminez la configuration pour commencer à jouer avec d'autres",
     "continueSetup": "Continuer la configuration",
-    "createMatch": "Créer un match",
+    "createMatch": "Créer une partie",
     "createMatchDescription": "Planifiez une nouvelle partie avec des joueurs",
     "invitePlayers": "Inviter des joueurs",
     "invitePlayersDescription": "Invitez vos amis à rejoindre Rallia",
     "createShareList": "Créer une liste de partage",
-    "createShareListDescription": "Créez une liste de personnes hors application à inviter aux matchs",
+    "createShareListDescription": "Créez une liste de personnes hors application à inviter aux parties",
     "createNetwork": "Créer un réseau",
     "createNetworkDescription": "Créez un groupe ou une communauté pour des parties régulières",
     "createEvent": "Créer un événement",
     "createEventDescription": "Organisez un tournoi ou une ligue"
   },
   "matchCreation": {
-    "title": "Créer un match",
-    "forSport": "Création de match pour {sport}",
+    "title": "Créer une partie",
+    "forSport": "Création de partie pour {sport}",
     "step": "Étape {current} sur {total}",
     "stepNames": {
       "where": "Lieu",
@@ -714,20 +714,20 @@
     "step3Description": "Définissez le format et les préférences du match",
     "next": "Suivant",
     "back": "Retour",
-    "createMatch": "Créer le match",
+    "createMatch": "Créer la partie",
     "creating": "Création...",
-    "success": "Match créé avec succès!",
-    "successDescription": "Votre match a été créé et est prêt pour que les joueurs le rejoignent.",
-    "viewMatch": "Voir le match",
-    "createAnother": "Créer un autre",
-    "editMatch": "Modifier le match",
+    "success": "Partie créée!",
+    "successDescription": "Votre partie est prête pour que les joueurs la rejoignent.",
+    "viewMatch": "Voir la partie",
+    "createAnother": "Créer une autre",
+    "editMatch": "Modifier la partie",
     "saveChanges": "Enregistrer",
-    "updateSuccess": "Match mis à jour!",
-    "updateSuccessDescription": "Votre match a été mis à jour avec succès.",
-    "updateError": "Échec de la mise à jour du match",
+    "updateSuccess": "Partie mise à jour!",
+    "updateSuccessDescription": "Votre partie a été mise à jour.",
+    "updateError": "Impossible de mettre à jour la partie",
     "discardEditMessage": "Vous avez des modifications non enregistrées. Êtes-vous sûr de vouloir les annuler?",
     "resumeDraft": "Reprendre le brouillon",
-    "resumeDraftMessage": "Vous avez un match non terminé. Voulez-vous continuer?",
+    "resumeDraftMessage": "Vous avez une partie non terminée. Voulez-vous continuer?",
     "discardDraft": "Supprimer le brouillon",
     "discardChanges": "Annuler les modifications",
     "discardChangesMessage": "Vous avez des modifications non enregistrées. Que souhaitez-vous faire?",
@@ -746,13 +746,13 @@
       "format": "Format",
       "formatSingles": "Simple",
       "formatDoubles": "Double",
-      "playerExpectation": "Type de match",
+      "playerExpectation": "Type de partie",
       "playerExpectationCasual": "Récréatif",
-      "playerExpectationCasualDescription": "Partie détendue, axée sur le plaisir et la pratique",
+      "playerExpectationCasualDescription": "Partie détendue axée sur le plaisir et la pratique",
       "playerExpectationCompetitive": "Compétitif",
-      "playerExpectationCompetitiveDescription": "Match sérieux avec comptage des points",
+      "playerExpectationCompetitiveDescription": "Partie sérieuse avec comptage des points",
       "playerExpectationBoth": "Les deux",
-      "playerExpectationBothDescription": "Ouvert aux matchs récréatifs ou compétitifs",
+      "playerExpectationBothDescription": "Ouvert aux parties récréatives ou compétitives",
       "lockedFromBooking": "Date, heure et durée verrouillées depuis votre réservation",
       "locationType": "Type de lieu",
       "locationTypeFacility": "Sélectionner une installation",
@@ -763,11 +763,11 @@
       "locationTypeTbdDescription": "Décider plus tard avec les participants",
       "gettingLocation": "Obtention de votre localisation...",
       "searchingFacilities": "Recherche d'installations...",
-      "locationAccessNeeded": "Accès à la localisation nécessaire pour trouver les installations à proximité",
-      "failedToLoadFacilities": "Échec du chargement des installations",
+      "locationAccessNeeded": "Nous avons besoin de votre localisation pour trouver les installations à proximité",
+      "failedToLoadFacilities": "Impossible de charger les installations",
       "noFacilitiesFound": "Aucune installation trouvée pour \"{query}\"",
       "noFacilitiesAvailable": "Aucune installation disponible pour ce sport",
-      "tbdLocationInfo": "Vous pouvez finaliser le lieu plus tard après que les participants se soient joints. Ils seront notifiés lorsque vous le mettrez à jour.",
+      "tbdLocationInfo": "Vous pouvez définir le lieu plus tard après que les joueurs se soient joints. Ils seront notifiés lorsque vous le mettrez à jour.",
       "facility": "Installation",
       "facilityPlaceholder": "Rechercher des installations...",
       "preferredFacility": "Favori",
@@ -785,7 +785,7 @@
       "failedToSearchPlaces": "Échec de la recherche. Veuillez réessayer.",
       "courtStatus": "État du terrain",
       "courtStatusBooked": "Déjà réservé",
-      "courtStatusBookedDescription": "Le terrain est déjà réservé pour ce match",
+      "courtStatusBookedDescription": "Le terrain est déjà réservé pour cette partie",
       "courtStatusToBook": "À réserver",
       "courtStatusToBookDescription": "Le terrain doit encore être réservé",
       "courtStatusTbd": "À déterminer",
@@ -827,7 +827,7 @@
       "genderMale": "Homme",
       "genderFemale": "Femme",
       "minRatingScore": "Niveau minimum",
-      "minRatingScoreDescription": "Seuls les joueurs à ce niveau ou au-dessus peuvent participer",
+      "minRatingScoreDescription": "Seuls les joueurs à ce niveau ou plus élevé peuvent participer",
       "yourRating": "Vous",
       "noMinimum": "Aucun",
       "skillLevelAbbr": {
@@ -848,39 +848,39 @@
     },
     "validation": {
       "dateRequired": "Veuillez sélectionner une date",
-      "dateFuture": "La date doit être dans le futur",
+      "dateFuture": "Veuillez sélectionner une date future",
       "timeRequired": "Veuillez sélectionner une heure de début",
       "durationRequired": "Veuillez sélectionner une durée",
       "formatRequired": "Veuillez sélectionner un format",
       "locationTypeRequired": "Veuillez sélectionner un type de lieu",
       "facilityRequired": "Veuillez sélectionner une installation",
       "locationNameRequired": "Veuillez entrer un nom de lieu",
-      "sportRequired": "Aucun sport sélectionné"
+      "sportRequired": "Veuillez sélectionner un sport"
     },
     "accessibility": {
       "stepIndicator": "Étape {current} sur {total}: {title}",
       "nextStep": "Aller à l'étape suivante",
       "previousStep": "Aller à l'étape précédente",
-      "closeWizard": "Fermer l'assistant de création de match",
-      "selectDate": "Sélectionner la date du match",
+      "closeWizard": "Fermer l'assistant de création de partie",
+      "selectDate": "Sélectionner la date de la partie",
       "selectTime": "Sélectionner l'heure de début",
-      "selectTimezone": "Sélectionner le fuseau horaire du lieu du match"
+      "selectTimezone": "Sélectionner le fuseau horaire du lieu de la partie"
     },
     "booking": {
       "openReservation": "Ouvrir la réservation",
       "confirmBooking": "Confirmer la réservation",
-      "didYouBook": "Avez-vous complété la réservation?",
+      "didYouBook": "Avez-vous réservé le terrain?",
       "iBookedThisCourt": "J'ai réservé ce terrain",
       "notYet": "Pas encore",
       "courtBooked": "Terrain réservé!",
-      "courtBookedDescription": "Le terrain a été marqué comme réservé pour ce match.",
+      "courtBookedDescription": "Le terrain est marqué comme réservé pour cette partie.",
       "availableSlots": "Créneaux disponibles",
       "noSlotsAvailable": "Aucun créneau à venir disponible",
       "loadingSlots": "Chargement des disponibilités...",
       "tapToBook": "Appuyez sur un créneau pour réserver",
       "externalBooking": "Vous serez redirigé vers le site de réservation",
       "bookingConfirmTitle": "Confirmation de réservation",
-      "bookingConfirmMessage": "Avez-vous réservé un terrain avec succès?",
+      "bookingConfirmMessage": "Avez-vous réservé un terrain?",
       "viewMoreSlots": "Voir plus de créneaux",
       "selectCourt": "Choisir un terrain",
       "courtAvailable": "terrain disponible",
@@ -889,22 +889,22 @@
   },
   "home": {
     "welcomeBack": "Bon retour! 👋",
-    "yourMatches": "🎾 Vos matchs",
-    "signInPrompt": "Vous devez vous connecter pour créer et accéder à vos matchs",
+    "yourMatches": "🎾 Vos parties",
+    "signInPrompt": "Veuillez vous connecter pour créer et accéder à vos parties",
     "user": "Utilisateur",
     "subtitle": "La meilleure façon de trouver votre prochain partenaire de tennis ou de pickleball",
     "soonAndNearby": "Bientôt et à proximité",
-    "publicMatches": "Matchs publics",
+    "publicMatches": "Parties publiques",
     "viewAll": "Voir tout",
-    "myMatches": "Mes matchs",
+    "myMatches": "Mes parties",
     "myMatchesEmpty": {
-      "title": "Aucun match à venir",
-      "description": "Créez un match ou rejoignez-en un pour le voir ici"
+      "title": "Aucune partie à venir",
+      "description": "Créez une partie ou rejoignez-en une pour la voir ici"
     },
     "nearbyEmpty": {
-      "title": "Aucun match à proximité",
-      "description": "Il n'y a pas de matchs à venir dans votre rayon de {distance} km.",
-      "suggestion": "Essayez d'augmenter votre distance maximale de déplacement dans vos paramètres de profil pour voir plus de matchs.",
+      "title": "Aucune partie à proximité",
+      "description": "Il n'y a pas de parties à venir dans votre rayon de {distance} km.",
+      "suggestion": "Essayez d'augmenter votre distance maximale de déplacement dans votre profil pour voir plus de parties.",
       "updateSettings": "Modifier les paramètres"
     },
     "header": {
@@ -912,8 +912,8 @@
     },
     "hero": {
       "badge": "Disponible début 2026",
-      "headline": "Ton prochain match t'attend.",
-      "subheadline": "Connecte-toi avec des joueurs compatibles, planifie tes parties sans effort, et ne joue plus jamais seul.",
+      "headline": "Ta prochaine partie t'attend",
+      "subheadline": "Connecte-toi avec des joueurs de ton niveau, planifie tes parties facilement, et ne joue plus jamais seul.",
       "ctaButton": "Rejoindre la liste d'attente",
       "ctaSubtext": "Aucune carte requise • Accès anticipé exclusif"
     },
@@ -926,15 +926,15 @@
       },
       "compatibility": {
         "title": "La crise de compatibilité",
-        "description": "Les différences de niveau gâchent l'expérience. Conflits de localisation. Préférences de surface incompatibles. Trouver le bon match semble impossible."
+        "description": "Les différences de niveau gâchent l'expérience. Conflits de localisation. Préférences différentes. Trouver la bonne partie semble impossible."
       },
       "reliability": {
         "title": "Le problème de fiabilité",
-        "description": "Absences sans préavis. Désistements en série sans responsabilité. Impossible de savoir qui est digne de confiance."
+        "description": "Absences sans préavis. Joueurs qui annulent à la dernière minute. Impossible de savoir qui est fiable."
       },
       "growth": {
         "title": "La barrière de progression",
-        "description": "Impossible de trouver assez de parties pour s'améliorer. Réseau de partenaires limité. La progression stagne sans jeu régulier."
+        "description": "Impossible de trouver assez de parties pour s'améliorer. Options de partenaires limitées. La progression stagne sans jeu régulier."
       }
     },
     "howItWorks": {
@@ -954,7 +954,7 @@
       },
       "step4": {
         "title": "Jouer et évaluer",
-        "description": "Planifiez des matchs instantanément et construisez votre réseau fiable."
+        "description": "Planifiez des parties instantanément et construisez votre réseau fiable."
       }
     },
     "solutions": {
@@ -966,11 +966,11 @@
       },
       "scheduling": {
         "title": "Planification instantanée",
-        "description": "Propositions de match en un clic avec synchronisation intelligente du calendrier. Confirmations automatiques et disponibilité en direct."
+        "description": "Propositions de partie en un clic avec synchronisation intelligente du calendrier. Confirmations automatiques et disponibilité en direct."
       },
       "marketplace": {
         "title": "Marché de parties",
-        "description": "Publiez ou parcourez des matchs par heure, lieu et niveau. Réservation instantanée avec évaluations et avis intégrés."
+        "description": "Publiez ou parcourez des parties par heure, lieu et niveau. Réservation instantanée avec évaluations et avis intégrés."
       },
       "portfolio": {
         "title": "Réseau de joueurs",
@@ -1040,7 +1040,7 @@
         "players": "2 500+",
         "playersLabel": "Inscriptions liste",
         "matches": "500+",
-        "matchesLabel": "Matchs test bêta",
+        "matchesLabel": "Parties test bêta",
         "rating": "4.9/5",
         "ratingLabel": "Note testeurs bêta"
       }
@@ -1091,7 +1091,7 @@
     }
   },
   "playerMatches": {
-    "title": "Mes matchs",
+    "title": "Mes parties",
     "tabs": {
       "upcoming": "À venir",
       "past": "Passés"
@@ -1107,17 +1107,17 @@
       "earlier": "Avant"
     },
     "emptyUpcoming": {
-      "title": "Aucun match à venir",
-      "description": "Créez un nouveau match ou parcourez les matchs publics pour commencer"
+      "title": "Aucune partie à venir",
+      "description": "Créez une nouvelle partie ou parcourez les parties publiques pour commencer"
     },
     "emptyPast": {
-      "title": "Aucun match passé",
-      "description": "Vos matchs terminés apparaîtront ici"
+      "title": "Aucune partie passée",
+      "description": "Vos parties terminées apparaîtront ici"
     }
   },
   "publicMatches": {
-    "title": "Matchs publics",
-    "searchPlaceholder": "Rechercher matchs, lieux, joueurs...",
+    "title": "Parties publiques",
+    "searchPlaceholder": "Rechercher parties, lieux, joueurs...",
     "filters": {
       "format": {
         "label": "Format",
@@ -1177,16 +1177,16 @@
       "reset": "Réinitialiser"
     },
     "empty": {
-      "title": "Aucun match trouvé",
+      "title": "Aucune partie trouvée",
       "description": "Essayez d'ajuster vos filtres ou revenez plus tard",
       "noFilters": {
-        "title": "Aucun match public à proximité",
-        "description": "Soyez le premier à créer un match dans votre région!"
+        "title": "Aucune partie publique à proximité",
+        "description": "Soyez le premier à créer une partie dans votre région!"
       }
     },
     "results": {
-      "count": "{count} matchs",
-      "countSingular": "1 match"
+      "count": "{count} parties",
+      "countSingular": "1 partie"
     }
   },
   "winter": {
@@ -1331,15 +1331,15 @@
     "adminTitle": "Admin",
     "adminDescription": "Connectez-vous pour accéder au tableau de bord d'administration",
     "invalidOtpCode": "Veuillez entrer le code de vérification à 6 chiffres",
-    "failedToSendOtp": "Échec de l'envoi du code",
-    "failedToVerifyOtp": "Échec de la vérification du code"
+    "failedToSendOtp": "Impossible d'envoyer le code de vérification",
+    "failedToVerifyOtp": "Impossible de vérifier le code"
   },
   "webOnboarding": {
     "badge": "Commencer",
     "pageTitle": "Créer votre organisation",
-    "pageDescription": "Configurez le profil de votre organisation pour commencer à gérer vos installations et membres.",
+    "pageDescription": "Configurez le profil de votre organisation pour commencer à gérer vos installations et membres",
     "title": "Détails de l'organisation",
-    "description": "Remplissez les informations ci-dessous pour créer le profil de votre organisation.",
+    "description": "Remplissez les informations ci-dessous pour créer le profil de votre organisation",
     "basicInfo": "Informations de base",
     "contactInfo": "Informations de contact",
     "locationInfo": "Informations de localisation",
@@ -1384,7 +1384,7 @@
   "dashboard": {
     "badge": "Tableau de bord",
     "title": "Bienvenue sur votre tableau de bord",
-    "description": "Gérez votre organisation et consultez les informations de votre profil.",
+    "description": "Gérez votre organisation et consultez les informations de votre profil",
     "profileTitle": "Votre profil",
     "profileDescription": "Vos informations personnelles et paramètres de compte.",
     "organizationTitle": "Votre organisation",
@@ -1430,7 +1430,7 @@
     },
     "dashboard": {
       "title": "Tableau de bord Admin",
-      "description": "Gérez les organisations, les utilisateurs et les paramètres.",
+      "description": "Gérez les organisations, les utilisateurs et les paramètres",
       "titleMeta": "Tableau de bord Admin - Rallia",
       "descriptionMeta": "Tableau de bord d'administration pour les employés de Rallia.",
       "organizationsCard": {
@@ -1448,7 +1448,7 @@
     },
     "organizations": {
       "title": "Organisations",
-      "description": "Gérer toutes les organisations.",
+      "description": "Gérer toutes les organisations",
       "titleMeta": "Organisations - Admin - Rallia",
       "descriptionMeta": "Gérer toutes les organisations.",
       "comingSoon": "Interface de gestion des organisations à venir.",
@@ -1465,7 +1465,7 @@
         "createdAt": "Créé le",
         "noOrganizations": "Aucune organisation trouvée.",
         "loading": "Chargement des organisations...",
-        "error": "Échec du chargement des organisations."
+        "error": "Impossible de charger les organisations"
       },
       "status": {
         "active": "Actif",
@@ -1614,7 +1614,7 @@
           "facilityCountryRequired": "Le pays de l'installation {index} est requis"
         },
         "error": {
-          "createFailed": "Échec de la création de l'organisation"
+          "createFailed": "Impossible de créer l'organisation"
         },
         "success": {
           "title": "Organisation créée avec succès",
@@ -1672,7 +1672,7 @@
         "surfaceType": "Type de surface",
         "lighting": "Éclairage",
         "indoor": "Intérieur",
-        "error": "Échec du chargement de l'organisation"
+        "error": "Impossible de charger l'organisation"
       },
       "update": {
         "title": "Mettre à jour l'organisation",
@@ -1799,8 +1799,8 @@
           "facilityCountryRequired": "Le pays de l'installation {index} est requis"
         },
         "error": {
-          "updateFailed": "Échec de la mise à jour de l'organisation",
-          "loadFailed": "Échec du chargement de l'organisation"
+          "updateFailed": "Impossible de mettre à jour l'organisation",
+          "loadFailed": "Impossible de charger l'organisation"
         },
         "success": {
           "title": "Organisation mise à jour avec succès",
@@ -1812,7 +1812,7 @@
     },
     "users": {
       "title": "Utilisateurs",
-      "description": "Gérer tous les utilisateurs, y compris les administrateurs, les membres d'organisation et les joueurs.",
+      "description": "Gérer tous les utilisateurs, y compris les administrateurs, les membres d'organisation et les joueurs",
       "titleMeta": "Utilisateurs - Admin - Rallia",
       "descriptionMeta": "Gérer tous les utilisateurs, y compris les administrateurs, les membres d'organisation et les joueurs.",
       "comingSoon": "Interface de gestion des utilisateurs à venir.",
@@ -1830,7 +1830,7 @@
         "status": "Statut",
         "createdAt": "Créé le",
         "noAdmins": "Aucun administrateur trouvé.",
-        "error": "Échec du chargement des administrateurs."
+        "error": "Impossible de charger les administrateurs"
       },
       "status": {
         "active": "Actif",
@@ -1872,7 +1872,7 @@
           "adminRoleRequired": "Veuillez sélectionner un type d'administrateur."
         },
         "error": {
-          "sendFailed": "Échec de l'envoi de l'invitation. Veuillez réessayer."
+          "sendFailed": "Impossible d'envoyer l'invitation. Veuillez réessayer."
         },
         "success": {
           "invitationSent": "Invitation envoyée avec succès à {email}!"
@@ -1881,14 +1881,14 @@
     },
     "analytics": {
       "title": "Analytique",
-      "description": "Analyses et informations.",
+      "description": "Analyses et informations",
       "titleMeta": "Analytique - Admin - Rallia",
       "descriptionMeta": "Analyses et informations.",
       "comingSoon": "Tableau de bord analytique à venir."
     },
     "settings": {
       "title": "Paramètres",
-      "description": "Gérer les paramètres et la configuration.",
+      "description": "Gérer les paramètres et la configuration",
       "titleMeta": "Paramètres - Admin - Rallia",
       "descriptionMeta": "Gérer les paramètres.",
       "comingSoon": "Interface des paramètres à venir."

@@ -1,15 +1,15 @@
 {
   "common": {
     "loading": "Loading...",
-    "error": "An error occurred",
-    "retry": "Retry",
+    "error": "Something went wrong",
+    "retry": "Try again",
     "save": "Save",
     "cancel": "Cancel",
     "confirm": "Confirm",
     "delete": "Delete",
     "edit": "Edit",
     "back": "Back",
-    "goBack": "Go Back",
+    "goBack": "Go back",
     "next": "Next",
     "done": "Done",
     "continue": "Continue",
@@ -37,7 +37,7 @@
     "required": "Required",
     "optional": "Optional",
     "showLess": "Show less",
-    "resetToDefaults": "Reset to Defaults",
+    "resetToDefaults": "Reset to defaults",
     "gender": {
       "label": "Gender",
       "male": "Male",
@@ -64,8 +64,8 @@
     "verifyCode": "Verify Code",
     "resendCode": "Resend Code",
     "codeSent": "Code sent to {email}",
-    "codeExpired": "Code expired. Please request a new one.",
-    "invalidCode": "Invalid code. Please try again.",
+    "codeExpired": "This code has expired. Please request a new one.",
+    "invalidCode": "That code isn't correct. Please try again.",
     "welcomeBack": "Welcome back!",
     "createAccount": "Create an account to get started",
     "enterCode": "Enter code",
@@ -80,7 +80,7 @@
   },
   "navigation": {
     "home": "Home",
-    "matches": "Matches",
+    "matches": "Games",
     "map": "Map",
     "community": "Community",
     "profile": "Profile",
@@ -91,7 +91,7 @@
   "notifications": {
     "title": "Notifications",
     "empty": "No notifications yet",
-    "emptyDescription": "You'll see match invitations, reminders, and more here",
+    "emptyDescription": "You'll see game invitations, reminders, and updates here",
     "unread": "unread",
     "markAllRead": "Mark all as read",
     "markAsRead": "Mark as read",
@@ -107,16 +107,16 @@
       "earlier": "Earlier"
     },
     "types": {
-      "match_invitation": "Match Invitation",
+      "match_invitation": "Game Invitation",
       "match_join_request": "Join Request",
       "match_join_accepted": "Request Accepted",
       "match_join_rejected": "Request Declined",
       "match_player_joined": "Player Joined",
-      "match_cancelled": "Match Cancelled",
-      "match_updated": "Match Updated",
-      "match_starting_soon": "Match Starting Soon",
-      "match_completed": "Match Completed",
-      "player_kicked": "Removed from Match",
+      "match_cancelled": "Game Cancelled",
+      "match_updated": "Game Updated",
+      "match_starting_soon": "Game Starting Soon",
+      "match_completed": "Game Completed",
+      "player_kicked": "Removed from Game",
       "player_left": "Player Left",
       "new_message": "New Message",
       "friend_request": "Friend Request",
@@ -128,7 +128,7 @@
       "system": "System"
     },
     "categories": {
-      "match": "Match Notifications",
+      "match": "Game Notifications",
       "social": "Social Notifications",
       "system": "System Notifications"
     },
@@ -139,55 +139,55 @@
     },
     "preferences": {
       "title": "Notification Preferences",
-      "description": "Choose how you want to be notified for different types of events. Toggle each channel on or off.",
+      "description": "Choose how you want to be notified about different events. Turn each option on or off.",
       "enabled": "Enabled",
       "disabled": "Disabled",
       "default": "Default"
     },
     "messages": {
       "match_invitation": {
-        "title": "Match Invitation",
-        "body": "{playerName} invited you to a {sportName} match"
+        "title": "Game Invitation",
+        "body": "{playerName} invited you to a {sportName} game"
       },
       "match_join_request": {
         "title": "New Join Request",
-        "body": "{playerName} wants to join your match"
+        "body": "{playerName} wants to join your game"
       },
       "match_join_accepted": {
         "title": "Join Request Accepted",
-        "body": "Your request to join the match was accepted"
+        "body": "Your request to join the game was accepted"
       },
       "match_join_rejected": {
         "title": "Join Request Declined",
-        "body": "Your request to join the match was declined"
+        "body": "Your request to join the game was declined"
       },
       "match_player_joined": {
         "title": "{playerName} Joined",
-        "body": "{playerName} joined your {sportName} match"
+        "body": "{playerName} joined your {sportName} game"
       },
       "match_cancelled": {
-        "title": "Match Cancelled",
-        "body": "The {sportName} match on {matchDate} has been cancelled"
+        "title": "Game Cancelled",
+        "body": "The {sportName} game on {matchDate} has been cancelled"
       },
       "match_updated": {
-        "title": "Match Updated",
-        "body": "Match details have been updated"
+        "title": "Game Updated",
+        "body": "Game details have been updated"
       },
       "match_starting_soon": {
-        "title": "Match Starting Soon",
-        "body": "Your {sportName} match starts in 15 minutes"
+        "title": "Game Starting Soon",
+        "body": "Your {sportName} game starts in 15 minutes"
       },
       "match_completed": {
-        "title": "Match Completed",
-        "body": "Your {sportName} match has been marked as completed"
+        "title": "Game Completed",
+        "body": "Your {sportName} game has been marked as completed"
       },
       "player_kicked": {
-        "title": "Removed from Match",
-        "body": "You have been removed from a match"
+        "title": "Removed from Game",
+        "body": "You have been removed from a game"
       },
       "player_left": {
         "title": "{playerName} Left",
-        "body": "{playerName} left your {sportName} match"
+        "body": "{playerName} left your {sportName} game"
       },
       "new_message": {
         "title": "New Message",
@@ -229,7 +229,7 @@
     "languageDescription": "Choose your preferred language",
     "languageAuto": "System Default",
     "notifications": "Notifications",
-    "notificationsDescription": "Choose how you want to be notified for different types of events. Toggle each channel on or off.",
+    "notificationsDescription": "Choose how you want to be notified about different events. Turn each option on or off.",
     "privacy": "Privacy",
     "subscription": "Subscription",
     "payments": "Payments",
@@ -246,8 +246,8 @@
     "permissions": "Permissions"
   },
   "permissions": {
-    "description": "Manage app permissions to enable features like notifications, location-based match discovery, and calendar sync.",
-    "settingsNote": "If a permission was denied, you'll need to enable it in your device settings.",
+    "description": "Manage app permissions to enable features like notifications, finding games near you, and calendar sync.",
+    "settingsNote": "If you denied a permission, you'll need to enable it in your device settings.",
     "types": {
       "notifications": "Notifications",
       "location": "Location",
@@ -277,7 +277,7 @@
     "removePhoto": "Remove Photo",
     "sportProfiles": "Sport Profiles",
     "ratings": "Ratings",
-    "matches": "Matches",
+    "matches": "Games",
     "reviews": "Reviews",
     "notSet": "Not set",
     "sections": {
@@ -295,8 +295,8 @@
       "dateOfBirth": "Date of Birth",
       "playingHand": "Playing Hand",
       "maxTravelDistance": "Max Travel Distance",
-      "matchDuration": "Match Duration",
-      "matchType": "Match Type",
+      "matchDuration": "Game Duration",
+      "matchType": "Game Type",
       "facility": "Facility",
       "playingStyle": "Playing Style",
       "playAttributes": "Play Attributes"
@@ -307,7 +307,7 @@
       "certified": "Certified",
       "noBio": "No bio yet",
       "noSports": "No sports available",
-      "noRating": "No rating information yet",
+      "noRating": "No rating yet",
       "noRatingSubtext": "Set up your rating to start playing"
     },
     "loading": {
@@ -319,7 +319,7 @@
     "username": "username",
     "user": "User",
     "doYouPlay": "Do you play {sport}?",
-    "activateSportMessage": "Activate {sport} to view and manage your rating and preferences",
+    "activateSportMessage": "Activate {sport} to set up your rating and preferences",
     "rating": {
       "skillLevel": "Skill Level",
       "score": "Score",
@@ -344,8 +344,8 @@
     "preferences": {
       "updateTennis": "Update your tennis preferences",
       "updatePickleball": "Update your pickleball preferences",
-      "matchDuration": "Match Duration",
-      "matchType": "Match Type",
+      "matchDuration": "Game Duration",
+      "matchType": "Game Type",
       "court": "Court",
       "playStyle": "Play Style",
       "selectAllThatApply": "Select all that apply",
@@ -381,7 +381,7 @@
   },
   "onboarding": {
     "welcome": "Welcome to Rallia",
-    "welcomeSubtitle": "Find your perfect tennis and pickleball partners",
+    "welcomeSubtitle": "Find your perfect tennis and pickleball playing partners",
     "getStarted": "Get Started",
     "personalInfo": "Personal Information",
     "personalInfoSubtitle": "Tell us a bit about yourself",
@@ -390,7 +390,7 @@
     "tennis": "Tennis",
     "pickleball": "Pickleball",
     "skillLevel": "Skill Level",
-    "skillLevelSubtitle": "What's your current skill level?",
+    "skillLevelSubtitle": "What's your skill level?",
     "beginner": "Beginner",
     "intermediate": "Intermediate",
     "advanced": "Advanced",
@@ -403,7 +403,7 @@
     "preferences": "Preferences",
     "preferencesSubtitle": "Set your playing preferences",
     "allSet": "You're all set!",
-    "allSetSubtitle": "Start finding matches now",
+    "allSetSubtitle": "Start finding games",
     "step": "Step {current} of {total}",
     "stepNames": {
       "personal": "About You",
@@ -443,8 +443,8 @@
       "right": "Right",
       "both": "Both",
       "travelDistance": "Maximum Travel Distance",
-      "matchDuration": "Preferred Match Duration",
-      "matchType": "Preferred Match Type",
+      "matchDuration": "Preferred Game Duration",
+      "matchType": "Preferred Game Type",
       "casual": "Casual",
       "competitive": "Competitive",
       "sameForAll": "Same for all sports"
@@ -464,10 +464,10 @@
     "complete": "Complete"
   },
   "matches": {
-    "title": "Matches",
-    "noMatches": "No matches yet",
-    "findMatch": "Find a Match",
-    "createMatch": "Create a Match",
+    "title": "Games",
+    "noMatches": "No games yet",
+    "findMatch": "Find a game",
+    "createMatch": "Create a game",
     "upcoming": "Upcoming",
     "past": "Past",
     "pending": "Pending",
@@ -480,47 +480,47 @@
     "players": "Players",
     "sport": "Sport",
     "level": "Level",
-    "joinMatch": "Join Match",
-    "leaveMatch": "Leave Match",
-    "cancelMatch": "Cancel Match",
-    "matchDetails": "Match Details"
+    "joinMatch": "Join game",
+    "leaveMatch": "Leave game",
+    "cancelMatch": "Cancel game",
+    "matchDetails": "Game details"
   },
   "matchActions": {
-    "joinSuccess": "You've joined the match!",
+    "joinSuccess": "You've joined the game!",
     "requestSent": "Request sent to host",
-    "leaveSuccess": "You've left the match",
-    "cancelSuccess": "Match cancelled",
-    "leaveConfirmTitle": "Leave Match?",
-    "leaveConfirmMessage": "You will be removed from this match.",
-    "cancelConfirmTitle": "Cancel Match?",
-    "cancelConfirmMessage": "This will cancel the match for all participants.",
-    "cancelWarning": "{count} other player(s) will be notified",
+    "leaveSuccess": "You've left the game",
+    "cancelSuccess": "Game cancelled",
+    "leaveConfirmTitle": "Leave this game?",
+    "leaveConfirmMessage": "You'll be removed from this game.",
+    "cancelConfirmTitle": "Cancel this game?",
+    "cancelConfirmMessage": "This will cancel the game for everyone.",
+    "cancelWarning": "{count} other player{count, plural, =1 {} other {s}} will be notified",
     "acceptRequest": "Accept",
     "rejectRequest": "Decline",
     "acceptSuccess": "Player accepted",
     "rejectSuccess": "Request declined",
     "rejectConfirmTitle": "Decline Request?",
-    "rejectConfirmMessage": "This player won't be able to request again for this match.",
+    "rejectConfirmMessage": "This player won't be able to request to join this game again.",
     "pendingRequests": "Pending Requests",
     "cancelRequest": "Cancel Request",
     "cancelRequestSuccess": "Your join request has been cancelled",
     "cancelRequestConfirmTitle": "Cancel Request?",
-    "cancelRequestConfirmMessage": "Your request to join this match will be withdrawn.",
+    "cancelRequestConfirmMessage": "Your request to join this game will be withdrawn.",
     "showMoreRequests": "Show {count} more",
-    "matchFullCannotAccept": "Match full",
+    "matchFullCannotAccept": "Game full",
     "requestPending": "Your request to join is pending approval from the host",
-    "waitlistedInfo": "You're on the waitlist. You'll be notified if a spot opens up.",
-    "spotOpenedUp": "A spot opened up! You can now join this match.",
+    "waitlistedInfo": "You're on the waitlist. We'll notify you if a spot opens up.",
+    "spotOpenedUp": "A spot opened up! You can join this game now.",
     "joinWaitlist": "Join Waitlist",
     "leaveWaitlist": "Leave Waitlist",
     "waitlistSuccess": "You've been added to the waitlist!",
     "leaveWaitlistSuccess": "You've left the waitlist",
     "requesterDetails": "Requester Details",
     "kickParticipant": "Remove Player",
-    "kickSuccess": "Player has been removed from the match",
+    "kickSuccess": "Player has been removed from the game",
     "kickConfirmTitle": "Remove Player?",
-    "kickConfirmMessage": "This player will be removed from the match and notified.",
-    "genderMismatch": "This match is restricted to players of a different gender than yours."
+    "kickConfirmMessage": "This player will be removed from the game and notified.",
+    "genderMismatch": "This game is only open to players of a different gender."
   },
   "ratings": {
     "title": "Ratings",
@@ -539,17 +539,17 @@
     "dupr": "DUPR"
   },
   "errors": {
-    "networkError": "Network error. Please check your connection.",
-    "serverError": "Server error. Please try again later.",
-    "unauthorized": "You are not authorized to perform this action.",
-    "notFound": "The requested resource was not found.",
-    "validation": "Please check your input and try again.",
-    "unknown": "An unexpected error occurred.",
-    "requestTimeout": "Request timeout",
-    "permissionsDenied": "Permissions denied",
-    "userNotAuthenticated": "User not authenticated",
-    "noPrimarySport": "No primary sport found. Please set a primary sport first.",
-    "mustBeLoggedIn": "You must be logged in to create a match."
+    "networkError": "Connection error. Please check your internet connection.",
+    "serverError": "Something went wrong. Please try again later.",
+    "unauthorized": "You don't have permission to do this.",
+    "notFound": "We couldn't find what you're looking for.",
+    "validation": "Please check your information and try again.",
+    "unknown": "Something unexpected happened. Please try again.",
+    "requestTimeout": "This is taking too long. Please try again.",
+    "permissionsDenied": "Permission denied",
+    "userNotAuthenticated": "Please sign in to continue",
+    "noPrimarySport": "Please set up a sport first.",
+    "mustBeLoggedIn": "Please sign in to create a game."
   },
   "chat": {
     "empty": "No messages yet"
@@ -561,7 +561,7 @@
     "placeholder": "Connect with other players"
   },
   "match": {
-    "placeholder": "Match Screen - Ready for your implementation",
+    "placeholder": "Game Screen - Ready for your implementation",
     "host": "Host",
     "format": {
       "singles": "Singles",
@@ -640,7 +640,7 @@
     }
   },
   "matchDetail": {
-    "title": "Match Details",
+    "title": "Game details",
     "host": "Host",
     "hostedBy": "Hosted by",
     "participants": "Players",
@@ -648,14 +648,14 @@
     "court": "Court",
     "estimatedCost": "Estimated cost",
     "notes": "Notes",
-    "joinNow": "Join Match",
-    "requestToJoin": "Request to Join",
-    "matchEnded": "This match has ended",
-    "matchCompleted": "Match completed",
-    "matchCancelled": "This match was cancelled",
-    "matchInProgress": "Match in progress",
+    "joinNow": "Join game",
+    "requestToJoin": "Request to join",
+    "matchEnded": "This game has ended",
+    "matchCompleted": "Game completed",
+    "matchCancelled": "This game was cancelled",
+    "matchInProgress": "Game in progress",
     "share": "Share",
-    "shareMessage": "Check out this match on Rallia!",
+    "shareMessage": "Check out this game on Rallia!",
     "distance": "Distance",
     "away": "away",
     "free": "Free",
@@ -684,22 +684,22 @@
     "welcome": "Welcome to Rallia",
     "welcomeSubtitle": "Sign in to start playing",
     "completeProfile": "Complete Your Profile",
-    "completeProfileSubtitle": "Finish setting up to start matching with players",
+    "completeProfileSubtitle": "Finish setting up to start playing with others",
     "continueSetup": "Continue Setup",
-    "createMatch": "Create Match",
+    "createMatch": "Create Game",
     "createMatchDescription": "Schedule a new game with players",
     "invitePlayers": "Invite Players",
     "invitePlayersDescription": "Invite friends to join Rallia",
     "createShareList": "Create Share List",
-    "createShareListDescription": "Create a list of people outside the app to invite to matches",
+    "createShareListDescription": "Create a list of people outside the app to invite to games",
     "createNetwork": "Create Network",
     "createNetworkDescription": "Start a group or community for regular games",
     "createEvent": "Create Event",
     "createEventDescription": "Organize a tournament or league"
   },
   "matchCreation": {
-    "title": "Create Match",
-    "forSport": "Creating match for {sport}",
+    "title": "Create a game",
+    "forSport": "Creating game for {sport}",
     "step": "Step {current} of {total}",
     "stepNames": {
       "where": "Location",
@@ -714,20 +714,20 @@
     "step3Description": "Set match format and preferences",
     "next": "Next",
     "back": "Back",
-    "createMatch": "Create Match",
+    "createMatch": "Create game",
     "creating": "Creating...",
-    "success": "Match created successfully!",
-    "successDescription": "Your match has been created and is ready for players to join.",
-    "viewMatch": "View Match",
-    "createAnother": "Create Another",
-    "editMatch": "Edit Match",
+    "success": "Game created!",
+    "successDescription": "Your game is ready for players to join.",
+    "viewMatch": "View game",
+    "createAnother": "Create another",
+    "editMatch": "Edit game",
     "saveChanges": "Save Changes",
-    "updateSuccess": "Match updated!",
-    "updateSuccessDescription": "Your match has been updated successfully.",
-    "updateError": "Failed to update match",
+    "updateSuccess": "Game updated!",
+    "updateSuccessDescription": "Your game has been updated.",
+    "updateError": "Couldn't update game",
     "discardEditMessage": "You have unsaved changes. Are you sure you want to discard them?",
     "resumeDraft": "Resume Draft",
-    "resumeDraftMessage": "You have an unfinished match. Would you like to continue?",
+    "resumeDraftMessage": "You have an unfinished game. Would you like to continue?",
     "discardDraft": "Discard Draft",
     "discardChanges": "Discard Changes",
     "discardChangesMessage": "You have unsaved changes. What would you like to do?",
@@ -746,11 +746,11 @@
       "format": "Format",
       "formatSingles": "Singles",
       "formatDoubles": "Doubles",
-      "playerExpectation": "Match Type",
+      "playerExpectation": "Game Type",
       "playerExpectationCasual": "Casual",
-      "playerExpectationCasualDescription": "Relaxed game, focus on fun and practice",
+      "playerExpectationCasualDescription": "Relaxed game focused on fun and practice",
       "playerExpectationCompetitive": "Competitive",
-      "playerExpectationCompetitiveDescription": "Serious match, keeping score",
+      "playerExpectationCompetitiveDescription": "Serious game with scorekeeping",
       "playerExpectationBoth": "Both",
       "playerExpectationBothDescription": "Open to either casual or competitive play",
       "lockedFromBooking": "Date, time and duration locked from your court booking",
@@ -763,11 +763,11 @@
       "locationTypeTbdDescription": "Decide later with participants",
       "gettingLocation": "Getting your location...",
       "searchingFacilities": "Searching facilities...",
-      "locationAccessNeeded": "Location access needed to find nearby facilities",
-      "failedToLoadFacilities": "Failed to load facilities",
+      "locationAccessNeeded": "We need your location to find nearby facilities",
+      "failedToLoadFacilities": "Couldn't load facilities",
       "noFacilitiesFound": "No facilities found for \"{query}\"",
       "noFacilitiesAvailable": "No facilities available for this sport",
-      "tbdLocationInfo": "You can finalize the location later after participants join. They'll be notified when you update it.",
+      "tbdLocationInfo": "You can set the location later after players join. They'll be notified when you update it.",
       "facility": "Facility",
       "facilityPlaceholder": "Search facilities...",
       "preferredFacility": "Favorite",
@@ -785,11 +785,11 @@
       "failedToSearchPlaces": "Failed to search places. Please try again.",
       "courtStatus": "Court Status",
       "courtStatusBooked": "Already Booked",
-      "courtStatusBookedDescription": "Court is already reserved for this match",
+      "courtStatusBookedDescription": "Court is already reserved for this game",
       "courtStatusToBook": "Will Book",
       "courtStatusToBookDescription": "Court still needs to be reserved",
       "courtStatusTbd": "To Be Determined",
-      "reservationContactTitle": "Book Your Court",
+      "reservationContactTitle": "Book your court",
       "reservationContactDescription": "Contact the facility to reserve your court, then update the status below.",
       "callFacility": "Call",
       "emailFacility": "Email",
@@ -827,7 +827,7 @@
       "genderMale": "Male",
       "genderFemale": "Female",
       "minRatingScore": "Minimum Skill Level",
-      "minRatingScoreDescription": "Only players at or above this level can join",
+      "minRatingScoreDescription": "Only players at this level or higher can join",
       "yourRating": "You",
       "noMinimum": "No min",
       "skillLevelAbbr": {
@@ -848,39 +848,39 @@
     },
     "validation": {
       "dateRequired": "Please select a date",
-      "dateFuture": "Date must be in the future",
+      "dateFuture": "Please select a future date",
       "timeRequired": "Please select a start time",
       "durationRequired": "Please select a duration",
       "formatRequired": "Please select a format",
       "locationTypeRequired": "Please select a location type",
       "facilityRequired": "Please select a facility",
       "locationNameRequired": "Please enter a location name",
-      "sportRequired": "No sport selected"
+      "sportRequired": "Please select a sport"
     },
     "accessibility": {
       "stepIndicator": "Step {current} of {total}: {title}",
       "nextStep": "Go to next step",
       "previousStep": "Go to previous step",
-      "closeWizard": "Close match creation wizard",
-      "selectDate": "Select match date",
+      "closeWizard": "Close game creation wizard",
+      "selectDate": "Select game date",
       "selectTime": "Select start time",
-      "selectTimezone": "Select timezone for match location"
+      "selectTimezone": "Select timezone for game location"
     },
     "booking": {
       "openReservation": "Open Reservation",
       "confirmBooking": "Confirm Booking",
-      "didYouBook": "Did you complete the booking?",
+      "didYouBook": "Did you book the court?",
       "iBookedThisCourt": "I booked this court",
       "notYet": "Not yet",
       "courtBooked": "Court booked!",
-      "courtBookedDescription": "The court has been marked as booked for this match.",
+      "courtBookedDescription": "The court is marked as booked for this game.",
       "availableSlots": "Available slots",
       "noSlotsAvailable": "No upcoming slots available",
       "loadingSlots": "Loading availability...",
       "tapToBook": "Tap a slot to book",
       "externalBooking": "You'll be redirected to the booking site",
       "bookingConfirmTitle": "Booking Confirmation",
-      "bookingConfirmMessage": "Did you successfully book a court?",
+      "bookingConfirmMessage": "Did you book a court?",
       "viewMoreSlots": "View more slots",
       "selectCourt": "Select a Court",
       "courtAvailable": "court available",
@@ -889,22 +889,22 @@
   },
   "home": {
     "welcomeBack": "Welcome back! 👋",
-    "yourMatches": "🎾 Your Matches",
-    "signInPrompt": "You must sign in to create and access your matches",
+    "yourMatches": "🎾 Your Games",
+    "signInPrompt": "Please sign in to create and access your games",
     "user": "User",
     "subtitle": "The best way to find your next tennis or pickleball partner",
     "soonAndNearby": "Soon & Nearby",
-    "publicMatches": "Public Matches",
+    "publicMatches": "Public Games",
     "viewAll": "View All",
-    "myMatches": "My Matches",
+    "myMatches": "My Games",
     "myMatchesEmpty": {
-      "title": "No upcoming matches",
-      "description": "Create a match or join one to see it here"
+      "title": "No upcoming games",
+      "description": "Create a game or join one to see it here"
     },
     "nearbyEmpty": {
-      "title": "No nearby matches found",
-      "description": "There are no upcoming matches within your {distance} km travel distance.",
-      "suggestion": "Try increasing your maximum travel distance in your profile settings to see more matches.",
+      "title": "No nearby games found",
+      "description": "There are no upcoming games within your {distance} km travel distance.",
+      "suggestion": "Try increasing your maximum travel distance in your profile to see more games.",
       "updateSettings": "Update Settings"
     },
     "header": {
@@ -912,8 +912,8 @@
     },
     "hero": {
       "badge": "Coming Early 2026",
-      "headline": "Your next match is waiting.",
-      "subheadline": "Connect with compatible players, schedule games effortlessly, and never play alone again.",
+      "headline": "Your next game is waiting",
+      "subheadline": "Connect with players at your level, schedule games easily, and never play alone again.",
       "ctaButton": "Join the Waitlist",
       "ctaSubtext": "No credit card required • Exclusive early access"
     },
@@ -922,19 +922,19 @@
       "sectionBadge": "The Problem",
       "scheduling": {
         "title": "The Scheduling Nightmare",
-        "description": "Hours spent coordinating through WhatsApp groups and Facebook. Last-minute cancellations. Games that never happen."
+        "description": "Hours spent coordinating through WhatsApp and Facebook. Last-minute cancellations. Games that never happen."
       },
       "compatibility": {
         "title": "The Compatibility Crisis",
-        "description": "Skill mismatches ruin the experience. Location conflicts. Surface preferences don't align. Finding the right match feels impossible."
+        "description": "Skill mismatches ruin the experience. Location conflicts. Different preferences. Finding the right game feels impossible."
       },
       "reliability": {
         "title": "The Reliability Problem",
-        "description": "No-shows without warning. Serial flakeys with no accountability. No way to know who's trustworthy."
+        "description": "No-shows without warning. Players who cancel last minute. No way to know who's reliable."
       },
       "growth": {
         "title": "The Growth Barrier",
-        "description": "Can't find enough games to improve. Limited partner pool. Skill progression stalls without consistent play."
+        "description": "Can't find enough games to improve. Limited partner options. Skill progression stalls without regular play."
       }
     },
     "howItWorks": {
@@ -942,19 +942,19 @@
       "sectionBadge": "Simple Process",
       "step1": {
         "title": "Join the Waitlist",
-        "description": "Sign up with your email to secure your spot and get notified when we launch."
+        "description": "Sign up with your email to secure your spot and get notified when we launch"
       },
       "step2": {
         "title": "Create Your Profile",
-        "description": "Tell us about your skill level, location, and playing preferences."
+        "description": "Share your skill level, location, and playing preferences"
       },
       "step3": {
         "title": "Get Matched",
-        "description": "We find perfect playing partners based on your profile and availability."
+        "description": "We find playing partners that match your profile and availability"
       },
       "step4": {
         "title": "Play & Review",
-        "description": "Schedule matches instantly and build your reliable player network."
+        "description": "Schedule games instantly and build your network of reliable players"
       }
     },
     "solutions": {
@@ -962,55 +962,55 @@
       "sectionBadge": "How It Works",
       "matchmaking": {
         "title": "Smart Matchmaking",
-        "description": "Smart skill assessment and reliability tracking. Get paired with players who match your level and commitment."
+        "description": "Smart skill assessment and reliability tracking. Get matched with players at your level who are just as committed."
       },
       "scheduling": {
         "title": "Instant Scheduling",
-        "description": "One-click match proposals with smart calendar sync. Auto-confirmations and live availability. No more endless back-and-forth."
+        "description": "One-click game proposals with calendar sync. Auto-confirmations and live availability. No more endless back-and-forth."
       },
       "marketplace": {
         "title": "Game Marketplace",
-        "description": "Post or browse matches by time, location, and skill level. Instant booking with built-in ratings and reviews."
+        "description": "Post or browse games by time, location, and skill level. Instant booking with ratings and reviews."
       },
       "portfolio": {
         "title": "Player Network",
-        "description": "Build your roster of favorite players. Get smart suggestions based on your preferences and play history."
+        "description": "Build your network of favorite players. Get suggestions based on your preferences and play history."
       }
     },
     "whyJoinEarly": {
       "sectionTitle": "Why Join Early?",
       "sectionBadge": "Early Adopter Benefits",
-      "description": "Be part of the founding community and enjoy exclusive perks that won't be available after launch.",
+      "description": "Be part of the founding community and enjoy exclusive perks that won't be available after launch",
       "benefits": {
         "priority": {
           "title": "Priority Access",
-          "description": "Skip the line and get immediate access when we launch. No waiting period."
+          "description": "Skip the line and get immediate access when we launch"
         },
         "pricing": {
           "title": "Special Early Benefits",
-          "description": "Enjoy special perks and benefits as an early supporter. Founding members get exclusive advantages."
+          "description": "Enjoy special perks and benefits as an early supporter. Founding members get exclusive advantages"
         },
         "influence": {
           "title": "Shape the Product",
-          "description": "Your feedback directly influences features. Help us build exactly what you need."
+          "description": "Your feedback directly influences features. Help us build what you need"
         },
         "exclusive": {
           "title": "Exclusive Features",
-          "description": "Get early access to beta features and new releases before anyone else."
+          "description": "Get early access to beta features and new releases before anyone else"
         },
         "community": {
           "title": "Founding Community",
-          "description": "Connect with other early adopters and build your network before the crowd arrives."
+          "description": "Connect with other early adopters and build your network before the crowd arrives"
         },
         "support": {
           "title": "VIP Support",
-          "description": "Direct line to our team. Get priority support and help shape our service standards."
+          "description": "Direct line to our team. Get priority support and help shape our service standards"
         }
       }
     },
     "cta": {
       "headline": "Ready to Transform Your Tennis Experience?",
-      "description": "Be among the first to experience the future of tennis matchmaking. Join our waitlist and get exclusive early access when we launch.",
+      "description": "Be among the first to experience the future of tennis matchmaking. Join our waitlist and get exclusive early access when we launch",
       "button": "Join the Waitlist"
     },
     "socialProof": {
@@ -1040,7 +1040,7 @@
         "players": "2,500+",
         "playersLabel": "Waitlist Signups",
         "matches": "500+",
-        "matchesLabel": "Beta Test Matches",
+        "matchesLabel": "Beta Test Games",
         "rating": "4.9/5",
         "ratingLabel": "Beta Tester Rating"
       }
@@ -1073,11 +1073,11 @@
         },
         "matching": {
           "question": "How does the skill matching work?",
-          "answer": "Our system analyzes your self-reported skill level, match history, and player feedback to accurately assess your ability. You'll be matched with players within your skill range for competitive and enjoyable games."
+          "answer": "Our system analyzes your skill level, match history, and player feedback to assess your ability. You'll be matched with players at your level for competitive and enjoyable games."
         },
         "privacy": {
           "question": "Is my data private and secure?",
-          "answer": "Absolutely. We use industry-standard encryption and never share your personal information with third parties. You control what information is visible to other players."
+          "answer": "Absolutely. We use industry-standard encryption and never share your personal information with third parties. You control what information other players can see."
         },
         "availability": {
           "question": "When will Rallia be available?",
@@ -1085,13 +1085,13 @@
         },
         "platforms": {
           "question": "What platforms is Rallia available on?",
-          "answer": "Rallia will be available as a web app, iOS app, and Android app. You'll be able to access your account and schedule matches from any device."
+          "answer": "Rallia will be available as a web app, iOS app, and Android app. You can access your account and schedule games from any device."
         }
       }
     }
   },
   "playerMatches": {
-    "title": "My Matches",
+    "title": "My Games",
     "tabs": {
       "upcoming": "Upcoming",
       "past": "Past"
@@ -1107,17 +1107,17 @@
       "earlier": "Earlier"
     },
     "emptyUpcoming": {
-      "title": "No upcoming matches",
-      "description": "Create a new match or browse public matches to get started"
+      "title": "No upcoming games",
+      "description": "Create a new game or browse public games to get started"
     },
     "emptyPast": {
-      "title": "No past matches",
-      "description": "Your completed matches will appear here"
+      "title": "No past games",
+      "description": "Your completed games will appear here"
     }
   },
   "publicMatches": {
-    "title": "Public Matches",
-    "searchPlaceholder": "Search matches, locations, players...",
+    "title": "Public Games",
+    "searchPlaceholder": "Search games, locations, players...",
     "filters": {
       "format": {
         "label": "Format",
@@ -1177,16 +1177,16 @@
       "reset": "Reset"
     },
     "empty": {
-      "title": "No matches found",
+      "title": "No games found",
       "description": "Try adjusting your filters or check back later",
       "noFilters": {
-        "title": "No public matches nearby",
-        "description": "Be the first to create a match in your area!"
+        "title": "No public games nearby",
+        "description": "Be the first to create a game in your area!"
       }
     },
     "results": {
-      "count": "{count} matches",
-      "countSingular": "1 match"
+      "count": "{count} games",
+      "countSingular": "1 game"
     }
   },
   "winter": {
@@ -1280,7 +1280,7 @@
       "questions": {
         "whatIsThis": {
           "question": "How does this solve the indoor court problem?",
-          "answer": "We're helping Canadian tennis and pickleball players deal with the indoor court shortage during winter months. We're building tools to help players find partners who have already booked courts, share costs, and fill last-minute cancellations—maximizing the use of existing facilities."
+          "answer": "We're helping Canadian tennis and pickleball players deal with the indoor court shortage during winter. We're building tools to help players find partners who have already booked courts, share costs, and fill last-minute cancellations—making the most of existing facilities."
         },
         "foundingMember": {
           "question": "What do Founding Members get?",
@@ -1296,7 +1296,7 @@
         },
         "howHelp": {
           "question": "How will this help with the court shortage?",
-          "answer": "While we can't build new courts overnight, we can help maximize the use of existing facilities. By connecting players who need courts with those who have them booked, sharing costs, and filling cancellations, we ensure every minute of court time is used."
+          "answer": "While we can't build new courts overnight, we can help make the most of existing facilities. By connecting players who need courts with those who have them booked, sharing costs, and filling cancellations, we ensure every minute of court time is used."
         }
       }
     }
@@ -1313,8 +1313,8 @@
   },
   "signIn": {
     "title": "Organization Sign In",
-    "description": "This is the first step to create your organization on our platform.",
-    "welcomeMessage": "Welcome! Sign in to get started with your organization account.",
+    "description": "This is the first step to create your organization",
+    "welcomeMessage": "Welcome! Sign in to get started with your organization account",
     "signInWithGoogle": "Continue with Google",
     "signInWithMicrosoft": "Continue with Microsoft",
     "or": "Or continue with email",
@@ -1331,15 +1331,15 @@
     "adminTitle": "Admin",
     "adminDescription": "Sign in to access the administration dashboard",
     "invalidOtpCode": "Please enter the 6-digit verification code",
-    "failedToSendOtp": "Failed to send OTP",
-    "failedToVerifyOtp": "Failed to verify OTP"
+    "failedToSendOtp": "Couldn't send verification code",
+    "failedToVerifyOtp": "Couldn't verify code"
   },
   "webOnboarding": {
     "badge": "Get Started",
     "pageTitle": "Create Your Organization",
-    "pageDescription": "Set up your organization profile to start managing your facilities and members.",
+    "pageDescription": "Set up your organization profile to start managing your facilities and members",
     "title": "Organization Details",
-    "description": "Fill in the information below to create your organization profile.",
+    "description": "Fill in the information below to create your organization profile",
     "basicInfo": "Basic Information",
     "contactInfo": "Contact Information",
     "locationInfo": "Location Information",
@@ -1384,7 +1384,7 @@
   "dashboard": {
     "badge": "Dashboard",
     "title": "Welcome to Your Dashboard",
-    "description": "Manage your organization and view your profile information.",
+    "description": "Manage your organization and view your profile information",
     "profileTitle": "Your Profile",
     "profileDescription": "Your personal information and account settings.",
     "organizationTitle": "Your Organization",
@@ -1430,7 +1430,7 @@
     },
     "dashboard": {
       "title": "Admin Dashboard",
-      "description": "Manage organizations, users, and settings.",
+      "description": "Manage organizations, users, and settings",
       "titleMeta": "Admin Dashboard - Rallia",
       "descriptionMeta": "Administration dashboard for Rallia employees.",
       "organizationsCard": {
@@ -1448,7 +1448,7 @@
     },
     "organizations": {
       "title": "Organizations",
-      "description": "Manage all organizations.",
+      "description": "Manage all organizations",
       "titleMeta": "Organizations - Admin - Rallia",
       "descriptionMeta": "Manage all organizations.",
       "comingSoon": "Organization management interface coming soon.",
@@ -1465,7 +1465,7 @@
         "createdAt": "Created",
         "noOrganizations": "No organizations found.",
         "loading": "Loading organizations...",
-        "error": "Failed to load organizations."
+        "error": "Couldn't load organizations"
       },
       "status": {
         "active": "Active",
@@ -1614,7 +1614,7 @@
           "facilityCountryRequired": "Facility {index} country is required"
         },
         "error": {
-          "createFailed": "Failed to create organization"
+          "createFailed": "Couldn't create organization"
         },
         "success": {
           "title": "Organization Created Successfully",
@@ -1672,7 +1672,7 @@
         "surfaceType": "Surface Type",
         "lighting": "Lighting",
         "indoor": "Indoor",
-        "error": "Failed to load organization"
+        "error": "Couldn't load organization"
       },
       "update": {
         "title": "Update Organization",
@@ -1799,8 +1799,8 @@
           "facilityCountryRequired": "Facility {index} country is required"
         },
         "error": {
-          "updateFailed": "Failed to update organization",
-          "loadFailed": "Failed to load organization"
+          "updateFailed": "Couldn't update organization",
+          "loadFailed": "Couldn't load organization"
         },
         "success": {
           "title": "Organization Updated Successfully",
@@ -1812,7 +1812,7 @@
     },
     "users": {
       "title": "Users",
-      "description": "Manage all users including admins, organization members, and players.",
+      "description": "Manage all users including admins, organization members, and players",
       "titleMeta": "Users - Admin - Rallia",
       "descriptionMeta": "Manage all users including admins, organization members, and players.",
       "comingSoon": "User management interface coming soon.",
@@ -1830,7 +1830,7 @@
         "status": "Status",
         "createdAt": "Created At",
         "noAdmins": "No admins found.",
-        "error": "Failed to load admins."
+        "error": "Couldn't load admins"
       },
       "status": {
         "active": "Active",
@@ -1872,7 +1872,7 @@
           "adminRoleRequired": "Please select an admin type."
         },
         "error": {
-          "sendFailed": "Failed to send invitation. Please try again."
+          "sendFailed": "Couldn't send invitation. Please try again."
         },
         "success": {
           "invitationSent": "Invitation sent successfully to {email}!"
@@ -1881,21 +1881,21 @@
     },
     "analytics": {
       "title": "Analytics",
-      "description": "Analytics and insights.",
+      "description": "Analytics and insights",
       "titleMeta": "Analytics - Admin - Rallia",
       "descriptionMeta": "Analytics and insights.",
       "comingSoon": "Analytics dashboard coming soon."
     },
     "settings": {
       "title": "Settings",
-      "description": "Manage settings and configuration.",
+      "description": "Manage settings and configuration",
       "titleMeta": "Settings - Admin - Rallia",
       "descriptionMeta": "Manage settings.",
       "comingSoon": "Settings interface coming soon."
     },
     "errors": {
       "accessDenied": "Access denied. Admin access required.",
-      "unexpectedError": "An unexpected error occurred",
+      "unexpectedError": "Something unexpected happened",
       "invalidCallback": "Invalid callback parameters"
     }
   }

@@ -6,7 +6,7 @@
     },
     "hero": {
       "badge": "🚀 Coming Early 2026",
-      "headline": "Your next match is waiting.",
+      "headline": "Your next game is waiting.",
       "subheadline": "Connect with compatible players, schedule games effortlessly, and never play alone again.",
       "ctaButton": "Join the Waitlist",
       "ctaSubtext": "✓ No credit card required  •  ✓ Exclusive early access"
@@ -20,7 +20,7 @@
       },
       "compatibility": {
         "title": "The Compatibility Crisis",
-        "description": "Skill mismatches ruin the experience. Location conflicts. Surface preferences don't align. Finding the right match feels impossible."
+        "description": "Skill mismatches ruin the experience. Location conflicts. Surface preferences don't align. Finding the right game feels impossible."
       },
       "reliability": {
         "title": "The Reliability Problem",
@@ -48,7 +48,7 @@
       },
       "step4": {
         "title": "Play & Review",
-        "description": "Schedule matches instantly and build your reliable player network."
+        "description": "Schedule games instantly and build your reliable player network."
       }
     },
     "solutions": {
@@ -60,11 +60,11 @@
       },
       "scheduling": {
         "title": "Instant Scheduling",
-        "description": "One-click match proposals with smart calendar sync. Auto-confirmations and live availability. No more endless back-and-forth."
+        "description": "One-click game proposals with smart calendar sync. Auto-confirmations and live availability. No more endless back-and-forth."
       },
       "marketplace": {
         "title": "Game Marketplace",
-        "description": "Post or browse matches by time, location, and skill level. Instant booking with built-in ratings and reviews."
+        "description": "Post or browse games by time, location, and skill level. Instant booking with built-in ratings and reviews."
       },
       "portfolio": {
         "title": "Player Network",
@@ -134,7 +134,7 @@
         "players": "2,500+",
         "playersLabel": "Waitlist Signups",
         "matches": "500+",
-        "matchesLabel": "Beta Test Matches",
+        "matchesLabel": "Beta Test Games",
         "rating": "4.9/5",
         "ratingLabel": "Beta Tester Rating"
       }
@@ -167,7 +167,7 @@
         },
         "matching": {
           "question": "How does the skill matching work?",
-          "answer": "Our system analyzes your self-reported skill level, match history, and player feedback to accurately assess your ability. You'll be matched with players within your skill range for competitive and enjoyable games."
+          "answer": "Our system analyzes your self-reported skill level, game history, and player feedback to accurately assess your ability. You'll be matched with players within your skill range for competitive and enjoyable games."
         },
         "privacy": {
           "question": "Is my data private and secure?",
@@ -179,7 +179,7 @@
         },
         "platforms": {
           "question": "What platforms is Rallia available on?",
-          "answer": "Rallia will be available as a web app, iOS app, and Android app. You'll be able to access your account and schedule matches from any device."
+          "answer": "Rallia will be available as a web app, iOS app, and Android app. You'll be able to access your account and schedule games from any device."
         }
       }
     }
@@ -298,7 +298,7 @@
   },
   "footer": {
     "title": "Rallia",
-    "description": "The platform that will connect tennis and pickleball players for better matches, every time.",
+    "description": "The platform that will connect tennis and pickleball players for better games, every time.",
     "quickLinks": "Quick Links",
     "joinWaitlist": "Join Waitlist",
     "privacy": "Privacy Policy",
