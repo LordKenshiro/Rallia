@@ -37,7 +37,22 @@ import { ProfileProvider, PlayerProvider, useNotificationRealtime } from '@ralli
 // Import NativeWind global styles
 import './global.css';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Data stays fresh for 2 minutes - prevents unnecessary refetches
+      staleTime: 1000 * 60 * 2,
+      // Don't refetch on window focus by default (use pull-to-refresh instead)
+      refetchOnWindowFocus: false,
+      // Don't refetch on mount if data is fresh
+      refetchOnMount: 'always',
+      // Keep unused data in cache for 5 minutes
+      gcTime: 1000 * 60 * 5,
+      // Retry failed requests once
+      retry: 1,
+    },
+  },
+});
 
 /**
  * AuthenticatedProviders - Wraps providers that need userId from auth context.

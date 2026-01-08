@@ -185,7 +185,31 @@ export function getTimezoneCity(timezone: string): string {
 }
 
 /**
+ * Determine if a locale should use 12-hour (AM/PM) or 24-hour format
+ *
+ * @param locale - Locale string (e.g., "en-US", "fr-CA")
+ * @returns true for 12-hour format, false for 24-hour format
+ */
+export function shouldUse12HourFormat(locale: string): boolean {
+  // Normalize locale to lowercase for comparison
+  const normalizedLocale = locale.toLowerCase();
+
+  // French locales use 24-hour format
+  if (normalizedLocale.startsWith('fr')) {
+    return false;
+  }
+
+  // English and other locales default to 12-hour format
+  // This includes: en-US, en-CA, en-GB, etc.
+  return true;
+}
+
+/**
  * Format a time in a specific timezone with timezone city name
+ *
+ * The time format is locale-aware:
+ * - English locales (en-*): 12-hour format (e.g., "2:00 PM")
+ * - French locales (fr-*): 24-hour format (e.g., "14:00")
  *
  * @param dateStr - Date string in YYYY-MM-DD format
  * @param timeStr - Time string in HH:MM format
@@ -199,6 +223,9 @@ export function getTimezoneCity(timezone: string): string {
  * // result.formattedTime = "2:00 PM"
  * // result.tzCity = "New York"
  * // result.fullDisplay = "2:00 PM (New York)"
+ *
+ * const resultFr = formatTimeInTimezone('2025-01-15', '14:00', 'America/New_York', 'fr-CA');
+ * // resultFr.formattedTime = "14:00"
  * ```
  */
 export function formatTimeInTimezone(
@@ -209,19 +236,18 @@ export function formatTimeInTimezone(
 ): TimezoneFormattedTime {
   const tz = timezone || 'UTC';
 
-  // Parse the date and time components
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const [hours, minutes] = timeStr.split(':').map(Number);
-
   // Create a date in the target timezone
   const date = createDateInTimezone(dateStr, timeStr, tz);
+
+  // Determine hour format based on locale
+  const use12Hour = shouldUse12HourFormat(locale);
 
   // Format time without timezone
   const timeFormatter = new Intl.DateTimeFormat(locale, {
     timeZone: tz,
     hour: 'numeric',
     minute: '2-digit',
-    hour12: true,
+    hour12: use12Hour,
   });
   const formattedTime = timeFormatter.format(date);
 
@@ -365,4 +391,186 @@ export function formatDateInTimezoneWithCity(
   const formattedDate = formatDateInTimezone(dateStr, timezone, locale, options);
   const tzCity = getTimezoneCity(timezone || 'UTC');
   return `${formattedDate} (${tzCity})`;
+}
+
+// =============================================================================
+// INTUITIVE DATE FORMATTING
+// =============================================================================
+
+/**
+ * Type of intuitive date display
+ */
+export type IntuitiveDateType = 'today' | 'tomorrow' | 'weekday' | 'date';
+
+/**
+ * Result of intuitive date formatting
+ */
+export interface IntuitiveDateResult {
+  /** The type of date display used */
+  type: IntuitiveDateType;
+  /** Translation key for Today/Tomorrow (null for weekday/date types) */
+  translationKey: string | null;
+  /** The formatted date string (weekday name or "Month Day") */
+  formattedDate: string;
+  /** The full display string (combined label + time if provided) */
+  label: string;
+}
+
+/**
+ * Get the date string (YYYY-MM-DD) for today in a specific timezone
+ */
+function getTodayInTimezone(timezone: string): string {
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  // en-CA format gives us YYYY-MM-DD directly
+  return formatter.format(now);
+}
+
+/**
+ * Get the date string (YYYY-MM-DD) for tomorrow in a specific timezone
+ */
+function getTomorrowInTimezone(timezone: string): string {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  return formatter.format(tomorrow);
+}
+
+/**
+ * Calculate the number of days between two dates (in the same timezone)
+ */
+function getDaysDifference(dateStr: string, timezone: string): number {
+  const today = getTodayInTimezone(timezone);
+
+  // Parse dates as midnight in the timezone
+  const todayDate = new Date(today + 'T00:00:00');
+  const targetDate = new Date(dateStr + 'T00:00:00');
+
+  // Calculate difference in days
+  const diffMs = targetDate.getTime() - todayDate.getTime();
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+  return diffDays;
+}
+
+/**
+ * Capitalize the first letter of a string
+ * This ensures date labels are always capitalized, which is important for
+ * locales like French where weekdays/months are lowercase by default.
+ */
+function capitalizeFirst(str: string): string {
+  if (!str) return str;
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+/**
+ * Format a date in an intuitive, user-friendly way
+ *
+ * This function returns contextual date labels that are easier to understand:
+ * - "Today" for today's date (uses translation key)
+ * - "Tomorrow" for tomorrow's date (uses translation key)
+ * - Weekday name for dates within the next 6 days (e.g., "Wednesday", "Mercredi")
+ * - "Month Day" for dates further out (e.g., "Jan 15", "15 janv.")
+ *
+ * @param dateStr - Date string in YYYY-MM-DD format
+ * @param timezone - IANA timezone identifier
+ * @param locale - Locale for formatting
+ * @returns Object with type, translation key (if applicable), and formatted date
+ *
+ * @example
+ * ```ts
+ * // For today's date
+ * const result = formatIntuitiveDateInTimezone('2025-01-08', 'America/New_York', 'en-US');
+ * // result.type = 'today'
+ * // result.translationKey = 'common.time.today'
+ * // result.label = 'Today' (will be replaced by t() call)
+ *
+ * // For a date 3 days from now
+ * const result = formatIntuitiveDateInTimezone('2025-01-11', 'America/New_York', 'en-US');
+ * // result.type = 'weekday'
+ * // result.translationKey = null
+ * // result.formattedDate = 'Saturday'
+ *
+ * // For a date 10 days from now
+ * const result = formatIntuitiveDateInTimezone('2025-01-18', 'America/New_York', 'en-US');
+ * // result.type = 'date'
+ * // result.translationKey = null
+ * // result.formattedDate = 'Jan 18'
+ * ```
+ */
+export function formatIntuitiveDateInTimezone(
+  dateStr: string,
+  timezone: string,
+  locale: string = 'en-US'
+): IntuitiveDateResult {
+  const tz = timezone || 'UTC';
+  const today = getTodayInTimezone(tz);
+  const tomorrow = getTomorrowInTimezone(tz);
+  const daysDiff = getDaysDifference(dateStr, tz);
+
+  // Today
+  if (dateStr === today) {
+    return {
+      type: 'today',
+      translationKey: 'common.time.today',
+      formattedDate: '',
+      label: '', // Will be set by caller using translation
+    };
+  }
+
+  // Tomorrow
+  if (dateStr === tomorrow) {
+    return {
+      type: 'tomorrow',
+      translationKey: 'common.time.tomorrow',
+      formattedDate: '',
+      label: '', // Will be set by caller using translation
+    };
+  }
+
+  // Within next 6 days (day 2 to day 6) - show weekday name
+  // This is especially useful for planning matches in the coming week
+  if (daysDiff >= 2 && daysDiff <= 6) {
+    const date = createDateInTimezone(dateStr, '12:00', tz);
+    const weekdayFormatter = new Intl.DateTimeFormat(locale, {
+      timeZone: tz,
+      weekday: 'long',
+    });
+    // Capitalize first letter (important for French where weekdays are lowercase)
+    const weekday = capitalizeFirst(weekdayFormatter.format(date));
+
+    return {
+      type: 'weekday',
+      translationKey: null,
+      formattedDate: weekday,
+      label: weekday,
+    };
+  }
+
+  // Further out or in the past - show "Weekday, Month Day" format (e.g., "Mon, Jan 6")
+  // Capitalize first letter (important for French where weekdays/months are lowercase)
+  const formattedDate = capitalizeFirst(
+    formatDateInTimezone(dateStr, tz, locale, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    })
+  );
+
+  return {
+    type: 'date',
+    translationKey: null,
+    formattedDate,
+    label: formattedDate,
+  };
 }

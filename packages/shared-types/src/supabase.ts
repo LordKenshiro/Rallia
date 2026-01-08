@@ -1675,6 +1675,7 @@ export type Database = {
           privacy_show_location: boolean | null;
           privacy_show_stats: boolean | null;
           push_notifications_enabled: boolean | null;
+          reputation_score: number;
           updated_at: string | null;
         };
         Insert: {
@@ -1691,6 +1692,7 @@ export type Database = {
           privacy_show_location?: boolean | null;
           privacy_show_stats?: boolean | null;
           push_notifications_enabled?: boolean | null;
+          reputation_score?: number;
           updated_at?: string | null;
         };
         Update: {
@@ -1707,6 +1709,7 @@ export type Database = {
           privacy_show_location?: boolean | null;
           privacy_show_stats?: boolean | null;
           push_notifications_enabled?: boolean | null;
+          reputation_score?: number;
           updated_at?: string | null;
         };
         Relationships: [
@@ -2913,7 +2916,8 @@ export type Database = {
         | 'left'
         | 'kicked'
         | 'waitlisted'
-        | 'refused';
+        | 'refused'
+        | 'cancelled';
       match_type_enum: 'casual' | 'competitive' | 'both';
       match_visibility_enum: 'public' | 'private';
       member_role: 'owner' | 'admin' | 'manager' | 'staff' | 'member';
@@ -3179,6 +3183,7 @@ export const Constants = {
         'kicked',
         'waitlisted',
         'refused',
+        'cancelled',
       ],
       match_type_enum: ['casual', 'competitive', 'both'],
       match_visibility_enum: ['public', 'private'],

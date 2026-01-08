@@ -158,8 +158,20 @@ export function matchToFormData(
     both: 'both',
   };
 
-  // Calculate duration from start/end times
-  const { duration, customMinutes } = calculateDurationFromTimes(match.start_time, match.end_time);
+  // Use stored duration if available, otherwise calculate from start/end times
+  let duration: MatchFormSchemaData['duration'];
+  let customMinutes: number | undefined;
+
+  if (match.duration) {
+    // Use the stored duration value directly (enum values match form values)
+    duration = match.duration as MatchFormSchemaData['duration'];
+    customMinutes = match.custom_duration_minutes ?? undefined;
+  } else {
+    // Fallback: calculate from start/end times for legacy matches
+    const calculated = calculateDurationFromTimes(match.start_time, match.end_time);
+    duration = calculated.duration;
+    customMinutes = calculated.customMinutes;
+  }
 
   return {
     sportId: match.sport_id,

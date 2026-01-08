@@ -14,7 +14,6 @@ import React, { useEffect } from 'react';
 import { View, TouchableOpacity, StyleProp, ViewStyle, GestureResponderEvent } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { lightHaptic } from '@rallia/shared-utils';
 import {
@@ -25,7 +24,7 @@ import {
 } from '@rallia/shared-components';
 import { useUnreadNotificationCount, useProfile } from '@rallia/shared-hooks';
 import { useActionsSheet, useSport } from '../context';
-import { useAuth, useThemeStyles } from '../hooks';
+import { useAuth, useThemeStyles, useTranslation } from '../hooks';
 import { useTheme } from '@rallia/shared-hooks';
 import { useAppNavigation } from './hooks';
 import { spacingPixels, fontSizePixels, fontWeightNumeric } from '@rallia/design-system';
@@ -107,14 +106,6 @@ function SportSelectorWithContext() {
   const { contentMode } = useActionsSheet();
   const { profile, refetch } = useProfile();
   const isDark = theme === 'dark';
-
-  // Refetch profile when screen comes into focus
-  // This ensures the sport selector appears when onboarding completes
-  useFocusEffect(
-    React.useCallback(() => {
-      refetch();
-    }, [refetch])
-  );
 
   // Refetch profile when auth state changes (e.g., user first authenticates)
   useEffect(() => {
@@ -265,6 +256,7 @@ function MapIconButton() {
  */
 function usePublicMatchesScreenOptions() {
   const { colors } = useThemeStyles();
+  const { t } = useTranslation();
   const sharedOptions = getSharedScreenOptions(colors);
 
   return ({
@@ -273,7 +265,7 @@ function usePublicMatchesScreenOptions() {
     navigation: NativeStackNavigationProp<HomeStackParamList, 'PublicMatches'>;
   }) => ({
     ...sharedOptions,
-    headerTitle: 'Public Matches',
+    headerTitle: t('screens.publicMatches'),
     headerLeft: () => <ThemedBackButton navigation={navigation} />,
     headerRight: () => <MapIconButton />,
   });
@@ -284,6 +276,7 @@ function usePublicMatchesScreenOptions() {
  */
 function usePlayerMatchesScreenOptions() {
   const { colors } = useThemeStyles();
+  const { t } = useTranslation();
   const sharedOptions = getSharedScreenOptions(colors);
 
   return ({
@@ -292,10 +285,17 @@ function usePlayerMatchesScreenOptions() {
     navigation: NativeStackNavigationProp<HomeStackParamList, 'PlayerMatches'>;
   }) => ({
     ...sharedOptions,
-    headerTitle: 'My Matches',
+    headerTitle: t('screens.playerMatches'),
     headerLeft: () => <ThemedBackButton navigation={navigation} />,
   });
 }
+
+// Shared screen options for fast animations across all stacks
+const fastAnimationOptions = {
+  animation: 'slide_from_right' as const,
+  animationDuration: 200,
+  gestureEnabled: true,
+};
 
 /**
  * Home Stack - Match discovery and player's own matches
@@ -305,7 +305,7 @@ function HomeStack() {
   const publicMatchesOptions = usePublicMatchesScreenOptions();
   const playerMatchesOptions = usePlayerMatchesScreenOptions();
   return (
-    <HomeStackNavigator.Navigator id="HomeStack">
+    <HomeStackNavigator.Navigator id="HomeStack" screenOptions={fastAnimationOptions}>
       <HomeStackNavigator.Screen name="HomeScreen" component={Home} options={mainScreenOptions} />
       <HomeStackNavigator.Screen
         name="PublicMatches"
@@ -328,7 +328,7 @@ function HomeStack() {
 function CourtsStack() {
   const mainScreenOptions = useMainScreenOptions();
   return (
-    <CourtsStackNavigator.Navigator id="CourtsStack">
+    <CourtsStackNavigator.Navigator id="CourtsStack" screenOptions={fastAnimationOptions}>
       <CourtsStackNavigator.Screen
         name="FacilitiesDirectory"
         component={Match} // Placeholder - will be FacilitiesDirectory
@@ -345,7 +345,7 @@ function CourtsStack() {
 function CommunityStack() {
   const mainScreenOptions = useMainScreenOptions();
   return (
-    <CommunityStackNavigator.Navigator id="CommunityStack">
+    <CommunityStackNavigator.Navigator id="CommunityStack" screenOptions={fastAnimationOptions}>
       <CommunityStackNavigator.Screen
         name="PlayerDirectory"
         component={Community}
@@ -362,7 +362,7 @@ function CommunityStack() {
 function ChatStack() {
   const mainScreenOptions = useMainScreenOptions();
   return (
-    <ChatStackNavigator.Navigator id="ChatStack">
+    <ChatStackNavigator.Navigator id="ChatStack" screenOptions={fastAnimationOptions}>
       <ChatStackNavigator.Screen
         name="Conversations"
         component={Chat}
@@ -532,6 +532,7 @@ function BottomTabs() {
 
 /**
  * Back button component with theme-aware colors
+ * Uses TouchableOpacity for proper touch handling and immediate response
  */
 function ThemedBackButton({
   navigation,
@@ -542,13 +543,21 @@ function ThemedBackButton({
 }) {
   const { colors } = useThemeStyles();
   return (
-    <Ionicons
-      name={icon as keyof typeof Ionicons.glyphMap}
-      size={28}
-      color={colors.headerForeground}
-      onPress={() => navigation.goBack()}
-      style={{ marginLeft: spacingPixels[2] }}
-    />
+    <TouchableOpacity
+      onPress={() => {
+        lightHaptic();
+        navigation.goBack();
+      }}
+      activeOpacity={0.6}
+      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+      style={{ marginLeft: spacingPixels[2], padding: spacingPixels[1] }}
+    >
+      <Ionicons
+        name={icon as keyof typeof Ionicons.glyphMap}
+        size={28}
+        color={colors.headerForeground}
+      />
+    </TouchableOpacity>
   );
 }
 
@@ -562,10 +571,15 @@ function ThemedBackButton({
  */
 export default function AppNavigator() {
   const { colors } = useThemeStyles();
+  const { t } = useTranslation();
   const sharedOptions = getSharedScreenOptions(colors);
 
   return (
-    <RootStack.Navigator id="RootStack" initialRouteName="Main">
+    <RootStack.Navigator
+      id="RootStack"
+      initialRouteName="Main"
+      screenOptions={fastAnimationOptions}
+    >
       {/* Main app entry */}
       <RootStack.Screen name="Main" component={BottomTabs} options={{ headerShown: false }} />
 
@@ -575,7 +589,7 @@ export default function AppNavigator() {
         component={UserProfile}
         options={({ navigation }) => ({
           ...sharedOptions,
-          headerTitle: 'Profile',
+          headerTitle: t('screens.profile'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />
@@ -585,7 +599,7 @@ export default function AppNavigator() {
         component={SportProfile}
         options={({ route, navigation }) => ({
           ...sharedOptions,
-          headerTitle: route.params?.sportName || 'Sport Profile',
+          headerTitle: route.params?.sportName || t('screens.sportProfile'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />
@@ -595,7 +609,7 @@ export default function AppNavigator() {
         component={SettingsScreen}
         options={({ navigation }) => ({
           ...sharedOptions,
-          headerTitle: 'Settings',
+          headerTitle: t('screens.settings'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />
@@ -605,7 +619,7 @@ export default function AppNavigator() {
         component={Notifications}
         options={({ navigation }) => ({
           ...sharedOptions,
-          headerTitle: 'Notifications',
+          headerTitle: t('screens.notifications'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />
@@ -615,7 +629,7 @@ export default function AppNavigator() {
         component={NotificationPreferencesScreen}
         options={({ navigation }) => ({
           ...sharedOptions,
-          headerTitle: 'Notification Preferences',
+          headerTitle: t('screens.notificationPreferences'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />
@@ -625,7 +639,7 @@ export default function AppNavigator() {
         component={PermissionsScreen}
         options={({ navigation }) => ({
           ...sharedOptions,
-          headerTitle: 'Permissions',
+          headerTitle: t('screens.permissions'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />
@@ -644,7 +658,7 @@ export default function AppNavigator() {
         component={RatingProofs}
         options={({ navigation }) => ({
           ...sharedOptions,
-          headerTitle: 'Rating Proofs',
+          headerTitle: t('screens.ratingProofs'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />

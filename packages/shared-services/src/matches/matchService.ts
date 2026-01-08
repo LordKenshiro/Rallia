@@ -12,6 +12,7 @@ import {
   notifyPlayerLeft,
   notifyMatchCancelled,
   notifyPlayerKicked,
+  notifyMatchInvitation,
 } from '../notifications/notificationFactory';
 import type {
   Match,
@@ -70,10 +71,11 @@ export interface CreateMatchInput {
 }
 
 /**
- * Helper to convert empty strings to undefined (for optional UUID fields)
+ * Helper to convert empty strings to null (for optional UUID fields)
+ * Returns null (not undefined) so the field is actually cleared in the database
  */
-function emptyToUndefined(value: string | undefined): string | undefined {
-  return value && value.trim() !== '' ? value : undefined;
+function emptyToNull(value: string | null | undefined): string | null {
+  return value && typeof value === 'string' && value.trim() !== '' ? value : null;
 }
 
 /**
@@ -95,7 +97,7 @@ export async function createMatch(input: CreateMatchInput): Promise<Match> {
   };
 
   // Build the insert object
-  // Note: Empty strings are converted to undefined for UUID fields to avoid "invalid uuid" errors
+  // Note: Empty strings are converted to null for UUID fields to avoid "invalid uuid" errors
   const insertData: TablesInsert<'match'> = {
     sport_id: input.sportId,
     created_by: input.createdBy,
@@ -108,22 +110,22 @@ export async function createMatch(input: CreateMatchInput): Promise<Match> {
     duration: input.duration ?? '60',
     custom_duration_minutes: input.customDurationMinutes,
     location_type: input.locationType ?? 'tbd',
-    facility_id: emptyToUndefined(input.facilityId),
-    court_id: emptyToUndefined(input.courtId),
-    location_name: emptyToUndefined(input.locationName),
-    location_address: emptyToUndefined(input.locationAddress),
+    facility_id: emptyToNull(input.facilityId),
+    court_id: emptyToNull(input.courtId),
+    location_name: emptyToNull(input.locationName),
+    location_address: emptyToNull(input.locationAddress),
     custom_latitude: input.customLatitude,
     custom_longitude: input.customLongitude,
     court_status: input.courtStatus ? courtStatusMap[input.courtStatus] : null,
     is_court_free: input.isCourtFree ?? true,
     cost_split_type: costSplitMap[input.costSplitType ?? 'equal'] ?? 'split_equal',
     estimated_cost: input.estimatedCost,
-    min_rating_score_id: emptyToUndefined(input.minRatingScoreId),
+    min_rating_score_id: emptyToNull(input.minRatingScoreId),
     preferred_opponent_gender:
       input.preferredOpponentGender === 'any' ? null : input.preferredOpponentGender,
     visibility: input.visibility ?? 'public',
     join_mode: input.joinMode ?? 'direct',
-    notes: emptyToUndefined(input.notes),
+    notes: emptyToNull(input.notes),
   };
 
   const { data, error } = await supabase.from('match').insert(insertData).select().single();
@@ -170,6 +172,7 @@ export async function getMatchWithDetails(matchId: string) {
         gender,
         playing_hand,
         max_travel_distance,
+        reputation_score,
         notification_match_requests,
         notification_messages,
         notification_reminders,
@@ -192,6 +195,7 @@ export async function getMatchWithDetails(matchId: string) {
           gender,
           playing_hand,
           max_travel_distance,
+          reputation_score,
           notification_match_requests,
           notification_messages,
           notification_reminders,
@@ -379,6 +383,7 @@ export async function getMatchesWithDetails(
         gender,
         playing_hand,
         max_travel_distance,
+        reputation_score,
         notification_match_requests,
         notification_messages,
         notification_reminders,
@@ -401,6 +406,7 @@ export async function getMatchesWithDetails(
           gender,
           playing_hand,
           max_travel_distance,
+          reputation_score,
           notification_match_requests,
           notification_messages,
           notification_reminders,
@@ -572,14 +578,39 @@ export async function updateMatch(
   if (updates.duration !== undefined) updateData.duration = updates.duration;
   if (updates.customDurationMinutes !== undefined)
     updateData.custom_duration_minutes = updates.customDurationMinutes;
-  if (updates.locationType !== undefined) updateData.location_type = updates.locationType;
-  if (updates.facilityId !== undefined)
-    updateData.facility_id = emptyToUndefined(updates.facilityId);
-  if (updates.courtId !== undefined) updateData.court_id = emptyToUndefined(updates.courtId);
+  if (updates.locationType !== undefined) {
+    updateData.location_type = updates.locationType;
+
+    // Clear all location-related fields when switching location types
+    // This ensures we start fresh with the new location type
+    if (updates.locationType === 'tbd') {
+      // TBD: clear everything
+      updateData.facility_id = null;
+      updateData.court_id = null;
+      updateData.court_status = null;
+      updateData.location_name = null;
+      updateData.location_address = null;
+      updateData.custom_latitude = null;
+      updateData.custom_longitude = null;
+    } else if (updates.locationType === 'facility') {
+      // Facility: clear custom location fields (facility fields will be set separately)
+      updateData.custom_latitude = null;
+      updateData.custom_longitude = null;
+      // Note: location_name/address may be set from facility, don't clear them here
+    } else if (updates.locationType === 'custom') {
+      // Custom: clear facility-related fields
+      updateData.facility_id = null;
+      updateData.court_id = null;
+      updateData.court_status = null;
+    }
+  }
+  if (updates.facilityId !== undefined) updateData.facility_id = emptyToNull(updates.facilityId);
+  if (updates.courtId !== undefined) updateData.court_id = emptyToNull(updates.courtId);
   if (updates.locationName !== undefined)
-    updateData.location_name = emptyToUndefined(updates.locationName);
+    updateData.location_name = emptyToNull(updates.locationName);
   if (updates.locationAddress !== undefined)
-    updateData.location_address = emptyToUndefined(updates.locationAddress);
+    updateData.location_address = emptyToNull(updates.locationAddress);
+  // Update custom coordinates if provided (will be cleared above if locationType changes away from 'custom')
   if (updates.customLatitude !== undefined) updateData.custom_latitude = updates.customLatitude;
   if (updates.customLongitude !== undefined) updateData.custom_longitude = updates.customLongitude;
   if (updates.courtStatus !== undefined) {
@@ -591,12 +622,13 @@ export async function updateMatch(
   }
   if (updates.estimatedCost !== undefined) updateData.estimated_cost = updates.estimatedCost;
   if (updates.minRatingScoreId !== undefined)
-    updateData.min_rating_score_id = emptyToUndefined(updates.minRatingScoreId);
+    updateData.min_rating_score_id = emptyToNull(updates.minRatingScoreId);
   if (updates.preferredOpponentGender !== undefined)
-    updateData.preferred_opponent_gender = updates.preferredOpponentGender;
+    updateData.preferred_opponent_gender =
+      updates.preferredOpponentGender === 'any' ? null : updates.preferredOpponentGender;
   if (updates.visibility !== undefined) updateData.visibility = updates.visibility;
   if (updates.joinMode !== undefined) updateData.join_mode = updates.joinMode;
-  if (updates.notes !== undefined) updateData.notes = updates.notes;
+  if (updates.notes !== undefined) updateData.notes = emptyToNull(updates.notes);
 
   const { data, error } = await supabase
     .from('match')
@@ -1462,6 +1494,249 @@ export async function kickParticipant(
 }
 
 /**
+ * Cancel an invitation for a match (host only).
+ * Updates the participant status from 'pending' to 'cancelled'.
+ *
+ * @param matchId - The match ID
+ * @param participantId - The participant record ID (not player_id)
+ * @param hostId - The ID of the user performing the action (must be match host)
+ * @throws Error if not host, participant not found, or not in 'pending' status
+ */
+export async function cancelInvitation(
+  matchId: string,
+  participantId: string,
+  hostId: string
+): Promise<MatchParticipant> {
+  // First, verify the caller is the match host
+  const { data: match, error: matchError } = await supabase
+    .from('match')
+    .select(
+      `
+      id,
+      created_by,
+      cancelled_at,
+      match_date,
+      start_time,
+      end_time,
+      timezone,
+      participants:match_participant (
+        id,
+        player_id,
+        status
+      )
+    `
+    )
+    .eq('id', matchId)
+    .single();
+
+  if (matchError || !match) {
+    throw new Error('Match not found');
+  }
+
+  // Check match is still available (not cancelled)
+  if (match.cancelled_at) {
+    throw new Error('Cannot cancel invitations for a cancelled match');
+  }
+
+  // Check if match has already ended
+  const { getMatchEndTimeDifferenceFromNow } = await import('@rallia/shared-utils');
+  const endTimeDiff = getMatchEndTimeDifferenceFromNow(
+    match.match_date,
+    match.start_time,
+    match.end_time,
+    match.timezone || 'UTC'
+  );
+  if (endTimeDiff < 0) {
+    throw new Error('Cannot cancel invitations for a completed match');
+  }
+
+  // Verify caller is the host
+  if (match.created_by !== hostId) {
+    throw new Error('Only the match host can cancel invitations');
+  }
+
+  // Find the participant record
+  const participant = match.participants?.find(
+    (p: { id: string; status: string }) => p.id === participantId
+  );
+
+  if (!participant) {
+    throw new Error('Invitation not found');
+  }
+
+  // Verify the participant has 'pending' status (is an invitation)
+  if (participant.status !== 'pending') {
+    throw new Error('This is not a pending invitation');
+  }
+
+  // Update the participant status to 'cancelled'
+  const { data: updatedParticipant, error: updateError } = await supabase
+    .from('match_participant')
+    .update({
+      status: 'cancelled',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', participantId)
+    .select()
+    .single();
+
+  if (updateError) {
+    throw new Error(`Failed to cancel invitation: ${updateError.message}`);
+  }
+
+  // No notification sent to invitee (per requirements)
+
+  return updatedParticipant as MatchParticipant;
+}
+
+/**
+ * Resend an invitation for a match (host only).
+ * - For 'pending' invitations: resends the notification
+ * - For 'declined' invitations: updates status to 'pending' and sends notification
+ *
+ * @param matchId - The match ID
+ * @param participantId - The participant record ID (not player_id)
+ * @param hostId - The ID of the user performing the action (must be match host)
+ * @throws Error if not host, participant not found, or not in 'pending'/'declined' status
+ */
+export async function resendInvitation(
+  matchId: string,
+  participantId: string,
+  hostId: string
+): Promise<MatchParticipant> {
+  // First, verify the caller is the match host and get match details
+  const { data: match, error: matchError } = await supabase
+    .from('match')
+    .select(
+      `
+      id,
+      created_by,
+      cancelled_at,
+      match_date,
+      start_time,
+      end_time,
+      timezone,
+      sport:sport (
+        id,
+        name,
+        display_name
+      ),
+      participants:match_participant (
+        id,
+        player_id,
+        status
+      )
+    `
+    )
+    .eq('id', matchId)
+    .single();
+
+  if (matchError || !match) {
+    throw new Error('Match not found');
+  }
+
+  // Check match is still available (not cancelled)
+  if (match.cancelled_at) {
+    throw new Error('Cannot resend invitations for a cancelled match');
+  }
+
+  // Check if match has already ended
+  const { getMatchEndTimeDifferenceFromNow } = await import('@rallia/shared-utils');
+  const endTimeDiff = getMatchEndTimeDifferenceFromNow(
+    match.match_date,
+    match.start_time,
+    match.end_time,
+    match.timezone || 'UTC'
+  );
+  if (endTimeDiff < 0) {
+    throw new Error('Cannot resend invitations for a completed match');
+  }
+
+  // Verify caller is the host
+  if (match.created_by !== hostId) {
+    throw new Error('Only the match host can resend invitations');
+  }
+
+  // Find the participant record
+  const participant = match.participants?.find(
+    (p: { id: string; status: string }) => p.id === participantId
+  );
+
+  if (!participant) {
+    throw new Error('Invitation not found');
+  }
+
+  // Verify the participant has 'pending' or 'declined' status
+  if (participant.status !== 'pending' && participant.status !== 'declined') {
+    throw new Error('This is not a pending or declined invitation');
+  }
+
+  let updatedParticipant: MatchParticipant;
+
+  // If status is 'declined', update it to 'pending'
+  if (participant.status === 'declined') {
+    const { data: updated, error: updateError } = await supabase
+      .from('match_participant')
+      .update({
+        status: 'pending',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', participantId)
+      .select()
+      .single();
+
+    if (updateError) {
+      throw new Error(`Failed to resend invitation: ${updateError.message}`);
+    }
+    updatedParticipant = updated as MatchParticipant;
+  } else {
+    // Status is already 'pending', just fetch the current record
+    const { data: current, error: fetchError } = await supabase
+      .from('match_participant')
+      .select()
+      .eq('id', participantId)
+      .single();
+
+    if (fetchError || !current) {
+      throw new Error('Failed to fetch participant record');
+    }
+    updatedParticipant = current as MatchParticipant;
+  }
+
+  // Get host profile for notification
+  const { data: hostProfile } = await supabase
+    .from('profile')
+    .select('full_name, display_name')
+    .eq('id', hostId)
+    .single();
+
+  const inviterName = hostProfile?.full_name || hostProfile?.display_name || 'A player';
+
+  // Get sport name
+  const sport = match.sport as { name: string; display_name?: string } | null;
+  const sportName = sport?.display_name || sport?.name || 'a match';
+
+  // Send invitation notification (fire and forget)
+  const participantRecord = match.participants?.find(
+    (p: { id: string }) => p.id === participantId
+  ) as { player_id: string } | undefined;
+
+  if (participantRecord?.player_id) {
+    notifyMatchInvitation(
+      participantRecord.player_id,
+      matchId,
+      inviterName,
+      sportName,
+      match.match_date
+    ).catch(err => {
+      console.error('Failed to send invitation notification:', err);
+    });
+  }
+
+  return updatedParticipant;
+}
+
+/**
  * Parameters for searching nearby matches
  */
 export interface SearchNearbyMatchesParams {
@@ -1555,6 +1830,7 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
         gender,
         playing_hand,
         max_travel_distance,
+        reputation_score,
         notification_match_requests,
         notification_messages,
         notification_reminders,
@@ -1577,6 +1853,7 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
           gender,
           playing_hand,
           max_travel_distance,
+          reputation_score,
           notification_match_requests,
           notification_messages,
           notification_reminders,
@@ -1829,6 +2106,7 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
         gender,
         playing_hand,
         max_travel_distance,
+        reputation_score,
         notification_match_requests,
         notification_messages,
         notification_reminders,
@@ -1851,6 +2129,7 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
           gender,
           playing_hand,
           max_travel_distance,
+          reputation_score,
           notification_match_requests,
           notification_messages,
           notification_reminders,
@@ -2144,6 +2423,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
         gender,
         playing_hand,
         max_travel_distance,
+        reputation_score,
         notification_match_requests,
         notification_messages,
         notification_reminders,
@@ -2166,6 +2446,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
           gender,
           playing_hand,
           max_travel_distance,
+          reputation_score,
           notification_match_requests,
           notification_messages,
           notification_reminders,

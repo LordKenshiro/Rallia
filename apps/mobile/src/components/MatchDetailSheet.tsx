@@ -46,11 +46,9 @@ import {
   selectionHaptic,
   successHaptic,
   errorHaptic,
-  formatTimeRangeInTimezone,
   formatTimeInTimezone,
   getTimeDifferenceFromNow,
-  getMatchEndTimeDifferenceFromNow,
-  formatDateInTimezone,
+  formatIntuitiveDateInTimezone,
   getProfilePictureUrl,
   deriveMatchStatus,
 } from '@rallia/shared-utils';
@@ -65,15 +63,28 @@ import type { PlayerWithProfile, MatchParticipantWithPlayer } from '@rallia/shar
 
 const BASE_WHITE = '#ffffff';
 
-// Premium/Gold card colors for "Ready to Play" matches
-const GOLD_COLORS = {
-  light: '#FFE55C',
-  base: '#FFD700',
-  dark: '#FFA500',
-  deepGold: '#B8860B',
-  bronze: '#CD7F32',
-  shimmer: '#FFF8DC',
-} as const;
+// =============================================================================
+// TYPES & CONSTANTS
+// =============================================================================
+
+type MatchTier = 'mostWanted' | 'readyToPlay' | 'regular';
+
+/**
+ * Threshold for "high reputation" creator (percentage 0-100)
+ */
+const HIGH_REPUTATION_THRESHOLD = 90;
+
+/**
+ * Determine match tier based on court status and creator reputation
+ */
+function getMatchTier(courtStatus: string | null, creatorReputationScore?: number): MatchTier {
+  const isCourtBooked = courtStatus === 'reserved';
+  const isHighReputation = (creatorReputationScore ?? 0) >= HIGH_REPUTATION_THRESHOLD;
+
+  if (isCourtBooked && isHighReputation) return 'mostWanted';
+  if (isCourtBooked) return 'readyToPlay';
+  return 'regular';
+}
 
 // =============================================================================
 // TYPES
@@ -106,7 +117,7 @@ interface ThemeColors {
 
 /**
  * Get time display for match date/time
- * Returns time without timezone (timezone shown separately)
+ * Uses the same format as the cards: "Today • 14:00 - 16:00"
  */
 function getRelativeTimeDisplay(
   dateString: string,
@@ -115,7 +126,7 @@ function getRelativeTimeDisplay(
   timezone: string,
   locale: string,
   t: (key: TranslationKey, options?: Record<string, string | number | boolean>) => string
-): { label: string; timezoneCity: string; isUrgent: boolean; fullDate: string } {
+): { label: string; isUrgent: boolean } {
   const tz = timezone || 'UTC';
 
   // Calculate time difference to determine if urgent (within 3 hours)
@@ -123,21 +134,24 @@ function getRelativeTimeDisplay(
   const hoursDiff = Math.floor(msDiff / (1000 * 60 * 60));
   const isUrgent = hoursDiff >= 0 && hoursDiff < 3;
 
-  // Format time range without timezone city (extract separately)
+  // Get intuitive date label (Today, Tomorrow, Wednesday, or Jan 15)
+  const dateResult = formatIntuitiveDateInTimezone(dateString, tz, locale);
+
+  // Use translation for Today/Tomorrow, otherwise use the formatted date
+  let dateLabel: string;
+  if (dateResult.translationKey) {
+    dateLabel = t(dateResult.translationKey as TranslationKey);
+  } else {
+    dateLabel = dateResult.label;
+  }
+
+  // Format time range (locale-aware: 12h for English, 24h for French)
   const startResult = formatTimeInTimezone(dateString, startTime, tz, locale);
   const endResult = formatTimeInTimezone(dateString, endTime, tz, locale);
   const timeRange = `${startResult.formattedTime} - ${endResult.formattedTime}`;
-  const timezoneCity = startResult.tzCity;
+  const separator = t('common.time.timeSeparator' as TranslationKey);
 
-  // Full date for display in the match's timezone
-  const fullDate = formatDateInTimezone(dateString, tz, locale, {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  });
-
-  return { label: timeRange, timezoneCity, isUrgent, fullDate };
+  return { label: `${dateLabel}${separator}${timeRange}`, isUrgent };
 }
 
 /**
@@ -196,7 +210,7 @@ interface BadgeProps {
 
 const Badge: React.FC<BadgeProps> = ({ label, bgColor, textColor, icon }) => (
   <View style={[styles.badge, { backgroundColor: bgColor }]}>
-    {icon && <Ionicons name={icon} size={12} color={textColor} style={styles.badgeIcon} />}
+    {icon && <Ionicons name={icon} size={10} color={textColor} style={styles.badgeIcon} />}
     <Text size="xs" weight="semibold" color={textColor}>
       {label}
     </Text>
@@ -273,9 +287,14 @@ export const MatchDetailSheet: React.FC = () => {
   const [showCancelRequestModal, setShowCancelRequestModal] = useState(false);
   const [showKickModal, setShowKickModal] = useState(false);
   const [kickingParticipantId, setKickingParticipantId] = useState<string | null>(null);
+  const [showCancelInviteModal, setShowCancelInviteModal] = useState(false);
+  const [cancellingInvitationId, setCancellingInvitationId] = useState<string | null>(null);
 
   // Collapse/expand state for pending requests
   const [showAllRequests, setShowAllRequests] = useState(false);
+
+  // Collapse/expand state for invitations
+  const [showAllInvitations, setShowAllInvitations] = useState(false);
 
   // Requester details modal state
   const [selectedRequester, setSelectedRequester] = useState<MatchParticipantWithPlayer | null>(
@@ -292,6 +311,8 @@ export const MatchDetailSheet: React.FC = () => {
     rejectRequest,
     cancelRequest,
     kickParticipant,
+    cancelInvite,
+    resendInvite,
     isJoining,
     isLeaving,
     isCancelling,
@@ -299,6 +320,8 @@ export const MatchDetailSheet: React.FC = () => {
     isRejecting,
     isCancellingRequest,
     isKicking,
+    isCancellingInvite,
+    isResendingInvite,
     joinResult,
   } = useMatchActions(selectedMatch?.id, {
     onJoinSuccess: result => {
@@ -438,6 +461,48 @@ export const MatchDetailSheet: React.FC = () => {
       errorHaptic();
       setShowKickModal(false);
       setKickingParticipantId(null);
+      Alert.alert(t('alerts.error' as TranslationKey), error.message);
+    },
+    onCancelInviteSuccess: participant => {
+      successHaptic();
+      setShowCancelInviteModal(false);
+      setCancellingInvitationId(null);
+      if (selectedMatch) {
+        updateSelectedMatch({
+          ...selectedMatch,
+          participants: selectedMatch.participants?.map(p =>
+            p.id === participant.id ? { ...p, status: participant.status } : p
+          ),
+        });
+      }
+      Alert.alert(
+        t('alerts.success' as TranslationKey),
+        t('matchActions.cancelInviteSuccess' as TranslationKey)
+      );
+    },
+    onCancelInviteError: error => {
+      errorHaptic();
+      setShowCancelInviteModal(false);
+      setCancellingInvitationId(null);
+      Alert.alert(t('alerts.error' as TranslationKey), error.message);
+    },
+    onResendInviteSuccess: participant => {
+      successHaptic();
+      if (selectedMatch) {
+        updateSelectedMatch({
+          ...selectedMatch,
+          participants: selectedMatch.participants?.map(p =>
+            p.id === participant.id ? { ...p, status: participant.status } : p
+          ),
+        });
+      }
+      Alert.alert(
+        t('alerts.success' as TranslationKey),
+        t('matchActions.resendInviteSuccess' as TranslationKey)
+      );
+    },
+    onResendInviteError: error => {
+      errorHaptic();
       Alert.alert(t('alerts.error' as TranslationKey), error.message);
     },
   });
@@ -632,6 +697,33 @@ export const MatchDetailSheet: React.FC = () => {
     kickParticipant({ participantId: kickingParticipantId, hostId: playerId });
   }, [playerId, kickingParticipantId, kickParticipant]);
 
+  // Handle cancel invite - opens confirmation modal (host only)
+  const handleCancelInvite = useCallback(
+    (participantId: string) => {
+      if (!selectedMatch) return;
+      mediumHaptic();
+      setCancellingInvitationId(participantId);
+      setShowCancelInviteModal(true);
+    },
+    [selectedMatch]
+  );
+
+  // Confirm cancel invite
+  const handleConfirmCancelInvite = useCallback(() => {
+    if (!playerId || !cancellingInvitationId) return;
+    cancelInvite({ participantId: cancellingInvitationId, hostId: playerId });
+  }, [playerId, cancellingInvitationId, cancelInvite]);
+
+  // Handle resend invite - direct action (no confirmation needed)
+  const handleResendInvite = useCallback(
+    (participantId: string) => {
+      if (!selectedMatch || !playerId) return;
+      lightHaptic();
+      resendInvite({ participantId, hostId: playerId });
+    },
+    [selectedMatch, playerId, resendInvite]
+  );
+
   // Handle open in maps
   const handleOpenMaps = useCallback(() => {
     if (!selectedMatch) return;
@@ -700,12 +792,11 @@ export const MatchDetailSheet: React.FC = () => {
   const match = selectedMatch;
   const participantInfo = getParticipantInfo(match);
 
-  const {
-    label: timeLabel,
-    timezoneCity,
-    isUrgent,
-    fullDate,
-  } = getRelativeTimeDisplay(
+  // Determine match tier and get tier-specific accent colors
+  const creatorReputationScore = match.created_by_player?.reputation_score;
+  const tier = getMatchTier(match.court_status, creatorReputationScore);
+
+  const { label: timeLabel, isUrgent } = getRelativeTimeDisplay(
     match.match_date,
     match.start_time,
     match.end_time,
@@ -749,49 +840,6 @@ export const MatchDetailSheet: React.FC = () => {
   const isInProgress = derivedStatus === 'in_progress';
   const hasMatchEnded = derivedStatus === 'completed';
   const hasResult = !!match.result;
-
-  // Get status badge info for display
-  const getStatusBadgeInfo = () => {
-    if (isCancelled) {
-      return {
-        label: t('match.status.cancelled' as TranslationKey),
-        bgColor: neutral[400],
-        textColor: BASE_WHITE,
-        icon: 'close-circle' as keyof typeof Ionicons.glyphMap,
-      };
-    }
-    if (hasResult || hasMatchEnded) {
-      return {
-        label: t('match.status.completed' as TranslationKey),
-        bgColor: colors.statusCompleted,
-        textColor: BASE_WHITE,
-        icon: 'trophy' as keyof typeof Ionicons.glyphMap,
-      };
-    }
-    if (isInProgress) {
-      return {
-        label: t('match.status.inProgress' as TranslationKey),
-        bgColor: status.warning.DEFAULT,
-        textColor: BASE_WHITE,
-        icon: 'play-circle' as keyof typeof Ionicons.glyphMap,
-      };
-    }
-    if (isFull) {
-      return {
-        label: t('match.status.full' as TranslationKey),
-        bgColor: colors.statusFull,
-        textColor: BASE_WHITE,
-        icon: 'people' as keyof typeof Ionicons.glyphMap,
-      };
-    }
-    return {
-      label: t('match.status.open' as TranslationKey),
-      bgColor: colors.statusOpen,
-      textColor: BASE_WHITE,
-      icon: 'checkmark-circle' as keyof typeof Ionicons.glyphMap,
-    };
-  };
-  const statusBadgeInfo = getStatusBadgeInfo();
 
   // Build participant avatars list
   const participantAvatars: Array<{
@@ -869,6 +917,45 @@ export const MatchDetailSheet: React.FC = () => {
         };
       }) ?? [];
 
+  // Pending invitations (host sent invite, awaiting response) - for host only
+  const pendingInvitations =
+    match.participants
+      ?.filter(p => p.status === 'pending')
+      .map(p => {
+        const fullName =
+          p.player?.profile?.full_name ||
+          p.player?.profile?.display_name ||
+          t('matchDetail.host' as TranslationKey);
+        return {
+          id: p.id,
+          playerId: p.player_id,
+          name: fullName.split(' ')[0], // Show only first name
+          fullName,
+          avatarUrl: getProfilePictureUrl(p.player?.profile?.profile_picture_url),
+        };
+      }) ?? [];
+
+  // Declined invitations (invitee declined) - for host only
+  const declinedInvitations =
+    match.participants
+      ?.filter(p => p.status === 'declined')
+      .map(p => {
+        const fullName =
+          p.player?.profile?.full_name ||
+          p.player?.profile?.display_name ||
+          t('matchDetail.host' as TranslationKey);
+        return {
+          id: p.id,
+          playerId: p.player_id,
+          name: fullName.split(' ')[0], // Show only first name
+          fullName,
+          avatarUrl: getProfilePictureUrl(p.player?.profile?.profile_picture_url),
+        };
+      }) ?? [];
+
+  // Combined invitations for display
+  const allInvitations = [...pendingInvitations, ...declinedInvitations];
+
   // Cost display
   const costDisplay = match.is_court_free
     ? t('matchDetail.free' as TranslationKey)
@@ -891,11 +978,11 @@ export const MatchDetailSheet: React.FC = () => {
   // 6. Request mode → "Request to Join" button
   // 7. Default → "Join Now" button
   const renderActionButtons = () => {
-    // Prepare theme colors for Button component
-    const buttonThemeColors = {
-      primary: colors.primary,
+    // Prepare theme colors for Button component - success green for join actions
+    const successThemeColors = {
+      primary: status.success.DEFAULT,
       primaryForeground: BASE_WHITE,
-      buttonActive: colors.primary,
+      buttonActive: status.success.DEFAULT,
       buttonInactive: neutral[300],
       buttonTextActive: BASE_WHITE,
       buttonTextInactive: neutral[500],
@@ -905,11 +992,46 @@ export const MatchDetailSheet: React.FC = () => {
       background: colors.cardBackground,
     };
 
-    // Destructive button theme colors
+    // Accent theme colors for edit actions
+    const accentThemeColors = {
+      primary: accent[500],
+      primaryForeground: BASE_WHITE,
+      buttonActive: accent[500],
+      buttonInactive: neutral[300],
+      buttonTextActive: BASE_WHITE,
+      buttonTextInactive: neutral[500],
+      text: colors.text,
+      textMuted: colors.textMuted,
+      border: colors.border,
+      background: colors.cardBackground,
+    };
+
+    // Destructive button theme colors for cancel/leave
     const destructiveThemeColors = {
-      ...buttonThemeColors,
       primary: status.error.DEFAULT,
+      primaryForeground: BASE_WHITE,
       buttonActive: status.error.DEFAULT,
+      buttonInactive: neutral[300],
+      buttonTextActive: BASE_WHITE,
+      buttonTextInactive: neutral[500],
+      text: colors.text,
+      textMuted: colors.textMuted,
+      border: colors.border,
+      background: colors.cardBackground,
+    };
+
+    // Warning accent theme colors for pending states
+    const warningThemeColors = {
+      primary: accent[500],
+      primaryForeground: BASE_WHITE,
+      buttonActive: isDark ? accent[900] : accent[100],
+      buttonInactive: neutral[300],
+      buttonTextActive: isDark ? accent[300] : accent[700],
+      buttonTextInactive: neutral[500],
+      text: colors.text,
+      textMuted: colors.textMuted,
+      border: colors.border,
+      background: colors.cardBackground,
     };
 
     // Match is cancelled → Show cancelled info, no actions available
@@ -966,41 +1088,20 @@ export const MatchDetailSheet: React.FC = () => {
     }
 
     // Host: Edit + Cancel buttons (only if match hasn't ended)
-    // Edit is only available if no other players have joined
     if (isCreator) {
-      const hasJoinedParticipants =
-        (match.participants?.filter(p => p.status === 'joined')?.length ?? 0) > 0;
-
-      if (hasJoinedParticipants) {
-        // Only show Cancel button when participants have joined
-        return (
-          <Button
-            variant="outline"
-            onPress={handleCancelMatch}
-            style={styles.actionButton}
-            themeColors={destructiveThemeColors}
-            isDark={isDark}
-            loading={isCancelling}
-          >
-            {t('matches.cancelMatch' as TranslationKey)}
-          </Button>
-        );
-      }
-
-      // Show both Edit and Cancel when no participants have joined
       return (
         <>
           <Button
-            variant="outline"
+            variant="primary"
             onPress={handleEditMatch}
             style={styles.actionButton}
-            themeColors={buttonThemeColors}
+            themeColors={accentThemeColors}
             isDark={isDark}
           >
             {t('common.edit' as TranslationKey)}
           </Button>
           <Button
-            variant="outline"
+            variant="primary"
             onPress={handleCancelMatch}
             style={styles.cancelButton}
             themeColors={destructiveThemeColors}
@@ -1013,14 +1114,14 @@ export const MatchDetailSheet: React.FC = () => {
       );
     }
 
-    // User has pending request: Cancel Request button
+    // User has pending request: Cancel Request button (warning accent, disabled look)
     if (hasPendingRequest) {
       return (
         <Button
-          variant="outline"
+          variant="primary"
           onPress={handleCancelRequest}
           style={styles.actionButton}
-          themeColors={buttonThemeColors}
+          themeColors={warningThemeColors}
           isDark={isDark}
           loading={isCancellingRequest}
         >
@@ -1029,14 +1130,14 @@ export const MatchDetailSheet: React.FC = () => {
       );
     }
 
-    // Waitlisted user: Show Leave Waitlist only if match is still full
+    // Waitlisted user: Show Leave Waitlist only if match is still full (warning accent)
     if (isWaitlisted && isFull) {
       return (
         <Button
-          variant="outline"
+          variant="primary"
           onPress={handleLeaveMatch}
           style={styles.actionButton}
-          themeColors={buttonThemeColors}
+          themeColors={warningThemeColors}
           isDark={isDark}
           loading={isLeaving}
         >
@@ -1045,7 +1146,7 @@ export const MatchDetailSheet: React.FC = () => {
       );
     }
 
-    // Waitlisted user and spot opened up: Show Join/Request button
+    // Waitlisted user and spot opened up: Show Join/Request button (success green)
     if (isWaitlisted && !isFull) {
       if (match.join_mode === 'request') {
         return (
@@ -1053,6 +1154,8 @@ export const MatchDetailSheet: React.FC = () => {
             variant="primary"
             onPress={handleJoinMatch}
             style={styles.actionButton}
+            themeColors={successThemeColors}
+            isDark={isDark}
             loading={isJoining}
             disabled={isJoining || !playerId}
           >
@@ -1066,6 +1169,8 @@ export const MatchDetailSheet: React.FC = () => {
           variant="primary"
           onPress={handleJoinMatch}
           style={styles.actionButton}
+          themeColors={successThemeColors}
+          isDark={isDark}
           loading={isJoining}
           disabled={isJoining || !playerId}
         >
@@ -1074,14 +1179,14 @@ export const MatchDetailSheet: React.FC = () => {
       );
     }
 
-    // Participant (not host, joined): Leave button (only if match hasn't ended)
+    // Participant (not host, joined): Leave button (danger red)
     if (isParticipant) {
       return (
         <Button
-          variant="outline"
+          variant="primary"
           onPress={handleLeaveMatch}
           style={styles.actionButton}
-          themeColors={buttonThemeColors}
+          themeColors={destructiveThemeColors}
           isDark={isDark}
           loading={isLeaving}
         >
@@ -1090,13 +1195,15 @@ export const MatchDetailSheet: React.FC = () => {
       );
     }
 
-    // Match is full - offer to join waitlist
+    // Match is full - offer to join waitlist (success green)
     if (isFull) {
       return (
         <Button
           variant="primary"
           onPress={handleJoinMatch}
           style={styles.actionButton}
+          themeColors={successThemeColors}
+          isDark={isDark}
           loading={isJoining}
           disabled={isJoining || !playerId}
         >
@@ -1105,13 +1212,15 @@ export const MatchDetailSheet: React.FC = () => {
       );
     }
 
-    // Request to join mode
+    // Request to join mode (success green)
     if (match.join_mode === 'request') {
       return (
         <Button
           variant="primary"
           onPress={handleJoinMatch}
           style={styles.actionButton}
+          themeColors={successThemeColors}
+          isDark={isDark}
           loading={isJoining}
           disabled={isJoining || !playerId}
         >
@@ -1120,12 +1229,14 @@ export const MatchDetailSheet: React.FC = () => {
       );
     }
 
-    // Direct join
+    // Direct join (success green)
     return (
       <Button
         variant="primary"
         onPress={handleJoinMatch}
         style={styles.actionButton}
+        themeColors={successThemeColors}
+        isDark={isDark}
         loading={isJoining}
         disabled={isJoining || !playerId}
       >
@@ -1156,22 +1267,18 @@ export const MatchDetailSheet: React.FC = () => {
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <View style={styles.headerTop}>
           <View style={styles.headerTitleSection}>
-            {/* Match Time with Status Badge inline */}
-            <View style={styles.timeRow}>
+            {/* Match Date/Time - same format as cards */}
+            <View style={styles.dateRow}>
+              <Ionicons
+                name="calendar-outline"
+                size={20}
+                color={colors.iconMuted}
+                style={styles.calendarIcon}
+              />
               <Text size="xl" weight="bold" color={isUrgent ? colors.secondary : colors.text}>
                 {timeLabel}
               </Text>
-              <Badge
-                label={statusBadgeInfo.label}
-                bgColor={statusBadgeInfo.bgColor}
-                textColor={statusBadgeInfo.textColor}
-                icon={statusBadgeInfo.icon}
-              />
             </View>
-            {/* Full Date with Timezone */}
-            <Text size="sm" color={colors.textMuted} style={styles.fullDate}>
-              {fullDate} • {timezoneCity}
-            </Text>
           </View>
           <View style={styles.headerRight}>
             <TouchableOpacity
@@ -1248,29 +1355,17 @@ export const MatchDetailSheet: React.FC = () => {
         {hasAnyBadges && (
           <View style={[styles.section, { borderBottomColor: colors.border }]}>
             <View style={styles.badgesGrid}>
-              {/* Ready to Play badge (prominent - court already booked) */}
-              {match.court_status === 'reserved' && (
+              {/* Court Booked badge - uses secondary (coral) for important callout */}
+              {(tier === 'mostWanted' || tier === 'readyToPlay') && (
                 <Badge
-                  label={t('match.courtStatus.readyToPlay' as TranslationKey)}
-                  bgColor={GOLD_COLORS.base}
-                  textColor={BASE_WHITE}
+                  label={t('match.courtStatus.courtBooked' as TranslationKey)}
+                  bgColor={isDark ? `${secondary[400]}25` : `${secondary[500]}15`}
+                  textColor={isDark ? secondary[400] : secondary[600]}
                   icon="checkmark-circle"
                 />
               )}
 
-              {/* Format */}
-              {/* <Badge
-                label={
-                  match.format === 'doubles'
-                    ? t('match.format.doubles' as TranslationKey)
-                    : t('match.format.singles' as TranslationKey)
-                }
-                bgColor={isDark ? neutral[700] : neutral[200]}
-                textColor={colors.text}
-                icon={match.format === 'doubles' ? 'people' : 'person'}
-              /> */}
-
-              {/* Player expectation - distinct UI for competitive, casual, and both */}
+              {/* Player expectation - competitive uses accent (amber), casual uses primary (teal) */}
               {match.player_expectation && match.player_expectation !== 'both' && (
                 <Badge
                   label={
@@ -1280,27 +1375,37 @@ export const MatchDetailSheet: React.FC = () => {
                   }
                   bgColor={
                     match.player_expectation === 'competitive'
-                      ? secondary[500]
+                      ? isDark
+                        ? `${accent[400]}25`
+                        : `${accent[500]}15`
                       : isDark
-                        ? primary[700]
-                        : primary[500]
+                        ? `${primary[400]}25`
+                        : `${primary[500]}15`
                   }
-                  textColor={BASE_WHITE}
+                  textColor={
+                    match.player_expectation === 'competitive'
+                      ? isDark
+                        ? accent[400]
+                        : accent[600]
+                      : isDark
+                        ? primary[400]
+                        : primary[600]
+                  }
                   icon={match.player_expectation === 'competitive' ? 'trophy' : 'happy'}
                 />
               )}
 
-              {/* Min rating */}
+              {/* Min rating - uses primary (teal) for level info */}
               {match.min_rating_score && match.min_rating_score.label && (
                 <Badge
                   label={match.min_rating_score.label}
-                  bgColor={colors.primary}
-                  textColor={BASE_WHITE}
+                  bgColor={isDark ? `${primary[400]}25` : `${primary[500]}15`}
+                  textColor={isDark ? primary[400] : primary[600]}
                   icon="analytics"
                 />
               )}
 
-              {/* Gender preference */}
+              {/* Gender preference - neutral style for filter info */}
               {match.preferred_opponent_gender && (
                 <Badge
                   label={
@@ -1310,18 +1415,18 @@ export const MatchDetailSheet: React.FC = () => {
                         ? t('match.gender.womenOnly' as TranslationKey)
                         : t('match.gender.other' as TranslationKey)
                   }
-                  bgColor={isDark ? neutral[700] : neutral[200]}
-                  textColor={colors.text}
+                  bgColor={isDark ? neutral[800] : neutral[100]}
+                  textColor={isDark ? neutral[300] : neutral[600]}
                   icon={match.preferred_opponent_gender === 'male' ? 'male' : 'female'}
                 />
               )}
 
-              {/* Join mode */}
+              {/* Join mode - neutral style for filter info */}
               {match.join_mode === 'request' && (
                 <Badge
                   label={t('match.joinMode.request' as TranslationKey)}
-                  bgColor={isDark ? neutral[700] : neutral[200]}
-                  textColor={colors.text}
+                  bgColor={isDark ? neutral[800] : neutral[100]}
+                  textColor={isDark ? neutral[300] : neutral[600]}
                   icon="hand-left"
                 />
               )}
@@ -1541,6 +1646,158 @@ export const MatchDetailSheet: React.FC = () => {
               )}
             </View>
           )}
+
+          {/* Invitations Section - only visible to host */}
+          {isCreator && allInvitations.length > 0 && (
+            <View style={styles.pendingRequestsSection}>
+              <View style={styles.pendingRequestsHeader}>
+                <Text
+                  size="sm"
+                  weight="semibold"
+                  color={colors.primary}
+                  style={styles.pendingRequestsTitle}
+                >
+                  {t('matchActions.invitations' as TranslationKey)} ({allInvitations.length})
+                </Text>
+              </View>
+              {(showAllInvitations ? allInvitations : allInvitations.slice(0, 3)).map(
+                invitation => {
+                  const isPending = pendingInvitations.some(p => p.id === invitation.id);
+                  const statusColor = isPending ? status.warning.DEFAULT : neutral[400];
+                  const statusLabel = isPending
+                    ? t('matchActions.participantStatus.pending' as TranslationKey)
+                    : t('matchActions.participantStatus.declined' as TranslationKey);
+
+                  return (
+                    <View
+                      key={invitation.id}
+                      style={[
+                        styles.pendingRequestInfo,
+                        {
+                          backgroundColor: themeColors.muted,
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                          borderRadius: radiusPixels.md,
+                          paddingHorizontal: spacingPixels[3],
+                          paddingVertical: spacingPixels[2.5],
+                        },
+                      ]}
+                    >
+                      <View style={styles.pendingRequestContent}>
+                        <View
+                          style={[styles.pendingRequestAvatar, { backgroundColor: colors.primary }]}
+                        >
+                          {invitation.avatarUrl ? (
+                            <Image
+                              source={{ uri: invitation.avatarUrl }}
+                              style={styles.pendingRequestAvatarImage}
+                            />
+                          ) : (
+                            <Ionicons name="person" size={16} color={BASE_WHITE} />
+                          )}
+                        </View>
+                        <View style={styles.pendingRequestNameContainer}>
+                          <Text
+                            size="sm"
+                            weight="medium"
+                            color={colors.text}
+                            numberOfLines={1}
+                            style={styles.pendingRequestName}
+                          >
+                            {invitation.name}
+                          </Text>
+                          <View
+                            style={[
+                              styles.pendingRequestRatingBadge,
+                              { backgroundColor: statusColor + '20' },
+                            ]}
+                          >
+                            <Ionicons
+                              name={isPending ? 'time-outline' : 'close-circle-outline'}
+                              size={10}
+                              color={statusColor}
+                              style={styles.pendingRequestRatingIcon}
+                            />
+                            <Text size="xs" weight="medium" color={statusColor}>
+                              {statusLabel}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                      <View style={styles.pendingRequestActions}>
+                        {isPending ? (
+                          <>
+                            {/* Resend button for pending invitations */}
+                            <TouchableOpacity
+                              style={[
+                                styles.requestActionButton,
+                                { backgroundColor: colors.primary },
+                              ]}
+                              onPress={() => invitation.id && handleResendInvite(invitation.id)}
+                              disabled={isResendingInvite || isCancellingInvite}
+                              activeOpacity={0.7}
+                            >
+                              <Ionicons name="refresh" size={18} color={BASE_WHITE} />
+                            </TouchableOpacity>
+                            {/* Cancel button for pending invitations */}
+                            <TouchableOpacity
+                              style={[
+                                styles.requestActionButton,
+                                { backgroundColor: status.error.DEFAULT },
+                              ]}
+                              onPress={() => invitation.id && handleCancelInvite(invitation.id)}
+                              disabled={isResendingInvite || isCancellingInvite}
+                              activeOpacity={0.7}
+                            >
+                              <Ionicons name="close" size={18} color={BASE_WHITE} />
+                            </TouchableOpacity>
+                          </>
+                        ) : (
+                          /* Resend button for declined invitations */
+                          <TouchableOpacity
+                            style={[
+                              styles.requestActionButton,
+                              { backgroundColor: colors.primary },
+                            ]}
+                            onPress={() => invitation.id && handleResendInvite(invitation.id)}
+                            disabled={isResendingInvite || isCancellingInvite}
+                            activeOpacity={0.7}
+                          >
+                            <Ionicons name="refresh" size={18} color={BASE_WHITE} />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </View>
+                  );
+                }
+              )}
+              {/* Show more/less toggle when there are more than 3 invitations */}
+              {allInvitations.length > 3 && (
+                <TouchableOpacity
+                  style={styles.showMoreButton}
+                  onPress={() => {
+                    lightHaptic();
+                    setShowAllInvitations(!showAllInvitations);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text size="sm" weight="medium" color={colors.primary}>
+                    {showAllInvitations
+                      ? t('common.showLess' as TranslationKey)
+                      : t('matchActions.showMoreInvitations' as TranslationKey, {
+                          count: allInvitations.length - 3,
+                        })}
+                  </Text>
+                  <Ionicons
+                    name={showAllInvitations ? 'chevron-up' : 'chevron-down'}
+                    size={16}
+                    color={colors.primary}
+                    style={styles.showMoreIcon}
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
         </View>
 
         {/* Location Section - Tappable to open maps */}
@@ -1595,7 +1852,7 @@ export const MatchDetailSheet: React.FC = () => {
             >
               <View>
                 <Text size="sm" color={colors.textMuted}>
-                  {t('matchDetail.estimatedCost' as TranslationKey)}
+                  {t('matchDetail.courtEstimatedCost' as TranslationKey)}
                 </Text>
                 <Text
                   size="base"
@@ -1735,6 +1992,22 @@ export const MatchDetailSheet: React.FC = () => {
         destructive
         isLoading={isKicking}
       />
+
+      {/* Cancel Invitation Confirmation Modal */}
+      <ConfirmationModal
+        visible={showCancelInviteModal}
+        onClose={() => {
+          setShowCancelInviteModal(false);
+          setCancellingInvitationId(null);
+        }}
+        onConfirm={handleConfirmCancelInvite}
+        title={t('matchActions.cancelInviteConfirmTitle' as TranslationKey)}
+        message={t('matchActions.cancelInviteConfirmMessage' as TranslationKey)}
+        confirmLabel={t('matchActions.cancelInvite' as TranslationKey)}
+        cancelLabel={t('common.cancel' as TranslationKey)}
+        destructive
+        isLoading={isCancellingInvite}
+      />
     </BottomSheetModal>
   );
 };
@@ -1786,32 +2059,23 @@ const styles = StyleSheet.create({
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   headerTitleSection: {
     flex: 1,
     marginRight: spacingPixels[3],
-    alignItems: 'flex-start',
   },
-  timeRow: {
+  dateRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacingPixels[2],
-    flexWrap: 'wrap',
-    marginBottom: spacingPixels[1],
+  },
+  calendarIcon: {
+    marginRight: spacingPixels[2],
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[2],
-  },
-  fullDate: {
-    marginTop: spacingPixels[1],
-  },
-  statusBadge: {
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[1.5],
-    borderRadius: radiusPixels.full,
   },
   closeButton: {
     width: 32,
@@ -1903,15 +2167,13 @@ const styles = StyleSheet.create({
   },
   kickButton: {
     position: 'absolute',
-    top: -4,
+    top: 0,
     right: -4,
     width: 18,
     height: 18,
     borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: BASE_WHITE,
   },
   spotsText: {
     marginTop: spacingPixels[3],
@@ -2047,17 +2309,23 @@ const styles = StyleSheet.create({
   badgesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacingPixels[2],
+    gap: spacingPixels[1.5],
   },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[1.5],
+    paddingHorizontal: spacingPixels[2.5],
+    paddingVertical: spacingPixels[1],
     borderRadius: radiusPixels.full,
+    // Subtle shadow for badge depth
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
   },
   badgeIcon: {
-    marginRight: spacingPixels[1.5],
+    marginRight: spacingPixels[1],
   },
 
   // Notes

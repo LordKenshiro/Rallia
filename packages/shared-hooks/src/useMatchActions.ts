@@ -13,6 +13,8 @@ import {
   rejectJoinRequest,
   cancelJoinRequest,
   kickParticipant,
+  cancelInvitation,
+  resendInvitation,
   type JoinMatchResult,
 } from '@rallia/shared-services';
 import type { Match, MatchParticipant } from '@rallia/shared-types';
@@ -91,6 +93,26 @@ export interface UseMatchActionsOptions {
    * Callback when kick participant fails
    */
   onKickError?: (error: Error) => void;
+
+  /**
+   * Callback when cancel invitation succeeds (host cancelling a pending invitation)
+   */
+  onCancelInviteSuccess?: (participant: MatchParticipant) => void;
+
+  /**
+   * Callback when cancel invitation fails
+   */
+  onCancelInviteError?: (error: Error) => void;
+
+  /**
+   * Callback when resend invitation succeeds (host resending an invitation)
+   */
+  onResendInviteSuccess?: (participant: MatchParticipant) => void;
+
+  /**
+   * Callback when resend invitation fails
+   */
+  onResendInviteError?: (error: Error) => void;
 }
 
 /**
@@ -145,6 +167,10 @@ export function useMatchActions(matchId: string | undefined, options: UseMatchAc
     onCancelRequestError,
     onKickSuccess,
     onKickError,
+    onCancelInviteSuccess,
+    onCancelInviteError,
+    onResendInviteSuccess,
+    onResendInviteError,
   } = options;
 
   const queryClient = useQueryClient();
@@ -291,6 +317,46 @@ export function useMatchActions(matchId: string | undefined, options: UseMatchAc
     },
   });
 
+  // Cancel Invitation Mutation - for host cancelling a pending invitation
+  const cancelInviteMutation = useMutation<
+    MatchParticipant,
+    Error,
+    { participantId: string; hostId: string }
+  >({
+    mutationFn: async ({ participantId, hostId }) => {
+      if (!matchId) throw new Error('Match ID is required');
+      return cancelInvitation(matchId, participantId, hostId);
+    },
+    onSuccess: async participant => {
+      // Wait for cache invalidation before calling success callback
+      await invalidateMatchQueries();
+      onCancelInviteSuccess?.(participant);
+    },
+    onError: error => {
+      onCancelInviteError?.(error);
+    },
+  });
+
+  // Resend Invitation Mutation - for host resending an invitation
+  const resendInviteMutation = useMutation<
+    MatchParticipant,
+    Error,
+    { participantId: string; hostId: string }
+  >({
+    mutationFn: async ({ participantId, hostId }) => {
+      if (!matchId) throw new Error('Match ID is required');
+      return resendInvitation(matchId, participantId, hostId);
+    },
+    onSuccess: async participant => {
+      // Wait for cache invalidation before calling success callback
+      await invalidateMatchQueries();
+      onResendInviteSuccess?.(participant);
+    },
+    onError: error => {
+      onResendInviteError?.(error);
+    },
+  });
+
   return {
     // Join actions
     /**
@@ -365,6 +431,28 @@ export function useMatchActions(matchId: string | undefined, options: UseMatchAc
     isKicking: kickMutation.isPending,
     kickError: kickMutation.error,
 
+    // Cancel invitation actions (host only)
+    /**
+     * Cancel a pending invitation (host only)
+     * @param params.participantId - The participant record ID
+     * @param params.hostId - The host's player ID
+     */
+    cancelInvite: cancelInviteMutation.mutate,
+    cancelInviteAsync: cancelInviteMutation.mutateAsync,
+    isCancellingInvite: cancelInviteMutation.isPending,
+    cancelInviteError: cancelInviteMutation.error,
+
+    // Resend invitation actions (host only)
+    /**
+     * Resend an invitation (host only)
+     * @param params.participantId - The participant record ID
+     * @param params.hostId - The host's player ID
+     */
+    resendInvite: resendInviteMutation.mutate,
+    resendInviteAsync: resendInviteMutation.mutateAsync,
+    isResendingInvite: resendInviteMutation.isPending,
+    resendInviteError: resendInviteMutation.error,
+
     // Combined loading state
     /**
      * Whether any action is in progress
@@ -376,7 +464,9 @@ export function useMatchActions(matchId: string | undefined, options: UseMatchAc
       acceptMutation.isPending ||
       rejectMutation.isPending ||
       cancelRequestMutation.isPending ||
-      kickMutation.isPending,
+      kickMutation.isPending ||
+      cancelInviteMutation.isPending ||
+      resendInviteMutation.isPending,
 
     // Reset all mutations
     /**
@@ -390,6 +480,8 @@ export function useMatchActions(matchId: string | undefined, options: UseMatchAc
       rejectMutation.reset();
       cancelRequestMutation.reset();
       kickMutation.reset();
+      cancelInviteMutation.reset();
+      resendInviteMutation.reset();
     },
   };
 }

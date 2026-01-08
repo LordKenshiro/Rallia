@@ -88,6 +88,17 @@
     "chat": "Messagerie",
     "notifications": "Notifications"
   },
+  "screens": {
+    "profile": "Profil",
+    "sportProfile": "Profil sportif",
+    "settings": "Paramètres",
+    "notifications": "Notifications",
+    "notificationPreferences": "Préférences de notifications",
+    "permissions": "Permissions",
+    "ratingProofs": "Preuves de classement",
+    "publicMatches": "Parties publiques",
+    "playerMatches": "Mes parties"
+  },
   "notifications": {
     "title": "Notifications",
     "empty": "Aucune notification",
@@ -520,7 +531,21 @@
     "kickSuccess": "Le joueur a été retiré de la partie",
     "kickConfirmTitle": "Retirer le joueur?",
     "kickConfirmMessage": "Ce joueur sera retiré de la partie et sera notifié.",
-    "genderMismatch": "Cette partie est réservée aux joueurs d'un genre différent."
+    "genderMismatch": "Cette partie est réservée aux joueurs d'un genre différent.",
+    "invitations": "Invitations",
+    "pendingInvitations": "Invitations en attente",
+    "declinedInvitations": "Refusées",
+    "cancelInvite": "Annuler",
+    "resendInvite": "Renvoyer",
+    "cancelInviteConfirmTitle": "Annuler l'invitation?",
+    "cancelInviteConfirmMessage": "L'invitation sera révoquée. Le joueur ne pourra plus rejoindre via cette invitation.",
+    "cancelInviteSuccess": "Invitation annulée",
+    "resendInviteSuccess": "Invitation renvoyée",
+    "showMoreInvitations": "+{count} autres invitations",
+    "participantStatus": {
+      "pending": "En attente",
+      "declined": "Refusé"
+    }
   },
   "ratings": {
     "title": "Classements",
@@ -603,7 +628,7 @@
     "participantsNeeded": "{count} requis",
     "joinMode": {
       "direct": "Rejoindre",
-      "request": "Demande"
+      "request": "Sur demande"
     },
     "rating": {
       "minimum": "{rating}+"
@@ -626,11 +651,11 @@
       "courtBooked": "Terrain Réservé"
     },
     "cta": {
-      "join": "Rejoindre",
-      "askToJoin": "Demander",
+      "join": "Rejoindre la partie",
+      "askToJoin": "Demander à rejoindre",
       "full": "Complet",
-      "view": "Voir",
-      "viewResults": "Résultats",
+      "view": "Voir détails",
+      "viewResults": "Voir résultats",
       "cancelled": "Annulé",
       "cancel": "Annuler",
       "edit": "Modifier",
@@ -648,6 +673,7 @@
     "openSpots": "Places disponibles",
     "court": "Terrain",
     "estimatedCost": "Coût estimé",
+    "courtEstimatedCost": "Coût estimé du terrain",
     "notes": "Notes",
     "joinNow": "Rejoindre",
     "requestToJoin": "Demander à rejoindre",

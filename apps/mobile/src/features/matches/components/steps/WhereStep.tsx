@@ -33,6 +33,7 @@ import type {
   MatchFormSchemaData,
   FacilitySearchResult,
   PlacePrediction,
+  MatchWithDetails,
 } from '@rallia/shared-types';
 import type { TranslationKey, TranslationOptions } from '../../../../hooks/useTranslation';
 import { useUserLocation } from '../../../../hooks/useUserLocation';
@@ -75,6 +76,8 @@ interface WhereStepProps {
   onSlotBooked?: (slotData: BookedSlotData) => void;
   /** Optional facility ID to pre-select when step loads */
   preferredFacilityId?: string;
+  /** Match data when in edit mode - used to initialize facility/location state */
+  editMatch?: MatchWithDetails;
 }
 
 interface LocationTypeCardProps {
@@ -568,6 +571,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   deviceTimezone,
   onSlotBooked,
   preferredFacilityId,
+  editMatch,
 }) => {
   const {
     setValue,
@@ -579,7 +583,6 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   const locationType = useWatch({ control, name: 'locationType' });
   const locationName = useWatch({ control, name: 'locationName' });
   const locationAddress = useWatch({ control, name: 'locationAddress' });
-  const facilityId = useWatch({ control, name: 'facilityId' });
 
   // Local state for search and selected facility
   const [searchQuery, setSearchQuery] = useState('');
@@ -605,6 +608,43 @@ export const WhereStep: React.FC<WhereStepProps> = ({
     facility: FacilitySearchResult;
     slot: FormattedSlot;
   } | null>(null);
+
+  // Track if edit mode initialization has been done
+  const hasInitializedFromEdit = useRef(false);
+
+  // Initialize local state from editMatch when in edit mode
+  useEffect(() => {
+    // Only run once and only when editMatch is provided
+    if (hasInitializedFromEdit.current || !editMatch) {
+      return;
+    }
+
+    hasInitializedFromEdit.current = true;
+
+    // Initialize facility state if locationType is 'facility' and we have facility data
+    if (editMatch.location_type === 'facility' && editMatch.facility) {
+      const facility = editMatch.facility;
+      // Convert Facility to FacilitySearchResult format
+      const facilitySearchResult: FacilitySearchResult = {
+        id: facility.id,
+        name: facility.name,
+        city: facility.city,
+        address: facility.address,
+        distance_meters: null, // Not available in edit mode
+        data_provider_id: facility.data_provider_id,
+        data_provider_type: null, // Would need to be fetched from data_provider table
+        booking_url_template: null, // Would need to be fetched from data_provider table
+        external_provider_id: facility.external_provider_id,
+        timezone: facility.timezone,
+      };
+      setSelectedFacility(facilitySearchResult);
+    }
+
+    // Initialize custom location state if locationType is 'custom' and we have location data
+    if (editMatch.location_type === 'custom' && editMatch.location_name) {
+      setHasSelectedPlace(true);
+    }
+  }, [editMatch]);
 
   // Listen for app returning to foreground after external booking
   useEffect(() => {
@@ -722,8 +762,18 @@ export const WhereStep: React.FC<WhereStepProps> = ({
     setPendingBookingSlot(null);
   }, []);
 
+  // Track previous sportId to only reset on actual sport changes (not initial mount)
+  const prevSportIdRef = useRef<string | undefined>(sportId);
+
   // Reset state when sportId changes (when switching sports)
+  // Skip initial mount to allow edit mode initialization to persist
   useEffect(() => {
+    // Skip if this is the initial mount (sportId hasn't changed yet)
+    if (prevSportIdRef.current === sportId) {
+      return;
+    }
+    prevSportIdRef.current = sportId;
+
     setSelectedFacility(null);
     setSearchQuery('');
     setPlaceSearchQuery('');
@@ -870,46 +920,37 @@ export const WhereStep: React.FC<WhereStepProps> = ({
     clearPredictions();
   }, [setValue, clearPredictions]);
 
-  // Handle location type changes - reset fields appropriately
+  // Handle location type changes - clear data from the PREVIOUS location type
   const handleLocationTypeChange = useCallback(
     (newLocationType: 'facility' | 'custom' | 'tbd') => {
+      if (locationType === newLocationType) {
+        return;
+      }
+
       lightHaptic();
       setValue('locationType', newLocationType, { shouldDirty: true });
 
-      // Clear fields based on the new type
-      if (newLocationType === 'facility') {
-        setValue('locationName', undefined, { shouldDirty: true });
-        setValue('locationAddress', undefined, { shouldDirty: true });
-        setValue('customLatitude', undefined, { shouldDirty: true });
-        setValue('customLongitude', undefined, { shouldDirty: true });
-        setPlaceSearchQuery('');
-        setHasSelectedPlace(false);
-        clearPredictions();
-      } else if (newLocationType === 'custom') {
-        setSelectedFacility(null);
-        setValue('facilityId', undefined, { shouldDirty: true });
-        setValue('locationName', undefined, { shouldDirty: true });
-        setValue('locationAddress', undefined, { shouldDirty: true });
-        setValue('customLatitude', undefined, { shouldDirty: true });
-        setValue('customLongitude', undefined, { shouldDirty: true });
-        setSearchQuery('');
-        setPlaceSearchQuery('');
-        setHasSelectedPlace(false);
-        clearPredictions();
-      } else if (newLocationType === 'tbd') {
-        setSelectedFacility(null);
-        setValue('facilityId', undefined, { shouldDirty: true });
-        setValue('locationName', undefined, { shouldDirty: true });
-        setValue('locationAddress', undefined, { shouldDirty: true });
-        setValue('customLatitude', undefined, { shouldDirty: true });
-        setValue('customLongitude', undefined, { shouldDirty: true });
-        setSearchQuery('');
-        setPlaceSearchQuery('');
-        setHasSelectedPlace(false);
-        clearPredictions();
-      }
+      // Clear all location-related data when switching types
+      // Use empty strings for string fields - emptyToNull in the service layer converts them to null for the database
+      setSelectedFacility(null);
+      setValue('facilityId', '', { shouldDirty: true });
+      setValue('courtId', '', { shouldDirty: true });
+      setValue('courtStatus', 'to_book', { shouldDirty: true });
+      setValue('locationName', '', { shouldDirty: true });
+      setValue('locationAddress', '', { shouldDirty: true });
+      setValue('customLatitude', undefined, { shouldDirty: true });
+      setValue('customLongitude', undefined, { shouldDirty: true });
+      setValue('isCourtFree', true, { shouldDirty: true });
+      setValue('costSplitType', 'equal', { shouldDirty: true });
+      setValue('estimatedCost', 0, { shouldDirty: true });
+
+      // Reset UI state
+      setSearchQuery('');
+      setPlaceSearchQuery('');
+      setHasSelectedPlace(false);
+      clearPredictions();
     },
-    [setValue, clearPredictions]
+    [setValue, clearPredictions, locationType]
   );
 
   // Handle infinite scroll via ScrollView

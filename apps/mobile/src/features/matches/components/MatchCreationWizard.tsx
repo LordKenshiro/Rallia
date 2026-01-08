@@ -383,6 +383,8 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     initialValues,
   });
 
+  console.log('values', values);
+
   // Draft persistence
   const {
     hasDraft,
@@ -578,13 +580,22 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   const goToNextStep = useCallback(async () => {
     Keyboard.dismiss();
 
-    // Special handling for step 1 (Where): show alert if facility is not selected
-    if (currentStep === 1 && values.locationType === 'facility' && !values.facilityId) {
-      warningHaptic();
-      Alert.alert(t('matchCreation.validation.facilityRequired' as TranslationKey), '', [
-        { text: t('common.ok' as TranslationKey) },
-      ]);
-      return;
+    // Special handling for step 1 (Where): show alert if facility or custom location is not selected
+    if (currentStep === 1) {
+      if (values.locationType === 'facility' && !values.facilityId) {
+        warningHaptic();
+        Alert.alert(t('matchCreation.validation.facilityRequired' as TranslationKey), '', [
+          { text: t('common.ok' as TranslationKey) },
+        ]);
+        return;
+      }
+      if (values.locationType === 'custom' && !values.locationName) {
+        warningHaptic();
+        Alert.alert(t('matchCreation.validation.locationNameRequired' as TranslationKey), '', [
+          { text: t('common.ok' as TranslationKey) },
+        ]);
+        return;
+      }
     }
 
     const isValid = await validateStep(currentStep as 1 | 2 | 3);
@@ -647,11 +658,6 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     },
     [form]
   );
-
-  // Clear booked slot data when location type changes away from facility or facility is cleared
-  const handleClearBooking = useCallback(() => {
-    setBookedSlotData(null);
-  }, []);
 
   // Handle form submission
   const handleSubmit = useCallback(async () => {
@@ -941,6 +947,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                 deviceTimezone={timezone}
                 onSlotBooked={handleSlotBooked}
                 preferredFacilityId={preferredFacilityId}
+                editMatch={editMatch}
               />
             </View>
 

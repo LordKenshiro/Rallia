@@ -88,6 +88,17 @@
     "chat": "Chat",
     "notifications": "Notifications"
   },
+  "screens": {
+    "profile": "Profile",
+    "sportProfile": "Sport Profile",
+    "settings": "Settings",
+    "notifications": "Notifications",
+    "notificationPreferences": "Notification Preferences",
+    "permissions": "Permissions",
+    "ratingProofs": "Rating Proofs",
+    "publicMatches": "Public Games",
+    "playerMatches": "My Games"
+  },
   "notifications": {
     "title": "Notifications",
     "empty": "No notifications yet",
@@ -520,7 +531,21 @@
     "kickSuccess": "Player has been removed from the game",
     "kickConfirmTitle": "Remove Player?",
     "kickConfirmMessage": "This player will be removed from the game and notified.",
-    "genderMismatch": "This game is only open to players of a different gender."
+    "genderMismatch": "This game is only open to players of a different gender.",
+    "invitations": "Invitations",
+    "pendingInvitations": "Pending Invitations",
+    "declinedInvitations": "Declined",
+    "cancelInvite": "Cancel",
+    "resendInvite": "Resend",
+    "cancelInviteConfirmTitle": "Cancel Invitation?",
+    "cancelInviteConfirmMessage": "This will revoke the invitation. The player will no longer be able to join through this invite.",
+    "cancelInviteSuccess": "Invitation cancelled",
+    "resendInviteSuccess": "Invitation resent",
+    "showMoreInvitations": "+{count} more invitations",
+    "participantStatus": {
+      "pending": "Pending",
+      "declined": "Declined"
+    }
   },
   "ratings": {
     "title": "Ratings",
@@ -603,7 +628,7 @@
     "participantsNeeded": "{count} needed",
     "joinMode": {
       "direct": "Direct Join",
-      "request": "Request"
+      "request": "On request"
     },
     "rating": {
       "minimum": "{rating}+"
@@ -626,11 +651,11 @@
       "courtBooked": "Court Booked"
     },
     "cta": {
-      "join": "Join",
-      "askToJoin": "Ask to Join",
+      "join": "Join game",
+      "askToJoin": "Request to join",
       "full": "Full",
-      "view": "View",
-      "viewResults": "Results",
+      "view": "View details",
+      "viewResults": "View results",
       "cancelled": "Cancelled",
       "cancel": "Cancel",
       "edit": "Edit",
@@ -648,6 +673,7 @@
     "openSpots": "Open spots",
     "court": "Court",
     "estimatedCost": "Estimated cost",
+    "courtEstimatedCost": "Court estimated cost",
     "notes": "Notes",
     "joinNow": "Join game",
     "requestToJoin": "Request to join",

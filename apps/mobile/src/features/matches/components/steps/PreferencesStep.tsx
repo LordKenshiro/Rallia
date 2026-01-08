@@ -460,37 +460,39 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
         </View>
       )}
 
-      {/* Court cost toggle */}
-      <View style={styles.fieldGroup}>
-        <View style={[styles.toggleRow, { borderColor: colors.border }]}>
-          <View style={styles.toggleTextContainer}>
-            <Text size="base" weight="semibold" color={colors.text}>
-              {t('matchCreation.fields.isCourtFree' as TranslationKey)}
-            </Text>
-            <Text size="xs" color={colors.textMuted}>
-              {isCourtFree
-                ? t('matchCreation.fields.isCourtFreeYes' as TranslationKey)
-                : t('matchCreation.fields.isCourtFreeNo' as TranslationKey)}
-            </Text>
+      {/* Court cost toggle - hide for TBD locations */}
+      {locationType !== 'tbd' && (
+        <View style={styles.fieldGroup}>
+          <View style={[styles.toggleRow, { borderColor: colors.border }]}>
+            <View style={styles.toggleTextContainer}>
+              <Text size="base" weight="semibold" color={colors.text}>
+                {t('matchCreation.fields.isCourtFree' as TranslationKey)}
+              </Text>
+              <Text size="xs" color={colors.textMuted}>
+                {isCourtFree
+                  ? t('matchCreation.fields.isCourtFreeYes' as TranslationKey)
+                  : t('matchCreation.fields.isCourtFreeNo' as TranslationKey)}
+              </Text>
+            </View>
+            <Switch
+              value={isCourtFree}
+              onValueChange={value => {
+                lightHaptic();
+                setValue('isCourtFree', value, { shouldValidate: true, shouldDirty: true });
+                // Clear estimated cost when toggling back to free
+                if (value) {
+                  setValue('estimatedCost', undefined, { shouldDirty: true });
+                }
+              }}
+              trackColor={{ false: colors.border, true: colors.buttonActive }}
+              thumbColor={colors.buttonTextActive}
+            />
           </View>
-          <Switch
-            value={isCourtFree}
-            onValueChange={value => {
-              lightHaptic();
-              setValue('isCourtFree', value, { shouldValidate: true, shouldDirty: true });
-              // Clear estimated cost when toggling back to free
-              if (value) {
-                setValue('estimatedCost', undefined, { shouldDirty: true });
-              }
-            }}
-            trackColor={{ false: colors.border, true: colors.buttonActive }}
-            thumbColor={colors.buttonTextActive}
-          />
         </View>
-      </View>
+      )}
 
-      {/* Cost options (only if not free) */}
-      {!isCourtFree && (
+      {/* Cost options (only if not free and not TBD location) */}
+      {!isCourtFree && locationType !== 'tbd' && (
         <>
           {/* Estimated cost input */}
           <View style={styles.fieldGroup}>

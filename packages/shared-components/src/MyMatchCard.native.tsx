@@ -2,12 +2,13 @@
  * MyMatchCard Component - Compact Card for "My Matches" Section
  *
  * A minimal, reminder-focused card showing only essential info:
- * - Dynamic gradient backgrounds based on match type (competitive/casual)
- * - Animated gold border for "Ready to Play" matches (preserves base palette)
+ * - Three-tier visual hierarchy based on match desirability:
+ *   - Most Wanted: Court booked + high reputation creator (90%+) → gold/amber
+ *   - Ready to Play: Court booked only → secondary/coral tones
+ *   - Regular: Default → primary/teal tones
  * - Date/time prominently displayed with urgent animation
  * - Location (brief)
  * - Participant avatars
- * - Sport-colored accent
  */
 
 import React, { useMemo, useEffect, useRef, useCallback } from 'react';
@@ -32,86 +33,96 @@ import type { MatchWithDetails } from '@rallia/shared-types';
 import {
   formatTimeInTimezone,
   getTimeDifferenceFromNow,
-  formatDateInTimezone,
+  formatIntuitiveDateInTimezone,
   getProfilePictureUrl,
   deriveMatchStatus,
 } from '@rallia/shared-utils';
 
 // =============================================================================
-// DYNAMIC GRADIENT PALETTES (using design system tokens)
+// TIER-BASED GRADIENT PALETTES (using design system tokens)
 // =============================================================================
 
 /**
- * Match type color palettes for dynamic backgrounds
+ * Match tier determines visual styling based on desirability:
+ * - mostWanted: Court booked + high reputation creator (90%+) → accent/gold
+ * - readyToPlay: Court booked only → secondary/coral
+ * - regular: Default → primary/teal
+ */
+type MatchTier = 'mostWanted' | 'readyToPlay' | 'regular';
+
+/**
+ * Threshold for "high reputation" creator (percentage 0-100)
+ */
+const HIGH_REPUTATION_THRESHOLD = 90;
+
+/**
+ * Determine match tier based on court status and creator reputation
+ */
+function getMatchTier(courtStatus: string | null, creatorReputationScore?: number): MatchTier {
+  const isCourtBooked = courtStatus === 'reserved';
+  const isHighReputation = (creatorReputationScore ?? 0) >= HIGH_REPUTATION_THRESHOLD;
+
+  if (isCourtBooked && isHighReputation) return 'mostWanted';
+  if (isCourtBooked) return 'readyToPlay';
+  return 'regular';
+}
+
+/**
+ * Tier-based color palettes for accent strips and backgrounds
  * Built from @rallia/design-system tokens for consistency
  *
- * Palette Strategy:
- * - competitive: secondary (coral/red) - warm, energetic
- * - casual: primary (teal) - fresh, relaxed
- * - both: accent (amber/gold) - versatile, open to anything
- *
- * Note: Urgent matches and ready-to-play status are handled via animations,
- * not color changes, to preserve the competitive/casual/both visual identity.
+ * Tier Strategy:
+ * - mostWanted: accent (amber/gold) - premium, highly desirable
+ * - readyToPlay: secondary (coral/red) - court ready, energetic
+ * - regular: primary (teal) - standard matches
  */
-const MATCH_PALETTES = {
-  // Competitive matches - secondary palette (coral/red tones)
-  competitive: {
+const TIER_PALETTES = {
+  // Most Wanted - accent palette (amber/gold - premium, highly desirable)
+  mostWanted: {
     light: {
-      gradientStart: secondary[50],
-      gradientMid: secondary[100],
-      gradientEnd: neutral[50],
-      accentStart: secondary[500],
-      accentEnd: secondary[400],
-    },
-    dark: {
-      gradientStart: secondary[950],
-      gradientMid: secondary[900],
-      gradientEnd: neutral[950],
-      accentStart: secondary[400],
-      accentEnd: secondary[300],
-    },
-  },
-  // Casual matches - primary palette (teal/mint - fresh, relaxed)
-  casual: {
-    light: {
-      gradientStart: primary[50],
-      gradientMid: primary[100],
-      gradientEnd: neutral[50],
-      accentStart: primary[500],
-      accentEnd: primary[400],
-    },
-    dark: {
-      gradientStart: primary[950],
-      gradientMid: primary[900],
-      gradientEnd: neutral[950],
-      accentStart: primary[400],
-      accentEnd: primary[300],
-    },
-  },
-  // Both (open to any) - accent palette (amber/gold - versatile, flexible)
-  both: {
-    light: {
-      gradientStart: accent[50],
-      gradientMid: accent[100],
-      gradientEnd: neutral[50],
+      background: accent[50], // Light amber background
       accentStart: accent[500],
       accentEnd: accent[400],
     },
     dark: {
-      gradientStart: '#1a1607',
-      gradientMid: '#332d10',
-      gradientEnd: neutral[950],
+      background: '#2a1f0a', // Rich dark gold background
       accentStart: accent[400],
       accentEnd: accent[300],
+    },
+  },
+  // Ready to Play - secondary palette (coral/red tones)
+  readyToPlay: {
+    light: {
+      background: secondary[50], // Light coral background
+      accentStart: secondary[500],
+      accentEnd: secondary[400],
+    },
+    dark: {
+      background: secondary[950], // Very dark coral background
+      accentStart: secondary[400],
+      accentEnd: secondary[300],
+    },
+  },
+  // Regular - primary palette (teal/mint - fresh, standard)
+  regular: {
+    light: {
+      background: primary[50], // Light teal background
+      accentStart: primary[500],
+      accentEnd: primary[400],
+    },
+    dark: {
+      background: primary[950], // Very dark teal background
+      accentStart: primary[400],
+      accentEnd: primary[300],
     },
   },
 } as const;
 
 /**
- * Ready-to-Play colors using design system accent scale
- * These colors are used for the animated gold border on reserved court matches
+ * Most Wanted colors using design system accent scale
+ * These colors are used for the premium styling on most wanted matches
  */
-const READY_TO_PLAY_COLORS = {
+const MOST_WANTED_COLORS = {
   light: {
     border: accent[400], // #fbbf24 - main border color
     glow: accent[300], // #fcd34d - outer glow
@@ -125,27 +136,6 @@ const READY_TO_PLAY_COLORS = {
     shadow: accent[600], // #d97706 - shadow color
   },
 } as const;
-
-/**
- * Determine which color palette to use based on match type
- * - competitive: secondary (coral) palette
- * - casual: primary (teal) palette
- * - both: accent (amber) palette - distinct from casual
- */
-type PaletteType = 'competitive' | 'casual' | 'both';
-
-function getMatchPalette(playerExpectation: string | null): PaletteType {
-  // Competitive matches use secondary (coral) palette
-  if (playerExpectation === 'competitive') {
-    return 'competitive';
-  }
-  // Casual matches use primary (teal) palette
-  if (playerExpectation === 'casual') {
-    return 'casual';
-  }
-  // Both or null/undefined uses accent (amber) palette - open to anything
-  return 'both';
-}
 
 // =============================================================================
 // CONSTANTS
@@ -184,9 +174,9 @@ interface ThemeColors {
   primary: string;
   secondary: string;
   avatarPlaceholder: string;
-  // Palette-aware colors (set based on competitive/casual)
-  paletteAccent: string;
-  paletteAccentLight: string;
+  // Tier-aware accent colors (set based on match tier)
+  tierAccent: string;
+  tierAccentLight: string;
 }
 
 // =============================================================================
@@ -195,7 +185,12 @@ interface ThemeColors {
 
 /**
  * Get compact time display for the card
- * Shows date and time with city name
+ *
+ * Shows intuitive date labels:
+ * - "Today" for today's date
+ * - "Tomorrow" for tomorrow's date
+ * - Weekday name for dates within the next 6 days (e.g., "Wednesday")
+ * - "Month Day" for dates further out (e.g., "Jan 15")
  */
 function getCompactTimeDisplay(
   dateString: string,
@@ -211,8 +206,16 @@ function getCompactTimeDisplay(
   const hoursDiff = Math.floor(msDiff / (1000 * 60 * 60));
   const isUrgent = hoursDiff >= 0 && hoursDiff < 3;
 
-  // Format date
-  const dayLabel = formatDateInTimezone(dateString, tz, locale, { month: 'short', day: 'numeric' });
+  // Get intuitive date label (Today, Tomorrow, Wednesday, or Jan 15)
+  const dateResult = formatIntuitiveDateInTimezone(dateString, tz, locale);
+
+  // Use translation for Today/Tomorrow, otherwise use the formatted date
+  let dayLabel: string;
+  if (dateResult.translationKey) {
+    dayLabel = t(dateResult.translationKey);
+  } else {
+    dayLabel = dateResult.label;
+  }
 
   // Format time in the match's timezone (without city name)
   const timeResult = formatTimeInTimezone(dateString, startTime, tz, locale);
@@ -227,51 +230,29 @@ function getCompactTimeDisplay(
 
 interface GradientStripProps {
   isDark: boolean;
-  isReadyToPlay?: boolean;
-  palette: PaletteType;
+  tier: MatchTier;
 }
 
 /**
  * Smooth gradient accent strip at the top of the card
- * Always uses palette colors (competitive/casual) - ready-to-play adds gold border separately
+ * Most Wanted tier gets a gold shimmer gradient
  */
-const GradientStrip: React.FC<GradientStripProps> = ({ isDark, isReadyToPlay, palette }) => {
-  const paletteColors = MATCH_PALETTES[palette][isDark ? 'dark' : 'light'];
-  const rtpColors = READY_TO_PLAY_COLORS[isDark ? 'dark' : 'light'];
+const GradientStrip: React.FC<GradientStripProps> = ({ isDark, tier }) => {
+  const tierColors = TIER_PALETTES[tier][isDark ? 'dark' : 'light'];
+  const mwColors = MOST_WANTED_COLORS[isDark ? 'dark' : 'light'];
 
-  // Ready-to-play cards get a gold shimmer gradient overlay on top of palette colors
-  const colors: [string, string, ...string[]] = isReadyToPlay
-    ? [rtpColors.shimmer, rtpColors.border, rtpColors.glow, rtpColors.border, rtpColors.shimmer]
-    : [paletteColors.accentStart, paletteColors.accentEnd];
+  // Most Wanted cards get a gold shimmer gradient
+  const colors: [string, string, ...string[]] =
+    tier === 'mostWanted'
+      ? [mwColors.shimmer, mwColors.border, mwColors.glow, mwColors.border, mwColors.shimmer]
+      : [tierColors.accentStart, tierColors.accentEnd];
 
   return (
     <LinearGradient
       colors={colors}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 0 }}
-      style={[styles.gradientStrip, isReadyToPlay && styles.gradientStripPremium]}
-    />
-  );
-};
-
-interface CardBackgroundProps {
-  isDark: boolean;
-  palette: PaletteType;
-}
-
-/**
- * Dynamic gradient background that creates the "color bleed" effect
- * Always uses palette colors - ready-to-play status is indicated via border, not background
- */
-const CardBackground: React.FC<CardBackgroundProps> = ({ isDark, palette }) => {
-  const paletteColors = MATCH_PALETTES[palette][isDark ? 'dark' : 'light'];
-
-  // Dynamic gradient based on match type (competitive or casual)
-  return (
-    <LinearGradient
-      colors={[paletteColors.gradientStart, paletteColors.gradientMid, paletteColors.gradientEnd]}
-      locations={[0, 0.35, 1]}
-      style={styles.cardBackgroundGradient}
+      style={[styles.gradientStrip, tier === 'mostWanted' && styles.gradientStripPremium]}
     />
   );
 };
@@ -341,10 +322,10 @@ const ParticipantAvatars: React.FC<ParticipantAvatarsProps> = ({ match, colors, 
                 styles.avatar,
                 index > 0 && { marginLeft: -8 },
                 {
-                  backgroundColor: avatar.url ? colors.paletteAccent : colors.avatarPlaceholder,
+                  backgroundColor: avatar.url ? colors.tierAccent : colors.avatarPlaceholder,
                   borderWidth: isHost ? 2.5 : 2,
-                  borderColor: isHost ? colors.paletteAccent : colors.paletteAccentLight, // Use accent light for all - visible in both modes
-                  shadowColor: isHost ? colors.paletteAccent : colors.paletteAccentLight,
+                  borderColor: isHost ? colors.tierAccent : colors.tierAccentLight, // Use tier accent - visible in both modes
+                  shadowColor: isHost ? colors.tierAccent : colors.tierAccentLight,
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: isHost ? 0.3 : 0.15,
                   shadowRadius: isHost ? 4 : 2,
@@ -359,7 +340,7 @@ const ParticipantAvatars: React.FC<ParticipantAvatarsProps> = ({ match, colors, 
               )}
             </View>
             {isHost && (
-              <View style={[styles.hostBadge, { backgroundColor: colors.paletteAccent }]}>
+              <View style={[styles.hostBadge, { backgroundColor: colors.tierAccent }]}>
                 <Ionicons name="star" size={5} color={base.white} />
               </View>
             )}
@@ -373,9 +354,9 @@ const ParticipantAvatars: React.FC<ParticipantAvatarsProps> = ({ match, colors, 
             styles.extraCount,
             {
               marginLeft: -8,
-              backgroundColor: colors.paletteAccent,
-              borderColor: colors.paletteAccentLight,
-              shadowColor: colors.paletteAccent,
+              backgroundColor: colors.tierAccent,
+              borderColor: colors.tierAccentLight,
+              shadowColor: colors.tierAccent,
               shadowOffset: { width: 0, height: 2 },
               shadowOpacity: 0.2,
               shadowRadius: 3,
@@ -397,46 +378,46 @@ const ParticipantAvatars: React.FC<ParticipantAvatarsProps> = ({ match, colors, 
 // =============================================================================
 
 const MyMatchCard: React.FC<MyMatchCardProps> = ({ match, onPress, isDark, t, locale }) => {
-  // Check if this is a "Ready to Play" match (court already reserved)
-  const isReadyToPlay = match.court_status === 'reserved';
+  // Determine match tier based on court status and creator reputation
+  const creatorReputationScore = match.created_by_player?.reputation_score;
+  const tier = getMatchTier(match.court_status, creatorReputationScore);
+  const isMostWanted = tier === 'mostWanted';
 
-  // Get ready-to-play colors from design system
-  const rtpColors = READY_TO_PLAY_COLORS[isDark ? 'dark' : 'light'];
+  // Get most wanted colors from design system
+  const mwColors = MOST_WANTED_COLORS[isDark ? 'dark' : 'light'];
 
   // Animated pulse effect for urgent matches
   const urgentPulseAnimation = useRef(new Animated.Value(0)).current;
 
-  // Determine color palette based on match type (competitive vs casual vs both)
-  // Urgency is handled via animation, not color change
-  const palette = getMatchPalette(match.player_expectation);
-  const paletteColors = MATCH_PALETTES[palette][isDark ? 'dark' : 'light'];
+  // Get tier palette colors
+  const tierPaletteColors = TIER_PALETTES[tier][isDark ? 'dark' : 'light'];
 
-  // Get palette-specific accent colors based on match type
-  const getPaletteAccentColors = useCallback(
-    (paletteType: PaletteType) => {
-      switch (paletteType) {
-        case 'competitive':
+  // Get tier-specific accent colors
+  const getTierAccentColors = useCallback(
+    (matchTier: MatchTier) => {
+      switch (matchTier) {
+        case 'mostWanted':
+          return {
+            accent: isDark ? accent[400] : accent[500],
+            accentLight: isDark ? accent[700] : accent[200],
+          };
+        case 'readyToPlay':
           return {
             accent: isDark ? secondary[400] : secondary[500],
             accentLight: isDark ? secondary[700] : secondary[200],
           };
-        case 'casual':
+        case 'regular':
+        default:
           return {
             accent: isDark ? primary[400] : primary[500],
             accentLight: isDark ? primary[700] : primary[200],
-          };
-        case 'both':
-        default:
-          return {
-            accent: isDark ? accent[400] : accent[500],
-            accentLight: isDark ? accent[700] : accent[200],
           };
       }
     },
     [isDark]
   );
 
-  const paletteAccents = getPaletteAccentColors(palette);
+  const tierAccentColors = getTierAccentColors(tier);
 
   const themeColors = isDark ? darkTheme : lightTheme;
   const colors: ThemeColors = useMemo(
@@ -448,12 +429,11 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({ match, onPress, isDark, t, lo
       primary: isDark ? primary[400] : primary[600],
       secondary: isDark ? secondary[400] : secondary[500],
       avatarPlaceholder: isDark ? neutral[700] : neutral[200],
-      // Palette-aware colors for consistent theming
-      paletteAccent: paletteAccents.accent,
-      // Subtle border color - visible but not overpowering
-      paletteAccentLight: paletteAccents.accentLight,
+      // Tier-aware accent colors for consistent theming
+      tierAccent: tierAccentColors.accent,
+      tierAccentLight: tierAccentColors.accentLight,
     }),
-    [themeColors, isDark, paletteAccents]
+    [themeColors, isDark, tierAccentColors]
   );
 
   const { dayLabel, timeLabel, isUrgent } = getCompactTimeDisplay(
@@ -538,33 +518,31 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({ match, onPress, isDark, t, lo
     outputRange: [0.6, 1, 0.6],
   });
 
-  // Dynamic border color based on palette and ready-to-play status
-  const dynamicBorderColor = isReadyToPlay
-    ? rtpColors.border
+  // Dynamic border color based on tier
+  // Most Wanted uses design system accent colors for border
+  const dynamicBorderColor = isMostWanted
+    ? mwColors.border
     : isDark
-      ? `${paletteColors.accentStart}40` // 25% opacity accent border in dark mode
-      : `${paletteColors.accentStart}20`; // 12% opacity accent border in light mode
+      ? `${tierPaletteColors.accentStart}40` // 25% opacity accent border in dark mode
+      : `${tierPaletteColors.accentStart}20`; // 12% opacity accent border in light mode
 
   return (
     <TouchableOpacity
       style={[
         styles.card,
         {
-          backgroundColor: 'transparent', // Background handled by gradient
+          backgroundColor: tierPaletteColors.background,
           borderColor: dynamicBorderColor,
         },
-        isReadyToPlay && [styles.premiumCard, { shadowColor: rtpColors.shadow }],
+        isMostWanted && [styles.premiumCard, { shadowColor: mwColors.shadow }],
       ]}
       onPress={onPress}
       activeOpacity={0.85}
       accessibilityRole="button"
-      accessibilityLabel={`Match ${dayLabel} at ${timeLabel}${isReadyToPlay ? ' - Ready to Play' : ''}`}
+      accessibilityLabel={`Match ${dayLabel} at ${timeLabel}${isMostWanted ? ' - Most Wanted' : ''}`}
     >
-      {/* Dynamic gradient background - always uses palette colors */}
-      <CardBackground isDark={isDark} palette={palette} />
-
       {/* Gradient accent strip */}
-      <GradientStrip isDark={isDark} isReadyToPlay={isReadyToPlay} palette={palette} />
+      <GradientStrip isDark={isDark} tier={tier} />
 
       <View style={styles.content}>
         {/* Day label with indicator */}
@@ -667,23 +645,13 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
-  // Premium "Ready to Play" card styles
+  // Premium "Most Wanted" card styles
   premiumCard: {
     borderWidth: 2,
     shadowOpacity: 0.25,
     shadowRadius: 16,
     elevation: 6,
-    // shadowColor is set dynamically using rtpColors.shadow
-  },
-
-  // Dynamic gradient background
-  cardBackgroundGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 0,
+    // shadowColor is set dynamically using mwColors.shadow
   },
 
   gradientStrip: {
