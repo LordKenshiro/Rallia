@@ -13,6 +13,7 @@ export * from './notifications';
 export * from './matches';
 export * from './facilities';
 export * from './availability';
+export * from './players';
 
 // Export default DatabaseService
 export { default } from './database';

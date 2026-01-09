@@ -33,26 +33,33 @@ function formatDateLocal(date: Date): string {
  * Get smart default values for the form
  */
 function getDefaultValues(sportId: string, timezone: string): MatchFormSchemaData {
-  // Use today's date
-  const today = new Date();
-  const todayStr = formatDateLocal(today);
-
-  // Get next rounded hour
+  // Get the next rounded hour for start time
   const now = new Date();
-  now.setHours(now.getHours() + 1);
-  now.setMinutes(0);
-  const startTimeStr = now.toTimeString().slice(0, 5);
+  const currentHour = now.getHours();
 
-  // Calculate end time (1 hour later)
-  now.setHours(now.getHours() + 1);
-  const endTimeStr = now.toTimeString().slice(0, 5);
+  // Calculate start time (next rounded hour)
+  const startTime = new Date(now);
+  startTime.setHours(currentHour + 1);
+  startTime.setMinutes(0);
+  startTime.setSeconds(0);
+  startTime.setMilliseconds(0);
+
+  // Use the start time's date (handles midnight rollover correctly)
+  // If current hour is 23, startTime will be 00:00 of the next day
+  const matchDateStr = formatDateLocal(startTime);
+  const startTimeStr = startTime.toTimeString().slice(0, 5);
+
+  // Calculate end time (1 hour after start)
+  const endTime = new Date(startTime);
+  endTime.setHours(endTime.getHours() + 1);
+  const endTimeStr = endTime.toTimeString().slice(0, 5);
 
   return {
     // Sport (from context)
     sportId,
 
     // Step 1: When & Format
-    matchDate: todayStr,
+    matchDate: matchDateStr,
     startTime: startTimeStr,
     endTime: endTimeStr,
     timezone, // IANA timezone (auto-detected)

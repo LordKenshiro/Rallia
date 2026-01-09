@@ -98,21 +98,7 @@ export const step1Schema = z
  */
 export const step2Schema = z
   .object({
-    matchDate: z
-      .string()
-      .min(1, 'Please select a date')
-      .refine(
-        date => {
-          // Parse date as local time, not UTC
-          // new Date('YYYY-MM-DD') is interpreted as UTC, causing day shift issues
-          const [year, month, day] = date.split('-').map(Number);
-          const selected = new Date(year, month - 1, day); // month is 0-indexed
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          return selected >= today;
-        },
-        { message: 'Date must be today or in the future' }
-      ),
+    matchDate: z.string().min(1, 'Please select a date'),
     startTime: z.string().min(1, 'Please select a start time'),
     duration: matchDurationSchema,
     customDurationMinutes: z.number().min(15).max(480).optional(),
@@ -126,6 +112,34 @@ export const step2Schema = z
         message: 'Please enter a custom duration',
         path: ['customDurationMinutes'],
       });
+    }
+
+    // Date and time validation - ensure match is not in the past
+    // Parse date as local time, not UTC
+    const [year, month, day] = data.matchDate.split('-').map(Number);
+    const selectedDate = new Date(year, month - 1, day); // month is 0-indexed
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (selectedDate < today) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Date must be today or in the future',
+        path: ['matchDate'],
+      });
+    } else if (selectedDate.getTime() === today.getTime() && data.startTime) {
+      // If date is today, check if time is in the past
+      const [hours, minutes] = data.startTime.split(':').map(Number);
+      const matchDateTime = new Date(year, month - 1, day, hours, minutes);
+      const now = new Date();
+
+      if (matchDateTime < now) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Start time cannot be in the past',
+          path: ['startTime'],
+        });
+      }
     }
   });
 
@@ -227,19 +241,33 @@ export const matchFormSchema = z
       });
     }
 
-    // Date validation
+    // Date and time validation - ensure match is not in the past
     // Parse date as local time, not UTC
     // new Date('YYYY-MM-DD') is interpreted as UTC, causing day shift issues
     const [year, month, day] = data.matchDate.split('-').map(Number);
     const selectedDate = new Date(year, month - 1, day); // month is 0-indexed
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
     if (selectedDate < today) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'Date must be today or in the future',
         path: ['matchDate'],
       });
+    } else if (selectedDate.getTime() === today.getTime() && data.startTime) {
+      // If date is today, check if time is in the past
+      const [hours, minutes] = data.startTime.split(':').map(Number);
+      const matchDateTime = new Date(year, month - 1, day, hours, minutes);
+      const now = new Date();
+
+      if (matchDateTime < now) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Start time cannot be in the past',
+          path: ['startTime'],
+        });
+      }
     }
   });
 

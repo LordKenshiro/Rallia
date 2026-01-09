@@ -931,6 +931,20 @@
       "selectCourt": "Select a Court",
       "courtAvailable": "court available",
       "courtsAvailable": "courts available"
+    },
+    "invite": {
+      "title": "Invite Players",
+      "description": "Invite players to join your game",
+      "searchPlaceholder": "Search players...",
+      "searching": "Searching players...",
+      "searchError": "Couldn't search players",
+      "noPlayersFound": "No players found",
+      "noPlayersAvailable": "No players available for this sport",
+      "selectPlayers": "Select players to invite",
+      "sendInvitations": "Send Invitations ({count})",
+      "skip": "Skip",
+      "invitationsSent": "Invitations sent!",
+      "invitationsSentCount": "Sent {count} invitation(s)"
     }
   },
   "home": {

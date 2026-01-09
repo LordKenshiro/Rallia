@@ -2780,6 +2780,164 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
   };
 }
 
+// =============================================================================
+// PLAYER INVITATION
+// =============================================================================
+
+/**
+ * Result of inviting players to a match
+ */
+export interface InvitePlayersResult {
+  /** Successfully created participant records */
+  invited: MatchParticipant[];
+  /** Player IDs that were already in the match (skipped) */
+  alreadyInMatch: string[];
+  /** Player IDs that failed to invite */
+  failed: string[];
+}
+
+/**
+ * Invite multiple players to a match.
+ * Creates match_participant records with 'pending' status and sends notifications.
+ *
+ * @param matchId - The match ID to invite players to
+ * @param playerIds - Array of player IDs to invite
+ * @param hostId - The ID of the user inviting (must be match host)
+ * @returns Result with invited, already in match, and failed player IDs
+ * @throws Error if match not found, cancelled, or caller is not the host
+ */
+export async function invitePlayersToMatch(
+  matchId: string,
+  playerIds: string[],
+  hostId: string
+): Promise<InvitePlayersResult> {
+  if (playerIds.length === 0) {
+    return { invited: [], alreadyInMatch: [], failed: [] };
+  }
+
+  // Verify match exists, is not cancelled, and caller is host
+  const { data: match, error: matchError } = await supabase
+    .from('match')
+    .select(
+      `
+      id,
+      created_by,
+      cancelled_at,
+      match_date,
+      start_time,
+      end_time,
+      timezone,
+      sport:sport_id (
+        id,
+        name,
+        display_name
+      ),
+      participants:match_participant (
+        id,
+        player_id,
+        status
+      )
+    `
+    )
+    .eq('id', matchId)
+    .single();
+
+  if (matchError || !match) {
+    throw new Error('Match not found');
+  }
+
+  if (match.cancelled_at) {
+    throw new Error('Cannot invite players to a cancelled match');
+  }
+
+  // Check if match has already ended
+  const { getMatchEndTimeDifferenceFromNow } = await import('@rallia/shared-utils');
+  const endTimeDiff = getMatchEndTimeDifferenceFromNow(
+    match.match_date,
+    match.start_time,
+    match.end_time,
+    match.timezone || 'UTC'
+  );
+  if (endTimeDiff < 0) {
+    throw new Error('Cannot invite players to a completed match');
+  }
+
+  // Verify caller is the host
+  if (match.created_by !== hostId) {
+    throw new Error('Only the match host can invite players');
+  }
+
+  // Get host's name for notifications
+  const { data: hostProfile } = await supabase
+    .from('profile')
+    .select('full_name, display_name')
+    .eq('id', hostId)
+    .single();
+
+  const inviterName = hostProfile?.full_name || hostProfile?.display_name || 'A player';
+  // Supabase returns relations as arrays when using select, handle both array and single object
+  const sportData = match.sport;
+  const sport = Array.isArray(sportData) ? sportData[0] : sportData;
+  const sportName = sport?.display_name || sport?.name || 'a match';
+
+  // Check which players are already in the match
+  const existingPlayerIds = new Set(
+    (match.participants ?? []).map((p: { player_id: string }) => p.player_id)
+  );
+
+  const alreadyInMatch: string[] = [];
+  const toInvite: string[] = [];
+
+  for (const playerId of playerIds) {
+    if (existingPlayerIds.has(playerId)) {
+      alreadyInMatch.push(playerId);
+    } else {
+      toInvite.push(playerId);
+    }
+  }
+
+  if (toInvite.length === 0) {
+    return { invited: [], alreadyInMatch, failed: [] };
+  }
+
+  // Create participant records with 'pending' status
+  const participantsToInsert = toInvite.map(playerId => ({
+    match_id: matchId,
+    player_id: playerId,
+    status: 'pending' as const,
+    is_host: false,
+  }));
+
+  const { data: insertedParticipants, error: insertError } = await supabase
+    .from('match_participant')
+    .insert(participantsToInsert)
+    .select();
+
+  if (insertError) {
+    console.error('[invitePlayersToMatch] Insert error:', insertError);
+    throw new Error(`Failed to invite players: ${insertError.message}`);
+  }
+
+  const invited = (insertedParticipants ?? []) as MatchParticipant[];
+  const invitedPlayerIds = new Set(invited.map(p => p.player_id));
+  const failed = toInvite.filter(id => !invitedPlayerIds.has(id));
+
+  // Send notifications to invited players (fire and forget)
+  for (const participant of invited) {
+    notifyMatchInvitation(
+      participant.player_id,
+      matchId,
+      inviterName,
+      sportName,
+      match.match_date
+    ).catch(err => {
+      console.error('[invitePlayersToMatch] Notification error:', err);
+    });
+  }
+
+  return { invited, alreadyInMatch, failed };
+}
+
 /**
  * Match service object for grouped exports
  */
@@ -2802,6 +2960,8 @@ export const matchService = {
   rejectJoinRequest,
   cancelJoinRequest,
   kickParticipant,
+  // Invitations
+  invitePlayersToMatch,
 };
 
 export default matchService;

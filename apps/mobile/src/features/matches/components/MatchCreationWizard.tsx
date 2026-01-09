@@ -52,6 +52,7 @@ import type { MatchFormSchemaData } from '@rallia/shared-types';
 import { WhenFormatStep } from './steps/WhenFormatStep';
 import { WhereStep } from './steps/WhereStep';
 import { PreferencesStep } from './steps/PreferencesStep';
+import { PlayerInviteStep } from './PlayerInviteStep';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SWIPE_THRESHOLD = 50;
@@ -384,8 +385,6 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     initialValues,
   });
 
-  console.log('values', values);
-
   // Draft persistence
   const {
     hasDraft,
@@ -422,6 +421,8 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   // Delayed success state for smoother UX
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMatchId, setSuccessMatchId] = useState<string | null>(null);
+  // Player invitation step (shown after success for new matches)
+  const [showInviteStep, setShowInviteStep] = useState(false);
 
   // Match creation mutation
   const { createMatch, isCreating } = useCreateMatch({
@@ -540,21 +541,25 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
       setBookedSlotData(prev => {
         if (prev) {
           // Reset date/time/duration to default values
-          const today = new Date();
-          const todayStr = formatDateLocal(today);
-
-          // Get next rounded hour
+          // Calculate start time (next rounded hour)
           const now = new Date();
-          now.setHours(now.getHours() + 1);
-          now.setMinutes(0);
-          const startTimeStr = now.toTimeString().slice(0, 5);
+          const currentHour = now.getHours();
+          const startTime = new Date(now);
+          startTime.setHours(currentHour + 1);
+          startTime.setMinutes(0);
+          startTime.setSeconds(0);
 
-          // Calculate end time (1 hour later)
-          now.setHours(now.getHours() + 1);
-          const endTimeStr = now.toTimeString().slice(0, 5);
+          // Use the start time's date (handles midnight rollover correctly)
+          const matchDateStr = formatDateLocal(startTime);
+          const startTimeStr = startTime.toTimeString().slice(0, 5);
+
+          // Calculate end time (1 hour after start)
+          const endTime = new Date(startTime);
+          endTime.setHours(endTime.getHours() + 1);
+          const endTimeStr = endTime.toTimeString().slice(0, 5);
 
           // Reset form values to defaults
-          form.setValue('matchDate', todayStr, { shouldDirty: true });
+          form.setValue('matchDate', matchDateStr, { shouldDirty: true });
           form.setValue('startTime', startTimeStr, { shouldDirty: true });
           form.setValue('endTime', endTimeStr, { shouldDirty: true });
           form.setValue('duration', '60', { shouldDirty: true });
@@ -979,17 +984,30 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   const successOpacity = useSharedValue(0);
   const successScale = useSharedValue(0.8);
   const formOpacity = useSharedValue(1);
+  // Post-success step transition (success → invite)
+  const postSuccessTranslateX = useSharedValue(0);
 
   // Trigger success animation when showSuccess becomes true
   useEffect(() => {
     if (showSuccess) {
       // Fade out form
-      formOpacity.value = withTiming(0, { duration: 200 });
-      // Fade in and scale up success view
-      successOpacity.value = withTiming(1, { duration: 400 });
-      successScale.value = withSpring(1, { damping: 15, stiffness: 150 });
+      formOpacity.value = withTiming(0, { duration: 150 });
+      // Fade in and scale up success view - snappy with no bounce
+      successOpacity.value = withTiming(1, { duration: 250 });
+      successScale.value = withTiming(1, { duration: 250 });
+      // Reset post-success position
+      postSuccessTranslateX.value = 0;
     }
   }, [showSuccess]);
+
+  // Animate transition to invite step
+  useEffect(() => {
+    if (showInviteStep) {
+      postSuccessTranslateX.value = withTiming(-SCREEN_WIDTH, { duration: 300 });
+    } else if (showSuccess) {
+      postSuccessTranslateX.value = withTiming(0, { duration: 300 });
+    }
+  }, [showInviteStep, showSuccess]);
 
   // Animated style for success view
   const successAnimatedStyle = useAnimatedStyle(() => ({
@@ -997,75 +1015,143 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     transform: [{ scale: successScale.value }],
   }));
 
+  // Animated style for post-success container (horizontal slide)
+  const postSuccessAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: postSuccessTranslateX.value }],
+  }));
+
   // Animated style for form (fades out on success)
   const formAnimatedStyle = useAnimatedStyle(() => ({
     opacity: formOpacity.value,
   }));
 
-  // Success view - overlay on top with fade animation
+  // Success and Invite steps - horizontal slide animation between them
   if (showSuccess && successMatchId) {
     return (
       <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
-        <Animated.View style={[styles.successContainer, successAnimatedStyle]}>
-          {/* Close button */}
-          <TouchableOpacity
-            onPress={() => {
-              lightHaptic();
-              onClose();
-            }}
-            style={[
-              styles.successCloseButton,
-              { backgroundColor: isDark ? neutral[800] : neutral[100] },
-            ]}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons name="close" size={20} color={colors.textMuted} />
-          </TouchableOpacity>
-
-          <View style={[styles.successIcon, { backgroundColor: colors.buttonActive }]}>
-            <Ionicons
-              name={isEditMode ? 'checkmark-circle' : 'trophy'}
-              size={48}
-              color={BASE_WHITE}
-            />
-          </View>
-          <Text size="xl" weight="bold" color={colors.text} style={styles.successTitle}>
-            {isEditMode
-              ? t('matchCreation.updateSuccess' as TranslationKey)
-              : t('matchCreation.success' as TranslationKey)}
-          </Text>
-          <Text size="base" color={colors.textMuted} style={styles.successDescription}>
-            {isEditMode
-              ? t('matchCreation.updateSuccessDescription' as TranslationKey)
-              : t('matchCreation.successDescription' as TranslationKey)}
-          </Text>
-          <View style={styles.successButtons}>
-            <TouchableOpacity
-              style={[styles.successButton, { backgroundColor: colors.buttonActive }]}
-              onPress={() => onSuccess?.(successMatchId)}
-            >
-              <Text size="base" weight="semibold" color={colors.buttonTextActive}>
-                {t('matchCreation.viewMatch' as TranslationKey)}
-              </Text>
-            </TouchableOpacity>
-            {!isEditMode && (
+        <Animated.View
+          style={[
+            styles.postSuccessContainer,
+            { width: SCREEN_WIDTH * 2 },
+            postSuccessAnimatedStyle,
+          ]}
+        >
+          {/* Success Step */}
+          <View style={[styles.postSuccessStep, { width: SCREEN_WIDTH }]}>
+            <Animated.View style={[styles.successContainer, successAnimatedStyle]}>
+              {/* Close button */}
               <TouchableOpacity
-                style={[styles.successButton, { backgroundColor: colors.buttonInactive }]}
                 onPress={() => {
-                  // Reset animations and state for next creation
-                  successOpacity.value = 0;
-                  successScale.value = 0.8;
-                  formOpacity.value = 1;
-                  setShowSuccess(false);
-                  setSuccessMatchId(null);
-                  resetForm();
-                  setCurrentStep(1);
+                  lightHaptic();
+                  onClose();
                 }}
+                style={[
+                  styles.successCloseButton,
+                  { backgroundColor: isDark ? neutral[800] : neutral[100] },
+                ]}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text size="base" weight="semibold" color={colors.buttonActive}>
-                  {t('matchCreation.createAnother' as TranslationKey)}
-                </Text>
+                <Ionicons name="close" size={20} color={colors.textMuted} />
               </TouchableOpacity>
+
+              <View style={[styles.successIcon, { backgroundColor: colors.buttonActive }]}>
+                <Ionicons
+                  name={isEditMode ? 'checkmark-circle' : 'trophy'}
+                  size={48}
+                  color={BASE_WHITE}
+                />
+              </View>
+              <Text size="xl" weight="bold" color={colors.text} style={styles.successTitle}>
+                {isEditMode
+                  ? t('matchCreation.updateSuccess' as TranslationKey)
+                  : t('matchCreation.success' as TranslationKey)}
+              </Text>
+              <Text size="base" color={colors.textMuted} style={styles.successDescription}>
+                {isEditMode
+                  ? t('matchCreation.updateSuccessDescription' as TranslationKey)
+                  : t('matchCreation.successDescription' as TranslationKey)}
+              </Text>
+              <View style={styles.successButtons}>
+                {/* Invite Players button - only for new matches */}
+                {!isEditMode && (
+                  <TouchableOpacity
+                    style={[styles.successButton, { backgroundColor: colors.buttonActive }]}
+                    onPress={() => {
+                      lightHaptic();
+                      setShowInviteStep(true);
+                    }}
+                  >
+                    <Ionicons
+                      name="people-outline"
+                      size={20}
+                      color={colors.buttonTextActive}
+                      style={styles.buttonIcon}
+                    />
+                    <Text size="base" weight="semibold" color={colors.buttonTextActive}>
+                      {t('matchCreation.invite.title' as TranslationKey)}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={[
+                    styles.successButton,
+                    {
+                      backgroundColor: isEditMode ? colors.buttonActive : colors.buttonInactive,
+                    },
+                  ]}
+                  onPress={() => onSuccess?.(successMatchId)}
+                >
+                  <Text
+                    size="base"
+                    weight="semibold"
+                    color={isEditMode ? colors.buttonTextActive : colors.buttonActive}
+                  >
+                    {t('matchCreation.viewMatch' as TranslationKey)}
+                  </Text>
+                </TouchableOpacity>
+                {!isEditMode && (
+                  <TouchableOpacity
+                    style={[styles.successButton, { backgroundColor: 'transparent' }]}
+                    onPress={() => {
+                      // Reset animations and state for next creation
+                      successOpacity.value = 0;
+                      successScale.value = 0.8;
+                      formOpacity.value = 1;
+                      postSuccessTranslateX.value = 0;
+                      setShowSuccess(false);
+                      setSuccessMatchId(null);
+                      setShowInviteStep(false);
+                      resetForm();
+                      setCurrentStep(1);
+                    }}
+                  >
+                    <Text size="base" weight="regular" color={colors.textSecondary}>
+                      {t('matchCreation.createAnother' as TranslationKey)}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </Animated.View>
+          </View>
+
+          {/* Player Invite Step */}
+          <View style={[styles.postSuccessStep, { width: SCREEN_WIDTH }]}>
+            {selectedSport?.id && session?.user?.id && (
+              <PlayerInviteStep
+                matchId={successMatchId}
+                sportId={selectedSport.id}
+                hostId={session.user.id}
+                onComplete={() => {
+                  // After invitations sent or skipped, go to match detail
+                  onSuccess?.(successMatchId);
+                }}
+                colors={{
+                  ...colors,
+                  background: colors.cardBackground,
+                }}
+                t={t}
+                isDark={isDark}
+              />
             )}
           </View>
         </Animated.View>
@@ -1276,6 +1362,14 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.6,
   },
+  postSuccessContainer: {
+    flexDirection: 'row',
+    flex: 1,
+  },
+  postSuccessStep: {
+    flex: 1,
+    height: '100%',
+  },
   successContainer: {
     flex: 1,
     alignItems: 'center',
@@ -1314,9 +1408,15 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   successButton: {
+    flexDirection: 'row',
     paddingVertical: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[2],
+  },
+  buttonIcon: {
+    marginRight: spacingPixels[1],
   },
 });
 

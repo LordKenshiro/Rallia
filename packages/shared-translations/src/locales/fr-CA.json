@@ -931,6 +931,20 @@
       "selectCourt": "Choisir un terrain",
       "courtAvailable": "terrain disponible",
       "courtsAvailable": "terrains disponibles"
+    },
+    "invite": {
+      "title": "Inviter des joueurs",
+      "description": "Invitez des joueurs à rejoindre votre partie",
+      "searchPlaceholder": "Rechercher des joueurs...",
+      "searching": "Recherche de joueurs...",
+      "searchError": "Impossible de rechercher des joueurs",
+      "noPlayersFound": "Aucun joueur trouvé",
+      "noPlayersAvailable": "Aucun joueur disponible pour ce sport",
+      "selectPlayers": "Sélectionner des joueurs",
+      "sendInvitations": "Envoyer les invitations ({count})",
+      "skip": "Passer",
+      "invitationsSent": "Invitations envoyées!",
+      "invitationsSentCount": "{count} invitation(s) envoyée(s)"
     }
   },
   "home": {

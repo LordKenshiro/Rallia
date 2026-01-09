@@ -185,12 +185,23 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
 
   // Parse date for picker - parse in LOCAL time, not UTC
   // new Date('YYYY-MM-DD') is interpreted as UTC, causing day shift issues
+  // If current hour is 23 (next hour is midnight), default to tomorrow
   const dateValue = matchDate
     ? (() => {
         const [year, month, day] = matchDate.split('-').map(Number);
         return new Date(year, month - 1, day); // month is 0-indexed
       })()
-    : new Date();
+    : (() => {
+        const now = new Date();
+        // If the current hour is 23, the next hour would be midnight (next day)
+        // In that case, default to tomorrow's date
+        if (now.getHours() === 23) {
+          const tomorrow = new Date(now);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          return tomorrow;
+        }
+        return now;
+      })();
 
   // Parse time for picker
   const timeValue = (() => {
