@@ -10,3 +10,4 @@ export type { AuthContextType, OAuthProvider, AuthResult } from './AuthContext';
 export type { ActionsSheetMode } from './ActionsSheetContext';
 export type { Sport } from './SportContext';
 export type { MatchDetailData } from './MatchDetailSheetContext';
+export type { OverlaySport } from './OverlayContext';

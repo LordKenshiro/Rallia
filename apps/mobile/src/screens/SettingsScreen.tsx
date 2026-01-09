@@ -137,7 +137,7 @@ const SettingsScreen: React.FC = () => {
     <TouchableOpacity
       style={[
         styles.settingsItem,
-        { backgroundColor: colors.cardBackground, borderBottomColor: colors.border },
+        { backgroundColor: colors.background, borderBottomColor: colors.border },
       ]}
       onPress={() => {
         lightHaptic();
@@ -169,13 +169,13 @@ const SettingsScreen: React.FC = () => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <ScrollView
-        style={[styles.scrollContent, { backgroundColor: colors.cardBackground }]}
+        style={[styles.scrollContent, { backgroundColor: colors.background }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Edit Profile */}
         {isAuthenticated && (
-          <View style={[styles.profileGroup, { backgroundColor: colors.cardBackground }]}>
-            <View style={[styles.profileSection, { backgroundColor: colors.cardBackground }]}>
+          <View style={[styles.profileGroup, { backgroundColor: colors.background }]}>
+            <View style={[styles.profileSection, { backgroundColor: colors.background }]}>
               {profile?.profile_picture_url ? (
                 <Image
                   source={{ uri: getProfilePictureUrl(profile.profile_picture_url) || '' }}
@@ -198,7 +198,7 @@ const SettingsScreen: React.FC = () => {
             <TouchableOpacity
               style={[
                 styles.editProfileButton,
-                { backgroundColor: colors.cardBackground, borderBottomColor: colors.border },
+                { backgroundColor: colors.background, borderBottomColor: colors.border },
               ]}
               onPress={() => {
                 lightHaptic();
@@ -220,24 +220,28 @@ const SettingsScreen: React.FC = () => {
           </View>
         )}
 
-        {/* Settings Items */}
+        {/* Settings Items - Auth required */}
         {isAuthenticated && (
-          <View style={[styles.settingsGroup, { backgroundColor: colors.cardBackground }]}>
+          <View style={[styles.settingsGroup, { backgroundColor: colors.background }]}>
             <SettingsItem
               icon="notifications-outline"
               title={t('settings.notifications')}
               onPress={handleNotificationPreferences}
             />
-            <SettingsItem
-              icon="shield-checkmark-outline"
-              title={t('settings.permissions')}
-              onPress={handlePermissions}
-            />
           </View>
         )}
 
+        {/* Settings Items - Available to all users */}
+        <View style={[styles.settingsGroup, { backgroundColor: colors.background }]}>
+          <SettingsItem
+            icon="shield-checkmark-outline"
+            title={t('settings.permissions')}
+            onPress={handlePermissions}
+          />
+        </View>
+
         {/* Preferred Language */}
-        <View style={[styles.preferenceSection, { backgroundColor: colors.cardBackground }]}>
+        <View style={[styles.preferenceSection, { backgroundColor: colors.background }]}>
           <View style={styles.preferenceTitleRow}>
             <Text size="sm" color={colors.textSecondary}>
               {t('settings.language')}
@@ -302,7 +306,7 @@ const SettingsScreen: React.FC = () => {
         </View>
 
         {/* Appearance */}
-        <View style={[styles.preferenceSection, { backgroundColor: colors.cardBackground }]}>
+        <View style={[styles.preferenceSection, { backgroundColor: colors.background }]}>
           <Text size="sm" color={colors.textSecondary} style={styles.preferenceSectionTitle}>
             {t('settings.theme')}
           </Text>
@@ -345,7 +349,7 @@ const SettingsScreen: React.FC = () => {
 
         {/* Sign Out & Delete Account */}
         {isAuthenticated && (
-          <View style={[styles.actionButtons, { backgroundColor: colors.cardBackground }]}>
+          <View style={[styles.actionButtons, { backgroundColor: colors.background }]}>
             <TouchableOpacity
               style={[styles.signOutButton, { backgroundColor: colors.buttonInactive }]}
               onPress={async () => {

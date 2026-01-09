@@ -18,6 +18,7 @@ import { ActionsBottomSheet } from './src/components/ActionsBottomSheet';
 import { MatchDetailSheet } from './src/components/MatchDetailSheet';
 import { PlayerInviteSheet } from './src/components/PlayerInviteSheet';
 import { SplashOverlay } from './src/components/SplashOverlay';
+import { SportSelectionOverlay } from './src/components/SportSelectionOverlay';
 import { ErrorBoundary } from '@rallia/shared-components';
 import { ThemeProvider, useTheme } from '@rallia/shared-hooks';
 import { Logger } from './src/services/logger';
@@ -32,6 +33,7 @@ import {
   MatchDetailSheetProvider,
   PlayerInviteSheetProvider,
   useOverlay,
+  useSport,
 } from './src/context';
 import { usePushNotifications } from './src/hooks';
 import { ProfileProvider, PlayerProvider, useNotificationRealtime } from '@rallia/shared-hooks';
@@ -92,7 +94,23 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
 
 function AppContent() {
   const { theme } = useTheme();
-  const { setSplashComplete } = useOverlay();
+  const {
+    setSplashComplete,
+    showSportSelectionOverlay,
+    isSplashComplete,
+    onSportSelectionComplete,
+  } = useOverlay();
+  const { setSelectedSportsOrdered } = useSport();
+
+  // Handle sport selection completion - update SportContext and notify OverlayContext
+  const handleSportSelectionComplete = async (
+    orderedSports: Parameters<typeof setSelectedSportsOrdered>[0]
+  ) => {
+    // Update SportContext with the ordered selection
+    await setSelectedSportsOrdered(orderedSports);
+    // Notify OverlayContext that selection is complete
+    onSportSelectionComplete(orderedSports);
+  };
 
   return (
     <>
@@ -106,6 +124,12 @@ function AppContent() {
       <MatchDetailSheet />
       {/* Player Invite Bottom Sheet - shows when host invites players */}
       <PlayerInviteSheet />
+      {/* Sport Selection Overlay - shows for first-time users after splash */}
+      <SportSelectionOverlay
+        visible={showSportSelectionOverlay}
+        startAnimation={isSplashComplete}
+        onComplete={handleSportSelectionComplete}
+      />
       {/* Splash overlay - renders on top of everything */}
       <SplashOverlay onAnimationComplete={() => setSplashComplete(true)} />
     </>

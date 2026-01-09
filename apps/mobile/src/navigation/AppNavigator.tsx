@@ -97,7 +97,9 @@ function NotificationButtonWithBadge({ color }: { color?: string }) {
 /**
  * Sport selector with context integration
  * Uses useSport hook to get/set selected sport and useTheme for dark mode
- * Only displays when onboarding is completed
+ * Shows for:
+ * - Signed-out users (guests) browsing public matches
+ * - Signed-in users who have completed onboarding
  */
 function SportSelectorWithContext() {
   const { selectedSport, userSports, setSelectedSport } = useSport();
@@ -106,6 +108,9 @@ function SportSelectorWithContext() {
   const { contentMode } = useActionsSheet();
   const { profile, refetch } = useProfile();
   const isDark = theme === 'dark';
+
+  // Determine if user is a guest (not signed in)
+  const isGuest = !session?.user;
 
   // Refetch profile when auth state changes (e.g., user first authenticates)
   useEffect(() => {
@@ -126,8 +131,9 @@ function SportSelectorWithContext() {
     prevContentModeRef.current = contentMode;
   }, [contentMode, session?.user, refetch]);
 
-  // Only show sport selector if onboarding is completed
-  if (!profile?.onboarding_completed) {
+  // For signed-in users, only show if onboarding is completed
+  // For guests, always allow (they browse all public matches)
+  if (!isGuest && !profile?.onboarding_completed) {
     return null;
   }
 

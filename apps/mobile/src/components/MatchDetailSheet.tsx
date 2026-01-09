@@ -273,7 +273,7 @@ const ParticipantAvatar: React.FC<ParticipantAvatarProps> = ({
 
 export const MatchDetailSheet: React.FC = () => {
   const { sheetRef, closeSheet, selectedMatch, updateSelectedMatch } = useMatchDetailSheet();
-  const { openSheetForEdit } = useActionsSheet();
+  const { openSheet: openAuthSheet, openSheetForEdit } = useActionsSheet();
   const { openSheet: openInviteSheet } = usePlayerInviteSheet();
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
@@ -566,12 +566,24 @@ export const MatchDetailSheet: React.FC = () => {
     }
   }, [selectedMatch, t]);
 
+  // Helper to redirect to auth sheet if user is not authenticated
+  const requireAuth = useCallback((): boolean => {
+    if (!playerId) {
+      // Close detail sheet and open auth sheet
+      closeSheet();
+      openAuthSheet();
+      return false;
+    }
+    return true;
+  }, [playerId, closeSheet, openAuthSheet]);
+
   // Handle join match
   const handleJoinMatch = useCallback(() => {
-    if (!selectedMatch || !playerId) return;
+    if (!selectedMatch) return;
+    if (!requireAuth()) return;
     mediumHaptic();
-    joinMatch(playerId);
-  }, [selectedMatch, playerId, joinMatch]);
+    joinMatch(playerId!);
+  }, [selectedMatch, requireAuth, playerId, joinMatch]);
 
   // Handle leave match - opens confirmation modal
   const handleLeaveMatch = useCallback(() => {
@@ -1185,7 +1197,7 @@ export const MatchDetailSheet: React.FC = () => {
             themeColors={successThemeColors}
             isDark={isDark}
             loading={isJoining}
-            disabled={isJoining || !playerId}
+            disabled={isJoining}
           >
             {t('matchDetail.requestToJoin' as TranslationKey)}
           </Button>
@@ -1200,7 +1212,7 @@ export const MatchDetailSheet: React.FC = () => {
           themeColors={successThemeColors}
           isDark={isDark}
           loading={isJoining}
-          disabled={isJoining || !playerId}
+          disabled={isJoining}
         >
           {t('matchDetail.joinNow' as TranslationKey)}
         </Button>
@@ -1233,7 +1245,7 @@ export const MatchDetailSheet: React.FC = () => {
           themeColors={successThemeColors}
           isDark={isDark}
           loading={isJoining}
-          disabled={isJoining || !playerId}
+          disabled={isJoining}
         >
           {t('matchActions.joinWaitlist' as TranslationKey)}
         </Button>
@@ -1250,7 +1262,7 @@ export const MatchDetailSheet: React.FC = () => {
           themeColors={successThemeColors}
           isDark={isDark}
           loading={isJoining}
-          disabled={isJoining || !playerId}
+          disabled={isJoining}
         >
           {t('matchDetail.requestToJoin' as TranslationKey)}
         </Button>
@@ -1266,7 +1278,7 @@ export const MatchDetailSheet: React.FC = () => {
         themeColors={successThemeColors}
         isDark={isDark}
         loading={isJoining}
-        disabled={isJoining || !playerId}
+        disabled={isJoining}
       >
         {t('matchDetail.joinNow' as TranslationKey)}
       </Button>
