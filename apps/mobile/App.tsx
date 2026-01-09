@@ -32,6 +32,8 @@ import {
   SportProvider,
   MatchDetailSheetProvider,
   PlayerInviteSheetProvider,
+  DeepLinkProvider,
+  useDeepLink,
   useOverlay,
   useSport,
 } from './src/context';
@@ -65,11 +67,18 @@ const queryClient = new QueryClient({
 function AuthenticatedProviders({ children }: PropsWithChildren) {
   const { user } = useAuth();
   const { syncLocaleToDatabase, isReady: isLocaleReady } = useLocale();
+  const { setPendingMatchId } = useDeepLink();
+  const { isSplashComplete } = useOverlay();
   const userId = user?.id;
 
   // Register push notifications when user is authenticated
   // This will save the Expo push token to the player table
-  usePushNotifications(userId);
+  // Pass the deep link handler for match notifications
+  // Wait for splash to complete before handling cold start notifications
+  usePushNotifications(userId, true, {
+    onMatchNotificationTapped: setPendingMatchId,
+    isSplashComplete,
+  });
 
   // Subscribe to realtime notification updates
   // This keeps the notification badge in sync with the database
@@ -151,21 +160,23 @@ export default function App() {
           <QueryClientProvider client={queryClient}>
             <LocaleProvider>
               <ThemeProvider>
-                <AuthProvider>
-                  <AuthenticatedProviders>
-                    <OverlayProvider>
-                      <ActionsSheetProvider>
-                        <MatchDetailSheetProvider>
-                          <PlayerInviteSheetProvider>
-                            <BottomSheetModalProvider>
-                              <AppContent />
-                            </BottomSheetModalProvider>
-                          </PlayerInviteSheetProvider>
-                        </MatchDetailSheetProvider>
-                      </ActionsSheetProvider>
-                    </OverlayProvider>
-                  </AuthenticatedProviders>
-                </AuthProvider>
+                <DeepLinkProvider>
+                  <OverlayProvider>
+                    <AuthProvider>
+                      <AuthenticatedProviders>
+                        <ActionsSheetProvider>
+                          <MatchDetailSheetProvider>
+                            <PlayerInviteSheetProvider>
+                              <BottomSheetModalProvider>
+                                <AppContent />
+                              </BottomSheetModalProvider>
+                            </PlayerInviteSheetProvider>
+                          </MatchDetailSheetProvider>
+                        </ActionsSheetProvider>
+                      </AuthenticatedProviders>
+                    </AuthProvider>
+                  </OverlayProvider>
+                </DeepLinkProvider>
               </ThemeProvider>
             </LocaleProvider>
           </QueryClientProvider>

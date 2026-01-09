@@ -644,8 +644,10 @@
     "slots": {
       "full": "Complet",
       "oneLeft": "1 place restante",
-      "left": "{count} places restantes"
+      "left": "{count} places dispos"
     },
+    "invited": "Invité",
+    "pendingRequests": "{count} en attente",
     "courtStatus": {
       "readyToPlay": "Prêt à jouer",
       "courtBooked": "Terrain Réservé"
@@ -653,6 +655,7 @@
     "cta": {
       "join": "Rejoindre la partie",
       "askToJoin": "Demander à rejoindre",
+      "acceptInvitation": "Accepter l'invitation",
       "full": "Complet",
       "view": "Voir détails",
       "viewResults": "Voir résultats",

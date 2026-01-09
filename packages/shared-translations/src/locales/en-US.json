@@ -646,6 +646,8 @@
       "oneLeft": "1 spot left",
       "left": "{count} spots left"
     },
+    "invited": "Invited",
+    "pendingRequests": "{count} pending",
     "courtStatus": {
       "readyToPlay": "Ready to Play",
       "courtBooked": "Court Booked"
@@ -653,6 +655,7 @@
     "cta": {
       "join": "Join game",
       "askToJoin": "Request to join",
+      "acceptInvitation": "Accept Invitation",
       "full": "Full",
       "view": "View details",
       "viewResults": "View results",

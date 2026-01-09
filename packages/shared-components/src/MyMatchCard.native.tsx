@@ -164,6 +164,16 @@ export interface MyMatchCardProps {
   t: (key: string, options?: TranslationOptions) => string;
   /** Current locale for date/time formatting */
   locale: string;
+  /**
+   * Number of pending join requests (only shown to match creator)
+   * Shows a notification badge in the top-right corner
+   */
+  pendingRequestCount?: number;
+  /**
+   * Whether the current user has been invited to this match
+   * Shows an "Invited" indicator in the day label row
+   */
+  isInvited?: boolean;
 }
 
 interface ThemeColors {
@@ -254,6 +264,145 @@ const GradientStrip: React.FC<GradientStripProps> = ({ isDark, tier }) => {
       end={{ x: 1, y: 0 }}
       style={[styles.gradientStrip, tier === 'mostWanted' && styles.gradientStripPremium]}
     />
+  );
+};
+
+// =============================================================================
+// PENDING REQUESTS BADGE (Creator view - top-right notification badge)
+// =============================================================================
+
+interface PendingRequestsBadgeProps {
+  count: number;
+  isDark: boolean;
+}
+
+/**
+ * Notification badge for pending join requests
+ * Shows in top-right corner with shimmer animation (matching invited badge)
+ * Uses secondary (coral) color for visual distinction from invited badge
+ */
+const PendingRequestsBadge: React.FC<PendingRequestsBadgeProps> = ({ count, isDark }) => {
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const shimmer = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerAnim, {
+          toValue: 1,
+          duration: duration.extraSlow,
+          easing: Easing.bezier(0.4, 0, 0.2, 1),
+          useNativeDriver: true,
+        }),
+        Animated.timing(shimmerAnim, {
+          toValue: 0,
+          duration: duration.extraSlow,
+          easing: Easing.bezier(0.4, 0, 0.2, 1),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    shimmer.start();
+    return () => shimmer.stop();
+  }, [shimmerAnim]);
+
+  // Same shimmer animation as invited badge
+  const shimmerOpacity = shimmerAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0.8, 1, 0.8],
+  });
+
+  const shimmerScale = shimmerAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [1, 1.1, 1],
+  });
+
+  // Use secondary (coral) color for distinction from gold invited badge
+  const badgeColor = isDark ? secondary[400] : secondary[500];
+  const textColor = base.white;
+
+  return (
+    <Animated.View
+      style={[
+        styles.pendingBadge,
+        {
+          backgroundColor: badgeColor,
+          shadowColor: badgeColor,
+          transform: [{ scale: shimmerScale }],
+          opacity: shimmerOpacity,
+        },
+      ]}
+    >
+      <Text size="xs" weight="bold" color={textColor} style={styles.pendingBadgeText}>
+        {count > 9 ? '9+' : count}
+      </Text>
+    </Animated.View>
+  );
+};
+
+// =============================================================================
+// INVITED INDICATOR (Player view - shows when invited to a match)
+// =============================================================================
+
+interface InvitedIndicatorProps {
+  isDark: boolean;
+}
+
+/**
+ * "Invited" badge indicator with subtle shimmer animation
+ * Compact icon-only design for bottom-right position
+ * Uses accent (gold) color to signal something special awaits action
+ */
+const InvitedIndicator: React.FC<InvitedIndicatorProps> = ({ isDark }) => {
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const shimmer = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerAnim, {
+          toValue: 1,
+          duration: duration.extraSlow,
+          easing: Easing.bezier(0.4, 0, 0.2, 1),
+          useNativeDriver: true,
+        }),
+        Animated.timing(shimmerAnim, {
+          toValue: 0,
+          duration: duration.extraSlow,
+          easing: Easing.bezier(0.4, 0, 0.2, 1),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    shimmer.start();
+    return () => shimmer.stop();
+  }, [shimmerAnim]);
+
+  const shimmerOpacity = shimmerAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0.8, 1, 0.8],
+  });
+
+  const shimmerScale = shimmerAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [1, 1.1, 1],
+  });
+
+  const badgeBg = isDark ? accent[600] : accent[500];
+  const iconColor = base.white;
+
+  return (
+    <Animated.View
+      style={[
+        styles.invitedBadge,
+        {
+          backgroundColor: badgeBg,
+          transform: [{ scale: shimmerScale }],
+          opacity: shimmerOpacity,
+          shadowColor: badgeBg,
+        },
+      ]}
+    >
+      <Ionicons name="mail" size={12} color={iconColor} />
+    </Animated.View>
   );
 };
 
@@ -377,7 +526,15 @@ const ParticipantAvatars: React.FC<ParticipantAvatarsProps> = ({ match, colors, 
 // MAIN COMPONENT
 // =============================================================================
 
-const MyMatchCard: React.FC<MyMatchCardProps> = ({ match, onPress, isDark, t, locale }) => {
+const MyMatchCard: React.FC<MyMatchCardProps> = ({
+  match,
+  onPress,
+  isDark,
+  t,
+  locale,
+  pendingRequestCount = 0,
+  isInvited = false,
+}) => {
   // Determine match tier based on court status and creator reputation
   const creatorReputationScore = match.created_by_player?.reputation_score;
   const tier = getMatchTier(match.court_status, creatorReputationScore);
@@ -526,6 +683,16 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({ match, onPress, isDark, t, lo
       ? `${tierPaletteColors.accentStart}40` // 25% opacity accent border in dark mode
       : `${tierPaletteColors.accentStart}20`; // 12% opacity accent border in light mode
 
+  // Determine if we should show pending requests badge (only for creators with pending requests)
+  const showPendingBadge = pendingRequestCount > 0;
+
+  // Build accessibility label with status indicators
+  let accessibilityLabel = `Match ${dayLabel} at ${timeLabel}`;
+  if (isMostWanted) accessibilityLabel += ' - Most Wanted';
+  if (isInvited) accessibilityLabel += ' - You are invited';
+  if (showPendingBadge)
+    accessibilityLabel += ` - ${pendingRequestCount} pending join request${pendingRequestCount > 1 ? 's' : ''}`;
+
   return (
     <TouchableOpacity
       style={[
@@ -539,8 +706,11 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({ match, onPress, isDark, t, lo
       onPress={onPress}
       activeOpacity={0.85}
       accessibilityRole="button"
-      accessibilityLabel={`Match ${dayLabel} at ${timeLabel}${isMostWanted ? ' - Most Wanted' : ''}`}
+      accessibilityLabel={accessibilityLabel}
     >
+      {/* Pending join requests badge (top-right corner) */}
+      {showPendingBadge && <PendingRequestsBadge count={pendingRequestCount} isDark={isDark} />}
+
       {/* Gradient accent strip */}
       <GradientStrip isDark={isDark} tier={tier} />
 
@@ -585,6 +755,7 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({ match, onPress, isDark, t, lo
               <Ionicons name="chevron-forward" size={10} color={status.warning.DEFAULT} />
             </Animated.View>
           )}
+          {/* Day label - always show */}
           <Text
             size="xs"
             weight="semibold"
@@ -621,8 +792,11 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({ match, onPress, isDark, t, lo
           </Text>
         </View>
 
-        {/* Participants */}
-        <ParticipantAvatars match={match} colors={colors} isDark={isDark} t={t} />
+        {/* Bottom row: Participants + Invited indicator */}
+        <View style={styles.bottomRow}>
+          <ParticipantAvatars match={match} colors={colors} isDark={isDark} t={t} />
+          {isInvited && <InvitedIndicator isDark={isDark} />}
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -637,7 +811,7 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
     borderRadius: radiusPixels.lg,
     borderWidth: 1.5,
-    overflow: 'hidden',
+    // Note: overflow NOT hidden to allow corner badges to extend outside
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
@@ -657,9 +831,54 @@ const styles = StyleSheet.create({
   gradientStrip: {
     height: 3,
     zIndex: 1,
+    borderTopLeftRadius: radiusPixels.lg - 1, // Match card border radius
+    borderTopRightRadius: radiusPixels.lg - 1,
+    overflow: 'hidden',
   },
   gradientStripPremium: {
     height: 5, // Slightly taller for premium cards
+  },
+
+  // Pending requests badge (top-right corner, extends outside card)
+  pendingBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    zIndex: 10,
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  pendingBadgeText: {
+    fontSize: 10,
+    lineHeight: 12,
+  },
+
+  // Bottom row: avatars + invited indicator
+  bottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  // Invited indicator badge (compact circular badge for bottom-right)
+  invitedBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
 
   content: {

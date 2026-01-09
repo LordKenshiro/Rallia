@@ -11,17 +11,19 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { useTheme } from '@rallia/shared-hooks';
+import { useTheme, useMatch } from '@rallia/shared-hooks';
 import { useAuth } from '../hooks';
 import { useTranslation, type TranslationOptions } from '../hooks/useTranslation';
 import type { TranslationKey } from '@rallia/shared-translations';
-import { useActionsSheet } from '../context';
+import { useActionsSheet, useMatchDetailSheet } from '../context';
 import {
   Notification,
   NOTIFICATION_TYPE_ICONS,
   NOTIFICATION_TYPE_COLORS,
+  ExtendedNotificationTypeEnum,
 } from '@rallia/shared-types';
 import { useNotificationsWithActions } from '@rallia/shared-hooks';
+import { Logger } from '@rallia/shared-services';
 import {
   lightTheme,
   darkTheme,
@@ -32,6 +34,23 @@ import {
   primary,
   neutral,
 } from '@rallia/design-system';
+
+/**
+ * Match-related notification types that should open match detail sheet
+ */
+const MATCH_NOTIFICATION_TYPES: ExtendedNotificationTypeEnum[] = [
+  'match_invitation',
+  'match_join_request',
+  'match_join_accepted',
+  'match_join_rejected',
+  'match_player_joined',
+  'match_cancelled',
+  'match_updated',
+  'match_starting_soon',
+  'match_completed',
+  'player_kicked',
+  'player_left',
+];
 
 const BASE_WHITE = '#ffffff';
 import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
@@ -235,7 +254,27 @@ const Notifications: React.FC = () => {
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
   const { openSheet } = useActionsSheet();
+  const { openSheet: openMatchDetail } = useMatchDetailSheet();
   const isDark = theme === 'dark';
+
+  // State for handling match detail opening
+  const [selectedMatchId, setSelectedMatchId] = React.useState<string | null>(null);
+
+  // Fetch match data when a match notification is tapped
+  const { match: selectedMatch, isLoading: isLoadingMatch } = useMatch(
+    selectedMatchId ?? undefined,
+    { enabled: !!selectedMatchId }
+  );
+
+  // Open match detail sheet when match data is loaded
+  React.useEffect(() => {
+    if (selectedMatch && !isLoadingMatch && selectedMatchId) {
+      Logger.logUserAction('notification_match_opened', { matchId: selectedMatchId });
+      openMatchDetail(selectedMatch);
+      // Clear the selected match ID after opening
+      setSelectedMatchId(null);
+    }
+  }, [selectedMatch, isLoadingMatch, selectedMatchId, openMatchDetail]);
 
   // Theme-aware colors from design system
   const themeColors = isDark ? darkTheme : lightTheme;
@@ -284,8 +323,22 @@ const Notifications: React.FC = () => {
       }
 
       // Navigate to target based on notification type and target_id
-      if (notification.target_id) {
-        // TODO: Navigate to specific entity based on notification.type
+      if (notification.target_id && notification.type) {
+        const isMatchNotification = MATCH_NOTIFICATION_TYPES.includes(
+          notification.type as ExtendedNotificationTypeEnum
+        );
+
+        if (isMatchNotification) {
+          // Set the selected match ID to trigger match detail fetch and sheet opening
+          Logger.logUserAction('notification_match_tapped', {
+            notificationId: notification.id,
+            matchId: notification.target_id,
+            type: notification.type,
+          });
+          setSelectedMatchId(notification.target_id);
+        }
+
+        // TODO: Handle other notification types (messages, friend requests, etc.)
       }
     },
     [markAsRead]

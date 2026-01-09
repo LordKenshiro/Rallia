@@ -1,9 +1,13 @@
 /**
  * PlayerMatches Screen
  * Displays the user's matches with tabbed Upcoming/Past views and date-sectioned lists.
+ *
+ * Also handles deep linking from push notifications:
+ * - When a match-related notification is tapped, this screen opens
+ * - The screen checks for a pending match ID and opens the detail sheet
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -15,11 +19,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { MatchCard, Text } from '@rallia/shared-components';
-import { useTheme, usePlayerMatches } from '@rallia/shared-hooks';
+import { useTheme, usePlayerMatches, useMatch } from '@rallia/shared-hooks';
 import type { MatchWithDetails } from '@rallia/shared-types';
 import { useAuth, useThemeStyles, useTranslation } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
-import { useMatchDetailSheet } from '../../../context';
+import { useMatchDetailSheet, useDeepLink } from '../../../context';
 import { Logger } from '@rallia/shared-services';
 import {
   lightTheme,
@@ -159,10 +163,39 @@ export default function PlayerMatches() {
   const { t, locale } = useTranslation();
   const { colors } = useThemeStyles();
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
+  const { consumePendingMatchId } = useDeepLink();
   const isDark = theme === 'dark';
 
   // Tab state
   const [activeTab, setActiveTab] = useState<TimeFilter>('upcoming');
+
+  // Deep link handling - check for pending match on mount
+  const [pendingMatchId, setPendingMatchId] = useState<string | null>(null);
+
+  // Fetch match data when we have a pending deep link
+  const { match: deepLinkMatch, isLoading: isLoadingDeepLinkMatch } = useMatch(
+    pendingMatchId ?? undefined,
+    { enabled: !!pendingMatchId }
+  );
+
+  // Check for pending deep link on mount
+  useEffect(() => {
+    const matchId = consumePendingMatchId();
+    if (matchId) {
+      Logger.logUserAction('deep_link_match_opening', { matchId });
+      setPendingMatchId(matchId);
+    }
+  }, [consumePendingMatchId]);
+
+  // Open match detail sheet when deep link match data is loaded
+  useEffect(() => {
+    if (deepLinkMatch && !isLoadingDeepLinkMatch && pendingMatchId) {
+      Logger.logUserAction('deep_link_match_opened', { matchId: pendingMatchId });
+      openMatchDetail(deepLinkMatch);
+      // Clear the pending match ID after opening
+      setPendingMatchId(null);
+    }
+  }, [deepLinkMatch, isLoadingDeepLinkMatch, pendingMatchId, openMatchDetail]);
 
   // Theme colors
   const themeColors = isDark ? darkTheme : lightTheme;

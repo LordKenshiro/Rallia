@@ -853,14 +853,19 @@ export const MatchDetailSheet: React.FC = () => {
   const isFull = participantInfo.spotsLeft === 0;
   const isCreator = playerId === match.created_by;
   // Check if user is an active participant (not left, declined, refused, or kicked)
-  const activeStatuses = ['joined', 'requested', 'pending', 'waitlisted'];
+  // Note: 'pending' (invited by host) is NOT included - invited players should see regular CTAs
+  const activeStatuses = ['joined', 'requested', 'waitlisted'];
   const isParticipant =
     match.participants?.some(
       p => p.player_id === playerId && activeStatuses.includes(p.status ?? '')
     ) || isCreator;
-  // Check if user has a pending request (for showing "Cancel Request" button)
+  // Check if user has a pending join request (for showing "Cancel Request" button)
   const hasPendingRequest = match.participants?.some(
     p => p.player_id === playerId && p.status === 'requested'
+  );
+  // Check if user is invited by host (pending status = invitation awaiting response)
+  const isInvited = match.participants?.some(
+    p => p.player_id === playerId && p.status === 'pending'
   );
   // Check if user is waitlisted (for showing waitlisted banner)
   const isWaitlisted = match.participants?.some(
@@ -1166,6 +1171,24 @@ export const MatchDetailSheet: React.FC = () => {
           loading={isCancellingRequest}
         >
           {t('matchActions.cancelRequest' as TranslationKey)}
+        </Button>
+      );
+    }
+
+    // User is invited (pending status) to direct-join match with spots: Accept Invitation button (success green)
+    // For request-mode or full matches, invited users see regular CTAs (Ask to Join / Join Waitlist)
+    if (isInvited && !isFull && match.join_mode !== 'request') {
+      return (
+        <Button
+          variant="primary"
+          onPress={handleJoinMatch}
+          style={styles.actionButton}
+          themeColors={successThemeColors}
+          isDark={isDark}
+          loading={isJoining}
+          disabled={isJoining}
+        >
+          {t('match.cta.acceptInvitation' as TranslationKey)}
         </Button>
       );
     }

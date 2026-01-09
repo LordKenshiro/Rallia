@@ -281,10 +281,7 @@ const SettingsScreen: React.FC = () => {
                   activeOpacity={0.7}
                 >
                   {isChangingLocale && !isActive ? (
-                    <ActivityIndicator
-                      size="small"
-                      color={isActive ? colors.buttonTextActive : colors.buttonTextInactive}
-                    />
+                    <ActivityIndicator size="small" color={colors.buttonActive} />
                   ) : (
                     <Text
                       size="sm"

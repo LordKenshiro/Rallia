@@ -270,7 +270,7 @@ const Home = () => {
     return (
       <View style={styles.myMatchesSection}>
         {/* Header with title and "See All" button */}
-        <View style={[styles.sectionHeader]}>
+        <View style={[styles.sectionHeader, { paddingVertical: spacingPixels[2] }]}>
           <Text size="xl" weight="bold" color={colors.text}>
             {t('home.myMatches' as TranslationKey)}
           </Text>
@@ -312,21 +312,39 @@ const Home = () => {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.myMatchesScrollContent}
           >
-            {myMatches.slice(0, 5).map((match: MatchWithDetails) => (
-              <MyMatchCard
-                key={match.id}
-                match={match}
-                isDark={isDark}
-                t={
-                  t as (key: string, options?: Record<string, string | number | boolean>) => string
-                }
-                locale={locale}
-                onPress={() => {
-                  Logger.logUserAction('my_match_pressed', { matchId: match.id });
-                  openMatchDetail(match);
-                }}
-              />
-            ))}
+            {myMatches.slice(0, 5).map((match: MatchWithDetails) => {
+              // Check if current player is invited (has pending invitation)
+              const isInvited = !!(
+                player?.id &&
+                match.participants?.some(p => p.player_id === player.id && p.status === 'pending')
+              );
+              // Count pending join requests (only relevant if current user is creator)
+              const pendingRequestCount =
+                match.created_by === player?.id
+                  ? (match.participants?.filter(p => p.status === 'requested').length ?? 0)
+                  : 0;
+
+              return (
+                <MyMatchCard
+                  key={match.id}
+                  match={match}
+                  isDark={isDark}
+                  t={
+                    t as (
+                      key: string,
+                      options?: Record<string, string | number | boolean>
+                    ) => string
+                  }
+                  locale={locale}
+                  isInvited={isInvited}
+                  pendingRequestCount={pendingRequestCount}
+                  onPress={() => {
+                    Logger.logUserAction('my_match_pressed', { matchId: match.id });
+                    openMatchDetail(match);
+                  }}
+                />
+              );
+            })}
           </ScrollView>
         )}
       </View>
@@ -343,6 +361,7 @@ const Home = () => {
     isDark,
     locale,
     openMatchDetail,
+    player,
   ]);
 
   // Render list header (welcome section for logged-in users)
@@ -580,6 +599,7 @@ const styles = StyleSheet.create({
   },
   myMatchesSection: {
     marginTop: spacingPixels[2],
+    overflow: 'visible', // Allow corner badges to extend outside cards
   },
   myMatchesLoading: {
     padding: spacingPixels[8],
@@ -602,6 +622,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   myMatchesScrollContent: {
+    paddingTop: 10, // Minimal space for corner badges (badge extends 8px above card)
     paddingLeft: spacingPixels[4],
     paddingRight: spacingPixels[4],
     paddingBottom: spacingPixels[2],

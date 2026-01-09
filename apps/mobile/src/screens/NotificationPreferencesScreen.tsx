@@ -406,7 +406,7 @@ const NotificationPreferencesScreen: React.FC = () => {
             activeOpacity={0.7}
           >
             {isResetting ? (
-              <ActivityIndicator size="small" color={colors.text} />
+              <ActivityIndicator size="small" color={colors.buttonActive} />
             ) : (
               <>
                 <Ionicons name="refresh-outline" size={18} color={colors.text} />

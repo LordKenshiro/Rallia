@@ -1010,15 +1010,15 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
   );
 
   // If they have an active participation, they can't join again
-  // Allow re-joining if they previously left, declined an invitation, were refused by host, were kicked, or are waitlisted (and spots opened up)
-  if (
-    existingParticipant &&
-    existingParticipant.status !== 'left' &&
-    existingParticipant.status !== 'declined' &&
-    existingParticipant.status !== 'refused' &&
-    existingParticipant.status !== 'kicked' &&
-    existingParticipant.status !== 'waitlisted'
-  ) {
+  // Allow joining/re-joining if:
+  // - 'pending': invited by host, accepting the invitation
+  // - 'left': previously left the match
+  // - 'declined': previously declined an invitation
+  // - 'refused': host previously rejected their join request
+  // - 'kicked': previously kicked from the match
+  // - 'waitlisted': on waitlist, spots may have opened up
+  const allowedStatuses = ['pending', 'left', 'declined', 'refused', 'kicked', 'waitlisted'];
+  if (existingParticipant && !allowedStatuses.includes(existingParticipant.status)) {
     throw new Error('You are already in this match');
   }
 

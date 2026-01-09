@@ -1,6 +1,9 @@
 import React from 'react';
 import { ActivityIndicator, View, StyleSheet, ViewStyle } from 'react-native';
-import { colors } from '../theme';
+import { primary } from '@rallia/design-system';
+
+// Default spinner color - teal primary that is visible on both light and dark backgrounds
+const DEFAULT_SPINNER_COLOR = primary[500]; // #14b8a6
 
 export interface SpinnerProps {
   /**
@@ -11,7 +14,7 @@ export interface SpinnerProps {
 
   /**
    * Color of the spinner
-   * @default colors.primary
+   * @default primary[500] (teal)
    */
   color?: string;
 
@@ -35,21 +38,21 @@ export interface SpinnerProps {
 /**
  * Spinner component for indicating loading states
  * Uses React Native's ActivityIndicator with size and color customization
- * 
+ *
  * @example
  * ```tsx
  * // Basic spinner
  * <Spinner />
- * 
+ *
  * // Small spinner
  * <Spinner size="sm" />
- * 
+ *
  * // Large spinner with custom color
  * <Spinner size="lg" color="#FF5722" />
- * 
+ *
  * // Centered spinner
  * <Spinner center />
- * 
+ *
  * // In a button (loading state)
  * <Button disabled>
  *   <HStack spacing={8} align="center">
@@ -57,7 +60,7 @@ export interface SpinnerProps {
  *     <Text color="#fff">Loading...</Text>
  *   </HStack>
  * </Button>
- * 
+ *
  * // Full-screen loading
  * <View style={{ flex: 1 }}>
  *   <Spinner size="xl" center />
@@ -66,7 +69,7 @@ export interface SpinnerProps {
  */
 export const Spinner: React.FC<SpinnerProps> = ({
   size = 'md',
-  color = colors.primary,
+  color = DEFAULT_SPINNER_COLOR,
   center = false,
   style,
   testID = 'spinner',
@@ -101,11 +104,7 @@ export const Spinner: React.FC<SpinnerProps> = ({
 
   return (
     <View style={[containerStyle, style]} testID={testID}>
-      <ActivityIndicator
-        size={getSize()}
-        color={color}
-        style={spinnerStyle}
-      />
+      <ActivityIndicator size={getSize()} color={color} style={spinnerStyle} />
     </View>
   );
 };

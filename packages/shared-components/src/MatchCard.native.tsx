@@ -34,7 +34,6 @@ import type { MatchWithDetails } from '@rallia/shared-types';
 import {
   formatTimeInTimezone,
   getTimeDifferenceFromNow,
-  getMatchEndTimeDifferenceFromNow,
   formatIntuitiveDateInTimezone,
   getProfilePictureUrl,
   deriveMatchStatus,
@@ -380,15 +379,43 @@ interface PlayerSlotsProps {
   colors: ThemeColors;
   isDark: boolean;
   t: (key: string, options?: TranslationOptions) => string;
+  /** Current user's player ID to check if they're invited */
+  currentPlayerId?: string;
 }
 
 /**
  * Visual player slot indicators showing filled/empty positions
  */
-const PlayerSlots: React.FC<PlayerSlotsProps> = ({ match, participantInfo, colors, isDark, t }) => {
+const PlayerSlots: React.FC<PlayerSlotsProps> = ({
+  match,
+  participantInfo,
+  colors,
+  isDark,
+  t,
+  currentPlayerId,
+}) => {
   const creatorProfile = match.created_by_player?.profile;
   // Only include joined participants
   const joinedParticipants = match.participants?.filter(p => p.status === 'joined') ?? [];
+
+  // Check if current user has been invited (pending status)
+  const isInvited = currentPlayerId
+    ? match.participants?.some(
+        p =>
+          (p.player_id === currentPlayerId || p.player?.id === currentPlayerId) &&
+          p.status === 'pending'
+      )
+    : false;
+
+  // Check if current user is the creator (to show pending requests count)
+  const isCreator = currentPlayerId
+    ? match.created_by_player?.id === currentPlayerId || match.created_by === currentPlayerId
+    : false;
+
+  // Count pending join requests (for creators only)
+  const pendingRequestsCount = isCreator
+    ? (match.participants?.filter(p => p.status === 'requested').length ?? 0)
+    : 0;
 
   // Build slots array
   const slots: Array<{
@@ -483,6 +510,52 @@ const PlayerSlots: React.FC<PlayerSlotsProps> = ({ match, participantInfo, color
       >
         {spotsText}
       </Text>
+      {/* Invited indicator for players with pending status */}
+      {isInvited && (
+        <View
+          style={[
+            styles.invitedBadge,
+            {
+              backgroundColor: isDark ? `${primary[400]}25` : `${primary[500]}15`,
+              borderColor: isDark ? primary[400] : primary[500],
+            },
+          ]}
+        >
+          <Ionicons
+            name="mail-outline"
+            size={12}
+            color={isDark ? primary[400] : primary[500]}
+            style={styles.invitedIcon}
+          />
+          <Text size="xs" weight="semibold" color={isDark ? primary[400] : primary[500]}>
+            {t('match.invited')}
+          </Text>
+        </View>
+      )}
+      {/* Pending requests indicator for match creators */}
+      {pendingRequestsCount > 0 && (
+        <View
+          style={[
+            styles.invitedBadge,
+            {
+              backgroundColor: isDark
+                ? `${status.warning.DEFAULT}25`
+                : `${status.warning.DEFAULT}15`,
+              borderColor: status.warning.DEFAULT,
+            },
+          ]}
+        >
+          <Ionicons
+            name="person-add-outline"
+            size={12}
+            color={status.warning.DEFAULT}
+            style={styles.invitedIcon}
+          />
+          <Text size="xs" weight="semibold" color={status.warning.DEFAULT}>
+            {t('match.pendingRequests', { count: pendingRequestsCount })}
+          </Text>
+        </View>
+      )}
     </View>
   );
 };
@@ -506,24 +579,6 @@ const Badge: React.FC<BadgeProps> = ({ label, bgColor, textColor, icon }) => (
   </View>
 );
 
-interface StatusBadgeProps {
-  label: string;
-  bgColor: string;
-  textColor: string;
-  glowColor: string;
-}
-
-/**
- * Status badge with subtle glow effect
- */
-const StatusBadge: React.FC<StatusBadgeProps> = ({ label, bgColor, textColor }) => (
-  <View style={[styles.statusBadge, { backgroundColor: bgColor }]}>
-    <Text size="xs" weight="bold" color={textColor}>
-      {label.toUpperCase()}
-    </Text>
-  </View>
-);
-
 interface CardFooterProps {
   match: MatchWithDetails;
   participantInfo: { current: number; total: number; spotsLeft: number };
@@ -542,10 +597,13 @@ interface CardFooterProps {
  * 2. Match has result → "View Results"
  * 3. Owner (match not ended) → "Edit"
  * 4. User has joined (match not ended) → "Leave"
- * 5. User has pending request → "Pending" (disabled)
- * 6. Match is full → "Full" (disabled)
+ * 5. User has pending join request ('requested' status) → "Pending" (disabled)
+ * 6. Match is full → "Join Waitlist"
  * 7. Join mode is 'request' → "Ask to Join"
  * 8. Default → "Join"
+ *
+ * Note: Users with 'pending' status (invited by host) see regular CTAs (Join/Ask to Join/Join Waitlist)
+ * so they can accept the invitation through the normal join flow.
  */
 const CardFooter: React.FC<CardFooterProps> = ({
   match,
@@ -559,15 +617,14 @@ const CardFooter: React.FC<CardFooterProps> = ({
   // Check if match is cancelled (use cancelled_at instead of status)
   const isCancelled = !!match.cancelled_at;
 
-  // Check if match has ended (end_time has passed in match's timezone)
-  // Account for matches that span midnight (e.g., 11 PM - 1 AM)
-  const matchEndDiff = getMatchEndTimeDifferenceFromNow(
+  // Check if match has started (start_time has passed in match's timezone)
+  // Once started, players can no longer join, leave, or edit the match
+  const matchStartDiff = getTimeDifferenceFromNow(
     match.match_date,
     match.start_time,
-    match.end_time,
     match.timezone
   );
-  const hasMatchEnded = matchEndDiff < 0;
+  const hasMatchStarted = matchStartDiff < 0;
 
   // Derive match state from data (not from status field)
   const isFull = participantInfo.spotsLeft === 0;
@@ -585,8 +642,10 @@ const CardFooter: React.FC<CardFooterProps> = ({
     : undefined;
 
   const hasJoined = userParticipant?.status === 'joined';
-  const hasPendingRequest =
-    userParticipant?.status === 'requested' || userParticipant?.status === 'pending';
+  // 'pending' (invited by host) shows "Accept Invitation" CTA
+  const isInvited = userParticipant?.status === 'pending';
+  // 'requested' (user requested to join) shows "Pending" CTA
+  const hasPendingRequest = userParticipant?.status === 'requested';
   const isWaitlisted = userParticipant?.status === 'waitlisted';
 
   // Join mode
@@ -619,8 +678,8 @@ const CardFooter: React.FC<CardFooterProps> = ({
     ctaBgColor = isDark ? neutral[700] : neutral[200];
     ctaTextColor = colors.text;
     ctaIcon = 'eye-outline';
-  } else if (hasMatchEnded) {
-    // Match has ended but no results yet → View (neutral)
+  } else if (hasMatchStarted) {
+    // Match has started but no results yet → View (neutral, no actions allowed)
     ctaLabel = t('match.cta.view');
     ctaBgColor = isDark ? neutral[700] : neutral[200];
     ctaTextColor = colors.text;
@@ -650,6 +709,12 @@ const CardFooter: React.FC<CardFooterProps> = ({
     ctaTextColor = status.warning.DEFAULT;
     ctaDisabled = true;
     ctaIcon = 'hourglass-outline';
+  } else if (isInvited && !isFull && !isRequestMode) {
+    // Invited (pending status) to direct-join match with spots → Accept Invitation (success green)
+    ctaLabel = t('match.cta.acceptInvitation');
+    ctaBgColor = status.success.DEFAULT;
+    ctaTextColor = base.white;
+    ctaIcon = 'checkmark-circle-outline';
   } else if (isFull) {
     // Join Waitlist → success green
     ctaLabel = t('match.cta.joinWaitlist');
@@ -1170,6 +1235,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
             colors={colors}
             isDark={isDark}
             t={t}
+            currentPlayerId={currentPlayerId}
           />
 
           {/* Badges row */}
@@ -1390,6 +1456,18 @@ const styles = StyleSheet.create({
   },
   spotsText: {
     marginLeft: spacingPixels[2],
+  },
+  invitedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: spacingPixels[2],
+    paddingHorizontal: spacingPixels[2],
+    paddingVertical: spacingPixels[1],
+    borderRadius: radiusPixels.full,
+    borderWidth: 1,
+  },
+  invitedIcon: {
+    marginRight: spacingPixels[1],
   },
 
   // Badges
