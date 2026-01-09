@@ -74,6 +74,11 @@ export interface RequesterDetailsModalProps {
    * Whether the match is full (disable accept)
    */
   isMatchFull?: boolean;
+
+  /**
+   * Whether the match is in progress (disable accept)
+   */
+  isMatchInProgress?: boolean;
 }
 
 // =============================================================================
@@ -88,6 +93,7 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
   onReject,
   isLoading = false,
   isMatchFull = false,
+  isMatchInProgress = false,
 }) => {
   const { theme } = useTheme();
   const { t } = useTranslation();
@@ -107,10 +113,10 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
 
   // Handle accept
   const handleAccept = useCallback(() => {
-    if (isLoading || isMatchFull || !participant?.id) return;
+    if (isLoading || isMatchFull || isMatchInProgress || !participant?.id) return;
     lightHaptic();
     onAccept(participant.id);
-  }, [isLoading, isMatchFull, participant, onAccept]);
+  }, [isLoading, isMatchFull, isMatchInProgress, participant, onAccept]);
 
   // Handle reject
   const handleReject = useCallback(() => {
@@ -355,6 +361,21 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                     </Text>
                   </View>
                 )}
+
+                {/* Match In Progress Warning */}
+                {isMatchInProgress && (
+                  <View
+                    style={[styles.warningBox, { backgroundColor: status.warning.DEFAULT + '20' }]}
+                  >
+                    <Ionicons name="play-circle-outline" size={16} color={status.warning.DEFAULT} />
+                    <Text
+                      size="sm"
+                      style={{ color: status.warning.DEFAULT, marginLeft: spacingPixels[2] }}
+                    >
+                      {t('matchDetail.matchInProgress' as TranslationKey)}
+                    </Text>
+                  </View>
+                )}
               </ScrollView>
 
               {/* Action Buttons */}
@@ -387,12 +408,13 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                     styles.button,
                     styles.acceptButton,
                     {
-                      backgroundColor: isMatchFull ? neutral[400] : status.success.DEFAULT,
+                      backgroundColor:
+                        isMatchFull || isMatchInProgress ? neutral[400] : status.success.DEFAULT,
                     },
-                    (isLoading || isMatchFull) && styles.buttonDisabled,
+                    (isLoading || isMatchFull || isMatchInProgress) && styles.buttonDisabled,
                   ]}
                   onPress={handleAccept}
-                  disabled={isLoading || isMatchFull}
+                  disabled={isLoading || isMatchFull || isMatchInProgress}
                   activeOpacity={0.7}
                 >
                   <Ionicons name="checkmark" size={18} color={BASE_WHITE} />

@@ -1547,18 +1547,23 @@ export const MatchDetailSheet: React.FC = () => {
                     colors={colors}
                     isDark={isDark}
                   />
-                  {/* Kick button for host to remove joined participants (not for host avatar, not for empty slots, not if match ended) */}
-                  {isCreator && !p.isHost && !p.isEmpty && p.participantId && !hasMatchEnded && (
-                    <TouchableOpacity
-                      style={[styles.kickButton, { backgroundColor: status.error.DEFAULT }]}
-                      onPress={() => handleKickParticipant(p.participantId!)}
-                      disabled={isKicking}
-                      activeOpacity={0.7}
-                      hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-                    >
-                      <Ionicons name="close" size={10} color={BASE_WHITE} />
-                    </TouchableOpacity>
-                  )}
+                  {/* Kick button for host to remove joined participants (not for host avatar, not for empty slots, not if match ended or in progress) */}
+                  {isCreator &&
+                    !p.isHost &&
+                    !p.isEmpty &&
+                    p.participantId &&
+                    !hasMatchEnded &&
+                    !isInProgress && (
+                      <TouchableOpacity
+                        style={[styles.kickButton, { backgroundColor: status.error.DEFAULT }]}
+                        onPress={() => handleKickParticipant(p.participantId!)}
+                        disabled={isKicking}
+                        activeOpacity={0.7}
+                        hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                      >
+                        <Ionicons name="close" size={10} color={BASE_WHITE} />
+                      </TouchableOpacity>
+                    )}
                 </View>
                 {/* Show name for all non-empty participants */}
                 {!p.isEmpty && p.name && (
@@ -1582,30 +1587,34 @@ export const MatchDetailSheet: React.FC = () => {
             </Text>
           )}
 
-          {/* Invite Players Button - only visible to host when spots available and match not ended */}
-          {isCreator && participantInfo.spotsLeft > 0 && !hasMatchEnded && !isCancelled && (
-            <TouchableOpacity
-              style={[
-                styles.invitePlayersButton,
-                {
-                  backgroundColor: colors.primaryLight,
-                  borderColor: colors.primary,
-                },
-              ]}
-              onPress={handleInvitePlayers}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="person-add" size={18} color={colors.primary} />
-              <Text
-                size="sm"
-                weight="medium"
-                color={colors.primary}
-                style={styles.inviteButtonText}
+          {/* Invite Players Button - only visible to host when spots available and match not ended or in progress */}
+          {isCreator &&
+            participantInfo.spotsLeft > 0 &&
+            !hasMatchEnded &&
+            !isCancelled &&
+            !isInProgress && (
+              <TouchableOpacity
+                style={[
+                  styles.invitePlayersButton,
+                  {
+                    backgroundColor: colors.primaryLight,
+                    borderColor: colors.primary,
+                  },
+                ]}
+                onPress={handleInvitePlayers}
+                activeOpacity={0.7}
               >
-                {t('matchCreation.invite.title' as TranslationKey)}
-              </Text>
-            </TouchableOpacity>
-          )}
+                <Ionicons name="person-add" size={18} color={colors.primary} />
+                <Text
+                  size="sm"
+                  weight="medium"
+                  color={colors.primary}
+                  style={styles.inviteButtonText}
+                >
+                  {t('matchCreation.invite.title' as TranslationKey)}
+                </Text>
+              </TouchableOpacity>
+            )}
 
           {/* Pending Requests Section - only visible to host */}
           {isCreator && pendingRequests.length > 0 && (
@@ -1631,6 +1640,24 @@ export const MatchDetailSheet: React.FC = () => {
                       style={styles.matchFullBadgeText}
                     >
                       {t('matchActions.matchFullCannotAccept' as TranslationKey)}
+                    </Text>
+                  </View>
+                )}
+                {isInProgress && (
+                  <View
+                    style={[
+                      styles.matchFullBadge,
+                      { backgroundColor: status.warning.DEFAULT + '20' },
+                    ]}
+                  >
+                    <Ionicons name="play-circle-outline" size={12} color={status.warning.DEFAULT} />
+                    <Text
+                      size="xs"
+                      weight="medium"
+                      color={status.warning.DEFAULT}
+                      style={styles.matchFullBadgeText}
+                    >
+                      {t('matchDetail.matchInProgress' as TranslationKey)}
                     </Text>
                   </View>
                 )}
@@ -1709,11 +1736,12 @@ export const MatchDetailSheet: React.FC = () => {
                         styles.requestActionButton,
                         styles.acceptButton,
                         {
-                          backgroundColor: isFull ? neutral[400] : status.success.DEFAULT,
+                          backgroundColor:
+                            isFull || isInProgress ? neutral[400] : status.success.DEFAULT,
                         },
                       ]}
                       onPress={() => request.id && handleAcceptRequest(request.id)}
-                      disabled={isAccepting || isRejecting || isFull}
+                      disabled={isAccepting || isRejecting || isFull || isInProgress}
                       activeOpacity={0.7}
                     >
                       {isAccepting ? (
@@ -1849,10 +1877,15 @@ export const MatchDetailSheet: React.FC = () => {
                             <TouchableOpacity
                               style={[
                                 styles.requestActionButton,
-                                { backgroundColor: colors.primary },
+                                {
+                                  backgroundColor:
+                                    isResendingInvite || isCancellingInvite || isInProgress
+                                      ? neutral[400]
+                                      : colors.primary,
+                                },
                               ]}
                               onPress={() => invitation.id && handleResendInvite(invitation.id)}
-                              disabled={isResendingInvite || isCancellingInvite}
+                              disabled={isResendingInvite || isCancellingInvite || isInProgress}
                               activeOpacity={0.7}
                             >
                               <Ionicons name="refresh" size={18} color={BASE_WHITE} />
@@ -1875,10 +1908,15 @@ export const MatchDetailSheet: React.FC = () => {
                           <TouchableOpacity
                             style={[
                               styles.requestActionButton,
-                              { backgroundColor: colors.primary },
+                              {
+                                backgroundColor:
+                                  isResendingInvite || isCancellingInvite || isInProgress
+                                    ? neutral[400]
+                                    : colors.primary,
+                              },
                             ]}
                             onPress={() => invitation.id && handleResendInvite(invitation.id)}
-                            disabled={isResendingInvite || isCancellingInvite}
+                            disabled={isResendingInvite || isCancellingInvite || isInProgress}
                             activeOpacity={0.7}
                           >
                             <Ionicons name="refresh" size={18} color={BASE_WHITE} />
@@ -2093,6 +2131,7 @@ export const MatchDetailSheet: React.FC = () => {
         onReject={handleRejectFromModal}
         isLoading={isAccepting || isRejecting}
         isMatchFull={isFull}
+        isMatchInProgress={isInProgress}
       />
 
       {/* Kick Participant Confirmation Modal */}
