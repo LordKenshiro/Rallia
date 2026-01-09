@@ -54,6 +54,7 @@ import {
 } from '@rallia/shared-utils';
 import { useMatchDetailSheet } from '../context/MatchDetailSheetContext';
 import { useActionsSheet } from '../context/ActionsSheetContext';
+import { usePlayerInviteSheet } from '../context/PlayerInviteSheetContext';
 import { useTranslation, type TranslationKey } from '../hooks';
 import { useTheme, usePlayer, useMatchActions } from '@rallia/shared-hooks';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
@@ -273,6 +274,7 @@ const ParticipantAvatar: React.FC<ParticipantAvatarProps> = ({
 export const MatchDetailSheet: React.FC = () => {
   const { sheetRef, closeSheet, selectedMatch, updateSelectedMatch } = useMatchDetailSheet();
   const { openSheetForEdit } = useActionsSheet();
+  const { openSheet: openInviteSheet } = usePlayerInviteSheet();
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
   const { player } = usePlayer();
@@ -644,6 +646,28 @@ export const MatchDetailSheet: React.FC = () => {
     closeSheet(); // Close the detail sheet first
     openSheetForEdit(selectedMatch); // Open actions sheet in edit mode
   }, [selectedMatch, closeSheet, openSheetForEdit]);
+
+  // Handle invite players - opens the player invite sheet
+  const handleInvitePlayers = useCallback(() => {
+    if (!selectedMatch || !playerId) return;
+    lightHaptic();
+    // Statuses that should be excluded from invite search:
+    // - pending: Already has an active invitation
+    // - requested: Already has an active join request
+    // - joined: Already in the match
+    // - waitlisted: Already on the waitlist
+    // - kicked: Host removed them (shouldn't re-invite)
+    // Statuses that CAN be re-invited: declined, left, refused, cancelled
+    const excludeStatuses = ['pending', 'requested', 'joined', 'waitlisted', 'kicked'];
+    const existingParticipantIds = [
+      selectedMatch.created_by, // Host always excluded
+      ...((selectedMatch.participants
+        ?.filter(p => excludeStatuses.includes(p.status ?? ''))
+        .map(p => p.player_id)
+        .filter(Boolean) as string[]) ?? []),
+    ];
+    openInviteSheet(selectedMatch.id, selectedMatch.sport_id, playerId, existingParticipantIds);
+  }, [selectedMatch, playerId, openInviteSheet]);
 
   // Handle view requester details - opens modal instead of navigating
   const handleViewRequesterDetails = useCallback((participant: MatchParticipantWithPlayer) => {
@@ -1523,6 +1547,31 @@ export const MatchDetailSheet: React.FC = () => {
             </Text>
           )}
 
+          {/* Invite Players Button - only visible to host when spots available and match not ended */}
+          {isCreator && participantInfo.spotsLeft > 0 && !hasMatchEnded && !isCancelled && (
+            <TouchableOpacity
+              style={[
+                styles.invitePlayersButton,
+                {
+                  backgroundColor: colors.primaryLight,
+                  borderColor: colors.primary,
+                },
+              ]}
+              onPress={handleInvitePlayers}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="person-add" size={18} color={colors.primary} />
+              <Text
+                size="sm"
+                weight="medium"
+                color={colors.primary}
+                style={styles.inviteButtonText}
+              >
+                {t('matchCreation.invite.title' as TranslationKey)}
+              </Text>
+            </TouchableOpacity>
+          )}
+
           {/* Pending Requests Section - only visible to host */}
           {isCreator && pendingRequests.length > 0 && (
             <View style={styles.pendingRequestsSection}>
@@ -2211,6 +2260,20 @@ const styles = StyleSheet.create({
   },
   spotsText: {
     marginTop: spacingPixels[3],
+  },
+  invitePlayersButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacingPixels[3],
+    paddingVertical: spacingPixels[2.5],
+    paddingHorizontal: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+    gap: spacingPixels[2],
+  },
+  inviteButtonText: {
+    // No additional styles needed
   },
 
   // Pending requests (host only)

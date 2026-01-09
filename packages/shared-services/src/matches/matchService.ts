@@ -2880,49 +2880,96 @@ export async function invitePlayersToMatch(
   const sport = Array.isArray(sportData) ? sportData[0] : sportData;
   const sportName = sport?.display_name || sport?.name || 'a match';
 
-  // Check which players are already in the match
-  const existingPlayerIds = new Set(
-    (match.participants ?? []).map((p: { player_id: string }) => p.player_id)
-  );
+  // Build a map of existing participants with their status
+  const existingParticipants = new Map<string, { id: string; status: string }>();
+  for (const p of match.participants ?? []) {
+    existingParticipants.set(p.player_id, { id: p.id, status: p.status ?? '' });
+  }
+
+  // Statuses that cannot be re-invited (active participation states)
+  const activeStatuses = ['pending', 'requested', 'joined', 'waitlisted', 'kicked'];
+  // Statuses that CAN be re-invited (player declined, left, etc.)
+  const reinvitableStatuses = ['declined', 'left', 'refused', 'cancelled'];
 
   const alreadyInMatch: string[] = [];
+  const toReinvite: Array<{ participantId: string; playerId: string }> = [];
   const toInvite: string[] = [];
 
   for (const playerId of playerIds) {
-    if (existingPlayerIds.has(playerId)) {
-      alreadyInMatch.push(playerId);
+    const existing = existingParticipants.get(playerId);
+    if (existing) {
+      if (activeStatuses.includes(existing.status)) {
+        // Player has an active status - cannot re-invite
+        alreadyInMatch.push(playerId);
+      } else if (reinvitableStatuses.includes(existing.status)) {
+        // Player has a re-invitable status - update their record
+        toReinvite.push({ participantId: existing.id, playerId });
+      } else {
+        // Unknown status - treat as already in match for safety
+        alreadyInMatch.push(playerId);
+      }
     } else {
+      // No existing record - create new invitation
       toInvite.push(playerId);
     }
   }
 
-  if (toInvite.length === 0) {
+  if (toInvite.length === 0 && toReinvite.length === 0) {
     return { invited: [], alreadyInMatch, failed: [] };
   }
 
-  // Create participant records with 'pending' status
-  const participantsToInsert = toInvite.map(playerId => ({
-    match_id: matchId,
-    player_id: playerId,
-    status: 'pending' as const,
-    is_host: false,
-  }));
+  const invited: MatchParticipant[] = [];
+  const failed: string[] = [];
 
-  const { data: insertedParticipants, error: insertError } = await supabase
-    .from('match_participant')
-    .insert(participantsToInsert)
-    .select();
+  // Update existing records for re-invitable players
+  for (const { participantId, playerId } of toReinvite) {
+    const { data: updatedParticipant, error: updateError } = await supabase
+      .from('match_participant')
+      .update({ status: 'pending', updated_at: new Date().toISOString() })
+      .eq('id', participantId)
+      .select()
+      .single();
 
-  if (insertError) {
-    console.error('[invitePlayersToMatch] Insert error:', insertError);
-    throw new Error(`Failed to invite players: ${insertError.message}`);
+    if (updateError) {
+      console.error('[invitePlayersToMatch] Update error for re-invite:', updateError);
+      failed.push(playerId);
+    } else if (updatedParticipant) {
+      invited.push(updatedParticipant as MatchParticipant);
+    }
   }
 
-  const invited = (insertedParticipants ?? []) as MatchParticipant[];
-  const invitedPlayerIds = new Set(invited.map(p => p.player_id));
-  const failed = toInvite.filter(id => !invitedPlayerIds.has(id));
+  // Create new participant records for players without existing records
+  if (toInvite.length > 0) {
+    const participantsToInsert = toInvite.map(playerId => ({
+      match_id: matchId,
+      player_id: playerId,
+      status: 'pending' as const,
+      is_host: false,
+    }));
 
-  // Send notifications to invited players (fire and forget)
+    const { data: insertedParticipants, error: insertError } = await supabase
+      .from('match_participant')
+      .insert(participantsToInsert)
+      .select();
+
+    if (insertError) {
+      console.error('[invitePlayersToMatch] Insert error:', insertError);
+      // Add all toInvite players to failed
+      failed.push(...toInvite);
+    } else {
+      const insertedList = (insertedParticipants ?? []) as MatchParticipant[];
+      invited.push(...insertedList);
+      // Check if any inserts failed
+      const insertedPlayerIds = new Set(insertedList.map(p => p.player_id));
+      for (const playerId of toInvite) {
+        if (!insertedPlayerIds.has(playerId)) {
+          failed.push(playerId);
+        }
+      }
+    }
+  }
+
+  // Send notifications to all invited players (fire and forget)
   for (const participant of invited) {
     notifyMatchInvitation(
       participant.player_id,

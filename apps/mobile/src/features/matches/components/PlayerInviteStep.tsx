@@ -58,6 +58,10 @@ interface PlayerInviteStepProps {
   t: (key: TranslationKey, options?: TranslationOptions) => string;
   /** Whether dark mode is active */
   isDark: boolean;
+  /** Player IDs to exclude from search (e.g., existing participants) */
+  excludePlayerIds?: string[];
+  /** Whether to show the skip button (default: true, used after match creation) */
+  showSkip?: boolean;
 }
 
 // =============================================================================
@@ -246,6 +250,8 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
   colors,
   t,
   isDark,
+  excludePlayerIds,
+  showSkip = true,
 }) => {
   // State
   const [searchQuery, setSearchQuery] = useState('');
@@ -273,6 +279,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
     sportId,
     currentUserId: hostId,
     searchQuery,
+    excludePlayerIds,
     enabled: true,
   });
 
@@ -476,12 +483,14 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
 
       {/* Footer with buttons */}
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
-        {/* Skip button */}
-        <TouchableOpacity style={styles.skipButton} onPress={handleSkip} disabled={isInviting}>
-          <Text size="base" color={colors.textSecondary}>
-            {t('matchCreation.invite.skip' as TranslationKey)}
-          </Text>
-        </TouchableOpacity>
+        {/* Skip button - only shown after match creation */}
+        {showSkip && (
+          <TouchableOpacity style={styles.skipButton} onPress={handleSkip} disabled={isInviting}>
+            <Text size="base" color={colors.textSecondary}>
+              {t('matchCreation.invite.skip' as TranslationKey)}
+            </Text>
+          </TouchableOpacity>
+        )}
 
         {/* Send invitations button */}
         <TouchableOpacity

@@ -16,6 +16,7 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { navigationRef } from './src/navigation';
 import { ActionsBottomSheet } from './src/components/ActionsBottomSheet';
 import { MatchDetailSheet } from './src/components/MatchDetailSheet';
+import { PlayerInviteSheet } from './src/components/PlayerInviteSheet';
 import { SplashOverlay } from './src/components/SplashOverlay';
 import { ErrorBoundary } from '@rallia/shared-components';
 import { ThemeProvider, useTheme } from '@rallia/shared-hooks';
@@ -29,6 +30,7 @@ import {
   ActionsSheetProvider,
   SportProvider,
   MatchDetailSheetProvider,
+  PlayerInviteSheetProvider,
   useOverlay,
 } from './src/context';
 import { usePushNotifications } from './src/hooks';
@@ -102,6 +104,8 @@ function AppContent() {
       <ActionsBottomSheet />
       {/* Match Detail Bottom Sheet - shows when match card is pressed */}
       <MatchDetailSheet />
+      {/* Player Invite Bottom Sheet - shows when host invites players */}
+      <PlayerInviteSheet />
       {/* Splash overlay - renders on top of everything */}
       <SplashOverlay onAnimationComplete={() => setSplashComplete(true)} />
     </>
@@ -128,9 +132,11 @@ export default function App() {
                     <OverlayProvider>
                       <ActionsSheetProvider>
                         <MatchDetailSheetProvider>
-                          <BottomSheetModalProvider>
-                            <AppContent />
-                          </BottomSheetModalProvider>
+                          <PlayerInviteSheetProvider>
+                            <BottomSheetModalProvider>
+                              <AppContent />
+                            </BottomSheetModalProvider>
+                          </PlayerInviteSheetProvider>
                         </MatchDetailSheetProvider>
                       </ActionsSheetProvider>
                     </OverlayProvider>
