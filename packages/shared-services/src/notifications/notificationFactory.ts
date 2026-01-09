@@ -245,7 +245,7 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   match_join_rejected: 'Join Request Declined',
   match_player_joined: '{playerName} Joined',
   match_cancelled: 'Match Cancelled',
-  match_updated: 'Match Updated',
+  match_updated: 'Game Updated',
   match_starting_soon: 'Match Starting Soon',
   match_completed: 'Match Completed',
   player_kicked: 'Removed from Match',
@@ -271,7 +271,7 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   match_join_rejected: 'Your request to join the match was declined',
   match_player_joined: '{playerName} joined your {sportName} match',
   match_cancelled: 'The {sportName} match on {matchDate} has been cancelled',
-  match_updated: 'Match details have been updated',
+  match_updated: 'Your game on {matchDate} has been updated. Tap to see the changes.',
   match_starting_soon: 'Your {sportName} match starts in 15 minutes',
   match_completed: 'Your {sportName} match has been marked as completed',
   player_kicked: 'You have been removed from a match',
@@ -477,18 +477,58 @@ export async function notifyMatchCancelled(
 
 /**
  * Notify all participants that a match was updated
+ * Fetches match details for a more informative notification
  */
 export async function notifyMatchUpdated(
   participantUserIds: string[],
   matchId: string,
   updatedFields?: string[]
 ): Promise<Notification[]> {
+  // Fetch match details for more informative notification
+  const { data: matchDetails } = await supabase
+    .from('match')
+    .select(
+      `
+      sport:sport_id (name),
+      match_date,
+      start_time
+    `
+    )
+    .eq('id', matchId)
+    .single();
+
+  const sportName = (matchDetails?.sport as { name?: string } | null)?.name ?? 'Game';
+
+  // Format match date for display
+  let formattedDate: string | undefined;
+  if (matchDetails?.match_date && matchDetails?.start_time) {
+    try {
+      const matchDateTime = new Date(`${matchDetails.match_date}T${matchDetails.start_time}`);
+      formattedDate = matchDateTime.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      });
+    } catch {
+      formattedDate = matchDetails.match_date;
+    }
+  } else if (matchDetails?.match_date) {
+    formattedDate = matchDetails.match_date;
+  }
+
   return createNotifications(
     participantUserIds.map(userId => ({
       type: 'match_updated' as const,
       userId,
       targetId: matchId,
-      payload: { matchId, updatedFields },
+      payload: {
+        matchId,
+        updatedFields,
+        sportName,
+        matchDate: formattedDate ?? 'TBD',
+      },
     }))
   );
 }

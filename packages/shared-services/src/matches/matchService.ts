@@ -11,6 +11,7 @@ import {
   notifyPlayerJoined,
   notifyPlayerLeft,
   notifyMatchCancelled,
+  notifyMatchUpdated,
   notifyPlayerKicked,
   notifyMatchInvitation,
 } from '../notifications/notificationFactory';
@@ -544,12 +545,134 @@ export async function getMatchesByCreator(
 }
 
 /**
+ * Error codes for match update validation
+ * These are translated on the frontend
+ */
+export type UpdateMatchErrorCode = 'MATCH_NOT_FOUND' | 'FORMAT_CHANGE_BLOCKED' | 'UNKNOWN_ERROR';
+
+/**
+ * Result of match update validation
+ */
+export interface UpdateMatchValidationResult {
+  canUpdate: boolean;
+  errorCode?: UpdateMatchErrorCode;
+  /** @deprecated Use errorCode instead - this is kept for backwards compatibility */
+  error?: string;
+  warnings?: {
+    type: 'gender_mismatch' | 'rating_mismatch';
+    affectedParticipantIds: string[];
+    message: string;
+  }[];
+}
+
+/**
+ * Validate match update and return affected participants info
+ * This is called before updateMatch to check for issues
+ */
+export async function validateMatchUpdate(
+  matchId: string,
+  updates: Partial<CreateMatchInput>
+): Promise<UpdateMatchValidationResult> {
+  // Fetch current match with participants
+  const { data: match, error: matchError } = await supabase
+    .from('match')
+    .select(
+      `
+      id,
+      format,
+      preferred_opponent_gender,
+      min_rating_score_id,
+      participants:match_participant (
+        id,
+        player_id,
+        status,
+        player:player_id (
+          id,
+          gender
+        )
+      )
+    `
+    )
+    .eq('id', matchId)
+    .single();
+
+  if (matchError || !match) {
+    return { canUpdate: false, errorCode: 'MATCH_NOT_FOUND', error: 'Match not found' };
+  }
+
+  const joinedParticipants =
+    match.participants?.filter((p: { status: string }) => p.status === 'joined') ?? [];
+  const joinedCount = joinedParticipants.length;
+
+  const warnings: UpdateMatchValidationResult['warnings'] = [];
+
+  // ========================================
+  // FORMAT VALIDATION
+  // ========================================
+  // Block format change from doubles to singles if 2+ participants joined
+  if (updates.format !== undefined && updates.format !== match.format) {
+    if (match.format === 'doubles' && updates.format === 'singles' && joinedCount >= 2) {
+      return {
+        canUpdate: false,
+        errorCode: 'FORMAT_CHANGE_BLOCKED',
+        error:
+          'Cannot change from doubles to singles with 2 or more participants. Remove participants first or cancel the match.',
+      };
+    }
+  }
+
+  // ========================================
+  // GENDER PREFERENCE VALIDATION
+  // ========================================
+  // Warn if changing gender preference would affect joined participants
+  if (updates.preferredOpponentGender !== undefined && joinedCount > 0) {
+    const newGender =
+      updates.preferredOpponentGender === 'any' ? null : updates.preferredOpponentGender;
+
+    // Only check if setting a specific gender (not clearing it)
+    if (newGender) {
+      const mismatchedParticipants = joinedParticipants.filter(
+        (p: { player: { gender: string } | { gender: string }[] | null }) => {
+          // Handle both array and object formats from Supabase
+          const playerObj = Array.isArray(p.player) ? p.player[0] : p.player;
+          return playerObj?.gender && playerObj.gender !== newGender;
+        }
+      );
+
+      if (mismatchedParticipants.length > 0) {
+        warnings.push({
+          type: 'gender_mismatch',
+          affectedParticipantIds: mismatchedParticipants.map(
+            (p: { player_id: string }) => p.player_id
+          ),
+          message: `${mismatchedParticipants.length} participant(s) do not match the new gender preference`,
+        });
+      }
+    }
+  }
+
+  return { canUpdate: true, warnings: warnings.length > 0 ? warnings : undefined };
+}
+
+/**
  * Update a match
  */
 export async function updateMatch(
   matchId: string,
-  updates: Partial<CreateMatchInput>
+  updates: Partial<CreateMatchInput>,
+  options?: { skipValidation?: boolean }
 ): Promise<Match> {
+  // ========================================
+  // VALIDATION (unless skipped)
+  // ========================================
+  if (!options?.skipValidation) {
+    const validation = await validateMatchUpdate(matchId, updates);
+    if (!validation.canUpdate) {
+      throw new Error(validation.error || 'Update not allowed');
+    }
+    // Note: Warnings are returned but not blocking - caller can check them first
+  }
+
   // Map costSplitType to database enum values (same as createMatch)
   const costSplitMap: Record<string, 'host_pays' | 'split_equal' | 'custom'> = {
     creator_pays: 'host_pays',
@@ -639,6 +762,54 @@ export async function updateMatch(
 
   if (error) {
     throw new Error(`Failed to update match: ${error.message}`);
+  }
+
+  // ========================================
+  // NOTIFY PARTICIPANTS OF CHANGES
+  // ========================================
+  // Get list of fields that were updated (for notification content)
+  const updatedFields = Object.keys(updates).filter(
+    key => updates[key as keyof typeof updates] !== undefined
+  );
+
+  // Fields that warrant participant notification
+  const notifiableFields = [
+    'matchDate',
+    'startTime',
+    'endTime',
+    'duration',
+    'customDurationMinutes',
+    'timezone',
+    'locationType',
+    'facilityId',
+    'courtId',
+    'locationName',
+    'locationAddress',
+    'isCourtFree',
+    'estimatedCost',
+    'costSplitType',
+    'format',
+    'playerExpectation',
+  ];
+
+  const hasNotifiableChanges = updatedFields.some(field => notifiableFields.includes(field));
+
+  if (hasNotifiableChanges) {
+    // Fetch all joined participants (excluding the match creator who made the update)
+    const { data: participantsData } = await supabase
+      .from('match_participant')
+      .select('player_id')
+      .eq('match_id', matchId)
+      .eq('status', 'joined');
+
+    if (participantsData && participantsData.length > 0) {
+      const participantIds = participantsData.map(p => p.player_id);
+
+      // Send notifications (fire and forget - don't block on notification)
+      notifyMatchUpdated(participantIds, matchId, updatedFields).catch(err => {
+        console.error('Failed to send match updated notifications:', err);
+      });
+    }
   }
 
   return data as Match;
@@ -1712,8 +1883,12 @@ export async function resendInvitation(
 
   const inviterName = hostProfile?.full_name || hostProfile?.display_name || 'A player';
 
-  // Get sport name
-  const sport = match.sport as { name: string; display_name?: string } | null;
+  // Get sport name (handle both array and object cases from Supabase types)
+  const sportData = match.sport as
+    | { name: string; display_name?: string | null }
+    | { name: string; display_name?: string | null }[]
+    | null;
+  const sport = Array.isArray(sportData) ? sportData[0] : sportData;
   const sportName = sport?.display_name || sport?.name || 'a match';
 
   // Send invitation notification (fire and forget)

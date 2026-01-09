@@ -39,6 +39,7 @@ import {
 const BASE_WHITE = '#ffffff';
 import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
 import { useCreateMatch, useUpdateMatch } from '@rallia/shared-hooks';
+import { validateMatchUpdate } from '@rallia/shared-services';
 
 import { useTheme } from '@rallia/shared-hooks';
 import { useTranslation, type TranslationKey } from '../../../hooks/useTranslation';
@@ -659,6 +660,58 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     [form]
   );
 
+  // Helper to detect impactful changes between original and new values
+  const getImpactfulChanges = useCallback((): string[] => {
+    if (!editMatch) return [];
+
+    const changes: string[] = [];
+
+    // Date/Time changes
+    if (values.matchDate !== editMatch.match_date) changes.push('date');
+    if (values.startTime !== editMatch.start_time) changes.push('time');
+    if (values.duration !== editMatch.duration) changes.push('duration');
+
+    // Location changes
+    if (values.locationType !== editMatch.location_type) changes.push('location');
+    if (values.facilityId !== editMatch.facility_id) changes.push('location');
+    if (values.locationName !== editMatch.location_name) changes.push('location');
+
+    // Format changes
+    if (values.format !== editMatch.format) changes.push('format');
+
+    // Cost changes
+    if (values.isCourtFree !== editMatch.is_court_free) changes.push('cost');
+    if (values.estimatedCost !== editMatch.estimated_cost) changes.push('cost');
+    if (
+      values.costSplitType !==
+      (editMatch.cost_split_type === 'host_pays'
+        ? 'creator_pays'
+        : editMatch.cost_split_type === 'split_equal'
+          ? 'equal'
+          : editMatch.cost_split_type)
+    ) {
+      changes.push('cost');
+    }
+
+    // Remove duplicates
+    return [...new Set(changes)];
+  }, [editMatch, values]);
+
+  // Perform the actual update
+  const performUpdate = useCallback(
+    (matchData: Parameters<typeof updateMatch>[0]['updates']) => {
+      if (editMatch) {
+        updateMatch({
+          matchId: editMatch.id,
+          updates: matchData,
+          // Skip server-side validation since we already validated on the client
+          skipValidation: true,
+        });
+      }
+    },
+    [editMatch, updateMatch]
+  );
+
   // Handle form submission
   const handleSubmit = useCallback(async () => {
     Keyboard.dismiss();
@@ -713,16 +766,126 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     };
 
     if (isEditMode && editMatch) {
-      // Update existing match
-      updateMatch({
-        matchId: editMatch.id,
-        updates: matchData,
-      });
+      // Check if there are joined participants
+      const joinedParticipants = editMatch.participants?.filter(p => p.status === 'joined') ?? [];
+      const hasParticipants = joinedParticipants.length > 0;
+
+      if (hasParticipants) {
+        // Validate the update server-side
+        try {
+          const validation = await validateMatchUpdate(editMatch.id, matchData);
+
+          if (!validation.canUpdate) {
+            // Show error and block update
+            warningHaptic();
+
+            // Translate error code to localized message
+            const errorMessage = validation.errorCode
+              ? t(`matchCreation.validation.errors.${validation.errorCode}` as TranslationKey)
+              : t('matchCreation.validation.cannotUpdate' as TranslationKey);
+
+            Alert.alert(
+              t('matchCreation.validation.updateBlocked' as TranslationKey),
+              errorMessage
+            );
+            return;
+          }
+
+          // Check for warnings (e.g., gender mismatch)
+          if (validation.warnings && validation.warnings.length > 0) {
+            const genderWarning = validation.warnings.find(w => w.type === 'gender_mismatch');
+
+            if (genderWarning) {
+              // Show confirmation for gender mismatch
+              Alert.alert(
+                t('matchCreation.validation.genderMismatchTitle' as TranslationKey),
+                t('matchCreation.validation.genderMismatchMessage' as TranslationKey).replace(
+                  '{count}',
+                  String(genderWarning.affectedParticipantIds.length)
+                ),
+                [
+                  {
+                    text: t('common.cancel' as TranslationKey),
+                    style: 'cancel',
+                  },
+                  {
+                    text: t('matchCreation.validation.updateAnyway' as TranslationKey),
+                    style: 'destructive',
+                    onPress: () => performUpdate(matchData),
+                  },
+                ]
+              );
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('Validation error:', error);
+          // Continue with update if validation fails unexpectedly
+        }
+
+        // Check for impactful changes that need confirmation
+        const impactfulChanges = getImpactfulChanges();
+
+        if (impactfulChanges.length > 0) {
+          // Build a message describing the changes
+          const changeDescriptions: string[] = [];
+          if (impactfulChanges.includes('date') || impactfulChanges.includes('time')) {
+            changeDescriptions.push(
+              t('matchCreation.validation.changes.dateTime' as TranslationKey)
+            );
+          }
+          if (impactfulChanges.includes('location')) {
+            changeDescriptions.push(
+              t('matchCreation.validation.changes.location' as TranslationKey)
+            );
+          }
+          if (impactfulChanges.includes('format')) {
+            changeDescriptions.push(t('matchCreation.validation.changes.format' as TranslationKey));
+          }
+          if (impactfulChanges.includes('cost')) {
+            changeDescriptions.push(t('matchCreation.validation.changes.cost' as TranslationKey));
+          }
+
+          const changesList = changeDescriptions.join(', ');
+
+          // Show confirmation dialog
+          Alert.alert(
+            t('matchCreation.validation.confirmChangesTitle' as TranslationKey),
+            t('matchCreation.validation.confirmChangesMessage' as TranslationKey)
+              .replace('{changes}', changesList)
+              .replace('{count}', String(joinedParticipants.length)),
+            [
+              {
+                text: t('common.cancel' as TranslationKey),
+                style: 'cancel',
+              },
+              {
+                text: t('matchCreation.validation.confirmUpdate' as TranslationKey),
+                onPress: () => performUpdate(matchData),
+              },
+            ]
+          );
+          return;
+        }
+      }
+
+      // No participants or no impactful changes - proceed with update
+      performUpdate(matchData);
     } else {
       // Create new match
       createMatch(matchData);
     }
-  }, [validateStep, values, session, createMatch, updateMatch, isEditMode, editMatch]);
+  }, [
+    validateStep,
+    values,
+    session,
+    createMatch,
+    isEditMode,
+    editMatch,
+    performUpdate,
+    getImpactfulChanges,
+    t,
+  ]);
 
   // Handle close with confirmation
   const handleClose = useCallback(() => {

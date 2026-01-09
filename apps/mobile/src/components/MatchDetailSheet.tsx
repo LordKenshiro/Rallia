@@ -758,6 +758,9 @@ export const MatchDetailSheet: React.FC = () => {
     });
   }, [selectedMatch]);
 
+  // Compute isCreator early for hasAnyBadges check (must be before early return for hooks rules)
+  const isCreatorEarly = playerId === selectedMatch?.created_by;
+
   // Check if any badges should be displayed (must be before early return for hooks rules)
   const hasAnyBadges = useMemo(() => {
     if (!selectedMatch) return false;
@@ -766,9 +769,10 @@ export const MatchDetailSheet: React.FC = () => {
       (selectedMatch.player_expectation && selectedMatch.player_expectation !== 'both') ||
       (selectedMatch.min_rating_score && selectedMatch.min_rating_score.label) ||
       !!selectedMatch.preferred_opponent_gender ||
-      selectedMatch.join_mode === 'request'
+      selectedMatch.join_mode === 'request' ||
+      (isCreatorEarly && !!selectedMatch.visibility) // Show visibility badge for creators
     );
-  }, [selectedMatch]);
+  }, [selectedMatch, isCreatorEarly]);
 
   // Render nothing if no match is selected
   if (!selectedMatch) {
@@ -1428,6 +1432,36 @@ export const MatchDetailSheet: React.FC = () => {
                   bgColor={isDark ? neutral[800] : neutral[100]}
                   textColor={isDark ? neutral[300] : neutral[600]}
                   icon="hand-left"
+                />
+              )}
+
+              {/* Visibility badge - only visible to creator */}
+              {isCreator && match.visibility && (
+                <Badge
+                  label={
+                    match.visibility === 'public'
+                      ? t('matchCreation.fields.visibilityPublic' as TranslationKey)
+                      : t('matchCreation.fields.visibilityPrivate' as TranslationKey)
+                  }
+                  bgColor={
+                    match.visibility === 'public'
+                      ? isDark
+                        ? `${primary[400]}25`
+                        : `${primary[500]}15`
+                      : isDark
+                        ? `${neutral[600]}40`
+                        : `${neutral[500]}20`
+                  }
+                  textColor={
+                    match.visibility === 'public'
+                      ? isDark
+                        ? primary[400]
+                        : primary[600]
+                      : isDark
+                        ? neutral[300]
+                        : neutral[600]
+                  }
+                  icon={match.visibility === 'public' ? 'globe-outline' : 'lock-closed'}
                 />
               )}
             </View>

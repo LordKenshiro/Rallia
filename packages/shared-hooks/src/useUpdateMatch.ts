@@ -15,6 +15,8 @@ import { matchKeys } from './useCreateMatch';
 interface UpdateMatchInput {
   matchId: string;
   updates: Partial<CreateMatchInput>;
+  /** Skip server-side validation (use when client has already validated) */
+  skipValidation?: boolean;
 }
 
 /**
@@ -68,7 +70,8 @@ export function useUpdateMatch(options: UseUpdateMatchOptions = {}) {
   const queryClient = useQueryClient();
 
   const mutation = useMutation<Match, Error, UpdateMatchInput>({
-    mutationFn: ({ matchId, updates }) => updateMatch(matchId, updates),
+    mutationFn: ({ matchId, updates, skipValidation }) =>
+      updateMatch(matchId, updates, { skipValidation }),
 
     onSuccess: match => {
       // Invalidate match queries to refetch with updated data

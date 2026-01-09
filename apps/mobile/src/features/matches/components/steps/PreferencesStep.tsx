@@ -526,7 +526,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                 keyboardType="decimal-pad"
               />
             </View>
-            {costSplitType === 'equal' && estimatedCost && (
+            {costSplitType === 'equal' && typeof estimatedCost === 'number' && (
               <Text size="xs" color={colors.textMuted} style={styles.costHelperText}>
                 {(() => {
                   const playerCount = format === 'doubles' ? 4 : 2;

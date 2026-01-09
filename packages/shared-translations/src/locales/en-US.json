@@ -182,7 +182,7 @@
       },
       "match_updated": {
         "title": "Game Updated",
-        "body": "Game details have been updated"
+        "body": "Your game on {matchDate} has been updated. Tap to see the changes."
       },
       "match_starting_soon": {
         "title": "Game Starting Soon",
@@ -882,7 +882,26 @@
       "locationTypeRequired": "Please select a location type",
       "facilityRequired": "Please select a facility",
       "locationNameRequired": "Please enter a location name",
-      "sportRequired": "Please select a sport"
+      "sportRequired": "Please select a sport",
+      "updateBlocked": "Update Not Allowed",
+      "cannotUpdate": "This change is not allowed with current participants.",
+      "genderMismatchTitle": "Gender Preference Conflict",
+      "genderMismatchMessage": "{count} participant(s) don't match the new gender preference. They will remain in the game but may not meet your preference.",
+      "updateAnyway": "Update Anyway",
+      "confirmChangesTitle": "Confirm Changes",
+      "confirmChangesMessage": "You're changing {changes}. {count} participant(s) will be notified about these changes.",
+      "confirmUpdate": "Update Game",
+      "changes": {
+        "dateTime": "date/time",
+        "location": "location",
+        "format": "format",
+        "cost": "cost"
+      },
+      "errors": {
+        "MATCH_NOT_FOUND": "Match not found.",
+        "FORMAT_CHANGE_BLOCKED": "Cannot change from doubles to singles with 2 or more participants. Remove participants first or cancel the game.",
+        "UNKNOWN_ERROR": "An unexpected error occurred. Please try again."
+      }
     },
     "accessibility": {
       "stepIndicator": "Step {current} of {total}: {title}",

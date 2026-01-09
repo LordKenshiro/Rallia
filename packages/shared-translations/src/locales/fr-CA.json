@@ -182,7 +182,7 @@
       },
       "match_updated": {
         "title": "Partie mise à jour",
-        "body": "Les détails de la partie ont été mis à jour"
+        "body": "Votre partie du {matchDate} a été modifiée. Appuyez pour voir les changements."
       },
       "match_starting_soon": {
         "title": "Partie imminente",
@@ -882,7 +882,26 @@
       "locationTypeRequired": "Veuillez sélectionner un type de lieu",
       "facilityRequired": "Veuillez sélectionner un site de jeu",
       "locationNameRequired": "Veuillez entrer un nom de lieu",
-      "sportRequired": "Veuillez sélectionner un sport"
+      "sportRequired": "Veuillez sélectionner un sport",
+      "updateBlocked": "Modification non autorisée",
+      "cannotUpdate": "Cette modification n'est pas permise avec les participants actuels.",
+      "genderMismatchTitle": "Conflit de préférence de genre",
+      "genderMismatchMessage": "{count} participant(s) ne correspondent pas à la nouvelle préférence de genre. Ils resteront dans la partie mais pourraient ne pas correspondre à votre préférence.",
+      "updateAnyway": "Modifier quand même",
+      "confirmChangesTitle": "Confirmer les modifications",
+      "confirmChangesMessage": "Vous modifiez {changes}. {count} participant(s) seront notifiés de ces changements.",
+      "confirmUpdate": "Modifier la partie",
+      "changes": {
+        "dateTime": "la date/heure",
+        "location": "le lieu",
+        "format": "le format",
+        "cost": "le coût"
+      },
+      "errors": {
+        "MATCH_NOT_FOUND": "Partie introuvable.",
+        "FORMAT_CHANGE_BLOCKED": "Impossible de passer de double à simple avec 2 participants ou plus. Retirez des participants ou annulez la partie.",
+        "UNKNOWN_ERROR": "Une erreur inattendue s'est produite. Veuillez réessayer."
+      }
     },
     "accessibility": {
       "stepIndicator": "Étape {current} sur {total}: {title}",
