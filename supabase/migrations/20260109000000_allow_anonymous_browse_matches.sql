@@ -10,6 +10,7 @@
 -- STEP 1: Allow anonymous users to view sports
 -- =============================================================================
 
+DROP POLICY IF EXISTS "Anonymous users can view sports" ON sport;
 CREATE POLICY "Anonymous users can view sports"
 ON sport FOR SELECT
 TO anon
@@ -22,6 +23,7 @@ COMMENT ON POLICY "Anonymous users can view sports" ON sport IS
 -- STEP 2: Allow anonymous users to view public matches
 -- =============================================================================
 
+DROP POLICY IF EXISTS "match_select_public_anon" ON match;
 CREATE POLICY "match_select_public_anon"
 ON match FOR SELECT
 TO anon

@@ -17,6 +17,8 @@ import {
   ScrollView,
 } from 'react-native';
 import { Text } from '@rallia/shared-components';
+import { usePlayerReputation } from '@rallia/shared-hooks';
+import { ReputationBadge } from './ReputationBadge';
 import {
   lightTheme,
   darkTheme,
@@ -100,6 +102,19 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
   const isDark = theme === 'dark';
   const themeColors = isDark ? darkTheme : lightTheme;
 
+  // Get player ID for reputation lookup
+  const playerData = participant
+    ? Array.isArray(participant.player)
+      ? participant.player[0]
+      : participant.player
+    : null;
+  const playerId = playerData?.id;
+
+  // Player reputation data
+  const { display: reputationDisplay } = usePlayerReputation(playerId, {
+    skip: !visible || !playerId,
+  });
+
   // Theme-aware colors
   const colors = {
     backdrop: 'rgba(0, 0, 0, 0.5)',
@@ -132,14 +147,7 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
     onClose();
   }, [isLoading, onClose]);
 
-  // Handle both single object and array formats from Supabase
-  // Note: sportRatingLabel and sportRatingValue are attached to the player object at runtime
-  const playerData = participant
-    ? Array.isArray(participant.player)
-      ? participant.player[0]
-      : participant.player
-    : null;
-
+  // Note: playerData is already extracted above for reputation lookup
   const player = playerData as PlayerWithProfile | null | undefined;
   const profile = player?.profile;
   const fullName = profile?.full_name || profile?.display_name || 'Player';
@@ -269,31 +277,46 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                   </View>
                 </View>
 
-                {/* Rating Badge */}
-                {ratingDisplay && (
-                  <View
-                    style={[
-                      styles.ratingBadge,
-                      {
-                        backgroundColor: themeColors.muted,
-                        borderWidth: 1,
-                        borderColor: themeColors.border,
-                      },
-                    ]}
-                  >
-                    <Ionicons name="analytics" size={16} color={themeColors.mutedForeground} />
-                    <Text
-                      size="base"
-                      weight="semibold"
-                      style={{
-                        color: themeColors.foreground,
-                        marginLeft: spacingPixels[2],
-                      }}
+                {/* Reputation and Rating Badges */}
+                <View style={styles.badgesRow}>
+                  {/* Reputation Badge */}
+                  {playerId && (
+                    <ReputationBadge
+                      tier={reputationDisplay.tier}
+                      score={reputationDisplay.score}
+                      isVisible={reputationDisplay.isVisible}
+                      size="md"
+                      showLabel
+                      showScore={reputationDisplay.isVisible}
+                    />
+                  )}
+
+                  {/* Rating Badge */}
+                  {ratingDisplay && (
+                    <View
+                      style={[
+                        styles.ratingBadge,
+                        {
+                          backgroundColor: themeColors.muted,
+                          borderWidth: 1,
+                          borderColor: themeColors.border,
+                        },
+                      ]}
                     >
-                      {ratingDisplay}
-                    </Text>
-                  </View>
-                )}
+                      <Ionicons name="analytics" size={16} color={themeColors.mutedForeground} />
+                      <Text
+                        size="base"
+                        weight="semibold"
+                        style={{
+                          color: themeColors.foreground,
+                          marginLeft: spacingPixels[2],
+                        }}
+                      >
+                        {ratingDisplay}
+                      </Text>
+                    </View>
+                  )}
+                </View>
 
                 {/* Details Grid */}
                 <View style={styles.detailsGrid}>
@@ -513,14 +536,20 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[1],
     borderRadius: radiusPixels.full,
   },
+  badgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[2],
+    marginBottom: spacingPixels[4],
+    flexWrap: 'wrap',
+  },
   ratingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'center',
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[2],
     borderRadius: radiusPixels.full,
-    marginBottom: spacingPixels[4],
   },
   detailsGrid: {
     gap: spacingPixels[3],

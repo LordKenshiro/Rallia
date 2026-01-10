@@ -13,6 +13,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAppNavigation } from '../navigation/hooks';
 import { Text } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
+import { usePlayerReputation } from '@rallia/shared-hooks';
+import { ReputationBadge } from '../components/ReputationBadge';
 import { replaceImage } from '../services/imageUpload';
 import { useImagePicker, useThemeStyles, useTranslation } from '../hooks';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
@@ -78,6 +80,11 @@ const UserProfile = () => {
 
   // Use custom hook for image picker (for profile picture editing)
   const { image: newProfileImage, pickImage } = useImagePicker();
+
+  // Player reputation data
+  const { display: reputationDisplay, loading: reputationLoading } = usePlayerReputation(
+    player?.id
+  );
 
   // Check authentication on mount and redirect if not logged in
   useEffect(() => {
@@ -581,6 +588,20 @@ const UserProfile = () => {
             @{profile?.display_name?.toLowerCase().replace(/\s/g, '') || t('profile.username')}
           </Text>
 
+          {/* Reputation Badge */}
+          {!reputationLoading && player?.id && (
+            <View style={styles.reputationContainer}>
+              <ReputationBadge
+                tier={reputationDisplay.tier}
+                score={reputationDisplay.score}
+                isVisible={reputationDisplay.isVisible}
+                size="md"
+                showLabel
+                showScore={reputationDisplay.isVisible}
+              />
+            </View>
+          )}
+
           {/* Joined Date */}
           <View style={styles.joinedContainer}>
             <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
@@ -968,6 +989,10 @@ const styles = StyleSheet.create({
   username: {
     fontSize: fontSizePixels.sm,
     marginBottom: spacingPixels[2],
+  },
+  reputationContainer: {
+    marginTop: spacingPixels[2],
+    marginBottom: spacingPixels[1],
   },
   joinedContainer: {
     flexDirection: 'row',

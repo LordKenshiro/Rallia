@@ -1868,6 +1868,62 @@ export type Database = {
           },
         ];
       };
+      player_reputation: {
+        Row: {
+          calculated_at: string;
+          created_at: string;
+          is_public: boolean | null;
+          last_decay_calculation: string | null;
+          matches_completed: number;
+          min_matches_for_public: number;
+          negative_events: number;
+          player_id: string;
+          positive_events: number;
+          reputation_score: number;
+          reputation_tier: Database['public']['Enums']['reputation_tier'];
+          total_events: number;
+          updated_at: string;
+        };
+        Insert: {
+          calculated_at?: string;
+          created_at?: string;
+          is_public?: boolean | null;
+          last_decay_calculation?: string | null;
+          matches_completed?: number;
+          min_matches_for_public?: number;
+          negative_events?: number;
+          player_id: string;
+          positive_events?: number;
+          reputation_score?: number;
+          reputation_tier?: Database['public']['Enums']['reputation_tier'];
+          total_events?: number;
+          updated_at?: string;
+        };
+        Update: {
+          calculated_at?: string;
+          created_at?: string;
+          is_public?: boolean | null;
+          last_decay_calculation?: string | null;
+          matches_completed?: number;
+          min_matches_for_public?: number;
+          negative_events?: number;
+          player_id?: string;
+          positive_events?: number;
+          reputation_score?: number;
+          reputation_tier?: Database['public']['Enums']['reputation_tier'];
+          total_events?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'player_reputation_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: true;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       player_review: {
         Row: {
           comment: string | null;
@@ -2500,6 +2556,103 @@ export type Database = {
           },
         ];
       };
+      reputation_config: {
+        Row: {
+          created_at: string;
+          decay_enabled: boolean;
+          decay_half_life_days: number | null;
+          default_impact: number;
+          event_type: Database['public']['Enums']['reputation_event_type'];
+          id: string;
+          is_active: boolean;
+          max_impact: number | null;
+          min_impact: number | null;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          decay_enabled?: boolean;
+          decay_half_life_days?: number | null;
+          default_impact: number;
+          event_type: Database['public']['Enums']['reputation_event_type'];
+          id?: string;
+          is_active?: boolean;
+          max_impact?: number | null;
+          min_impact?: number | null;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          decay_enabled?: boolean;
+          decay_half_life_days?: number | null;
+          default_impact?: number;
+          event_type?: Database['public']['Enums']['reputation_event_type'];
+          id?: string;
+          is_active?: boolean;
+          max_impact?: number | null;
+          min_impact?: number | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      reputation_event: {
+        Row: {
+          base_impact: number;
+          caused_by_player_id: string | null;
+          created_at: string;
+          event_occurred_at: string;
+          event_type: Database['public']['Enums']['reputation_event_type'];
+          id: string;
+          match_id: string | null;
+          metadata: Json | null;
+          player_id: string;
+        };
+        Insert: {
+          base_impact: number;
+          caused_by_player_id?: string | null;
+          created_at?: string;
+          event_occurred_at?: string;
+          event_type: Database['public']['Enums']['reputation_event_type'];
+          id?: string;
+          match_id?: string | null;
+          metadata?: Json | null;
+          player_id: string;
+        };
+        Update: {
+          base_impact?: number;
+          caused_by_player_id?: string | null;
+          created_at?: string;
+          event_occurred_at?: string;
+          event_type?: Database['public']['Enums']['reputation_event_type'];
+          id?: string;
+          match_id?: string | null;
+          metadata?: Json | null;
+          player_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'reputation_event_caused_by_player_id_fkey';
+            columns: ['caused_by_player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'reputation_event_match_id_fkey';
+            columns: ['match_id'];
+            isOneToOne: false;
+            referencedRelation: 'match';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'reputation_event_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       sport: {
         Row: {
           attributes: Json | null;
@@ -2610,6 +2763,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      calculate_reputation_tier: {
+        Args: { matches_completed: number; min_matches?: number; score: number };
+        Returns: Database['public']['Enums']['reputation_tier'];
+      };
       check_peer_verification_threshold: {
         Args: { p_player_id: string; p_sport_id: string; p_threshold?: number };
         Returns: {
@@ -2710,6 +2867,18 @@ export type Database = {
           step: number;
         }[];
       };
+      get_reputation_summary: {
+        Args: { target_player_id: string };
+        Returns: {
+          is_public: boolean;
+          matches_completed: number;
+          negative_events: number;
+          positive_events: number;
+          score: number;
+          tier: Database['public']['Enums']['reputation_tier'];
+          total_events: number;
+        }[];
+      };
       get_user_created_match_ids: {
         Args: { p_player_id: string };
         Returns: string[];
@@ -2785,6 +2954,30 @@ export type Database = {
         Returns: boolean;
       };
       is_public_match: { Args: { p_match_id: string }; Returns: boolean };
+      recalculate_player_reputation: {
+        Args: { apply_decay?: boolean; target_player_id: string };
+        Returns: {
+          calculated_at: string;
+          created_at: string;
+          is_public: boolean | null;
+          last_decay_calculation: string | null;
+          matches_completed: number;
+          min_matches_for_public: number;
+          negative_events: number;
+          player_id: string;
+          positive_events: number;
+          reputation_score: number;
+          reputation_tier: Database['public']['Enums']['reputation_tier'];
+          total_events: number;
+          updated_at: string;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'player_reputation';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       search_facilities_nearby: {
         Args: {
           p_latitude: number;
@@ -2983,6 +3176,28 @@ export type Database = {
       rating_system_code_enum: 'ntrp' | 'utr' | 'self_tennis' | 'dupr' | 'self_pickle';
       report_reason: 'inappropriate_behavior' | 'harassment' | 'spam' | 'cheating' | 'other';
       report_status: 'pending' | 'under_review' | 'resolved' | 'dismissed';
+      reputation_event_type:
+        | 'match_completed'
+        | 'match_no_show'
+        | 'match_ghosted'
+        | 'match_on_time'
+        | 'match_late'
+        | 'match_cancelled_early'
+        | 'match_cancelled_late'
+        | 'match_repeat_opponent'
+        | 'review_received_5star'
+        | 'review_received_4star'
+        | 'review_received_3star'
+        | 'review_received_2star'
+        | 'review_received_1star'
+        | 'report_received'
+        | 'report_dismissed'
+        | 'report_upheld'
+        | 'warning_issued'
+        | 'suspension_lifted'
+        | 'peer_rating_given'
+        | 'first_match_bonus';
+      reputation_tier: 'unknown' | 'bronze' | 'silver' | 'gold' | 'platinum';
       role_enum: 'admin' | 'staff' | 'player' | 'coach' | 'owner';
       skill_level: 'beginner' | 'intermediate' | 'advanced' | 'professional';
       surface_type_enum:
@@ -3254,6 +3469,29 @@ export const Constants = {
       rating_system_code_enum: ['ntrp', 'utr', 'self_tennis', 'dupr', 'self_pickle'],
       report_reason: ['inappropriate_behavior', 'harassment', 'spam', 'cheating', 'other'],
       report_status: ['pending', 'under_review', 'resolved', 'dismissed'],
+      reputation_event_type: [
+        'match_completed',
+        'match_no_show',
+        'match_ghosted',
+        'match_on_time',
+        'match_late',
+        'match_cancelled_early',
+        'match_cancelled_late',
+        'match_repeat_opponent',
+        'review_received_5star',
+        'review_received_4star',
+        'review_received_3star',
+        'review_received_2star',
+        'review_received_1star',
+        'report_received',
+        'report_dismissed',
+        'report_upheld',
+        'warning_issued',
+        'suspension_lifted',
+        'peer_rating_given',
+        'first_match_bonus',
+      ],
+      reputation_tier: ['unknown', 'bronze', 'silver', 'gold', 'platinum'],
       role_enum: ['admin', 'staff', 'player', 'coach', 'owner'],
       skill_level: ['beginner', 'intermediate', 'advanced', 'professional'],
       surface_type_enum: ['hard', 'clay', 'grass', 'synthetic', 'carpet', 'concrete', 'asphalt'],

@@ -32,6 +32,7 @@ export * from './useCourtAvailability';
 export * from './usePlacesAutocomplete';
 export * from './usePlayerSearch';
 export * from './useInviteToMatch';
+export * from './usePlayerReputation';
 
 // Platform-specific exports - Metro resolves .native.ts for React Native builds
 // Web bundlers will use the stub .ts files which throw helpful errors at runtime

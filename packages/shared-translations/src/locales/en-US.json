@@ -1961,5 +1961,36 @@
       "unexpectedError": "Something unexpected happened",
       "invalidCallback": "Invalid callback parameters"
     }
+  },
+  "reputation": {
+    "tiers": {
+      "unknown": "New",
+      "bronze": "Bronze",
+      "silver": "Silver",
+      "gold": "Gold",
+      "platinum": "Platinum"
+    },
+    "labels": {
+      "newPlayer": "New Player",
+      "score": "{score}%",
+      "tierWithScore": "{tier} {score}%"
+    },
+    "tooltips": {
+      "unknown": "This player hasn't completed enough matches yet",
+      "bronze": "Bronze tier player",
+      "silver": "Silver tier player",
+      "gold": "Gold tier player - reliable and trustworthy",
+      "platinum": "Platinum tier player - exceptional reputation"
+    },
+    "profile": {
+      "title": "Reputation",
+      "matchesCompleted": "Matches Completed",
+      "eventsToPublic": "{count} more events until public",
+      "trend": {
+        "improving": "Improving",
+        "stable": "Stable",
+        "declining": "Declining"
+      }
+    }
   }
 }

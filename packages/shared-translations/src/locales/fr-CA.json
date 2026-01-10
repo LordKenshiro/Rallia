@@ -1961,5 +1961,36 @@
       "unexpectedError": "Une erreur inattendue s'est produite",
       "invalidCallback": "Paramètres de rappel invalides"
     }
+  },
+  "reputation": {
+    "tiers": {
+      "unknown": "Nouveau",
+      "bronze": "Bronze",
+      "silver": "Argent",
+      "gold": "Or",
+      "platinum": "Platine"
+    },
+    "labels": {
+      "newPlayer": "Nouveau joueur",
+      "score": "{score}%",
+      "tierWithScore": "{tier} {score}%"
+    },
+    "tooltips": {
+      "unknown": "Ce joueur n'a pas encore complété assez de matchs",
+      "bronze": "Joueur de niveau Bronze",
+      "silver": "Joueur de niveau Argent",
+      "gold": "Joueur de niveau Or - fiable et digne de confiance",
+      "platinum": "Joueur de niveau Platine - réputation exceptionnelle"
+    },
+    "profile": {
+      "title": "Réputation",
+      "matchesCompleted": "Matchs complétés",
+      "eventsToPublic": "Encore {count} événements avant publication",
+      "trend": {
+        "improving": "En hausse",
+        "stable": "Stable",
+        "declining": "En baisse"
+      }
+    }
   }
 }

@@ -15,6 +15,11 @@ import {
   notifyPlayerKicked,
   notifyMatchInvitation,
 } from '../notifications/notificationFactory';
+import {
+  createReputationEvent,
+  createReputationEvents,
+  havePlayedTogether,
+} from '../reputation/reputationService';
 import type {
   Match,
   TablesInsert,
@@ -869,6 +874,24 @@ export async function cancelMatch(matchId: string, userId?: string): Promise<Mat
 
   if (error) {
     throw new Error(`Failed to cancel match: ${error.message}`);
+  }
+
+  // Create reputation event for cancellation (if userId is provided = host cancelling)
+  if (userId) {
+    // Check if this is a late cancellation (less than 24 hours before match start)
+    const matchStartDateTime = new Date(`${match.match_date}T${match.start_time}`);
+    const now = new Date();
+    const hoursUntilMatch = (matchStartDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+    const isLateCancellation = hoursUntilMatch < 24;
+
+    // Create reputation event for the host
+    createReputationEvent(
+      userId,
+      isLateCancellation ? 'match_cancelled_late' : 'match_cancelled_early',
+      { matchId }
+    ).catch(err => {
+      console.error('[cancelMatch] Failed to create reputation event:', err);
+    });
   }
 
   // Notify all joined participants about the cancellation
@@ -2985,6 +3008,156 @@ export async function invitePlayersToMatch(
   return { invited, alreadyInMatch, failed };
 }
 
+// =============================================================================
+// REPUTATION EVENTS
+// =============================================================================
+
+/**
+ * Result of awarding match completion reputation
+ */
+export interface AwardMatchCompletionResult {
+  /** Player IDs that received reputation events */
+  awarded: string[];
+  /** Player IDs that already had reputation events for this match */
+  skipped: string[];
+  /** Player IDs that had errors */
+  failed: string[];
+}
+
+/**
+ * Award match completion reputation events to all participants.
+ * This should be called when a match is confirmed as completed (either via UI
+ * confirmation or by a scheduled job after match end time).
+ *
+ * Awards:
+ * - 'match_completed' to all participants
+ * - 'first_match_bonus' if it's the player's first match
+ * - 'match_repeat_opponent' if players have played together before
+ *
+ * @param matchId - The match ID
+ * @returns Result with awarded, skipped, and failed player IDs
+ */
+export async function awardMatchCompletionReputation(
+  matchId: string
+): Promise<AwardMatchCompletionResult> {
+  // Fetch match with participants
+  const { data: match, error: matchError } = await supabase
+    .from('match')
+    .select(
+      `
+      id,
+      created_by,
+      cancelled_at,
+      participants:match_participant (
+        player_id,
+        status
+      )
+    `
+    )
+    .eq('id', matchId)
+    .single();
+
+  if (matchError || !match) {
+    throw new Error('Match not found');
+  }
+
+  // Only award for non-cancelled matches
+  if (match.cancelled_at) {
+    return { awarded: [], skipped: [], failed: [] };
+  }
+
+  // Get all players who participated (creator + joined participants)
+  const participantPlayerIds = (match.participants ?? [])
+    .filter((p: { status: string }) => p.status === 'joined')
+    .map((p: { player_id: string }) => p.player_id);
+
+  // Include the creator
+  const allPlayerIds = [match.created_by, ...participantPlayerIds];
+  const uniquePlayerIds = [...new Set(allPlayerIds)];
+
+  if (uniquePlayerIds.length === 0) {
+    return { awarded: [], skipped: [], failed: [] };
+  }
+
+  // Check if reputation events already exist for this match (avoid duplicates)
+  const { data: existingEvents } = await supabase
+    .from('reputation_event')
+    .select('player_id')
+    .eq('match_id', matchId)
+    .eq('event_type', 'match_completed');
+
+  const playersWithEvents = new Set(
+    (existingEvents ?? []).map((e: { player_id: string }) => e.player_id)
+  );
+
+  const skipped = uniquePlayerIds.filter(id => playersWithEvents.has(id));
+  const toAward = uniquePlayerIds.filter(id => !playersWithEvents.has(id));
+
+  if (toAward.length === 0) {
+    return { awarded: [], skipped, failed: [] };
+  }
+
+  const awarded: string[] = [];
+  const failed: string[] = [];
+
+  // Prepare events for each player
+  for (const playerId of toAward) {
+    try {
+      const eventsToCreate: Array<{
+        playerId: string;
+        eventType: 'match_completed' | 'first_match_bonus' | 'match_repeat_opponent';
+        options?: { matchId?: string; causedByPlayerId?: string };
+      }> = [
+        {
+          playerId,
+          eventType: 'match_completed',
+          options: { matchId },
+        },
+      ];
+
+      // Check if this is the player's first match completion
+      const { data: existingCompletions } = await supabase
+        .from('reputation_event')
+        .select('id')
+        .eq('player_id', playerId)
+        .eq('event_type', 'match_completed')
+        .limit(1);
+
+      if (!existingCompletions || existingCompletions.length === 0) {
+        eventsToCreate.push({
+          playerId,
+          eventType: 'first_match_bonus',
+          options: { matchId },
+        });
+      }
+
+      // Check for repeat opponents
+      const otherPlayerIds = uniquePlayerIds.filter(id => id !== playerId);
+      for (const opponentId of otherPlayerIds) {
+        const hasPlayedBefore = await havePlayedTogether(playerId, opponentId, matchId);
+        if (hasPlayedBefore) {
+          eventsToCreate.push({
+            playerId,
+            eventType: 'match_repeat_opponent',
+            options: { matchId, causedByPlayerId: opponentId },
+          });
+          // Only award once per match (not per opponent)
+          break;
+        }
+      }
+
+      // Create all events for this player
+      await createReputationEvents(eventsToCreate);
+      awarded.push(playerId);
+    } catch (err) {
+      console.error(`[awardMatchCompletionReputation] Failed for player ${playerId}:`, err);
+      failed.push(playerId);
+    }
+  }
+
+  return { awarded, skipped, failed };
+}
+
 /**
  * Match service object for grouped exports
  */
@@ -3009,6 +3182,8 @@ export const matchService = {
   kickParticipant,
   // Invitations
   invitePlayersToMatch,
+  // Reputation
+  awardMatchCompletionReputation,
 };
 
 export default matchService;
