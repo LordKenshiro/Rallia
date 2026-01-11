@@ -94,8 +94,14 @@ export function SportProvider({ children, userId }: SportProviderProps) {
       let primarySport: Sport | null = null;
 
       playerSports.forEach(ps => {
+        // Only include sports that are active both at the player_sport level and sport level
         const sportData = Array.isArray(ps.sport) ? ps.sport[0] : ps.sport;
-        if (sportData && typeof sportData === 'object') {
+        if (
+          sportData &&
+          typeof sportData === 'object' &&
+          ps.is_active === true &&
+          sportData.is_active === true
+        ) {
           const sport: Sport = {
             id: sportData.id,
             name: sportData.name,
@@ -116,6 +122,9 @@ export function SportProvider({ children, userId }: SportProviderProps) {
       // Initialize selected sport from storage or use primary/first sport
       if (sports.length > 0) {
         initializeSelectedSport(sports, primarySport);
+      } else {
+        // No active sports - clear selected sport
+        setSelectedSportState(null);
       }
     } else if (!playerSportsLoading) {
       setUserSports([]);

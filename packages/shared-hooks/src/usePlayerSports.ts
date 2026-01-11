@@ -9,6 +9,7 @@ export interface PlayerSport {
   player_id: string;
   sport_id: string;
   is_primary: boolean;
+  is_active: boolean;
   preferred_match_duration?: string;
   preferred_match_type?: string;
   sport?: Sport | Sport[];
@@ -60,6 +61,7 @@ export const usePlayerSports = (playerId: string | undefined) => {
           player_id,
           sport_id,
           is_primary,
+          is_active,
           preferred_match_duration,
           preferred_match_type,
           sport:sport_id (
