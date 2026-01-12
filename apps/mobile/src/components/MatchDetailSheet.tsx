@@ -168,6 +168,7 @@ function formatDistance(meters: number | null | undefined): string | null {
 
 /**
  * Get participant info - only counts active participants
+ * Note: Creator is now included in joined participants with is_host=true
  */
 function getParticipantInfo(match: MatchDetailData): {
   current: number;
@@ -176,8 +177,9 @@ function getParticipantInfo(match: MatchDetailData): {
 } {
   const total = match.format === 'doubles' ? 4 : 2;
   // Only count joined participants for display (not requested, pending, waitlisted, left, etc.)
+  // Creator is now included as a joined participant with is_host=true
   const joinedParticipants = match.participants?.filter(p => p.status === 'joined') ?? [];
-  const current = joinedParticipants.length + 1; // +1 for creator
+  const current = joinedParticipants.length;
   const spotsLeft = Math.max(0, total - current);
   return { current, total, spotsLeft };
 }
@@ -896,32 +898,37 @@ export const MatchDetailSheet: React.FC = () => {
     name?: string;
   }> = [];
 
-  // Host first - normalize URL to use current environment's Supabase URL
+  // Get joined participants and identify host using is_host flag
+  const joinedParticipants = match.participants?.filter(p => p.status === 'joined') ?? [];
+  const hostParticipant = joinedParticipants.find(p => p.is_host);
+  const otherJoinedParticipants = joinedParticipants.filter(p => !p.is_host);
+
+  // Host first - use host participant's profile, fallback to created_by_player for backwards compatibility
+  const hostProfile = hostParticipant?.player?.profile ?? creatorProfile;
+  const hostName = hostProfile?.full_name || hostProfile?.display_name || creatorName;
   participantAvatars.push({
     key: 'host',
-    avatarUrl: getProfilePictureUrl(creatorProfile?.profile_picture_url),
+    avatarUrl: getProfilePictureUrl(hostProfile?.profile_picture_url),
     isHost: true,
     isEmpty: false,
-    name: creatorName.split(' ')[0],
+    name: hostName.split(' ')[0],
   });
 
-  // Other participants (only joined ones - not requested, pending, etc.)
+  // Other participants (joined, excluding host)
   // Normalize URLs to use current environment's Supabase URL
-  match.participants
-    ?.filter(p => p.status === 'joined')
-    .forEach((p, i) => {
-      const participantFullName =
-        p.player?.profile?.full_name || p.player?.profile?.display_name || '';
-      const participantFirstName = participantFullName.split(' ')[0];
-      participantAvatars.push({
-        key: p.id || `participant-${i}`,
-        participantId: p.id,
-        avatarUrl: getProfilePictureUrl(p.player?.profile?.profile_picture_url),
-        isHost: false,
-        isEmpty: false,
-        name: participantFirstName,
-      });
+  otherJoinedParticipants.forEach((p, i) => {
+    const participantFullName =
+      p.player?.profile?.full_name || p.player?.profile?.display_name || '';
+    const participantFirstName = participantFullName.split(' ')[0];
+    participantAvatars.push({
+      key: p.id || `participant-${i}`,
+      participantId: p.id,
+      avatarUrl: getProfilePictureUrl(p.player?.profile?.profile_picture_url),
+      isHost: false,
+      isEmpty: false,
+      name: participantFirstName,
     });
+  });
 
   // Empty slots
   for (let i = 0; i < participantInfo.spotsLeft; i++) {

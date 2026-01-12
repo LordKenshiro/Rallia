@@ -275,6 +275,7 @@ function getCourtDisplay(match: MatchWithDetails): string | null {
 
 /**
  * Calculate player slots info - only counts joined participants
+ * Note: Creator is now included in joined participants with is_host=true
  */
 function getParticipantInfo(match: MatchWithDetails): {
   current: number;
@@ -283,8 +284,9 @@ function getParticipantInfo(match: MatchWithDetails): {
 } {
   const total = match.format === 'doubles' ? 4 : 2;
   // Only count joined participants (not requested, pending, waitlisted, left, etc.)
+  // Creator is now included as a joined participant with is_host=true
   const joinedParticipants = match.participants?.filter(p => p.status === 'joined') ?? [];
-  const current = joinedParticipants.length + 1; // +1 for creator
+  const current = joinedParticipants.length;
   const spotsLeft = Math.max(0, total - current);
   return { current, total, spotsLeft };
 }
@@ -394,9 +396,12 @@ const PlayerSlots: React.FC<PlayerSlotsProps> = ({
   t,
   currentPlayerId,
 }) => {
-  const creatorProfile = match.created_by_player?.profile;
   // Only include joined participants
   const joinedParticipants = match.participants?.filter(p => p.status === 'joined') ?? [];
+
+  // Identify host and other participants using is_host flag
+  const hostParticipant = joinedParticipants.find(p => p.is_host);
+  const otherParticipants = joinedParticipants.filter(p => !p.is_host);
 
   // Check if current user has been invited (pending status)
   const isInvited = currentPlayerId
@@ -407,9 +412,11 @@ const PlayerSlots: React.FC<PlayerSlotsProps> = ({
       )
     : false;
 
-  // Check if current user is the creator (to show pending requests count)
+  // Check if current user is the creator/host (to show pending requests count)
   const isCreator = currentPlayerId
-    ? match.created_by_player?.id === currentPlayerId || match.created_by === currentPlayerId
+    ? hostParticipant?.player_id === currentPlayerId ||
+      match.created_by_player?.id === currentPlayerId ||
+      match.created_by === currentPlayerId
     : false;
 
   // Count pending join requests (for creators only)
@@ -424,18 +431,19 @@ const PlayerSlots: React.FC<PlayerSlotsProps> = ({
     isHost: boolean;
   }> = [];
 
-  // First slot is always the host/creator
-  // Normalize URL to use current environment's Supabase URL
+  // First slot is always the host
+  // Use host participant's profile, fallback to created_by_player for backwards compatibility
+  const hostProfile = hostParticipant?.player?.profile ?? match.created_by_player?.profile;
   slots.push({
     filled: true,
-    avatarUrl: getProfilePictureUrl(creatorProfile?.profile_picture_url),
+    avatarUrl: getProfilePictureUrl(hostProfile?.profile_picture_url),
     isHost: true,
   });
 
-  // Add participant slots (only joined participants)
+  // Add participant slots (only non-host joined participants)
   // Normalize URLs to use current environment's Supabase URL
   for (let i = 0; i < participantInfo.total - 1; i++) {
-    const participant = joinedParticipants[i];
+    const participant = otherParticipants[i];
     slots.push({
       filled: !!participant,
       avatarUrl: getProfilePictureUrl(participant?.player?.profile?.profile_picture_url),

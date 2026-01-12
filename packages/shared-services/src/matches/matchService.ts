@@ -1003,8 +1003,11 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
     throw new Error('Match is no longer available');
   }
 
-  // Check if player is the creator (creators can't join their own match as participant)
-  if (match.created_by === playerId) {
+  // Check if player is already a host participant (creators can't join their own match)
+  const isHost = match.participants?.some(
+    (p: { player_id: string; is_host?: boolean | null }) => p.player_id === playerId && p.is_host
+  );
+  if (isHost) {
     throw new Error('You are the host of this match');
   }
 
@@ -1046,12 +1049,12 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
   }
 
   // Calculate spots: format determines total capacity (singles=2, doubles=4)
-  // Creator counts as 1, participants with 'joined' status fill remaining spots
+  // Joined participants (now includes creator who has is_host=true) fill spots
   const totalSpots = match.format === 'doubles' ? 4 : 2;
   const joinedParticipants =
     match.participants?.filter((p: { status: string }) => p.status === 'joined').length ?? 0;
-  // Creator takes 1 spot, so available = total - 1 (creator) - joined participants
-  const availableSpots = totalSpots - 1 - joinedParticipants;
+  // Available = total - joined participants (creator is now included in joined participants)
+  const availableSpots = totalSpots - joinedParticipants;
 
   // Determine status based on join mode and availability
   let participantStatus: 'joined' | 'requested' | 'waitlisted';
@@ -1211,7 +1214,7 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
  * @throws Error if user is the host, not a participant, or match not found
  */
 export async function leaveMatch(matchId: string, playerId: string): Promise<void> {
-  // First check if user is the match creator and get match details
+  // First check if user is the match host and get match details
   const { data: match, error: matchError } = await supabase
     .from('match')
     .select(
@@ -1220,7 +1223,8 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
       sport:sport_id (name),
       participants:match_participant (
         player_id,
-        status
+        status,
+        is_host
       )
     `
     )
@@ -1231,7 +1235,11 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
     throw new Error('Match not found');
   }
 
-  if (match.created_by === playerId) {
+  // Check if user is the host (either via is_host flag or created_by for backwards compatibility)
+  const isHost = match.participants?.some(
+    (p: { player_id: string; is_host?: boolean | null }) => p.player_id === playerId && p.is_host
+  );
+  if (isHost || match.created_by === playerId) {
     throw new Error('Hosts cannot leave their own match. Cancel it instead.');
   }
 
@@ -1394,8 +1402,8 @@ export async function acceptJoinRequest(
   const totalSpots = match.format === 'doubles' ? 4 : 2;
   const joinedParticipants =
     match.participants?.filter((p: { status: string }) => p.status === 'joined').length ?? 0;
-  // Creator takes 1 spot
-  const availableSpots = totalSpots - 1 - joinedParticipants;
+  // Creator is now included in joined participants
+  const availableSpots = totalSpots - joinedParticipants;
 
   if (availableSpots <= 0) {
     throw new Error('Match is full. Cannot accept more players.');
@@ -3066,14 +3074,13 @@ export async function awardMatchCompletionReputation(
     return { awarded: [], skipped: [], failed: [] };
   }
 
-  // Get all players who participated (creator + joined participants)
+  // Get all players who participated (joined participants, which now includes the creator)
   const participantPlayerIds = (match.participants ?? [])
     .filter((p: { status: string }) => p.status === 'joined')
     .map((p: { player_id: string }) => p.player_id);
 
-  // Include the creator
-  const allPlayerIds = [match.created_by, ...participantPlayerIds];
-  const uniquePlayerIds = [...new Set(allPlayerIds)];
+  // Creator is now included as a joined participant with is_host=true
+  const uniquePlayerIds = [...new Set(participantPlayerIds)];
 
   if (uniquePlayerIds.length === 0) {
     return { awarded: [], skipped: [], failed: [] };

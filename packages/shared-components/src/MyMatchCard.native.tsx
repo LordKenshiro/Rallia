@@ -416,12 +416,13 @@ interface ParticipantAvatarsProps {
 const ParticipantAvatars: React.FC<ParticipantAvatarsProps> = ({ match, colors, isDark, t }) => {
   const participants = match.participants?.filter(p => p.status === 'joined') ?? [];
 
-  // Filter out creator from participants list
-  const otherParticipants = participants.filter(p => p.player_id !== match.created_by);
+  // Identify host and other participants using is_host flag
+  const hostParticipant = participants.find(p => p.is_host);
+  const otherParticipants = participants.filter(p => !p.is_host);
 
-  // Calculate total spots and spots left
+  // Calculate total spots and spots left (creator is now in participants)
   const total = match.format === 'doubles' ? 4 : 2;
-  const current = otherParticipants.length + 1; // +1 for creator
+  const current = participants.length;
   const spotsLeft = Math.max(0, total - current);
 
   // If no other participants, show spots available indicator
@@ -440,15 +441,21 @@ const ParticipantAvatars: React.FC<ParticipantAvatarsProps> = ({ match, colors, 
     );
   }
 
-  // Build avatars list (creator first, then other participants)
+  // Build avatars list (host first, then other participants)
   // Normalize URLs to use current environment's Supabase URL
   const avatars: Array<{ url?: string }> = [];
-  const creatorProfile = match.created_by_player?.profile;
 
-  // Add creator
-  avatars.push({
-    url: getProfilePictureUrl(creatorProfile?.profile_picture_url) ?? undefined,
-  });
+  // Add host (using is_host flag to identify)
+  if (hostParticipant) {
+    avatars.push({
+      url: getProfilePictureUrl(hostParticipant.player?.profile?.profile_picture_url) ?? undefined,
+    });
+  } else {
+    // Fallback to created_by_player for backwards compatibility
+    avatars.push({
+      url: getProfilePictureUrl(match.created_by_player?.profile?.profile_picture_url) ?? undefined,
+    });
+  }
 
   // Add other participants
   for (const participant of otherParticipants) {
