@@ -819,6 +819,7 @@
       "courtStatusToBook": "À réserver",
       "courtStatusToBookDescription": "Le terrain doit encore être réservé",
       "courtStatusTbd": "À déterminer",
+      "courtNumber": "Terrain {number}",
       "reservationContactTitle": "Réservez votre terrain",
       "reservationContactDescription": "Contactez l'établissement pour réserver votre terrain, puis mettez à jour le statut ci-dessous.",
       "callFacility": "Appeler",

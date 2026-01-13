@@ -22,6 +22,7 @@ import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
+import { getOrCreateCourt, parseCourtNumber } from '@rallia/shared-services';
 import {
   useFacilitySearch,
   usePreferredFacility,
@@ -445,9 +446,18 @@ interface SelectedFacilityProps {
   facility: FacilitySearchResult;
   onClear: () => void;
   colors: WhereStepProps['colors'];
+  /** Court number from a confirmed booking (only shown if set) */
+  bookedCourtNumber?: number | null;
+  t: (key: TranslationKey, options?: TranslationOptions) => string;
 }
 
-const SelectedFacility: React.FC<SelectedFacilityProps> = ({ facility, onClear, colors }) => (
+const SelectedFacility: React.FC<SelectedFacilityProps> = ({
+  facility,
+  onClear,
+  colors,
+  bookedCourtNumber,
+  t,
+}) => (
   <View
     style={[
       styles.selectedFacility,
@@ -457,9 +467,22 @@ const SelectedFacility: React.FC<SelectedFacilityProps> = ({ facility, onClear, 
     <View style={styles.selectedFacilityContent}>
       <Ionicons name="business" size={20} color={colors.buttonActive} />
       <View style={styles.selectedFacilityText}>
-        <Text size="base" weight="semibold" color={colors.text}>
-          {facility.name}
-        </Text>
+        <View style={styles.selectedFacilityHeader}>
+          <Text size="base" weight="semibold" color={colors.text}>
+            {facility.name}
+          </Text>
+          {bookedCourtNumber !== null && bookedCourtNumber !== undefined && (
+            <View
+              style={[styles.courtNumberBadge, { backgroundColor: `${colors.buttonActive}20` }]}
+            >
+              <Text size="xs" weight="semibold" color={colors.buttonActive}>
+                {t('matchCreation.fields.courtNumber' as TranslationKey, {
+                  number: bookedCourtNumber,
+                })}
+              </Text>
+            </View>
+          )}
+        </View>
         <Text size="sm" color={colors.textMuted} numberOfLines={1}>
           {[facility.address, facility.city].filter(Boolean).join(', ')}
         </Text>
@@ -587,6 +610,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   // Local state for search and selected facility
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFacility, setSelectedFacility] = useState<FacilitySearchResult | null>(null);
+  const [bookedCourtNumber, setBookedCourtNumber] = useState<number | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const addressFieldRef = useRef<View>(null);
 
@@ -638,6 +662,14 @@ export const WhereStep: React.FC<WhereStepProps> = ({
         timezone: facility.timezone,
       };
       setSelectedFacility(facilitySearchResult);
+
+      // Initialize court number if a court is linked to this match
+      if (editMatch.court) {
+        // Use court_number from the court record, or parse from name as fallback
+        const courtNum =
+          editMatch.court.court_number ?? parseCourtNumber(editMatch.court.name ?? '');
+        setBookedCourtNumber(courtNum);
+      }
     }
 
     // Initialize custom location state if locationType is 'custom' and we have location data
@@ -721,14 +753,43 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   }, []);
 
   // Handle booking confirmation
-  const handleBookingConfirm = useCallback(() => {
+  const handleBookingConfirm = useCallback(async () => {
     if (pendingBookingSlot) {
-      const { facility, slot } = pendingBookingSlot;
+      const { facility, slot, selectedCourt } = pendingBookingSlot;
 
       // Update form with the booked facility
       setValue('facilityId', facility.id);
       setValue('courtStatus', 'booked');
       setSelectedFacility(facility);
+
+      // Get the external court ID and name from selectedCourt (if user chose a specific court)
+      // or fall back to the slot's values
+      const externalCourtId = selectedCourt?.externalCourtId || slot.externalCourtId;
+      const courtName = selectedCourt?.courtName || `Court ${slot.facilityScheduleId}`;
+
+      // Link the court to the match by getting/creating a local court record
+      if (externalCourtId) {
+        try {
+          const { court } = await getOrCreateCourt({
+            facilityId: facility.id,
+            externalProviderId: externalCourtId,
+            courtName,
+          });
+          setValue('courtId', court.id);
+
+          // Store the court number to display in the selected facility card
+          // Use the court number from the database if available, otherwise parse from name
+          const courtNum = court.court_number ?? parseCourtNumber(courtName);
+          setBookedCourtNumber(courtNum);
+        } catch (error) {
+          // Log error but don't block the booking confirmation
+          // The match can still be created without a specific court link
+          console.warn('[WhereStep] Failed to get/create court:', error);
+
+          // Still try to show the court number from the name
+          setBookedCourtNumber(parseCourtNumber(courtName));
+        }
+      }
 
       // Extract slot data for auto-filling date/time/duration in WhenStep
       const slotDate = slot.datetime;
@@ -775,6 +836,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
     prevSportIdRef.current = sportId;
 
     setSelectedFacility(null);
+    setBookedCourtNumber(null);
     setSearchQuery('');
     setPlaceSearchQuery('');
     setHasSelectedPlace(false);
@@ -868,7 +930,9 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   // Handle clearing selected facility
   const handleClearFacility = useCallback(() => {
     setSelectedFacility(null);
+    setBookedCourtNumber(null);
     setValue('facilityId', undefined, { shouldValidate: true, shouldDirty: true });
+    setValue('courtId', undefined, { shouldDirty: true });
     setValue('locationName', undefined, { shouldDirty: true });
     setValue('locationAddress', undefined, { shouldDirty: true });
     setSearchQuery('');
@@ -1123,6 +1187,8 @@ export const WhereStep: React.FC<WhereStepProps> = ({
               facility={selectedFacility}
               onClear={handleClearFacility}
               colors={colors}
+              bookedCourtNumber={bookedCourtNumber}
+              t={t}
             />
           ) : (
             <>
@@ -1563,6 +1629,17 @@ const styles = StyleSheet.create({
   },
   selectedFacilityText: {
     flex: 1,
+  },
+  selectedFacilityHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    flexWrap: 'wrap',
+  },
+  courtNumberBadge: {
+    paddingHorizontal: spacingPixels[2],
+    paddingVertical: spacingPixels[0.5],
+    borderRadius: radiusPixels.full,
   },
   textInput: {
     padding: spacingPixels[4],

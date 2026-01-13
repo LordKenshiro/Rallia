@@ -45,6 +45,8 @@ export interface CourtOption {
   bookingUrl: string;
   /** Schedule ID (for tracking) */
   facilityScheduleId: string;
+  /** External court ID from the provider (e.g., Montreal's facility.id like "172601") */
+  externalCourtId: string;
   /** Optional price */
   price?: number;
 }
@@ -62,6 +64,8 @@ export interface FormattedSlot {
   bookingUrl: string | null;
   /** Schedule ID (for tracking) */
   facilityScheduleId: string;
+  /** External court ID from the provider (e.g., Montreal's facility.id like "172601") */
+  externalCourtId: string;
   /** Start datetime (for sorting and calculations) */
   datetime: Date;
   /** End datetime (for duration calculations) */
@@ -222,11 +226,13 @@ function groupSlotsByTime(slots: AvailabilitySlot[]): GroupedSlot[] {
 
     // Create court option if this slot has a booking URL
     // Use shortCourtName for display (e.g., "Court 1") instead of full name
+    // slot.facilityId is the external court ID from the provider (e.g., Montreal's "172601")
     const courtOption: CourtOption | null = slot.bookingUrl
       ? {
           courtName: slot.shortCourtName || slot.courtName || `Court ${slot.facilityScheduleId}`,
           bookingUrl: slot.bookingUrl,
           facilityScheduleId: slot.facilityScheduleId,
+          externalCourtId: slot.facilityId,
           price: slot.price,
         }
       : null;
@@ -366,6 +372,7 @@ export function useCourtAvailability(
     isToday: isToday(slot.datetime),
     bookingUrl: slot.bookingUrl ?? null,
     facilityScheduleId: slot.facilityScheduleId,
+    externalCourtId: slot.facilityId,
     datetime: slot.datetime,
     endDateTime: slot.endDateTime,
     price: slot.price,

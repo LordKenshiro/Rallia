@@ -222,6 +222,7 @@ export type Database = {
           availability_status: Database['public']['Enums']['availability_enum'];
           court_number: number | null;
           created_at: string;
+          external_provider_id: string | null;
           facility_id: string;
           id: string;
           indoor: boolean;
@@ -238,6 +239,7 @@ export type Database = {
           availability_status?: Database['public']['Enums']['availability_enum'];
           court_number?: number | null;
           created_at?: string;
+          external_provider_id?: string | null;
           facility_id: string;
           id?: string;
           indoor?: boolean;
@@ -254,6 +256,7 @@ export type Database = {
           availability_status?: Database['public']['Enums']['availability_enum'];
           court_number?: number | null;
           created_at?: string;
+          external_provider_id?: string | null;
           facility_id?: string;
           id?: string;
           indoor?: boolean;
@@ -1875,7 +1878,7 @@ export type Database = {
           is_public: boolean | null;
           last_decay_calculation: string | null;
           matches_completed: number;
-          min_matches_for_public: number;
+          min_events_for_public: number;
           negative_events: number;
           player_id: string;
           positive_events: number;
@@ -1890,7 +1893,7 @@ export type Database = {
           is_public?: boolean | null;
           last_decay_calculation?: string | null;
           matches_completed?: number;
-          min_matches_for_public?: number;
+          min_events_for_public?: number;
           negative_events?: number;
           player_id: string;
           positive_events?: number;
@@ -1905,7 +1908,7 @@ export type Database = {
           is_public?: boolean | null;
           last_decay_calculation?: string | null;
           matches_completed?: number;
-          min_matches_for_public?: number;
+          min_events_for_public?: number;
           negative_events?: number;
           player_id?: string;
           positive_events?: number;
@@ -2764,7 +2767,7 @@ export type Database = {
     };
     Functions: {
       calculate_reputation_tier: {
-        Args: { matches_completed: number; min_matches?: number; score: number };
+        Args: { min_events?: number; score: number; total_events: number };
         Returns: Database['public']['Enums']['reputation_tier'];
       };
       check_peer_verification_threshold: {
@@ -2962,7 +2965,7 @@ export type Database = {
           is_public: boolean | null;
           last_decay_calculation: string | null;
           matches_completed: number;
-          min_matches_for_public: number;
+          min_events_for_public: number;
           negative_events: number;
           player_id: string;
           positive_events: number;

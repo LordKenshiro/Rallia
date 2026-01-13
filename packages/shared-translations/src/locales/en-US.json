@@ -819,6 +819,7 @@
       "courtStatusToBook": "Will Book",
       "courtStatusToBookDescription": "Court still needs to be reserved",
       "courtStatusTbd": "To Be Determined",
+      "courtNumber": "Court {number}",
       "reservationContactTitle": "Book your court",
       "reservationContactDescription": "Contact the facility to reserve your court, then update the status below.",
       "callFacility": "Call",
