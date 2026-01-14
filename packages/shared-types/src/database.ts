@@ -440,7 +440,8 @@ export interface MatchParticipantWithPlayer extends MatchParticipant {
 // ============================================
 
 export interface OnboardingPersonalInfo {
-  full_name: string;
+  first_name: string;
+  last_name: string;
   display_name?: string;
   birth_date: string;
   gender: GenderEnum;

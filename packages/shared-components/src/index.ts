@@ -14,9 +14,11 @@ export type { HeadingProps } from './foundation/Heading.native';
 // Form Components
 export { Input } from './forms/Input.native';
 export { Select } from './forms/Select.native';
+export { PhoneInput } from './forms/PhoneInput.native';
 
 export type { InputProps } from './forms/Input.native';
 export type { SelectProps, SelectOption } from './forms/Select.native';
+export type { PhoneInputProps } from './forms/PhoneInput.native';
 
 // Layout Components
 export { Container } from './layout/Container.native';

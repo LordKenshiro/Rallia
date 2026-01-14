@@ -188,7 +188,9 @@ const SettingsScreen: React.FC = () => {
               )}
               <View style={styles.profileInfo}>
                 <Text size="lg" weight="semibold" color={colors.text}>
-                  {profile?.full_name || profile?.display_name || ''}
+                  {profile?.display_name ||
+                    `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() ||
+                    ''}
                 </Text>
                 <Text size="sm" color={colors.textSecondary} style={styles.profileEmail}>
                   {profile?.email || ''}

@@ -90,6 +90,7 @@
   },
   "screens": {
     "profile": "Profil",
+    "playerProfile": "Profil du joueur",
     "sportProfile": "Profil sportif",
     "settings": "Paramètres",
     "notifications": "Notifications",
@@ -97,7 +98,9 @@
     "permissions": "Permissions",
     "ratingProofs": "Preuves de classement",
     "publicMatches": "Parties publiques",
-    "playerMatches": "Mes parties"
+    "playerMatches": "Mes parties",
+    "group": "Groupe",
+    "groups": "Groupes"
   },
   "notifications": {
     "title": "Notifications",
@@ -300,6 +303,8 @@
       "preferences": "MES PRÉFÉRENCES"
     },
     "fields": {
+      "firstName": "Prénom",
+      "lastName": "Nom de famille",
       "fullName": "Nom complet",
       "email": "Courriel",
       "phoneNumber": "Numéro de téléphone",
@@ -426,6 +431,10 @@
     },
     "personalInfoStep": {
       "title": "Parlez-nous de vous",
+      "firstName": "Prénom",
+      "firstNamePlaceholder": "Entrez votre prénom",
+      "lastName": "Nom de famille",
+      "lastNamePlaceholder": "Entrez votre nom de famille",
       "fullName": "Nom complet",
       "fullNamePlaceholder": "Entrez votre nom complet",
       "username": "Nom d'utilisateur",

@@ -26,7 +26,8 @@ interface PeerRatingRequestOverlayProps {
 
 interface Player {
   id: string;
-  full_name: string;
+  first_name: string;
+  last_name: string;
   display_name: string | null;
   profile_picture_url: string | null;
   rating: string | null;
@@ -66,7 +67,7 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
       const query = searchQuery.toLowerCase();
       const filtered = players.filter(
         player =>
-          player.full_name.toLowerCase().includes(query) ||
+          `${player.first_name} ${player.last_name}`.toLowerCase().includes(query) ||
           player.display_name?.toLowerCase().includes(query)
       );
       setFilteredPlayers(filtered);
@@ -148,7 +149,7 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
       // Step 3: Fetch opponent profiles
       const { data: opponentProfiles, error: profilesError } = await supabase
         .from('profile')
-        .select('id, full_name, display_name, profile_picture_url')
+        .select('id, first_name, last_name, display_name, profile_picture_url')
         .in('id', uniqueOpponentIds);
 
       if (profilesError) throw profilesError;
@@ -194,12 +195,14 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
       const playersWithRatings: Player[] = (opponentProfiles || []).map(
         (profile: {
           id: string;
-          full_name: string;
+          first_name: string;
+          last_name: string;
           display_name: string | null;
           profile_picture_url: string | null;
         }) => ({
           id: profile.id,
-          full_name: profile.full_name,
+          first_name: profile.first_name,
+          last_name: profile.last_name,
           display_name: profile.display_name,
           profile_picture_url: profile.profile_picture_url,
           rating: ratingsMap.get(profile.id) || null,
@@ -283,7 +286,9 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
 
         {/* Player Info */}
         <View style={styles.playerInfo}>
-          <Text style={[styles.playerName, { color: colors.text }]}>{player.full_name}</Text>
+          <Text style={[styles.playerName, { color: colors.text }]}>
+            {`${player.first_name} ${player.last_name}`.trim()}
+          </Text>
           {player.display_name && (
             <Text style={[styles.playerUsername, { color: colors.textMuted }]}>
               @{player.display_name}

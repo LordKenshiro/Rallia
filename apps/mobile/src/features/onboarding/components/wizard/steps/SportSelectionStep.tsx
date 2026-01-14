@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
     marginTop: spacingPixels[3],
   },
   sportCard: {
-    height: 140,
+    height: 180,
     borderRadius: radiusPixels.xl,
     marginBottom: spacingPixels[4],
     overflow: 'hidden',

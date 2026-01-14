@@ -26,7 +26,8 @@ describe('useProfile', () => {
   const mockProfile = {
     id: 'user-123',
     email: 'test@example.com',
-    full_name: 'Test User',
+    first_name: 'Test',
+    last_name: 'User',
     display_name: 'TestUser',
     profile_picture_url: 'https://example.com/avatar.jpg',
     date_of_birth: '1990-01-01',

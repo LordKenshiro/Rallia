@@ -16,6 +16,9 @@ export * from './courts';
 export * from './availability';
 export * from './players';
 export * from './reputation';
+export * from './shared-contacts';
+export * from './match-share';
+export * from './groups';
 
 // Export default DatabaseService
 export { default } from './database';

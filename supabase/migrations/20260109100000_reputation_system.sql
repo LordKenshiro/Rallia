@@ -7,50 +7,58 @@
 -- ENUMS
 -- =============================================================================
 
-CREATE TYPE reputation_event_type AS ENUM (
-    -- Match-related
-    'match_completed',        -- Showed up and played
-    'match_no_show',          -- Didn't show up
-    'match_ghosted',          -- Stopped responding after accepting
-    'match_on_time',          -- Arrived on time
-    'match_late',             -- Arrived late (>10min)
-    'match_cancelled_early',  -- Cancelled with adequate notice
-    'match_cancelled_late',   -- Last-minute cancellation (<24h)
-    'match_repeat_opponent',  -- Played with same opponent again
+DO $$ BEGIN
+    CREATE TYPE reputation_event_type AS ENUM (
+        -- Match-related
+        'match_completed',        -- Showed up and played
+        'match_no_show',          -- Didn't show up
+        'match_ghosted',          -- Stopped responding after accepting
+        'match_on_time',          -- Arrived on time
+        'match_late',             -- Arrived late (>10min)
+        'match_cancelled_early',  -- Cancelled with adequate notice
+        'match_cancelled_late',   -- Last-minute cancellation (<24h)
+        'match_repeat_opponent',  -- Played with same opponent again
 
-    -- Peer reviews
-    'review_received_5star',
-    'review_received_4star',
-    'review_received_3star',
-    'review_received_2star',
-    'review_received_1star',
+        -- Peer reviews
+        'review_received_5star',
+        'review_received_4star',
+        'review_received_3star',
+        'review_received_2star',
+        'review_received_1star',
 
-    -- Reports/Moderation
-    'report_received',        -- Someone reported this player
-    'report_dismissed',       -- Report was dismissed (false report bonus)
-    'report_upheld',          -- Report was upheld (penalty)
-    'warning_issued',
-    'suspension_lifted',
+        -- Reports/Moderation
+        'report_received',        -- Someone reported this player
+        'report_dismissed',       -- Report was dismissed (false report bonus)
+        'report_upheld',          -- Report was upheld (penalty)
+        'warning_issued',
+        'suspension_lifted',
 
-    -- Community
-    'peer_rating_given',      -- Helped rate another player
-    'first_match_bonus'       -- Bonus for completing first match
-);
+        -- Community
+        'peer_rating_given',      -- Helped rate another player
+        'first_match_bonus'       -- Bonus for completing first match
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
-CREATE TYPE reputation_tier AS ENUM (
-    'unknown',      -- Not enough matches
-    'bronze',       -- 0-59%
-    'silver',       -- 60-74%
-    'gold',         -- 75-89%
-    'platinum'      -- 90-100%
-);
+DO $$ BEGIN
+    CREATE TYPE reputation_tier AS ENUM (
+        'unknown',      -- Not enough matches
+        'bronze',       -- 0-59%
+        'silver',       -- 60-74%
+        'gold',         -- 75-89%
+        'platinum'      -- 90-100%
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 -- =============================================================================
 -- REPUTATION EVENT TABLE
 -- Immutable log of events affecting player reputation
 -- =============================================================================
 
-CREATE TABLE reputation_event (
+CREATE TABLE IF NOT EXISTS reputation_event (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     player_id UUID NOT NULL REFERENCES player(id) ON DELETE CASCADE,
     event_type reputation_event_type NOT NULL,
@@ -71,16 +79,17 @@ CREATE TABLE reputation_event (
 );
 
 -- Indexes for efficient querying
-CREATE INDEX idx_reputation_event_player ON reputation_event(player_id);
-CREATE INDEX idx_reputation_event_type ON reputation_event(event_type);
-CREATE INDEX idx_reputation_event_occurred ON reputation_event(event_occurred_at DESC);
-CREATE INDEX idx_reputation_event_player_occurred ON reputation_event(player_id, event_occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_reputation_event_player ON reputation_event(player_id);
+CREATE INDEX IF NOT EXISTS idx_reputation_event_type ON reputation_event(event_type);
+CREATE INDEX IF NOT EXISTS idx_reputation_event_occurred ON reputation_event(event_occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_reputation_event_player_occurred ON reputation_event(player_id, event_occurred_at DESC);
 
 -- Enable RLS
 ALTER TABLE reputation_event ENABLE ROW LEVEL SECURITY;
 
 -- PRIVACY: Block all player access to individual events
 -- Only service_role (backend) can read events
+DROP POLICY IF EXISTS "reputation_event_block_player_read" ON reputation_event;
 CREATE POLICY "reputation_event_block_player_read" ON reputation_event
     FOR SELECT
     TO authenticated
@@ -90,6 +99,7 @@ CREATE POLICY "reputation_event_block_player_read" ON reputation_event
 -- No explicit policy needed - service_role bypasses RLS
 
 -- Allow authenticated users to insert (will be validated by application logic)
+DROP POLICY IF EXISTS "reputation_event_allow_insert" ON reputation_event;
 CREATE POLICY "reputation_event_allow_insert" ON reputation_event
     FOR INSERT
     TO authenticated
@@ -100,7 +110,7 @@ CREATE POLICY "reputation_event_allow_insert" ON reputation_event
 -- Cached/calculated reputation scores
 -- =============================================================================
 
-CREATE TABLE player_reputation (
+CREATE TABLE IF NOT EXISTS player_reputation (
     player_id UUID PRIMARY KEY REFERENCES player(id) ON DELETE CASCADE,
 
     -- Current calculated values
@@ -130,23 +140,27 @@ CREATE TABLE player_reputation (
 ALTER TABLE player_reputation ENABLE ROW LEVEL SECURITY;
 
 -- Allow players to read their own reputation
+DROP POLICY IF EXISTS "player_reputation_read_own" ON player_reputation;
 CREATE POLICY "player_reputation_read_own" ON player_reputation
     FOR SELECT
     TO authenticated
     USING (player_id = auth.uid());
 
 -- Allow players to read other public reputations
+DROP POLICY IF EXISTS "player_reputation_read_public" ON player_reputation;
 CREATE POLICY "player_reputation_read_public" ON player_reputation
     FOR SELECT
     TO authenticated
     USING (is_public = true);
 
 -- Only service role can insert/update (via application logic)
+DROP POLICY IF EXISTS "player_reputation_insert" ON player_reputation;
 CREATE POLICY "player_reputation_insert" ON player_reputation
     FOR INSERT
     TO authenticated
     WITH CHECK (player_id = auth.uid());
 
+DROP POLICY IF EXISTS "player_reputation_update_own" ON player_reputation;
 CREATE POLICY "player_reputation_update_own" ON player_reputation
     FOR UPDATE
     TO authenticated
@@ -158,7 +172,7 @@ CREATE POLICY "player_reputation_update_own" ON player_reputation
 -- Configurable event impact values
 -- =============================================================================
 
-CREATE TABLE reputation_config (
+CREATE TABLE IF NOT EXISTS reputation_config (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     event_type reputation_event_type UNIQUE NOT NULL,
 
@@ -182,6 +196,7 @@ CREATE TABLE reputation_config (
 ALTER TABLE reputation_config ENABLE ROW LEVEL SECURITY;
 
 -- Everyone can read config
+DROP POLICY IF EXISTS "reputation_config_read_all" ON reputation_config;
 CREATE POLICY "reputation_config_read_all" ON reputation_config
     FOR SELECT
     TO authenticated
@@ -218,12 +233,14 @@ INSERT INTO reputation_config (event_type, default_impact, min_impact, max_impac
 
     -- Community
     ('peer_rating_given', 1, 0, 2, false, NULL),
-    ('first_match_bonus', 10, 10, 10, false, NULL);
+    ('first_match_bonus', 10, 10, 10, false, NULL)
+ON CONFLICT (event_type) DO NOTHING;
 
 -- =============================================================================
 -- HELPER FUNCTION: Calculate tier from score
 -- =============================================================================
 
+DROP FUNCTION IF EXISTS calculate_reputation_tier(DECIMAL, INT, INT);
 CREATE OR REPLACE FUNCTION calculate_reputation_tier(score DECIMAL, matches_completed INT, min_matches INT DEFAULT 3)
 RETURNS reputation_tier
 LANGUAGE plpgsql
@@ -252,6 +269,7 @@ $$;
 -- HELPER FUNCTION: Recalculate player reputation
 -- =============================================================================
 
+DROP FUNCTION IF EXISTS recalculate_player_reputation(UUID, BOOLEAN);
 CREATE OR REPLACE FUNCTION recalculate_player_reputation(target_player_id UUID, apply_decay BOOLEAN DEFAULT false)
 RETURNS player_reputation
 LANGUAGE plpgsql
@@ -352,6 +370,7 @@ $$;
 -- TRIGGER: Recalculate reputation on new events
 -- =============================================================================
 
+DROP FUNCTION IF EXISTS trigger_recalculate_reputation() CASCADE;
 CREATE OR REPLACE FUNCTION trigger_recalculate_reputation()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -364,6 +383,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS reputation_event_recalculate ON reputation_event;
 CREATE TRIGGER reputation_event_recalculate
     AFTER INSERT ON reputation_event
     FOR EACH ROW
@@ -373,6 +393,7 @@ CREATE TRIGGER reputation_event_recalculate
 -- RPC: Get player reputation summary (privacy-safe)
 -- =============================================================================
 
+DROP FUNCTION IF EXISTS get_reputation_summary(UUID);
 CREATE OR REPLACE FUNCTION get_reputation_summary(target_player_id UUID)
 RETURNS TABLE (
     score DECIMAL(5,2),

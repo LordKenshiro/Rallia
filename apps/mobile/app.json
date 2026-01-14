@@ -4,6 +4,7 @@
     "slug": "rallia-app",
     "owner": "rallia-app",
     "version": "1.0.0",
+    "entryPoint": "./index.ts",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -20,7 +21,8 @@
         "ITSAppUsesNonExemptEncryption": false
       },
       "bundleIdentifier": "com.mathisl971.rallia-app",
-      "appleTeamId": "587DRRMTV8"
+      "appleTeamId": "587DRRMTV8",
+      "usesAppleSignIn": true
     },
     "android": {
       "adaptiveIcon": {
@@ -42,6 +44,25 @@
     },
     "plugins": [
       "expo-dev-client",
+      "expo-apple-authentication",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.YOUR_IOS_CLIENT_ID"
+        }
+      ],
+      [
+        "react-native-fbsdk-next",
+        {
+          "appID": "YOUR_FACEBOOK_APP_ID",
+          "clientToken": "YOUR_FACEBOOK_CLIENT_TOKEN",
+          "displayName": "Rallia",
+          "scheme": "fbYOUR_FACEBOOK_APP_ID",
+          "advertiserIDCollectionEnabled": false,
+          "autoLogAppEventsEnabled": false,
+          "isAutoInitEnabled": true
+        }
+      ],
       [
         "expo-build-properties",
         {

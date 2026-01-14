@@ -29,6 +29,7 @@ export type RootStackParamList = {
 
   // Shared screens - full screen, hides tabs when navigated to
   UserProfile: { userId?: string }; // undefined = current user's profile
+  PlayerProfile: { playerId: string; sportId?: string }; // View another player's profile
   SportProfile: SportProfileScreenParams;
   Settings: undefined;
   Notifications: undefined;
@@ -36,6 +37,8 @@ export type RootStackParamList = {
   Permissions: undefined;
   Map: { focusLocation?: { lat: number; lng: number } } | undefined;
   RatingProofs: RatingProofsScreenParams;
+  GroupDetail: { groupId: string; groupName?: string }; // Group detail view
+  Chat: { conversationId: string; title?: string }; // Direct chat navigation
 };
 
 // =============================================================================
@@ -78,6 +81,7 @@ export type CourtsStackParamList = {
 export type CommunityStackParamList = {
   PlayerDirectory: undefined;
   ShareLists: undefined;
+  SharedListDetail: { listId: string; listName: string };
   Groups: undefined;
   Communities: undefined;
   Tournaments: undefined;

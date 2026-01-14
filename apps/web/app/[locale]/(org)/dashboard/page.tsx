@@ -72,7 +72,25 @@ export default async function DashboardPage() {
 
   // Get the first active organization (for now, showing one)
   const membership = memberships?.[0];
-  const organization = membership?.organization as any;
+  const organization = membership?.organization as
+    | {
+        id: string;
+        name: string;
+        nature: string | null;
+        email: string | null;
+        phone: string | null;
+        slug: string;
+        address: string | null;
+        city: string | null;
+        country: string | null;
+        postal_code: string | null;
+        type: string | null;
+        description: string | null;
+        website: string | null;
+        is_active: boolean;
+        created_at: string;
+      }
+    | undefined;
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -117,7 +135,7 @@ export default async function DashboardPage() {
               </div>
             </div>
 
-            {profile?.full_name && (
+            {profile?.first_name && (
               <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors">
                 <div className="p-2 bg-primary/10 rounded-md">
                   <User className="h-4 w-4 text-primary" />
@@ -126,7 +144,7 @@ export default async function DashboardPage() {
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide m-0">
                     {t('fullName')}
                   </p>
-                  <p className="text-sm font-medium m-0">{profile.full_name}</p>
+                  <p className="text-sm font-medium m-0">{`${profile.first_name}${profile.last_name ? ` ${profile.last_name}` : ''}`}</p>
                 </div>
               </div>
             )}

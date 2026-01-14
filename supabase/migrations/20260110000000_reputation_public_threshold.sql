@@ -22,15 +22,16 @@ ALTER TABLE player_reputation DROP COLUMN IF EXISTS min_matches_for_public;
 -- =============================================================================
 
 ALTER TABLE player_reputation 
-ADD COLUMN min_events_for_public INT NOT NULL DEFAULT 10;
+ADD COLUMN IF NOT EXISTS min_events_for_public INT NOT NULL DEFAULT 10;
 
 ALTER TABLE player_reputation 
-ADD COLUMN is_public BOOLEAN GENERATED ALWAYS AS (total_events >= min_events_for_public) STORED;
+ADD COLUMN IF NOT EXISTS is_public BOOLEAN GENERATED ALWAYS AS (total_events >= min_events_for_public) STORED;
 
 -- =============================================================================
 -- STEP 4: Recreate the RLS policy with the new column
 -- =============================================================================
 
+DROP POLICY IF EXISTS "player_reputation_read_public" ON player_reputation;
 CREATE POLICY "player_reputation_read_public" ON player_reputation
     FOR SELECT
     TO authenticated

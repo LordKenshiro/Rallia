@@ -27,13 +27,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
   const navigation = useNavigation();
   const [slideAnim] = useState(new Animated.Value(width));
   const [selectedLanguage, setSelectedLanguage] = useState<'EN' | 'FR'>('EN');
-  const [selectedAppearance, setSelectedAppearance] = useState<'Light' | 'Dark' | 'System'>('Light');
-  
+  const [selectedAppearance, setSelectedAppearance] = useState<'Light' | 'Dark' | 'System'>(
+    'Light'
+  );
+
   // Use custom hook for profile data
   const { profile, refetch: refetchProfile } = useProfile();
 
   // Extract user data from profile
-  const userName = profile?.display_name || profile?.full_name || '';
+  const userName =
+    profile?.display_name ||
+    (profile?.first_name && profile?.last_name
+      ? `${profile.first_name} ${profile.last_name}`
+      : profile?.first_name) ||
+    '';
   const userEmail = profile?.email || '';
   const profilePictureUrl = profile?.profile_picture_url || null;
 
@@ -46,7 +53,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
         tension: 65,
         friction: 11,
       }).start();
-      
+
       // Refetch user data when modal opens
       refetchProfile();
     } else {
@@ -64,7 +71,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
       await supabase.auth.signOut();
       onClose();
       // Navigate to Home after successful sign out
-      (navigation as any).navigate('Home');
+      (navigation as { navigate: (screen: string) => void }).navigate('Home');
     } catch (error) {
       console.error('Error signing out:', error);
     }
@@ -75,13 +82,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
     console.log('Delete account pressed');
   };
 
-  const SettingsItem = ({ 
-    icon, 
-    title, 
-    onPress 
-  }: { 
-    icon: keyof typeof Ionicons.glyphMap; 
-    title: string; 
+  const SettingsItem = ({
+    icon,
+    title,
+    onPress,
+  }: {
+    icon: keyof typeof Ionicons.glyphMap;
+    title: string;
     onPress: () => void;
   }) => (
     <TouchableOpacity style={styles.settingsItem} onPress={onPress}>
@@ -94,14 +101,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
   );
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="none"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
-        <Animated.View 
+        <Animated.View
           style={[
             styles.modalContent,
             {
@@ -124,23 +126,24 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
               {/* User Profile Section */}
               <View style={styles.profileSection}>
                 {profilePictureUrl ? (
-                  <Image 
-                    source={{ uri: profilePictureUrl }} 
-                    style={styles.profileImage} 
-                  />
+                  <Image source={{ uri: profilePictureUrl }} style={styles.profileImage} />
                 ) : (
                   <View style={styles.profileImagePlaceholder}>
                     <Ionicons name="person" size={24} color="#999" />
                   </View>
                 )}
                 <View style={styles.profileInfo}>
-                  <Text weight="semibold" size="base">{userName}</Text>
-                  <Text variant="caption" color="#666">{userEmail}</Text>
+                  <Text weight="semibold" size="base">
+                    {userName}
+                  </Text>
+                  <Text variant="caption" color="#666">
+                    {userEmail}
+                  </Text>
                 </View>
               </View>
 
               {/* Edit Profile */}
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.editProfileButton}
                 onPress={() => {
                   onClose(); // Close settings modal first
@@ -149,47 +152,54 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
               >
                 <Ionicons name="create-outline" size={16} color="#666" />
                 <Text size="sm">Edit Profile</Text>
-                <Ionicons name="chevron-forward" size={18} color="#999" style={{ marginLeft: 'auto' }} />
+                <Ionicons
+                  name="chevron-forward"
+                  size={18}
+                  color="#999"
+                  style={{ marginLeft: 'auto' }}
+                />
               </TouchableOpacity>
             </View>
 
             {/* Settings Items */}
             <View style={styles.settingsGroup}>
-              <SettingsItem 
-                icon="notifications-outline" 
-                title="Notifications" 
-                onPress={() => console.log('Notifications pressed')} 
+              <SettingsItem
+                icon="notifications-outline"
+                title="Notifications"
+                onPress={() => console.log('Notifications pressed')}
               />
-              <SettingsItem 
-                icon="lock-closed-outline" 
-                title="Permissions" 
-                onPress={() => console.log('Permissions pressed')} 
+              <SettingsItem
+                icon="lock-closed-outline"
+                title="Permissions"
+                onPress={() => console.log('Permissions pressed')}
               />
-              <SettingsItem 
-                icon="card-outline" 
-                title="Subscription" 
-                onPress={() => console.log('Subscription pressed')} 
+              <SettingsItem
+                icon="card-outline"
+                title="Subscription"
+                onPress={() => console.log('Subscription pressed')}
               />
-              <SettingsItem 
-                icon="wallet-outline" 
-                title="Payments" 
-                onPress={() => console.log('Payments pressed')} 
+              <SettingsItem
+                icon="wallet-outline"
+                title="Payments"
+                onPress={() => console.log('Payments pressed')}
               />
-              <SettingsItem 
-                icon="help-circle-outline" 
-                title="Help & Assistance" 
-                onPress={() => console.log('Help pressed')} 
+              <SettingsItem
+                icon="help-circle-outline"
+                title="Help & Assistance"
+                onPress={() => console.log('Help pressed')}
               />
-              <SettingsItem 
-                icon="document-text-outline" 
-                title="Terms & Conditions" 
-                onPress={() => console.log('Terms pressed')} 
+              <SettingsItem
+                icon="document-text-outline"
+                title="Terms & Conditions"
+                onPress={() => console.log('Terms pressed')}
               />
             </View>
 
             {/* Preferred Language */}
             <View style={styles.preferenceSection}>
-              <Text variant="caption" color="#666">Preferred language</Text>
+              <Text variant="caption" color="#666">
+                Preferred language
+              </Text>
               <View style={styles.preferenceOptions}>
                 <TouchableOpacity
                   style={[
@@ -226,7 +236,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
 
             {/* Appearance */}
             <View style={styles.preferenceSection}>
-              <Text variant="caption" color="#666">Appearance</Text>
+              <Text variant="caption" color="#666">
+                Appearance
+              </Text>
               <View style={styles.preferenceOptions}>
                 <TouchableOpacity
                   style={[
@@ -285,7 +297,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
 
               <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
                 <Ionicons name="trash-outline" size={18} color="#FF3B30" />
-                <Text size="sm" color="#FF3B30">Delete Account</Text>
+                <Text size="sm" color="#FF3B30">
+                  Delete Account
+                </Text>
               </TouchableOpacity>
             </View>
 

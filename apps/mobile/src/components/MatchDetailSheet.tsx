@@ -849,7 +849,7 @@ export const MatchDetailSheet: React.FC = () => {
   const distanceDisplay = formatDistance(match.distance_meters);
   const creatorProfile = match.created_by_player?.profile;
   const creatorName =
-    creatorProfile?.full_name ||
+    `${creatorProfile?.first_name || ''} ${creatorProfile?.last_name || ''}`.trim() ||
     creatorProfile?.display_name ||
     t('matchDetail.host' as TranslationKey);
   const isFull = participantInfo.spotsLeft === 0;
@@ -905,7 +905,12 @@ export const MatchDetailSheet: React.FC = () => {
 
   // Host first - use host participant's profile, fallback to created_by_player for backwards compatibility
   const hostProfile = hostParticipant?.player?.profile ?? creatorProfile;
-  const hostName = hostProfile?.full_name || hostProfile?.display_name || creatorName;
+  const hostName =
+    hostProfile?.display_name ||
+    (hostProfile?.first_name && hostProfile?.last_name
+      ? `${hostProfile.first_name} ${hostProfile.last_name}`
+      : hostProfile?.first_name) ||
+    creatorName;
   participantAvatars.push({
     key: 'host',
     avatarUrl: getProfilePictureUrl(hostProfile?.profile_picture_url),
@@ -918,7 +923,11 @@ export const MatchDetailSheet: React.FC = () => {
   // Normalize URLs to use current environment's Supabase URL
   otherJoinedParticipants.forEach((p, i) => {
     const participantFullName =
-      p.player?.profile?.full_name || p.player?.profile?.display_name || '';
+      p.player?.profile?.display_name ||
+      (p.player?.profile?.first_name && p.player?.profile?.last_name
+        ? `${p.player.profile.first_name} ${p.player.profile.last_name}`
+        : p.player?.profile?.first_name) ||
+      '';
     const participantFirstName = participantFullName.split(' ')[0];
     participantAvatars.push({
       key: p.id || `participant-${i}`,
@@ -947,7 +956,7 @@ export const MatchDetailSheet: React.FC = () => {
       ?.filter(p => p.status === 'requested')
       .map(p => {
         const fullName =
-          p.player?.profile?.full_name ||
+          `${p.player?.profile?.first_name || ''} ${p.player?.profile?.last_name || ''}`.trim() ||
           p.player?.profile?.display_name ||
           t('matchDetail.host' as TranslationKey);
         // Get sport rating info if available (label and value)
@@ -975,7 +984,7 @@ export const MatchDetailSheet: React.FC = () => {
       ?.filter(p => p.status === 'pending')
       .map(p => {
         const fullName =
-          p.player?.profile?.full_name ||
+          `${p.player?.profile?.first_name || ''} ${p.player?.profile?.last_name || ''}`.trim() ||
           p.player?.profile?.display_name ||
           t('matchDetail.host' as TranslationKey);
         return {
@@ -993,7 +1002,7 @@ export const MatchDetailSheet: React.FC = () => {
       ?.filter(p => p.status === 'declined')
       .map(p => {
         const fullName =
-          p.player?.profile?.full_name ||
+          `${p.player?.profile?.first_name || ''} ${p.player?.profile?.last_name || ''}`.trim() ||
           p.player?.profile?.display_name ||
           t('matchDetail.host' as TranslationKey);
         return {

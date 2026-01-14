@@ -13,13 +13,13 @@ import {
   TextInput,
   ActivityIndicator,
   ScrollView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { lightHaptic } from '@rallia/shared-utils';
-import { Logger } from '@rallia/shared-services';
 import type { TranslationKey } from '@rallia/shared-translations';
+import type { SocialProvider } from '../../hooks/useSocialAuth';
 
 interface ThemeColors {
   background: string;
@@ -51,6 +51,15 @@ interface EmailStepProps {
   isDark: boolean;
   /** Whether this step is currently active/visible */
   isActive?: boolean;
+  /** Social auth handlers */
+  onGoogleSignIn?: () => void;
+  onAppleSignIn?: () => void;
+  onFacebookSignIn?: () => void;
+  /** Social auth loading state */
+  socialAuthLoading?: boolean;
+  socialAuthLoadingProvider?: SocialProvider | null;
+  /** Whether Apple Sign-In is available (iOS 13+ only) */
+  isAppleSignInAvailable?: boolean;
 }
 
 export const EmailStep: React.FC<EmailStepProps> = ({
@@ -64,6 +73,12 @@ export const EmailStep: React.FC<EmailStepProps> = ({
   t,
   isDark: _isDark,
   isActive = true,
+  onGoogleSignIn,
+  onAppleSignIn,
+  onFacebookSignIn,
+  socialAuthLoading = false,
+  socialAuthLoadingProvider = null,
+  isAppleSignInAvailable = Platform.OS === 'ios',
 }) => {
   const emailInputRef = useRef<TextInput>(null);
 
@@ -73,25 +88,9 @@ export const EmailStep: React.FC<EmailStepProps> = ({
       emailInputRef.current.blur();
     }
   }, [isActive]);
-  const handleGoogleSignIn = () => {
-    lightHaptic();
-    Logger.logUserAction('oauth_signin_initiated', { provider: 'google' });
-    // TODO: Implement Google authentication
-  };
 
-  const handleAppleSignIn = () => {
-    lightHaptic();
-    Logger.logUserAction('oauth_signin_initiated', { provider: 'apple' });
-    // TODO: Implement Apple authentication
-  };
-
-  const handleFacebookSignIn = () => {
-    lightHaptic();
-    Logger.logUserAction('oauth_signin_initiated', { provider: 'facebook' });
-    // TODO: Implement Facebook authentication
-  };
-
-  const canContinue = isEmailValid && !isLoading;
+  const canContinue = isEmailValid && !isLoading && !socialAuthLoading;
+  const isAnyLoading = isLoading || socialAuthLoading;
 
   return (
     <ScrollView
@@ -107,28 +106,60 @@ export const EmailStep: React.FC<EmailStepProps> = ({
 
       {/* Social Sign In Buttons */}
       <View style={styles.socialButtons}>
+        {/* Google Sign In */}
         <TouchableOpacity
-          style={[styles.socialButton, { backgroundColor: colors.buttonActive }]}
-          onPress={handleGoogleSignIn}
+          style={[
+            styles.socialButton,
+            { backgroundColor: colors.buttonActive },
+            isAnyLoading && styles.socialButtonDisabled,
+          ]}
+          onPress={onGoogleSignIn}
           activeOpacity={0.8}
+          disabled={isAnyLoading}
         >
-          <Ionicons name="logo-google" size={24} color="#fff" />
+          {socialAuthLoadingProvider === 'google' ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <Ionicons name="logo-google" size={24} color="#fff" />
+          )}
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.socialButton, { backgroundColor: colors.buttonActive }]}
-          onPress={handleAppleSignIn}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="logo-apple" size={24} color="#fff" />
-        </TouchableOpacity>
+        {/* Apple Sign In - iOS only */}
+        {isAppleSignInAvailable && (
+          <TouchableOpacity
+            style={[
+              styles.socialButton,
+              { backgroundColor: colors.buttonActive },
+              isAnyLoading && styles.socialButtonDisabled,
+            ]}
+            onPress={onAppleSignIn}
+            activeOpacity={0.8}
+            disabled={isAnyLoading}
+          >
+            {socialAuthLoadingProvider === 'apple' ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Ionicons name="logo-apple" size={24} color="#fff" />
+            )}
+          </TouchableOpacity>
+        )}
 
+        {/* Facebook Sign In */}
         <TouchableOpacity
-          style={[styles.socialButton, { backgroundColor: colors.buttonActive }]}
-          onPress={handleFacebookSignIn}
+          style={[
+            styles.socialButton,
+            { backgroundColor: colors.buttonActive },
+            isAnyLoading && styles.socialButtonDisabled,
+          ]}
+          onPress={onFacebookSignIn}
           activeOpacity={0.8}
+          disabled={isAnyLoading}
         >
-          <Ionicons name="logo-facebook" size={24} color="#fff" />
+          {socialAuthLoadingProvider === 'facebook' ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <Ionicons name="logo-facebook" size={24} color="#fff" />
+          )}
         </TouchableOpacity>
       </View>
 
@@ -232,6 +263,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  socialButtonDisabled: {
+    opacity: 0.6,
   },
   dividerContainer: {
     flexDirection: 'row',

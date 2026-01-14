@@ -44,6 +44,54 @@ interface Rating {
   skill_level: 'beginner' | 'intermediate' | 'advanced' | 'professional' | null;
 }
 
+/**
+ * Maps NTRP score value to a user-friendly skill level name
+ */
+const getNtrpSkillLabel = (scoreValue: number): string => {
+  const mapping: Record<number, string> = {
+    1.5: 'Beginner 1',
+    2.0: 'Beginner 2',
+    2.5: 'Beginner 3',
+    3.0: 'Intermediate 1',
+    3.5: 'Intermediate 2',
+    4.0: 'Intermediate 3',
+    4.5: 'Advanced 1',
+    5.0: 'Advanced 2',
+    5.5: 'Advanced 3',
+    6.0: 'Professional',
+  };
+  return mapping[scoreValue] || `Level ${scoreValue}`;
+};
+
+/**
+ * Maps DUPR score value to a user-friendly skill level name
+ */
+const getDuprSkillLabel = (scoreValue: number): string => {
+  const mapping: Record<number, string> = {
+    1.0: 'Beginner 1',
+    2.0: 'Beginner 2',
+    2.5: 'Beginner 3',
+    3.0: 'Intermediate 1',
+    3.5: 'Intermediate 2',
+    4.0: 'Intermediate 3',
+    4.5: 'Advanced 1',
+    5.0: 'Advanced 2',
+    5.5: 'Advanced 3',
+    6.0: 'Professional',
+  };
+  return mapping[scoreValue] || `Level ${scoreValue}`;
+};
+
+/**
+ * Get skill category from score value for icon selection
+ */
+const getSkillCategory = (scoreValue: number): string => {
+  if (scoreValue <= 2.5) return 'beginner';
+  if (scoreValue <= 4.0) return 'intermediate';
+  if (scoreValue <= 5.5) return 'advanced';
+  return 'professional';
+};
+
 interface RatingStepProps {
   sport: 'tennis' | 'pickleball';
   formData: OnboardingFormData;
@@ -190,7 +238,7 @@ export const RatingStep: React.FC<RatingStepProps> = ({
               >
                 <View style={styles.ratingHeader}>
                   <Ionicons
-                    name={getRatingIcon(rating.skill_level ?? 'intermediate')}
+                    name={getRatingIcon(getSkillCategory(rating.score_value))}
                     size={20}
                     color={isSelected ? colors.buttonActive : colors.buttonActive}
                     style={styles.ratingIcon}
@@ -200,8 +248,9 @@ export const RatingStep: React.FC<RatingStepProps> = ({
                     weight="bold"
                     color={isSelected ? colors.buttonActive : colors.text}
                   >
-                    {(rating.skill_level ?? 'intermediate').charAt(0).toUpperCase() +
-                      (rating.skill_level ?? 'intermediate').slice(1)}
+                    {isTennis
+                      ? getNtrpSkillLabel(rating.score_value)
+                      : getDuprSkillLabel(rating.score_value)}
                   </Text>
                 </View>
                 <Text

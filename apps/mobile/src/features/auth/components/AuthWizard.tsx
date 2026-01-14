@@ -24,6 +24,7 @@ import { lightHaptic } from '@rallia/shared-utils';
 import type { TranslationKey } from '@rallia/shared-translations';
 
 import { useAuthWizard } from '../hooks/useAuthWizard';
+import { useSocialAuth } from '../hooks/useSocialAuth';
 import { EmailStep } from './steps/EmailStep';
 import { OTPVerificationStep } from './steps/OTPVerificationStep';
 
@@ -212,6 +213,16 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
     isEmailValid,
   } = useAuthWizard();
 
+  // Social auth hook
+  const {
+    isLoading: socialAuthLoading,
+    loadingProvider: socialAuthLoadingProvider,
+    signInWithGoogle,
+    signInWithApple,
+    signInWithFacebook,
+    isAppleSignInAvailable,
+  } = useSocialAuth();
+
   // Animation values
   const translateX = useSharedValue(0);
   const gestureTranslateX = useSharedValue(0);
@@ -224,6 +235,31 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
       overshootClamping: false,
     });
   }, [currentStep, translateX]);
+
+  // Handle social sign-in result
+  const handleSocialAuthResult = useCallback(
+    async (signInFn: () => Promise<{ success: boolean; needsOnboarding: boolean }>) => {
+      Keyboard.dismiss();
+      const result = await signInFn();
+      if (result.success) {
+        onSuccess(result.needsOnboarding);
+      }
+    },
+    [onSuccess]
+  );
+
+  // Social sign-in handlers
+  const handleGoogleSignIn = useCallback(() => {
+    handleSocialAuthResult(signInWithGoogle);
+  }, [handleSocialAuthResult, signInWithGoogle]);
+
+  const handleAppleSignIn = useCallback(() => {
+    handleSocialAuthResult(signInWithApple);
+  }, [handleSocialAuthResult, signInWithApple]);
+
+  const handleFacebookSignIn = useCallback(() => {
+    handleSocialAuthResult(signInWithFacebook);
+  }, [handleSocialAuthResult, signInWithFacebook]);
 
   // Navigate to next step
   const goToNextStep = useCallback(async () => {
@@ -317,6 +353,12 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
                 t={t}
                 isDark={isDark}
                 isActive={currentStep === 1}
+                onGoogleSignIn={handleGoogleSignIn}
+                onAppleSignIn={handleAppleSignIn}
+                onFacebookSignIn={handleFacebookSignIn}
+                socialAuthLoading={socialAuthLoading}
+                socialAuthLoadingProvider={socialAuthLoadingProvider}
+                isAppleSignInAvailable={isAppleSignInAvailable}
               />
             </View>
 
