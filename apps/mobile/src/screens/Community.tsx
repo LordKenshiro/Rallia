@@ -70,9 +70,8 @@ const Community = () => {
   }, [navigation]);
 
   const handleGroups = useCallback(() => {
-    // TODO: Implement groups functionality
-    Alert.alert('Groups', 'This feature is coming soon!');
-  }, []);
+    navigation.navigate('Groups');
+  }, [navigation]);
 
   const handleCommunities = useCallback(() => {
     // TODO: Implement communities functionality
