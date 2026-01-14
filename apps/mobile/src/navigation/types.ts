@@ -37,6 +37,8 @@ export type RootStackParamList = {
   Permissions: undefined;
   Map: { focusLocation?: { lat: number; lng: number } } | undefined;
   RatingProofs: RatingProofsScreenParams;
+  GroupDetail: { groupId: string; groupName?: string }; // Group detail view
+  Chat: { conversationId: string; title?: string }; // Direct chat navigation
 };
 
 // =============================================================================

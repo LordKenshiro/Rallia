@@ -98,7 +98,9 @@
     "permissions": "Permissions",
     "ratingProofs": "Preuves de classement",
     "publicMatches": "Parties publiques",
-    "playerMatches": "Mes parties"
+    "playerMatches": "Mes parties",
+    "group": "Groupe",
+    "groups": "Groupes"
   },
   "notifications": {
     "title": "Notifications",

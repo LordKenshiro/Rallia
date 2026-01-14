@@ -46,6 +46,8 @@ import PermissionsScreen from '../screens/PermissionsScreen';
 import PlayerProfile from '../screens/PlayerProfile';
 import SharedLists from '../screens/SharedLists';
 import SharedListDetail from '../screens/SharedListDetail';
+import Groups from '../screens/Groups';
+import GroupDetail from '../screens/GroupDetail';
 
 // Components
 import { ThemeLogo } from '../components/ThemeLogo';
@@ -370,7 +372,15 @@ function CommunityStack() {
           headerBackTitle: 'Back',
         }}
       />
-      {/* Future screens: Groups, Communities, Tournaments, Leagues, etc. */}
+      <CommunityStackNavigator.Screen
+        name="Groups"
+        component={Groups}
+        options={{
+          title: 'Groups',
+          headerBackTitle: 'Back',
+        }}
+      />
+      {/* Future screens: Communities, Tournaments, Leagues, etc. */}
     </CommunityStackNavigator.Navigator>
   );
 }
@@ -688,6 +698,16 @@ export default function AppNavigator() {
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('screens.ratingProofs'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="GroupDetail"
+        component={GroupDetail}
+        options={({ route, navigation }) => ({
+          ...sharedOptions,
+          headerTitle: route.params?.groupName || t('screens.group'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />

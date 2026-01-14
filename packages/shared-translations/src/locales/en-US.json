@@ -98,7 +98,9 @@
     "permissions": "Permissions",
     "ratingProofs": "Rating Proofs",
     "publicMatches": "Public Games",
-    "playerMatches": "My Games"
+    "playerMatches": "My Games",
+    "group": "Group",
+    "groups": "Groups"
   },
   "notifications": {
     "title": "Notifications",
