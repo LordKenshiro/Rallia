@@ -3,7 +3,7 @@
  * Modal showing all group members with management options
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import {
   View,
   Modal,
@@ -24,6 +24,7 @@ import {
   type GroupWithMembers,
   type GroupMember,
 } from '@rallia/shared-hooks';
+import { MemberOptionsModal } from './MemberOptionsModal';
 
 interface MemberListModalProps {
   visible: boolean;
@@ -44,30 +45,41 @@ export function MemberListModal({
 }: MemberListModalProps) {
   const { colors, isDark } = useThemeStyles();
 
+  const [selectedMember, setSelectedMember] = useState<GroupMember | null>(null);
+  const [showMemberOptions, setShowMemberOptions] = useState(false);
+
   const removeGroupMemberMutation = useRemoveGroupMember();
   const promoteMemberMutation = usePromoteMember();
   const demoteMemberMutation = useDemoteMember();
 
   const handleMemberOptions = useCallback((member: GroupMember) => {
-    const isCreator = group.created_by === member.player_id;
-    const isSelf = member.player_id === currentUserId;
-    const memberIsModerator = member.role === 'moderator';
+    setSelectedMember(member);
+    setShowMemberOptions(true);
+  }, []);
 
-    const options: { text: string; style?: 'cancel' | 'destructive' | 'default'; onPress?: () => void }[] = [
-      { text: 'Cancel', style: 'cancel' },
-    ];
+  // Build options for the selected member
+  const memberOptions = useMemo(() => {
+    if (!selectedMember) return [];
+
+    const isCreator = group.created_by === selectedMember.player_id;
+    const isSelf = selectedMember.player_id === currentUserId;
+    const memberIsModerator = selectedMember.role === 'moderator';
+
+    const options: { id: string; label: string; icon: keyof typeof Ionicons.glyphMap; onPress: () => void; destructive?: boolean }[] = [];
 
     // Only moderators can manage members
     if (isModerator && !isSelf && !isCreator) {
       if (!memberIsModerator) {
-        options.unshift({
-          text: 'Promote to Moderator',
+        options.push({
+          id: 'promote',
+          label: 'Promote to Moderator',
+          icon: 'arrow-up-circle-outline',
           onPress: async () => {
             try {
               await promoteMemberMutation.mutateAsync({
                 groupId: group.id,
                 moderatorId: currentUserId,
-                playerIdToPromote: member.player_id,
+                playerIdToPromote: selectedMember.player_id,
               });
               Alert.alert('Success', 'Member promoted to moderator');
               onMemberRemoved();
@@ -77,14 +89,16 @@ export function MemberListModal({
           },
         });
       } else {
-        options.unshift({
-          text: 'Demote to Member',
+        options.push({
+          id: 'demote',
+          label: 'Demote to Member',
+          icon: 'arrow-down-circle-outline',
           onPress: async () => {
             try {
               await demoteMemberMutation.mutateAsync({
                 groupId: group.id,
                 moderatorId: currentUserId,
-                playerIdToDemote: member.player_id,
+                playerIdToDemote: selectedMember.player_id,
               });
               Alert.alert('Success', 'Moderator demoted to member');
               onMemberRemoved();
@@ -95,13 +109,15 @@ export function MemberListModal({
         });
       }
 
-      options.unshift({
-        text: 'Remove from Group',
-        style: 'destructive',
+      options.push({
+        id: 'remove',
+        label: 'Remove from Group',
+        icon: 'person-remove-outline',
+        destructive: true,
         onPress: () => {
           Alert.alert(
             'Remove Member',
-            `Are you sure you want to remove ${member.player?.profile?.first_name || 'this member'} from the group?`,
+            `Are you sure you want to remove ${selectedMember.player?.profile?.first_name || 'this member'} from the group?`,
             [
               { text: 'Cancel', style: 'cancel' },
               {
@@ -112,7 +128,7 @@ export function MemberListModal({
                     await removeGroupMemberMutation.mutateAsync({
                       groupId: group.id,
                       moderatorId: currentUserId,
-                      playerIdToRemove: member.player_id,
+                      playerIdToRemove: selectedMember.player_id,
                     });
                     Alert.alert('Success', 'Member removed from group');
                     onMemberRemoved();
@@ -127,15 +143,9 @@ export function MemberListModal({
       });
     }
 
-    // Only show alert if there are actions
-    if (options.length > 1) {
-      Alert.alert(
-        member.player?.profile?.first_name || 'Member',
-        undefined,
-        options
-      );
-    }
+    return options;
   }, [
+    selectedMember,
     group,
     currentUserId,
     isModerator,
@@ -144,6 +154,19 @@ export function MemberListModal({
     demoteMemberMutation,
     onMemberRemoved,
   ]);
+
+  // Get member info for the options modal
+  const selectedMemberInfo = useMemo(() => {
+    if (!selectedMember) return null;
+    return {
+      name: selectedMember.player?.profile?.display_name ||
+        `${selectedMember.player?.profile?.first_name || ''} ${selectedMember.player?.profile?.last_name || ''}`.trim() ||
+        'Unknown',
+      role: selectedMember.role,
+      isCreator: group.created_by === selectedMember.player_id,
+      profilePictureUrl: selectedMember.player?.profile?.profile_picture_url,
+    };
+  }, [selectedMember, group]);
 
   const renderMemberItem = useCallback(({ item }: { item: GroupMember }) => {
     const isCreator = group.created_by === item.player_id;
@@ -207,41 +230,54 @@ export function MemberListModal({
   }, [colors, isDark, group, currentUserId, isModerator, handleMemberOptions]);
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={onClose}
-    >
-      <View style={styles.overlay}>
-        <TouchableOpacity
-          style={styles.backdrop}
-          activeOpacity={1}
-          onPress={onClose}
-        />
-        
-        <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
-          {/* Header */}
-          <View style={[styles.header, { borderBottomColor: colors.border }]}>
-            <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-              Members ({group.member_count})
-            </Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={colors.text} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Member List */}
-          <FlatList
-            data={group.members}
-            renderItem={renderMemberItem}
-            keyExtractor={(item) => item.id}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.listContent}
+    <>
+      <Modal
+        visible={visible}
+        animationType="slide"
+        transparent
+        onRequestClose={onClose}
+      >
+        <View style={styles.overlay}>
+          <TouchableOpacity
+            style={styles.backdrop}
+            activeOpacity={1}
+            onPress={onClose}
           />
+          
+          <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
+            {/* Header */}
+            <View style={[styles.header, { borderBottomColor: colors.border }]}>
+              <Text weight="semibold" size="lg" style={{ color: colors.text }}>
+                Members ({group.member_count})
+              </Text>
+              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Member List */}
+            <FlatList
+              data={group.members}
+              renderItem={renderMemberItem}
+              keyExtractor={(item) => item.id}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.listContent}
+            />
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+
+      {/* Member Options Modal */}
+      <MemberOptionsModal
+        visible={showMemberOptions}
+        onClose={() => {
+          setShowMemberOptions(false);
+          setSelectedMember(null);
+        }}
+        member={selectedMemberInfo}
+        options={memberOptions}
+      />
+    </>
   );
 }
 

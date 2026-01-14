@@ -1,6 +1,6 @@
 /**
  * CreateGroupModal
- * Modal for creating a new player group
+ * Modal for creating a new player group with optional cover image
  */
 
 import React, { useState, useCallback } from 'react';
@@ -13,16 +13,22 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Image,
+  Alert,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 
 import { Text } from '@rallia/shared-components';
 import { useThemeStyles } from '../../../hooks';
+import { uploadImage } from '../../../services/imageUpload';
+import { primary } from '@rallia/design-system';
 
 interface CreateGroupModalProps {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (name: string, description?: string) => Promise<void>;
+  onSubmit: (name: string, description?: string, coverImageUrl?: string) => Promise<void>;
   isLoading?: boolean;
 }
 
@@ -36,14 +42,47 @@ export function CreateGroupModal({
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [coverImage, setCoverImage] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleClose = useCallback(() => {
     setName('');
     setDescription('');
+    setCoverImage(null);
     setError(null);
     onClose();
   }, [onClose]);
+
+  const handlePickImage = useCallback(async () => {
+    try {
+      // Request permission
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please allow access to your photos to add a group image.');
+        return;
+      }
+
+      // Pick image
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setCoverImage(result.assets[0].uri);
+      }
+    } catch (err) {
+      console.error('Error picking image:', err);
+      Alert.alert('Error', 'Failed to pick image');
+    }
+  }, []);
+
+  const handleRemoveImage = useCallback(() => {
+    setCoverImage(null);
+  }, []);
 
   const handleSubmit = useCallback(async () => {
     if (!name.trim()) {
@@ -62,10 +101,34 @@ export function CreateGroupModal({
     }
 
     setError(null);
-    await onSubmit(name.trim(), description.trim() || undefined);
+
+    let coverImageUrl: string | undefined;
+
+    // Upload image if selected
+    if (coverImage) {
+      setIsUploadingImage(true);
+      try {
+        const { url, error: uploadError } = await uploadImage(coverImage, 'group-images');
+        if (uploadError) {
+          console.error('Error uploading image:', uploadError);
+          Alert.alert('Warning', 'Failed to upload group image. Group will be created without image.');
+        } else if (url) {
+          coverImageUrl = url;
+        }
+      } catch (err) {
+        console.error('Error uploading image:', err);
+      } finally {
+        setIsUploadingImage(false);
+      }
+    }
+
+    await onSubmit(name.trim(), description.trim() || undefined, coverImageUrl);
     setName('');
     setDescription('');
-  }, [name, description, onSubmit]);
+    setCoverImage(null);
+  }, [name, description, coverImage, onSubmit]);
+
+  const isSubmitting = isLoading || isUploadingImage;
 
   return (
     <Modal
@@ -96,7 +159,46 @@ export function CreateGroupModal({
           </View>
 
           {/* Content */}
-          <View style={styles.content}>
+          <ScrollView style={styles.scrollContent} contentContainerStyle={styles.content}>
+            {/* Cover Image Picker */}
+            <View style={styles.inputGroup}>
+              <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
+                Group Image (optional)
+              </Text>
+              {coverImage ? (
+                <View style={styles.imagePreviewContainer}>
+                  <Image source={{ uri: coverImage }} style={styles.imagePreview} />
+                  <TouchableOpacity
+                    style={[styles.removeImageButton, { backgroundColor: colors.cardBackground }]}
+                    onPress={handleRemoveImage}
+                  >
+                    <Ionicons name="close" size={20} color={colors.text} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.changeImageButton, { backgroundColor: colors.primary }]}
+                    onPress={handlePickImage}
+                  >
+                    <Ionicons name="camera" size={16} color="#FFFFFF" />
+                    <Text size="xs" weight="semibold" style={{ color: '#FFFFFF', marginLeft: 4 }}>
+                      Change
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.imagePicker, { backgroundColor: isDark ? primary[900] : primary[100], borderColor: colors.border }]}
+                  onPress={handlePickImage}
+                >
+                  <View style={[styles.imagePickerIcon, { backgroundColor: colors.cardBackground }]}>
+                    <Ionicons name="camera" size={24} color={colors.primary} />
+                  </View>
+                  <Text size="sm" style={{ color: colors.textSecondary, marginTop: 8 }}>
+                    Add a cover image
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
             <View style={styles.inputGroup}>
               <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
                 Group Name *
@@ -115,7 +217,6 @@ export function CreateGroupModal({
                 value={name}
                 onChangeText={setName}
                 maxLength={50}
-                autoFocus
               />
               {error && (
                 <Text size="xs" style={{ color: '#FF3B30', marginTop: 4 }}>
@@ -158,14 +259,14 @@ export function CreateGroupModal({
                 Groups can have up to 10 members. As the creator, you'll be a moderator with the ability to add and remove members.
               </Text>
             </View>
-          </View>
+          </ScrollView>
 
           {/* Footer */}
           <View style={[styles.footer, { borderTopColor: colors.border }]}>
             <TouchableOpacity
               style={[styles.cancelButton, { borderColor: colors.border }]}
               onPress={handleClose}
-              disabled={isLoading}
+              disabled={isSubmitting}
             >
               <Text style={{ color: colors.text }}>Cancel</Text>
             </TouchableOpacity>
@@ -173,12 +274,12 @@ export function CreateGroupModal({
               style={[
                 styles.submitButton,
                 { backgroundColor: colors.primary },
-                isLoading && { opacity: 0.7 },
+                isSubmitting && { opacity: 0.7 },
               ]}
               onPress={handleSubmit}
-              disabled={isLoading || !name.trim()}
+              disabled={isSubmitting || !name.trim()}
             >
-              {isLoading ? (
+              {isSubmitting ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <Text weight="semibold" style={{ color: '#FFFFFF' }}>
@@ -205,7 +306,7 @@ const styles = StyleSheet.create({
   container: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '80%',
+    maxHeight: '85%',
   },
   header: {
     flexDirection: 'row',
@@ -217,12 +318,65 @@ const styles = StyleSheet.create({
   closeButton: {
     padding: 4,
   },
+  scrollContent: {
+    maxHeight: 400,
+  },
   content: {
     padding: 16,
     gap: 20,
   },
   inputGroup: {
     gap: 0,
+  },
+  imagePicker: {
+    height: 120,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imagePickerIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imagePreviewContainer: {
+    position: 'relative',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  imagePreview: {
+    width: '100%',
+    height: 120,
+    borderRadius: 12,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  changeImageButton: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
   },
   input: {
     borderWidth: 1,

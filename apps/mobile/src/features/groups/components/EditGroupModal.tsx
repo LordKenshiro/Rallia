@@ -1,6 +1,6 @@
 /**
  * EditGroupModal
- * Modal for editing group name and description
+ * Modal for editing group name, description, and cover image
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
@@ -14,12 +14,17 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  Image,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 
 import { Text } from '@rallia/shared-components';
 import { useThemeStyles, useAuth } from '../../../hooks';
 import { useUpdateGroup, type Group } from '@rallia/shared-hooks';
+import { uploadImage, replaceImage } from '../../../services/imageUpload';
+import { primary } from '@rallia/design-system';
 
 interface EditGroupModalProps {
   visible: boolean;
@@ -34,12 +39,15 @@ export function EditGroupModal({
   group,
   onSuccess,
 }: EditGroupModalProps) {
-  const { colors } = useThemeStyles();
+  const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
   const playerId = session?.user?.id;
 
   const [name, setName] = useState(group.name);
   const [description, setDescription] = useState(group.description || '');
+  const [coverImage, setCoverImage] = useState<string | null>(group.cover_image_url || null);
+  const [newCoverImage, setNewCoverImage] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const updateGroupMutation = useUpdateGroup();
@@ -49,14 +57,46 @@ export function EditGroupModal({
     if (visible) {
       setName(group.name);
       setDescription(group.description || '');
+      setCoverImage(group.cover_image_url || null);
+      setNewCoverImage(null);
       setError(null);
     }
   }, [visible, group]);
 
   const handleClose = useCallback(() => {
     setError(null);
+    setNewCoverImage(null);
     onClose();
   }, [onClose]);
+
+  const handlePickImage = useCallback(async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please allow access to your photos to change the group image.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setNewCoverImage(result.assets[0].uri);
+      }
+    } catch (err) {
+      console.error('Error picking image:', err);
+      Alert.alert('Error', 'Failed to pick image');
+    }
+  }, []);
+
+  const handleRemoveImage = useCallback(() => {
+    setCoverImage(null);
+    setNewCoverImage(null);
+  }, []);
 
   const handleSubmit = useCallback(async () => {
     if (!playerId) return;
@@ -78,6 +118,45 @@ export function EditGroupModal({
 
     setError(null);
 
+    let coverImageUrl: string | null | undefined = undefined;
+
+    // Handle image upload if there's a new image
+    if (newCoverImage) {
+      setIsUploadingImage(true);
+      try {
+        if (group.cover_image_url) {
+          // Replace existing image
+          const { url, error: uploadError } = await replaceImage(
+            newCoverImage,
+            group.cover_image_url,
+            'group-images'
+          );
+          if (uploadError) {
+            console.error('Error replacing image:', uploadError);
+            Alert.alert('Warning', 'Failed to update group image.');
+          } else {
+            coverImageUrl = url;
+          }
+        } else {
+          // Upload new image
+          const { url, error: uploadError } = await uploadImage(newCoverImage, 'group-images');
+          if (uploadError) {
+            console.error('Error uploading image:', uploadError);
+            Alert.alert('Warning', 'Failed to upload group image.');
+          } else if (url) {
+            coverImageUrl = url;
+          }
+        }
+      } catch (err) {
+        console.error('Error uploading image:', err);
+      } finally {
+        setIsUploadingImage(false);
+      }
+    } else if (coverImage === null && group.cover_image_url) {
+      // User removed the image
+      coverImageUrl = null;
+    }
+
     try {
       await updateGroupMutation.mutateAsync({
         groupId: group.id,
@@ -85,15 +164,23 @@ export function EditGroupModal({
         input: {
           name: name.trim(),
           description: description.trim() || undefined,
+          ...(coverImageUrl !== undefined && { cover_image_url: coverImageUrl || undefined }),
         },
       });
       onSuccess();
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Failed to update group');
     }
-  }, [name, description, group.id, playerId, updateGroupMutation, onSuccess]);
+  }, [name, description, group.id, group.cover_image_url, playerId, updateGroupMutation, onSuccess, newCoverImage, coverImage]);
 
-  const hasChanges = name !== group.name || description !== (group.description || '');
+  const hasChanges = 
+    name !== group.name || 
+    description !== (group.description || '') ||
+    newCoverImage !== null ||
+    (coverImage === null && group.cover_image_url !== null);
+
+  const displayImage = newCoverImage || coverImage;
+  const isSubmitting = updateGroupMutation.isPending || isUploadingImage;
 
   return (
     <Modal
@@ -124,7 +211,45 @@ export function EditGroupModal({
           </View>
 
           {/* Content */}
-          <View style={styles.content}>
+          <ScrollView style={styles.scrollContent} contentContainerStyle={styles.content}>
+            {/* Cover Image Picker */}
+            <View style={styles.inputGroup}>
+              <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
+                Group Image
+              </Text>
+              {displayImage ? (
+                <View style={styles.imagePreviewContainer}>
+                  <Image source={{ uri: displayImage }} style={styles.imagePreview} />
+                  <TouchableOpacity
+                    style={[styles.removeImageButton, { backgroundColor: colors.cardBackground }]}
+                    onPress={handleRemoveImage}
+                  >
+                    <Ionicons name="close" size={20} color={colors.text} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.changeImageButton, { backgroundColor: colors.primary }]}
+                    onPress={handlePickImage}
+                  >
+                    <Ionicons name="camera" size={16} color="#FFFFFF" />
+                    <Text size="xs" weight="semibold" style={{ color: '#FFFFFF', marginLeft: 4 }}>
+                      Change
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.imagePicker, { backgroundColor: isDark ? primary[900] : primary[100], borderColor: colors.border }]}
+                  onPress={handlePickImage}
+                >
+                  <View style={[styles.imagePickerIcon, { backgroundColor: colors.cardBackground }]}>
+                    <Ionicons name="camera" size={24} color={colors.primary} />
+                  </View>
+                  <Text size="sm" style={{ color: colors.textSecondary, marginTop: 8 }}>
+                    Add a cover image
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
             <View style={styles.inputGroup}>
               <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
                 Group Name *
@@ -178,14 +303,14 @@ export function EditGroupModal({
                 {description.length}/200
               </Text>
             </View>
-          </View>
+          </ScrollView>
 
           {/* Footer */}
           <View style={[styles.footer, { borderTopColor: colors.border }]}>
             <TouchableOpacity
               style={[styles.cancelButton, { borderColor: colors.border }]}
               onPress={handleClose}
-              disabled={updateGroupMutation.isPending}
+              disabled={isSubmitting}
             >
               <Text style={{ color: colors.text }}>Cancel</Text>
             </TouchableOpacity>
@@ -193,12 +318,12 @@ export function EditGroupModal({
               style={[
                 styles.submitButton,
                 { backgroundColor: colors.primary },
-                (!hasChanges || updateGroupMutation.isPending) && { opacity: 0.7 },
+                (!hasChanges || isSubmitting) && { opacity: 0.7 },
               ]}
               onPress={handleSubmit}
-              disabled={!hasChanges || updateGroupMutation.isPending || !name.trim()}
+              disabled={!hasChanges || isSubmitting || !name.trim()}
             >
-              {updateGroupMutation.isPending ? (
+              {isSubmitting ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <Text weight="semibold" style={{ color: '#FFFFFF' }}>
@@ -225,7 +350,7 @@ const styles = StyleSheet.create({
   container: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '80%',
+    maxHeight: '85%',
   },
   header: {
     flexDirection: 'row',
@@ -237,12 +362,65 @@ const styles = StyleSheet.create({
   closeButton: {
     padding: 4,
   },
+  scrollContent: {
+    maxHeight: 400,
+  },
   content: {
     padding: 16,
     gap: 20,
   },
   inputGroup: {
     gap: 0,
+  },
+  imagePicker: {
+    height: 120,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imagePickerIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imagePreviewContainer: {
+    position: 'relative',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  imagePreview: {
+    width: '100%',
+    height: 120,
+    borderRadius: 12,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  changeImageButton: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
   },
   input: {
     borderWidth: 1,
