@@ -106,7 +106,8 @@ export async function POST(request: NextRequest) {
       {
         id: userId,
         email,
-        full_name: 'Super Admin',
+        first_name: 'Super',
+        last_name: 'Admin',
         display_name: 'Admin',
       },
       { onConflict: 'id' }

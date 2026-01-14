@@ -127,7 +127,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isSelected, onToggle, c
               weight="semibold"
               color={isSelected ? colors.buttonTextActive : colors.textMuted}
             >
-              {getInitials(player.full_name)}
+              {getInitials(`${player.first_name} ${player.last_name}`)}
             </Text>
           </View>
         )}
@@ -141,7 +141,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isSelected, onToggle, c
           color={isSelected ? colors.buttonActive : colors.text}
           numberOfLines={1}
         >
-          {player.full_name}
+          {player.first_name} {player.last_name}
         </Text>
         {player.rating && (
           <View
@@ -224,7 +224,7 @@ const SelectedPlayersStrip: React.FC<SelectedPlayersStripProps> = ({
                 style={[styles.selectedAvatarFallback, { backgroundColor: colors.buttonActive }]}
               >
                 <Text size="xs" weight="semibold" color={colors.buttonTextActive}>
-                  {getInitials(item.full_name)}
+                  {getInitials(`${item.first_name} ${item.last_name}`)}
                 </Text>
               </View>
             )}

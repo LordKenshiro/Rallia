@@ -582,7 +582,9 @@ const UserProfile = () => {
 
           {/* Name and Username */}
           <Text style={[styles.profileName, { color: colors.text }]}>
-            {profile?.display_name || profile?.full_name || t('profile.user')}
+            {profile?.display_name ||
+              `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() ||
+              t('profile.user')}
           </Text>
           <Text style={[styles.username, { color: colors.textMuted }]}>
             @{profile?.display_name?.toLowerCase().replace(/\s/g, '') || t('profile.username')}
@@ -628,10 +630,19 @@ const UserProfile = () => {
           <View style={[styles.card, { backgroundColor: colors.card }]}>
             <View style={styles.compactRow}>
               <Text style={[styles.label, { color: colors.textMuted }]}>
-                {t('profile.fields.fullName')}
+                {t('profile.fields.firstName')}
               </Text>
               <Text style={[styles.value, { color: colors.text }]}>
-                {profile?.full_name || '-'}
+                {profile?.first_name || '-'}
+              </Text>
+            </View>
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <View style={styles.compactRow}>
+              <Text style={[styles.label, { color: colors.textMuted }]}>
+                {t('profile.fields.lastName')}
+              </Text>
+              <Text style={[styles.value, { color: colors.text }]}>
+                {profile?.last_name || '-'}
               </Text>
             </View>
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -894,7 +905,8 @@ const UserProfile = () => {
         }}
         mode="edit"
         initialData={{
-          fullName: profile?.full_name || '',
+          firstName: profile?.first_name || '',
+          lastName: profile?.last_name || '',
           username: profile?.display_name || '',
           email: profile?.email || '',
           dateOfBirth: profile?.birth_date || '',

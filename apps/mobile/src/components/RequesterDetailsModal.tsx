@@ -150,7 +150,10 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
   // Note: playerData is already extracted above for reputation lookup
   const player = playerData as PlayerWithProfile | null | undefined;
   const profile = player?.profile;
-  const fullName = profile?.full_name || profile?.display_name || 'Player';
+  const fullName =
+    `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() ||
+    profile?.display_name ||
+    'Player';
 
   // Get rating from the player object - check both label and value
   // The rating is attached by matchService at runtime when fetching match data

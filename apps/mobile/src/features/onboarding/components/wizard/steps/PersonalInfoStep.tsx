@@ -5,7 +5,7 @@
  * Migrated from PersonalInformationOverlay with theme-aware colors.
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -19,13 +19,12 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, PhoneInput } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { OnboardingService, Logger } from '@rallia/shared-services';
 import {
   validateFullName,
   validateUsername,
-  validatePhoneNumber,
   lightHaptic,
   selectionHaptic,
 } from '@rallia/shared-utils';
@@ -70,7 +69,8 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
 
   // Refs for keyboard visibility handling
   const scrollViewRef = useRef<ScrollView>(null);
-  const fullNameFieldRef = useRef<View>(null);
+  const firstNameFieldRef = useRef<View>(null);
+  const lastNameFieldRef = useRef<View>(null);
   const usernameFieldRef = useRef<View>(null);
   const phoneNumberFieldRef = useRef<View>(null);
 
@@ -85,8 +85,8 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
           setGenderOptions([
             { value: 'male', label: 'Male' },
             { value: 'female', label: 'Female' },
-            { value: 'other', label: 'Non-binary' },
-            { value: 'prefer_not_to_say', label: 'Prefer not to say' },
+            { value: 'other', label: 'Other' },
+            //{ value: 'prefer_not_to_say', label: 'Prefer not to say' },
           ]);
         } else if (data) {
           setGenderOptions(data);
@@ -96,8 +96,8 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
         setGenderOptions([
           { value: 'male', label: 'Male' },
           { value: 'female', label: 'Female' },
-          { value: 'other', label: 'Non-binary' },
-          { value: 'prefer_not_to_say', label: 'Prefer not to say' },
+          { value: 'other', label: 'Other' },
+          //{ value: 'prefer_not_to_say', label: 'Prefer not to say' },
         ]);
       }
     };
@@ -105,17 +105,24 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
     fetchGenderOptions();
   }, []);
 
-  const handleFullNameChange = (text: string) => {
-    onUpdateFormData({ fullName: validateFullName(text) });
+  const handleFirstNameChange = (text: string) => {
+    onUpdateFormData({ firstName: validateFullName(text) });
+  };
+
+  const handleLastNameChange = (text: string) => {
+    onUpdateFormData({ lastName: validateFullName(text) });
   };
 
   const handleUsernameChange = (text: string) => {
     onUpdateFormData({ username: validateUsername(text) });
   };
 
-  const handlePhoneNumberChange = (text: string) => {
-    onUpdateFormData({ phoneNumber: validatePhoneNumber(text) });
-  };
+  const handlePhoneNumberChange = useCallback(
+    (fullNumber: string, _countryCode: string, _localNumber: string) => {
+      onUpdateFormData({ phoneNumber: fullNumber });
+    },
+    [onUpdateFormData]
+  );
 
   // Get the current date value for the picker
   const dateValue = formData.dateOfBirth || new Date(2000, 0, 1);
@@ -182,24 +189,68 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
         )}
       </TouchableOpacity>
 
-      {/* Full Name */}
-      <View ref={fullNameFieldRef} style={styles.inputContainer}>
+      {/* First Name */}
+      <View ref={firstNameFieldRef} style={styles.inputContainer}>
         <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-          {t('onboarding.personalInfoStep.fullName' as TranslationKey)}{' '}
+          {t('onboarding.personalInfoStep.firstName' as TranslationKey)}{' '}
           <Text color={colors.error}>
             {t('onboarding.personalInfoStep.required' as TranslationKey)}
           </Text>
         </Text>
         <BottomSheetTextInput
-          placeholder={t('onboarding.personalInfoStep.fullNamePlaceholder' as TranslationKey)}
+          placeholder={t('onboarding.personalInfoStep.firstNamePlaceholder' as TranslationKey)}
           placeholderTextColor={colors.textMuted}
-          value={formData.fullName}
-          onChangeText={handleFullNameChange}
+          value={formData.firstName}
+          onChangeText={handleFirstNameChange}
           onFocus={() => {
-            // Scroll to full name field when focused to ensure it's visible above keyboard
+            // Scroll to first name field when focused to ensure it's visible above keyboard
             // Use a delay to allow keyboard animation to start
             setTimeout(() => {
-              fullNameFieldRef.current?.measureLayout(
+              firstNameFieldRef.current?.measureLayout(
+                scrollViewRef.current as unknown as number,
+                (x: number, y: number, _width: number, _height: number) => {
+                  // Scroll to show the field with extra padding above it (200px)
+                  scrollViewRef.current?.scrollTo({
+                    y: Math.max(0, y - 200),
+                    animated: true,
+                  });
+                },
+                () => {
+                  // Fallback: scroll to end if measure fails
+                  scrollViewRef.current?.scrollToEnd({ animated: true });
+                }
+              );
+            }, 300);
+          }}
+          style={[
+            styles.input,
+            {
+              backgroundColor: colors.inputBackground,
+              borderColor: colors.inputBorder,
+              color: colors.text,
+            },
+          ]}
+        />
+      </View>
+
+      {/* Last Name */}
+      <View ref={lastNameFieldRef} style={styles.inputContainer}>
+        <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
+          {t('onboarding.personalInfoStep.lastName' as TranslationKey)}{' '}
+          <Text color={colors.error}>
+            {t('onboarding.personalInfoStep.required' as TranslationKey)}
+          </Text>
+        </Text>
+        <BottomSheetTextInput
+          placeholder={t('onboarding.personalInfoStep.lastNamePlaceholder' as TranslationKey)}
+          placeholderTextColor={colors.textMuted}
+          value={formData.lastName}
+          onChangeText={handleLastNameChange}
+          onFocus={() => {
+            // Scroll to last name field when focused to ensure it's visible above keyboard
+            // Use a delay to allow keyboard animation to start
+            setTimeout(() => {
+              lastNameFieldRef.current?.measureLayout(
                 scrollViewRef.current as unknown as number,
                 (x: number, y: number, _width: number, _height: number) => {
                   // Scroll to show the field with extra padding above it (200px)
@@ -413,54 +464,44 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
 
       {/* Phone Number */}
       <View ref={phoneNumberFieldRef} style={styles.inputContainer}>
-        <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-          {t('onboarding.personalInfoStep.phoneNumber' as TranslationKey)}{' '}
-          <Text color={colors.error}>
-            {t('onboarding.personalInfoStep.required' as TranslationKey)}
-          </Text>
-        </Text>
-        <BottomSheetTextInput
-          placeholder={t('onboarding.personalInfoStep.phoneNumber' as TranslationKey)}
-          placeholderTextColor={colors.textMuted}
+        <PhoneInput
           value={formData.phoneNumber}
-          onChangeText={handlePhoneNumberChange}
-          maxLength={10}
-          keyboardType="phone-pad"
+          onChangePhone={handlePhoneNumberChange}
+          label={t('onboarding.personalInfoStep.phoneNumber' as TranslationKey)}
+          placeholder={t('onboarding.personalInfoStep.phoneNumber' as TranslationKey)}
+          required
+          maxLength={15}
+          showCharCount
+          colors={{
+            text: colors.text,
+            textMuted: colors.textMuted,
+            textSecondary: colors.textSecondary,
+            background: colors.background,
+            inputBackground: colors.inputBackground,
+            inputBorder: colors.inputBorder,
+            primary: colors.buttonActive,
+            error: colors.error,
+            card: colors.cardBackground,
+          }}
           onFocus={() => {
             // Scroll to phone number field when focused to ensure it's visible above keyboard
-            // Use a delay to allow keyboard animation to start
             setTimeout(() => {
               phoneNumberFieldRef.current?.measureLayout(
                 scrollViewRef.current as unknown as number,
                 (x: number, y: number, _width: number, _height: number) => {
-                  // Scroll to show the field with extra padding above it (200px)
                   scrollViewRef.current?.scrollTo({
                     y: Math.max(0, y - 200),
                     animated: true,
                   });
                 },
                 () => {
-                  // Fallback: scroll to end if measure fails
                   scrollViewRef.current?.scrollToEnd({ animated: true });
                 }
               );
             }, 300);
           }}
-          style={[
-            styles.input,
-            {
-              backgroundColor: colors.inputBackground,
-              borderColor: colors.inputBorder,
-              color: colors.text,
-            },
-          ]}
+          TextInputComponent={BottomSheetTextInput}
         />
-        <View style={styles.inputFooter}>
-          <View style={{ flex: 1 }} />
-          <Text size="xs" color={colors.textSecondary}>
-            {formData.phoneNumber.length}/10
-          </Text>
-        </View>
       </View>
     </ScrollView>
   );

@@ -13,6 +13,7 @@ DROP POLICY IF EXISTS "reputation_event_insert_authenticated" ON reputation_even
 -- Allow users to read events they created (for insert+select pattern)
 -- This is needed because Supabase's .insert().select() requires SELECT access
 -- to the newly inserted row
+DROP POLICY IF EXISTS "reputation_event_select_own_inserts" ON reputation_event;
 CREATE POLICY "reputation_event_select_own_inserts" ON reputation_event
     FOR SELECT
     TO authenticated
@@ -25,6 +26,7 @@ CREATE POLICY "reputation_event_select_own_inserts" ON reputation_event
     );
 
 -- Allow authenticated users to insert events
+DROP POLICY IF EXISTS "reputation_event_insert" ON reputation_event;
 CREATE POLICY "reputation_event_insert" ON reputation_event
     FOR INSERT
     TO authenticated

@@ -373,7 +373,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       case 'personal':
         // Validate personal info
         if (
-          !formData.fullName.trim() ||
+          !formData.firstName.trim() ||
+          !formData.lastName.trim() ||
           !formData.username.trim() ||
           !formData.dateOfBirth ||
           !formData.gender ||
@@ -413,7 +414,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           }
 
           const { error } = await OnboardingService.savePersonalInfo({
-            full_name: formData.fullName,
+            first_name: formData.firstName,
+            last_name: formData.lastName,
             display_name: formData.username,
             birth_date: formattedDate,
             gender: formData.gender as 'M' | 'F' | 'O' | 'prefer_not_to_say',

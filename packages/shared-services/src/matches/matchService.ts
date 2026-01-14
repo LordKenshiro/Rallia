@@ -1115,12 +1115,17 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
   // Get player name for notifications (player.id = profile.id)
   const { data: profileData } = await supabase
     .from('profile')
-    .select('full_name, display_name')
+    .select('first_name, last_name, display_name')
     .eq('id', playerId)
     .single();
 
-  // Prefer full_name, fall back to display_name
-  const playerName = profileData?.full_name || profileData?.display_name || 'A player';
+  // Prefer display_name, fall back to first_name + last_name
+  const playerName =
+    profileData?.display_name ||
+    (profileData?.first_name && profileData?.last_name
+      ? `${profileData.first_name} ${profileData.last_name}`
+      : profileData?.first_name) ||
+    'A player';
 
   // Send notification to host if this is a join request
   if (participantStatus === 'requested') {
@@ -1267,11 +1272,16 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
   // Get player name for notification
   const { data: profileData } = await supabase
     .from('profile')
-    .select('full_name, display_name')
+    .select('first_name, last_name, display_name')
     .eq('id', playerId)
     .single();
 
-  const playerName = profileData?.full_name || profileData?.display_name || 'A player';
+  const playerName =
+    profileData?.display_name ||
+    (profileData?.first_name && profileData?.last_name
+      ? `${profileData.first_name} ${profileData.last_name}`
+      : profileData?.first_name) ||
+    'A player';
   const sportName = (match.sport as { name?: string } | null)?.name;
 
   // Get all remaining joined participants (excluding the player who left)
@@ -1908,11 +1918,16 @@ export async function resendInvitation(
   // Get host profile for notification
   const { data: hostProfile } = await supabase
     .from('profile')
-    .select('full_name, display_name')
+    .select('first_name, last_name, display_name')
     .eq('id', hostId)
     .single();
 
-  const inviterName = hostProfile?.full_name || hostProfile?.display_name || 'A player';
+  const inviterName =
+    hostProfile?.display_name ||
+    (hostProfile?.first_name && hostProfile?.last_name
+      ? `${hostProfile.first_name} ${hostProfile.last_name}`
+      : hostProfile?.first_name) ||
+    'A player';
 
   // Get sport name (handle both array and object cases from Supabase types)
   const sportData = match.sport as
@@ -2901,11 +2916,16 @@ export async function invitePlayersToMatch(
   // Get host's name for notifications
   const { data: hostProfile } = await supabase
     .from('profile')
-    .select('full_name, display_name')
+    .select('first_name, last_name, display_name')
     .eq('id', hostId)
     .single();
 
-  const inviterName = hostProfile?.full_name || hostProfile?.display_name || 'A player';
+  const inviterName =
+    hostProfile?.display_name ||
+    (hostProfile?.first_name && hostProfile?.last_name
+      ? `${hostProfile.first_name} ${hostProfile.last_name}`
+      : hostProfile?.first_name) ||
+    'A player';
   // Supabase returns relations as arrays when using select, handle both array and single object
   const sportData = match.sport;
   const sport = Array.isArray(sportData) ? sportData[0] : sportData;

@@ -30,7 +30,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         updated_at,
         profiles:owner_id (
           id,
-          full_name,
+          first_name,
+          last_name,
           display_name,
           email
         )
@@ -107,7 +108,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     // Fetch courts for each facility
     const facilityIds = facilities?.map(f => f.id) || [];
-    let courts: any[] = [];
+    let courts: NonNullable<typeof courtsData> = [];
 
     if (facilityIds.length > 0) {
       const { data: courtsData, error: courtsError } = await supabase

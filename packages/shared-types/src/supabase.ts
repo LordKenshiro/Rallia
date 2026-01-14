@@ -791,6 +791,51 @@ export type Database = {
           },
         ];
       };
+      group_activity: {
+        Row: {
+          activity_type: string;
+          created_at: string;
+          id: string;
+          metadata: Json | null;
+          network_id: string;
+          player_id: string;
+          related_entity_id: string | null;
+        };
+        Insert: {
+          activity_type: string;
+          created_at?: string;
+          id?: string;
+          metadata?: Json | null;
+          network_id: string;
+          player_id: string;
+          related_entity_id?: string | null;
+        };
+        Update: {
+          activity_type?: string;
+          created_at?: string;
+          id?: string;
+          metadata?: Json | null;
+          network_id?: string;
+          player_id?: string;
+          related_entity_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'group_activity_network_id_fkey';
+            columns: ['network_id'];
+            isOneToOne: false;
+            referencedRelation: 'network';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'group_activity_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       invitation: {
         Row: {
           accepted_at: string | null;
@@ -1129,6 +1174,140 @@ export type Database = {
           },
         ];
       };
+      match_share: {
+        Row: {
+          created_at: string;
+          expires_at: string | null;
+          id: string;
+          match_id: string;
+          share_channel: Database['public']['Enums']['share_channel_enum'];
+          share_link_token: string | null;
+          shared_at: string;
+          shared_by: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          expires_at?: string | null;
+          id?: string;
+          match_id: string;
+          share_channel: Database['public']['Enums']['share_channel_enum'];
+          share_link_token?: string | null;
+          shared_at?: string;
+          shared_by: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          expires_at?: string | null;
+          id?: string;
+          match_id?: string;
+          share_channel?: Database['public']['Enums']['share_channel_enum'];
+          share_link_token?: string | null;
+          shared_at?: string;
+          shared_by?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'match_share_match_id_fkey';
+            columns: ['match_id'];
+            isOneToOne: false;
+            referencedRelation: 'match';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'match_share_shared_by_fkey';
+            columns: ['shared_by'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      match_share_recipient: {
+        Row: {
+          contact_id: string | null;
+          contact_list_id: string | null;
+          converted_player_id: string | null;
+          created_at: string;
+          id: string;
+          recipient_email: string | null;
+          recipient_name: string;
+          recipient_phone: string | null;
+          responded_at: string | null;
+          response_note: string | null;
+          sent_at: string | null;
+          share_id: string;
+          status: Database['public']['Enums']['share_status_enum'];
+          updated_at: string;
+          viewed_at: string | null;
+        };
+        Insert: {
+          contact_id?: string | null;
+          contact_list_id?: string | null;
+          converted_player_id?: string | null;
+          created_at?: string;
+          id?: string;
+          recipient_email?: string | null;
+          recipient_name: string;
+          recipient_phone?: string | null;
+          responded_at?: string | null;
+          response_note?: string | null;
+          sent_at?: string | null;
+          share_id: string;
+          status?: Database['public']['Enums']['share_status_enum'];
+          updated_at?: string;
+          viewed_at?: string | null;
+        };
+        Update: {
+          contact_id?: string | null;
+          contact_list_id?: string | null;
+          converted_player_id?: string | null;
+          created_at?: string;
+          id?: string;
+          recipient_email?: string | null;
+          recipient_name?: string;
+          recipient_phone?: string | null;
+          responded_at?: string | null;
+          response_note?: string | null;
+          sent_at?: string | null;
+          share_id?: string;
+          status?: Database['public']['Enums']['share_status_enum'];
+          updated_at?: string;
+          viewed_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'match_share_recipient_contact_id_fkey';
+            columns: ['contact_id'];
+            isOneToOne: false;
+            referencedRelation: 'shared_contact';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'match_share_recipient_contact_list_id_fkey';
+            columns: ['contact_list_id'];
+            isOneToOne: false;
+            referencedRelation: 'shared_contact_list';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'match_share_recipient_converted_player_id_fkey';
+            columns: ['converted_player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'match_share_recipient_share_id_fkey';
+            columns: ['share_id'];
+            isOneToOne: false;
+            referencedRelation: 'match_share';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       message: {
         Row: {
           content: string;
@@ -1179,36 +1358,55 @@ export type Database = {
       };
       network: {
         Row: {
+          conversation_id: string | null;
+          cover_image_url: string | null;
           created_at: string | null;
           created_by: string;
           description: string | null;
           id: string;
           is_private: boolean | null;
+          max_members: number | null;
+          member_count: number;
           name: string;
           network_type_id: string;
           updated_at: string | null;
         };
         Insert: {
+          conversation_id?: string | null;
+          cover_image_url?: string | null;
           created_at?: string | null;
           created_by: string;
           description?: string | null;
           id?: string;
           is_private?: boolean | null;
+          max_members?: number | null;
+          member_count?: number;
           name: string;
           network_type_id: string;
           updated_at?: string | null;
         };
         Update: {
+          conversation_id?: string | null;
+          cover_image_url?: string | null;
           created_at?: string | null;
           created_by?: string;
           description?: string | null;
           id?: string;
           is_private?: boolean | null;
+          max_members?: number | null;
+          member_count?: number;
           name?: string;
           network_type_id?: string;
           updated_at?: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: 'network_conversation_id_fkey';
+            columns: ['conversation_id'];
+            isOneToOne: false;
+            referencedRelation: 'conversation';
+            referencedColumns: ['id'];
+          },
           {
             foreignKeyName: 'network_created_by_fkey';
             columns: ['created_by'];
@@ -1227,33 +1425,46 @@ export type Database = {
       };
       network_member: {
         Row: {
+          added_by: string | null;
           created_at: string | null;
           id: string;
           joined_at: string | null;
           network_id: string;
           player_id: string;
+          role: Database['public']['Enums']['network_member_role_enum'];
           status: Database['public']['Enums']['network_member_status'] | null;
           updated_at: string | null;
         };
         Insert: {
+          added_by?: string | null;
           created_at?: string | null;
           id?: string;
           joined_at?: string | null;
           network_id: string;
           player_id: string;
+          role?: Database['public']['Enums']['network_member_role_enum'];
           status?: Database['public']['Enums']['network_member_status'] | null;
           updated_at?: string | null;
         };
         Update: {
+          added_by?: string | null;
           created_at?: string | null;
           id?: string;
           joined_at?: string | null;
           network_id?: string;
           player_id?: string;
+          role?: Database['public']['Enums']['network_member_role_enum'];
           status?: Database['public']['Enums']['network_member_status'] | null;
           updated_at?: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: 'network_member_added_by_fkey';
+            columns: ['added_by'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
           {
             foreignKeyName: 'network_member_network_id_fkey';
             columns: ['network_id'];
@@ -1763,6 +1974,78 @@ export type Database = {
           },
         ];
       };
+      player_block: {
+        Row: {
+          blocked_player_id: string;
+          created_at: string | null;
+          id: string;
+          player_id: string;
+        };
+        Insert: {
+          blocked_player_id: string;
+          created_at?: string | null;
+          id?: string;
+          player_id: string;
+        };
+        Update: {
+          blocked_player_id?: string;
+          created_at?: string | null;
+          id?: string;
+          player_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'player_block_blocked_player_id_fkey';
+            columns: ['blocked_player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'player_block_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      player_favorite: {
+        Row: {
+          created_at: string | null;
+          favorite_player_id: string;
+          id: string;
+          player_id: string;
+        };
+        Insert: {
+          created_at?: string | null;
+          favorite_player_id: string;
+          id?: string;
+          player_id: string;
+        };
+        Update: {
+          created_at?: string | null;
+          favorite_player_id?: string;
+          id?: string;
+          player_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'player_favorite_favorite_player_id_fkey';
+            columns: ['favorite_player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'player_favorite_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       player_play_attribute: {
         Row: {
           created_at: string | null;
@@ -2137,10 +2420,11 @@ export type Database = {
           display_name: string | null;
           email: string;
           email_verified: boolean | null;
-          full_name: string;
+          first_name: string;
           id: string;
           is_active: boolean | null;
           last_active_at: string | null;
+          last_name: string | null;
           onboarding_completed: boolean | null;
           phone: string | null;
           phone_verified: boolean | null;
@@ -2161,10 +2445,11 @@ export type Database = {
           display_name?: string | null;
           email: string;
           email_verified?: boolean | null;
-          full_name: string;
+          first_name: string;
           id: string;
           is_active?: boolean | null;
           last_active_at?: string | null;
+          last_name?: string | null;
           onboarding_completed?: boolean | null;
           phone?: string | null;
           phone_verified?: boolean | null;
@@ -2185,10 +2470,11 @@ export type Database = {
           display_name?: string | null;
           email?: string;
           email_verified?: boolean | null;
-          full_name?: string;
+          first_name?: string;
           id?: string;
           is_active?: boolean | null;
           last_active_at?: string | null;
+          last_name?: string | null;
           onboarding_completed?: boolean | null;
           phone?: string | null;
           phone_verified?: boolean | null;
@@ -2656,6 +2942,91 @@ export type Database = {
           },
         ];
       };
+      shared_contact: {
+        Row: {
+          created_at: string;
+          device_contact_id: string | null;
+          email: string | null;
+          id: string;
+          list_id: string;
+          name: string;
+          notes: string | null;
+          phone: string | null;
+          source: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          device_contact_id?: string | null;
+          email?: string | null;
+          id?: string;
+          list_id: string;
+          name: string;
+          notes?: string | null;
+          phone?: string | null;
+          source?: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          device_contact_id?: string | null;
+          email?: string | null;
+          id?: string;
+          list_id?: string;
+          name?: string;
+          notes?: string | null;
+          phone?: string | null;
+          source?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'shared_contact_list_id_fkey';
+            columns: ['list_id'];
+            isOneToOne: false;
+            referencedRelation: 'shared_contact_list';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      shared_contact_list: {
+        Row: {
+          contact_count: number;
+          created_at: string;
+          description: string | null;
+          id: string;
+          name: string;
+          player_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          contact_count?: number;
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          name: string;
+          player_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          contact_count?: number;
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          name?: string;
+          player_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'shared_contact_list_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       sport: {
         Row: {
           attributes: Json | null;
@@ -2956,6 +3327,18 @@ export type Database = {
         Args: { p_match_id: string; p_player_id: string };
         Returns: boolean;
       };
+      is_network_creator: {
+        Args: { network_id_param: string; user_id_param: string };
+        Returns: boolean;
+      };
+      is_network_member: {
+        Args: { network_id_param: string; user_id_param: string };
+        Returns: boolean;
+      };
+      is_network_moderator: {
+        Args: { network_id_param: string; user_id_param: string };
+        Returns: boolean;
+      };
       is_public_match: { Args: { p_match_id: string }; Returns: boolean };
       recalculate_player_reputation: {
         Args: { apply_decay?: boolean; target_player_id: string };
@@ -3119,6 +3502,7 @@ export type Database = {
       member_role: 'owner' | 'admin' | 'manager' | 'staff' | 'member';
       member_status: 'active' | 'inactive' | 'pending' | 'suspended';
       message_status: 'sent' | 'delivered' | 'read' | 'failed';
+      network_member_role_enum: 'member' | 'moderator';
       network_member_status: 'active' | 'pending' | 'blocked' | 'removed';
       network_visibility: 'public' | 'private' | 'friends' | 'club';
       notification_priority_enum: 'low' | 'normal' | 'high' | 'urgent';
@@ -3202,6 +3586,8 @@ export type Database = {
         | 'first_match_bonus';
       reputation_tier: 'unknown' | 'bronze' | 'silver' | 'gold' | 'platinum';
       role_enum: 'admin' | 'staff' | 'player' | 'coach' | 'owner';
+      share_channel_enum: 'sms' | 'email' | 'whatsapp' | 'share_sheet' | 'copy_link';
+      share_status_enum: 'pending' | 'sent' | 'viewed' | 'accepted' | 'expired' | 'cancelled';
       skill_level: 'beginner' | 'intermediate' | 'advanced' | 'professional';
       surface_type_enum:
         | 'hard'
@@ -3408,6 +3794,7 @@ export const Constants = {
       member_role: ['owner', 'admin', 'manager', 'staff', 'member'],
       member_status: ['active', 'inactive', 'pending', 'suspended'],
       message_status: ['sent', 'delivered', 'read', 'failed'],
+      network_member_role_enum: ['member', 'moderator'],
       network_member_status: ['active', 'pending', 'blocked', 'removed'],
       network_visibility: ['public', 'private', 'friends', 'club'],
       notification_priority_enum: ['low', 'normal', 'high', 'urgent'],
@@ -3496,6 +3883,8 @@ export const Constants = {
       ],
       reputation_tier: ['unknown', 'bronze', 'silver', 'gold', 'platinum'],
       role_enum: ['admin', 'staff', 'player', 'coach', 'owner'],
+      share_channel_enum: ['sms', 'email', 'whatsapp', 'share_sheet', 'copy_link'],
+      share_status_enum: ['pending', 'sent', 'viewed', 'accepted', 'expired', 'cancelled'],
       skill_level: ['beginner', 'intermediate', 'advanced', 'professional'],
       surface_type_enum: ['hard', 'clay', 'grass', 'synthetic', 'carpet', 'concrete', 'asphalt'],
       time_period: ['morning', 'afternoon', 'evening', 'night'],
