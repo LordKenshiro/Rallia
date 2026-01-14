@@ -43,6 +43,9 @@ import RatingProofs from '../screens/RatingProofs';
 import Notifications from '../screens/Notifications';
 import NotificationPreferencesScreen from '../screens/NotificationPreferencesScreen';
 import PermissionsScreen from '../screens/PermissionsScreen';
+import PlayerProfile from '../screens/PlayerProfile';
+import SharedLists from '../screens/SharedLists';
+import SharedListDetail from '../screens/SharedListDetail';
 
 // Components
 import { ThemeLogo } from '../components/ThemeLogo';
@@ -351,7 +354,23 @@ function CommunityStack() {
         component={Community}
         options={mainScreenOptions}
       />
-      {/* Future screens: ShareLists, Groups, Communities, Tournaments, Leagues, etc. */}
+      <CommunityStackNavigator.Screen
+        name="ShareLists"
+        component={SharedLists}
+        options={{
+          title: 'Shared Lists',
+          headerBackTitle: 'Back',
+        }}
+      />
+      <CommunityStackNavigator.Screen
+        name="SharedListDetail"
+        component={SharedListDetail}
+        options={{
+          title: 'List',
+          headerBackTitle: 'Back',
+        }}
+      />
+      {/* Future screens: Groups, Communities, Tournaments, Leagues, etc. */}
     </CommunityStackNavigator.Navigator>
   );
 }
@@ -590,6 +609,16 @@ export default function AppNavigator() {
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('screens.profile'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="PlayerProfile"
+        component={PlayerProfile}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('screens.playerProfile'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />

@@ -20,7 +20,8 @@ export type OnboardingStepId =
 
 export interface OnboardingFormData {
   // Personal Info
-  fullName: string;
+  firstName: string;
+  lastName: string;
   username: string;
   dateOfBirth: Date | null;
   gender: string;
@@ -91,7 +92,8 @@ const DEFAULT_AVAILABILITIES = {
 };
 
 const INITIAL_FORM_DATA: OnboardingFormData = {
-  fullName: '',
+  firstName: '',
+  lastName: '',
   username: '',
   dateOfBirth: null,
   gender: '',
@@ -119,7 +121,8 @@ function isStepComplete(stepId: OnboardingStepId, formData: OnboardingFormData):
   switch (stepId) {
     case 'personal':
       return !!(
-        formData.fullName.trim() &&
+        formData.firstName.trim() &&
+        formData.lastName.trim() &&
         formData.username.trim() &&
         formData.dateOfBirth &&
         formData.gender &&
@@ -209,7 +212,8 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
 
         // Profile data
         if (profileRes.data) {
-          updates.fullName = profileRes.data.full_name || '';
+          updates.firstName = profileRes.data.first_name || '';
+          updates.lastName = profileRes.data.last_name || '';
           updates.username = profileRes.data.display_name || '';
           updates.dateOfBirth = profileRes.data.birth_date
             ? new Date(profileRes.data.birth_date)

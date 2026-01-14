@@ -26,7 +26,8 @@ interface ReferenceRequestOverlayProps {
 
 interface Player {
   id: string;
-  full_name: string;
+  first_name: string;
+  last_name: string;
   display_name: string | null;
   profile_picture_url: string | null;
   rating: string | null;
@@ -67,7 +68,8 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
       const query = searchQuery.toLowerCase();
       const filtered = players.filter(
         player =>
-          player.full_name.toLowerCase().includes(query) ||
+          player.first_name.toLowerCase().includes(query) ||
+          player.last_name.toLowerCase().includes(query) ||
           player.display_name?.toLowerCase().includes(query)
       );
       setFilteredPlayers(filtered);
@@ -146,7 +148,7 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
       // Step 2: Fetch player profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profile')
-        .select('id, full_name, display_name, profile_picture_url')
+        .select('id, first_name, last_name, display_name, profile_picture_url')
         .in('id', uniquePlayerIds);
 
       if (profilesError) throw profilesError;
@@ -176,14 +178,16 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
       const playersWithRatings: Player[] = (profiles || []).map(
         (profile: {
           id: string;
-          full_name: string;
+          first_name: string;
+          last_name: string;
           display_name: string | null;
           profile_picture_url: string | null;
         }) => {
           const ratingInfo = ratingsMap.get(profile.id);
           return {
             id: profile.id,
-            full_name: profile.full_name,
+            first_name: profile.first_name,
+            last_name: profile.last_name,
             display_name: profile.display_name,
             profile_picture_url: profile.profile_picture_url,
             rating: ratingInfo?.display_label || null,
@@ -270,7 +274,7 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
 
         {/* Player Info */}
         <View style={styles.playerInfo}>
-          <Text style={[styles.playerName, { color: colors.text }]}>{player.full_name}</Text>
+          <Text style={[styles.playerName, { color: colors.text }]}>{player.first_name} {player.last_name}</Text>
           {player.display_name && (
             <Text style={[styles.playerUsername, { color: colors.textMuted }]}>
               @{player.display_name}

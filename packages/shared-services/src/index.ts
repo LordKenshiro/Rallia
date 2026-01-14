@@ -14,6 +14,8 @@ export * from './matches';
 export * from './facilities';
 export * from './availability';
 export * from './players';
+export * from './shared-contacts';
+export * from './match-share';
 
 // Export default DatabaseService
 export { default } from './database';

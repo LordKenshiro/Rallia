@@ -7,15 +7,15 @@
 import { useMemo } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { searchPlayersForSport } from '@rallia/shared-services';
-import type { PlayersPage, PlayerSearchResult } from '@rallia/shared-services';
+import type { PlayersPage, PlayerSearchResult, PlayerFilters } from '@rallia/shared-services';
 import { useDebounce } from './useDebounce';
 
 // Query keys for cache management
 export const playerKeys = {
   all: ['players'] as const,
   search: () => [...playerKeys.all, 'search'] as const,
-  searchWithParams: (sportId: string, currentUserId: string, query: string) =>
-    [...playerKeys.search(), sportId, currentUserId, query] as const,
+  searchWithParams: (sportId: string, currentUserId: string, query: string, filters: PlayerFilters, favoritePlayerIds: string[], blockedPlayerIds: string[]) =>
+    [...playerKeys.search(), sportId, currentUserId, query, JSON.stringify(filters), JSON.stringify(favoritePlayerIds), JSON.stringify(blockedPlayerIds)] as const,
 };
 
 interface UsePlayerSearchOptions {
@@ -27,6 +27,12 @@ interface UsePlayerSearchOptions {
   searchQuery: string;
   /** Player IDs to exclude (e.g., already invited) */
   excludePlayerIds?: string[];
+  /** Filters to apply (gender, skill level, availability, etc.) */
+  filters?: PlayerFilters;
+  /** Favorite player IDs (used when filtering by favorites) */
+  favoritePlayerIds?: string[];
+  /** Blocked player IDs (used when filtering by blocked or excluding blocked) */
+  blockedPlayerIds?: string[];
   /** Debounce delay in milliseconds (default: 300) */
   debounceMs?: number;
   /** Enable/disable the query */
@@ -77,6 +83,9 @@ export function usePlayerSearch(options: UsePlayerSearchOptions): UsePlayerSearc
     currentUserId,
     searchQuery,
     excludePlayerIds = [],
+    filters = {},
+    favoritePlayerIds = [],
+    blockedPlayerIds = [],
     debounceMs = 300,
     enabled = true,
   } = options;
@@ -88,7 +97,7 @@ export function usePlayerSearch(options: UsePlayerSearchOptions): UsePlayerSearc
   const hasRequiredParams = !!sportId && !!currentUserId;
 
   const query = useInfiniteQuery<PlayersPage, Error>({
-    queryKey: playerKeys.searchWithParams(sportId ?? '', currentUserId ?? '', debouncedQuery),
+    queryKey: playerKeys.searchWithParams(sportId ?? '', currentUserId ?? '', debouncedQuery, filters, favoritePlayerIds, blockedPlayerIds),
     queryFn: async ({ pageParam }) => {
       if (!sportId || !currentUserId) {
         return { players: [], hasMore: false, nextOffset: null };
@@ -100,6 +109,9 @@ export function usePlayerSearch(options: UsePlayerSearchOptions): UsePlayerSearc
         searchQuery: debouncedQuery || undefined,
         offset: (pageParam as number) ?? 0,
         excludePlayerIds,
+        filters,
+        favoritePlayerIds,
+        blockedPlayerIds,
       });
     },
     getNextPageParam: lastPage => lastPage.nextOffset,

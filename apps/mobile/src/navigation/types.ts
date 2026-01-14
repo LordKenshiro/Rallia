@@ -29,6 +29,7 @@ export type RootStackParamList = {
 
   // Shared screens - full screen, hides tabs when navigated to
   UserProfile: { userId?: string }; // undefined = current user's profile
+  PlayerProfile: { playerId: string; sportId?: string }; // View another player's profile
   SportProfile: SportProfileScreenParams;
   Settings: undefined;
   Notifications: undefined;
@@ -78,6 +79,7 @@ export type CourtsStackParamList = {
 export type CommunityStackParamList = {
   PlayerDirectory: undefined;
   ShareLists: undefined;
+  SharedListDetail: { listId: string; listName: string };
   Groups: undefined;
   Communities: undefined;
   Tournaments: undefined;

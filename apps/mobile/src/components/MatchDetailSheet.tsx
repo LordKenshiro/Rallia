@@ -811,7 +811,7 @@ export const MatchDetailSheet: React.FC = () => {
   const distanceDisplay = formatDistance(match.distance_meters);
   const creatorProfile = match.created_by_player?.profile;
   const creatorName =
-    creatorProfile?.full_name ||
+    `${creatorProfile?.first_name || ''} ${creatorProfile?.last_name || ''}`.trim() ||
     creatorProfile?.display_name ||
     t('matchDetail.host' as TranslationKey);
   const isFull = participantInfo.spotsLeft === 0;
@@ -870,7 +870,7 @@ export const MatchDetailSheet: React.FC = () => {
     ?.filter(p => p.status === 'joined')
     .forEach((p, i) => {
       const participantFullName =
-        p.player?.profile?.full_name || p.player?.profile?.display_name || '';
+        `${p.player?.profile?.first_name || ''} ${p.player?.profile?.last_name || ''}`.trim() || p.player?.profile?.display_name || '';
       const participantFirstName = participantFullName.split(' ')[0];
       participantAvatars.push({
         key: p.id || `participant-${i}`,
@@ -899,7 +899,7 @@ export const MatchDetailSheet: React.FC = () => {
       ?.filter(p => p.status === 'requested')
       .map(p => {
         const fullName =
-          p.player?.profile?.full_name ||
+          `${p.player?.profile?.first_name || ''} ${p.player?.profile?.last_name || ''}`.trim() ||
           p.player?.profile?.display_name ||
           t('matchDetail.host' as TranslationKey);
         // Get sport rating info if available (label and value)
@@ -927,7 +927,7 @@ export const MatchDetailSheet: React.FC = () => {
       ?.filter(p => p.status === 'pending')
       .map(p => {
         const fullName =
-          p.player?.profile?.full_name ||
+          `${p.player?.profile?.first_name || ''} ${p.player?.profile?.last_name || ''}`.trim() ||
           p.player?.profile?.display_name ||
           t('matchDetail.host' as TranslationKey);
         return {
@@ -945,7 +945,7 @@ export const MatchDetailSheet: React.FC = () => {
       ?.filter(p => p.status === 'declined')
       .map(p => {
         const fullName =
-          p.player?.profile?.full_name ||
+          `${p.player?.profile?.first_name || ''} ${p.player?.profile?.last_name || ''}`.trim() ||
           p.player?.profile?.display_name ||
           t('matchDetail.host' as TranslationKey);
         return {

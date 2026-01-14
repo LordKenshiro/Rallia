@@ -145,8 +145,8 @@ export const EnumService = {
         const fallbackData = [
           { value: 'male', label: 'Male' },
           { value: 'female', label: 'Female' },
-          { value: 'other', label: 'Non-binary' },
-          { value: 'prefer_not_to_say', label: 'Prefer not to say' },
+          { value: 'other', label: 'Other' },
+          //{ value: 'prefer_not_to_say', label: 'Prefer not to say' },
         ];
         return { data: fallbackData, error: null };
       }
@@ -155,19 +155,21 @@ export const EnumService = {
       // So data is already in the correct format
       console.log('✅ Gender types loaded from database:', data);
 
-      // Map enum labels to user-friendly display labels
-      const genderTypes = (data || []).map((item: { value: string; label: string }) => {
-        const labelMap: Record<string, string> = {
-          male: 'Male',
-          female: 'Female',
-          other: 'Non-binary',
-          prefer_not_to_say: 'Prefer not to say',
-        };
-        return {
+      // Only allow these 3 gender types
+      const allowedGenders = ['male', 'female', 'other'];
+      const labelMap: Record<string, string> = {
+        male: 'Male',
+        female: 'Female',
+        other: 'Other',
+      };
+
+      // Filter to only allowed gender types and map to display labels
+      const genderTypes = (data || [])
+        .filter((item: { value: string; label: string }) => allowedGenders.includes(item.value))
+        .map((item: { value: string; label: string }) => ({
           value: item.value,
           label: labelMap[item.value] || item.value,
-        };
-      });
+        }));
 
       return { data: genderTypes, error: null };
     } catch (error) {
@@ -175,8 +177,8 @@ export const EnumService = {
       const fallbackData = [
         { value: 'male', label: 'Male' },
         { value: 'female', label: 'Female' },
-        { value: 'other', label: 'Non-binary' },
-        { value: 'prefer_not_to_say', label: 'Prefer not to say' },
+        { value: 'other', label: 'Other' },
+        //{ value: 'prefer_not_to_say', label: 'Prefer not to say' },
       ];
       return { data: fallbackData, error: null };
     }
@@ -944,8 +946,9 @@ export const OnboardingService = {
           {
             id: userId,
             email: user.email,
-            full_name: info.full_name,
-            display_name: info.display_name || info.full_name,
+            first_name: info.first_name,
+            last_name: info.last_name,
+            display_name: info.display_name || `${info.first_name} ${info.last_name}`.trim(),
             birth_date: info.birth_date,
             phone: info.phone,
             profile_picture_url: info.profile_picture_url,

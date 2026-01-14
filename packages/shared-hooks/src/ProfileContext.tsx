@@ -146,7 +146,7 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children, user
  * if (loading) return <Spinner />;
  * if (error) return <ErrorMessage message={error.message} />;
  *
- * return <Text>{profile?.full_name}</Text>;
+ * return <Text>{profile?.first_name} {profile?.last_name}</Text>;
  * ```
  */
 export const useProfile = (): ProfileContextType => {

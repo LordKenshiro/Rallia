@@ -90,6 +90,7 @@
   },
   "screens": {
     "profile": "Profile",
+    "playerProfile": "Player Profile",
     "sportProfile": "Sport Profile",
     "settings": "Settings",
     "notifications": "Notifications",
@@ -300,6 +301,8 @@
       "preferences": "MY PREFERENCES"
     },
     "fields": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
       "fullName": "Full Name",
       "email": "Email",
       "phoneNumber": "Phone Number",
@@ -426,6 +429,10 @@
     },
     "personalInfoStep": {
       "title": "Tell us about yourself",
+      "firstName": "First Name",
+      "firstNamePlaceholder": "Enter your first name",
+      "lastName": "Last Name",
+      "lastNamePlaceholder": "Enter your last name",
       "fullName": "Full Name",
       "fullNamePlaceholder": "Enter your full name",
       "username": "Username",

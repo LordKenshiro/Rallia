@@ -190,7 +190,7 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
                 >
                   <View style={styles.sportCardContent}>
                     <Ionicons
-                      name="tennisball-outline"
+                      name={sport.name.toLowerCase() === 'pickleball' ? 'baseball-outline' : 'tennisball-outline'}
                       size={24}
                       color={isSelected ? colors.buttonActive : colors.textMuted}
                     />
