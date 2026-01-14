@@ -12,19 +12,14 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import Animated, {
-  useAnimatedScrollHandler,
-  useAnimatedStyle,
-  useSharedValue,
-  interpolate,
-  Extrapolation,
-} from 'react-native-reanimated';
+import Svg, { Circle } from 'react-native-svg';
 
 import { Text } from '@rallia/shared-components';
 import { useThemeStyles, useAuth } from '../hooks';
@@ -43,9 +38,10 @@ import {
   EditGroupModal,
   AddMemberModal,
   MemberListModal,
+  GroupOptionsModal,
 } from '../features/groups';
 
-const HEADER_IMAGE_HEIGHT = 180;
+const HEADER_HEIGHT = 140;
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type GroupDetailRouteProp = RouteProp<RootStackParamList, 'GroupDetail'>;
@@ -71,8 +67,7 @@ export default function GroupDetailScreen() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [showMemberListModal, setShowMemberListModal] = useState(false);
-
-  const scrollY = useSharedValue(0);
+  const [showOptionsModal, setShowOptionsModal] = useState(false);
 
   const { data: group, isLoading, refetch } = useGroupWithMembers(groupId);
   const { data: stats } = useGroupStats(groupId);
@@ -81,28 +76,6 @@ export default function GroupDetailScreen() {
 
   const leaveGroupMutation = useLeaveGroup();
   const deleteGroupMutation = useDeleteGroup();
-
-  const scrollHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      scrollY.value = event.contentOffset.y;
-    },
-  });
-
-  const headerAnimatedStyle = useAnimatedStyle(() => {
-    const height = interpolate(
-      scrollY.value,
-      [-100, 0, HEADER_IMAGE_HEIGHT],
-      [HEADER_IMAGE_HEIGHT + 100, HEADER_IMAGE_HEIGHT, 60],
-      Extrapolation.CLAMP
-    );
-    const opacity = interpolate(
-      scrollY.value,
-      [0, HEADER_IMAGE_HEIGHT - 60],
-      [1, 0],
-      Extrapolation.CLAMP
-    );
-    return { height, opacity };
-  });
 
   const handleOpenChat = useCallback(() => {
     if (group?.conversation_id) {
@@ -157,34 +130,42 @@ export default function GroupDetailScreen() {
   }, [groupId, playerId, deleteGroupMutation, navigation]);
 
   const handleShowOptions = useCallback(() => {
+    setShowOptionsModal(true);
+  }, []);
+
+  // Build options for the menu modal
+  const menuOptions = useMemo(() => {
     const isCreator = group?.created_by === playerId;
-    const options: { text: string; style?: 'cancel' | 'destructive' | 'default'; onPress?: () => void }[] = [
-      { text: 'Cancel', style: 'cancel' },
-    ];
+    const options: { id: string; label: string; icon: keyof typeof Ionicons.glyphMap; onPress: () => void; destructive?: boolean }[] = [];
 
     if (isModerator) {
-      options.unshift({
-        text: 'Edit Group',
-        style: 'default',
+      options.push({
+        id: 'edit',
+        label: 'Edit Group',
+        icon: 'create-outline',
         onPress: () => setShowEditModal(true),
       });
     }
 
-    options.unshift({
-      text: 'Leave Group',
-      style: 'destructive',
+    options.push({
+      id: 'leave',
+      label: 'Leave Group',
+      icon: 'exit-outline',
       onPress: handleLeaveGroup,
+      destructive: true,
     });
 
     if (isCreator) {
-      options.unshift({
-        text: 'Delete Group',
-        style: 'destructive',
+      options.push({
+        id: 'delete',
+        label: 'Delete Group',
+        icon: 'trash-outline',
         onPress: handleDeleteGroup,
+        destructive: true,
       });
     }
 
-    Alert.alert('Group Options', undefined, options);
+    return options;
   }, [group, playerId, isModerator, handleLeaveGroup, handleDeleteGroup]);
 
   // Format activity time
@@ -256,6 +237,32 @@ export default function GroupDetailScreen() {
   }, []);
 
   const renderTabContent = () => {
+    // Calculate activity ring segments
+    const membersCount = stats?.newMembersLast7Days || 0;
+    const gamesCount = stats?.gamesCreatedLast7Days || 0;
+    const messagesCount = stats?.messagesLast7Days || 0;
+    const totalActivities = membersCount + gamesCount + messagesCount;
+
+    // SVG circle properties
+    const size = 100;
+    const strokeWidth = 8;
+    const radius = (size - strokeWidth) / 2;
+    const circumference = 2 * Math.PI * radius;
+
+    // Calculate stroke dash offsets for each segment
+    const membersPercent = totalActivities > 0 ? membersCount / totalActivities : 0;
+    const gamesPercent = totalActivities > 0 ? gamesCount / totalActivities : 0;
+    const messagesPercent = totalActivities > 0 ? messagesCount / totalActivities : 0;
+
+    const membersLength = circumference * membersPercent;
+    const gamesLength = circumference * gamesPercent;
+    const messagesLength = circumference * messagesPercent;
+
+    // Starting rotation for each segment (members starts at top, -90deg)
+    const membersRotation = -90;
+    const gamesRotation = membersRotation + (membersPercent * 360);
+    const messagesRotation = gamesRotation + (gamesPercent * 360);
+
     switch (activeTab) {
       case 'home':
         return (
@@ -267,30 +274,93 @@ export default function GroupDetailScreen() {
               </Text>
               <View style={styles.statsRow}>
                 <View style={styles.statCircle}>
-                  <View style={[styles.circleProgress, { borderColor: colors.primary }]}>
-                    <Text weight="bold" size="xl" style={{ color: colors.primary }}>
-                      {(stats?.gamesCreatedLast7Days || 0) + (stats?.newMembersLast7Days || 0)}
-                    </Text>
-                    <Text size="xs" style={{ color: colors.textSecondary }}>ACTIVITIES</Text>
+                  {/* Donut Chart */}
+                  <View style={styles.donutContainer}>
+                    <Svg width={size} height={size}>
+                      {/* Background circle */}
+                      <Circle
+                        cx={size / 2}
+                        cy={size / 2}
+                        r={radius}
+                        stroke={colors.border}
+                        strokeWidth={strokeWidth}
+                        fill="transparent"
+                      />
+                      {/* Members segment (cyan/blue) */}
+                      {membersCount > 0 && (
+                        <Circle
+                          cx={size / 2}
+                          cy={size / 2}
+                          r={radius}
+                          stroke="#5AC8FA"
+                          strokeWidth={strokeWidth}
+                          fill="transparent"
+                          strokeDasharray={`${membersLength} ${circumference - membersLength}`}
+                          strokeDashoffset={0}
+                          strokeLinecap="round"
+                          rotation={membersRotation}
+                          origin={`${size / 2}, ${size / 2}`}
+                        />
+                      )}
+                      {/* Games segment (orange) */}
+                      {gamesCount > 0 && (
+                        <Circle
+                          cx={size / 2}
+                          cy={size / 2}
+                          r={radius}
+                          stroke="#FF9500"
+                          strokeWidth={strokeWidth}
+                          fill="transparent"
+                          strokeDasharray={`${gamesLength} ${circumference - gamesLength}`}
+                          strokeDashoffset={0}
+                          strokeLinecap="round"
+                          rotation={gamesRotation}
+                          origin={`${size / 2}, ${size / 2}`}
+                        />
+                      )}
+                      {/* Messages segment (gray/dark) */}
+                      {messagesCount > 0 && (
+                        <Circle
+                          cx={size / 2}
+                          cy={size / 2}
+                          r={radius}
+                          stroke={isDark ? '#8E8E93' : '#636366'}
+                          strokeWidth={strokeWidth}
+                          fill="transparent"
+                          strokeDasharray={`${messagesLength} ${circumference - messagesLength}`}
+                          strokeDashoffset={0}
+                          strokeLinecap="round"
+                          rotation={messagesRotation}
+                          origin={`${size / 2}, ${size / 2}`}
+                        />
+                      )}
+                    </Svg>
+                    {/* Center text */}
+                    <View style={styles.donutCenter}>
+                      <Text weight="bold" size="xl" style={{ color: colors.text }}>
+                        {totalActivities}
+                      </Text>
+                      <Text size="xs" style={{ color: colors.textSecondary }}>ACTIVITIES</Text>
+                    </View>
                   </View>
                 </View>
                 <View style={styles.statsList}>
                   <View style={styles.statItem}>
-                    <Ionicons name="person-add" size={18} color={colors.primary} />
-                    <Text size="sm" style={{ color: colors.text, marginLeft: 8 }}>
-                      {stats?.newMembersLast7Days || 0} new members
+                    <Ionicons name="people" size={20} color="#5AC8FA" />
+                    <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
+                      {membersCount} new members
                     </Text>
                   </View>
                   <View style={styles.statItem}>
-                    <Ionicons name="tennisball" size={18} color={colors.primary} />
-                    <Text size="sm" style={{ color: colors.text, marginLeft: 8 }}>
-                      {stats?.gamesCreatedLast7Days || 0} games created
+                    <Ionicons name="tennisball" size={20} color="#FF9500" />
+                    <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
+                      {gamesCount} game{gamesCount !== 1 ? 's' : ''} created
                     </Text>
                   </View>
                   <View style={styles.statItem}>
-                    <Ionicons name="chatbubble" size={18} color={colors.primary} />
-                    <Text size="sm" style={{ color: colors.text, marginLeft: 8 }}>
-                      {stats?.messagesLast7Days || 0} messages in chat
+                    <Ionicons name="chatbubble-ellipses" size={20} color={isDark ? '#8E8E93' : '#C7C7CC'} />
+                    <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
+                      {messagesCount} new messages in{'\n'}community chat
                     </Text>
                   </View>
                 </View>
@@ -435,32 +505,8 @@ export default function GroupDetailScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      {/* Header with group icon */}
-      <Animated.View style={[styles.header, headerAnimatedStyle, { backgroundColor: isDark ? primary[900] : primary[100] }]}>
-        <View style={styles.headerContent}>
-          <View style={[styles.headerIcon, { backgroundColor: colors.cardBackground }]}>
-            <Ionicons name="people" size={48} color={colors.primary} />
-          </View>
-        </View>
-      </Animated.View>
-
-      {/* Navigation Bar */}
-      <View style={[styles.navBar, { backgroundColor: colors.background }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.navButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text weight="semibold" size="lg" style={{ color: colors.text }} numberOfLines={1}>
-          {group.name}
-        </Text>
-        <TouchableOpacity onPress={handleShowOptions} style={styles.navButton}>
-          <Ionicons name="ellipsis-horizontal" size={24} color={colors.text} />
-        </TouchableOpacity>
-      </View>
-
-      <Animated.ScrollView
-        onScroll={scrollHandler}
-        scrollEventThrottle={16}
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
@@ -470,8 +516,20 @@ export default function GroupDetailScreen() {
           />
         }
       >
-        {/* Spacer for header */}
-        <View style={{ height: HEADER_IMAGE_HEIGHT - 60 }} />
+        {/* Header Section - with cover image or default icon */}
+        {group.cover_image_url ? (
+          <Image
+            source={{ uri: group.cover_image_url }}
+            style={styles.coverImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={[styles.headerSection, { backgroundColor: isDark ? primary[900] : primary[100] }]}>
+            <View style={[styles.headerIcon, { backgroundColor: colors.cardBackground }]}>
+              <Ionicons name="people" size={48} color={colors.primary} />
+            </View>
+          </View>
+        )}
 
         {/* Group Info Card */}
         <View style={[styles.infoCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
@@ -522,22 +580,30 @@ export default function GroupDetailScreen() {
             </View>
           </TouchableOpacity>
 
-          {/* Add Member Button */}
-          {group.member_count < group.max_members && (
+          {/* Action Buttons Row */}
+          <View style={styles.actionButtonsRow}>
+            {group.member_count < group.max_members && (
+              <TouchableOpacity
+                style={[styles.addMemberButton, { borderColor: colors.primary, flex: 1 }]}
+                onPress={() => setShowAddMemberModal(true)}
+              >
+                <Ionicons name="person-add" size={18} color={colors.primary} />
+                <Text weight="semibold" style={{ color: colors.primary, marginLeft: 8 }}>
+                  Add Member
+                </Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
-              style={[styles.addMemberButton, { borderColor: colors.primary }]}
-              onPress={() => setShowAddMemberModal(true)}
+              style={[styles.menuButton, { borderColor: colors.border }]}
+              onPress={handleShowOptions}
             >
-              <Ionicons name="person-add" size={18} color={colors.primary} />
-              <Text weight="semibold" style={{ color: colors.primary, marginLeft: 8 }}>
-                Add Member
-              </Text>
+              <Ionicons name="ellipsis-horizontal" size={20} color={colors.text} />
             </TouchableOpacity>
-          )}
+          </View>
         </View>
 
         {/* Tab Bar */}
-        <View style={[styles.tabBar, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
           {TABS.map((tab) => (
             <TouchableOpacity
               key={tab.key}
@@ -559,7 +625,10 @@ export default function GroupDetailScreen() {
 
         {/* Tab Content */}
         {renderTabContent()}
-      </Animated.ScrollView>
+        
+        {/* Bottom spacing for chat button */}
+        <View style={{ height: 80 }} />
+      </ScrollView>
 
       {/* Chat Button */}
       <TouchableOpacity
@@ -602,6 +671,13 @@ export default function GroupDetailScreen() {
         isModerator={isModerator || false}
         onMemberRemoved={() => refetch()}
       />
+
+      <GroupOptionsModal
+        visible={showOptionsModal}
+        onClose={() => setShowOptionsModal(false)}
+        options={menuOptions}
+        title="Group Options"
+      />
     </SafeAreaView>
   );
 }
@@ -627,16 +703,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
   },
-  header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 1,
-    overflow: 'hidden',
+  coverImage: {
+    width: '100%',
+    height: HEADER_HEIGHT,
   },
-  headerContent: {
-    flex: 1,
+  headerSection: {
+    height: HEADER_HEIGHT,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -653,7 +725,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    zIndex: 10,
+    borderBottomWidth: 1,
   },
   navButton: {
     width: 40,
@@ -662,10 +734,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 20,
   },
   infoCard: {
     marginHorizontal: 16,
+    marginTop: -40,
     padding: 20,
     borderRadius: 16,
     borderWidth: 1,
@@ -694,6 +767,12 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
   },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+    gap: 12,
+  },
   addMemberButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -701,15 +780,20 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     borderWidth: 1,
-    marginTop: 16,
+  },
+  menuButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   tabBar: {
     flexDirection: 'row',
-    marginTop: 16,
+    marginTop: 24,
     marginHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    overflow: 'hidden',
+    borderBottomWidth: 1,
   },
   tab: {
     flex: 1,
@@ -732,21 +816,25 @@ const styles = StyleSheet.create({
   statCircle: {
     marginRight: 24,
   },
-  circleProgress: {
+  donutContainer: {
     width: 100,
     height: 100,
-    borderRadius: 50,
-    borderWidth: 4,
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  donutCenter: {
+    position: 'absolute',
     justifyContent: 'center',
     alignItems: 'center',
   },
   statsList: {
     flex: 1,
-    gap: 12,
+    gap: 16,
   },
   statItem: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   aboutCard: {
     padding: 20,

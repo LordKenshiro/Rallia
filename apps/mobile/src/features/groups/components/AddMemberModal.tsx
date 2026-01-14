@@ -51,11 +51,58 @@ export function AddMemberModal({
   const playerId = session?.user?.id;
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [suggestedPlayers, setSuggestedPlayers] = useState<PlayerProfile[]>([]);
   const [searchResults, setSearchResults] = useState<PlayerProfile[]>([]);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const debouncedSearch = useDebounce(searchQuery, 300);
 
   const addMemberMutation = useAddGroupMember();
+
+  // Load suggested players when modal opens
+  useEffect(() => {
+    const loadSuggestedPlayers = async () => {
+      if (!visible || !playerId) return;
+
+      setIsLoadingSuggestions(true);
+      try {
+        // Get profiles of players (users who have a player record), excluding current user
+        const { data, error } = await supabase
+          .from('profile')
+          .select(`
+            id,
+            first_name,
+            last_name,
+            display_name,
+            city,
+            profile_picture_url,
+            player!inner(id)
+          `)
+          .neq('id', playerId)
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        if (error) throw error;
+        // Map to flatten structure (profile data only, player join ensures they are players)
+        const players = (data || []).map(p => ({
+          id: p.id,
+          first_name: p.first_name,
+          last_name: p.last_name,
+          display_name: p.display_name,
+          city: p.city,
+          profile_picture_url: p.profile_picture_url,
+        }));
+        setSuggestedPlayers(players);
+      } catch (error) {
+        console.error('Error loading suggested players:', error);
+        setSuggestedPlayers([]);
+      } finally {
+        setIsLoadingSuggestions(false);
+      }
+    };
+
+    loadSuggestedPlayers();
+  }, [visible, playerId]);
 
   // Search players when query changes
   useEffect(() => {
@@ -69,13 +116,31 @@ export function AddMemberModal({
       try {
         const searchTerm = `%${debouncedSearch}%`;
         const { data, error } = await supabase
-          .from('player')
-          .select('id, first_name, last_name, display_name, city, profile_picture_url')
+          .from('profile')
+          .select(`
+            id,
+            first_name,
+            last_name,
+            display_name,
+            city,
+            profile_picture_url,
+            player!inner(id)
+          `)
+          .neq('id', playerId || '')
           .or(`first_name.ilike.${searchTerm},last_name.ilike.${searchTerm},display_name.ilike.${searchTerm}`)
           .limit(20);
 
         if (error) throw error;
-        setSearchResults(data || []);
+        // Map to flatten structure
+        const players = (data || []).map(p => ({
+          id: p.id,
+          first_name: p.first_name,
+          last_name: p.last_name,
+          display_name: p.display_name,
+          city: p.city,
+          profile_picture_url: p.profile_picture_url,
+        }));
+        setSearchResults(players);
       } catch (error) {
         console.error('Error searching players:', error);
         setSearchResults([]);
@@ -85,12 +150,13 @@ export function AddMemberModal({
     };
 
     searchPlayers();
-  }, [debouncedSearch]);
+  }, [debouncedSearch, playerId]);
 
-  // Filter out current members
+  // Filter out current members from results
   const filteredResults = useMemo(() => {
-    return searchResults.filter(player => !currentMemberIds.includes(player.id));
-  }, [searchResults, currentMemberIds]);
+    const sourceList = searchQuery.length >= 2 ? searchResults : suggestedPlayers;
+    return sourceList.filter(player => !currentMemberIds.includes(player.id));
+  }, [searchResults, suggestedPlayers, currentMemberIds, searchQuery]);
 
   const handleClose = useCallback(() => {
     setSearchQuery('');
@@ -197,14 +263,7 @@ export function AddMemberModal({
 
           {/* Results */}
           <View style={styles.resultsContainer}>
-            {searchQuery.length < 2 ? (
-              <View style={styles.emptyState}>
-                <Ionicons name="search-outline" size={48} color={colors.textMuted} />
-                <Text style={{ color: colors.textSecondary, marginTop: 12 }}>
-                  Enter at least 2 characters to search
-                </Text>
-              </View>
-            ) : isSearching ? (
+            {isLoadingSuggestions || isSearching ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={colors.primary} />
               </View>
@@ -212,16 +271,23 @@ export function AddMemberModal({
               <View style={styles.emptyState}>
                 <Ionicons name="person-outline" size={48} color={colors.textMuted} />
                 <Text style={{ color: colors.textSecondary, marginTop: 12 }}>
-                  No players found
+                  {searchQuery.length >= 2 ? 'No players found' : 'No players available'}
                 </Text>
               </View>
             ) : (
-              <FlatList
-                data={filteredResults}
-                renderItem={renderPlayerItem}
-                keyExtractor={(item) => item.id}
-                showsVerticalScrollIndicator={false}
-              />
+              <>
+                {searchQuery.length < 2 && (
+                  <Text size="sm" style={{ color: colors.textSecondary, paddingHorizontal: 16, paddingVertical: 8 }}>
+                    Suggested Players
+                  </Text>
+                )}
+                <FlatList
+                  data={filteredResults}
+                  renderItem={renderPlayerItem}
+                  keyExtractor={(item) => item.id}
+                  showsVerticalScrollIndicator={false}
+                />
+              </>
             )}
           </View>
         </View>

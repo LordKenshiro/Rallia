@@ -14,6 +14,7 @@ export interface Group {
   max_members: number;
   member_count: number;
   conversation_id: string | null;
+  cover_image_url: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -25,7 +26,7 @@ export interface GroupMember {
   player_id: string;
   role: 'member' | 'moderator';
   status: 'active' | 'pending' | 'blocked' | 'removed';
-  invited_by: string | null;
+  added_by: string | null;
   joined_at: string;
   created_at: string;
   updated_at: string;
@@ -72,11 +73,13 @@ export interface GroupStats {
 export interface CreateGroupInput {
   name: string;
   description?: string;
+  cover_image_url?: string;
 }
 
 export interface UpdateGroupInput {
   name?: string;
   description?: string;
+  cover_image_url?: string;
 }
 
 // =============================================================================
@@ -115,6 +118,7 @@ export async function createGroup(
       network_type_id: typeId,
       name: input.name,
       description: input.description || null,
+      cover_image_url: input.cover_image_url || null,
       is_private: true, // Groups are always private
       created_by: playerId,
     })
@@ -160,6 +164,7 @@ export async function getGroupWithMembers(groupId: string): Promise<GroupWithMem
 
   if (groupError) {
     if (groupError.code === 'PGRST116') return null;
+    console.error('Error fetching group:', groupError);
     throw new Error(groupError.message);
   }
 
@@ -169,7 +174,7 @@ export async function getGroupWithMembers(groupId: string): Promise<GroupWithMem
       *,
       player:player_id (
         id,
-        profile:id (
+        profile (
           first_name,
           last_name,
           display_name,
@@ -183,6 +188,7 @@ export async function getGroupWithMembers(groupId: string): Promise<GroupWithMem
     .order('joined_at', { ascending: true });
 
   if (membersError) {
+    console.error('Error fetching members:', membersError);
     throw new Error(membersError.message);
   }
 
@@ -231,13 +237,24 @@ export async function updateGroup(
     throw new Error('Only moderators can update the group');
   }
 
+  // Build update object with only provided fields
+  const updateData: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+  
+  if (input.name !== undefined) {
+    updateData.name = input.name;
+  }
+  if (input.description !== undefined) {
+    updateData.description = input.description;
+  }
+  if (input.cover_image_url !== undefined) {
+    updateData.cover_image_url = input.cover_image_url;
+  }
+
   const { data, error } = await supabase
     .from('network')
-    .update({
-      name: input.name,
-      description: input.description,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq('id', groupId)
     .select()
     .single();
@@ -369,8 +386,8 @@ export async function addGroupMember(
       network_id: groupId,
       player_id: playerIdToAdd,
       role: 'member',
+      added_by: inviterId,
       status: 'active',
-      invited_by: inviterId,
       joined_at: new Date().toISOString(),
     }, {
       onConflict: 'network_id,player_id',
@@ -533,10 +550,16 @@ export async function getGroupActivity(
   const { data, error } = await supabase
     .from('group_activity')
     .select(`
-      *,
-      actor:actor_id (
+      id,
+      network_id,
+      player_id,
+      activity_type,
+      related_entity_id,
+      metadata,
+      created_at,
+      player:player_id (
         id,
-        profile:id (
+        profile (
           first_name,
           last_name,
           profile_picture_url
@@ -552,7 +575,17 @@ export async function getGroupActivity(
     throw new Error(error.message);
   }
 
-  return data as GroupActivity[];
+  // Transform data to match GroupActivity interface
+  return (data || []).map((item: Record<string, unknown>) => ({
+    id: item.id as string,
+    network_id: item.network_id as string,
+    actor_id: item.player_id as string,
+    activity_type: item.activity_type as GroupActivity['activity_type'],
+    target_id: item.related_entity_id as string | null,
+    metadata: item.metadata as Record<string, unknown> | null,
+    created_at: item.created_at as string,
+    actor: item.player as GroupActivity['actor'],
+  }));
 }
 
 /**
@@ -565,13 +598,19 @@ export async function logGroupActivity(
   targetId?: string,
   metadata?: Record<string, unknown>
 ): Promise<void> {
+  // Only insert if we have an actorId (player_id is required in the table)
+  if (!actorId) {
+    console.warn('Cannot log activity without actorId');
+    return;
+  }
+
   const { error } = await supabase
     .from('group_activity')
     .insert({
       network_id: groupId,
       activity_type: activityType,
-      actor_id: actorId,
-      target_id: targetId || null,
+      player_id: actorId,
+      related_entity_id: targetId || null,
       metadata: metadata || null,
     });
 

@@ -1,6 +1,7 @@
 /**
  * Groups Screen
  * Lists all player groups the user is a member of
+ * Grid card layout with cover images
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
@@ -12,6 +13,8 @@ import {
   RefreshControl,
   ActivityIndicator,
   Alert,
+  Image,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +26,11 @@ import { useThemeStyles, useAuth } from '../hooks';
 import { usePlayerGroups, useCreateGroup, type Group } from '@rallia/shared-hooks';
 import type { RootStackParamList } from '../navigation/types';
 import { CreateGroupModal } from '../features/groups';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const CARD_GAP = 12;
+const CARD_PADDING = 16;
+const CARD_WIDTH = (SCREEN_WIDTH - CARD_PADDING * 2 - CARD_GAP) / 2;
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -43,13 +51,13 @@ export default function GroupsScreen() {
 
   const createGroupMutation = useCreateGroup();
 
-  const handleCreateGroup = useCallback(async (name: string, description?: string) => {
+  const handleCreateGroup = useCallback(async (name: string, description?: string, coverImageUrl?: string) => {
     if (!playerId) return;
 
     try {
       const newGroup = await createGroupMutation.mutateAsync({
         playerId,
-        input: { name, description },
+        input: { name, description, cover_image_url: coverImageUrl },
       });
       setShowCreateModal(false);
       // Navigate to the new group
@@ -63,36 +71,72 @@ export default function GroupsScreen() {
     navigation.navigate('GroupDetail', { groupId: group.id });
   }, [navigation]);
 
-  const renderGroupItem = useCallback(({ item }: { item: Group }) => (
-    <TouchableOpacity
-      style={[styles.groupCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
-      onPress={() => handleGroupPress(item)}
-      activeOpacity={0.7}
-    >
-      <View style={[styles.groupIcon, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-        <Ionicons name="people" size={28} color={colors.primary} />
-      </View>
-      
-      <View style={styles.groupInfo}>
-        <Text weight="semibold" size="base" style={{ color: colors.text }}>
-          {item.name}
-        </Text>
-        {item.description && (
-          <Text size="sm" style={{ color: colors.textSecondary }} numberOfLines={1}>
-            {item.description}
-          </Text>
-        )}
-        <View style={styles.memberCount}>
-          <Ionicons name="person" size={14} color={colors.textMuted} />
-          <Text size="xs" style={{ color: colors.textMuted, marginLeft: 4 }}>
-            {item.member_count} / {item.max_members} members
-          </Text>
+  const renderGroupItem = useCallback(({ item, index }: { item: Group; index: number }) => {
+    const hasBooking = false; // TODO: Add booking feature indicator
+    
+    return (
+      <TouchableOpacity
+        style={[
+          styles.groupCard,
+          { 
+            backgroundColor: colors.cardBackground,
+            marginRight: index % 2 === 0 ? CARD_GAP : 0,
+          }
+        ]}
+        onPress={() => handleGroupPress(item)}
+        activeOpacity={0.85}
+      >
+        {/* Cover Image */}
+        <View style={styles.imageContainer}>
+          {item.cover_image_url ? (
+            <Image
+              source={{ uri: item.cover_image_url }}
+              style={styles.coverImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={[styles.placeholderImage, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+              <Ionicons name="people" size={40} color={colors.textMuted} />
+            </View>
+          )}
+          
+          {/* Badge overlay (e.g., "Court booking" feature) */}
+          {hasBooking && (
+            <View style={styles.badgeContainer}>
+              <Text size="xs" weight="semibold" style={styles.badgeText}>
+                Court booking
+              </Text>
+            </View>
+          )}
         </View>
-      </View>
 
-      <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-    </TouchableOpacity>
-  ), [colors, isDark, handleGroupPress]);
+        {/* Group Info */}
+        <View style={styles.groupInfo}>
+          <Text 
+            weight="semibold" 
+            size="sm" 
+            style={{ color: colors.text }} 
+            numberOfLines={2}
+          >
+            {item.name}
+          </Text>
+          
+          {/* Verified indicator + Member count */}
+          <View style={styles.bottomRow}>
+            <View style={styles.verifiedBadge}>
+              <Ionicons name="checkmark-circle" size={16} color="#34C759" />
+            </View>
+            <View style={styles.memberCount}>
+              <Ionicons name="heart-outline" size={14} color={colors.textMuted} />
+              <Text size="xs" style={{ color: colors.textMuted, marginLeft: 4 }}>
+                {item.member_count} members
+              </Text>
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  }, [colors, isDark, handleGroupPress]);
 
   const renderEmptyState = useMemo(() => (
     <View style={styles.emptyState}>
@@ -131,10 +175,12 @@ export default function GroupsScreen() {
         data={groups}
         renderItem={renderGroupItem}
         keyExtractor={(item) => item.id}
+        numColumns={2}
         contentContainerStyle={[
           styles.listContent,
           (!groups || groups.length === 0) && styles.emptyListContent,
         ]}
+        columnWrapperStyle={groups && groups.length > 1 ? styles.columnWrapper : undefined}
         ListEmptyComponent={renderEmptyState}
         refreshControl={
           <RefreshControl
@@ -178,36 +224,68 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   listContent: {
-    padding: 16,
-    gap: 12,
+    padding: CARD_PADDING,
+    paddingBottom: 100, // Extra padding for FAB
   },
   emptyListContent: {
     flex: 1,
     justifyContent: 'center',
   },
-  groupCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
+  columnWrapper: {
+    marginBottom: CARD_GAP,
   },
-  groupIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+  groupCard: {
+    width: CARD_WIDTH,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  imageContainer: {
+    width: '100%',
+    height: CARD_WIDTH * 0.75,
+    position: 'relative',
+  },
+  coverImage: {
+    width: '100%',
+    height: '100%',
+  },
+  placeholderImage: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+  },
+  badgeContainer: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: '#34C759',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  badgeText: {
+    color: '#FFFFFF',
   },
   groupInfo: {
-    flex: 1,
-    gap: 2,
+    padding: 12,
+    gap: 6,
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  verifiedBadge: {
+    marginRight: 8,
   },
   memberCount: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
   },
   emptyState: {
     alignItems: 'center',
