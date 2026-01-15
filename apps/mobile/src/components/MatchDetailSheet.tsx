@@ -48,6 +48,7 @@ import {
   errorHaptic,
   formatTimeInTimezone,
   getTimeDifferenceFromNow,
+  getMatchEndTimeDifferenceFromNow,
   formatIntuitiveDateInTimezone,
   getProfilePictureUrl,
   deriveMatchStatus,
@@ -164,6 +165,62 @@ function formatDistance(meters: number | null | undefined): string | null {
     return `${Math.round(meters)} m`;
   }
   return `${(meters / 1000).toFixed(1)} km`;
+}
+
+/**
+ * Check if we're within the 48h feedback window after match end time
+ * Uses timezone-aware date utilities to properly handle timezones.
+ * Returns: { isWithinFeedbackWindow: boolean, isPastFeedbackWindow: boolean }
+ */
+function getFeedbackWindowStatus(
+  matchDate: string,
+  startTime: string,
+  endTime: string,
+  timezone: string
+): { isWithinFeedbackWindow: boolean; isPastFeedbackWindow: boolean } {
+  // Use the existing timezone-aware utility to get time difference from end time
+  // This properly handles timezone conversion and midnight-spanning matches
+  const endTimeDiffMs = getMatchEndTimeDifferenceFromNow(matchDate, startTime, endTime, timezone);
+
+  // If endTimeDiffMs > 0, match hasn't ended yet
+  if (endTimeDiffMs > 0) {
+    return { isWithinFeedbackWindow: false, isPastFeedbackWindow: false };
+  }
+
+  // Match has ended - endTimeDiffMs is negative (time since end)
+  const timeSinceEndMs = Math.abs(endTimeDiffMs);
+  const fortyEightHoursMs = 48 * 60 * 60 * 1000;
+
+  const isWithinFeedbackWindow = timeSinceEndMs < fortyEightHoursMs;
+  const isPastFeedbackWindow = timeSinceEndMs >= fortyEightHoursMs;
+
+  return { isWithinFeedbackWindow, isPastFeedbackWindow };
+}
+
+/**
+ * Check if we're within the check-in window (10 minutes before start until end)
+ * Uses timezone-aware date utilities to properly handle timezones.
+ */
+function getCheckInWindowStatus(
+  matchDate: string,
+  startTime: string,
+  endTime: string,
+  timezone: string
+): boolean {
+  // Get time difference from start time
+  const startTimeDiffMs = getTimeDifferenceFromNow(matchDate, startTime, timezone);
+  // Get time difference from end time
+  const endTimeDiffMs = getMatchEndTimeDifferenceFromNow(matchDate, startTime, endTime, timezone);
+
+  // Check-in window: 10 minutes before start until end
+  const tenMinutesMs = 10 * 60 * 1000;
+
+  // startTimeDiffMs > 0 means start is in the future
+  // We want: now >= (start - 10min) AND now < end
+  // Which means: startTimeDiffMs <= 10min AND endTimeDiffMs > 0
+  const isWithinCheckInWindow = startTimeDiffMs <= tenMinutesMs && endTimeDiffMs > 0;
+
+  return isWithinCheckInWindow;
 }
 
 /**
@@ -888,6 +945,36 @@ export const MatchDetailSheet: React.FC = () => {
   const hasMatchEnded = derivedStatus === 'completed';
   const hasResult = !!match.result;
 
+  // Feedback window status (48h after end time)
+  const { isWithinFeedbackWindow, isPastFeedbackWindow } = getFeedbackWindowStatus(
+    match.match_date,
+    match.start_time,
+    match.end_time,
+    match.timezone
+  );
+
+  // Check if current player is a joined participant who hasn't completed feedback yet
+  const currentPlayerParticipant = match.participants?.find(
+    p => p.player_id === playerId && p.status === 'joined'
+  );
+  const playerHasCompletedFeedback = currentPlayerParticipant?.feedback_completed ?? false;
+  const playerNeedsFeedback =
+    hasMatchEnded &&
+    isWithinFeedbackWindow &&
+    currentPlayerParticipant &&
+    !playerHasCompletedFeedback;
+
+  // Check-in window status (10 min before start until end, only for full games)
+  const isWithinCheckInWindow = getCheckInWindowStatus(
+    match.match_date,
+    match.start_time,
+    match.end_time,
+    match.timezone
+  );
+  const playerHasCheckedIn = !!currentPlayerParticipant?.checked_in_at;
+  const playerNeedsCheckIn =
+    isFull && isWithinCheckInWindow && currentPlayerParticipant && !playerHasCheckedIn;
+
   // Build participant avatars list
   const participantAvatars: Array<{
     key: string;
@@ -1119,15 +1206,77 @@ export const MatchDetailSheet: React.FC = () => {
       );
     }
 
-    // Match has ended but no results → No actions available
-    if (hasMatchEnded) {
+    // Match is expired - start time passed but not full
+    if ((isInProgress || hasMatchEnded) && !isFull) {
       return (
         <View style={styles.matchEndedContainer}>
           <Ionicons name="time-outline" size={20} color={colors.textMuted} />
           <Text size="sm" weight="medium" color={colors.textMuted} style={styles.matchEndedText}>
-            {t('matchDetail.matchEnded' as TranslationKey)}
+            {t('matchDetail.matchExpired' as TranslationKey)}
           </Text>
         </View>
+      );
+    }
+
+    // Match has ended - show feedback CTA or completion status based on conditions
+    if (hasMatchEnded) {
+      // Within 48h window
+      if (isWithinFeedbackWindow) {
+        // Current player needs to provide feedback → Show CTA button
+        if (playerNeedsFeedback) {
+          return (
+            <Button
+              variant="primary"
+              onPress={() => {
+                // TODO: Navigate to feedback screen
+                mediumHaptic();
+              }}
+              style={styles.actionButton}
+              themeColors={successThemeColors}
+              isDark={isDark}
+            >
+              {t('matchDetail.provideFeedback' as TranslationKey)}
+            </Button>
+          );
+        }
+        // Feedback completed or not a participant → Show "completed" message
+        return (
+          <View style={styles.matchEndedContainer}>
+            <Ionicons name="checkmark-circle-outline" size={20} color={colors.textMuted} />
+            <Text size="sm" weight="medium" color={colors.textMuted} style={styles.matchEndedText}>
+              {t('matchDetail.matchCompleted' as TranslationKey)}
+            </Text>
+          </View>
+        );
+      }
+
+      // Past 48h window → Show "closed" message
+      return (
+        <View style={styles.matchEndedContainer}>
+          <Ionicons name="lock-closed-outline" size={20} color={colors.textMuted} />
+          <Text size="sm" weight="medium" color={colors.textMuted} style={styles.matchEndedText}>
+            {t('matchDetail.matchClosed' as TranslationKey)}
+          </Text>
+        </View>
+      );
+    }
+
+    // Check-in window (10 min before start until end, full game only)
+    // Show check-in CTA if player hasn't checked in, otherwise show "in progress"
+    if (playerNeedsCheckIn) {
+      return (
+        <Button
+          variant="primary"
+          onPress={() => {
+            // TODO: Implement check-in action
+            mediumHaptic();
+          }}
+          style={styles.actionButton}
+          themeColors={successThemeColors}
+          isDark={isDark}
+        >
+          {t('matchDetail.checkIn' as TranslationKey)}
+        </Button>
       );
     }
 
@@ -1255,6 +1404,23 @@ export const MatchDetailSheet: React.FC = () => {
         >
           {t('matchDetail.joinNow' as TranslationKey)}
         </Button>
+      );
+    }
+
+    // Participant has checked in but game hasn't started yet → Show "Checked-in" text
+    if (isParticipant && playerHasCheckedIn && !isInProgress) {
+      return (
+        <View style={styles.matchEndedContainer}>
+          <Ionicons name="checkmark-circle" size={20} color={status.success.DEFAULT} />
+          <Text
+            size="sm"
+            weight="medium"
+            color={status.success.DEFAULT}
+            style={styles.matchEndedText}
+          >
+            {t('matchDetail.checkedIn' as TranslationKey)}
+          </Text>
+        </View>
       );
     }
 
