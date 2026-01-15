@@ -44,7 +44,7 @@ export function AnimatedCounter({ value, duration = 2000, className }: AnimatedC
     }
 
     // Extract number and suffix (e.g., "2,500+" => number: 2500, suffix: "+")
-    const matches = value.match(/^([\d,\.]+)(.*)$/);
+    const matches = value.match(/^([\d,.]+)(.*)$/);
     if (!matches) {
       setDisplayValue(value);
       return;
