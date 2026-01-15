@@ -232,6 +232,9 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
 
   // Low - informational
   system: 'low',
+
+  // Feedback - normal priority
+  feedback_request: 'normal',
 };
 
 /**
@@ -258,6 +261,7 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   payment: 'Payment Update',
   support: 'Support Message',
   system: 'System Notification',
+  feedback_request: 'Rate Your Match',
 };
 
 /**
@@ -284,6 +288,7 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   payment: 'Payment status update',
   support: 'You have a message from support',
   system: 'System notification',
+  feedback_request: 'How was your {sportName} match? Rate your experience!',
 };
 
 /**

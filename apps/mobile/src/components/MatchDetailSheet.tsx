@@ -56,7 +56,7 @@ import {
 import { useMatchDetailSheet } from '../context/MatchDetailSheetContext';
 import { useActionsSheet } from '../context/ActionsSheetContext';
 import { usePlayerInviteSheet } from '../context/PlayerInviteSheetContext';
-import { useTranslation, type TranslationKey } from '../hooks';
+import { useTranslation, usePermissions, type TranslationKey } from '../hooks';
 import { useTheme, usePlayer, useMatchActions } from '@rallia/shared-hooks';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import { ConfirmationModal } from './ConfirmationModal';
@@ -241,6 +241,121 @@ function getParticipantInfo(match: MatchDetailData): {
   return { current, total, spotsLeft };
 }
 
+/**
+ * Check if leaving this match will affect the player's reputation.
+ *
+ * Per the spec, a reputation penalty (-25 points) applies only when ALL conditions are met:
+ * 1. Match is full (all spots taken)
+ * 2. Match was created more than 24 hours before start time (planned match)
+ * 3. Match was NOT edited within 24 hours of start time (no last-minute host changes)
+ * 4. Player is leaving within 24 hours of start time
+ *
+ * @param match - The match data
+ * @returns true if leaving will incur a reputation penalty
+ */
+function willLeaveAffectReputation(match: MatchDetailData): boolean {
+  const tz = match.timezone || 'UTC';
+  const participantInfo = getParticipantInfo(match);
+
+  // Condition 1: Match must be full
+  if (participantInfo.spotsLeft > 0) {
+    return false;
+  }
+
+  // Calculate match start datetime
+  const matchStartDateTime = new Date(`${match.match_date}T${match.start_time}`);
+  const now = new Date();
+
+  // Condition 4: Must be within 24 hours of start time
+  const hoursUntilMatch = (matchStartDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+  if (hoursUntilMatch >= 24 || hoursUntilMatch < 0) {
+    // Not within 24h window, or match already started
+    return false;
+  }
+
+  // Condition 2: Match must have been created more than 24 hours before start
+  if (match.created_at) {
+    const createdAt = new Date(match.created_at);
+    const hoursFromCreationToStart =
+      (matchStartDateTime.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+    if (hoursFromCreationToStart < 24) {
+      // Spontaneous/last-minute match - no penalty
+      return false;
+    }
+  }
+
+  // Condition 3: Match must NOT have been edited within 24 hours of start
+  if (match.updated_at) {
+    const updatedAt = new Date(match.updated_at);
+    const hoursFromUpdateToStart =
+      (matchStartDateTime.getTime() - updatedAt.getTime()) / (1000 * 60 * 60);
+    if (hoursFromUpdateToStart < 24) {
+      // Host made last-minute changes - no penalty for leaving
+      return false;
+    }
+  }
+
+  // All conditions met - leaving will affect reputation
+  return true;
+}
+
+/**
+ * Check if we're within 24 hours of the match start time.
+ * Used to prevent certain actions like kicking players too close to game time.
+ * Uses timezone-aware date utilities to properly handle timezones.
+ *
+ * @param match - The match data
+ * @returns true if we're within 24 hours of match start
+ */
+function isWithin24HoursOfStart(match: MatchDetailData): boolean {
+  const tz = match.timezone || 'UTC';
+  // Get time difference in milliseconds (positive = future, negative = past)
+  const msDiff = getTimeDifferenceFromNow(match.match_date, match.start_time, tz);
+  const hoursUntilMatch = msDiff / (1000 * 60 * 60);
+
+  // Returns true if match is in the future and within 24 hours
+  return hoursUntilMatch >= 0 && hoursUntilMatch < 24;
+}
+
+/**
+ * Check if cancelling this match will affect the creator's reputation.
+ *
+ * Per the spec, a reputation penalty (-25 points) applies only when BOTH conditions are met:
+ * 1. Match was created more than 24 hours before start time (planned match)
+ * 2. Creator is cancelling within 24 hours of start time
+ *
+ * Note: Unlike leaving, the match fullness is NOT a factor for cancellation penalties.
+ *
+ * @param match - The match data
+ * @returns true if cancelling will incur a reputation penalty
+ */
+function willCancelAffectReputation(match: MatchDetailData): boolean {
+  // Calculate match start datetime
+  const matchStartDateTime = new Date(`${match.match_date}T${match.start_time}`);
+  const now = new Date();
+
+  // Condition 2: Must be within 24 hours of start time
+  const hoursUntilMatch = (matchStartDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+  if (hoursUntilMatch >= 24 || hoursUntilMatch < 0) {
+    // Not within 24h window, or match already started
+    return false;
+  }
+
+  // Condition 1: Match must have been created more than 24 hours before start
+  if (match.created_at) {
+    const createdAt = new Date(match.created_at);
+    const hoursFromCreationToStart =
+      (matchStartDateTime.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+    if (hoursFromCreationToStart < 24) {
+      // Spontaneous/last-minute match - no penalty
+      return false;
+    }
+  }
+
+  // All conditions met - cancelling will affect reputation
+  return true;
+}
+
 // =============================================================================
 // SUB-COMPONENTS
 // =============================================================================
@@ -281,6 +396,7 @@ interface ParticipantAvatarProps {
   avatarUrl?: string | null;
   isHost?: boolean;
   isEmpty?: boolean;
+  isCheckedIn?: boolean;
   colors: ThemeColors;
   isDark: boolean;
 }
@@ -289,6 +405,7 @@ const ParticipantAvatar: React.FC<ParticipantAvatarProps> = ({
   avatarUrl,
   isHost,
   isEmpty,
+  isCheckedIn,
   colors,
   isDark,
 }) => (
@@ -323,8 +440,110 @@ const ParticipantAvatar: React.FC<ParticipantAvatarProps> = ({
         <Ionicons name="star" size={8} color={BASE_WHITE} />
       </View>
     )}
+    {isCheckedIn && (
+      <View style={[styles.checkedInBadge, { backgroundColor: status.success.DEFAULT }]}>
+        <Ionicons name="checkmark" size={8} color={BASE_WHITE} />
+      </View>
+    )}
   </View>
 );
+
+interface CheckInButtonProps {
+  playerId: string | undefined;
+  matchId: string | undefined;
+  checkIn: (params: { playerId: string; latitude: number; longitude: number }) => void;
+  isCheckingIn: boolean;
+  successThemeColors: {
+    primary: string;
+    primaryForeground: string;
+    buttonActive: string;
+    buttonInactive: string;
+    buttonTextActive: string;
+    buttonTextInactive: string;
+    text: string;
+    textMuted: string;
+    border: string;
+    background: string;
+  };
+  isDark: boolean;
+  t: (key: TranslationKey, options?: Record<string, string | number | boolean>) => string;
+}
+
+/**
+ * Check-in button with local loading state for better UX.
+ * The loading state starts immediately when pressed (during location fetch)
+ * rather than waiting for the mutation to start.
+ */
+const CheckInButton: React.FC<CheckInButtonProps> = ({
+  playerId,
+  matchId,
+  checkIn,
+  isCheckingIn,
+  successThemeColors,
+  isDark,
+  t,
+}) => {
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+
+  const handleCheckIn = async () => {
+    mediumHaptic();
+    if (!playerId || !matchId) return;
+
+    setIsGettingLocation(true);
+
+    try {
+      const Location = await import('expo-location');
+
+      // Try to get high accuracy location with a 5-second timeout
+      // If it times out, fall back to last known location
+      let position: Awaited<ReturnType<typeof Location.getCurrentPositionAsync>> | null = null;
+
+      const timeoutPromise = new Promise<null>(resolve => setTimeout(() => resolve(null), 5000));
+      const locationPromise = Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+      position = await Promise.race([locationPromise, timeoutPromise]);
+
+      // If high accuracy timed out, try balanced (faster)
+      if (!position) {
+        position = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+      }
+
+      checkIn({
+        playerId,
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
+    } catch (error) {
+      errorHaptic();
+      Alert.alert(
+        t('matchDetail.checkInFailed' as TranslationKey),
+        t('matchDetail.checkInLocationError' as TranslationKey)
+      );
+    } finally {
+      setIsGettingLocation(false);
+    }
+  };
+
+  const isLoading = isGettingLocation || isCheckingIn;
+
+  return (
+    <Button
+      variant="primary"
+      onPress={handleCheckIn}
+      style={styles.actionButton}
+      themeColors={successThemeColors}
+      isDark={isDark}
+      loading={isLoading}
+      disabled={isLoading}
+    >
+      {t('matchDetail.checkIn' as TranslationKey)}
+    </Button>
+  );
+};
 
 // =============================================================================
 // MAIN COMPONENT
@@ -337,6 +556,7 @@ export const MatchDetailSheet: React.FC = () => {
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
   const { player } = usePlayer();
+  const { location: locationPermission } = usePermissions();
   const isDark = theme === 'dark';
   const playerId = player?.id;
 
@@ -374,6 +594,7 @@ export const MatchDetailSheet: React.FC = () => {
     kickParticipant,
     cancelInvite,
     resendInvite,
+    checkIn,
     isJoining,
     isLeaving,
     isCancelling,
@@ -383,6 +604,7 @@ export const MatchDetailSheet: React.FC = () => {
     isKicking,
     isCancellingInvite,
     isResendingInvite,
+    isCheckingIn,
     joinResult,
   } = useMatchActions(selectedMatch?.id, {
     onJoinSuccess: result => {
@@ -565,6 +787,43 @@ export const MatchDetailSheet: React.FC = () => {
     onResendInviteError: error => {
       errorHaptic();
       Alert.alert(t('alerts.error' as TranslationKey), error.message);
+    },
+    onCheckInSuccess: () => {
+      successHaptic();
+      // Update the local match state to show checked-in status
+      if (selectedMatch && playerId) {
+        const updatedParticipants = selectedMatch.participants?.map(p =>
+          p.player_id === playerId ? { ...p, checked_in_at: new Date().toISOString() } : p
+        );
+        updateSelectedMatch({
+          ...selectedMatch,
+          participants: updatedParticipants,
+        });
+      }
+      Alert.alert(
+        t('alerts.success' as TranslationKey),
+        t('matchDetail.checkInSuccess' as TranslationKey)
+      );
+    },
+    onCheckInError: result => {
+      errorHaptic();
+      if (result.error === 'too_far') {
+        Alert.alert(
+          t('matchDetail.checkInFailed' as TranslationKey),
+          t('matchDetail.checkInTooFar' as TranslationKey)
+        );
+      } else if (result.error === 'already_checked_in') {
+        // Already checked in - just refresh the UI
+        Alert.alert(
+          t('alerts.info' as TranslationKey),
+          t('matchDetail.alreadyCheckedIn' as TranslationKey)
+        );
+      } else {
+        Alert.alert(
+          t('matchDetail.checkInFailed' as TranslationKey),
+          t('matchDetail.checkInError' as TranslationKey)
+        );
+      }
     },
   });
 
@@ -945,6 +1204,17 @@ export const MatchDetailSheet: React.FC = () => {
   const hasMatchEnded = derivedStatus === 'completed';
   const hasResult = !!match.result;
 
+  // Check if we're within 24h of match start (to prevent kicking players)
+  const cannotKickWithin24h = isWithin24HoursOfStart(match);
+
+  // DEBUG: Log the 24h kick restriction check
+  console.log('[MatchDetailSheet] Kick restriction check:', {
+    matchDate: match.match_date,
+    startTime: match.start_time,
+    timezone: match.timezone,
+    cannotKickWithin24h,
+  });
+
   // Feedback window status (48h after end time)
   const { isWithinFeedbackWindow, isPastFeedbackWindow } = getFeedbackWindowStatus(
     match.match_date,
@@ -972,8 +1242,19 @@ export const MatchDetailSheet: React.FC = () => {
     match.timezone
   );
   const playerHasCheckedIn = !!currentPlayerParticipant?.checked_in_at;
+  // Check-in is only available for matches with a confirmed location (facility or custom)
+  // TBD matches don't have a location to check in at
+  // Also requires location permission to be granted for geolocation verification
+  const locationAllowsCheckIn =
+    match.location_type === 'facility' || match.location_type === 'custom';
+  const hasLocationPermission = locationPermission === 'granted';
   const playerNeedsCheckIn =
-    isFull && isWithinCheckInWindow && currentPlayerParticipant && !playerHasCheckedIn;
+    isFull &&
+    isWithinCheckInWindow &&
+    currentPlayerParticipant &&
+    !playerHasCheckedIn &&
+    locationAllowsCheckIn &&
+    hasLocationPermission;
 
   // Build participant avatars list
   const participantAvatars: Array<{
@@ -983,6 +1264,7 @@ export const MatchDetailSheet: React.FC = () => {
     isHost: boolean;
     isEmpty: boolean;
     name?: string;
+    isCheckedIn?: boolean;
   }> = [];
 
   // Get joined participants and identify host using is_host flag
@@ -1004,6 +1286,7 @@ export const MatchDetailSheet: React.FC = () => {
     isHost: true,
     isEmpty: false,
     name: hostName.split(' ')[0],
+    isCheckedIn: !!hostParticipant?.checked_in_at,
   });
 
   // Other participants (joined, excluding host)
@@ -1023,6 +1306,7 @@ export const MatchDetailSheet: React.FC = () => {
       isHost: false,
       isEmpty: false,
       name: participantFirstName,
+      isCheckedIn: !!p.checked_in_at,
     });
   });
 
@@ -1265,18 +1549,15 @@ export const MatchDetailSheet: React.FC = () => {
     // Show check-in CTA if player hasn't checked in, otherwise show "in progress"
     if (playerNeedsCheckIn) {
       return (
-        <Button
-          variant="primary"
-          onPress={() => {
-            // TODO: Implement check-in action
-            mediumHaptic();
-          }}
-          style={styles.actionButton}
-          themeColors={successThemeColors}
+        <CheckInButton
+          playerId={playerId}
+          matchId={selectedMatch?.id}
+          checkIn={checkIn}
+          isCheckingIn={isCheckingIn}
+          successThemeColors={successThemeColors}
           isDark={isDark}
-        >
-          {t('matchDetail.checkIn' as TranslationKey)}
-        </Button>
+          t={t}
+        />
       );
     }
 
@@ -1726,16 +2007,18 @@ export const MatchDetailSheet: React.FC = () => {
                     avatarUrl={p.avatarUrl}
                     isHost={p.isHost}
                     isEmpty={p.isEmpty}
+                    isCheckedIn={p.isCheckedIn}
                     colors={colors}
                     isDark={isDark}
                   />
-                  {/* Kick button for host to remove joined participants (not for host avatar, not for empty slots, not if match ended or in progress) */}
+                  {/* Kick button for host to remove joined participants (not for host avatar, not for empty slots, not if match ended, in progress, or within 24h of start) */}
                   {isCreator &&
                     !p.isHost &&
                     !p.isEmpty &&
                     p.participantId &&
                     !hasMatchEnded &&
-                    !isInProgress && (
+                    !isInProgress &&
+                    !cannotKickWithin24h && (
                       <TouchableOpacity
                         style={[styles.kickButton, { backgroundColor: status.error.DEFAULT }]}
                         onPress={() => handleKickParticipant(p.participantId!)}
@@ -2247,6 +2530,11 @@ export const MatchDetailSheet: React.FC = () => {
         onConfirm={handleConfirmLeave}
         title={t('matchActions.leaveConfirmTitle' as TranslationKey)}
         message={t('matchActions.leaveConfirmMessage' as TranslationKey)}
+        additionalInfo={
+          selectedMatch && willLeaveAffectReputation(selectedMatch)
+            ? t('matchActions.leaveReputationWarning' as TranslationKey)
+            : undefined
+        }
         confirmLabel={t('matches.leaveMatch' as TranslationKey)}
         cancelLabel={t('common.cancel' as TranslationKey)}
         destructive
@@ -2262,13 +2550,22 @@ export const MatchDetailSheet: React.FC = () => {
         message={t('matchActions.cancelConfirmMessage' as TranslationKey, {
           count: participantInfo.current,
         })}
-        additionalInfo={
-          participantInfo.current > 1
-            ? t('matchActions.cancelWarning' as TranslationKey, {
+        additionalInfo={(() => {
+          const warnings: string[] = [];
+          // Add reputation warning if applicable
+          if (selectedMatch && willCancelAffectReputation(selectedMatch)) {
+            warnings.push(t('matchActions.cancelReputationWarning' as TranslationKey));
+          }
+          // Add participant notification warning if there are other participants
+          if (participantInfo.current > 1) {
+            warnings.push(
+              t('matchActions.cancelWarning' as TranslationKey, {
                 count: participantInfo.current - 1,
               })
-            : undefined
-        }
+            );
+          }
+          return warnings.length > 0 ? warnings.join('\n\n') : undefined;
+        })()}
         confirmLabel={t('matches.cancelMatch' as TranslationKey)}
         cancelLabel={t('common.goBack' as TranslationKey)}
         destructive
@@ -2493,6 +2790,18 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: -2,
     left: -2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: BASE_WHITE,
+  },
+  checkedInBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
     width: 16,
     height: 16,
     borderRadius: 8,

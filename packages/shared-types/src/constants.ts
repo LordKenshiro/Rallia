@@ -313,6 +313,8 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   new_message: 'chatbubble-ellipses-outline',
   friend_request: 'people-outline',
   rating_verified: 'ribbon-outline',
+  // Feedback types
+  feedback_request: 'star-outline',
 };
 
 /**
@@ -341,6 +343,8 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   new_message: '#9C27B0', // Purple
   friend_request: '#4DB8A8', // Teal
   rating_verified: '#4CAF50', // Green
+  // Feedback types
+  feedback_request: '#FFC107', // Amber
 };
 
 /**
@@ -366,6 +370,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   new_message: 'New Message',
   friend_request: 'Friend Request',
   rating_verified: 'Rating Verified',
+  feedback_request: 'Feedback Request',
 };
 
 /**
@@ -399,6 +404,8 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   payment: 'system',
   support: 'system',
   system: 'system',
+  // Feedback (match-related)
+  feedback_request: 'match',
 };
 
 /**
@@ -469,6 +476,8 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   payment: { email: true, push: true, sms: false },
   support: { email: true, push: false, sms: false },
   system: { email: true, push: false, sms: false },
+  // Feedback types
+  feedback_request: { email: false, push: true, sms: false },
 };
 
 // ============================================

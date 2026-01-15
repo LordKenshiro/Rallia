@@ -29,6 +29,7 @@ import type {
   Profile,
   PlayerWithProfile,
 } from '@rallia/shared-types';
+import { calculateDistanceMeters } from '@rallia/shared-utils';
 
 /**
  * Input data for creating a match
@@ -833,9 +834,10 @@ export async function updateMatch(
  */
 export async function cancelMatch(matchId: string, userId?: string): Promise<Match> {
   // First, verify the user is authorized to cancel (must be the creator)
+  // Include created_at for reputation penalty calculation
   const { data: match, error: fetchError } = await supabase
     .from('match')
-    .select('created_by, cancelled_at, match_date, start_time, end_time, timezone')
+    .select('created_by, cancelled_at, created_at, match_date, start_time, end_time, timezone')
     .eq('id', matchId)
     .single();
 
@@ -881,12 +883,26 @@ export async function cancelMatch(matchId: string, userId?: string): Promise<Mat
   }
 
   // Create reputation event for cancellation (if userId is provided = host cancelling)
+  // Per the spec, late cancellation penalty applies when BOTH:
+  // 1. Cancelling within 24 hours of start time
+  // 2. Match was created more than 24 hours before start (not a spontaneous match)
   if (userId) {
-    // Check if this is a late cancellation (less than 24 hours before match start)
     const matchStartDateTime = new Date(`${match.match_date}T${match.start_time}`);
     const now = new Date();
     const hoursUntilMatch = (matchStartDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-    const isLateCancellation = hoursUntilMatch < 24;
+    const isWithin24HoursOfStart = hoursUntilMatch > 0 && hoursUntilMatch < 24;
+
+    // Check if match was created more than 24h before start (planned match vs spontaneous)
+    let isPlannedMatch = true; // Default to true if created_at is missing
+    if (match.created_at) {
+      const createdAt = new Date(match.created_at);
+      const hoursFromCreationToStart =
+        (matchStartDateTime.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+      isPlannedMatch = hoursFromCreationToStart >= 24;
+    }
+
+    // Late cancellation penalty only applies if within 24h of start AND was a planned match
+    const isLateCancellation = isWithin24HoursOfStart && isPlannedMatch;
 
     // Create reputation event for the host
     createReputationEvent(
@@ -1220,15 +1236,28 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
  * Leave a match as a participant.
  * Updates the participant status to 'left' (soft delete to preserve history).
  *
+ * Creates a reputation event (match_cancelled_late, -25 impact) if ALL conditions are met:
+ * 1. Match is full (all spots taken)
+ * 2. Match was created more than 24 hours before start time (planned match)
+ * 3. Match was NOT edited within 24 hours of start time (no last-minute host changes)
+ * 4. Player is leaving within 24 hours of start time
+ *
  * @throws Error if user is the host, not a participant, or match not found
  */
 export async function leaveMatch(matchId: string, playerId: string): Promise<void> {
   // First check if user is the match host and get match details
+  // Include fields needed for reputation penalty calculation
   const { data: match, error: matchError } = await supabase
     .from('match')
     .select(
       `
       created_by,
+      created_at,
+      updated_at,
+      match_date,
+      start_time,
+      timezone,
+      format,
       sport:sport_id (name),
       participants:match_participant (
         player_id,
@@ -1252,6 +1281,13 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
     throw new Error('Hosts cannot leave their own match. Cancel it instead.');
   }
 
+  // Calculate if reputation penalty applies BEFORE updating status
+  // (we need to check if match is full with current player still counted)
+  const joinedParticipants =
+    match.participants?.filter((p: { status: string }) => p.status === 'joined') ?? [];
+  const totalCapacity = match.format === 'doubles' ? 4 : 2;
+  const isMatchFull = joinedParticipants.length >= totalCapacity;
+
   // Update status to 'left'
   const { data, error } = await supabase
     .from('match_participant')
@@ -1270,6 +1306,51 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
 
   if (!data) {
     throw new Error('You are not a participant in this match');
+  }
+
+  // ========================================
+  // CREATE REPUTATION EVENT IF APPLICABLE
+  // ========================================
+  // Check if leaving warrants a reputation penalty per the spec:
+  // Penalty applies when: full match + created >24h before start + not edited <24h before start + leaving <24h before start
+  if (isMatchFull) {
+    const matchStartDateTime = new Date(`${match.match_date}T${match.start_time}`);
+    const now = new Date();
+    const hoursUntilMatch = (matchStartDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    // Condition: Must be within 24 hours of start time
+    if (hoursUntilMatch > 0 && hoursUntilMatch < 24) {
+      let shouldCreatePenalty = true;
+
+      // Condition: Match must have been created more than 24 hours before start
+      if (match.created_at) {
+        const createdAt = new Date(match.created_at);
+        const hoursFromCreationToStart =
+          (matchStartDateTime.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+        if (hoursFromCreationToStart < 24) {
+          // Spontaneous/last-minute match - no penalty
+          shouldCreatePenalty = false;
+        }
+      }
+
+      // Condition: Match must NOT have been edited within 24 hours of start
+      if (shouldCreatePenalty && match.updated_at) {
+        const updatedAt = new Date(match.updated_at);
+        const hoursFromUpdateToStart =
+          (matchStartDateTime.getTime() - updatedAt.getTime()) / (1000 * 60 * 60);
+        if (hoursFromUpdateToStart < 24) {
+          // Host made last-minute changes - no penalty for leaving
+          shouldCreatePenalty = false;
+        }
+      }
+
+      if (shouldCreatePenalty) {
+        // Create reputation event for leaving late (same type as host cancelling late per spec)
+        createReputationEvent(playerId, 'match_cancelled_late', { matchId }).catch(err => {
+          console.error('[leaveMatch] Failed to create reputation event:', err);
+        });
+      }
+    }
   }
 
   // Send notifications to host and remaining participants
@@ -3196,6 +3277,144 @@ export async function awardMatchCompletionReputation(
 }
 
 /**
+ * Check-in radius in meters
+ */
+const CHECK_IN_RADIUS_METERS = 100;
+
+/**
+ * Result of a check-in attempt
+ */
+export interface CheckInResult {
+  success: boolean;
+  error?: 'too_far' | 'no_location' | 'not_participant' | 'already_checked_in' | 'unknown';
+  distanceMeters?: number;
+}
+
+/**
+ * Check in a player to a match by verifying their location is within
+ * the specified radius of the match location.
+ *
+ * @param matchId - The match ID
+ * @param playerId - The player's ID
+ * @param playerLat - The player's current latitude
+ * @param playerLng - The player's current longitude
+ * @returns CheckInResult indicating success or failure with reason
+ */
+export async function checkInToMatch(
+  matchId: string,
+  playerId: string,
+  playerLat: number,
+  playerLng: number
+): Promise<CheckInResult> {
+  try {
+    // 1. Fetch match with facility coordinates
+    const { data: match, error: matchError } = await supabase
+      .from('match')
+      .select(
+        `
+        id,
+        location_type,
+        custom_latitude,
+        custom_longitude,
+        facility:facility_id (
+          id,
+          latitude,
+          longitude
+        )
+      `
+      )
+      .eq('id', matchId)
+      .single();
+
+    if (matchError || !match) {
+      console.error('[checkInToMatch] Failed to fetch match:', matchError);
+      return { success: false, error: 'unknown' };
+    }
+
+    // 2. Determine target coordinates based on location type
+    let targetLat: number | null = null;
+    let targetLng: number | null = null;
+
+    if (match.location_type === 'facility' && match.facility) {
+      // Handle facility as potential array (Supabase relation quirk)
+      const facility = Array.isArray(match.facility) ? match.facility[0] : match.facility;
+      targetLat = facility?.latitude ?? null;
+      targetLng = facility?.longitude ?? null;
+    } else if (match.location_type === 'custom') {
+      targetLat = match.custom_latitude;
+      targetLng = match.custom_longitude;
+    }
+
+    // 3. Validate we have location coordinates
+    if (targetLat === null || targetLng === null) {
+      console.error('[checkInToMatch] Match has no valid location coordinates:', {
+        matchId,
+        locationType: match.location_type,
+      });
+      return { success: false, error: 'no_location' };
+    }
+
+    // 4. Check if player is already checked in
+    const { data: participant, error: participantError } = await supabase
+      .from('match_participant')
+      .select('id, checked_in_at')
+      .eq('match_id', matchId)
+      .eq('player_id', playerId)
+      .eq('status', 'joined')
+      .single();
+
+    if (participantError || !participant) {
+      console.error('[checkInToMatch] Player is not a participant:', {
+        matchId,
+        playerId,
+        error: participantError,
+      });
+      return { success: false, error: 'not_participant' };
+    }
+
+    if (participant.checked_in_at) {
+      return { success: false, error: 'already_checked_in' };
+    }
+
+    // 5. Calculate distance using Haversine formula
+    const distanceMeters = calculateDistanceMeters(playerLat, playerLng, targetLat, targetLng);
+
+    // 6. Check if within radius
+    if (distanceMeters > CHECK_IN_RADIUS_METERS) {
+      console.log('[checkInToMatch] Player too far from match location:', {
+        matchId,
+        playerId,
+        distanceMeters,
+        radiusMeters: CHECK_IN_RADIUS_METERS,
+      });
+      return { success: false, error: 'too_far', distanceMeters };
+    }
+
+    // 7. Update match_participant.checked_in_at
+    const { error: updateError } = await supabase
+      .from('match_participant')
+      .update({ checked_in_at: new Date().toISOString() })
+      .eq('id', participant.id);
+
+    if (updateError) {
+      console.error('[checkInToMatch] Failed to update checked_in_at:', updateError);
+      return { success: false, error: 'unknown' };
+    }
+
+    console.log('[checkInToMatch] Player checked in successfully:', {
+      matchId,
+      playerId,
+      distanceMeters,
+    });
+
+    return { success: true, distanceMeters };
+  } catch (err) {
+    console.error('[checkInToMatch] Unexpected error:', err);
+    return { success: false, error: 'unknown' };
+  }
+}
+
+/**
  * Match service object for grouped exports
  */
 export const matchService = {
@@ -3217,6 +3436,7 @@ export const matchService = {
   rejectJoinRequest,
   cancelJoinRequest,
   kickParticipant,
+  checkInToMatch,
   // Invitations
   invitePlayersToMatch,
   // Reputation

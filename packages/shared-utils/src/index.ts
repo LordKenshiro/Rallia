@@ -9,3 +9,4 @@ export * from './errors';
 export * from './logger';
 export * from './storage';
 export * from './match';
+export * from './geo';
