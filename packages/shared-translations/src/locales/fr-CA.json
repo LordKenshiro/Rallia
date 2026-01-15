@@ -718,6 +718,54 @@
     "practice": "Pratique",
     "casual": "Récréatif"
   },
+  "matchFeedback": {
+    "title": "Évaluation du match",
+    "step": "Étape {current} sur {total}",
+    "stepNames": {
+      "outcome": "Résultat du match",
+      "feedback": "Évaluation"
+    },
+    "outcomeStep": {
+      "title": "Comment s'est passé le match?",
+      "subtitle": "Dites-nous si le match a eu lieu comme prévu",
+      "matchPlayed": "Match joué",
+      "matchPlayedDescription": "Le match a eu lieu et je peux évaluer mon/mes adversaire(s)",
+      "matchCancelled": "Match annulé",
+      "matchCancelledDescription": "Nous avons mutuellement convenu de ne pas jouer",
+      "whyCancelled": "Pourquoi le match a-t-il été annulé?",
+      "otherReasonPlaceholder": "Veuillez décrire pourquoi le match a été annulé...",
+      "confirmCancelled": "Confirmer l'annulation",
+      "continue": "Continuer"
+    },
+    "cancellationReasons": {
+      "weather": "Météo",
+      "courtUnavailable": "Terrain non disponible",
+      "emergency": "Urgence",
+      "other": "Autre"
+    },
+    "opponentStep": {
+      "rateExperience": "Évaluez votre expérience avec ce joueur",
+      "showedUp": "S'est-il/elle présenté(e)?",
+      "noShowInfo": "Si quelqu'un d'autre que le joueur inscrit s'est présenté, sélectionnez aussi « Non »",
+      "wasLate": "Était-il/elle en retard?",
+      "wasLateDescription": "Plus de 10 minutes de retard",
+      "rating": "Évaluez votre expérience",
+      "comments": "Commentaires (facultatif)",
+      "commentsPlaceholder": "Partagez vos commentaires...",
+      "reportIssue": "Signaler un problème",
+      "skip": "Passer",
+      "continue": "Continuer",
+      "complete": "Terminer"
+    },
+    "success": {
+      "title": "Merci!",
+      "message": "Votre évaluation a été soumise"
+    },
+    "alreadyCompleted": {
+      "title": "Évaluation terminée",
+      "message": "Vous avez déjà soumis une évaluation pour tous les joueurs de ce match"
+    }
+  },
   "alerts": {
     "success": "Succès",
     "error": "Erreur",

@@ -14,6 +14,9 @@ export * from './database';
 // UI-specific types (view models, navigation params)
 export * from './ui-types';
 
+// Match feedback types (wizard UI and mutations)
+export * from './feedback';
+
 // Domain constants (display labels, mappings)
 export * from './constants';
 

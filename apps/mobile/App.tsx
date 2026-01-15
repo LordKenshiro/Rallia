@@ -17,6 +17,7 @@ import { navigationRef } from './src/navigation';
 import { ActionsBottomSheet } from './src/components/ActionsBottomSheet';
 import { MatchDetailSheet } from './src/components/MatchDetailSheet';
 import { PlayerInviteSheet } from './src/components/PlayerInviteSheet';
+import { FeedbackSheet } from './src/components/FeedbackSheet';
 import { SplashOverlay } from './src/components/SplashOverlay';
 import { SportSelectionOverlay } from './src/components/SportSelectionOverlay';
 import { ErrorBoundary } from '@rallia/shared-components';
@@ -32,6 +33,7 @@ import {
   SportProvider,
   MatchDetailSheetProvider,
   PlayerInviteSheetProvider,
+  FeedbackSheetProvider,
   DeepLinkProvider,
   useDeepLink,
   useOverlay,
@@ -133,6 +135,8 @@ function AppContent() {
       <MatchDetailSheet />
       {/* Player Invite Bottom Sheet - shows when host invites players */}
       <PlayerInviteSheet />
+      {/* Feedback Bottom Sheet - shows when providing post-match feedback */}
+      <FeedbackSheet />
       {/* Sport Selection Overlay - shows for first-time users after splash */}
       <SportSelectionOverlay
         visible={showSportSelectionOverlay}
@@ -167,9 +171,11 @@ export default function App() {
                         <ActionsSheetProvider>
                           <MatchDetailSheetProvider>
                             <PlayerInviteSheetProvider>
-                              <BottomSheetModalProvider>
-                                <AppContent />
-                              </BottomSheetModalProvider>
+                              <FeedbackSheetProvider>
+                                <BottomSheetModalProvider>
+                                  <AppContent />
+                                </BottomSheetModalProvider>
+                              </FeedbackSheetProvider>
                             </PlayerInviteSheetProvider>
                           </MatchDetailSheetProvider>
                         </ActionsSheetProvider>

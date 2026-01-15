@@ -1146,6 +1146,8 @@ export type Database = {
       match_participant: {
         Row: {
           aggregated_at: string | null;
+          cancellation_notes: string | null;
+          cancellation_reason: Database['public']['Enums']['cancellation_reason_enum'] | null;
           checked_in_at: string | null;
           created_at: string | null;
           feedback_completed: boolean;
@@ -1164,6 +1166,8 @@ export type Database = {
         };
         Insert: {
           aggregated_at?: string | null;
+          cancellation_notes?: string | null;
+          cancellation_reason?: Database['public']['Enums']['cancellation_reason_enum'] | null;
           checked_in_at?: string | null;
           created_at?: string | null;
           feedback_completed?: boolean;
@@ -1182,6 +1186,8 @@ export type Database = {
         };
         Update: {
           aggregated_at?: string | null;
+          cancellation_notes?: string | null;
+          cancellation_reason?: Database['public']['Enums']['cancellation_reason_enum'] | null;
           checked_in_at?: string | null;
           created_at?: string | null;
           feedback_completed?: boolean;
@@ -3594,6 +3600,7 @@ export type Database = {
         | 'under_maintenance'
         | 'closed';
       booking_status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+      cancellation_reason_enum: 'weather' | 'court_unavailable' | 'emergency' | 'other';
       conversation_type: 'direct' | 'group' | 'match' | 'announcement';
       cost_split_type_enum: 'host_pays' | 'split_equal' | 'custom';
       country_enum: 'Canada' | 'United States';
@@ -3906,6 +3913,7 @@ export const Constants = {
         'closed',
       ],
       booking_status: ['pending', 'confirmed', 'cancelled', 'completed'],
+      cancellation_reason_enum: ['weather', 'court_unavailable', 'emergency', 'other'],
       conversation_type: ['direct', 'group', 'match', 'announcement'],
       cost_split_type_enum: ['host_pays', 'split_equal', 'custom'],
       country_enum: ['Canada', 'United States'],

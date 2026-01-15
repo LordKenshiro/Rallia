@@ -718,6 +718,54 @@
     "practice": "Practice",
     "casual": "Casual"
   },
+  "matchFeedback": {
+    "title": "Match Feedback",
+    "step": "Step {current} of {total}",
+    "stepNames": {
+      "outcome": "Match Outcome",
+      "feedback": "Feedback"
+    },
+    "outcomeStep": {
+      "title": "How did the match go?",
+      "subtitle": "Let us know if the match happened as planned",
+      "matchPlayed": "Match played",
+      "matchPlayedDescription": "The game happened and I can rate my opponent(s)",
+      "matchCancelled": "Match was cancelled",
+      "matchCancelledDescription": "We mutually agreed not to play",
+      "whyCancelled": "Why was the match cancelled?",
+      "otherReasonPlaceholder": "Please describe why the match was cancelled...",
+      "confirmCancelled": "Confirm Cancellation",
+      "continue": "Continue"
+    },
+    "cancellationReasons": {
+      "weather": "Weather",
+      "courtUnavailable": "Court unavailable",
+      "emergency": "Emergency",
+      "other": "Other"
+    },
+    "opponentStep": {
+      "rateExperience": "Rate your experience with this player",
+      "showedUp": "Did they show up?",
+      "noShowInfo": "If someone other than the registered player showed up, also select 'No'",
+      "wasLate": "Were they late?",
+      "wasLateDescription": "More than 10 minutes late",
+      "rating": "Rate your experience",
+      "comments": "Comments (optional)",
+      "commentsPlaceholder": "Share any additional feedback...",
+      "reportIssue": "Report an issue",
+      "skip": "Skip",
+      "continue": "Continue",
+      "complete": "Complete"
+    },
+    "success": {
+      "title": "Thank you!",
+      "message": "Your feedback has been submitted"
+    },
+    "alreadyCompleted": {
+      "title": "Feedback Complete",
+      "message": "You have already submitted feedback for all players in this match"
+    }
+  },
   "alerts": {
     "success": "Success",
     "error": "Error",

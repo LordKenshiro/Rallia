@@ -56,6 +56,17 @@ export type MatchJoinModeEnum = DbEnum<'match_join_mode_enum'>;
 export type CostSplitTypeEnum = DbEnum<'cost_split_type_enum'>;
 export type LocationTypeEnum = DbEnum<'location_type_enum'>;
 
+// Match Feedback (enums for feedback wizard)
+export type MatchOutcomeEnum = DbEnum<'match_outcome_enum'>;
+// Note: cancellation_reason_enum will be available after running migration and regenerating types
+// Until then, use this manual type definition:
+export type CancellationReasonEnum = 'weather' | 'court_unavailable' | 'emergency' | 'other';
+
+// Match Report (enums for moderation)
+export type MatchReportReasonEnum = DbEnum<'match_report_reason_enum'>;
+export type MatchReportPriorityEnum = DbEnum<'match_report_priority_enum'>;
+export type MatchReportStatusEnum = DbEnum<'match_report_status_enum'>;
+
 // Organization & Facility
 export type OrganizationTypeEnum = DbEnum<'organization_type_enum'>;
 export type OrganizationNatureEnum = DbEnum<'organization_nature_enum'>;
@@ -189,6 +200,8 @@ export type CourtSport = TableRow<'court_sport'>;
 export type Match = TableRow<'match'>;
 export type MatchParticipant = TableRow<'match_participant'>;
 export type MatchResult = TableRow<'match_result'>;
+export type MatchFeedback = TableRow<'match_feedback'>;
+export type MatchReport = TableRow<'match_report'>;
 
 // Notification
 export type Notification = TableRow<'notification'>;
@@ -268,6 +281,8 @@ export type CourtSportInsert = TableInsert<'court_sport'>;
 export type MatchInsert = TableInsert<'match'>;
 export type MatchParticipantInsert = TableInsert<'match_participant'>;
 export type MatchResultInsert = TableInsert<'match_result'>;
+export type MatchFeedbackInsert = TableInsert<'match_feedback'>;
+export type MatchReportInsert = TableInsert<'match_report'>;
 export type NotificationInsert = TableInsert<'notification'>;
 export type DeliveryAttemptInsert = TableInsert<'delivery_attempt'>;
 export type FileInsert = TableInsert<'file'>;
@@ -306,6 +321,8 @@ export type CourtSportUpdate = TableUpdate<'court_sport'>;
 export type MatchUpdate = TableUpdate<'match'>;
 export type MatchParticipantUpdate = TableUpdate<'match_participant'>;
 export type MatchResultUpdate = TableUpdate<'match_result'>;
+export type MatchFeedbackUpdate = TableUpdate<'match_feedback'>;
+export type MatchReportUpdate = TableUpdate<'match_report'>;
 export type NotificationUpdate = TableUpdate<'notification'>;
 export type DeliveryAttemptUpdate = TableUpdate<'delivery_attempt'>;
 export type FileUpdate = TableUpdate<'file'>;

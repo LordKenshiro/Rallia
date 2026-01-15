@@ -11,6 +11,7 @@ export * from './dupr';
 export * from './logger';
 export * from './notifications';
 export * from './matches';
+export * from './feedback';
 export * from './facilities';
 export * from './courts';
 export * from './availability';

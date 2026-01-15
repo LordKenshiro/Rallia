@@ -6,6 +6,7 @@ export { ActionsSheetProvider, useActionsSheet } from './ActionsSheetContext';
 export { SportProvider, useSport, SportContext } from './SportContext';
 export { MatchDetailSheetProvider, useMatchDetailSheet } from './MatchDetailSheetContext';
 export { PlayerInviteSheetProvider, usePlayerInviteSheet } from './PlayerInviteSheetContext';
+export { FeedbackSheetProvider, useFeedbackSheet } from './FeedbackSheetContext';
 export { DeepLinkProvider, useDeepLink } from './DeepLinkContext';
 export type { AuthContextType, OAuthProvider, AuthResult } from './AuthContext';
 export type { ActionsSheetMode } from './ActionsSheetContext';

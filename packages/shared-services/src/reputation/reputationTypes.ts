@@ -37,7 +37,9 @@ export type ReputationEventType =
   | 'suspension_lifted'
   // Community
   | 'peer_rating_given'
-  | 'first_match_bonus';
+  | 'first_match_bonus'
+  // Feedback
+  | 'feedback_submitted';
 
 /**
  * Reputation tier levels

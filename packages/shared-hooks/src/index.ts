@@ -20,6 +20,7 @@ export * from './useCreateMatch';
 export * from './useUpdateMatch';
 export * from './useMatches';
 export * from './useMatchActions';
+export * from './useMatchFeedback';
 export * from './useNearbyMatches';
 export * from './usePlayerMatches';
 export * from './usePublicMatches';

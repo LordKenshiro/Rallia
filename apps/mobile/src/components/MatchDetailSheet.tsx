@@ -56,12 +56,17 @@ import {
 import { useMatchDetailSheet } from '../context/MatchDetailSheetContext';
 import { useActionsSheet } from '../context/ActionsSheetContext';
 import { usePlayerInviteSheet } from '../context/PlayerInviteSheetContext';
+import { useFeedbackSheet } from '../context/FeedbackSheetContext';
 import { useTranslation, usePermissions, type TranslationKey } from '../hooks';
 import { useTheme, usePlayer, useMatchActions } from '@rallia/shared-hooks';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import { ConfirmationModal } from './ConfirmationModal';
 import { RequesterDetailsModal } from './RequesterDetailsModal';
-import type { PlayerWithProfile, MatchParticipantWithPlayer } from '@rallia/shared-types';
+import type {
+  PlayerWithProfile,
+  MatchParticipantWithPlayer,
+  OpponentForFeedback,
+} from '@rallia/shared-types';
 
 const BASE_WHITE = '#ffffff';
 
@@ -553,6 +558,7 @@ export const MatchDetailSheet: React.FC = () => {
   const { sheetRef, closeSheet, selectedMatch, updateSelectedMatch } = useMatchDetailSheet();
   const { openSheet: openAuthSheet, openSheetForEdit } = useActionsSheet();
   const { openSheet: openInviteSheet } = usePlayerInviteSheet();
+  const { openSheet: openFeedbackSheet } = useFeedbackSheet();
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
   const { player } = usePlayer();
@@ -1507,13 +1513,32 @@ export const MatchDetailSheet: React.FC = () => {
       // Within 48h window
       if (isWithinFeedbackWindow) {
         // Current player needs to provide feedback → Show CTA button
-        if (playerNeedsFeedback) {
+        if (playerNeedsFeedback && currentPlayerParticipant) {
           return (
             <Button
               variant="primary"
               onPress={() => {
-                // TODO: Navigate to feedback screen
                 mediumHaptic();
+                // Build opponents list from match participants (excluding current player)
+                const opponents: OpponentForFeedback[] = (match.participants ?? [])
+                  .filter(p => p.player_id !== playerId && p.status === 'joined')
+                  .map(p => {
+                    const profile = p.player?.profile;
+                    const firstName = profile?.first_name || '';
+                    const lastName = profile?.last_name || '';
+                    const displayName = profile?.display_name;
+                    const name = displayName || firstName || 'Player';
+                    const fullName = displayName || `${firstName} ${lastName}`.trim() || 'Player';
+                    return {
+                      participantId: p.id,
+                      playerId: p.player_id,
+                      name,
+                      fullName,
+                      avatarUrl: profile?.profile_picture_url || null,
+                      hasExistingFeedback: false, // Will be checked by the hook
+                    };
+                  });
+                openFeedbackSheet(match.id, playerId!, currentPlayerParticipant.id, opponents);
               }}
               style={styles.actionButton}
               themeColors={successThemeColors}
