@@ -729,12 +729,19 @@
       "title": "How did the match go?",
       "subtitle": "Let us know if the match happened as planned",
       "matchPlayed": "Match played",
-      "matchPlayedDescription": "The game happened and I can rate my opponent(s)",
+      "matchPlayedDescription": "The game happened and I can rate my opponent",
+      "matchPlayedDescriptionPlural": "The game happened and I can rate my opponents",
       "matchCancelled": "Match was cancelled",
       "matchCancelledDescription": "We mutually agreed not to play",
+      "missingPlayer": "Missing player",
+      "missingPlayerDescription": "My opponent didn't show up",
+      "missingPlayers": "Missing player(s)",
+      "missingPlayersDescription": "One or more players didn't show up",
+      "selectNoShowPlayers": "Select the player(s) who didn't show up",
       "whyCancelled": "Why was the match cancelled?",
       "otherReasonPlaceholder": "Please describe why the match was cancelled...",
       "confirmCancelled": "Confirm Cancellation",
+      "confirmNoShows": "Confirm no-shows",
       "continue": "Continue"
     },
     "cancellationReasons": {
@@ -756,14 +763,6 @@
       "skip": "Skip",
       "continue": "Continue",
       "complete": "Complete"
-    },
-    "success": {
-      "title": "Thank you!",
-      "message": "Your feedback has been submitted"
-    },
-    "alreadyCompleted": {
-      "title": "Feedback Complete",
-      "message": "You have already submitted feedback for all players in this match"
     }
   },
   "alerts": {

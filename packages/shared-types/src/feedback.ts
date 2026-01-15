@@ -20,12 +20,16 @@ export interface MatchOutcomeInput {
   matchId: string;
   /** The match_participant.id for the reviewer */
   participantId: string;
+  /** The reviewer's player ID (needed for creating feedback records) */
+  reviewerId?: string;
   /** Whether the match was played or mutually cancelled */
   outcome: MatchOutcomeEnum;
   /** Reason for cancellation (only if outcome is 'mutual_cancel') */
   cancellationReason?: CancellationReasonEnum;
   /** Free text notes (only if cancellationReason is 'other') */
   cancellationNotes?: string;
+  /** Player IDs who didn't show up (only if outcome is 'opponent_no_show') */
+  noShowPlayerIds?: string[];
 }
 
 /**

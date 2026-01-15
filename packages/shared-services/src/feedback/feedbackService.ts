@@ -19,11 +19,20 @@ import type {
 // ============================================
 
 /**
- * Submit match outcome for a participant (played or mutually cancelled).
- * If cancelled, sets feedback_completed to true immediately.
+ * Submit match outcome for a participant (played, mutually cancelled, or opponent no-show).
+ * If cancelled or no-show, sets feedback_completed to true immediately.
+ * For no-show, also creates feedback records for the no-show players.
  */
 export async function submitMatchOutcome(input: MatchOutcomeInput): Promise<MatchOutcomeResult> {
-  const { matchId, participantId, outcome, cancellationReason, cancellationNotes } = input;
+  const {
+    matchId,
+    participantId,
+    reviewerId,
+    outcome,
+    cancellationReason,
+    cancellationNotes,
+    noShowPlayerIds,
+  } = input;
 
   // Build update data
   const updateData: Record<string, unknown> = {
@@ -41,6 +50,11 @@ export async function submitMatchOutcome(input: MatchOutcomeInput): Promise<Matc
     }
   }
 
+  // If opponent no-show, set feedback as complete
+  if (outcome === 'opponent_no_show') {
+    updateData.feedback_completed = true;
+  }
+
   const { error } = await supabase
     .from('match_participant')
     .update(updateData)
@@ -52,10 +66,44 @@ export async function submitMatchOutcome(input: MatchOutcomeInput): Promise<Matc
     throw new Error(error.message);
   }
 
+  // For opponent no-show, create feedback records for each no-show player
+  if (
+    outcome === 'opponent_no_show' &&
+    noShowPlayerIds &&
+    noShowPlayerIds.length > 0 &&
+    reviewerId
+  ) {
+    const feedbackRecords = noShowPlayerIds.map(opponentId => ({
+      match_id: matchId,
+      reviewer_id: reviewerId,
+      opponent_id: opponentId,
+      showed_up: false,
+      was_late: null,
+      star_rating: null,
+      comments: null,
+    }));
+
+    const { error: feedbackError } = await supabase.from('match_feedback').insert(feedbackRecords);
+
+    if (feedbackError) {
+      console.error('[feedbackService] Failed to create no-show feedback records:', feedbackError);
+      // Don't throw - the outcome was saved successfully
+    }
+
+    // Create reputation events for submitting feedback
+    try {
+      for (const _opponentId of noShowPlayerIds) {
+        await createReputationEvent(reviewerId, 'feedback_submitted', { matchId });
+      }
+    } catch (repError) {
+      console.warn('[feedbackService] Failed to create reputation events:', repError);
+    }
+  }
+
   return {
     success: true,
     outcome,
-    feedbackCompleted: outcome === 'mutual_cancel',
+    feedbackCompleted: outcome === 'mutual_cancel' || outcome === 'opponent_no_show',
   };
 }
 

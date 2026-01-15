@@ -729,12 +729,19 @@
       "title": "Comment s'est passé le match?",
       "subtitle": "Dites-nous si le match a eu lieu comme prévu",
       "matchPlayed": "Match joué",
-      "matchPlayedDescription": "Le match a eu lieu et je peux évaluer mon/mes adversaire(s)",
+      "matchPlayedDescription": "Le match a eu lieu et je peux évaluer mon adversaire",
+      "matchPlayedDescriptionPlural": "Le match a eu lieu et je peux évaluer mes adversaires",
       "matchCancelled": "Match annulé",
       "matchCancelledDescription": "Nous avons mutuellement convenu de ne pas jouer",
+      "missingPlayer": "Joueur absent",
+      "missingPlayerDescription": "Mon adversaire ne s'est pas présenté",
+      "missingPlayers": "Joueur(s) absent(s)",
+      "missingPlayersDescription": "Un ou plusieurs joueurs ne se sont pas présentés",
+      "selectNoShowPlayers": "Sélectionnez le(s) joueur(s) qui ne se sont pas présenté(s)",
       "whyCancelled": "Pourquoi le match a-t-il été annulé?",
       "otherReasonPlaceholder": "Veuillez décrire pourquoi le match a été annulé...",
       "confirmCancelled": "Confirmer l'annulation",
+      "confirmNoShows": "Confirmer la/les absence(s)",
       "continue": "Continuer"
     },
     "cancellationReasons": {
@@ -756,14 +763,6 @@
       "skip": "Passer",
       "continue": "Continuer",
       "complete": "Terminer"
-    },
-    "success": {
-      "title": "Merci!",
-      "message": "Votre évaluation a été soumise"
-    },
-    "alreadyCompleted": {
-      "title": "Évaluation terminée",
-      "message": "Vous avez déjà soumis une évaluation pour tous les joueurs de ce match"
     }
   },
   "alerts": {

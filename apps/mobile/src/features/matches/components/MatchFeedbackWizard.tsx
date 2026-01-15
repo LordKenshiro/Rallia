@@ -147,6 +147,7 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
   const [outcome, setOutcome] = useState<MatchOutcomeEnum | null>(null);
   const [cancellationReason, setCancellationReason] = useState<CancellationReasonEnum | null>(null);
   const [cancellationNotes, setCancellationNotes] = useState('');
+  const [noShowPlayerIds, setNoShowPlayerIds] = useState<string[]>([]);
 
   // Form state for opponent steps (indexed by opponent index in unratedOpponents)
   const [opponentFeedback, setOpponentFeedback] = useState<
@@ -218,13 +219,25 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
   // doesn't cause the outcome step to disappear
   const initialOutcomeSubmittedRef = useRef<boolean | null>(null);
 
+  // Track the initial list of opponents when the wizard FIRST opened
+  // This prevents opponents from disappearing when feedback is submitted
+  const initialOpponentsRef = useRef<typeof unratedOpponents | null>(null);
+
   // Capture initial state when participant data first loads
   if (participant && initialOutcomeSubmittedRef.current === null) {
     initialOutcomeSubmittedRef.current = participant.match_outcome === 'played';
   }
 
+  // Capture initial opponents when they first load
+  if (unratedOpponents.length > 0 && initialOpponentsRef.current === null) {
+    initialOpponentsRef.current = unratedOpponents;
+  }
+
   // Use the initial value (default to false if not yet loaded)
   const outcomeAlreadySubmitted = initialOutcomeSubmittedRef.current ?? false;
+
+  // Use the initial opponents list (or current if not yet captured)
+  const opponents = initialOpponentsRef.current ?? unratedOpponents;
 
   // Helper: whether we're currently on the outcome step
   const isOnOutcomeStep = !outcomeAlreadySubmitted && currentStep === 0;
@@ -237,8 +250,8 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
     [outcomeAlreadySubmitted]
   );
 
-  // Total steps: outcome step (if not already submitted) + unrated opponents count
-  const totalSteps = (outcomeAlreadySubmitted ? 0 : 1) + unratedOpponents.length;
+  // Total steps: outcome step (if not already submitted) + opponents count
+  const totalSteps = (outcomeAlreadySubmitted ? 0 : 1) + opponents.length;
 
   // Animation values
   const translateX = useSharedValue(0);
@@ -296,22 +309,33 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
   const handleOutcomeConfirm = useCallback(() => {
     if (!outcome) return;
     if (outcome === 'mutual_cancel' && !cancellationReason) return;
+    if (outcome === 'opponent_no_show' && noShowPlayerIds.length === 0) return;
 
     submitOutcome({
       participantId: feedbackData.participantId,
+      reviewerId: feedbackData.reviewerId,
       outcome,
       cancellationReason: outcome === 'mutual_cancel' ? cancellationReason! : undefined,
       cancellationNotes:
         outcome === 'mutual_cancel' && cancellationReason === 'other'
           ? cancellationNotes
           : undefined,
+      noShowPlayerIds: outcome === 'opponent_no_show' ? noShowPlayerIds : undefined,
     });
-  }, [submitOutcome, feedbackData.participantId, outcome, cancellationReason, cancellationNotes]);
+  }, [
+    submitOutcome,
+    feedbackData.participantId,
+    feedbackData.reviewerId,
+    outcome,
+    cancellationReason,
+    cancellationNotes,
+    noShowPlayerIds,
+  ]);
 
   // Handle opponent feedback submission
   const handleOpponentFeedbackSubmit = useCallback(() => {
     const opponentIndex = getOpponentIndex(currentStep);
-    const opponent = unratedOpponents[opponentIndex];
+    const opponent = opponents[opponentIndex];
     const feedback = opponentFeedback[opponentIndex];
 
     if (!opponent || !feedback) return;
@@ -323,7 +347,7 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
       starRating: feedback.starRating,
       comments: feedback.comments,
     });
-  }, [submitFeedback, unratedOpponents, currentStep, opponentFeedback, getOpponentIndex]);
+  }, [submitFeedback, opponents, currentStep, opponentFeedback, getOpponentIndex]);
 
   // Handle skip
   const handleSkip = useCallback(() => {
@@ -340,23 +364,34 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
   const canProceed = useMemo(() => {
     if (isOnOutcomeStep) {
       // Outcome step
-      return outcome === 'played' || (outcome === 'mutual_cancel' && cancellationReason !== null);
+      if (outcome === 'played') return true;
+      if (outcome === 'mutual_cancel') return cancellationReason !== null;
+      if (outcome === 'opponent_no_show') return noShowPlayerIds.length > 0;
+      return false;
     } else {
       // Opponent step - always can proceed (can skip)
       return true;
     }
-  }, [isOnOutcomeStep, outcome, cancellationReason]);
+  }, [isOnOutcomeStep, outcome, cancellationReason, noShowPlayerIds]);
 
   // Determine button text and action
   const getFooterButton = useMemo(() => {
     if (isOnOutcomeStep) {
       // Outcome step
+      let label = t('matchFeedback.outcomeStep.continue' as TranslationKey);
+      let icon = 'arrow-forward';
+
+      if (outcome === 'mutual_cancel') {
+        label = t('matchFeedback.outcomeStep.confirmCancelled' as TranslationKey);
+        icon = 'checkmark';
+      } else if (outcome === 'opponent_no_show') {
+        label = t('matchFeedback.outcomeStep.confirmNoShows' as TranslationKey);
+        icon = 'checkmark';
+      }
+
       return {
-        label:
-          outcome === 'mutual_cancel'
-            ? t('matchFeedback.outcomeStep.confirmCancelled' as TranslationKey)
-            : t('matchFeedback.outcomeStep.continue' as TranslationKey),
-        icon: outcome === 'mutual_cancel' ? 'checkmark' : 'arrow-forward',
+        label,
+        icon,
         onPress: handleOutcomeConfirm,
         isLoading: isSubmittingOutcome,
       };
@@ -406,38 +441,11 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
   if (isLoadingOpponents || isLoadingParticipant) {
     return (
       <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
-        <View style={styles.successContainer}>
+        <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.buttonActive} />
-          <Text size="base" color={colors.textMuted} style={styles.successTitle}>
+          <Text size="base" color={colors.textMuted} style={styles.loadingText}>
             {t('common.loading' as TranslationKey)}
           </Text>
-        </View>
-      </View>
-    );
-  }
-
-  // No unrated opponents - show already completed message
-  if (unratedOpponents.length === 0 && currentStep === 0) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
-        <View style={styles.successContainer}>
-          <View style={[styles.successIcon, { backgroundColor: colors.buttonActive }]}>
-            <Ionicons name="checkmark-circle" size={48} color={BASE_WHITE} />
-          </View>
-          <Text size="xl" weight="bold" color={colors.text} style={styles.successTitle}>
-            {t('matchFeedback.alreadyCompleted.title' as TranslationKey)}
-          </Text>
-          <Text size="base" color={colors.textMuted} style={styles.successMessage}>
-            {t('matchFeedback.alreadyCompleted.message' as TranslationKey)}
-          </Text>
-          <TouchableOpacity
-            style={[styles.closeButton, { backgroundColor: colors.buttonActive }]}
-            onPress={onClose}
-          >
-            <Text size="base" weight="semibold" color={colors.buttonTextActive}>
-              {t('common.close' as TranslationKey)}
-            </Text>
-          </TouchableOpacity>
         </View>
       </View>
     );
@@ -483,7 +491,7 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
         currentStepName={
           isOnOutcomeStep
             ? t('matchFeedback.stepNames.outcome' as TranslationKey)
-            : unratedOpponents[getOpponentIndex(currentStep)]?.name ||
+            : opponents[getOpponentIndex(currentStep)]?.name ||
               t('matchFeedback.stepNames.feedback' as TranslationKey)
         }
       />
@@ -502,6 +510,9 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
                   cancellationReason={cancellationReason}
                   cancellationNotes={cancellationNotes}
                   onOutcomeChange={handleOutcomeChange}
+                  opponents={opponents}
+                  noShowPlayerIds={noShowPlayerIds}
+                  onNoShowPlayerIdsChange={setNoShowPlayerIds}
                   colors={colors}
                   t={t}
                   isDark={isDark}
@@ -510,7 +521,7 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
             )}
 
             {/* Opponent Feedback Steps */}
-            {unratedOpponents.map((opponent, index) => {
+            {opponents.map((opponent, index) => {
               const opponentIndex = index;
               const feedback = opponentFeedback[opponentIndex] || {
                 showedUp: true,
@@ -671,32 +682,15 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.lg,
     gap: spacingPixels[2],
   },
-  successContainer: {
+  loadingContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacingPixels[6],
   },
-  successIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacingPixels[4],
-  },
-  successTitle: {
+  loadingText: {
     textAlign: 'center',
-    marginBottom: spacingPixels[2],
-  },
-  successMessage: {
-    textAlign: 'center',
-    marginBottom: spacingPixels[6],
-  },
-  closeButton: {
-    paddingVertical: spacingPixels[4],
-    paddingHorizontal: spacingPixels[8],
-    borderRadius: radiusPixels.lg,
+    marginTop: spacingPixels[4],
   },
 });
 

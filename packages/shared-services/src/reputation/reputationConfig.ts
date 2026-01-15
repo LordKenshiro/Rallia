@@ -33,6 +33,7 @@ export const DEFAULT_EVENT_IMPACTS: Record<ReputationEventType, number> = {
   review_received_3star: 0,
   review_received_2star: -5,
   review_received_1star: -10,
+  feedback_submitted: 1,
 
   // Reports/Moderation
   report_received: 0,

@@ -6,13 +6,17 @@
  */
 
 import React, { useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { lightHaptic, selectionHaptic } from '@rallia/shared-utils';
-import type { MatchOutcomeEnum, CancellationReasonEnum } from '@rallia/shared-types';
+import { lightHaptic, selectionHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
+import type {
+  MatchOutcomeEnum,
+  CancellationReasonEnum,
+  OpponentForFeedback,
+} from '@rallia/shared-types';
 import type { TranslationKey } from '../../../../hooks/useTranslation';
 
 // =============================================================================
@@ -32,6 +36,12 @@ interface MatchOutcomeStepProps {
     cancellationReason?: CancellationReasonEnum | null,
     cancellationNotes?: string
   ) => void;
+  /** List of opponents for no-show selection */
+  opponents: OpponentForFeedback[];
+  /** Currently selected no-show player IDs */
+  noShowPlayerIds: string[];
+  /** Callback when no-show player selection changes */
+  onNoShowPlayerIdsChange: (playerIds: string[]) => void;
   /** Theme colors */
   colors: {
     text: string;
@@ -177,6 +187,70 @@ const ReasonCard: React.FC<ReasonCardProps> = ({ icon, label, selected, onPress,
 );
 
 // =============================================================================
+// PLAYER SELECT CARD (for no-show selection)
+// =============================================================================
+
+interface PlayerSelectCardProps {
+  player: OpponentForFeedback;
+  selected: boolean;
+  onToggle: () => void;
+  colors: MatchOutcomeStepProps['colors'];
+}
+
+const PlayerSelectCard: React.FC<PlayerSelectCardProps> = ({
+  player,
+  selected,
+  onToggle,
+  colors,
+}) => {
+  const avatarUrl = getProfilePictureUrl(player.avatarUrl);
+
+  return (
+    <TouchableOpacity
+      style={[
+        styles.playerCard,
+        {
+          backgroundColor: selected ? `${colors.buttonActive}15` : colors.buttonInactive,
+          borderColor: selected ? colors.buttonActive : colors.border,
+        },
+      ]}
+      onPress={() => {
+        lightHaptic();
+        onToggle();
+      }}
+      activeOpacity={0.7}
+    >
+      {avatarUrl ? (
+        <Image source={{ uri: avatarUrl }} style={styles.playerAvatar} />
+      ) : (
+        <View style={[styles.playerAvatarPlaceholder, { backgroundColor: colors.border }]}>
+          <Ionicons name="person" size={20} color={colors.textMuted} />
+        </View>
+      )}
+      <Text
+        size="base"
+        weight={selected ? 'semibold' : 'regular'}
+        color={selected ? colors.buttonActive : colors.text}
+        style={styles.playerName}
+      >
+        {player.fullName}
+      </Text>
+      <View
+        style={[
+          styles.checkbox,
+          {
+            backgroundColor: selected ? colors.buttonActive : 'transparent',
+            borderColor: selected ? colors.buttonActive : colors.border,
+          },
+        ]}
+      >
+        {selected && <Ionicons name="checkmark" size={16} color={colors.buttonTextActive} />}
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+// =============================================================================
 // MAIN COMPONENT
 // =============================================================================
 
@@ -185,6 +259,9 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
   cancellationReason,
   cancellationNotes,
   onOutcomeChange,
+  opponents,
+  noShowPlayerIds,
+  onNoShowPlayerIdsChange,
   colors,
   t,
   isDark: _isDark,
@@ -192,8 +269,15 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
   const handleOutcomeChange = useCallback(
     (newOutcome: MatchOutcomeEnum) => {
       onOutcomeChange(newOutcome, null, '');
+      // Clear no-show selection when changing outcome, or auto-select if singles
+      if (newOutcome !== 'opponent_no_show') {
+        onNoShowPlayerIdsChange([]);
+      } else if (newOutcome === 'opponent_no_show' && opponents.length === 1) {
+        // Auto-select the only opponent for singles matches
+        onNoShowPlayerIdsChange([opponents[0].playerId]);
+      }
     },
-    [onOutcomeChange]
+    [onOutcomeChange, onNoShowPlayerIdsChange, opponents]
   );
 
   const handleCancellationReasonChange = useCallback(
@@ -208,6 +292,17 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
       onOutcomeChange(outcome, cancellationReason, notes);
     },
     [onOutcomeChange, outcome, cancellationReason]
+  );
+
+  const handlePlayerToggle = useCallback(
+    (playerId: string) => {
+      if (noShowPlayerIds.includes(playerId)) {
+        onNoShowPlayerIdsChange(noShowPlayerIds.filter(id => id !== playerId));
+      } else {
+        onNoShowPlayerIdsChange([...noShowPlayerIds, playerId]);
+      }
+    },
+    [noShowPlayerIds, onNoShowPlayerIdsChange]
   );
 
   return (
@@ -232,7 +327,11 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
         <OptionCard
           icon="checkmark-circle-outline"
           title={t('matchFeedback.outcomeStep.matchPlayed' as TranslationKey)}
-          description={t('matchFeedback.outcomeStep.matchPlayedDescription' as TranslationKey)}
+          description={
+            opponents.length === 1
+              ? t('matchFeedback.outcomeStep.matchPlayedDescription' as TranslationKey)
+              : t('matchFeedback.outcomeStep.matchPlayedDescriptionPlural' as TranslationKey)
+          }
           selected={outcome === 'played'}
           onPress={() => handleOutcomeChange('played')}
           colors={colors}
@@ -245,7 +344,48 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
           onPress={() => handleOutcomeChange('mutual_cancel')}
           colors={colors}
         />
+        <OptionCard
+          icon="person-remove-outline"
+          title={
+            opponents.length === 1
+              ? t('matchFeedback.outcomeStep.missingPlayer' as TranslationKey)
+              : t('matchFeedback.outcomeStep.missingPlayers' as TranslationKey)
+          }
+          description={
+            opponents.length === 1
+              ? t('matchFeedback.outcomeStep.missingPlayerDescription' as TranslationKey)
+              : t('matchFeedback.outcomeStep.missingPlayersDescription' as TranslationKey)
+          }
+          selected={outcome === 'opponent_no_show'}
+          onPress={() => handleOutcomeChange('opponent_no_show')}
+          colors={colors}
+        />
       </View>
+
+      {/* No-show player selection (only for doubles - singles auto-selects the only opponent) */}
+      {outcome === 'opponent_no_show' && opponents.length > 1 && (
+        <View style={styles.reasonsSection}>
+          <Text
+            size="sm"
+            weight="semibold"
+            color={colors.textSecondary}
+            style={styles.reasonsLabel}
+          >
+            {t('matchFeedback.outcomeStep.selectNoShowPlayers' as TranslationKey)}
+          </Text>
+          <View style={styles.playersGrid}>
+            {opponents.map(opponent => (
+              <PlayerSelectCard
+                key={opponent.playerId}
+                player={opponent}
+                selected={noShowPlayerIds.includes(opponent.playerId)}
+                onToggle={() => handlePlayerToggle(opponent.playerId)}
+                colors={colors}
+              />
+            ))}
+          </View>
+        </View>
+      )}
 
       {/* Cancellation Reasons (only if cancelled selected) */}
       {outcome === 'mutual_cancel' && (
@@ -262,7 +402,6 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
             {CANCELLATION_REASONS.map(reason => (
               <ReasonCard
                 key={reason.value}
-                value={reason.value}
                 icon={reason.icon}
                 label={t(reason.labelKey as TranslationKey)}
                 selected={cancellationReason === reason.value}
@@ -373,6 +512,41 @@ const styles = StyleSheet.create({
     fontSize: 16,
     minHeight: 80,
     textAlignVertical: 'top',
+  },
+  playersGrid: {
+    gap: spacingPixels[2],
+  },
+  playerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+    gap: spacingPixels[3],
+  },
+  playerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  playerAvatarPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playerName: {
+    flex: 1,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 
