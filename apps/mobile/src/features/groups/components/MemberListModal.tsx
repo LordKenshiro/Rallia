@@ -35,6 +35,54 @@ interface MemberListModalProps {
   onMemberRemoved: () => void;
 }
 
+/**
+ * Format a date as relative time or date string for join dates
+ */
+function formatJoinDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffDays === 0) return 'Joined today';
+  if (diffDays === 1) return 'Joined yesterday';
+  if (diffDays < 7) return `Joined ${diffDays} days ago`;
+  if (diffDays < 30) return `Joined ${Math.floor(diffDays / 7)} weeks ago`;
+  
+  return `Joined ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined })}`;
+}
+
+/**
+ * Format last active status - returns null if never active
+ */
+function formatLastActive(dateStr: string | null | undefined): { text: string; isOnline: boolean } | null {
+  if (!dateStr) return null;
+  
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  // Consider online if active within last 5 minutes
+  if (diffMins < 5) return { text: 'Online now', isOnline: true };
+  if (diffMins < 60) return { text: `Active ${diffMins}m ago`, isOnline: false };
+  if (diffHours < 24) return { text: `Active ${diffHours}h ago`, isOnline: false };
+  if (diffDays < 7) return { text: `Active ${diffDays}d ago`, isOnline: false };
+  
+  return { text: `Active ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`, isOnline: false };
+}
+
+interface MemberListModalProps {
+  visible: boolean;
+  onClose: () => void;
+  group: GroupWithMembers;
+  currentUserId: string;
+  isModerator: boolean;
+  onMemberRemoved: () => void;
+}
+
 export function MemberListModal({
   visible,
   onClose,
@@ -172,6 +220,8 @@ export function MemberListModal({
     const isCreator = group.created_by === item.player_id;
     const isSelf = item.player_id === currentUserId;
     const canManage = isModerator && !isSelf && !isCreator;
+    const lastActive = formatLastActive(item.player?.profile?.last_active_at);
+    const joinDate = formatJoinDate(item.joined_at);
 
     return (
       <TouchableOpacity
@@ -180,14 +230,20 @@ export function MemberListModal({
         disabled={!canManage}
         activeOpacity={canManage ? 0.7 : 1}
       >
-        <View style={[styles.memberAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-          {item.player?.profile?.profile_picture_url ? (
-            <Image
-              source={{ uri: item.player.profile.profile_picture_url }}
-              style={styles.avatarImage}
-            />
-          ) : (
-            <Ionicons name="person" size={24} color={colors.textMuted} />
+        <View style={styles.avatarContainer}>
+          <View style={[styles.memberAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+            {item.player?.profile?.profile_picture_url ? (
+              <Image
+                source={{ uri: item.player.profile.profile_picture_url }}
+                style={styles.avatarImage}
+              />
+            ) : (
+              <Ionicons name="person" size={24} color={colors.textMuted} />
+            )}
+          </View>
+          {/* Online indicator */}
+          {lastActive?.isOnline && (
+            <View style={styles.onlineIndicator} />
           )}
         </View>
 
@@ -204,6 +260,10 @@ export function MemberListModal({
               </Text>
             )}
           </View>
+          {/* Last active / Join date */}
+          <Text size="xs" style={{ color: lastActive?.isOnline ? colors.primary : colors.textMuted, marginTop: 2 }}>
+            {lastActive ? lastActive.text : joinDate}
+          </Text>
           <View style={styles.memberBadges}>
             {item.role === 'moderator' && (
               <View style={[styles.badge, { backgroundColor: isDark ? '#FF9500' : '#FFF3E0' }]}>
@@ -315,6 +375,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
   },
+  avatarContainer: {
+    position: 'relative',
+    marginRight: 12,
+  },
   memberAvatar: {
     width: 48,
     height: 48,
@@ -322,12 +386,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-    marginRight: 12,
   },
   avatarImage: {
     width: 48,
     height: 48,
     borderRadius: 24,
+  },
+  onlineIndicator: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#34C759', // iOS green
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   memberInfo: {
     flex: 1,

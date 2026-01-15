@@ -25,7 +25,7 @@ import { Text } from '@rallia/shared-components';
 import { useThemeStyles, useAuth } from '../hooks';
 import { usePlayerGroups, useCreateGroup, type Group } from '@rallia/shared-hooks';
 import type { RootStackParamList } from '../navigation/types';
-import { CreateGroupModal } from '../features/groups';
+import { CreateGroupModal, QRScannerModal } from '../features/groups';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_GAP = 12;
@@ -41,6 +41,7 @@ export default function GroupsScreen() {
   const playerId = session?.user?.id;
 
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showScannerModal, setShowScannerModal] = useState(false);
 
   const {
     data: groups,
@@ -66,6 +67,21 @@ export default function GroupsScreen() {
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create group');
     }
   }, [playerId, createGroupMutation, navigation]);
+
+  const handleGroupJoined = useCallback((groupId: string, groupName: string) => {
+    // Refetch groups list and navigate to the joined group
+    refetch();
+    Alert.alert(
+      'Welcome!',
+      `You've successfully joined "${groupName}"`,
+      [
+        {
+          text: 'View Group',
+          onPress: () => navigation.navigate('GroupDetail', { groupId }),
+        },
+      ]
+    );
+  }, [refetch, navigation]);
 
   const handleGroupPress = useCallback((group: Group) => {
     navigation.navigate('GroupDetail', { groupId: group.id });
@@ -145,17 +161,28 @@ export default function GroupsScreen() {
         No Groups Yet
       </Text>
       <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-        Create a group to organize matches with your friends and teammates
+        Create a group or scan a QR code to join one
       </Text>
-      <TouchableOpacity
-        style={[styles.createButton, { backgroundColor: colors.primary }]}
-        onPress={() => setShowCreateModal(true)}
-      >
-        <Ionicons name="add" size={20} color="#FFFFFF" />
-        <Text weight="semibold" style={styles.createButtonText}>
-          Create Group
-        </Text>
-      </TouchableOpacity>
+      <View style={styles.emptyButtons}>
+        <TouchableOpacity
+          style={[styles.createButton, { backgroundColor: colors.primary }]}
+          onPress={() => setShowCreateModal(true)}
+        >
+          <Ionicons name="add" size={20} color="#FFFFFF" />
+          <Text weight="semibold" style={styles.createButtonText}>
+            Create Group
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.scanButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+          onPress={() => setShowScannerModal(true)}
+        >
+          <Ionicons name="qr-code-outline" size={20} color={colors.primary} />
+          <Text weight="semibold" style={[styles.scanButtonText, { color: colors.primary }]}>
+            Scan QR Code
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   ), [colors]);
 
@@ -192,15 +219,27 @@ export default function GroupsScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      {/* FAB to create new group */}
+      {/* FABs - Scan QR and Create Group */}
       {groups && groups.length > 0 && (
-        <TouchableOpacity
-          style={[styles.fab, { backgroundColor: colors.primary }]}
-          onPress={() => setShowCreateModal(true)}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="add" size={28} color="#FFFFFF" />
-        </TouchableOpacity>
+        <View style={styles.fabContainer}>
+          {/* Scan QR FAB */}
+          <TouchableOpacity
+            style={[styles.fabSecondary, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}
+            onPress={() => setShowScannerModal(true)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="qr-code-outline" size={24} color={colors.text} />
+          </TouchableOpacity>
+
+          {/* Create Group FAB */}
+          <TouchableOpacity
+            style={[styles.fab, { backgroundColor: colors.primary }]}
+            onPress={() => setShowCreateModal(true)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="add" size={28} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
       )}
 
       {/* Create Group Modal */}
@@ -210,6 +249,16 @@ export default function GroupsScreen() {
         onSubmit={handleCreateGroup}
         isLoading={createGroupMutation.isPending}
       />
+
+      {/* QR Scanner Modal */}
+      {playerId && (
+        <QRScannerModal
+          visible={showScannerModal}
+          onClose={() => setShowScannerModal(false)}
+          playerId={playerId}
+          onGroupJoined={handleGroupJoined}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -313,10 +362,15 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
   },
-  fab: {
+  fabContainer: {
     position: 'absolute',
     bottom: 24,
     right: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  fab: {
     width: 56,
     height: 56,
     borderRadius: 28,
@@ -327,5 +381,35 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  fabSecondary: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  emptyButtons: {
+    flexDirection: 'column',
+    gap: 12,
+    marginTop: 8,
+  },
+  scanButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 24,
+    gap: 8,
+    borderWidth: 1.5,
+  },
+  scanButtonText: {
+    fontSize: 16,
   },
 });

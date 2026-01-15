@@ -37,8 +37,11 @@ export interface GroupMember {
       last_name: string | null;
       display_name: string | null;
       profile_picture_url: string | null;
+      last_active_at: string | null;
     };
   };
+  // Resolved name of who added this member (populated in some queries)
+  added_by_name?: string | null;
 }
 
 export interface GroupWithMembers extends Group {
@@ -48,7 +51,7 @@ export interface GroupWithMembers extends Group {
 export interface GroupActivity {
   id: string;
   network_id: string;
-  activity_type: 'member_joined' | 'member_left' | 'game_created' | 'message_sent' | 'group_updated';
+  activity_type: 'member_joined' | 'member_left' | 'member_promoted' | 'member_demoted' | 'game_created' | 'message_sent' | 'group_updated';
   actor_id: string | null;
   target_id: string | null;
   metadata: Record<string, unknown> | null;
@@ -61,6 +64,8 @@ export interface GroupActivity {
       profile_picture_url: string | null;
     };
   };
+  // Resolved name of who added the member (for member_joined activities)
+  added_by_name?: string | null;
 }
 
 export interface GroupStats {
@@ -178,7 +183,8 @@ export async function getGroupWithMembers(groupId: string): Promise<GroupWithMem
           first_name,
           last_name,
           display_name,
-          profile_picture_url
+          profile_picture_url,
+          last_active_at
         )
       )
     `)
@@ -496,6 +502,15 @@ export async function promoteMember(
     throw new Error(error.message);
   }
 
+  // Log the promotion activity
+  await logGroupActivity(
+    groupId,
+    'member_promoted',
+    moderatorId,
+    playerIdToPromote,
+    { promoted_by: moderatorId }
+  );
+
   return data as GroupMember;
 }
 
@@ -532,6 +547,15 @@ export async function demoteMember(
     console.error('Error demoting member:', error);
     throw new Error(error.message);
   }
+
+  // Log the demotion activity
+  await logGroupActivity(
+    groupId,
+    'member_demoted',
+    moderatorId,
+    playerIdToDemote,
+    { demoted_by: moderatorId }
+  );
 
   return data as GroupMember;
 }
@@ -576,7 +600,7 @@ export async function getGroupActivity(
   }
 
   // Transform data to match GroupActivity interface
-  return (data || []).map((item: Record<string, unknown>) => ({
+  const activities = (data || []).map((item: Record<string, unknown>) => ({
     id: item.id as string,
     network_id: item.network_id as string,
     actor_id: item.player_id as string,
@@ -585,7 +609,52 @@ export async function getGroupActivity(
     metadata: item.metadata as Record<string, unknown> | null,
     created_at: item.created_at as string,
     actor: item.player as GroupActivity['actor'],
+    added_by_name: null as string | null,
   }));
+
+  // Extract unique added_by IDs from member_joined activities
+  const addedByIds = new Set<string>();
+  for (const activity of activities) {
+    if (activity.activity_type === 'member_joined' && activity.metadata?.added_by) {
+      const addedById = activity.metadata.added_by as string;
+      // Only fetch if the adder is different from the actor (self-join doesn't need "added by")
+      if (addedById !== activity.actor_id) {
+        addedByIds.add(addedById);
+      }
+    }
+  }
+
+  // Fetch profiles for all added_by IDs
+  if (addedByIds.size > 0) {
+    const { data: profiles } = await supabase
+      .from('player')
+      .select('id, profile(first_name)')
+      .in('id', Array.from(addedByIds));
+
+    // Create a map for quick lookup
+    const profileMap = new Map<string, string>();
+    for (const p of profiles || []) {
+      // profile can be an array or single object depending on the relationship
+      const profileData = Array.isArray(p.profile) ? p.profile[0] : p.profile;
+      const firstName = (profileData as { first_name?: string } | null)?.first_name;
+      if (firstName) {
+        profileMap.set(p.id, firstName);
+      }
+    }
+
+    // Enrich activities with added_by_name
+    for (const activity of activities) {
+      if (activity.activity_type === 'member_joined' && activity.metadata?.added_by) {
+        const addedById = activity.metadata.added_by as string;
+        // Don't show "added by" for self-joins
+        if (addedById !== activity.actor_id) {
+          activity.added_by_name = profileMap.get(addedById) || null;
+        }
+      }
+    }
+  }
+
+  return activities;
 }
 
 /**
@@ -667,22 +736,768 @@ export async function getGroupStats(groupId: string): Promise<GroupStats> {
   };
 }
 
+// =============================================================================
+// GROUP INVITE CODE FUNCTIONS
+// =============================================================================
+
 /**
- * Get leaderboard for a group (members with most wins)
- * This is a placeholder - actual implementation depends on how match results are tracked per group
+ * Get or create an invite code for a group
+ */
+export async function getOrCreateGroupInviteCode(groupId: string): Promise<string> {
+  const { data, error } = await supabase.rpc('get_or_create_group_invite_code', {
+    group_id: groupId,
+  });
+
+  if (error) {
+    console.error('Error getting/creating invite code:', error);
+    throw new Error(error.message);
+  }
+
+  return data as string;
+}
+
+/**
+ * Join a group using an invite code
+ */
+export async function joinGroupByInviteCode(
+  inviteCode: string,
+  playerId: string
+): Promise<{ success: boolean; groupId?: string; groupName?: string; error?: string }> {
+  const { data, error } = await supabase.rpc('join_group_by_invite_code', {
+    p_invite_code: inviteCode.toUpperCase(),
+    p_player_id: playerId,
+  });
+
+  if (error) {
+    console.error('Error joining group by invite code:', error);
+    throw new Error(error.message);
+  }
+
+  const result = data as { success: boolean; group_id?: string; group_name?: string; error?: string };
+  
+  return {
+    success: result.success,
+    groupId: result.group_id,
+    groupName: result.group_name,
+    error: result.error,
+  };
+}
+
+/**
+ * Reset (regenerate) the invite code for a group
+ * Only moderators can do this
+ */
+export async function resetGroupInviteCode(
+  groupId: string,
+  moderatorId: string
+): Promise<string> {
+  const { data, error } = await supabase.rpc('reset_group_invite_code', {
+    p_group_id: groupId,
+    p_moderator_id: moderatorId,
+  });
+
+  if (error) {
+    console.error('Error resetting invite code:', error);
+    throw new Error(error.message);
+  }
+
+  return data as string;
+}
+
+/**
+ * Get the invite link URL for a group
+ */
+export function getGroupInviteLink(inviteCode: string): string {
+  // Using a custom scheme that can be handled by the app
+  // This can be a universal link or deep link depending on your setup
+  return `https://rallia.app/join/${inviteCode}`;
+}
+
+// =============================================================================
+// GROUP MATCHES/GAMES
+// =============================================================================
+
+export interface GroupMatch {
+  id: string;
+  match_id: string;
+  network_id: string;
+  posted_by: string;
+  posted_at: string;
+  match: {
+    id: string;
+    sport_id: string;
+    match_date: string;
+    start_time: string;
+    player_expectation: 'practice' | 'competitive' | 'both';
+    status: string;
+    format: 'singles' | 'doubles';
+    created_by: string;
+    sport?: {
+      id: string;
+      name: string;
+      icon_url: string | null;
+    };
+    participants: Array<{
+      id: string;
+      player_id: string;
+      team_number: number | null;
+      is_host: boolean;
+      player?: {
+        id: string;
+        profile?: {
+          first_name: string;
+          last_name: string | null;
+          display_name: string | null;
+          profile_picture_url: string | null;
+        };
+      };
+    }>;
+    result?: {
+      id: string;
+      winning_team: number | null;
+      team1_score: number | null;
+      team2_score: number | null;
+      is_verified: boolean;
+    } | null;
+  };
+  posted_by_player?: {
+    id: string;
+    profile?: {
+      first_name: string;
+      last_name: string | null;
+      display_name: string | null;
+      profile_picture_url: string | null;
+    };
+  };
+}
+
+export interface LeaderboardEntry {
+  player_id: string;
+  games_played: number;
+  games_won: number;
+  player?: {
+    id: string;
+    profile?: {
+      first_name: string;
+      last_name: string | null;
+      display_name: string | null;
+      profile_picture_url: string | null;
+    };
+  };
+}
+
+/**
+ * Get matches posted to a group
+ */
+export async function getGroupMatches(
+  groupId: string,
+  daysBack: number = 180,
+  limit: number = 50
+): Promise<GroupMatch[]> {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - daysBack);
+
+  const { data, error } = await supabase
+    .from('match_network')
+    .select(`
+      id,
+      match_id,
+      network_id,
+      posted_by,
+      posted_at,
+      match:match_id (
+        id,
+        sport_id,
+        match_date,
+        start_time,
+        player_expectation,
+        status,
+        format,
+        created_by,
+        sport:sport_id (
+          id,
+          name,
+          icon_url
+        ),
+        participants:match_participant (
+          id,
+          player_id,
+          team_number,
+          is_host,
+          player:player_id (
+            id,
+            profile:profile!inner (
+              first_name,
+              last_name,
+              display_name,
+              profile_picture_url
+            )
+          )
+        ),
+        result:match_result (
+          id,
+          winning_team,
+          team1_score,
+          team2_score,
+          is_verified
+        )
+      ),
+      posted_by_player:posted_by (
+        id,
+        profile:profile!inner (
+          first_name,
+          last_name,
+          display_name,
+          profile_picture_url
+        )
+      )
+    `)
+    .eq('network_id', groupId)
+    .gte('posted_at', cutoffDate.toISOString())
+    .order('posted_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('Error fetching group matches:', error);
+    throw new Error(error.message);
+  }
+
+  // Transform the data to handle Supabase's nested response format
+  return (data || []).map((item: Record<string, unknown>) => {
+    const match = item.match as Record<string, unknown> | null;
+    const postedByPlayer = item.posted_by_player as Record<string, unknown> | null;
+    
+    return {
+      id: item.id as string,
+      match_id: item.match_id as string,
+      network_id: item.network_id as string,
+      posted_by: item.posted_by as string,
+      posted_at: item.posted_at as string,
+      match: match ? {
+        id: match.id as string,
+        sport_id: match.sport_id as string,
+        match_date: match.match_date as string,
+        start_time: match.start_time as string,
+        player_expectation: match.player_expectation as 'practice' | 'competitive' | 'both',
+        status: match.status as string,
+        format: match.format as 'singles' | 'doubles',
+        created_by: match.created_by as string,
+        sport: match.sport as GroupMatch['match']['sport'],
+        participants: (match.participants as Array<Record<string, unknown>> || []).map(p => ({
+          id: p.id as string,
+          player_id: p.player_id as string,
+          team_number: p.team_number as number | null,
+          is_host: p.is_host as boolean,
+          player: p.player as GroupMatch['match']['participants'][0]['player'],
+        })),
+        result: Array.isArray(match.result) && match.result.length > 0 
+          ? match.result[0] as GroupMatch['match']['result']
+          : match.result as GroupMatch['match']['result'],
+      } : undefined,
+      posted_by_player: postedByPlayer as GroupMatch['posted_by_player'],
+    } as GroupMatch;
+  }).filter((item: GroupMatch) => item.match !== undefined);
+}
+
+/**
+ * Get the most recent match posted to a group
+ */
+export async function getMostRecentGroupMatch(
+  groupId: string
+): Promise<GroupMatch | null> {
+  const matches = await getGroupMatches(groupId, 180, 1);
+  return matches.length > 0 ? matches[0] : null;
+}
+
+/**
+ * Get leaderboard for a group based on games played
  */
 export async function getGroupLeaderboard(
   groupId: string,
-  _period: '7days' | '30days' | 'all' = '30days'
-): Promise<Array<{
-  playerId: string;
-  playerName: string;
-  profilePicture: string | null;
-  gamesPlayed: number;
-  wins: number;
-}>> {
-  // TODO: Implement when match tracking per group is available
-  // For now, return empty array
-  void groupId; // Suppress unused variable warning
-  return [];
+  daysBack: number = 30
+): Promise<LeaderboardEntry[]> {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - daysBack);
+
+  // First get all matches posted to this group within the time period
+  const { data: matchNetworks, error: mnError } = await supabase
+    .from('match_network')
+    .select('match_id')
+    .eq('network_id', groupId)
+    .gte('posted_at', cutoffDate.toISOString());
+
+  if (mnError) {
+    console.error('Error fetching match networks:', mnError);
+    throw new Error(mnError.message);
+  }
+
+  if (!matchNetworks || matchNetworks.length === 0) {
+    return [];
+  }
+
+  const matchIds = matchNetworks.map(mn => mn.match_id);
+
+  // Get all participants and results for these matches (only verified scores)
+  const { data: participants, error: pError } = await supabase
+    .from('match_participant')
+    .select(`
+      player_id,
+      team_number,
+      match:match_id (
+        id,
+        result:match_result (
+          winning_team,
+          is_verified,
+          confirmation_deadline
+        )
+      ),
+      player:player_id (
+        id,
+        profile:profile!inner (
+          first_name,
+          last_name,
+          display_name,
+          profile_picture_url
+        )
+      )
+    `)
+    .in('match_id', matchIds);
+
+  if (pError) {
+    console.error('Error fetching participants:', pError);
+    throw new Error(pError.message);
+  }
+
+  // Aggregate by player (only count verified scores or auto-confirmed after deadline)
+  const leaderboardMap = new Map<string, LeaderboardEntry>();
+  const now = new Date();
+
+  for (const p of participants || []) {
+    const playerId = p.player_id;
+    // Handle Supabase nested response - match can be array or object
+    const matchData = Array.isArray(p.match) ? p.match[0] : p.match;
+    const resultData = matchData?.result;
+    const result = Array.isArray(resultData) ? resultData[0] : resultData;
+    
+    // Skip if no result or if not verified and deadline hasn't passed
+    if (!result) continue;
+    
+    const isVerified = result.is_verified as boolean;
+    const confirmationDeadline = result.confirmation_deadline 
+      ? new Date(result.confirmation_deadline as string) 
+      : null;
+    const deadlinePassed = confirmationDeadline ? now > confirmationDeadline : true;
+    
+    // Only count if verified OR deadline has passed (auto-confirmed)
+    if (!isVerified && !deadlinePassed) continue;
+    
+    const winningTeam = result.winning_team as number | null;
+    const isWinner = winningTeam !== null && p.team_number === winningTeam;
+
+    // Handle player data similarly
+    const playerData = Array.isArray(p.player) ? p.player[0] : p.player;
+    const profileData = playerData?.profile;
+    const profile = Array.isArray(profileData) ? profileData[0] : profileData;
+
+    if (!leaderboardMap.has(playerId)) {
+      leaderboardMap.set(playerId, {
+        player_id: playerId,
+        games_played: 0,
+        games_won: 0,
+        player: playerData ? {
+          id: playerData.id as string,
+          profile: profile ? {
+            first_name: profile.first_name as string,
+            last_name: profile.last_name as string | null,
+            display_name: profile.display_name as string | null,
+            profile_picture_url: profile.profile_picture_url as string | null,
+          } : undefined,
+        } : undefined,
+      });
+    }
+
+    const entry = leaderboardMap.get(playerId)!;
+    entry.games_played += 1;
+    if (isWinner) {
+      entry.games_won += 1;
+    }
+  }
+
+  // Convert to array and sort by games played (descending)
+  return Array.from(leaderboardMap.values())
+    .sort((a, b) => b.games_played - a.games_played);
+}
+
+/**
+ * Post a match to a group
+ */
+export async function postMatchToGroup(
+  matchId: string,
+  groupId: string,
+  playerId: string
+): Promise<void> {
+  const { error } = await supabase
+    .from('match_network')
+    .insert({
+      match_id: matchId,
+      network_id: groupId,
+      posted_by: playerId,
+    });
+
+  if (error) {
+    // Check if it's a duplicate
+    if (error.code === '23505') {
+      throw new Error('This match has already been posted to this group');
+    }
+    console.error('Error posting match to group:', error);
+    throw new Error(error.message);
+  }
+
+  // Log activity
+  await logGroupActivity(groupId, 'game_created', playerId, matchId, {
+    match_id: matchId,
+  });
+}
+
+/**
+ * Remove a match from a group
+ */
+export async function removeMatchFromGroup(
+  matchId: string,
+  groupId: string
+): Promise<void> {
+  const { error } = await supabase
+    .from('match_network')
+    .delete()
+    .eq('match_id', matchId)
+    .eq('network_id', groupId);
+
+  if (error) {
+    console.error('Error removing match from group:', error);
+    throw new Error(error.message);
+  }
+}
+
+// ===========================
+// CREATE PLAYED MATCH
+// ===========================
+
+export interface SetScore {
+  team1Score: number | null;
+  team2Score: number | null;
+}
+
+export interface CreatePlayedMatchInput {
+  // Required
+  sportId: string;
+  createdBy: string;
+  matchDate: string; // YYYY-MM-DD format
+  
+  // Match format
+  format: 'singles' | 'doubles';
+  expectation: 'friendly' | 'competitive';
+  
+  // Location (optional)
+  locationName?: string;
+  
+  // Participants
+  team1PlayerIds: string[]; // Current user + partner for doubles
+  team2PlayerIds: string[]; // Opponent(s)
+  
+  // Results (only for competitive)
+  winnerId: 'team1' | 'team2';
+  sets: SetScore[];
+  
+  // Optional: Post to a group
+  networkId?: string;
+}
+
+/**
+ * Create a played match with results
+ * This is for recording past games that have already been played
+ */
+export async function createPlayedMatch(
+  input: CreatePlayedMatchInput
+): Promise<{ matchId: string; success: boolean }> {
+  const {
+    sportId,
+    createdBy,
+    matchDate,
+    format,
+    expectation,
+    locationName,
+    team1PlayerIds,
+    team2PlayerIds,
+    winnerId,
+    sets,
+    networkId,
+  } = input;
+
+  try {
+    // 1. Create the match record
+    const { data: match, error: matchError } = await supabase
+      .from('match')
+      .insert({
+        sport_id: sportId,
+        created_by: createdBy,
+        match_date: matchDate,
+        start_time: '00:00', // Unknown time for past matches
+        end_time: '01:00',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        format: format === 'singles' ? 'singles' : 'doubles',
+        player_expectation: expectation === 'competitive' ? 'competitive' : 'casual',
+        location_type: locationName ? 'custom' : 'tbd',
+        location_name: locationName || null,
+        visibility: 'private', // Past matches are private by default
+        join_mode: 'direct',
+        is_court_free: true,
+        cost_split_type: 'split_equal',
+      })
+      .select('id')
+      .single();
+
+    if (matchError) {
+      console.error('Error creating match:', matchError);
+      throw new Error(matchError.message);
+    }
+
+    const matchId = match.id;
+
+    // 2. Create match participants for Team 1
+    const team1Participants = team1PlayerIds.map((playerId, index) => ({
+      match_id: matchId,
+      player_id: playerId,
+      team_number: 1,
+      is_host: index === 0, // First player in team 1 is the host
+      status: 'joined' as const,
+    }));
+
+    // 3. Create match participants for Team 2
+    const team2Participants = team2PlayerIds.map((playerId) => ({
+      match_id: matchId,
+      player_id: playerId,
+      team_number: 2,
+      is_host: false,
+      status: 'joined' as const,
+    }));
+
+    const { error: participantsError } = await supabase
+      .from('match_participant')
+      .insert([...team1Participants, ...team2Participants]);
+
+    if (participantsError) {
+      console.error('Error creating participants:', participantsError);
+      // Cleanup: delete the match
+      await supabase.from('match').delete().eq('id', matchId);
+      throw new Error(participantsError.message);
+    }
+
+    // 4. Create match result (only for competitive matches)
+    if (expectation === 'competitive' && sets.length > 0) {
+      // Calculate total scores
+      let team1Total = 0;
+      let team2Total = 0;
+      
+      sets.forEach((set) => {
+        if (set.team1Score !== null && set.team2Score !== null) {
+          if (set.team1Score > set.team2Score) {
+            team1Total++;
+          } else if (set.team2Score > set.team1Score) {
+            team2Total++;
+          }
+        }
+      });
+
+      // Calculate confirmation deadline (24 hours from now)
+      const confirmationDeadline = new Date();
+      confirmationDeadline.setHours(confirmationDeadline.getHours() + 24);
+
+      const { error: resultError } = await supabase
+        .from('match_result')
+        .insert({
+          match_id: matchId,
+          winning_team: winnerId === 'team1' ? 1 : 2,
+          team1_score: team1Total,
+          team2_score: team2Total,
+          is_verified: false, // Opponent needs to confirm
+          submitted_by: createdBy,
+          confirmation_deadline: confirmationDeadline.toISOString(),
+        });
+
+      if (resultError) {
+        console.error('Error creating match result:', resultError);
+        // Don't fail the whole operation, result can be added later
+      } else {
+        // Send notifications to opponents about pending score confirmation
+        try {
+          await notifyOpponentsOfPendingScore(matchId, createdBy, team2PlayerIds);
+        } catch (notifyError) {
+          console.error('Error sending notifications:', notifyError);
+          // Don't fail - notification failure shouldn't break the flow
+        }
+      }
+    }
+
+    // 5. Post to group if networkId provided
+    if (networkId) {
+      try {
+        await postMatchToGroup(matchId, networkId, createdBy);
+      } catch (postError) {
+        console.error('Error posting to group:', postError);
+        // Don't fail, match is still created
+      }
+    }
+
+    return { matchId, success: true };
+  } catch (error) {
+    console.error('Error in createPlayedMatch:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get sport ID by name
+ */
+export async function getSportIdByName(
+  sportName: 'tennis' | 'pickleball'
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('sport')
+    .select('id')
+    .ilike('name', sportName)
+    .single();
+
+  if (error) {
+    console.error('Error fetching sport:', error);
+    return null;
+  }
+
+  return data?.id || null;
+}
+
+// ============================================
+// SCORE CONFIRMATION FUNCTIONS
+// ============================================
+
+/**
+ * Pending score confirmation entry
+ */
+export interface PendingScoreConfirmation {
+  match_result_id: string;
+  match_id: string;
+  match_date: string;
+  sport_name: string;
+  sport_icon_url: string | null;
+  winning_team: number;
+  team1_score: number;
+  team2_score: number;
+  submitted_by_id: string;
+  submitted_by_name: string;
+  submitted_by_avatar: string | null;
+  confirmation_deadline: string;
+  opponent_name: string;
+  opponent_avatar: string | null;
+  player_team: number;
+  network_id: string | null;
+  network_name: string | null;
+}
+
+/**
+ * Get pending score confirmations for a player
+ */
+export async function getPendingScoreConfirmations(
+  playerId: string
+): Promise<PendingScoreConfirmation[]> {
+  const { data, error } = await supabase
+    .rpc('get_pending_score_confirmations', { p_player_id: playerId });
+
+  if (error) {
+    console.error('Error fetching pending confirmations:', error);
+    throw new Error(error.message);
+  }
+
+  return (data || []) as PendingScoreConfirmation[];
+}
+
+/**
+ * Confirm a match score
+ */
+export async function confirmMatchScore(
+  matchResultId: string,
+  playerId: string
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .rpc('confirm_match_score', {
+      p_match_result_id: matchResultId,
+      p_player_id: playerId,
+    });
+
+  if (error) {
+    console.error('Error confirming score:', error);
+    throw new Error(error.message);
+  }
+
+  return data as boolean;
+}
+
+/**
+ * Dispute a match score
+ */
+export async function disputeMatchScore(
+  matchResultId: string,
+  playerId: string,
+  reason?: string
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .rpc('dispute_match_score', {
+      p_match_result_id: matchResultId,
+      p_player_id: playerId,
+      p_reason: reason || null,
+    });
+
+  if (error) {
+    console.error('Error disputing score:', error);
+    throw new Error(error.message);
+  }
+
+  return data as boolean;
+}
+
+/**
+ * Send notification to opponent(s) about pending score confirmation
+ */
+export async function notifyOpponentsOfPendingScore(
+  matchId: string,
+  submittedBy: string,
+  opponentIds: string[]
+): Promise<void> {
+  // Get submitter's profile for notification message
+  const { data: submitterProfile } = await supabase
+    .from('profile')
+    .select('first_name, last_name, display_name')
+    .eq('id', submittedBy)
+    .single();
+
+  const submitterName = submitterProfile?.display_name ||
+    `${submitterProfile?.first_name || ''} ${submitterProfile?.last_name || ''}`.trim() ||
+    'A player';
+
+  // Create notifications for each opponent
+  const notifications = opponentIds.map((opponentId) => ({
+    recipient_id: opponentId,
+    type: 'match_confirmation' as const,
+    title: 'Score Confirmation Required',
+    message: `${submitterName} submitted a match score. Please confirm or dispute within 24 hours.`,
+    data: JSON.stringify({ match_id: matchId }),
+    is_read: false,
+  }));
+
+  const { error } = await supabase
+    .from('notification')
+    .insert(notifications);
+
+  if (error) {
+    console.error('Error sending score confirmation notifications:', error);
+    // Don't throw - notification failure shouldn't break the flow
+  }
 }
