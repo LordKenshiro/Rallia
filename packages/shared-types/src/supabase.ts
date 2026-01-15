@@ -935,6 +935,7 @@ export type Database = {
         Row: {
           booking_id: string | null;
           cancelled_at: string | null;
+          closed_at: string | null;
           cost_split_type: Database['public']['Enums']['cost_split_type_enum'] | null;
           court_id: string | null;
           court_status: Database['public']['Enums']['court_status_enum'] | null;
@@ -957,6 +958,7 @@ export type Database = {
           location_type: Database['public']['Enums']['location_type_enum'] | null;
           match_date: string;
           min_rating_score_id: string | null;
+          mutually_cancelled: boolean | null;
           notes: string | null;
           player_expectation: Database['public']['Enums']['match_type_enum'];
           preferred_opponent_gender: Database['public']['Enums']['gender_type'] | null;
@@ -969,6 +971,7 @@ export type Database = {
         Insert: {
           booking_id?: string | null;
           cancelled_at?: string | null;
+          closed_at?: string | null;
           cost_split_type?: Database['public']['Enums']['cost_split_type_enum'] | null;
           court_id?: string | null;
           court_status?: Database['public']['Enums']['court_status_enum'] | null;
@@ -991,6 +994,7 @@ export type Database = {
           location_type?: Database['public']['Enums']['location_type_enum'] | null;
           match_date: string;
           min_rating_score_id?: string | null;
+          mutually_cancelled?: boolean | null;
           notes?: string | null;
           player_expectation?: Database['public']['Enums']['match_type_enum'];
           preferred_opponent_gender?: Database['public']['Enums']['gender_type'] | null;
@@ -1003,6 +1007,7 @@ export type Database = {
         Update: {
           booking_id?: string | null;
           cancelled_at?: string | null;
+          closed_at?: string | null;
           cost_split_type?: Database['public']['Enums']['cost_split_type_enum'] | null;
           court_id?: string | null;
           court_status?: Database['public']['Enums']['court_status_enum'] | null;
@@ -1025,6 +1030,7 @@ export type Database = {
           location_type?: Database['public']['Enums']['location_type_enum'] | null;
           match_date?: string;
           min_rating_score_id?: string | null;
+          mutually_cancelled?: boolean | null;
           notes?: string | null;
           player_expectation?: Database['public']['Enums']['match_type_enum'];
           preferred_opponent_gender?: Database['public']['Enums']['gender_type'] | null;
@@ -1079,39 +1085,118 @@ export type Database = {
           },
         ];
       };
+      match_feedback: {
+        Row: {
+          comments: string | null;
+          created_at: string;
+          id: string;
+          match_id: string;
+          opponent_id: string;
+          reviewer_id: string;
+          showed_up: boolean;
+          star_rating: number | null;
+          was_late: boolean | null;
+        };
+        Insert: {
+          comments?: string | null;
+          created_at?: string;
+          id?: string;
+          match_id: string;
+          opponent_id: string;
+          reviewer_id: string;
+          showed_up: boolean;
+          star_rating?: number | null;
+          was_late?: boolean | null;
+        };
+        Update: {
+          comments?: string | null;
+          created_at?: string;
+          id?: string;
+          match_id?: string;
+          opponent_id?: string;
+          reviewer_id?: string;
+          showed_up?: boolean;
+          star_rating?: number | null;
+          was_late?: boolean | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'match_feedback_match_id_fkey';
+            columns: ['match_id'];
+            isOneToOne: false;
+            referencedRelation: 'match';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'match_feedback_opponent_id_fkey';
+            columns: ['opponent_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'match_feedback_reviewer_id_fkey';
+            columns: ['reviewer_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       match_participant: {
         Row: {
+          aggregated_at: string | null;
+          checked_in_at: string | null;
           created_at: string | null;
+          feedback_completed: boolean;
           id: string;
           is_host: boolean | null;
           match_id: string;
+          match_outcome: Database['public']['Enums']['match_outcome_enum'] | null;
           player_id: string;
           score: number | null;
+          showed_up: boolean | null;
+          star_rating: number | null;
           status: Database['public']['Enums']['match_participant_status_enum'] | null;
           team_number: number | null;
           updated_at: string | null;
+          was_late: boolean | null;
         };
         Insert: {
+          aggregated_at?: string | null;
+          checked_in_at?: string | null;
           created_at?: string | null;
+          feedback_completed?: boolean;
           id?: string;
           is_host?: boolean | null;
           match_id: string;
+          match_outcome?: Database['public']['Enums']['match_outcome_enum'] | null;
           player_id: string;
           score?: number | null;
+          showed_up?: boolean | null;
+          star_rating?: number | null;
           status?: Database['public']['Enums']['match_participant_status_enum'] | null;
           team_number?: number | null;
           updated_at?: string | null;
+          was_late?: boolean | null;
         };
         Update: {
+          aggregated_at?: string | null;
+          checked_in_at?: string | null;
           created_at?: string | null;
+          feedback_completed?: boolean;
           id?: string;
           is_host?: boolean | null;
           match_id?: string;
+          match_outcome?: Database['public']['Enums']['match_outcome_enum'] | null;
           player_id?: string;
           score?: number | null;
+          showed_up?: boolean | null;
+          star_rating?: number | null;
           status?: Database['public']['Enums']['match_participant_status_enum'] | null;
           team_number?: number | null;
           updated_at?: string | null;
+          was_late?: boolean | null;
         };
         Relationships: [
           {
@@ -1126,6 +1211,77 @@ export type Database = {
             columns: ['player_id'];
             isOneToOne: false;
             referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      match_report: {
+        Row: {
+          created_at: string;
+          details: string | null;
+          id: string;
+          match_id: string;
+          priority: Database['public']['Enums']['match_report_priority_enum'];
+          reason: Database['public']['Enums']['match_report_reason_enum'];
+          reported_id: string;
+          reporter_id: string;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          status: Database['public']['Enums']['match_report_status_enum'];
+        };
+        Insert: {
+          created_at?: string;
+          details?: string | null;
+          id?: string;
+          match_id: string;
+          priority: Database['public']['Enums']['match_report_priority_enum'];
+          reason: Database['public']['Enums']['match_report_reason_enum'];
+          reported_id: string;
+          reporter_id: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: Database['public']['Enums']['match_report_status_enum'];
+        };
+        Update: {
+          created_at?: string;
+          details?: string | null;
+          id?: string;
+          match_id?: string;
+          priority?: Database['public']['Enums']['match_report_priority_enum'];
+          reason?: Database['public']['Enums']['match_report_reason_enum'];
+          reported_id?: string;
+          reporter_id?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: Database['public']['Enums']['match_report_status_enum'];
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'match_report_match_id_fkey';
+            columns: ['match_id'];
+            isOneToOne: false;
+            referencedRelation: 'match';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'match_report_reported_id_fkey';
+            columns: ['reported_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'match_report_reporter_id_fkey';
+            columns: ['reporter_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'match_report_reviewed_by_fkey';
+            columns: ['reviewed_by'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
             referencedColumns: ['id'];
           },
         ];
@@ -3487,6 +3643,7 @@ export type Database = {
       match_duration_enum: '30' | '60' | '90' | '120' | 'custom';
       match_format_enum: 'singles' | 'doubles';
       match_join_mode_enum: 'direct' | 'request';
+      match_outcome_enum: 'played' | 'mutual_cancel' | 'opponent_no_show';
       match_participant_status_enum:
         | 'pending'
         | 'requested'
@@ -3497,6 +3654,14 @@ export type Database = {
         | 'waitlisted'
         | 'refused'
         | 'cancelled';
+      match_report_priority_enum: 'high' | 'medium' | 'low';
+      match_report_reason_enum:
+        | 'harassment'
+        | 'unsportsmanlike'
+        | 'safety'
+        | 'misrepresented_level'
+        | 'inappropriate';
+      match_report_status_enum: 'pending' | 'reviewed' | 'dismissed' | 'action_taken';
       match_type_enum: 'casual' | 'competitive' | 'both';
       match_visibility_enum: 'public' | 'private';
       member_role: 'owner' | 'admin' | 'manager' | 'staff' | 'member';
@@ -3533,7 +3698,8 @@ export type Database = {
         | 'player_left'
         | 'new_message'
         | 'friend_request'
-        | 'rating_verified';
+        | 'rating_verified'
+        | 'feedback_request';
       organization_nature_enum: 'public' | 'private';
       organization_type: 'club' | 'facility' | 'league' | 'academy' | 'association';
       organization_type_enum: 'club' | 'municipality' | 'city' | 'association';
@@ -3583,7 +3749,8 @@ export type Database = {
         | 'warning_issued'
         | 'suspension_lifted'
         | 'peer_rating_given'
-        | 'first_match_bonus';
+        | 'first_match_bonus'
+        | 'feedback_submitted';
       reputation_tier: 'unknown' | 'bronze' | 'silver' | 'gold' | 'platinum';
       role_enum: 'admin' | 'staff' | 'player' | 'coach' | 'owner';
       share_channel_enum: 'sms' | 'email' | 'whatsapp' | 'share_sheet' | 'copy_link';
@@ -3778,6 +3945,7 @@ export const Constants = {
       match_duration_enum: ['30', '60', '90', '120', 'custom'],
       match_format_enum: ['singles', 'doubles'],
       match_join_mode_enum: ['direct', 'request'],
+      match_outcome_enum: ['played', 'mutual_cancel', 'opponent_no_show'],
       match_participant_status_enum: [
         'pending',
         'requested',
@@ -3789,6 +3957,15 @@ export const Constants = {
         'refused',
         'cancelled',
       ],
+      match_report_priority_enum: ['high', 'medium', 'low'],
+      match_report_reason_enum: [
+        'harassment',
+        'unsportsmanlike',
+        'safety',
+        'misrepresented_level',
+        'inappropriate',
+      ],
+      match_report_status_enum: ['pending', 'reviewed', 'dismissed', 'action_taken'],
       match_type_enum: ['casual', 'competitive', 'both'],
       match_visibility_enum: ['public', 'private'],
       member_role: ['owner', 'admin', 'manager', 'staff', 'member'],
@@ -3827,6 +4004,7 @@ export const Constants = {
         'new_message',
         'friend_request',
         'rating_verified',
+        'feedback_request',
       ],
       organization_nature_enum: ['public', 'private'],
       organization_type: ['club', 'facility', 'league', 'academy', 'association'],
@@ -3880,6 +4058,7 @@ export const Constants = {
         'suspension_lifted',
         'peer_rating_given',
         'first_match_bonus',
+        'feedback_submitted',
       ],
       reputation_tier: ['unknown', 'bronze', 'silver', 'gold', 'platinum'],
       role_enum: ['admin', 'staff', 'player', 'coach', 'owner'],
