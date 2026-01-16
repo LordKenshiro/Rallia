@@ -34,6 +34,7 @@ import type { MatchWithDetails } from '@rallia/shared-types';
 import {
   formatTimeInTimezone,
   getTimeDifferenceFromNow,
+  getMatchEndTimeDifferenceFromNow,
   formatIntuitiveDateInTimezone,
   getProfilePictureUrl,
   deriveMatchStatus,
@@ -291,54 +292,55 @@ function getParticipantInfo(match: MatchWithDetails): {
   return { current, total, spotsLeft };
 }
 
+function getFeedbackWindowStatus(
+  matchDate: string,
+  startTime: string,
+  endTime: string,
+  timezone: string
+): { isWithinFeedbackWindow: boolean; isPastFeedbackWindow: boolean } {
+  // Use the existing timezone-aware utility to get time difference from end time
+  // This properly handles timezone conversion and midnight-spanning matches
+  const endTimeDiffMs = getMatchEndTimeDifferenceFromNow(matchDate, startTime, endTime, timezone);
+
+  // If endTimeDiffMs > 0, match hasn't ended yet
+  if (endTimeDiffMs > 0) {
+    return { isWithinFeedbackWindow: false, isPastFeedbackWindow: false };
+  }
+
+  // Match has ended - endTimeDiffMs is negative (time since end)
+  const timeSinceEndMs = Math.abs(endTimeDiffMs);
+  const fortyEightHoursMs = 48 * 60 * 60 * 1000;
+
+  const isWithinFeedbackWindow = timeSinceEndMs < fortyEightHoursMs;
+  const isPastFeedbackWindow = timeSinceEndMs >= fortyEightHoursMs;
+
+  return { isWithinFeedbackWindow, isPastFeedbackWindow };
+}
+
 /**
- * Get status info for badges
- * Uses derived status instead of denormalized status field
+ * Check if we're within the check-in window (10 minutes before start until end)
+ * Uses timezone-aware date utilities to properly handle timezones.
  */
-function getStatusInfo(
-  derivedStatus: DerivedMatchStatus,
-  participantInfo: { current: number; total: number },
-  colors: ThemeColors,
-  t: (key: string) => string
-): { label: string; bgColor: string; textColor: string; glowColor: string } {
-  if (derivedStatus === 'completed') {
-    return {
-      label: t('match.status.completed'),
-      bgColor: colors.statusCompleted,
-      textColor: base.white,
-      glowColor: colors.statusCompleted,
-    };
-  }
-  if (derivedStatus === 'cancelled') {
-    return {
-      label: t('match.status.cancelled'),
-      bgColor: neutral[400],
-      textColor: base.white,
-      glowColor: neutral[400],
-    };
-  }
-  if (derivedStatus === 'in_progress') {
-    return {
-      label: t('match.status.inProgress'),
-      bgColor: colors.statusFull, // Orange for in-progress
-      textColor: base.white,
-      glowColor: colors.statusFull,
-    };
-  }
-  if (participantInfo.current >= participantInfo.total) {
-    return {
-      label: t('match.status.full'),
-      bgColor: colors.statusFull,
-      textColor: base.white,
-      glowColor: colors.statusFull,
-    };
-  }
-  return {
-    label: t('match.status.open'),
-    bgColor: colors.statusOpen,
-    textColor: base.white,
-    glowColor: colors.statusOpen,
-  };
+function getCheckInWindowStatus(
+  matchDate: string,
+  startTime: string,
+  endTime: string,
+  timezone: string
+): boolean {
+  // Get time difference from start time
+  const startTimeDiffMs = getTimeDifferenceFromNow(matchDate, startTime, timezone);
+  // Get time difference from end time
+  const endTimeDiffMs = getMatchEndTimeDifferenceFromNow(matchDate, startTime, endTime, timezone);
+
+  // Check-in window: 10 minutes before start until end
+  const tenMinutesMs = 10 * 60 * 1000;
+
+  // startTimeDiffMs > 0 means start is in the future
+  // We want: now >= (start - 10min) AND now < end
+  // Which means: startTimeDiffMs <= 10min AND endTimeDiffMs > 0
+  const isWithinCheckInWindow = startTimeDiffMs <= tenMinutesMs && endTimeDiffMs > 0;
+
+  return isWithinCheckInWindow;
 }
 
 // =============================================================================
@@ -601,14 +603,16 @@ interface CardFooterProps {
  * Footer with CTA button
  *
  * CTA Logic (priority order):
- * 1. Match has ended → "View" (for everyone - no edit/leave allowed)
- * 2. Match has result → "View Results"
- * 3. Owner (match not ended) → "Edit"
- * 4. User has joined (match not ended) → "Leave"
- * 5. User has pending join request ('requested' status) → "Pending" (disabled)
- * 6. Match is full → "Join Waitlist"
- * 7. Join mode is 'request' → "Ask to Join"
- * 8. Default → "Join"
+ * 1. Check-in CTA (when within check-in window, full game, joined participant, hasn't checked in)
+ * 2. Feedback CTA (when match ended, within 48h window, joined participant, hasn't completed feedback)
+ * 3. Match has ended → "View" (for everyone - no edit/leave allowed)
+ * 4. Match has result → "View Results"
+ * 5. Owner (match not ended) → "Edit"
+ * 6. User has joined (match not ended) → "Leave"
+ * 7. User has pending join request ('requested' status) → "Pending" (disabled)
+ * 8. Match is full → "Join Waitlist"
+ * 9. Join mode is 'request' → "Ask to Join"
+ * 10. Default → "Join"
  *
  * Note: Users with 'pending' status (invited by host) see regular CTAs (Join/Ask to Join/Join Waitlist)
  * so they can accept the invitation through the normal join flow.
@@ -624,6 +628,18 @@ const CardFooter: React.FC<CardFooterProps> = ({
 }) => {
   // Check if match is cancelled (use cancelled_at instead of status)
   const isCancelled = !!match.cancelled_at;
+
+  // Derive match status from data (not from status field)
+  const derivedStatus = deriveMatchStatus({
+    cancelled_at: match.cancelled_at,
+    match_date: match.match_date,
+    start_time: match.start_time,
+    end_time: match.end_time,
+    timezone: match.timezone,
+    result: match.result,
+  });
+  const isInProgress = derivedStatus === 'in_progress';
+  const hasMatchEnded = derivedStatus === 'completed';
 
   // Check if match has started (start_time has passed in match's timezone)
   // Once started, players can no longer join, leave, or edit the match
@@ -659,9 +675,51 @@ const CardFooter: React.FC<CardFooterProps> = ({
   // Join mode
   const isRequestMode = match.join_mode === 'request';
 
+  // Feedback window status (48h after end time)
+  const { isWithinFeedbackWindow } = getFeedbackWindowStatus(
+    match.match_date,
+    match.start_time,
+    match.end_time,
+    match.timezone
+  );
+
+  // Check if current player is a joined participant who hasn't completed feedback yet
+  const currentPlayerParticipant = currentPlayerId
+    ? match.participants?.find(
+        p =>
+          (p.player_id === currentPlayerId || p.player?.id === currentPlayerId) &&
+          p.status === 'joined'
+      )
+    : undefined;
+  const playerHasCompletedFeedback = currentPlayerParticipant?.feedback_completed ?? false;
+  const playerNeedsFeedback =
+    hasMatchEnded &&
+    isWithinFeedbackWindow &&
+    currentPlayerParticipant &&
+    !playerHasCompletedFeedback;
+
+  // Check-in window status (10 min before start until end, only for full games)
+  const isWithinCheckInWindow = getCheckInWindowStatus(
+    match.match_date,
+    match.start_time,
+    match.end_time,
+    match.timezone
+  );
+  const playerHasCheckedIn = !!currentPlayerParticipant?.checked_in_at;
+  // Check-in is only available for matches with a confirmed location (facility or custom)
+  // TBD matches don't have a location to check in at
+  const locationAllowsCheckIn =
+    match.location_type === 'facility' || match.location_type === 'custom';
+  const playerNeedsCheckIn =
+    isFull &&
+    isWithinCheckInWindow &&
+    currentPlayerParticipant &&
+    !playerHasCheckedIn &&
+    locationAllowsCheckIn;
+
   // Determine button label, style, and icon based on state
   // CTA Color Matrix:
-  // - Join/Ask to Join/Join Waitlist → success green
+  // - Check-in/Feedback/Join/Ask to Join/Join Waitlist → success green
   // - Edit → accent
   // - Cancel/Leave/Cancelled → error red
   // - View/View Results → neutral
@@ -673,7 +731,26 @@ const CardFooter: React.FC<CardFooterProps> = ({
   let ctaDisabled = false;
   let ctaIcon: keyof typeof Ionicons.glyphMap | null = 'arrow-forward';
 
-  if (isCancelled) {
+  // Check-in CTA (highest priority when conditions are met)
+  if (playerNeedsCheckIn) {
+    ctaLabel = t('matchDetail.checkIn');
+    ctaBgColor = status.success.DEFAULT;
+    ctaTextColor = base.white;
+    ctaIcon = 'checkmark-circle-outline';
+  } else if (hasJoined && playerHasCheckedIn && !isInProgress && !hasMatchEnded) {
+    // Participant has checked in but game hasn't started yet → Show "Checked-in" (success green, disabled look)
+    ctaLabel = t('matchDetail.checkedIn');
+    ctaBgColor = isDark ? `${status.success.DEFAULT}30` : `${status.success.DEFAULT}20`;
+    ctaTextColor = status.success.DEFAULT;
+    ctaDisabled = true;
+    ctaIcon = 'checkmark-circle';
+  } else if (playerNeedsFeedback) {
+    // Feedback CTA (when match ended and player needs feedback)
+    ctaLabel = t('matchDetail.provideFeedback');
+    ctaBgColor = status.success.DEFAULT;
+    ctaTextColor = base.white;
+    ctaIcon = 'star-outline';
+  } else if (isCancelled) {
     // Match is cancelled → Cancelled (danger red, disabled)
     ctaLabel = t('match.cta.cancelled');
     ctaBgColor = isDark ? `${status.error.DEFAULT}30` : `${status.error.DEFAULT}20`;
@@ -788,10 +865,10 @@ const MatchCard: React.FC<MatchCardProps> = ({
   const mwColors = MOST_WANTED_COLORS[isDark ? 'dark' : 'light'];
 
   // Animated glow effect for most wanted cards - smooth, polished breathing effect
-  const glowAnimation = useRef(new Animated.Value(0)).current;
+  const glowAnimation = useMemo(() => new Animated.Value(0), []);
 
   // Animated pulse effect for urgent matches
-  const urgentPulseAnimation = useRef(new Animated.Value(0)).current;
+  const urgentPulseAnimation = useMemo(() => new Animated.Value(0), []);
 
   useEffect(() => {
     if (isMostWanted) {
@@ -921,7 +998,6 @@ const MatchCard: React.FC<MatchCardProps> = ({
     timezone: match.timezone,
     result: match.result,
   });
-  const statusInfo = getStatusInfo(derivedStatus, participantInfo, colors, t);
   const { label: timeLabel, isUrgent } = getRelativeTimeDisplay(
     match.match_date,
     match.start_time,

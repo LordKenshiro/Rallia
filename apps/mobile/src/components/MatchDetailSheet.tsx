@@ -259,7 +259,6 @@ function getParticipantInfo(match: MatchDetailData): {
  * @returns true if leaving will incur a reputation penalty
  */
 function willLeaveAffectReputation(match: MatchDetailData): boolean {
-  const tz = match.timezone || 'UTC';
   const participantInfo = getParticipantInfo(match);
 
   // Condition 1: Match must be full
@@ -611,7 +610,6 @@ export const MatchDetailSheet: React.FC = () => {
     isCancellingInvite,
     isResendingInvite,
     isCheckingIn,
-    joinResult,
   } = useMatchActions(selectedMatch?.id, {
     onJoinSuccess: result => {
       successHaptic();
@@ -1222,7 +1220,7 @@ export const MatchDetailSheet: React.FC = () => {
   });
 
   // Feedback window status (48h after end time)
-  const { isWithinFeedbackWindow, isPastFeedbackWindow } = getFeedbackWindowStatus(
+  const { isWithinFeedbackWindow } = getFeedbackWindowStatus(
     match.match_date,
     match.start_time,
     match.end_time,
@@ -1603,7 +1601,24 @@ export const MatchDetailSheet: React.FC = () => {
       );
     }
 
-    // Host: Edit + Cancel buttons (only if match hasn't ended)
+    // Creator has checked in but game hasn't started yet → Show "You are checked-in"
+    if (isCreator && playerHasCheckedIn && !isInProgress && !hasMatchEnded) {
+      return (
+        <View style={styles.matchEndedContainer}>
+          <Ionicons name="checkmark-circle" size={20} color={status.success.DEFAULT} />
+          <Text
+            size="sm"
+            weight="medium"
+            color={status.success.DEFAULT}
+            style={styles.matchEndedText}
+          >
+            {t('matchDetail.checkedIn' as TranslationKey)}
+          </Text>
+        </View>
+      );
+    }
+
+    // Host: Edit + Cancel buttons (only if match hasn't ended and creator hasn't checked in)
     if (isCreator) {
       return (
         <>
@@ -2025,7 +2040,7 @@ export const MatchDetailSheet: React.FC = () => {
             </Text>
           </View>
           <View style={styles.participantsRow}>
-            {participantAvatars.map((p, index) => (
+            {participantAvatars.map((p, _index) => (
               <View key={p.key} style={styles.participantWithLabel}>
                 <View style={styles.participantAvatarWithAction}>
                   <ParticipantAvatar
