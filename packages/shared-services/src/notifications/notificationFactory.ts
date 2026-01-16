@@ -239,11 +239,11 @@ function getTranslatedBody(
     ? {
         ...normalizedPayload,
         matchDate: formatDateForNotification(
-          normalizedPayload.matchDate as string | undefined,
+          (normalizedPayload as Record<string, unknown>).matchDate as string | undefined,
           locale
         ),
         startTime: formatStartTimeWithPrefix(
-          normalizedPayload.startTime as string | undefined,
+          (normalizedPayload as Record<string, unknown>).startTime as string | undefined,
           locale
         ),
       }
