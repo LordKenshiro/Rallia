@@ -813,12 +813,16 @@ export async function updateMatch(
       .eq('status', 'joined');
 
     if (participantsData && participantsData.length > 0) {
-      const participantIds = participantsData.map(p => p.player_id);
+      // Exclude the creator from notifications since they triggered the update
+      const creatorId = (data as Match).created_by;
+      const participantIds = participantsData.map(p => p.player_id).filter(id => id !== creatorId);
 
-      // Send notifications (fire and forget - don't block on notification)
-      notifyMatchUpdated(participantIds, matchId, updatedFields).catch(err => {
-        console.error('Failed to send match updated notifications:', err);
-      });
+      if (participantIds.length > 0) {
+        // Send notifications (fire and forget - don't block on notification)
+        notifyMatchUpdated(participantIds, matchId, updatedFields).catch(err => {
+          console.error('Failed to send match updated notifications:', err);
+        });
+      }
     }
   }
 
@@ -926,17 +930,29 @@ export async function cancelMatch(matchId: string, userId?: string): Promise<Mat
     const participantIds = participantsData.map(p => p.player_id).filter(id => id !== userId); // Exclude the host
 
     if (participantIds.length > 0) {
-      // Get sport name for better notification
+      // Get sport name and location for better notification
       const { data: matchDetails } = await supabase
         .from('match')
-        .select('sport:sport_id (name)')
+        .select('sport:sport_id (name), location_name')
         .eq('id', matchId)
         .single();
 
       const sportName = (matchDetails?.sport as { name?: string } | null)?.name ?? 'Match';
+      const locationName =
+        (matchDetails as { location_name?: string | null })?.location_name ?? undefined;
+
+      // Extract time in HH:MM format for notification
+      const startTime = match.start_time ? match.start_time.slice(0, 5) : undefined;
 
       // Send notifications (fire and forget)
-      notifyMatchCancelled(participantIds, matchId, match.match_date, sportName).catch(err => {
+      notifyMatchCancelled(
+        participantIds,
+        matchId,
+        match.match_date,
+        sportName,
+        startTime,
+        locationName
+      ).catch(err => {
         console.error('Failed to send match cancelled notifications:', err);
       });
     }
@@ -1158,19 +1174,17 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
   // Send notifications to host and participants when a player directly joins (open access)
   if (participantStatus === 'joined') {
     // Get all joined participants (excluding the new player)
+    // Note: The creator is now a participant, so they'll be included in this list if they're joined
     const otherParticipants =
       match.participants?.filter(
         (p: { player_id: string; status: string }) =>
           p.status === 'joined' && p.player_id !== playerId
       ) ?? [];
 
-    // Collect all user IDs to notify: host + other participants
-    const userIdsToNotify = [
-      match.created_by, // Always notify the host
-      ...otherParticipants.map((p: { player_id: string }) => p.player_id),
-    ];
+    // Collect all user IDs to notify (creator is already included if they're a participant)
+    const userIdsToNotify = otherParticipants.map((p: { player_id: string }) => p.player_id);
 
-    // Remove duplicates (in case host is somehow in participants)
+    // Remove duplicates
     const uniqueUserIds = [...new Set(userIdsToNotify)];
 
     if (uniqueUserIds.length > 0) {
@@ -1370,17 +1384,15 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
   const sportName = (match.sport as { name?: string } | null)?.name;
 
   // Get all remaining joined participants (excluding the player who left)
+  // Note: The creator is now a participant, so they'll be included in this list if they're joined
   const remainingParticipants =
     match.participants?.filter(
       (p: { player_id: string; status: string }) =>
         p.status === 'joined' && p.player_id !== playerId
     ) ?? [];
 
-  // Recipients include the host and remaining joined participants
-  const userIdsToNotify = [
-    match.created_by,
-    ...remainingParticipants.map((p: { player_id: string }) => p.player_id),
-  ];
+  // Recipients are the remaining joined participants (creator is already included if they're a participant)
+  const userIdsToNotify = remainingParticipants.map((p: { player_id: string }) => p.player_id);
 
   // Remove duplicates
   const uniqueUserIds = [...new Set(userIdsToNotify)];
@@ -1520,10 +1532,14 @@ export async function acceptJoinRequest(
   }
 
   // Notify the player that their request was accepted (fire and forget)
+  // Extract time in HH:MM format for notification
+  const startTime = match.start_time ? match.start_time.slice(0, 5) : undefined;
+
   notifyJoinRequestAccepted(
     participant.player_id,
     matchId,
     match.match_date,
+    startTime,
     undefined // sportName - would need additional query to get
   ).catch(err => {
     console.error('Failed to send join accepted notification:', err);
@@ -1782,7 +1798,16 @@ export async function kickParticipant(
   ) as { player_id: string } | undefined;
 
   if (participantRecord?.player_id) {
-    notifyPlayerKicked(participantRecord.player_id, matchId).catch(err => {
+    // Extract time in HH:MM format for notification
+    const startTime = match.start_time ? match.start_time.slice(0, 5) : undefined;
+
+    notifyPlayerKicked(
+      participantRecord.player_id,
+      matchId,
+      undefined, // sportName - would need additional query
+      match.match_date,
+      startTime
+    ).catch(err => {
       console.error('Failed to send kicked notification:', err);
     });
   }
@@ -2028,12 +2053,16 @@ export async function resendInvitation(
   ) as { player_id: string } | undefined;
 
   if (participantRecord?.player_id) {
+    // Extract time in HH:MM format for notification
+    const startTime = match.start_time ? match.start_time.slice(0, 5) : undefined;
+
     notifyMatchInvitation(
       participantRecord.player_id,
       matchId,
       inviterName,
       sportName,
-      match.match_date
+      match.match_date,
+      startTime
     ).catch(err => {
       console.error('Failed to send invitation notification:', err);
     });
@@ -3112,13 +3141,17 @@ export async function invitePlayersToMatch(
   }
 
   // Send notifications to all invited players (fire and forget)
+  // Extract time in HH:MM format for notification
+  const startTime = match.start_time ? match.start_time.slice(0, 5) : undefined;
+
   for (const participant of invited) {
     notifyMatchInvitation(
       participant.player_id,
       matchId,
       inviterName,
       sportName,
-      match.match_date
+      match.match_date,
+      startTime
     ).catch(err => {
       console.error('[invitePlayersToMatch] Notification error:', err);
     });

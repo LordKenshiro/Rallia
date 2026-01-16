@@ -575,6 +575,7 @@ export const MatchDetailSheet: React.FC = () => {
   const [kickingParticipantId, setKickingParticipantId] = useState<string | null>(null);
   const [showCancelInviteModal, setShowCancelInviteModal] = useState(false);
   const [cancellingInvitationId, setCancellingInvitationId] = useState<string | null>(null);
+  const [resendingInvitationId, setResendingInvitationId] = useState<string | null>(null);
 
   // Collapse/expand state for pending requests
   const [showAllRequests, setShowAllRequests] = useState(false);
@@ -775,6 +776,7 @@ export const MatchDetailSheet: React.FC = () => {
     },
     onResendInviteSuccess: participant => {
       successHaptic();
+      setResendingInvitationId(null);
       if (selectedMatch) {
         updateSelectedMatch({
           ...selectedMatch,
@@ -790,6 +792,7 @@ export const MatchDetailSheet: React.FC = () => {
     },
     onResendInviteError: error => {
       errorHaptic();
+      setResendingInvitationId(null);
       Alert.alert(t('alerts.error' as TranslationKey), error.message);
     },
     onCheckInSuccess: () => {
@@ -1077,6 +1080,7 @@ export const MatchDetailSheet: React.FC = () => {
     (participantId: string) => {
       if (!selectedMatch || !playerId) return;
       lightHaptic();
+      setResendingInvitationId(participantId);
       resendInvite({ participantId, hostId: playerId });
     },
     [selectedMatch, playerId, resendInvite]
@@ -1207,6 +1211,14 @@ export const MatchDetailSheet: React.FC = () => {
   const isInProgress = derivedStatus === 'in_progress';
   const hasMatchEnded = derivedStatus === 'completed';
   const hasResult = !!match.result;
+
+  // Check if start time has passed
+  const startTimeDiffMs = getTimeDifferenceFromNow(
+    match.match_date,
+    match.start_time,
+    match.timezone
+  );
+  const hasStartTimePassed = startTimeDiffMs < 0;
 
   // Check if we're within 24h of match start (to prevent kicking players)
   const cannotKickWithin24h = isWithin24HoursOfStart(match);
@@ -2122,7 +2134,7 @@ export const MatchDetailSheet: React.FC = () => {
             )}
 
           {/* Pending Requests Section - only visible to host */}
-          {isCreator && pendingRequests.length > 0 && (
+          {isCreator && pendingRequests.length > 0 && !isCancelled && !hasStartTimePassed && (
             <View style={styles.pendingRequestsSection}>
               <View style={styles.pendingRequestsHeader}>
                 <Text
@@ -2299,7 +2311,7 @@ export const MatchDetailSheet: React.FC = () => {
           )}
 
           {/* Invitations Section - only visible to host */}
-          {isCreator && allInvitations.length > 0 && (
+          {isCreator && allInvitations.length > 0 && !isCancelled && !hasStartTimePassed && (
             <View style={styles.pendingRequestsSection}>
               <View style={styles.pendingRequestsHeader}>
                 <Text
@@ -2384,13 +2396,19 @@ export const MatchDetailSheet: React.FC = () => {
                                 styles.requestActionButton,
                                 {
                                   backgroundColor:
-                                    isResendingInvite || isCancellingInvite || isInProgress
+                                    resendingInvitationId === invitation.id ||
+                                    isCancellingInvite ||
+                                    isInProgress
                                       ? neutral[400]
                                       : colors.primary,
                                 },
                               ]}
                               onPress={() => invitation.id && handleResendInvite(invitation.id)}
-                              disabled={isResendingInvite || isCancellingInvite || isInProgress}
+                              disabled={
+                                resendingInvitationId === invitation.id ||
+                                isCancellingInvite ||
+                                isInProgress
+                              }
                               activeOpacity={0.7}
                             >
                               <Ionicons name="refresh" size={18} color={BASE_WHITE} />
@@ -2402,7 +2420,9 @@ export const MatchDetailSheet: React.FC = () => {
                                 { backgroundColor: status.error.DEFAULT },
                               ]}
                               onPress={() => invitation.id && handleCancelInvite(invitation.id)}
-                              disabled={isResendingInvite || isCancellingInvite}
+                              disabled={
+                                resendingInvitationId === invitation.id || isCancellingInvite
+                              }
                               activeOpacity={0.7}
                             >
                               <Ionicons name="close" size={18} color={BASE_WHITE} />
@@ -2415,13 +2435,19 @@ export const MatchDetailSheet: React.FC = () => {
                               styles.requestActionButton,
                               {
                                 backgroundColor:
-                                  isResendingInvite || isCancellingInvite || isInProgress
+                                  resendingInvitationId === invitation.id ||
+                                  isCancellingInvite ||
+                                  isInProgress
                                     ? neutral[400]
                                     : colors.primary,
                               },
                             ]}
                             onPress={() => invitation.id && handleResendInvite(invitation.id)}
-                            disabled={isResendingInvite || isCancellingInvite || isInProgress}
+                            disabled={
+                              resendingInvitationId === invitation.id ||
+                              isCancellingInvite ||
+                              isInProgress
+                            }
                             activeOpacity={0.7}
                           >
                             <Ionicons name="refresh" size={18} color={BASE_WHITE} />

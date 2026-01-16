@@ -771,8 +771,11 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     };
 
     if (isEditMode && editMatch) {
-      // Check if there are joined participants
-      const joinedParticipants = editMatch.participants?.filter(p => p.status === 'joined') ?? [];
+      // Check if there are joined participants (excluding the creator since they have their own match_participant record)
+      const joinedParticipants =
+        editMatch.participants?.filter(
+          p => p.status === 'joined' && p.player_id !== editMatch.created_by
+        ) ?? [];
       const hasParticipants = joinedParticipants.length > 0;
 
       if (hasParticipants) {
