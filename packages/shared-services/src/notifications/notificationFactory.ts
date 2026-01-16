@@ -23,12 +23,20 @@ export interface MatchNotificationPayload {
   sportName?: string;
   locationName?: string;
   playerName?: string;
+  hostName?: string;
+  spotsLeft?: number | string;
+  totalSpots?: number;
+  timeUntil?: string;
+  updatedFields?: string[];
 }
 
 export interface PlayerNotificationPayload {
   playerId: string;
   playerName: string;
   profilePictureUrl?: string;
+  sportName?: string;
+  matchId?: string;
+  matchDate?: string;
 }
 
 export interface MessageNotificationPayload {
@@ -43,6 +51,13 @@ export interface RatingNotificationPayload {
   ratingValue: string;
 }
 
+export interface FeedbackNotificationPayload {
+  matchId: string;
+  sportName?: string;
+  playerName?: string;
+  matchDate?: string;
+}
+
 /**
  * Union type for all notification payloads
  */
@@ -51,7 +66,54 @@ export type NotificationPayload =
   | PlayerNotificationPayload
   | MessageNotificationPayload
   | RatingNotificationPayload
+  | FeedbackNotificationPayload
   | Record<string, unknown>;
+
+/**
+ * Format a human-readable time until a future date
+ * Examples: "in 15 minutes", "in 2 hours", "tomorrow at 3:00 PM"
+ */
+export function formatTimeUntil(targetDate: Date, locale: string = 'en-US'): string {
+  const now = new Date();
+  const diffMs = targetDate.getTime() - now.getTime();
+
+  if (diffMs < 0) {
+    return 'now';
+  }
+
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMinutes < 60) {
+    return locale.startsWith('fr')
+      ? `dans ${diffMinutes} minute${diffMinutes > 1 ? 's' : ''}`
+      : `in ${diffMinutes} minute${diffMinutes > 1 ? 's' : ''}`;
+  }
+
+  if (diffHours < 24) {
+    return locale.startsWith('fr')
+      ? `dans ${diffHours} heure${diffHours > 1 ? 's' : ''}`
+      : `in ${diffHours} hour${diffHours > 1 ? 's' : ''}`;
+  }
+
+  if (diffDays === 1) {
+    const timeStr = targetDate.toLocaleTimeString(locale, {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+    return locale.startsWith('fr') ? `demain à ${timeStr}` : `tomorrow at ${timeStr}`;
+  }
+
+  // More than 1 day away
+  return targetDate.toLocaleDateString(locale, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
 
 // Cache for user locales to avoid repeated DB calls
 const userLocaleCache = new Map<string, { locale: Locale; timestamp: number }>();
@@ -146,16 +208,19 @@ function getTranslatedTitle(
   locale: Locale,
   payload?: NotificationPayload
 ): string {
+  // Normalize payload to ensure sport names are lowercase
+  const normalizedPayload = normalizePayload(payload);
   const t = createTranslator(locale);
   const translationKey = `notifications.messages.${type}.title`;
-  const translated = t(translationKey, payload as Record<string, string | number>);
+  const translated = t(translationKey, normalizedPayload as Record<string, string | number>);
 
   // If translation key was returned (not found), fall back to hardcoded templates
   if (translated === translationKey) {
-    return TITLE_TEMPLATES[type] ?? 'Notification';
+    return interpolateTemplate(TITLE_TEMPLATES[type] ?? 'Notification', normalizedPayload);
   }
 
-  return translated;
+  // Ensure all variables are interpolated (safety check in case translation system missed some)
+  return interpolateTemplate(translated, normalizedPayload);
 }
 
 /**
@@ -166,16 +231,38 @@ function getTranslatedBody(
   locale: Locale,
   payload?: NotificationPayload
 ): string {
+  // Normalize payload to ensure sport names are lowercase
+  const normalizedPayload = normalizePayload(payload);
+
+  // Format date and startTime with locale-aware formatting
+  const payloadWithFormattedValues = normalizedPayload
+    ? {
+        ...normalizedPayload,
+        matchDate: formatDateForNotification(
+          normalizedPayload.matchDate as string | undefined,
+          locale
+        ),
+        startTime: formatStartTimeWithPrefix(
+          normalizedPayload.startTime as string | undefined,
+          locale
+        ),
+      }
+    : normalizedPayload;
+
   const t = createTranslator(locale);
   const translationKey = `notifications.messages.${type}.body`;
-  const translated = t(translationKey, payload as Record<string, string | number>);
+  const translated = t(
+    translationKey,
+    payloadWithFormattedValues as Record<string, string | number>
+  );
 
   // If translation key was returned (not found), fall back to hardcoded templates
   if (translated === translationKey) {
-    return interpolateTemplate(BODY_TEMPLATES[type] ?? '', payload);
+    return interpolateTemplate(BODY_TEMPLATES[type] ?? '', payloadWithFormattedValues);
   }
 
-  return translated;
+  // Ensure all variables are interpolated (safety check in case translation system missed some)
+  return interpolateTemplate(translated, payloadWithFormattedValues);
 }
 
 /**
@@ -240,66 +327,190 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
 /**
  * Title templates for notification types
  * Use {variable} for interpolation
+ * These are fallbacks when translations are not available
  */
 const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
-  match_invitation: 'Match Invitation',
-  match_join_request: 'New Join Request',
-  match_join_accepted: 'Join Request Accepted',
-  match_join_rejected: 'Join Request Declined',
-  match_player_joined: '{playerName} Joined',
-  match_cancelled: 'Match Cancelled',
+  match_invitation: 'Game On!',
+  match_join_request: 'New Player Request',
+  match_join_accepted: "You're In!",
+  match_join_rejected: 'Request Declined',
+  match_player_joined: 'Player Joined!',
+  match_cancelled: 'Game Cancelled',
   match_updated: 'Game Updated',
-  match_starting_soon: 'Match Starting Soon',
-  match_completed: 'Match Completed',
-  player_kicked: 'Removed from Match',
-  player_left: '{playerName} Left',
-  new_message: 'New Message',
+  match_starting_soon: 'Get Ready!',
+  match_completed: 'Great Game!',
+  player_kicked: 'Removed from Game',
+  player_left: 'Player Left',
+  new_message: 'Message from {senderName}',
   chat: 'New Message',
-  friend_request: 'Friend Request',
-  rating_verified: 'Rating Verified',
-  reminder: 'Reminder',
+  friend_request: 'New Connection Request',
+  rating_verified: 'Rating Verified!',
+  reminder: 'Upcoming Game',
   payment: 'Payment Update',
-  support: 'Support Message',
-  system: 'System Notification',
-  feedback_request: 'Rate Your Match',
+  support: 'Message from Rallia',
+  system: 'Rallia Update',
+  feedback_request: 'How Was Your Game?',
 };
 
 /**
  * Body templates for notification types
  * Use {variable} for interpolation from payload
+ * These are fallbacks when translations are not available
  */
 const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
-  match_invitation: '{playerName} invited you to a {sportName} match',
-  match_join_request: '{playerName} wants to join your match',
-  match_join_accepted: 'Your request to join the match was accepted',
-  match_join_rejected: 'Your request to join the match was declined',
-  match_player_joined: '{playerName} joined your {sportName} match',
-  match_cancelled: 'The {sportName} match on {matchDate} has been cancelled',
-  match_updated: 'Your game on {matchDate} has been updated. Tap to see the changes.',
-  match_starting_soon: 'Your {sportName} match starts in 15 minutes',
-  match_completed: 'Your {sportName} match has been marked as completed',
-  player_kicked: 'You have been removed from a match',
-  player_left: '{playerName} left your {sportName} match',
-  new_message: '{senderName}: {messagePreview}',
-  chat: 'You have a new message',
-  friend_request: '{playerName} wants to connect with you',
-  rating_verified: 'Your {ratingSystemName} rating of {ratingValue} has been verified',
-  reminder: 'You have a reminder',
-  payment: 'Payment status update',
-  support: 'You have a message from support',
-  system: 'System notification',
-  feedback_request: 'How was your {sportName} match? Rate your experience!',
+  match_invitation: '{playerName} wants to play {sportName} with you on {matchDate}{startTime}',
+  match_join_request: '{playerName} wants to join your {sportName} game on {matchDate}',
+  match_join_accepted:
+    'Your {sportName} game on {matchDate} at {locationName} is confirmed. See you there!',
+  match_join_rejected:
+    "Your request to join the {sportName} game wasn't accepted this time. Check out other games nearby!",
+  match_player_joined: '{playerName} joined your {sportName} game. {spotsLeft} spot(s) left!',
+  match_cancelled:
+    'The {sportName} game on {matchDate} at {locationName} has been cancelled. We hope to see you on the court soon!',
+  match_updated: 'Your {sportName} game on {matchDate} has new details. Tap to review the changes.',
+  match_starting_soon:
+    'Your {sportName} game at {locationName} starts {timeUntil}. Time to warm up!',
+  match_completed: 'Your {sportName} game is complete. How did it go? Share your feedback!',
+  player_kicked:
+    "You've been removed from the {sportName} game on {matchDate}. Check out other games nearby!",
+  player_left: '{playerName} left your {sportName} game. {spotsLeft} spot(s) now available.',
+  new_message: '{messagePreview}',
+  chat: 'You have a new message waiting for you',
+  friend_request: '{playerName} wants to add you to their network. Check out their profile!',
+  rating_verified:
+    'Congrats! Your {ratingSystemName} rating of {ratingValue} for {sportName} is now verified.',
+  reminder: "Don't forget your {sportName} game on {matchDate} at {locationName}",
+  payment: 'Your payment status has been updated. Tap to view details.',
+  support: 'Our support team has sent you a message. Tap to read.',
+  system: 'We have an update for you. Tap to learn more.',
+  feedback_request:
+    'Rate your {sportName} game with {playerName}. Your feedback helps the community!',
 };
 
 /**
+ * Normalize sport name to lowercase for consistent display
+ */
+function normalizeSportName(sportName?: string): string | undefined {
+  if (!sportName) return undefined;
+  return sportName.toLowerCase().trim();
+}
+
+/**
+ * Get ordinal suffix for English dates (1st, 2nd, 3rd, 4th, etc.)
+ */
+function getOrdinalSuffix(day: number): string {
+  if (day > 3 && day < 21) return 'th';
+  switch (day % 10) {
+    case 1:
+      return 'st';
+    case 2:
+      return 'nd';
+    case 3:
+      return 'rd';
+    default:
+      return 'th';
+  }
+}
+
+/**
+ * Format date in locale-aware format
+ * English: "January 5th 2025"
+ * French: "5 Janvier 2025"
+ */
+function formatDateForNotification(dateStr: string | undefined, locale: Locale): string {
+  if (!dateStr) return '';
+
+  try {
+    // Parse date string (handles YYYY-MM-DD format)
+    // Use UTC to avoid timezone shifts when parsing date-only strings
+    let date: Date;
+    if (dateStr.includes('T')) {
+      date = new Date(dateStr);
+    } else {
+      // For YYYY-MM-DD format, parse components directly to avoid timezone issues
+      const [year, month, day] = dateStr.split('-').map(Number);
+      date = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+    }
+
+    if (isNaN(date.getTime())) {
+      // If parsing fails, return original string
+      return dateStr;
+    }
+
+    if (locale.startsWith('fr')) {
+      // French format: "5 Janvier 2025"
+      const formatter = new Intl.DateTimeFormat('fr-CA', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        timeZone: 'UTC', // Use UTC to avoid timezone shifts
+      });
+      return formatter.format(date);
+    } else {
+      // English format: "January 5th 2025"
+      // Use UTC date components to avoid timezone shifts
+      const utcYear = date.getUTCFullYear();
+      const utcMonth = date.getUTCMonth();
+      const utcDay = date.getUTCDate();
+
+      const month = new Date(Date.UTC(utcYear, utcMonth, 1)).toLocaleDateString('en-US', {
+        month: 'long',
+        timeZone: 'UTC',
+      });
+      const ordinal = getOrdinalSuffix(utcDay);
+      return `${month} ${utcDay}${ordinal} ${utcYear}`;
+    }
+  } catch (error) {
+    // If formatting fails, return original string
+    return dateStr;
+  }
+}
+
+/**
+ * Format startTime with locale-aware prefix for translation
+ */
+function formatStartTimeWithPrefix(startTime: string | undefined, locale: Locale): string {
+  if (!startTime) return '';
+  // Extract just the time part (HH:MM) if it includes date
+  const timeOnly = startTime.includes('T')
+    ? startTime.split('T')[1]?.slice(0, 5) || startTime.slice(0, 5)
+    : startTime.slice(0, 5);
+
+  // Format with locale-appropriate prefix
+  // English: " at 14:30", French: " à 14:30"
+  if (locale.startsWith('fr')) {
+    return ` à ${timeOnly}`;
+  }
+  return ` at ${timeOnly}`;
+}
+
+/**
+ * Normalize payload to ensure sport names are lowercase
+ */
+function normalizePayload(payload?: NotificationPayload): NotificationPayload | undefined {
+  if (!payload) return payload;
+  const normalized = { ...payload } as Record<string, unknown>;
+  if (normalized.sportName) {
+    normalized.sportName = normalizeSportName(normalized.sportName as string);
+  }
+  return normalized as NotificationPayload;
+}
+
+/**
  * Interpolate template variables with payload values
+ * Handles optional variables by replacing with empty string if undefined
  */
 function interpolateTemplate(template: string, payload?: NotificationPayload): string {
   if (!payload) return template;
 
   return template.replace(/\{(\w+)\}/g, (match, key) => {
     const value = (payload as Record<string, unknown>)[key];
-    return value !== undefined ? String(value) : match;
+    if (value !== undefined && value !== null && value !== '') {
+      return String(value);
+    }
+    // For optional variables like startTime, return empty string instead of placeholder
+    // This allows translations to conditionally include parts like "at {startTime}"
+    return '';
   });
 }
 
@@ -310,12 +521,15 @@ function interpolateTemplate(template: string, payload?: NotificationPayload): s
 export async function createNotification(input: CreateNotificationInput): Promise<Notification> {
   const { type, userId, targetId, title, body, payload, priority, scheduledAt, expiresAt } = input;
 
+  // Normalize payload to ensure sport names are lowercase
+  const normalizedPayload = normalizePayload(payload);
+
   // Fetch user's preferred locale for translations
   const userLocale = await getUserLocale(userId);
 
   // Generate title and body from translations if not provided
-  const finalTitle = title ?? getTranslatedTitle(type, userLocale, payload);
-  const finalBody = body ?? getTranslatedBody(type, userLocale, payload);
+  const finalTitle = title ?? getTranslatedTitle(type, userLocale, normalizedPayload);
+  const finalBody = body ?? getTranslatedBody(type, userLocale, normalizedPayload);
   const finalPriority = priority ?? DEFAULT_PRIORITIES[type] ?? 'normal';
 
   // Use RPC function to bypass RLS (SECURITY DEFINER)
@@ -325,7 +539,7 @@ export async function createNotification(input: CreateNotificationInput): Promis
     p_target_id: targetId ?? null,
     p_title: finalTitle,
     p_body: finalBody ?? null,
-    p_payload: payload ?? {},
+    p_payload: normalizedPayload ?? {},
     p_priority: finalPriority,
     p_scheduled_at: scheduledAt?.toISOString() ?? null,
     p_expires_at: expiresAt?.toISOString() ?? null,
@@ -354,9 +568,12 @@ export async function createNotifications(
     const { type, userId, targetId, title, body, payload, priority, scheduledAt, expiresAt } =
       input;
 
+    // Normalize payload to ensure sport names are lowercase
+    const normalizedPayload = normalizePayload(payload);
+
     const userLocale = userLocales.get(userId) ?? defaultLocale;
-    const finalTitle = title ?? getTranslatedTitle(type, userLocale, payload);
-    const finalBody = body ?? getTranslatedBody(type, userLocale, payload);
+    const finalTitle = title ?? getTranslatedTitle(type, userLocale, normalizedPayload);
+    const finalBody = body ?? getTranslatedBody(type, userLocale, normalizedPayload);
     const finalPriority = priority ?? DEFAULT_PRIORITIES[type] ?? 'normal';
 
     return {
@@ -365,7 +582,7 @@ export async function createNotifications(
       target_id: targetId ?? null,
       title: finalTitle,
       body: finalBody,
-      payload: payload ?? {},
+      payload: normalizedPayload ?? {},
       priority: finalPriority,
       scheduled_at: scheduledAt?.toISOString() ?? null,
       expires_at: expiresAt?.toISOString() ?? null,
@@ -395,13 +612,15 @@ export async function createNotifications(
 export async function notifyMatchJoinRequest(
   hostUserId: string,
   matchId: string,
-  playerName: string
+  playerName: string,
+  sportName?: string,
+  matchDate?: string
 ): Promise<Notification> {
   return createNotification({
     type: 'match_join_request',
     userId: hostUserId,
     targetId: matchId,
-    payload: { matchId, playerName },
+    payload: { matchId, playerName, sportName, matchDate },
   });
 }
 
@@ -412,13 +631,16 @@ export async function notifyJoinRequestAccepted(
   playerUserId: string,
   matchId: string,
   matchDate?: string,
-  sportName?: string
+  startTime?: string,
+  sportName?: string,
+  locationName?: string,
+  hostName?: string
 ): Promise<Notification> {
   return createNotification({
     type: 'match_join_accepted',
     userId: playerUserId,
     targetId: matchId,
-    payload: { matchId, matchDate, sportName },
+    payload: { matchId, matchDate, startTime, sportName, locationName, hostName },
   });
 }
 
@@ -427,13 +649,15 @@ export async function notifyJoinRequestAccepted(
  */
 export async function notifyJoinRequestRejected(
   playerUserId: string,
-  matchId: string
+  matchId: string,
+  sportName?: string,
+  matchDate?: string
 ): Promise<Notification> {
   return createNotification({
     type: 'match_join_rejected',
     userId: playerUserId,
     targetId: matchId,
-    payload: { matchId },
+    payload: { matchId, sportName, matchDate },
   });
 }
 
@@ -447,7 +671,8 @@ export async function notifyPlayerJoined(
   playerName: string,
   sportName?: string,
   matchDate?: string,
-  locationName?: string
+  locationName?: string,
+  spotsLeft?: number
 ): Promise<Notification[]> {
   // Title and body will be generated from translations in createNotifications
   // based on each user's preferred locale
@@ -456,7 +681,14 @@ export async function notifyPlayerJoined(
       type: 'match_player_joined' as const,
       userId,
       targetId: matchId,
-      payload: { matchId, playerName, sportName, matchDate, locationName },
+      payload: {
+        matchId,
+        playerName,
+        sportName,
+        matchDate,
+        locationName,
+        spotsLeft: spotsLeft !== undefined ? String(spotsLeft) : undefined,
+      },
     }))
   );
 }
@@ -468,14 +700,16 @@ export async function notifyMatchCancelled(
   participantUserIds: string[],
   matchId: string,
   matchDate: string,
-  sportName: string
+  sportName: string,
+  startTime?: string,
+  locationName?: string
 ): Promise<Notification[]> {
   return createNotifications(
     participantUserIds.map(userId => ({
       type: 'match_cancelled' as const,
       userId,
       targetId: matchId,
-      payload: { matchId, matchDate, sportName },
+      payload: { matchId, matchDate, startTime, sportName, locationName },
     }))
   );
 }
@@ -502,26 +736,11 @@ export async function notifyMatchUpdated(
     .eq('id', matchId)
     .single();
 
-  const sportName = (matchDetails?.sport as { name?: string } | null)?.name ?? 'Game';
+  const rawSportName = (matchDetails?.sport as { name?: string } | null)?.name;
+  const sportName = rawSportName ? normalizeSportName(rawSportName) : undefined;
 
-  // Format match date for display
-  let formattedDate: string | undefined;
-  if (matchDetails?.match_date && matchDetails?.start_time) {
-    try {
-      const matchDateTime = new Date(`${matchDetails.match_date}T${matchDetails.start_time}`);
-      formattedDate = matchDateTime.toLocaleDateString('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-      });
-    } catch {
-      formattedDate = matchDetails.match_date;
-    }
-  } else if (matchDetails?.match_date) {
-    formattedDate = matchDetails.match_date;
-  }
+  // Extract time in HH:MM format for notification (formatting will be done in getTranslatedBody)
+  const startTime = matchDetails?.start_time ? matchDetails.start_time.slice(0, 5) : undefined;
 
   return createNotifications(
     participantUserIds.map(userId => ({
@@ -532,7 +751,8 @@ export async function notifyMatchUpdated(
         matchId,
         updatedFields,
         sportName,
-        matchDate: formattedDate ?? 'TBD',
+        matchDate: matchDetails?.match_date,
+        startTime,
       },
     }))
   );
@@ -562,13 +782,16 @@ export async function notifyMatchStartingSoon(
  */
 export async function notifyPlayerKicked(
   playerUserId: string,
-  matchId: string
+  matchId: string,
+  sportName?: string,
+  matchDate?: string,
+  startTime?: string
 ): Promise<Notification> {
   return createNotification({
     type: 'player_kicked',
     userId: playerUserId,
     targetId: matchId,
-    payload: { matchId },
+    payload: { matchId, sportName, matchDate, startTime },
   });
 }
 
@@ -580,7 +803,8 @@ export async function notifyPlayerLeft(
   recipientUserIds: string[],
   matchId: string,
   playerName: string,
-  sportName?: string
+  sportName?: string,
+  spotsLeft?: number
 ): Promise<Notification[]> {
   // Title and body will be generated from translations in createNotifications
   // based on each user's preferred locale
@@ -589,7 +813,12 @@ export async function notifyPlayerLeft(
       type: 'player_left' as const,
       userId,
       targetId: matchId,
-      payload: { matchId, playerName, sportName },
+      payload: {
+        matchId,
+        playerName,
+        sportName,
+        spotsLeft: spotsLeft !== undefined ? String(spotsLeft) : undefined,
+      },
     }))
   );
 }
@@ -602,13 +831,15 @@ export async function notifyMatchInvitation(
   matchId: string,
   inviterName: string,
   sportName: string,
-  matchDate: string
+  matchDate: string,
+  startTime?: string,
+  locationName?: string
 ): Promise<Notification> {
   return createNotification({
     type: 'match_invitation',
     userId: playerUserId,
     targetId: matchId,
-    payload: { matchId, playerName: inviterName, sportName, matchDate },
+    payload: { matchId, playerName: inviterName, sportName, matchDate, startTime, locationName },
   });
 }
 
@@ -646,6 +877,60 @@ export async function notifyRatingVerified(
 }
 
 /**
+ * Notify participants that a match has been completed
+ */
+export async function notifyMatchCompleted(
+  participantUserIds: string[],
+  matchId: string,
+  sportName: string
+): Promise<Notification[]> {
+  return createNotifications(
+    participantUserIds.map(userId => ({
+      type: 'match_completed' as const,
+      userId,
+      targetId: matchId,
+      payload: { matchId, sportName },
+    }))
+  );
+}
+
+/**
+ * Request feedback from a player about their match experience
+ */
+export async function notifyFeedbackRequest(
+  playerUserId: string,
+  matchId: string,
+  sportName: string,
+  opponentName?: string,
+  matchDate?: string
+): Promise<Notification> {
+  return createNotification({
+    type: 'feedback_request',
+    userId: playerUserId,
+    targetId: matchId,
+    payload: { matchId, sportName, playerName: opponentName, matchDate },
+  });
+}
+
+/**
+ * Notify a player about a match reminder
+ */
+export async function notifyReminder(
+  playerUserId: string,
+  matchId: string,
+  sportName: string,
+  matchDate: string,
+  locationName?: string
+): Promise<Notification> {
+  return createNotification({
+    type: 'reminder',
+    userId: playerUserId,
+    targetId: matchId,
+    payload: { matchId, sportName, matchDate, locationName },
+  });
+}
+
+/**
  * Notification factory object for grouped exports
  */
 export const notificationFactory = {
@@ -664,10 +949,16 @@ export const notificationFactory = {
   matchStartingSoon: notifyMatchStartingSoon,
   matchInvitation: notifyMatchInvitation,
   playerKicked: notifyPlayerKicked,
+  matchCompleted: notifyMatchCompleted,
+  feedbackRequest: notifyFeedbackRequest,
+  reminder: notifyReminder,
 
   // Social
   newMessage: notifyNewMessage,
   ratingVerified: notifyRatingVerified,
+
+  // Utilities
+  formatTimeUntil,
 };
 
 export default notificationFactory;

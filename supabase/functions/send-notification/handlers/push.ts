@@ -8,6 +8,45 @@ import type { NotificationRecord, DeliveryResult } from '../types.ts';
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 
 /**
+ * Sport emoji mapping for visual context in push notifications
+ */
+const SPORT_EMOJIS: Record<string, string> = {
+  tennis: '🎾',
+  pickleball: '🏓',
+  badminton: '🏸',
+  squash: '🎾',
+  padel: '🎾',
+  default: '🏃',
+};
+
+/**
+ * Get emoji for a sport name
+ */
+function getSportEmoji(sportName?: string): string {
+  if (!sportName) return '';
+  const normalized = sportName.toLowerCase().trim();
+  return SPORT_EMOJIS[normalized] || SPORT_EMOJIS.default;
+}
+
+/**
+ * Get iOS category identifier for notification actions
+ */
+function getCategoryId(type: string): string | undefined {
+  switch (type) {
+    case 'match_invitation':
+    case 'match_join_request':
+      return 'match_action'; // Can have Accept/Decline actions
+    case 'feedback_request':
+      return 'feedback_action'; // Can have Rate action
+    case 'new_message':
+    case 'chat':
+      return 'message_action'; // Can have Reply action
+    default:
+      return undefined;
+  }
+}
+
+/**
  * Send a push notification via Expo
  */
 export async function sendPush(
@@ -84,6 +123,18 @@ function buildPushPayload(notification: NotificationRecord, expoPushToken: strin
   // Map priority to Expo priority
   const expoPriority = priority === 'urgent' || priority === 'high' ? 'high' : 'normal';
 
+  // Get sport emoji for visual context
+  const sportName = (payload as Record<string, unknown>)?.sportName as string | undefined;
+  const sportEmoji = getSportEmoji(sportName);
+
+  // Enhance title with sport emoji for match-related notifications
+  const enhancedTitle =
+    type.startsWith('match_') || type === 'feedback_request' || type === 'reminder'
+      ? sportEmoji
+        ? `${sportEmoji} ${title}`
+        : title
+      : title;
+
   // Build data payload for deep linking
   const data: Record<string, unknown> = {
     notificationId: notification.id,
@@ -92,23 +143,37 @@ function buildPushPayload(notification: NotificationRecord, expoPushToken: strin
     ...payload,
   };
 
-  // Determine channel ID for Android
-  const channelId = type.startsWith('match_') ? 'match' : 'default';
+  // Determine channel ID for Android based on notification type
+  let channelId = 'default';
+  if (type.startsWith('match_')) {
+    channelId = priority === 'urgent' ? 'match_urgent' : 'match';
+  } else if (type === 'new_message' || type === 'chat') {
+    channelId = 'messages';
+  } else if (type === 'feedback_request') {
+    channelId = 'feedback';
+  }
+
+  // Get iOS category for notification actions
+  const categoryId = getCategoryId(type);
 
   return {
     to: expoPushToken,
-    title,
+    title: enhancedTitle,
     body: body || undefined,
     data,
-    sound: 'default',
+    sound: priority === 'urgent' ? 'default' : 'default',
     priority: expoPriority,
     channelId,
+    // iOS category for notification actions
+    ...(categoryId && { categoryId }),
     // Badge count could be managed here if needed
     // badge: 1,
     // TTL for message expiry (24 hours for normal, 1 hour for urgent)
     ttl: priority === 'urgent' ? 3600 : 86400,
     // Collapse key for grouping similar notifications
     _contentAvailable: true,
+    // Mutable content for iOS rich notifications
+    mutableContent: true,
   };
 }
 

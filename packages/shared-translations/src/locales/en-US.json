@@ -160,80 +160,84 @@
     },
     "messages": {
       "match_invitation": {
-        "title": "Game Invitation",
-        "body": "{playerName} invited you to a {sportName} game"
+        "title": "Game On!",
+        "body": "{playerName} wants to play {sportName} with you on {matchDate}{startTime}"
       },
       "match_join_request": {
-        "title": "New Join Request",
-        "body": "{playerName} wants to join your game"
+        "title": "New Player Request",
+        "body": "{playerName} wants to join your {sportName} game on {matchDate}"
       },
       "match_join_accepted": {
-        "title": "Join Request Accepted",
-        "body": "Your request to join the game was accepted"
+        "title": "You're In!",
+        "body": "Your {sportName} game on {matchDate} at {locationName} is confirmed. See you there!"
       },
       "match_join_rejected": {
-        "title": "Join Request Declined",
-        "body": "Your request to join the game was declined"
+        "title": "Request Declined",
+        "body": "Your request to join the {sportName} game wasn't accepted this time. Check out other games nearby!"
       },
       "match_player_joined": {
-        "title": "{playerName} Joined",
-        "body": "{playerName} joined your {sportName} game"
+        "title": "Player Joined!",
+        "body": "{playerName} joined your {sportName} game. {spotsLeft} spot(s) left!"
       },
       "match_cancelled": {
         "title": "Game Cancelled",
-        "body": "The {sportName} game on {matchDate} has been cancelled"
+        "body": "The {sportName} game on {matchDate} at {locationName} has been cancelled. We hope to see you on the court soon!"
       },
       "match_updated": {
         "title": "Game Updated",
-        "body": "Your game on {matchDate} has been updated. Tap to see the changes."
+        "body": "Your {sportName} game on {matchDate} has new details. Tap to review the changes."
       },
       "match_starting_soon": {
-        "title": "Game Starting Soon",
-        "body": "Your {sportName} game starts in 15 minutes"
+        "title": "Get Ready!",
+        "body": "Your {sportName} game at {locationName} starts {timeUntil}. Time to warm up!"
       },
       "match_completed": {
-        "title": "Game Completed",
-        "body": "Your {sportName} game has been marked as completed"
+        "title": "Great Game!",
+        "body": "Your {sportName} game is complete. How did it go? Share your feedback!"
       },
       "player_kicked": {
         "title": "Removed from Game",
-        "body": "You have been removed from a game"
+        "body": "You've been removed from the {sportName} game on {matchDate}. Check out other games nearby!"
       },
       "player_left": {
-        "title": "{playerName} Left",
-        "body": "{playerName} left your {sportName} game"
+        "title": "Player Left",
+        "body": "{playerName} left your {sportName} game. {spotsLeft} spot(s) now available."
       },
       "new_message": {
-        "title": "New Message",
-        "body": "{senderName}: {messagePreview}"
+        "title": "Message from {senderName}",
+        "body": "{messagePreview}"
       },
       "chat": {
         "title": "New Message",
-        "body": "You have a new message"
+        "body": "You have a new message waiting for you"
       },
       "friend_request": {
-        "title": "Friend Request",
-        "body": "{playerName} wants to connect with you"
+        "title": "New Connection Request",
+        "body": "{playerName} wants to add you to their network. Check out their profile!"
       },
       "rating_verified": {
-        "title": "Rating Verified",
-        "body": "Your {ratingSystemName} rating of {ratingValue} has been verified"
+        "title": "Rating Verified!",
+        "body": "Congrats! Your {ratingSystemName} rating of {ratingValue} for {sportName} is now verified."
       },
       "reminder": {
-        "title": "Reminder",
-        "body": "You have a reminder"
+        "title": "Upcoming Game",
+        "body": "Don't forget your {sportName} game on {matchDate} at {locationName}"
       },
       "payment": {
         "title": "Payment Update",
-        "body": "Payment status update"
+        "body": "Your payment status has been updated. Tap to view details."
       },
       "support": {
-        "title": "Support Message",
-        "body": "You have a message from support"
+        "title": "Message from Rallia",
+        "body": "Our support team has sent you a message. Tap to read."
       },
       "system": {
-        "title": "System Notification",
-        "body": "System notification"
+        "title": "Rallia Update",
+        "body": "We have an update for you. Tap to learn more."
+      },
+      "feedback_request": {
+        "title": "How Was Your Game?",
+        "body": "Rate your {sportName} game with {playerName}. Your feedback helps the community!"
       }
     }
   },

@@ -160,80 +160,84 @@
     },
     "messages": {
       "match_invitation": {
-        "title": "Invitation à une partie",
-        "body": "{playerName} vous a invité à une partie de {sportName}"
+        "title": "C'est parti!",
+        "body": "{playerName} veut jouer au {sportName} avec vous le {matchDate}{startTime}"
       },
       "match_join_request": {
-        "title": "Nouvelle demande de participation",
-        "body": "{playerName} souhaite rejoindre votre partie"
+        "title": "Nouvelle demande",
+        "body": "{playerName} souhaite rejoindre votre partie de {sportName} du {matchDate}"
       },
       "match_join_accepted": {
-        "title": "Demande acceptée",
-        "body": "Votre demande de participation à la partie a été acceptée"
+        "title": "Vous êtes inscrit!",
+        "body": "Votre partie de {sportName} du {matchDate} à {locationName} est confirmée. À bientôt!"
       },
       "match_join_rejected": {
         "title": "Demande refusée",
-        "body": "Votre demande de participation à la partie a été refusée"
+        "body": "Votre demande pour la partie de {sportName} n'a pas été acceptée. Découvrez d'autres parties à proximité!"
       },
       "match_player_joined": {
-        "title": "{playerName} a rejoint",
-        "body": "{playerName} a rejoint votre partie de {sportName}"
+        "title": "Nouveau joueur!",
+        "body": "{playerName} a rejoint votre partie de {sportName}. {spotsLeft} place(s) restante(s)!"
       },
       "match_cancelled": {
         "title": "Partie annulée",
-        "body": "La partie de {sportName} du {matchDate} a été annulée"
+        "body": "La partie de {sportName} du {matchDate} à {locationName} a été annulée. On espère vous voir bientôt sur le terrain!"
       },
       "match_updated": {
-        "title": "Partie mise à jour",
-        "body": "Votre partie du {matchDate} a été modifiée. Appuyez pour voir les changements."
+        "title": "Partie modifiée",
+        "body": "Votre partie de {sportName} du {matchDate} a été mise à jour. Appuyez pour voir les changements."
       },
       "match_starting_soon": {
-        "title": "Partie imminente",
-        "body": "Votre partie de {sportName} commence dans 15 minutes"
+        "title": "Préparez-vous!",
+        "body": "Votre partie de {sportName} à {locationName} commence {timeUntil}. C'est l'heure de s'échauffer!"
       },
       "match_completed": {
-        "title": "Partie terminée",
-        "body": "Votre partie de {sportName} a été marquée comme terminée"
+        "title": "Belle partie!",
+        "body": "Votre partie de {sportName} est terminée. Comment ça s'est passé? Partagez votre avis!"
       },
       "player_kicked": {
         "title": "Retiré de la partie",
-        "body": "Vous avez été retiré d'une partie"
+        "body": "Vous avez été retiré de la partie de {sportName} du {matchDate}. Découvrez d'autres parties à proximité!"
       },
       "player_left": {
-        "title": "{playerName} est parti",
-        "body": "{playerName} a quitté votre partie de {sportName}"
+        "title": "Joueur parti",
+        "body": "{playerName} a quitté votre partie de {sportName}. {spotsLeft} place(s) maintenant disponible(s)."
       },
       "new_message": {
-        "title": "Nouveau message",
-        "body": "{senderName}: {messagePreview}"
+        "title": "Message de {senderName}",
+        "body": "{messagePreview}"
       },
       "chat": {
         "title": "Nouveau message",
-        "body": "Vous avez un nouveau message"
+        "body": "Vous avez un nouveau message qui vous attend"
       },
       "friend_request": {
-        "title": "Demande d'ami",
-        "body": "{playerName} souhaite se connecter avec vous"
+        "title": "Nouvelle demande de connexion",
+        "body": "{playerName} veut vous ajouter à son réseau. Consultez son profil!"
       },
       "rating_verified": {
-        "title": "Classement vérifié",
-        "body": "Votre classement {ratingSystemName} de {ratingValue} a été vérifié"
+        "title": "Classement vérifié!",
+        "body": "Félicitations! Votre classement {ratingSystemName} de {ratingValue} pour le {sportName} est maintenant vérifié."
       },
       "reminder": {
-        "title": "Rappel",
-        "body": "Vous avez un rappel"
+        "title": "Partie à venir",
+        "body": "N'oubliez pas votre partie de {sportName} le {matchDate} à {locationName}"
       },
       "payment": {
         "title": "Mise à jour de paiement",
-        "body": "Mise à jour du statut de paiement"
+        "body": "Votre statut de paiement a été mis à jour. Appuyez pour voir les détails."
       },
       "support": {
-        "title": "Message du support",
-        "body": "Vous avez un message du support"
+        "title": "Message de Rallia",
+        "body": "Notre équipe de support vous a envoyé un message. Appuyez pour lire."
       },
       "system": {
-        "title": "Notification système",
-        "body": "Notification système"
+        "title": "Mise à jour Rallia",
+        "body": "Nous avons une mise à jour pour vous. Appuyez pour en savoir plus."
+      },
+      "feedback_request": {
+        "title": "Comment était votre partie?",
+        "body": "Évaluez votre partie de {sportName} avec {playerName}. Votre avis aide la communauté!"
       }
     }
   },
