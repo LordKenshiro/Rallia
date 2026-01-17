@@ -23,7 +23,7 @@ import { useAddScore } from './AddScoreContext';
 import type { SetScore } from './types';
 
 interface WinnerScoresStepProps {
-  onSubmit: () => void;
+  onSubmit: (winnerId: 'team1' | 'team2', sets: SetScore[]) => void;
   isSubmitting?: boolean;
 }
 
@@ -92,12 +92,16 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
       }
     }
 
+    const finalWinner = winner || 'team1';
+    const finalSets = isFriendly ? [] : sets.filter((s) => s.team1Score !== null && s.team2Score !== null);
+    
     updateFormData({
-      winnerId: winner || 'team1',
-      sets: isFriendly ? [] : sets.filter((s) => s.team1Score !== null || s.team2Score !== null),
+      winnerId: finalWinner,
+      sets: finalSets,
     });
 
-    onSubmit();
+    // Pass values directly to avoid React state async issues
+    onSubmit(finalWinner, finalSets);
   }, [winner, sets, isFriendly, updateFormData, onSubmit]);
 
   const canSubmit = isFriendly || (winner !== null);

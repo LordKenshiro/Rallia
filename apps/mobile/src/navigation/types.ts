@@ -39,6 +39,7 @@ export type RootStackParamList = {
   RatingProofs: RatingProofsScreenParams;
   GroupDetail: { groupId: string; groupName?: string }; // Group detail view
   Chat: { conversationId: string; title?: string }; // Direct chat navigation
+  PlayedMatchDetail: { match: unknown }; // Played match detail view
 };
 
 // =============================================================================
@@ -97,6 +98,7 @@ export type CommunityStackParamList = {
 export type ChatStackParamList = {
   Conversations: undefined;
   ChatScreen: { conversationId: string; title?: string };
+  ArchivedChats: undefined;
 };
 
 // =============================================================================

@@ -586,7 +586,29 @@
     "mustBeLoggedIn": "Veuillez vous connecter pour créer une partie."
   },
   "chat": {
-    "empty": "Aucun message pour le moment"
+    "empty": "Aucun message pour le moment",
+    "inbox": "Boîte de réception",
+    "search": "Rechercher des joueurs",
+    "newGroup": "Nouveau groupe",
+    "noConversations": "Aucune conversation pour le moment",
+    "noConversationsSubtitle": "Rejoignez un groupe ou démarrez une conversation avec un autre joueur",
+    "typeMessage": "Tapez votre message",
+    "today": "Aujourd'hui",
+    "yesterday": "Hier",
+    "participants": "{{count}} participant",
+    "participants_plural": "{{count}} participants",
+    "agreement": {
+      "welcome": "Bienvenue dans",
+      "description": "Ceci est une discussion de groupe - tous les membres de cette communauté verront vos messages",
+      "chatRules": "Règles de discussion",
+      "warning": "Le contenu sera supprimé et les utilisateurs bannis en cas de violation de nos règles communautaires",
+      "agree": "J'accepte"
+    },
+    "rules": {
+      "noHarassment": "Pas de harcèlement, de discours haineux ou de langage sexuel",
+      "noAdvertising": "Pas de publicité ni d'auto-promotion",
+      "noDisrespect": "Pas de manque de respect !"
+    }
   },
   "map": {
     "placeholder": "Vue carte"

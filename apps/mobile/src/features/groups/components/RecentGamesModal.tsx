@@ -95,16 +95,21 @@ export function RecentGamesModal({
           </View>
         </View>
 
-        {/* Players */}
-        <View style={styles.playersContainer}>
+        {/* Players - same layout as GroupDetail match card */}
+        <View style={styles.matchPlayersContainer}>
           {/* Team 1 */}
-          <View style={styles.teamSection}>
-            {team1Players.map((participant, idx) => (
+          <View style={styles.teamContainer}>
+            {team1Players.map((participant) => (
               <View key={participant.id} style={[
-                styles.playerRow,
-                winningTeam === 1 && styles.winnerHighlight,
-                winningTeam === 1 && { borderColor: colors.primary },
+                styles.playerCard,
+                winningTeam === 1 && styles.winnerCard,
+                winningTeam === 1 && { borderColor: '#F59E0B' },
               ]}>
+                {winningTeam === 1 && (
+                  <View style={styles.winnerBadge}>
+                    <Ionicons name="trophy" size={12} color="#F59E0B" />
+                  </View>
+                )}
                 <View style={[styles.playerAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
                   {participant.player?.profile?.profile_picture_url ? (
                     <Image
@@ -112,32 +117,50 @@ export function RecentGamesModal({
                       style={styles.avatarImage}
                     />
                   ) : (
-                    <Ionicons name="person" size={20} color={colors.textMuted} />
+                    <Ionicons name="person" size={24} color={colors.textMuted} />
                   )}
                 </View>
-                {winningTeam === 1 && idx === 0 && (
-                  <View style={styles.trophyBadge}>
-                    <Ionicons name="trophy" size={12} color="#FFD700" />
-                  </View>
-                )}
                 <Text size="sm" weight={winningTeam === 1 ? 'semibold' : 'regular'} style={{ color: colors.text, marginTop: 4 }}>
                   {participant.player?.profile?.first_name || 'Player'}
                 </Text>
+                {/* Set scores under player - show individual set game scores */}
+                {match.result && (
+                  <Text 
+                    size="sm" 
+                    weight="bold" 
+                    style={{ 
+                      color: winningTeam === 1 ? '#F59E0B' : colors.textMuted,
+                      marginTop: 4,
+                    }}
+                  >
+                    {match.result.sets && match.result.sets.length > 0
+                      ? match.result.sets
+                          .sort((a, b) => a.set_number - b.set_number)
+                          .map(set => set.team1_score)
+                          .join('  ')
+                      : match.result.team1_score ?? '-'}
+                  </Text>
+                )}
               </View>
             ))}
           </View>
 
           {/* VS */}
-          <Text weight="semibold" style={{ color: colors.textMuted, marginHorizontal: 16 }}>vs</Text>
+          <Text weight="semibold" style={{ color: colors.textMuted, marginHorizontal: 12 }}>vs</Text>
 
           {/* Team 2 */}
-          <View style={styles.teamSection}>
-            {team2Players.map((participant, idx) => (
+          <View style={styles.teamContainer}>
+            {team2Players.map((participant) => (
               <View key={participant.id} style={[
-                styles.playerRow,
-                winningTeam === 2 && styles.winnerHighlight,
-                winningTeam === 2 && { borderColor: colors.primary },
+                styles.playerCard,
+                winningTeam === 2 && styles.winnerCard,
+                winningTeam === 2 && { borderColor: '#F59E0B' },
               ]}>
+                {winningTeam === 2 && (
+                  <View style={styles.winnerBadge}>
+                    <Ionicons name="trophy" size={12} color="#F59E0B" />
+                  </View>
+                )}
                 <View style={[styles.playerAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
                   {participant.player?.profile?.profile_picture_url ? (
                     <Image
@@ -145,40 +168,34 @@ export function RecentGamesModal({
                       style={styles.avatarImage}
                     />
                   ) : (
-                    <Ionicons name="person" size={20} color={colors.textMuted} />
+                    <Ionicons name="person" size={24} color={colors.textMuted} />
                   )}
                 </View>
-                {winningTeam === 2 && idx === 0 && (
-                  <View style={styles.trophyBadge}>
-                    <Ionicons name="trophy" size={12} color="#FFD700" />
-                  </View>
-                )}
                 <Text size="sm" weight={winningTeam === 2 ? 'semibold' : 'regular'} style={{ color: colors.text, marginTop: 4 }}>
                   {participant.player?.profile?.first_name || 'Player'}
                 </Text>
+                {/* Set scores under player - show individual set game scores */}
+                {match.result && (
+                  <Text 
+                    size="sm" 
+                    weight="bold" 
+                    style={{ 
+                      color: winningTeam === 2 ? '#F59E0B' : colors.textMuted,
+                      marginTop: 4,
+                    }}
+                  >
+                    {match.result.sets && match.result.sets.length > 0
+                      ? match.result.sets
+                          .sort((a, b) => a.set_number - b.set_number)
+                          .map(set => set.team2_score)
+                          .join('  ')
+                      : match.result.team2_score ?? '-'}
+                  </Text>
+                )}
               </View>
             ))}
           </View>
         </View>
-
-        {/* Scores */}
-        {match.result && (
-          <View style={styles.scoresContainer}>
-            <Text 
-              weight={winningTeam === 1 ? 'bold' : 'regular'} 
-              style={{ color: winningTeam === 1 ? colors.primary : colors.textMuted, fontSize: 18 }}
-            >
-              {match.result.team1_score ?? '-'}
-            </Text>
-            <Text style={{ color: colors.textMuted, marginHorizontal: 12 }}>-</Text>
-            <Text 
-              weight={winningTeam === 2 ? 'bold' : 'regular'} 
-              style={{ color: winningTeam === 2 ? colors.primary : colors.textMuted, fontSize: 18 }}
-            >
-              {match.result.team2_score ?? '-'}
-            </Text>
-          </View>
-        )}
       </TouchableOpacity>
     );
   }, [colors, isDark, formatMatchDate, onMatchPress]);
@@ -246,6 +263,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContent: {
+    minHeight: SCREEN_HEIGHT * 0.5,
     maxHeight: SCREEN_HEIGHT * 0.85,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -287,7 +305,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
   },
   matchInfo: {
     flexDirection: 'row',
@@ -300,50 +317,47 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 12,
   },
-  playersContainer: {
+  matchPlayersContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 16,
+    paddingHorizontal: 8,
   },
-  teamSection: {
+  teamContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
-  playerRow: {
+  playerCard: {
     alignItems: 'center',
     padding: 8,
     borderRadius: 8,
     borderWidth: 2,
     borderColor: 'transparent',
   },
-  winnerHighlight: {
+  winnerCard: {
     borderWidth: 2,
   },
   playerAvatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
     overflow: 'hidden',
   },
   avatarImage: {
     width: '100%',
     height: '100%',
   },
-  trophyBadge: {
+  winnerBadge: {
     position: 'absolute',
-    top: 0,
-    right: 0,
-    backgroundColor: '#FFF8E1',
+    top: 4,
+    right: 4,
+    backgroundColor: '#FFF',
     borderRadius: 10,
     padding: 2,
-  },
-  scoresContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 12,
   },
   emptyState: {
     alignItems: 'center',

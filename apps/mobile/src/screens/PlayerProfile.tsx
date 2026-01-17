@@ -18,11 +18,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as Haptics from 'expo-haptics';
 import { Text } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
+import { useGetOrCreateDirectConversation } from '@rallia/shared-hooks';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
@@ -42,6 +44,7 @@ import {
 
 // Types
 type PlayerProfileRouteProp = RouteProp<RootStackParamList, 'PlayerProfile'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 interface SportWithRating {
   id: string;
@@ -82,9 +85,11 @@ interface PlayerStats {
 
 const PlayerProfile = () => {
   const route = useRoute<PlayerProfileRouteProp>();
+  const navigation = useNavigation<NavigationProp>();
   const { playerId, sportId } = route.params;
   const { colors, isDark } = useThemeStyles();
   const { t, locale } = useTranslation();
+  const getOrCreateDirectConversation = useGetOrCreateDirectConversation();
 
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -98,6 +103,7 @@ const PlayerProfile = () => {
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockLoading, setBlockLoading] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
 
   // Fetch player data on mount
   useEffect(() => {
@@ -490,6 +496,35 @@ const PlayerProfile = () => {
     Alert.alert('Request Reference', 'This feature is coming soon!');
   };
 
+  const handleStartChat = useCallback(async () => {
+    if (!currentUserId || chatLoading) return;
+    
+    setChatLoading(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
+    try {
+      const conversation = await getOrCreateDirectConversation.mutateAsync({
+        playerId1: currentUserId,
+        playerId2: playerId,
+      });
+      
+      // Navigate to the chat conversation
+      // Use the other player's name as the title
+      const playerName = profile 
+        ? `${(profile as unknown as { first_name?: string }).first_name || ''} ${(profile as unknown as { last_name?: string }).last_name || ''}`.trim() || 'Player'
+        : 'Chat';
+      navigation.navigate('Chat', {
+        conversationId: conversation.id,
+        title: playerName,
+      });
+    } catch (error) {
+      Logger.error('Failed to start chat', error as Error);
+      Alert.alert('Error', 'Failed to start conversation. Please try again.');
+    } finally {
+      setChatLoading(false);
+    }
+  }, [currentUserId, playerId, chatLoading, getOrCreateDirectConversation, navigation, profile]);
+
   const handleToggleFavorite = useCallback(async () => {
     if (!currentUserId || favoriteLoading) return;
     
@@ -685,10 +720,30 @@ const PlayerProfile = () => {
 
             <TouchableOpacity
               style={[styles.actionButtonSecondary, { borderColor: colors.primary }]}
+              onPress={handleStartChat}
+              disabled={chatLoading || !currentUserId}
+            >
+              {chatLoading ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <>
+                  <Ionicons name="chatbubble-outline" size={18} color={colors.primary} />
+                  <Text style={[styles.actionButtonTextSecondary, { color: colors.primary }]}>
+                    Chat
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Secondary Action */}
+          <View style={styles.secondaryAction}>
+            <TouchableOpacity
+              style={[styles.actionButtonSecondary, { borderColor: colors.border, flex: 0, paddingHorizontal: spacingPixels[4] }]}
               onPress={handleRequestReference}
             >
-              <Ionicons name="document-text-outline" size={18} color={colors.primary} />
-              <Text style={[styles.actionButtonTextSecondary, { color: colors.primary }]}>
+              <Ionicons name="document-text-outline" size={18} color={colors.textSecondary} />
+              <Text style={[styles.actionButtonTextSecondary, { color: colors.textSecondary }]}>
                 Request reference
               </Text>
             </TouchableOpacity>
@@ -1057,6 +1112,12 @@ const styles = StyleSheet.create({
   actionButtonTextSecondary: {
     fontSize: fontSizePixels.sm,
     fontWeight: fontWeightNumeric.semibold,
+  },
+  secondaryAction: {
+    width: '100%',
+    paddingHorizontal: spacingPixels[4],
+    marginTop: spacingPixels[2],
+    alignItems: 'center',
   },
   section: {
     marginTop: spacingPixels[4],

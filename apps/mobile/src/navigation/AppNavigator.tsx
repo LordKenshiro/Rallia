@@ -36,6 +36,8 @@ import Map from '../screens/Map';
 import Match from '../screens/Match';
 import Community from '../screens/Community';
 import Chat from '../screens/Chat';
+import ChatConversation from '../screens/ChatConversation';
+import ArchivedChats from '../screens/ArchivedChats';
 import SettingsScreen from '../screens/SettingsScreen';
 import UserProfile from '../screens/UserProfile';
 import SportProfile from '../screens/SportProfile';
@@ -48,6 +50,7 @@ import SharedLists from '../screens/SharedLists';
 import SharedListDetail from '../screens/SharedListDetail';
 import Groups from '../screens/Groups';
 import GroupDetail from '../screens/GroupDetail';
+import PlayedMatchDetail from '../screens/PlayedMatchDetail';
 
 // Components
 import { ThemeLogo } from '../components/ThemeLogo';
@@ -397,7 +400,20 @@ function ChatStack() {
         component={Chat}
         options={mainScreenOptions}
       />
-      {/* Future screens: ChatScreen (individual conversation) */}
+      <ChatStackNavigator.Screen
+        name="ChatScreen"
+        component={ChatConversation}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <ChatStackNavigator.Screen
+        name="ArchivedChats"
+        component={ArchivedChats}
+        options={{
+          headerShown: false,
+        }}
+      />
     </ChatStackNavigator.Navigator>
   );
 }
@@ -710,6 +726,22 @@ export default function AppNavigator() {
           headerTitle: route.params?.groupName || t('screens.group'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
+      />
+
+      <RootStack.Screen
+        name="PlayedMatchDetail"
+        component={PlayedMatchDetail}
+        options={{
+          headerShown: false,
+        }}
+      />
+
+      <RootStack.Screen
+        name="Chat"
+        component={ChatConversation}
+        options={{
+          headerShown: false,
+        }}
       />
     </RootStack.Navigator>
   );

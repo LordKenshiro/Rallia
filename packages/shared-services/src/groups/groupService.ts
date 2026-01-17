@@ -817,6 +817,13 @@ export function getGroupInviteLink(inviteCode: string): string {
 // GROUP MATCHES/GAMES
 // =============================================================================
 
+export interface MatchSet {
+  id: string;
+  set_number: number;
+  team1_score: number;
+  team2_score: number;
+}
+
 export interface GroupMatch {
   id: string;
   match_id: string;
@@ -858,6 +865,7 @@ export interface GroupMatch {
       team1_score: number | null;
       team2_score: number | null;
       is_verified: boolean;
+      sets?: MatchSet[];
     } | null;
   };
   posted_by_player?: {
@@ -939,7 +947,13 @@ export async function getGroupMatches(
           winning_team,
           team1_score,
           team2_score,
-          is_verified
+          is_verified,
+          sets:match_set (
+            id,
+            set_number,
+            team1_score,
+            team2_score
+          )
         )
       ),
       posted_by_player:posted_by (
@@ -967,6 +981,37 @@ export async function getGroupMatches(
     const match = item.match as Record<string, unknown> | null;
     const postedByPlayer = item.posted_by_player as Record<string, unknown> | null;
     
+    // Handle result transformation with sets
+    const transformResult = (resultData: unknown): GroupMatch['match']['result'] => {
+      const result = Array.isArray(resultData) && resultData.length > 0 
+        ? resultData[0] as Record<string, unknown>
+        : resultData as Record<string, unknown> | null;
+      
+      if (!result) return null;
+      
+      // Get sets and sort by set_number
+      const setsData = result.sets as Array<Record<string, unknown>> | undefined;
+      const sets = setsData 
+        ? setsData
+            .map(s => ({
+              id: s.id as string,
+              set_number: s.set_number as number,
+              team1_score: s.team1_score as number,
+              team2_score: s.team2_score as number,
+            }))
+            .sort((a, b) => a.set_number - b.set_number)
+        : undefined;
+      
+      return {
+        id: result.id as string,
+        winning_team: result.winning_team as number | null,
+        team1_score: result.team1_score as number | null,
+        team2_score: result.team2_score as number | null,
+        is_verified: result.is_verified as boolean,
+        sets,
+      };
+    };
+    
     return {
       id: item.id as string,
       match_id: item.match_id as string,
@@ -990,9 +1035,7 @@ export async function getGroupMatches(
           is_host: p.is_host as boolean,
           player: p.player as GroupMatch['match']['participants'][0]['player'],
         })),
-        result: Array.isArray(match.result) && match.result.length > 0 
-          ? match.result[0] as GroupMatch['match']['result']
-          : match.result as GroupMatch['match']['result'],
+        result: transformResult(match.result),
       } : undefined,
       posted_by_player: postedByPlayer as GroupMatch['posted_by_player'],
     } as GroupMatch;
@@ -1213,8 +1256,76 @@ export interface CreatePlayedMatchInput {
 }
 
 /**
+ * Find an existing scheduled match that matches the criteria
+ * Returns the match_id if found, null otherwise
+ */
+async function findExistingMatch(
+  sportId: string,
+  matchDate: string,
+  team1PlayerIds: string[],
+  team2PlayerIds: string[]
+): Promise<{ matchId: string; hasResult: boolean } | null> {
+  // Get all matches on this date for this sport
+  const { data: matches, error } = await supabase
+    .from('match')
+    .select(`
+      id,
+      sport_id,
+      match_date,
+      format,
+      participants:match_participant (
+        player_id,
+        team_number
+      ),
+      result:match_result (
+        id
+      )
+    `)
+    .eq('sport_id', sportId)
+    .eq('match_date', matchDate)
+    .is('cancelled_at', null);
+
+  if (error || !matches || matches.length === 0) {
+    return null;
+  }
+
+  // All player IDs that should be in the match
+  const allPlayerIds = [...team1PlayerIds, ...team2PlayerIds].sort();
+
+  // Find a match with the exact same players
+  for (const match of matches) {
+    const participants = match.participants as Array<{ player_id: string; team_number: number }>;
+    
+    if (!participants || participants.length === 0) continue;
+
+    // Get all participant player IDs
+    const matchPlayerIds = participants.map(p => p.player_id).sort();
+
+    // Check if all players match (same players in match)
+    if (matchPlayerIds.length === allPlayerIds.length &&
+        matchPlayerIds.every((id, idx) => id === allPlayerIds[idx])) {
+      
+      // Found a match with the same players!
+      // Check if it has a result
+      const result = match.result as Array<{ id: string }> | null;
+      const hasResult = Array.isArray(result) && result.length > 0;
+      
+      return {
+        matchId: match.id,
+        hasResult,
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
  * Create a played match with results
  * This is for recording past games that have already been played
+ * 
+ * SMART MATCHING: If a scheduled match exists with the same players and date,
+ * we add the result to that match instead of creating a duplicate.
  */
 export async function createPlayedMatch(
   input: CreatePlayedMatchInput
@@ -1234,67 +1345,102 @@ export async function createPlayedMatch(
   } = input;
 
   try {
-    // 1. Create the match record
-    const { data: match, error: matchError } = await supabase
-      .from('match')
-      .insert({
-        sport_id: sportId,
-        created_by: createdBy,
-        match_date: matchDate,
-        start_time: '00:00', // Unknown time for past matches
-        end_time: '01:00',
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        format: format === 'singles' ? 'singles' : 'doubles',
-        player_expectation: expectation === 'competitive' ? 'competitive' : 'casual',
-        location_type: locationName ? 'custom' : 'tbd',
-        location_name: locationName || null,
-        visibility: 'private', // Past matches are private by default
-        join_mode: 'direct',
-        is_court_free: true,
-        cost_split_type: 'split_equal',
-      })
-      .select('id')
-      .single();
+    // 1. Check if a matching scheduled match already exists
+    const existingMatch = await findExistingMatch(
+      sportId,
+      matchDate,
+      team1PlayerIds,
+      team2PlayerIds
+    );
 
-    if (matchError) {
-      console.error('Error creating match:', matchError);
-      throw new Error(matchError.message);
+    let matchId: string;
+    let isNewMatch = false;
+
+    if (existingMatch) {
+      // Use the existing match
+      matchId = existingMatch.matchId;
+      console.log(`Found existing match ${matchId}, adding result...`);
+
+      // If the match already has a result, we shouldn't overwrite it
+      if (existingMatch.hasResult) {
+        console.warn(`Match ${matchId} already has a result. Skipping result creation.`);
+        
+        // Still post to group if requested
+        if (networkId) {
+          try {
+            await postMatchToGroup(matchId, networkId, createdBy);
+          } catch (postError) {
+            console.error('Error posting to group:', postError);
+          }
+        }
+        
+        return { matchId, success: true };
+      }
+    } else {
+      // 2. Create a new match record
+      isNewMatch = true;
+      const { data: match, error: matchError } = await supabase
+        .from('match')
+        .insert({
+          sport_id: sportId,
+          created_by: createdBy,
+          match_date: matchDate,
+          start_time: '00:00', // Unknown time for past matches
+          end_time: '01:00',
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          format: format === 'singles' ? 'singles' : 'doubles',
+          player_expectation: expectation === 'competitive' ? 'competitive' : 'casual',
+          location_type: locationName ? 'custom' : 'tbd',
+          location_name: locationName || null,
+          visibility: 'private', // Past matches are private by default
+          join_mode: 'direct',
+          is_court_free: true,
+          cost_split_type: 'split_equal',
+          status: 'completed', // Match is already played with results
+        })
+        .select('id')
+        .single();
+
+      if (matchError) {
+        console.error('Error creating match:', matchError);
+        throw new Error(matchError.message);
+      }
+
+      matchId = match.id;
+
+      // 3. Create match participants for Team 1
+      const team1Participants = team1PlayerIds.map((playerId, index) => ({
+        match_id: matchId,
+        player_id: playerId,
+        team_number: 1,
+        is_host: index === 0, // First player in team 1 is the host
+        status: 'joined' as const,
+      }));
+
+      // 4. Create match participants for Team 2
+      const team2Participants = team2PlayerIds.map((playerId) => ({
+        match_id: matchId,
+        player_id: playerId,
+        team_number: 2,
+        is_host: false,
+        status: 'joined' as const,
+      }));
+
+      const { error: participantsError } = await supabase
+        .from('match_participant')
+        .insert([...team1Participants, ...team2Participants]);
+
+      if (participantsError) {
+        console.error('Error creating participants:', participantsError);
+        // Cleanup: delete the match
+        await supabase.from('match').delete().eq('id', matchId);
+        throw new Error(participantsError.message);
+      }
     }
 
-    const matchId = match.id;
-
-    // 2. Create match participants for Team 1
-    const team1Participants = team1PlayerIds.map((playerId, index) => ({
-      match_id: matchId,
-      player_id: playerId,
-      team_number: 1,
-      is_host: index === 0, // First player in team 1 is the host
-      status: 'joined' as const,
-    }));
-
-    // 3. Create match participants for Team 2
-    const team2Participants = team2PlayerIds.map((playerId) => ({
-      match_id: matchId,
-      player_id: playerId,
-      team_number: 2,
-      is_host: false,
-      status: 'joined' as const,
-    }));
-
-    const { error: participantsError } = await supabase
-      .from('match_participant')
-      .insert([...team1Participants, ...team2Participants]);
-
-    if (participantsError) {
-      console.error('Error creating participants:', participantsError);
-      // Cleanup: delete the match
-      await supabase.from('match').delete().eq('id', matchId);
-      throw new Error(participantsError.message);
-    }
-
-    // 4. Create match result (only for competitive matches)
+    // 5. Create match result (only for competitive matches)
     if (expectation === 'competitive' && sets.length > 0) {
-      // Calculate total scores
+      // Calculate total scores (sets won)
       let team1Total = 0;
       let team2Total = 0;
       
@@ -1312,7 +1458,7 @@ export async function createPlayedMatch(
       const confirmationDeadline = new Date();
       confirmationDeadline.setHours(confirmationDeadline.getHours() + 24);
 
-      const { error: resultError } = await supabase
+      const { data: resultData, error: resultError } = await supabase
         .from('match_result')
         .insert({
           match_id: matchId,
@@ -1322,29 +1468,53 @@ export async function createPlayedMatch(
           is_verified: false, // Opponent needs to confirm
           submitted_by: createdBy,
           confirmation_deadline: confirmationDeadline.toISOString(),
-        });
+        })
+        .select('id')
+        .single();
 
       if (resultError) {
         console.error('Error creating match result:', resultError);
         // Don't fail the whole operation, result can be added later
       } else {
+        // 5b. Insert individual set scores
+        if (resultData && sets.length > 0) {
+          const setsToInsert = sets.map((set, index) => ({
+            match_result_id: resultData.id,
+            set_number: index + 1,
+            team1_score: set.team1Score,
+            team2_score: set.team2Score,
+          }));
+
+          const { error: setsError } = await supabase
+            .from('match_set')
+            .insert(setsToInsert);
+
+          if (setsError) {
+            console.error('Error creating match sets:', setsError);
+            // Don't fail - sets can be added later
+          }
+        }
+
         // Send notifications to opponents about pending score confirmation
-        try {
-          await notifyOpponentsOfPendingScore(matchId, createdBy, team2PlayerIds);
-        } catch (notifyError) {
-          console.error('Error sending notifications:', notifyError);
-          // Don't fail - notification failure shouldn't break the flow
+        // Only for new matches, as existing match participants are already aware
+        if (isNewMatch) {
+          try {
+            await notifyOpponentsOfPendingScore(matchId, createdBy, team2PlayerIds);
+          } catch (notifyError) {
+            console.error('Error sending notifications:', notifyError);
+            // Don't fail - notification failure shouldn't break the flow
+          }
         }
       }
     }
 
-    // 5. Post to group if networkId provided
+    // 6. Post to group if networkId provided
     if (networkId) {
       try {
         await postMatchToGroup(matchId, networkId, createdBy);
       } catch (postError) {
         console.error('Error posting to group:', postError);
-        // Don't fail, match is still created
+        // Don't fail, match is still created/updated
       }
     }
 
@@ -1482,14 +1652,15 @@ export async function notifyOpponentsOfPendingScore(
     `${submitterProfile?.first_name || ''} ${submitterProfile?.last_name || ''}`.trim() ||
     'A player';
 
-  // Create notifications for each opponent
+  // Create notifications for each opponent using the correct schema columns
+  // Schema: user_id, type, target_id, title, body, payload, read_at, expires_at
   const notifications = opponentIds.map((opponentId) => ({
-    recipient_id: opponentId,
-    type: 'match_confirmation' as const,
+    user_id: opponentId,
+    type: 'score_confirmation' as const,
+    target_id: matchId,
     title: 'Score Confirmation Required',
-    message: `${submitterName} submitted a match score. Please confirm or dispute within 24 hours.`,
-    data: JSON.stringify({ match_id: matchId }),
-    is_read: false,
+    body: `${submitterName} submitted a match score. Please confirm or dispute within 24 hours.`,
+    payload: { match_id: matchId, submitted_by: submittedBy },
   }));
 
   const { error } = await supabase

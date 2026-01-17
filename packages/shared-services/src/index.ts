@@ -17,6 +17,7 @@ export * from './players';
 export * from './shared-contacts';
 export * from './match-share';
 export * from './groups';
+export * from './chat';
 
 // Export default DatabaseService
 export { default } from './database';

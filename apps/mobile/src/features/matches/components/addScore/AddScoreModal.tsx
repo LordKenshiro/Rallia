@@ -67,7 +67,11 @@ function AddScoreContent({
     }
   }, [canGoBack, goToPreviousStep, onClose]);
 
-  const handleSubmit = useCallback(async () => {
+  // winnerId and sets are passed directly to avoid React state async issues
+  const handleSubmit = useCallback(async (
+    winnerId: 'team1' | 'team2',
+    sets: Array<{ team1Score: number | null; team2Score: number | null }>
+  ) => {
     if (!user?.id) {
       Alert.alert('Error', 'You must be logged in to submit a score.');
       return;
@@ -95,6 +99,7 @@ function AddScoreContent({
       const team2PlayerIds = opponentIds;
 
       // Transform formData to CreatePlayedMatchInput
+      // winnerId and sets are used directly from parameters (not formData) to avoid async state issues
       const matchInput: CreatePlayedMatchInput = {
         sportId,
         createdBy: user.id,
@@ -103,8 +108,8 @@ function AddScoreContent({
         expectation: formData.expectation || 'competitive',
         team1PlayerIds,
         team2PlayerIds,
-        winnerId: formData.winnerId === 'team1' ? 'team1' : 'team2',
-        sets: (formData.sets || [])
+        winnerId,
+        sets: sets
           .filter((s) => s.team1Score !== null && s.team2Score !== null)
           .map((s) => ({
             team1Score: s.team1Score || 0,

@@ -121,7 +121,10 @@ export default function GroupDetailScreen() {
 
   const handleOpenChat = useCallback(() => {
     if (group?.conversation_id) {
-      navigation.navigate('Chat', { conversationId: group.conversation_id });
+      navigation.navigate('Chat', { 
+        conversationId: group.conversation_id,
+        title: group.name,
+      });
     }
   }, [group, navigation]);
 
@@ -558,8 +561,7 @@ export default function GroupDetailScreen() {
                 <TouchableOpacity 
                   style={[styles.matchCard, { backgroundColor: isDark ? '#1C1C1E' : '#F8F8F8', borderColor: colors.border }]}
                   onPress={() => {
-                    // TODO: Navigate to match details
-                    Alert.alert('Match Details', 'Match details screen coming soon!');
+                    navigation.navigate('PlayedMatchDetail', { match: recentMatch });
                   }}
                   activeOpacity={0.7}
                 >
@@ -603,8 +605,13 @@ export default function GroupDetailScreen() {
                           <View key={participant.id} style={[
                             styles.playerCard,
                             recentMatch.match?.result?.winning_team === 1 && styles.winnerCard,
-                            recentMatch.match?.result?.winning_team === 1 && { borderColor: colors.primary },
+                            recentMatch.match?.result?.winning_team === 1 && { borderColor: '#F59E0B' },
                           ]}>
+                            {recentMatch.match?.result?.winning_team === 1 && (
+                              <View style={styles.winnerBadge}>
+                                <Ionicons name="trophy" size={12} color="#F59E0B" />
+                              </View>
+                            )}
                             <View style={[styles.playerAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
                               {participant.player?.profile?.profile_picture_url ? (
                                 <Image
@@ -615,14 +622,27 @@ export default function GroupDetailScreen() {
                                 <Ionicons name="person" size={24} color={colors.textMuted} />
                               )}
                             </View>
-                            {recentMatch.match?.result?.winning_team === 1 && (
-                              <View style={styles.winnerBadge}>
-                                <Ionicons name="trophy" size={12} color="#FFD700" />
-                              </View>
-                            )}
                             <Text size="sm" weight={recentMatch.match?.result?.winning_team === 1 ? 'semibold' : 'regular'} style={{ color: colors.text, marginTop: 4 }}>
                               {participant.player?.profile?.first_name || 'Player'}
                             </Text>
+                            {/* Set scores under player - show individual set game scores */}
+                            {recentMatch.match?.result && (
+                              <Text 
+                                size="sm" 
+                                weight="bold" 
+                                style={{ 
+                                  color: recentMatch.match.result.winning_team === 1 ? '#F59E0B' : colors.textMuted,
+                                  marginTop: 4,
+                                }}
+                              >
+                                {recentMatch.match.result.sets && recentMatch.match.result.sets.length > 0
+                                  ? recentMatch.match.result.sets
+                                      .sort((a, b) => a.set_number - b.set_number)
+                                      .map(set => set.team1_score)
+                                      .join('  ')
+                                  : recentMatch.match.result.team1_score ?? '-'}
+                              </Text>
+                            )}
                           </View>
                         ))}
                     </View>
@@ -638,8 +658,13 @@ export default function GroupDetailScreen() {
                           <View key={participant.id} style={[
                             styles.playerCard,
                             recentMatch.match?.result?.winning_team === 2 && styles.winnerCard,
-                            recentMatch.match?.result?.winning_team === 2 && { borderColor: colors.primary },
+                            recentMatch.match?.result?.winning_team === 2 && { borderColor: '#F59E0B' },
                           ]}>
+                            {recentMatch.match?.result?.winning_team === 2 && (
+                              <View style={styles.winnerBadge}>
+                                <Ionicons name="trophy" size={12} color="#F59E0B" />
+                              </View>
+                            )}
                             <View style={[styles.playerAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
                               {participant.player?.profile?.profile_picture_url ? (
                                 <Image
@@ -650,43 +675,31 @@ export default function GroupDetailScreen() {
                                 <Ionicons name="person" size={24} color={colors.textMuted} />
                               )}
                             </View>
-                            {recentMatch.match?.result?.winning_team === 2 && (
-                              <View style={styles.winnerBadge}>
-                                <Ionicons name="trophy" size={12} color="#FFD700" />
-                              </View>
-                            )}
                             <Text size="sm" weight={recentMatch.match?.result?.winning_team === 2 ? 'semibold' : 'regular'} style={{ color: colors.text, marginTop: 4 }}>
                               {participant.player?.profile?.first_name || 'Player'}
                             </Text>
+                            {/* Set scores under player - show individual set game scores */}
+                            {recentMatch.match?.result && (
+                              <Text 
+                                size="sm" 
+                                weight="bold" 
+                                style={{ 
+                                  color: recentMatch.match.result.winning_team === 2 ? '#F59E0B' : colors.textMuted,
+                                  marginTop: 4,
+                                }}
+                              >
+                                {recentMatch.match.result.sets && recentMatch.match.result.sets.length > 0
+                                  ? recentMatch.match.result.sets
+                                      .sort((a, b) => a.set_number - b.set_number)
+                                      .map(set => set.team2_score)
+                                      .join('  ')
+                                  : recentMatch.match.result.team2_score ?? '-'}
+                              </Text>
+                            )}
                           </View>
                         ))}
                     </View>
                   </View>
-
-                  {/* Scores */}
-                  {recentMatch.match.result && (
-                    <View style={styles.scoresRow}>
-                      <Text 
-                        weight={recentMatch.match.result.winning_team === 1 ? 'bold' : 'regular'} 
-                        style={{ 
-                          color: recentMatch.match.result.winning_team === 1 ? colors.primary : colors.textMuted, 
-                          fontSize: 18 
-                        }}
-                      >
-                        {recentMatch.match.result.team1_score ?? '-'} {recentMatch.match.result.team1_score !== null && recentMatch.match.result.team2_score !== null ? '' : ''}
-                      </Text>
-                      <Text style={{ color: colors.textMuted, marginHorizontal: 16, fontSize: 18 }}>-</Text>
-                      <Text 
-                        weight={recentMatch.match.result.winning_team === 2 ? 'bold' : 'regular'} 
-                        style={{ 
-                          color: recentMatch.match.result.winning_team === 2 ? colors.primary : colors.textMuted, 
-                          fontSize: 18 
-                        }}
-                      >
-                        {recentMatch.match.result.team2_score ?? '-'}
-                      </Text>
-                    </View>
-                  )}
                 </TouchableOpacity>
               ) : (
                 <View style={styles.emptyMatch}>
@@ -1120,9 +1133,9 @@ export default function GroupDetailScreen() {
         visible={showRecentGamesModal}
         onClose={() => setShowRecentGamesModal(false)}
         matches={allMatches || []}
-        onMatchPress={(_match) => {
-          // TODO: Navigate to match details
-          Alert.alert('Match Details', 'Match details screen coming soon!');
+        onMatchPress={(match) => {
+          setShowRecentGamesModal(false);
+          navigation.navigate('PlayedMatchDetail', { match });
         }}
       />
 
