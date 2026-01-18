@@ -55,36 +55,48 @@ interface CourtItemProps {
   court: CourtOption;
   onPress: () => void;
   colors: CourtSelectionSheetProps['colors'];
+  t: (key: TranslationKey) => string;
 }
 
-const CourtItem: React.FC<CourtItemProps> = ({ court, onPress, colors }) => (
-  <TouchableOpacity
-    style={[
-      styles.courtItem,
-      { backgroundColor: colors.buttonInactive, borderColor: colors.border },
-    ]}
-    onPress={() => {
-      lightHaptic();
-      onPress();
-    }}
-    activeOpacity={0.7}
-  >
-    <View style={[styles.courtIconContainer, { backgroundColor: `${colors.buttonActive}20` }]}>
-      <Ionicons name="tennisball-outline" size={20} color={colors.buttonActive} />
-    </View>
-    <View style={styles.courtInfo}>
-      <Text size="base" weight="medium" color={colors.text} numberOfLines={2}>
-        {court.courtName}
-      </Text>
-      {court.price !== undefined && court.price > 0 && (
-        <Text size="sm" color={colors.textMuted}>
-          ${court.price.toFixed(2)}
+const CourtItem: React.FC<CourtItemProps> = ({ court, onPress, colors, t }) => {
+  // Display translated "Court X" if we have a court number, otherwise fallback to raw name
+  const displayName =
+    court.courtNumber !== undefined
+      ? t('matchCreation.booking.courtNumber' as TranslationKey).replace(
+          '{number}',
+          String(court.courtNumber)
+        )
+      : court.courtName;
+
+  return (
+    <TouchableOpacity
+      style={[
+        styles.courtItem,
+        { backgroundColor: colors.buttonInactive, borderColor: colors.border },
+      ]}
+      onPress={() => {
+        lightHaptic();
+        onPress();
+      }}
+      activeOpacity={0.7}
+    >
+      <View style={[styles.courtIconContainer, { backgroundColor: `${colors.buttonActive}20` }]}>
+        <Ionicons name="tennisball-outline" size={20} color={colors.buttonActive} />
+      </View>
+      <View style={styles.courtInfo}>
+        <Text size="base" weight="medium" color={colors.text} numberOfLines={2}>
+          {displayName}
         </Text>
-      )}
-    </View>
-    <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-  </TouchableOpacity>
-);
+        {court.price !== undefined && court.price > 0 && (
+          <Text size="sm" color={colors.textMuted}>
+            ${court.price.toFixed(2)}
+          </Text>
+        )}
+      </View>
+      <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+    </TouchableOpacity>
+  );
+};
 
 // =============================================================================
 // MAIN COMPONENT
@@ -98,7 +110,7 @@ export const CourtSelectionSheet: React.FC<CourtSelectionSheetProps> = ({
   onCancel,
   colors,
   t,
-  isDark,
+  isDark: _isDark,
 }) => {
   const handleSelect = (court: CourtOption) => {
     successHaptic();
@@ -154,6 +166,7 @@ export const CourtSelectionSheet: React.FC<CourtSelectionSheetProps> = ({
                 court={court}
                 onPress={() => handleSelect(court)}
                 colors={colors}
+                t={t}
               />
             ))}
           </ScrollView>

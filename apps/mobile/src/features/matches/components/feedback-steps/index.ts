@@ -6,3 +6,4 @@
 
 export { MatchOutcomeStep } from './MatchOutcomeStep';
 export { OpponentFeedbackStep } from './OpponentFeedbackStep';
+export { ReportIssueSheet } from './ReportIssueSheet';

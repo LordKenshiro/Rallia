@@ -765,14 +765,15 @@ export async function notifyMatchStartingSoon(
   participantUserIds: string[],
   matchId: string,
   sportName: string,
-  locationName?: string
+  locationName?: string,
+  timeUntil?: string
 ): Promise<Notification[]> {
   return createNotifications(
     participantUserIds.map(userId => ({
       type: 'match_starting_soon' as const,
       userId,
       targetId: matchId,
-      payload: { matchId, sportName, locationName },
+      payload: { matchId, sportName, locationName, timeUntil },
     }))
   );
 }

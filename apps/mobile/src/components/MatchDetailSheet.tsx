@@ -576,6 +576,7 @@ export const MatchDetailSheet: React.FC = () => {
   const [showCancelInviteModal, setShowCancelInviteModal] = useState(false);
   const [cancellingInvitationId, setCancellingInvitationId] = useState<string | null>(null);
   const [resendingInvitationId, setResendingInvitationId] = useState<string | null>(null);
+  const [acceptingRequestId, setAcceptingRequestId] = useState<string | null>(null);
 
   // Collapse/expand state for pending requests
   const [showAllRequests, setShowAllRequests] = useState(false);
@@ -674,6 +675,7 @@ export const MatchDetailSheet: React.FC = () => {
     },
     onAcceptSuccess: participant => {
       successHaptic();
+      setAcceptingRequestId(null);
       if (selectedMatch) {
         updateSelectedMatch({
           ...selectedMatch,
@@ -689,6 +691,7 @@ export const MatchDetailSheet: React.FC = () => {
     },
     onAcceptError: error => {
       errorHaptic();
+      setAcceptingRequestId(null);
       Alert.alert(t('alerts.error' as TranslationKey), error.message);
     },
     onRejectSuccess: participant => {
@@ -941,6 +944,7 @@ export const MatchDetailSheet: React.FC = () => {
     (participantId: string) => {
       if (!selectedMatch || !playerId) return;
       lightHaptic();
+      setAcceptingRequestId(participantId);
       acceptRequest({ participantId, hostId: playerId });
     },
     [selectedMatch, playerId, acceptRequest]
@@ -1222,14 +1226,6 @@ export const MatchDetailSheet: React.FC = () => {
 
   // Check if we're within 24h of match start (to prevent kicking players)
   const cannotKickWithin24h = isWithin24HoursOfStart(match);
-
-  // DEBUG: Log the 24h kick restriction check
-  console.log('[MatchDetailSheet] Kick restriction check:', {
-    matchDate: match.match_date,
-    startTime: match.start_time,
-    timezone: match.timezone,
-    cannotKickWithin24h,
-  });
 
   // Feedback window status (48h after end time)
   const { isWithinFeedbackWindow } = getFeedbackWindowStatus(
@@ -2254,18 +2250,18 @@ export const MatchDetailSheet: React.FC = () => {
                         styles.acceptButton,
                         {
                           backgroundColor:
-                            isFull || isInProgress ? neutral[400] : status.success.DEFAULT,
+                            acceptingRequestId === request.id || isFull || isInProgress
+                              ? neutral[400]
+                              : status.success.DEFAULT,
                         },
                       ]}
                       onPress={() => request.id && handleAcceptRequest(request.id)}
-                      disabled={isAccepting || isRejecting || isFull || isInProgress}
+                      disabled={
+                        acceptingRequestId === request.id || isRejecting || isFull || isInProgress
+                      }
                       activeOpacity={0.7}
                     >
-                      {isAccepting ? (
-                        <View style={styles.requestActionLoading} />
-                      ) : (
-                        <Ionicons name="checkmark" size={18} color={BASE_WHITE} />
-                      )}
+                      <Ionicons name="checkmark" size={18} color={BASE_WHITE} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[

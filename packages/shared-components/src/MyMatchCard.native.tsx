@@ -282,7 +282,27 @@ interface PendingRequestsBadgeProps {
  * Uses secondary (coral) color for visual distinction from invited badge
  */
 const PendingRequestsBadge: React.FC<PendingRequestsBadgeProps> = ({ count, isDark }) => {
-  const shimmerAnim = useRef(new Animated.Value(0)).current;
+  // Use useMemo to avoid accessing refs during render
+  const shimmerAnim = useMemo(() => new Animated.Value(0), []);
+
+  // Memoize interpolated values
+  const shimmerOpacity = useMemo(
+    () =>
+      shimmerAnim.interpolate({
+        inputRange: [0, 0.5, 1],
+        outputRange: [0.8, 1, 0.8],
+      }),
+    [shimmerAnim]
+  );
+
+  const shimmerScale = useMemo(
+    () =>
+      shimmerAnim.interpolate({
+        inputRange: [0, 0.5, 1],
+        outputRange: [1, 1.1, 1],
+      }),
+    [shimmerAnim]
+  );
 
   useEffect(() => {
     const shimmer = Animated.loop(
@@ -304,17 +324,6 @@ const PendingRequestsBadge: React.FC<PendingRequestsBadgeProps> = ({ count, isDa
     shimmer.start();
     return () => shimmer.stop();
   }, [shimmerAnim]);
-
-  // Same shimmer animation as invited badge
-  const shimmerOpacity = shimmerAnim.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0.8, 1, 0.8],
-  });
-
-  const shimmerScale = shimmerAnim.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [1, 1.1, 1],
-  });
 
   // Use secondary (coral) color for distinction from gold invited badge
   const badgeColor = isDark ? secondary[400] : secondary[500];
@@ -353,7 +362,27 @@ interface InvitedIndicatorProps {
  * Uses accent (gold) color to signal something special awaits action
  */
 const InvitedIndicator: React.FC<InvitedIndicatorProps> = ({ isDark }) => {
-  const shimmerAnim = useRef(new Animated.Value(0)).current;
+  // Use useMemo to avoid accessing refs during render
+  const shimmerAnim = useMemo(() => new Animated.Value(0), []);
+
+  // Memoize interpolated values
+  const shimmerOpacity = useMemo(
+    () =>
+      shimmerAnim.interpolate({
+        inputRange: [0, 0.5, 1],
+        outputRange: [0.8, 1, 0.8],
+      }),
+    [shimmerAnim]
+  );
+
+  const shimmerScale = useMemo(
+    () =>
+      shimmerAnim.interpolate({
+        inputRange: [0, 0.5, 1],
+        outputRange: [1, 1.1, 1],
+      }),
+    [shimmerAnim]
+  );
 
   useEffect(() => {
     const shimmer = Animated.loop(
@@ -375,16 +404,6 @@ const InvitedIndicator: React.FC<InvitedIndicatorProps> = ({ isDark }) => {
     shimmer.start();
     return () => shimmer.stop();
   }, [shimmerAnim]);
-
-  const shimmerOpacity = shimmerAnim.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0.8, 1, 0.8],
-  });
-
-  const shimmerScale = shimmerAnim.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [1, 1.1, 1],
-  });
 
   const badgeBg = isDark ? accent[600] : accent[500];
   const iconColor = base.white;
@@ -550,8 +569,8 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
   // Get most wanted colors from design system
   const mwColors = MOST_WANTED_COLORS[isDark ? 'dark' : 'light'];
 
-  // Animated pulse effect for urgent matches
-  const urgentPulseAnimation = useRef(new Animated.Value(0)).current;
+  // Animated pulse effect for urgent matches - use useMemo to avoid accessing refs during render
+  const urgentPulseAnimation = useMemo(() => new Animated.Value(0), []);
 
   // Get tier palette colors
   const tierPaletteColors = TIER_PALETTES[tier][isDark ? 'dark' : 'light'];
@@ -655,32 +674,52 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
     }
   }, [isOngoing, isStartingSoon, urgentPulseAnimation]);
 
-  // "Live indicator" interpolations for ongoing matches
-  const liveRingScale = urgentPulseAnimation.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 2],
-  });
+  // "Live indicator" interpolations for ongoing matches - memoize to avoid accessing refs during render
+  const liveRingScale = useMemo(
+    () =>
+      urgentPulseAnimation.interpolate({
+        inputRange: [0, 1],
+        outputRange: [1, 2],
+      }),
+    [urgentPulseAnimation]
+  );
 
-  const liveRingOpacity = urgentPulseAnimation.interpolate({
-    inputRange: [0, 0.3, 1],
-    outputRange: [0.7, 0.3, 0],
-  });
+  const liveRingOpacity = useMemo(
+    () =>
+      urgentPulseAnimation.interpolate({
+        inputRange: [0, 0.3, 1],
+        outputRange: [0.7, 0.3, 0],
+      }),
+    [urgentPulseAnimation]
+  );
 
-  const liveDotOpacity = urgentPulseAnimation.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [1, 0.7, 1],
-  });
+  const liveDotOpacity = useMemo(
+    () =>
+      urgentPulseAnimation.interpolate({
+        inputRange: [0, 0.5, 1],
+        outputRange: [1, 0.7, 1],
+      }),
+    [urgentPulseAnimation]
+  );
 
   // "Starting soon" interpolations - subtle bouncing chevron
-  const countdownBounce = urgentPulseAnimation.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0, 2, 0],
-  });
+  const countdownBounce = useMemo(
+    () =>
+      urgentPulseAnimation.interpolate({
+        inputRange: [0, 0.5, 1],
+        outputRange: [0, 2, 0],
+      }),
+    [urgentPulseAnimation]
+  );
 
-  const countdownOpacity = urgentPulseAnimation.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0.6, 1, 0.6],
-  });
+  const countdownOpacity = useMemo(
+    () =>
+      urgentPulseAnimation.interpolate({
+        inputRange: [0, 0.5, 1],
+        outputRange: [0.6, 1, 0.6],
+      }),
+    [urgentPulseAnimation]
+  );
 
   // Dynamic border color based on tier
   // Most Wanted uses design system accent colors for border
@@ -707,6 +746,12 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
         {
           backgroundColor: tierPaletteColors.background,
           borderColor: dynamicBorderColor,
+          // Softer shadow for light mode, subtle for dark mode
+          shadowColor: isDark ? '#000' : neutral[400],
+          shadowOffset: { width: 0, height: isDark ? 2 : 3 },
+          shadowOpacity: isDark ? 0.2 : 0.15,
+          shadowRadius: isDark ? 8 : 10,
+          elevation: isDark ? 3 : 2,
         },
         isMostWanted && [styles.premiumCard, { shadowColor: mwColors.shadow }],
       ]}
@@ -819,19 +864,15 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.lg,
     borderWidth: 1.5,
     // Note: overflow NOT hidden to allow corner badges to extend outside
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 4,
+    // Shadow is applied dynamically based on theme in the component
   },
 
   // Premium "Most Wanted" card styles
   premiumCard: {
     borderWidth: 2,
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 6,
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 4,
     // shadowColor is set dynamically using mwColors.shadow
   },
 

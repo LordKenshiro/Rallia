@@ -34,6 +34,7 @@ import type {
   OpponentFeedbackFormState,
   MatchOutcomeEnum,
   CancellationReasonEnum,
+  MatchReportReasonEnum,
 } from '@rallia/shared-types';
 
 import { useTranslation, type TranslationKey } from '../../../hooks/useTranslation';
@@ -95,7 +96,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
   // Animate progress when step changes
   useEffect(() => {
     progress.value = withTiming((currentStep / totalSteps) * 100, { duration: 300 });
-  }, [currentStep, totalSteps]);
+  }, [currentStep, totalSteps, progress]);
 
   const animatedProgressStyle = useAnimatedStyle(() => ({
     width: `${progress.value}%`,
@@ -174,8 +175,10 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
   const {
     submitOutcome,
     submitFeedback,
+    submitReport,
     isSubmittingOutcome,
     isSubmittingFeedback,
+    isSubmittingReport,
     unratedOpponents,
     isLoadingOpponents,
     participant,
@@ -211,6 +214,14 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
     onFeedbackError: error => {
       warningHaptic();
       console.error('[MatchFeedbackWizard] Feedback error:', error);
+    },
+    onReportSuccess: () => {
+      // Report submitted successfully - toast is shown by the component
+      console.log('[MatchFeedbackWizard] Report submitted successfully');
+    },
+    onReportError: error => {
+      warningHaptic();
+      console.error('[MatchFeedbackWizard] Report error:', error);
     },
   });
 
@@ -263,7 +274,7 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
       damping: 80,
       stiffness: 600,
     });
-  }, [currentStep]);
+  }, [currentStep, translateX]);
 
   // Navigation
   const goToNextStep = useCallback(() => {
@@ -359,6 +370,22 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
       goToNextStep();
     }
   }, [currentStep, totalSteps, goToNextStep, onClose]);
+
+  // Handle report submission for current opponent
+  const handleReportSubmit = useCallback(
+    (reason: MatchReportReasonEnum, details?: string) => {
+      const opponentIndex = getOpponentIndex(currentStep);
+      const opponent = opponents[opponentIndex];
+      if (!opponent) return;
+
+      submitReport({
+        reportedId: opponent.playerId,
+        reason,
+        details,
+      });
+    },
+    [submitReport, opponents, currentStep, getOpponentIndex]
+  );
 
   // Determine if current step can proceed
   const canProceed = useMemo(() => {
@@ -538,6 +565,8 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
                     onFeedbackChange={newFeedback =>
                       handleOpponentFeedbackChange(opponentIndex, newFeedback)
                     }
+                    onReportSubmit={handleReportSubmit}
+                    isSubmittingReport={isSubmittingReport}
                     colors={colors}
                     t={t}
                     isDark={isDark}

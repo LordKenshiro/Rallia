@@ -38,7 +38,6 @@ import type {
 } from '@rallia/shared-types';
 import type { TranslationKey, TranslationOptions } from '../../../../hooks/useTranslation';
 import { useUserLocation } from '../../../../hooks/useUserLocation';
-import { supabase } from '../../../../lib/supabase';
 import { BookingConfirmationSheet } from '../BookingConfirmationSheet';
 import { CourtSelectionSheet } from '../CourtSelectionSheet';
 
@@ -211,7 +210,8 @@ interface SkeletonProps {
 }
 
 const Skeleton: React.FC<SkeletonProps> = ({ width, height, borderRadius = 4, colors, style }) => {
-  const pulseAnim = React.useRef(new Animated.Value(0.3)).current;
+  // Use useMemo to avoid accessing refs during render
+  const pulseAnim = React.useMemo(() => new Animated.Value(0.3), []);
 
   React.useEffect(() => {
     const pulse = Animated.loop(
@@ -471,21 +471,19 @@ const SelectedFacility: React.FC<SelectedFacilityProps> = ({
           <Text size="base" weight="semibold" color={colors.text}>
             {facility.name}
           </Text>
-          {bookedCourtNumber !== null && bookedCourtNumber !== undefined && (
-            <View
-              style={[styles.courtNumberBadge, { backgroundColor: `${colors.buttonActive}20` }]}
-            >
-              <Text size="xs" weight="semibold" color={colors.buttonActive}>
-                {t('matchCreation.fields.courtNumber' as TranslationKey, {
-                  number: bookedCourtNumber,
-                })}
-              </Text>
-            </View>
-          )}
         </View>
         <Text size="sm" color={colors.textMuted} numberOfLines={1}>
           {[facility.address, facility.city].filter(Boolean).join(', ')}
         </Text>
+        {bookedCourtNumber !== null && bookedCourtNumber !== undefined && (
+          <View style={[styles.courtNumberBadge, { backgroundColor: `${colors.buttonActive}20` }]}>
+            <Text size="xs" weight="semibold" color={colors.buttonActive}>
+              {t('matchCreation.fields.courtNumber' as TranslationKey, {
+                number: bookedCourtNumber,
+              })}
+            </Text>
+          </View>
+        )}
       </View>
     </View>
     <TouchableOpacity
@@ -874,7 +872,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   });
 
   // Preferred facility hook - fetch the player's preferred facility
-  const { preferredFacility, isLoading: preferredFacilityLoading } = usePreferredFacility({
+  const { preferredFacility, isLoading: _preferredFacilityLoading } = usePreferredFacility({
     preferredFacilityId,
     sportId,
     latitude: location?.latitude,
@@ -910,7 +908,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   });
 
   // State for fetching place details
-  const [isFetchingPlaceDetails, setIsFetchingPlaceDetails] = useState(false);
+  const [_isFetchingPlaceDetails, setIsFetchingPlaceDetails] = useState(false);
 
   // Handle facility selection
   const handleSelectFacility = useCallback(
@@ -1110,6 +1108,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
     facilities.length,
     isFetching,
     colors,
+    t,
   ]);
 
   return (
@@ -1640,6 +1639,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[2],
     paddingVertical: spacingPixels[0.5],
     borderRadius: radiusPixels.full,
+    marginTop: spacingPixels[1],
+    alignSelf: 'flex-start',
   },
   textInput: {
     padding: spacingPixels[4],

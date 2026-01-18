@@ -190,20 +190,24 @@ export function useMatchActions(matchId: string | undefined, options: UseMatchAc
   const queryClient = useQueryClient();
 
   /**
-   * Invalidate and refetch all relevant match queries after an action
+   * Invalidate and refetch all relevant match queries after an action.
+   * Uses invalidateQueries (not resetQueries) to keep showing cached data
+   * while refetching in the background - this prevents UI flash to loading state.
    */
   const invalidateMatchQueries = async () => {
     // Invalidate the specific match detail
     if (matchId) {
-      queryClient.invalidateQueries({
+      await queryClient.invalidateQueries({
         queryKey: matchKeys.detail(matchId),
+        refetchType: 'all',
       });
     }
 
-    // Reset all match list queries - this clears pagination state for infinite queries
-    // and triggers a fresh fetch from the first page
-    await queryClient.resetQueries({
+    // Invalidate all match list queries - marks them as stale and triggers refetch
+    // while keeping cached data visible (no loading flash)
+    await queryClient.invalidateQueries({
       queryKey: matchKeys.lists(),
+      refetchType: 'all',
     });
   };
 

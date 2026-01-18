@@ -5,16 +5,21 @@
  * Includes attendance toggle, late toggle, star rating, and comments.
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { lightHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
+import { lightHaptic, getProfilePictureUrl, successHaptic } from '@rallia/shared-utils';
 import { StarRating } from '../../../../components/StarRating';
-import type { OpponentForFeedback, OpponentFeedbackFormState } from '@rallia/shared-types';
+import type {
+  OpponentForFeedback,
+  OpponentFeedbackFormState,
+  MatchReportReasonEnum,
+} from '@rallia/shared-types';
 import type { TranslationKey } from '../../../../hooks/useTranslation';
+import { ReportIssueSheet } from './ReportIssueSheet';
 
 // =============================================================================
 // TYPES
@@ -27,6 +32,10 @@ interface OpponentFeedbackStepProps {
   feedback: OpponentFeedbackFormState;
   /** Callback when feedback form values change */
   onFeedbackChange: (feedback: OpponentFeedbackFormState) => void;
+  /** Callback when report is submitted */
+  onReportSubmit?: (reason: MatchReportReasonEnum, details?: string) => void;
+  /** Whether report submission is in progress */
+  isSubmittingReport?: boolean;
   /** Theme colors */
   colors: {
     text: string;
@@ -37,6 +46,7 @@ interface OpponentFeedbackStepProps {
     buttonInactive: string;
     buttonTextActive: string;
     cardBackground: string;
+    background?: string;
   };
   /** Translation function */
   t: (key: TranslationKey) => string;
@@ -125,11 +135,39 @@ export const OpponentFeedbackStep: React.FC<OpponentFeedbackStepProps> = ({
   opponent,
   feedback,
   onFeedbackChange,
+  onReportSubmit,
+  isSubmittingReport = false,
   colors,
   t,
   isDark: _isDark,
 }) => {
   const { showedUp, wasLate, starRating, comments } = feedback;
+
+  // Report sheet state
+  const [showReportSheet, setShowReportSheet] = useState(false);
+
+  // Handle report button press
+  const handleReportPress = useCallback(() => {
+    lightHaptic();
+    setShowReportSheet(true);
+  }, []);
+
+  // Handle report sheet close
+  const handleReportClose = useCallback(() => {
+    setShowReportSheet(false);
+  }, []);
+
+  // Handle report submission
+  const handleReportSubmit = useCallback(
+    (reason: MatchReportReasonEnum, details?: string) => {
+      if (onReportSubmit) {
+        onReportSubmit(reason, details);
+        successHaptic();
+        setShowReportSheet(false);
+      }
+    },
+    [onReportSubmit]
+  );
 
   const handleShowedUpChange = useCallback(
     (value: boolean) => {
@@ -284,10 +322,11 @@ export const OpponentFeedbackStep: React.FC<OpponentFeedbackStepProps> = ({
         </Text>
       </View>
 
-      {/* Report Link (disabled) */}
+      {/* Report Link */}
       <TouchableOpacity
-        style={[styles.reportLink, { opacity: 0.5 }]}
-        disabled={true}
+        style={[styles.reportLink, !onReportSubmit && { opacity: 0.5 }]}
+        disabled={!onReportSubmit}
+        onPress={handleReportPress}
         activeOpacity={0.7}
       >
         <Ionicons name="flag-outline" size={16} color={colors.textMuted} />
@@ -295,6 +334,22 @@ export const OpponentFeedbackStep: React.FC<OpponentFeedbackStepProps> = ({
           {t('matchFeedback.opponentStep.reportIssue' as TranslationKey)}
         </Text>
       </TouchableOpacity>
+
+      {/* Report Issue Sheet */}
+      {onReportSubmit && (
+        <ReportIssueSheet
+          visible={showReportSheet}
+          opponentName={opponent.name}
+          onClose={handleReportClose}
+          onSubmit={handleReportSubmit}
+          isSubmitting={isSubmittingReport}
+          colors={{
+            ...colors,
+            background: colors.background || colors.cardBackground,
+          }}
+          t={t}
+        />
+      )}
     </ScrollView>
   );
 };

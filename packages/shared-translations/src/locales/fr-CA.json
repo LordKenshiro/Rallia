@@ -767,6 +767,21 @@
       "skip": "Passer",
       "continue": "Continuer",
       "complete": "Terminer"
+    },
+    "report": {
+      "title": "Signaler {name}",
+      "selectReason": "Que s'est-il passé?",
+      "reasons": {
+        "harassment": "Harcèlement",
+        "unsportsmanlike": "Comportement antisportif",
+        "safety": "Problème de sécurité",
+        "misrepresented_level": "Niveau mal représenté",
+        "inappropriate": "Comportement inapproprié"
+      },
+      "detailsLabel": "Détails supplémentaires (facultatif)",
+      "detailsPlaceholder": "Décrivez ce qui s'est passé...",
+      "submit": "Envoyer le signalement",
+      "success": "Signalement envoyé"
     }
   },
   "alerts": {
@@ -870,7 +885,7 @@
       "locationAccessNeeded": "Nous avons besoin de votre localisation pour trouver les sites de jeu à proximité",
       "failedToLoadFacilities": "Impossible de charger les sites de jeu",
       "noFacilitiesFound": "Aucun site de jeu trouvé pour \"{query}\"",
-      "noFacilitiesAvailable": "Aucun site de jeu disponible pour ce sport",
+      "noFacilitiesAvailable": "Aucun site de jeu disponible",
       "tbdLocationInfo": "Vous pouvez définir le lieu plus tard après que les joueurs se soient joints. Ils seront notifiés lorsque vous le mettrez à jour.",
       "facility": "Site de jeu",
       "facilityPlaceholder": "Rechercher des sites de jeu...",
@@ -1008,7 +1023,8 @@
       "viewMoreSlots": "Voir plus de créneaux",
       "selectCourt": "Choisir un terrain",
       "courtAvailable": "terrain disponible",
-      "courtsAvailable": "terrains disponibles"
+      "courtsAvailable": "terrains disponibles",
+      "courtNumber": "Terrain {number}"
     },
     "invite": {
       "title": "Inviter des joueurs",
@@ -1017,7 +1033,7 @@
       "searching": "Recherche de joueurs...",
       "searchError": "Impossible de rechercher des joueurs",
       "noPlayersFound": "Aucun joueur trouvé",
-      "noPlayersAvailable": "Aucun joueur disponible pour ce sport",
+      "noPlayersAvailable": "Aucun joueur disponible",
       "selectPlayers": "Sélectionner des joueurs",
       "sendInvitations": "Envoyer les invitations ({count})",
       "skip": "Passer",
@@ -2036,6 +2052,13 @@
       "unexpectedError": "Une erreur inattendue s'est produite",
       "invalidCallback": "Paramètres de rappel invalides"
     }
+  },
+  "sportSelectionOverlay": {
+    "title": "Quels sports pratiquez-vous?",
+    "subtitle": "Sélectionnez un ou plusieurs sports.",
+    "loading": "Chargement des sports...",
+    "getStarted": "Commencer",
+    "selectionHint": "Vous commencerez avec {sport}"
   },
   "reputation": {
     "tiers": {

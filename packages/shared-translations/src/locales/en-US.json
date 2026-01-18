@@ -767,6 +767,21 @@
       "skip": "Skip",
       "continue": "Continue",
       "complete": "Complete"
+    },
+    "report": {
+      "title": "Report {name}",
+      "selectReason": "What happened?",
+      "reasons": {
+        "harassment": "Harassment",
+        "unsportsmanlike": "Unsportsmanlike conduct",
+        "safety": "Safety concern",
+        "misrepresented_level": "Misrepresented skill level",
+        "inappropriate": "Inappropriate behavior"
+      },
+      "detailsLabel": "Additional details (optional)",
+      "detailsPlaceholder": "Describe what happened...",
+      "submit": "Submit Report",
+      "success": "Report submitted"
     }
   },
   "alerts": {
@@ -870,7 +885,7 @@
       "locationAccessNeeded": "We need your location to find nearby facilities",
       "failedToLoadFacilities": "Couldn't load facilities",
       "noFacilitiesFound": "No facilities found for \"{query}\"",
-      "noFacilitiesAvailable": "No facilities available for this sport",
+      "noFacilitiesAvailable": "No facilities available",
       "tbdLocationInfo": "You can set the location later after players join. They'll be notified when you update it.",
       "facility": "Facility",
       "facilityPlaceholder": "Search facilities...",
@@ -1008,7 +1023,8 @@
       "viewMoreSlots": "View more slots",
       "selectCourt": "Select a Court",
       "courtAvailable": "court available",
-      "courtsAvailable": "courts available"
+      "courtsAvailable": "courts available",
+      "courtNumber": "Court {number}"
     },
     "invite": {
       "title": "Invite Players",
@@ -1017,7 +1033,7 @@
       "searching": "Searching players...",
       "searchError": "Couldn't search players",
       "noPlayersFound": "No players found",
-      "noPlayersAvailable": "No players available for this sport",
+      "noPlayersAvailable": "No players available",
       "selectPlayers": "Select players to invite",
       "sendInvitations": "Send Invitations ({count})",
       "skip": "Skip",
@@ -2036,6 +2052,13 @@
       "unexpectedError": "Something unexpected happened",
       "invalidCallback": "Invalid callback parameters"
     }
+  },
+  "sportSelectionOverlay": {
+    "title": "What sports do you play?",
+    "subtitle": "Select one or more sports.",
+    "loading": "Loading sports...",
+    "getStarted": "Get Started",
+    "selectionHint": "You'll start with {sport}"
   },
   "reputation": {
     "tiers": {

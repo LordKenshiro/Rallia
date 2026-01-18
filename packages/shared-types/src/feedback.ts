@@ -5,7 +5,12 @@
  * These are UI view models and input types, not database row types.
  */
 
-import type { CancellationReasonEnum, MatchOutcomeEnum } from './database';
+import type {
+  CancellationReasonEnum,
+  MatchOutcomeEnum,
+  MatchReportReasonEnum,
+  MatchReportPriorityEnum,
+} from './database';
 
 // ============================================
 // MATCH OUTCOME (INTRO STEP)
@@ -145,6 +150,10 @@ export interface UseMatchFeedbackOptions {
   onFeedbackSuccess?: (result: MatchFeedbackResult) => void;
   /** Callback when feedback submission fails */
   onFeedbackError?: (error: Error) => void;
+  /** Callback when report submission succeeds */
+  onReportSuccess?: (result: MatchReportResult) => void;
+  /** Callback when report submission fails */
+  onReportError?: (error: Error) => void;
 }
 
 // ============================================
@@ -170,4 +179,57 @@ export const CANCELLATION_REASON_ICONS: Record<CancellationReasonEnum, string> =
   court_unavailable: 'close-circle-outline',
   emergency: 'warning-outline',
   other: 'chatbox-ellipses-outline',
+};
+
+// ============================================
+// MATCH REPORT
+// ============================================
+
+/**
+ * Input for submitting a match report.
+ */
+export interface MatchReportInput {
+  /** The match ID */
+  matchId: string;
+  /** The player ID of the reporter */
+  reporterId: string;
+  /** The player ID of the reported player */
+  reportedId: string;
+  /** The reason for the report */
+  reason: MatchReportReasonEnum;
+  /** Optional additional details */
+  details?: string;
+}
+
+/**
+ * Result from submitting a match report.
+ */
+export interface MatchReportResult {
+  /** Whether the report was submitted successfully */
+  success: boolean;
+  /** The created report ID */
+  reportId: string;
+}
+
+/**
+ * Priority mapping for report reasons.
+ * Used to automatically set priority based on reason.
+ */
+export const REPORT_REASON_PRIORITY: Record<MatchReportReasonEnum, MatchReportPriorityEnum> = {
+  harassment: 'high',
+  unsportsmanlike: 'medium',
+  safety: 'high',
+  misrepresented_level: 'low',
+  inappropriate: 'medium',
+};
+
+/**
+ * Icons for report reasons (Ionicons names).
+ */
+export const REPORT_REASON_ICONS: Record<MatchReportReasonEnum, string> = {
+  harassment: 'warning-outline',
+  unsportsmanlike: 'thumbs-down-outline',
+  safety: 'shield-outline',
+  misrepresented_level: 'trending-down-outline',
+  inappropriate: 'alert-circle-outline',
 };

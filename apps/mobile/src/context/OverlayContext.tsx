@@ -49,6 +49,8 @@ interface OverlayContextType {
   showSportSelectionOverlay: boolean;
   /** Whether splash animation has completed (triggers overlay entrance animation) */
   isSplashComplete: boolean;
+  /** Whether sport selection has been completed (or was already done for returning users) */
+  isSportSelectionComplete: boolean;
   /** Handle sport selection completion */
   onSportSelectionComplete: (orderedSports: OverlaySport[]) => void;
 }
@@ -250,6 +252,7 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
     setSplashComplete: handleSetSplashComplete,
     showSportSelectionOverlay,
     isSplashComplete,
+    isSportSelectionComplete,
     onSportSelectionComplete: handleSportSelectionComplete,
   };
 

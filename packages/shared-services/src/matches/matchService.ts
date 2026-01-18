@@ -1007,6 +1007,7 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
       timezone,
       created_by,
       preferred_opponent_gender,
+      sport:sport_id (name),
       participants:match_participant (
         id,
         player_id,
@@ -1155,18 +1156,23 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
     .eq('id', playerId)
     .single();
 
-  // Prefer display_name, fall back to first_name + last_name
+  // Prefer first_name + last_name for notifications
   const playerName =
-    profileData?.display_name ||
-    (profileData?.first_name && profileData?.last_name
+    profileData?.first_name && profileData?.last_name
       ? `${profileData.first_name} ${profileData.last_name}`
-      : profileData?.first_name) ||
-    'A player';
+      : profileData?.first_name || 'A player';
 
   // Send notification to host if this is a join request
   if (participantStatus === 'requested') {
     // Notify the host (fire and forget - don't block on notification)
-    notifyMatchJoinRequest(match.created_by, matchId, playerName).catch(err => {
+    const sportName = (match.sport as { name?: string } | null)?.name;
+    notifyMatchJoinRequest(
+      match.created_by,
+      matchId,
+      playerName,
+      sportName,
+      match.match_date
+    ).catch(err => {
       console.error('Failed to send join request notification:', err);
     });
   }
@@ -1226,6 +1232,9 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
         }
       }
 
+      // Calculate spots left after this player joined
+      const spotsLeft = availableSpots - 1;
+
       // Notify all users (fire and forget - don't block on notification)
       notifyPlayerJoined(
         uniqueUserIds,
@@ -1233,7 +1242,8 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
         playerName,
         sportName,
         formattedDate,
-        locationName
+        locationName,
+        spotsLeft
       ).catch(err => {
         console.error('Failed to send player joined notifications:', err);
       });
@@ -1376,11 +1386,9 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
     .single();
 
   const playerName =
-    profileData?.display_name ||
-    (profileData?.first_name && profileData?.last_name
+    profileData?.first_name && profileData?.last_name
       ? `${profileData.first_name} ${profileData.last_name}`
-      : profileData?.first_name) ||
-    'A player';
+      : profileData?.first_name || 'A player';
   const sportName = (match.sport as { name?: string } | null)?.name;
 
   // Get all remaining joined participants (excluding the player who left)
@@ -1398,8 +1406,11 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
   const uniqueUserIds = [...new Set(userIdsToNotify)];
 
   if (uniqueUserIds.length > 0) {
+    // Calculate spots left after the player left
+    const spotsLeft = totalCapacity - remainingParticipants.length;
+
     // Notify all users (fire and forget - don't block on notification)
-    notifyPlayerLeft(uniqueUserIds, matchId, playerName, sportName).catch(err => {
+    notifyPlayerLeft(uniqueUserIds, matchId, playerName, sportName, spotsLeft).catch(err => {
       console.error('Failed to send player left notifications:', err);
     });
   }
@@ -1456,6 +1467,10 @@ export async function acceptJoinRequest(
       start_time,
       end_time,
       timezone,
+      location_type,
+      location_name,
+      sport:sport_id (name),
+      facility:facility_id (name),
       participants:match_participant (
         id,
         player_id,
@@ -1534,13 +1549,19 @@ export async function acceptJoinRequest(
   // Notify the player that their request was accepted (fire and forget)
   // Extract time in HH:MM format for notification
   const startTime = match.start_time ? match.start_time.slice(0, 5) : undefined;
+  const sportName = (match.sport as { name?: string } | null)?.name;
+  const locationName =
+    match.location_type === 'tbd'
+      ? undefined
+      : ((match.facility as { name?: string } | null)?.name ?? match.location_name);
 
   notifyJoinRequestAccepted(
     participant.player_id,
     matchId,
     match.match_date,
     startTime,
-    undefined // sportName - would need additional query to get
+    sportName,
+    locationName
   ).catch(err => {
     console.error('Failed to send join accepted notification:', err);
   });
@@ -1577,8 +1598,10 @@ export async function rejectJoinRequest(
       start_time,
       end_time,
       timezone,
+      sport:sport_id (name),
       participants:match_participant (
         id,
+        player_id,
         status
       )
     `
@@ -1647,7 +1670,13 @@ export async function rejectJoinRequest(
 
   if (participantRecord?.player_id) {
     // Notify the player that their request was rejected (fire and forget)
-    notifyJoinRequestRejected(participantRecord.player_id, matchId).catch(err => {
+    const sportName = (match.sport as { name?: string } | null)?.name;
+    notifyJoinRequestRejected(
+      participantRecord.player_id,
+      matchId,
+      sportName,
+      match.match_date
+    ).catch(err => {
       console.error('Failed to send join rejected notification:', err);
     });
   }
@@ -1728,6 +1757,7 @@ export async function kickParticipant(
       start_time,
       end_time,
       timezone,
+      sport:sport_id (name),
       participants:match_participant (
         id,
         player_id,
@@ -1800,11 +1830,12 @@ export async function kickParticipant(
   if (participantRecord?.player_id) {
     // Extract time in HH:MM format for notification
     const startTime = match.start_time ? match.start_time.slice(0, 5) : undefined;
+    const sportName = (match.sport as { name?: string } | null)?.name;
 
     notifyPlayerKicked(
       participantRecord.player_id,
       matchId,
-      undefined, // sportName - would need additional query
+      sportName,
       match.match_date,
       startTime
     ).catch(err => {
@@ -2033,11 +2064,9 @@ export async function resendInvitation(
     .single();
 
   const inviterName =
-    hostProfile?.display_name ||
-    (hostProfile?.first_name && hostProfile?.last_name
+    hostProfile?.first_name && hostProfile?.last_name
       ? `${hostProfile.first_name} ${hostProfile.last_name}`
-      : hostProfile?.first_name) ||
-    'A player';
+      : hostProfile?.first_name || 'A player';
 
   // Get sport name (handle both array and object cases from Supabase types)
   const sportData = match.sport as
@@ -3041,11 +3070,9 @@ export async function invitePlayersToMatch(
     .single();
 
   const inviterName =
-    hostProfile?.display_name ||
-    (hostProfile?.first_name && hostProfile?.last_name
+    hostProfile?.first_name && hostProfile?.last_name
       ? `${hostProfile.first_name} ${hostProfile.last_name}`
-      : hostProfile?.first_name) ||
-    'A player';
+      : hostProfile?.first_name || 'A player';
   // Supabase returns relations as arrays when using select, handle both array and single object
   const sportData = match.sport;
   const sport = Array.isArray(sportData) ? sportData[0] : sportData;
@@ -3414,12 +3441,6 @@ export async function checkInToMatch(
 
     // 6. Check if within radius
     if (distanceMeters > CHECK_IN_RADIUS_METERS) {
-      console.log('[checkInToMatch] Player too far from match location:', {
-        matchId,
-        playerId,
-        distanceMeters,
-        radiusMeters: CHECK_IN_RADIUS_METERS,
-      });
       return { success: false, error: 'too_far', distanceMeters };
     }
 
@@ -3434,17 +3455,233 @@ export async function checkInToMatch(
       return { success: false, error: 'unknown' };
     }
 
-    console.log('[checkInToMatch] Player checked in successfully:', {
-      matchId,
-      playerId,
-      distanceMeters,
-    });
-
     return { success: true, distanceMeters };
   } catch (err) {
     console.error('[checkInToMatch] Unexpected error:', err);
     return { success: false, error: 'unknown' };
   }
+}
+
+/**
+ * Result type for getMatchNeedingFeedback
+ */
+export interface PendingFeedbackMatch {
+  match: MatchWithDetails;
+  /** The user's participant record for this match */
+  userParticipant: MatchParticipantWithPlayer;
+}
+
+/**
+ * Get the most recently ended match that requires feedback from the user.
+ *
+ * Returns a match if:
+ * 1. User is a joined participant with feedback_completed = false
+ * 2. Match ended within the last 48 hours (feedback window)
+ * 3. Match was full (all spots filled: 4 for doubles, 2 for singles)
+ *
+ * @param userId - The user's player ID
+ * @returns The most recently ended match needing feedback, or null if none
+ */
+export async function getMatchNeedingFeedback(
+  userId: string
+): Promise<PendingFeedbackMatch | null> {
+  // Fetch past matches where user is a joined participant with feedback_completed = false
+  const { data: matchIdResults, error: rpcError } = await supabase.rpc('get_player_matches', {
+    p_player_id: userId,
+    p_time_filter: 'past',
+    p_sport_id: null,
+    p_limit: 50, // Get recent past matches
+    p_offset: 0,
+  });
+
+  if (rpcError) {
+    console.error('[getMatchNeedingFeedback] RPC error:', rpcError);
+    return null;
+  }
+
+  const matchIds = (matchIdResults ?? []).map((r: { match_id: string }) => r.match_id);
+
+  if (matchIds.length === 0) {
+    return null;
+  }
+
+  // Fetch full match details for the IDs
+  const { data, error } = await supabase
+    .from('match')
+    .select(
+      `
+      *,
+      sport:sport_id (*),
+      facility:facility_id (*),
+      court:court_id (*),
+      min_rating_score:min_rating_score_id (*),
+      created_by_player:created_by (
+        id,
+        gender,
+        playing_hand,
+        max_travel_distance,
+        reputation_score,
+        notification_match_requests,
+        notification_messages,
+        notification_reminders,
+        privacy_show_age,
+        privacy_show_location,
+        privacy_show_stats
+      ),
+      participants:match_participant (
+        id,
+        match_id,
+        player_id,
+        status,
+        is_host,
+        score,
+        team_number,
+        feedback_completed,
+        match_outcome,
+        checked_in_at,
+        created_at,
+        updated_at,
+        player:player_id (
+          id,
+          gender,
+          playing_hand,
+          max_travel_distance,
+          reputation_score,
+          notification_match_requests,
+          notification_messages,
+          notification_reminders,
+          privacy_show_age,
+          privacy_show_location,
+          privacy_show_stats
+        )
+      )
+    `
+    )
+    .in('id', matchIds)
+    .is('cancelled_at', null); // Exclude cancelled matches
+
+  if (error) {
+    console.error('[getMatchNeedingFeedback] Query error:', error);
+    return null;
+  }
+
+  if (!data || data.length === 0) {
+    return null;
+  }
+
+  // Import date utility for feedback window check
+  const { getMatchEndTimeDifferenceFromNow } = await import('@rallia/shared-utils');
+
+  const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000;
+
+  // Filter and find the best match
+  let bestMatch: PendingFeedbackMatch | null = null;
+  let bestEndTimeDiff = -Infinity; // Most recent = closest to 0 (least negative)
+
+  for (const match of data as MatchWithDetails[]) {
+    // Check if match has ended and is within feedback window
+    const endTimeDiff = getMatchEndTimeDifferenceFromNow(
+      match.match_date,
+      match.start_time,
+      match.end_time,
+      match.timezone
+    );
+
+    // Skip if match hasn't ended yet (endTimeDiff > 0)
+    if (endTimeDiff > 0) {
+      continue;
+    }
+
+    // Skip if outside 48h feedback window
+    const timeSinceEnd = Math.abs(endTimeDiff);
+    if (timeSinceEnd >= FORTY_EIGHT_HOURS_MS) {
+      continue;
+    }
+
+    // Find user's participant record
+    const userParticipant = match.participants?.find(
+      (p: MatchParticipantWithPlayer) => p.player_id === userId && p.status === 'joined'
+    );
+
+    // Skip if user is not a joined participant or has completed feedback
+    if (!userParticipant || userParticipant.feedback_completed) {
+      continue;
+    }
+
+    // Check if match was full (all spots filled)
+    const joinedParticipants =
+      match.participants?.filter((p: MatchParticipantWithPlayer) => p.status === 'joined') ?? [];
+    const expectedCount = match.format === 'doubles' ? 4 : 2;
+
+    if (joinedParticipants.length < expectedCount) {
+      continue;
+    }
+
+    // This match is eligible - check if it's the most recent
+    if (endTimeDiff > bestEndTimeDiff) {
+      bestEndTimeDiff = endTimeDiff;
+      bestMatch = { match, userParticipant };
+    }
+  }
+
+  if (!bestMatch) {
+    return null;
+  }
+
+  // Enrich with profiles
+  const match = bestMatch.match;
+  const playerIds = new Set<string>();
+
+  if (match.created_by_player?.id) {
+    playerIds.add(match.created_by_player.id);
+  }
+  if (match.participants) {
+    match.participants.forEach((p: MatchParticipantWithPlayer) => {
+      const playerObj = Array.isArray(p.player) ? p.player[0] : p.player;
+      if (playerObj?.id) {
+        playerIds.add(playerObj.id);
+      }
+    });
+  }
+
+  const profileIds = Array.from(playerIds);
+  const profilesMap: Record<string, Profile> = {};
+
+  if (profileIds.length > 0) {
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profile')
+      .select('*')
+      .in('id', profileIds);
+
+    if (!profilesError && profiles) {
+      profiles.forEach(profile => {
+        profilesMap[profile.id] = profile;
+      });
+    }
+  }
+
+  // Attach profile to creator
+  if (match.created_by_player?.id && profilesMap[match.created_by_player.id]) {
+    match.created_by_player.profile = profilesMap[match.created_by_player.id];
+  }
+
+  // Attach profiles to participants
+  if (match.participants) {
+    match.participants = match.participants.map((p: MatchParticipantWithPlayer) => {
+      const playerObj = Array.isArray(p.player) ? p.player[0] : p.player;
+      const playerId = playerObj?.id;
+
+      if (playerId && profilesMap[playerId]) {
+        playerObj.profile = profilesMap[playerId];
+      }
+      if (Array.isArray(p.player) && playerObj) {
+        p.player = playerObj;
+      }
+      return p;
+    });
+  }
+
+  return bestMatch;
 }
 
 /**
@@ -3474,6 +3711,8 @@ export const matchService = {
   invitePlayersToMatch,
   // Reputation
   awardMatchCompletionReputation,
+  // Feedback
+  getMatchNeedingFeedback,
 };
 
 export default matchService;

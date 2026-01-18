@@ -35,6 +35,7 @@ export * from './usePlayerSearch';
 export * from './useInviteToMatch';
 export * from './usePlayerReputation';
 export * from './useGroups';
+export * from './usePendingFeedbackCheck';
 
 // Platform-specific exports - Metro resolves .native.ts for React Native builds
 // Web bundlers will use the stub .ts files which throw helpful errors at runtime

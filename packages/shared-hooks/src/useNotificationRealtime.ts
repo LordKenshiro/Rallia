@@ -55,7 +55,11 @@ export function useNotificationRealtime(
   const channelRef = useRef<RealtimeChannel | null>(null);
   // Store callback in ref to avoid re-subscribing when callback changes
   const onNewNotificationRef = useRef(onNewNotification);
-  onNewNotificationRef.current = onNewNotification;
+
+  // Update callback ref in effect to avoid updating refs during render
+  useEffect(() => {
+    onNewNotificationRef.current = onNewNotification;
+  }, [onNewNotification]);
 
   useEffect(() => {
     // Don't subscribe if no user or disabled
@@ -67,24 +71,26 @@ export function useNotificationRealtime(
     const channelName = `notifications:${userId}`;
 
     // Subscribe to notification table changes for this user
+    // Only listen to INSERT events - UPDATE and DELETE events are handled
+    // via optimistic updates to avoid unnecessary refetches
     const channel = supabase
       .channel(channelName)
       .on(
         'postgres_changes',
         {
-          event: '*', // Listen to INSERT, UPDATE, DELETE
+          event: 'INSERT',
           schema: 'public',
           table: 'notification',
           filter: `user_id=eq.${userId}`,
         },
         (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
-          // Invalidate notification queries to refetch
+          // Invalidate notification queries to refetch for new notifications
           queryClient.invalidateQueries({
             queryKey: notificationKeys.all,
           });
 
           // Call callback for new notifications
-          if (payload.eventType === 'INSERT' && onNewNotificationRef.current) {
+          if (onNewNotificationRef.current) {
             onNewNotificationRef.current(payload.new);
           }
         }

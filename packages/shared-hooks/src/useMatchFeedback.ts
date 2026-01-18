@@ -8,6 +8,7 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import {
   submitMatchOutcome,
   submitOpponentFeedback,
+  submitMatchReport,
   getOpponentsForFeedback,
   getReviewerParticipant,
 } from '@rallia/shared-services';
@@ -16,6 +17,8 @@ import type {
   MatchOutcomeResult,
   MatchFeedbackInput,
   MatchFeedbackResult,
+  MatchReportInput,
+  MatchReportResult,
   UseMatchFeedbackOptions,
 } from '@rallia/shared-types';
 import { matchKeys } from './useCreateMatch';
@@ -66,7 +69,14 @@ export function useMatchFeedback(
   reviewerId: string | undefined,
   options: UseMatchFeedbackOptions = {}
 ) {
-  const { onOutcomeSuccess, onOutcomeError, onFeedbackSuccess, onFeedbackError } = options;
+  const {
+    onOutcomeSuccess,
+    onOutcomeError,
+    onFeedbackSuccess,
+    onFeedbackError,
+    onReportSuccess,
+    onReportError,
+  } = options;
 
   const queryClient = useQueryClient();
 
@@ -170,6 +180,27 @@ export function useMatchFeedback(
     },
   });
 
+  /**
+   * Submit a report for a player
+   */
+  const reportMutation = useMutation<
+    MatchReportResult,
+    Error,
+    Omit<MatchReportInput, 'matchId' | 'reporterId'>
+  >({
+    mutationFn: async input => {
+      if (!matchId) throw new Error('Match ID is required');
+      if (!reviewerId) throw new Error('Reporter ID is required');
+      return submitMatchReport({ ...input, matchId, reporterId: reviewerId });
+    },
+    onSuccess: result => {
+      onReportSuccess?.(result);
+    },
+    onError: error => {
+      onReportError?.(error);
+    },
+  });
+
   // ============================================
   // RETURN VALUE
   // ============================================
@@ -211,21 +242,32 @@ export function useMatchFeedback(
     feedbackError: feedbackMutation.error,
     feedbackResult: feedbackMutation.data,
 
+    // Report mutation
+    /** Submit a report for a player */
+    submitReport: reportMutation.mutate,
+    submitReportAsync: reportMutation.mutateAsync,
+    isSubmittingReport: reportMutation.isPending,
+    reportError: reportMutation.error,
+    reportResult: reportMutation.data,
+
     // Combined state
     /** Whether any operation is in progress */
     isLoading:
       opponentsQuery.isLoading ||
       participantQuery.isLoading ||
       outcomeMutation.isPending ||
-      feedbackMutation.isPending,
+      feedbackMutation.isPending ||
+      reportMutation.isPending,
 
     /** Whether any mutation is in progress */
-    isSubmitting: outcomeMutation.isPending || feedbackMutation.isPending,
+    isSubmitting:
+      outcomeMutation.isPending || feedbackMutation.isPending || reportMutation.isPending,
 
     /** Reset all mutation states */
     reset: () => {
       outcomeMutation.reset();
       feedbackMutation.reset();
+      reportMutation.reset();
     },
   };
 }

@@ -92,7 +92,7 @@ export function usePlayerMatches(options: UsePlayerMatchesOptions) {
     getNextPageParam: lastPage => lastPage.nextOffset,
     initialPageParam: 0,
     enabled: enabled && hasRequiredParams,
-    staleTime: 1000 * 60 * 2, // 2 minutes - data stays fresh for 2 minutes
+    staleTime: 0, // Always refetch in background when query is accessed
     refetchOnWindowFocus: false, // Don't refetch on navigation back (use pull-to-refresh instead)
     refetchOnReconnect: true,
   });
@@ -101,7 +101,7 @@ export function usePlayerMatches(options: UsePlayerMatchesOptions) {
   const matches = useMemo(() => {
     if (!query.data?.pages) return [];
     return query.data.pages.flatMap(page => page.matches);
-  }, [query.data?.pages]);
+  }, [query.data]);
 
   // Stable refetch callback for pull-to-refresh
   const refresh = useCallback(async () => {

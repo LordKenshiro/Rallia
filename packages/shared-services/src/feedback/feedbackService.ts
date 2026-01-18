@@ -10,9 +10,12 @@ import type {
   MatchFeedbackResult,
   MatchOutcomeInput,
   MatchOutcomeResult,
+  MatchReportInput,
+  MatchReportResult,
   OpponentForFeedback,
   MatchParticipant,
 } from '@rallia/shared-types';
+import { REPORT_REASON_PRIORITY } from '@rallia/shared-types';
 
 // ============================================
 // MATCH OUTCOME (INTRO STEP)
@@ -92,7 +95,7 @@ export async function submitMatchOutcome(input: MatchOutcomeInput): Promise<Matc
 
     // Create reputation events for submitting feedback
     try {
-      for (const _opponentId of noShowPlayerIds) {
+      for (const _ of noShowPlayerIds) {
         await createReputationEvent(reviewerId, 'feedback_submitted', { matchId });
       }
     } catch (repError) {
@@ -334,4 +337,43 @@ export async function getReviewerParticipant(
   }
 
   return data;
+}
+
+// ============================================
+// MATCH REPORT
+// ============================================
+
+/**
+ * Submit a match report for a player.
+ * Creates a match_report record with appropriate priority based on reason.
+ */
+export async function submitMatchReport(input: MatchReportInput): Promise<MatchReportResult> {
+  const { matchId, reporterId, reportedId, reason, details } = input;
+
+  // Derive priority from reason
+  const priority = REPORT_REASON_PRIORITY[reason];
+
+  const { data: report, error } = await supabase
+    .from('match_report')
+    .insert({
+      match_id: matchId,
+      reporter_id: reporterId,
+      reported_id: reportedId,
+      reason,
+      details: details || null,
+      priority,
+      status: 'pending',
+    })
+    .select('id')
+    .single();
+
+  if (error) {
+    console.error('[feedbackService] Failed to submit match report:', error);
+    throw new Error(error.message);
+  }
+
+  return {
+    success: true,
+    reportId: report.id,
+  };
 }

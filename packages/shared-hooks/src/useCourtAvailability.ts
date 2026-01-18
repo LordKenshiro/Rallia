@@ -41,6 +41,8 @@ export interface UseCourtAvailabilityOptions {
 export interface CourtOption {
   /** Court name (e.g., "Tennis Court 1") */
   courtName: string;
+  /** Court number extracted from the name (e.g., 1, 2, 3) for translated display */
+  courtNumber?: number;
   /** Booking URL for this specific court */
   bookingUrl: string;
   /** Schedule ID (for tracking) */
@@ -123,14 +125,21 @@ export const courtAvailabilityKeys = {
 // =============================================================================
 
 /**
- * Get default dates (today and tomorrow) for availability fetching.
+ * Get default dates (today and next 2 days) for availability fetching.
+ * Returns the next 3 days: today, tomorrow, and the day after tomorrow.
  */
 function getDefaultDates(): string[] {
   const today = new Date();
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
+  const dayAfterTomorrow = new Date(today);
+  dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
 
-  return [today.toISOString().split('T')[0], tomorrow.toISOString().split('T')[0]];
+  return [
+    today.toISOString().split('T')[0],
+    tomorrow.toISOString().split('T')[0],
+    dayAfterTomorrow.toISOString().split('T')[0],
+  ];
 }
 
 /**
@@ -230,6 +239,7 @@ function groupSlotsByTime(slots: AvailabilitySlot[]): GroupedSlot[] {
     const courtOption: CourtOption | null = slot.bookingUrl
       ? {
           courtName: slot.shortCourtName || slot.courtName || `Court ${slot.facilityScheduleId}`,
+          courtNumber: slot.courtNumber,
           bookingUrl: slot.bookingUrl,
           facilityScheduleId: slot.facilityScheduleId,
           externalCourtId: slot.facilityId,
@@ -310,7 +320,7 @@ export function useCourtAvailability(
     dataProviderId,
     dataProviderType,
     externalProviderId,
-    bookingUrlTemplate,
+    bookingUrlTemplate: _bookingUrlTemplate,
     dates = getDefaultDates(),
     enabled = true,
     maxSlots = 20, // Increased to show more slots for date-sectioned display

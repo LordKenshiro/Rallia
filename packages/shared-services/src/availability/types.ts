@@ -28,6 +28,8 @@ export interface AvailabilitySlot {
   courtName?: string;
   /** Optional short court name for display in selection UI (e.g., "Tennis Court 1") */
   shortCourtName?: string;
+  /** Court number extracted from the name (e.g., 1, 2, 3) for translated display */
+  courtNumber?: number;
   /** Pre-built booking URL for this slot (populated after fetch) */
   bookingUrl?: string;
   /** Optional price information */

@@ -6,7 +6,7 @@
  * becomes the default view in the app.
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -22,7 +22,7 @@ import { Text, Spinner, Button } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
 import { SportService, Logger } from '@rallia/shared-services';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles } from '../hooks';
+import { useThemeStyles, useTranslation } from '../hooks';
 import type { Sport as DatabaseSport } from '@rallia/shared-types';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -52,21 +52,22 @@ export function SportSelectionOverlay({
 }: SportSelectionOverlayProps) {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
 
   // State
   const [sports, setSports] = useState<Sport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [orderedSelection, setOrderedSelection] = useState<Sport[]>([]);
 
-  // Animation values
-  const containerOpacity = useRef(new Animated.Value(0)).current;
-  const contentTranslateY = useRef(new Animated.Value(50)).current;
-  const card1Opacity = useRef(new Animated.Value(0)).current;
-  const card1TranslateY = useRef(new Animated.Value(30)).current;
-  const card2Opacity = useRef(new Animated.Value(0)).current;
-  const card2TranslateY = useRef(new Animated.Value(30)).current;
-  const buttonOpacity = useRef(new Animated.Value(0)).current;
-  const buttonTranslateY = useRef(new Animated.Value(20)).current;
+  // Animation values - use useMemo to avoid accessing refs during render
+  const containerOpacity = useMemo(() => new Animated.Value(0), []);
+  const contentTranslateY = useMemo(() => new Animated.Value(50), []);
+  const card1Opacity = useMemo(() => new Animated.Value(0), []);
+  const card1TranslateY = useMemo(() => new Animated.Value(30), []);
+  const card2Opacity = useMemo(() => new Animated.Value(0), []);
+  const card2TranslateY = useMemo(() => new Animated.Value(30), []);
+  const buttonOpacity = useMemo(() => new Animated.Value(0), []);
+  const buttonTranslateY = useMemo(() => new Animated.Value(20), []);
 
   // Fetch sports on mount
   useEffect(() => {
@@ -249,15 +250,19 @@ export function SportSelectionOverlay({
     return index >= 0 ? index + 1 : null;
   };
 
+  // Memoize card animations array
+  const cardAnimations = useMemo(
+    () => [
+      { opacity: card1Opacity, translateY: card1TranslateY },
+      { opacity: card2Opacity, translateY: card2TranslateY },
+    ],
+    [card1Opacity, card1TranslateY, card2Opacity, card2TranslateY]
+  );
+
   // Don't render if not visible
   if (!visible) {
     return null;
   }
-
-  const cardAnimations = [
-    { opacity: card1Opacity, translateY: card1TranslateY },
-    { opacity: card2Opacity, translateY: card2TranslateY },
-  ];
 
   return (
     <Animated.View
@@ -281,10 +286,10 @@ export function SportSelectionOverlay({
         ]}
       >
         <Text size="2xl" weight="bold" color={colors.foreground} style={styles.title}>
-          What sports do you play?
+          {t('sportSelectionOverlay.title')}
         </Text>
         <Text size="base" color={colors.textMuted} style={styles.subtitle}>
-          Select one or more. Your first choice becomes your default view.
+          {t('sportSelectionOverlay.subtitle')}
         </Text>
       </Animated.View>
 
@@ -294,7 +299,7 @@ export function SportSelectionOverlay({
           <View style={styles.loadingContainer}>
             <Spinner size="lg" />
             <Text size="sm" color={colors.textMuted} style={styles.loadingText}>
-              Loading sports...
+              {t('sportSelectionOverlay.loading')}
             </Text>
           </View>
         ) : (
@@ -349,9 +354,13 @@ export function SportSelectionOverlay({
                     {/* Selection Badge */}
                     {isSelected ? (
                       <View style={styles.selectionBadge}>
-                        <Text size="sm" weight="bold" color={BASE_WHITE}>
-                          {selectionOrder}
-                        </Text>
+                        {orderedSelection.length > 1 ? (
+                          <Text size="sm" weight="bold" color={BASE_WHITE}>
+                            {selectionOrder}
+                          </Text>
+                        ) : (
+                          <Ionicons name="checkmark" size={18} color={BASE_WHITE} />
+                        )}
                       </View>
                     ) : (
                       <View style={styles.unselectedCircle}>
@@ -382,14 +391,12 @@ export function SportSelectionOverlay({
           disabled={orderedSelection.length === 0}
           style={styles.continueButton}
         >
-          Get Started
+          {t('sportSelectionOverlay.getStarted')}
         </Button>
 
-        {orderedSelection.length > 0 && (
+        {orderedSelection.length > 1 && (
           <Text size="sm" color={colors.textMuted} style={styles.selectionHint}>
-            {orderedSelection.length === 1
-              ? `${orderedSelection[0].display_name} will be your default sport`
-              : `${orderedSelection[0].display_name} will be your default sport. Tap the header to switch.`}
+            {t('sportSelectionOverlay.selectionHint', { sport: orderedSelection[0].display_name })}
           </Text>
         )}
       </Animated.View>

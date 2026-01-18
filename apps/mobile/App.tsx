@@ -21,7 +21,14 @@ import { FeedbackSheet } from './src/components/FeedbackSheet';
 import { SplashOverlay } from './src/components/SplashOverlay';
 import { SportSelectionOverlay } from './src/components/SportSelectionOverlay';
 import { ErrorBoundary } from '@rallia/shared-components';
-import { ThemeProvider, useTheme } from '@rallia/shared-hooks';
+import {
+  ThemeProvider,
+  useTheme,
+  ProfileProvider,
+  PlayerProvider,
+  useNotificationRealtime,
+  usePendingFeedbackCheck,
+} from '@rallia/shared-hooks';
 import { Logger } from './src/services/logger';
 import {
   AuthProvider,
@@ -34,13 +41,13 @@ import {
   MatchDetailSheetProvider,
   PlayerInviteSheetProvider,
   FeedbackSheetProvider,
+  useFeedbackSheet,
   DeepLinkProvider,
   useDeepLink,
   useOverlay,
   useSport,
 } from './src/context';
 import { usePushNotifications } from './src/hooks';
-import { ProfileProvider, PlayerProvider, useNotificationRealtime } from '@rallia/shared-hooks';
 
 // Import NativeWind global styles
 import './global.css';
@@ -103,6 +110,34 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
   );
 }
 
+/**
+ * PendingFeedbackHandler - Opens FeedbackSheet for pending feedback on app launch.
+ * Checks for matches in the 48h feedback window where user hasn't completed feedback.
+ */
+function PendingFeedbackHandler() {
+  const { user } = useAuth();
+  const { isSplashComplete, isSportSelectionComplete } = useOverlay();
+  const { openSheet } = useFeedbackSheet();
+
+  // Check for pending feedback when splash and sport selection are complete
+  usePendingFeedbackCheck({
+    userId: user?.id,
+    enabled: isSplashComplete && isSportSelectionComplete && !!user?.id,
+    onMatchFound: data => {
+      Logger.logNavigation('pending_feedback_found', {
+        matchId: data.matchId,
+        opponentsCount: data.opponents.length,
+      });
+      // Small delay to ensure the UI is ready
+      setTimeout(() => {
+        openSheet(data.matchId, data.reviewerId, data.participantId, data.opponents);
+      }, 500);
+    },
+  });
+
+  return null;
+}
+
 function AppContent() {
   const { theme } = useTheme();
   const {
@@ -137,6 +172,8 @@ function AppContent() {
       <PlayerInviteSheet />
       {/* Feedback Bottom Sheet - shows when providing post-match feedback */}
       <FeedbackSheet />
+      {/* Pending Feedback Handler - auto-opens FeedbackSheet on app launch if needed */}
+      <PendingFeedbackHandler />
       {/* Sport Selection Overlay - shows for first-time users after splash */}
       <SportSelectionOverlay
         visible={showSportSelectionOverlay}

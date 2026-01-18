@@ -101,13 +101,18 @@ export function useUnreadNotificationCount(userId: string | undefined) {
   });
 }
 
+// Extended context for mark as read mutation
+interface MarkAsReadMutationContext extends MutationContext {
+  wasUnread: boolean;
+}
+
 /**
  * Hook for marking a single notification as read
  */
 export function useMarkAsRead(userId: string | undefined) {
   const queryClient = useQueryClient();
 
-  return useMutation<Notification, Error, string, MutationContext>({
+  return useMutation<Notification, Error, string, MarkAsReadMutationContext>({
     mutationFn: markAsRead,
     onMutate: async notificationId => {
       // Cancel any outgoing refetches for this user's notifications
@@ -127,6 +132,20 @@ export function useMarkAsRead(userId: string | undefined) {
         data: InfiniteData<NotificationsPage> | undefined;
       }> = [];
 
+      // Check if the notification was actually unread before updating
+      let wasUnread = false;
+      queries.forEach(query => {
+        const data = query.state.data as InfiniteData<NotificationsPage> | undefined;
+        if (data) {
+          data.pages.forEach(page => {
+            const notification = page.notifications.find(n => n.id === notificationId);
+            if (notification && !notification.read_at) {
+              wasUnread = true;
+            }
+          });
+        }
+      });
+
       // Optimistically update all notification list queries
       queries.forEach(query => {
         const data = query.state.data as InfiniteData<NotificationsPage> | undefined;
@@ -144,15 +163,17 @@ export function useMarkAsRead(userId: string | undefined) {
         }
       });
 
-      // Optimistically decrement unread count
+      // Optimistically decrement unread count only if the notification was actually unread
       const previousUnreadCount = queryClient.getQueryData<number>(
         notificationKeys.unreadCount(userId ?? '')
       );
-      queryClient.setQueryData<number>(notificationKeys.unreadCount(userId ?? ''), old =>
-        Math.max(0, (old ?? 0) - 1)
-      );
+      if (wasUnread) {
+        queryClient.setQueryData<number>(notificationKeys.unreadCount(userId ?? ''), old =>
+          Math.max(0, (old ?? 0) - 1)
+        );
+      }
 
-      return { previousQueries, previousUnreadCount };
+      return { previousQueries, previousUnreadCount, wasUnread };
     },
     onError: (_err, _notificationId, context) => {
       // Rollback all queries on error
@@ -166,12 +187,7 @@ export function useMarkAsRead(userId: string | undefined) {
         );
       }
     },
-    onSettled: () => {
-      // Refetch to ensure consistency (background sync)
-      queryClient.invalidateQueries({
-        queryKey: notificationKeys.unreadCount(userId ?? ''),
-      });
-    },
+    // No onSettled - rely purely on optimistic updates without background refetch
   });
 }
 
@@ -244,12 +260,7 @@ export function useMarkAllAsRead(userId: string | undefined) {
         );
       }
     },
-    onSettled: () => {
-      // Refetch to ensure consistency (background sync)
-      queryClient.invalidateQueries({
-        queryKey: notificationKeys.unreadCount(userId ?? ''),
-      });
-    },
+    // No onSettled - rely purely on optimistic updates without background refetch
   });
 }
 
@@ -332,12 +343,7 @@ export function useDeleteNotification(userId: string | undefined) {
         );
       }
     },
-    onSettled: () => {
-      // Refetch to ensure consistency (background sync)
-      queryClient.invalidateQueries({
-        queryKey: notificationKeys.unreadCount(userId ?? ''),
-      });
-    },
+    // No onSettled - rely purely on optimistic updates without background refetch
   });
 }
 

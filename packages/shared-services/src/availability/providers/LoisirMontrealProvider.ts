@@ -10,7 +10,7 @@
  */
 
 import { BaseAvailabilityProvider } from './BaseAvailabilityProvider';
-import { generateMockLoisirMontrealResponse } from './mockData';
+// Removed unused import: generateMockLoisirMontrealResponse
 import type {
   AvailabilitySlot,
   FetchAvailabilityParams,
@@ -18,6 +18,32 @@ import type {
   LoisirMontrealSearchResponse,
   LoisirMontrealSlot,
 } from '../types';
+
+/**
+ * Clean Loisir Montreal facility/site names by removing internal prefixes.
+ * The API returns names like "#aPickleball ESMR.droit - Terrain 2" which we clean to "Pickleball ESMR.droit - Terrain 2"
+ */
+function cleanLoisirName(name: string | undefined | null): string | undefined {
+  if (!name) return undefined;
+  // Remove "#a" prefix that Loisir Montreal uses internally
+  return name.replace(/^#a/i, '').trim();
+}
+
+/**
+ * Extract court number from facility name.
+ * Handles patterns like "Terrain 2", "Court 1", "Terrain pickleball 1", etc.
+ * Returns undefined if no number found.
+ */
+function extractCourtNumber(name: string | undefined | null): number | undefined {
+  if (!name) return undefined;
+  // Match patterns like "Terrain 2", "Court 1", "Terrain pickleball 1", etc.
+  // Look for a number at the end or after "Terrain" or "Court"
+  const match = name.match(/(?:terrain|court)\s*(?:\w+\s+)?(\d+)/i) || name.match(/(\d+)\s*$/);
+  if (match && match[1]) {
+    return parseInt(match[1], 10);
+  }
+  return undefined;
+}
 
 export class LoisirMontrealProvider extends BaseAvailabilityProvider {
   readonly providerType = 'loisir_montreal';
@@ -29,86 +55,74 @@ export class LoisirMontrealProvider extends BaseAvailabilityProvider {
    * @returns Array of normalized availability slots
    */
   async fetchAvailability(params: FetchAvailabilityParams): Promise<AvailabilitySlot[]> {
-    // TEMPORARY: Always use mock data in production for now
-    // TODO: Remove this and restore environment variable check when ready
-    console.log('[LoisirMontrealProvider] Using mock data (forced for production)');
-    const mockResponse = generateMockLoisirMontrealResponse(params.dates, params.siteId);
-    return this.parseResponse(mockResponse);
+    // Check for mock mode (useful for testing during winter when no real slots exist)
 
-    // Original code (commented out for now - will be restored later):
-    // // Check for mock mode (useful for testing during winter when no real slots exist)
     // const useMockData =
+    //   false ||
     //   this.getConfigValue('useMockData', false) ||
     //   process.env.EXPO_PUBLIC_USE_MOCK_AVAILABILITY === 'true';
-    //
+
     // if (useMockData) {
     //   console.log('[LoisirMontrealProvider] Using mock data (EXPO_PUBLIC_USE_MOCK_AVAILABILITY)');
     //   const mockResponse = generateMockLoisirMontrealResponse(params.dates, params.siteId);
     //   return this.parseResponse(mockResponse);
     // }
-    //
-    // const searchPath = this.getConfigValue('searchPath', '/public/search');
-    // const defaultLimit = this.getConfigValue('defaultLimit', 50);
-    //
-    // // Build the URL with cache-busting timestamp
-    // const url = `${this.config.apiBaseUrl}${searchPath}?_=${Date.now()}`;
-    //
-    // // Format dates as ISO strings with timezone (as expected by the API)
-    // // Input: "2025-06-04" -> Output: "2025-06-04T00:00:00.000-04:00"
-    // const formattedDates = params.dates.map(dateStr => {
-    //   // If already in ISO format with time, use as-is
-    //   if (dateStr.includes('T')) {
-    //     return dateStr;
-    //   }
-    //   // Otherwise, add time and timezone offset for Montreal (Eastern Time)
-    //   // Note: This is a simplified approach - in production, consider using a proper timezone library
-    //   return `${dateStr}T00:00:00.000-04:00`;
-    // });
-    //
-    // // Build request body matching Postman format exactly
-    // const requestBody: LoisirMontrealSearchRequest = {
-    //   dates: formattedDates,
-    //   siteId: params.siteId ?? null,
-    //   startTime: params.startTime ?? null,
-    //   endTime: params.endTime ?? null,
-    //   boroughIds: null,
-    //   facilityTypeIds: null,
-    //   searchString: params.searchString ?? null,
-    //   limit: params.limit ?? defaultLimit,
-    //   offset: params.offset ?? 0,
-    //   sortColumn: 'startDateTime',
-    //   isSortOrderAsc: true,
-    // };
-    //
-    // console.log('[LoisirMontrealProvider] Fetching from:', url);
-    // console.log('[LoisirMontrealProvider] Request body:', JSON.stringify(requestBody, null, 2));
-    //
-    // try {
-    //   const response = await this.makeRequest<LoisirMontrealSearchResponse>(url, {
-    //     method: 'POST',
-    //     body: requestBody as unknown as Record<string, unknown>,
-    //     headers: {
-    //       // Additional headers that might be required by the API
-    //       'User-Agent': 'Rallia/1.0',
-    //       Origin: 'https://loisirs.montreal.ca',
-    //       Referer: 'https://loisirs.montreal.ca/',
-    //     },
-    //     timeout: 30000, // 30s timeout for external API
-    //   });
-    //
-    //   console.log(
-    //     '[LoisirMontrealProvider] Response received, recordCount:',
-    //     response?.recordCount
-    //   );
-    //   return this.parseResponse(response);
-    // } catch (error) {
-    //   console.error('[LoisirMontrealProvider] Failed to fetch availability:', error);
-    //   // Log more details for debugging
-    //   if (error instanceof Error) {
-    //     console.error('[LoisirMontrealProvider] Error details:', error.message, error.name);
-    //   }
-    //   return []; // Graceful degradation
-    // }
+
+    const searchPath = this.getConfigValue('searchPath', '/public/search');
+    const defaultLimit = this.getConfigValue('defaultLimit', 50);
+
+    // Build the URL with cache-busting timestamp
+    const url = `${this.config.apiBaseUrl}${searchPath}?_=${Date.now()}`;
+
+    // Format dates as ISO strings with timezone (as expected by the API)
+    // Input: "2025-06-04" -> Output: "2025-06-04T00:00:00.000-04:00"
+    const formattedDates = params.dates.map(dateStr => {
+      // If already in ISO format with time, use as-is
+      if (dateStr.includes('T')) {
+        return dateStr;
+      }
+      // Otherwise, add time and timezone offset for Montreal (Eastern Time)
+      // Note: This is a simplified approach - in production, consider using a proper timezone library
+      return `${dateStr}T00:00:00.000-04:00`;
+    });
+
+    // Build request body matching Postman format exactly
+    const requestBody: LoisirMontrealSearchRequest = {
+      dates: formattedDates,
+      siteId: params.siteId ?? null,
+      startTime: params.startTime ?? null,
+      endTime: params.endTime ?? null,
+      boroughIds: null,
+      facilityTypeIds: null,
+      searchString: params.searchString ?? null,
+      limit: params.limit ?? defaultLimit,
+      offset: params.offset ?? 0,
+      sortColumn: 'startDateTime',
+      isSortOrderAsc: true,
+    };
+
+    try {
+      const response = await this.makeRequest<LoisirMontrealSearchResponse>(url, {
+        method: 'POST',
+        body: requestBody as unknown as Record<string, unknown>,
+        headers: {
+          // Additional headers that might be required by the API
+          'User-Agent': 'Rallia/1.0',
+          Origin: 'https://loisirs.montreal.ca',
+          Referer: 'https://loisirs.montreal.ca/',
+        },
+        timeout: 30000, // 30s timeout for external API
+      });
+
+      return this.parseResponse(response);
+    } catch (error) {
+      console.error('[LoisirMontrealProvider] Failed to fetch availability:', error);
+      // Log more details for debugging
+      if (error instanceof Error) {
+        console.error('[LoisirMontrealProvider] Error details:', error.message, error.name);
+      }
+      return []; // Graceful degradation
+    }
   }
 
   /**
@@ -179,14 +193,18 @@ export class LoisirMontrealProvider extends BaseAvailabilityProvider {
     // Extract facility info from nested structure
     const facility = item.facility;
     const facilityId = facility?.id ? String(facility.id) : String(item.facilityScheduleId);
-    const shortCourtName = facility?.name || undefined;
-    const siteName = facility?.site?.name || undefined;
+    // Clean names by removing "#a" prefix used by Loisir Montreal
+    const shortCourtName = cleanLoisirName(facility?.name);
+    const siteName = cleanLoisirName(facility?.site?.name);
+    // Extract court number for translated display (e.g., "Terrain 2" → 2)
+    const courtNumber = extractCourtNumber(facility?.name);
 
     return {
       datetime,
       endDateTime,
       courtCount: 1, // Each Loisir Montreal slot represents one court
       facilityId,
+      courtNumber,
       facilityScheduleId: String(item.facilityScheduleId),
       courtName: siteName ? `${siteName} - ${shortCourtName}` : shortCourtName,
       shortCourtName, // Just the court name without facility prefix (e.g., "Tennis Court 1")
