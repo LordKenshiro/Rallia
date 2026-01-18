@@ -50,6 +50,7 @@ import SharedLists from '../screens/SharedLists';
 import SharedListDetail from '../screens/SharedListDetail';
 import Groups from '../screens/Groups';
 import GroupDetail from '../screens/GroupDetail';
+import GroupChatInfo from '../screens/GroupChatInfo';
 import PlayedMatchDetail from '../screens/PlayedMatchDetail';
 
 // Components
@@ -726,6 +727,14 @@ export default function AppNavigator() {
           headerTitle: route.params?.groupName || t('screens.group'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
+      />
+
+      <RootStack.Screen
+        name="GroupChatInfo"
+        component={GroupChatInfo}
+        options={{
+          headerShown: false,
+        }}
       />
 
       <RootStack.Screen

@@ -243,9 +243,14 @@ export default function ChatConversationScreen() {
 
   // Get group avatar (if it's a group conversation linked to a network)
   const headerImage = useMemo(() => {
-    // For group chats, use network cover image
+    // For group chats linked to a network, use network cover image
     if (conversation?.conversation_type === 'group' && networkInfo?.cover_image_url) {
       return networkInfo.cover_image_url;
+    }
+    
+    // For simple group chats (no network), use conversation picture_url
+    if (conversation?.conversation_type === 'group' && conversation.picture_url) {
+      return conversation.picture_url;
     }
 
     // For direct messages, show the other participant's avatar
@@ -315,12 +320,14 @@ export default function ChatConversationScreen() {
     navigation.goBack();
   }, [navigation]);
 
-  // Navigate to player profile when tapping header in direct chat
+  // Navigate to player profile (direct chat) or group info (group chat) when tapping header
   const handleTitlePress = useCallback(() => {
     if (isDirectChat && otherUserId) {
       navigation.navigate('PlayerProfile', { playerId: otherUserId });
+    } else if (conversation?.conversation_type === 'group') {
+      navigation.navigate('GroupChatInfo', { conversationId });
     }
-  }, [isDirectChat, otherUserId, navigation]);
+  }, [isDirectChat, otherUserId, conversation, conversationId, navigation]);
 
   // Header menu handlers
   const handleSearchPress = useCallback(() => {
@@ -532,7 +539,7 @@ export default function ChatConversationScreen() {
           subtitle={headerSubtitle}
           imageUrl={headerImage}
           onBack={handleBack}
-          onTitlePress={isDirectChat ? handleTitlePress : undefined}
+          onTitlePress={handleTitlePress}
           isDirectChat={isDirectChat}
           isMuted={isMuted}
           isBlocked={isBlocked}
@@ -562,7 +569,7 @@ export default function ChatConversationScreen() {
         subtitle={headerSubtitle}
         imageUrl={headerImage}
         onBack={handleBack}
-        onTitlePress={isDirectChat ? handleTitlePress : undefined}
+        onTitlePress={handleTitlePress}
         isDirectChat={isDirectChat}
         isMuted={isMuted}
         isBlocked={isBlocked}

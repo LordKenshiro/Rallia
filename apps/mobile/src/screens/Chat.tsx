@@ -1,7 +1,9 @@
 /**
  * Chat Screen (Inbox)
- * Shows all conversations the user is part of
- * Groups, Communities, Direct Messages, etc.
+ * Shows all conversations the user is part of with tabbed sections:
+ * - Direct Messages: User-to-user chats (not linked to matches) + manually created group chats
+ * - Groups & Communities: Chats linked to networks (groups/communities)
+ * - Match Chats: Chats linked to matches (both singles and doubles)
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
@@ -21,7 +23,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
 import { useThemeStyles, useAuth } from '../hooks';
-import { spacingPixels, fontSizePixels, primary } from '@rallia/design-system';
+import { spacingPixels, fontSizePixels, primary, neutral } from '@rallia/design-system';
 import {
   usePlayerConversations,
   useConversationsRealtime,
@@ -32,10 +34,18 @@ import {
   useBlockedUserIds,
   type ConversationPreview,
 } from '@rallia/shared-hooks';
-import { ConversationItem, ConversationActionsSheet } from '../features/chat';
+import { ConversationItem, ConversationActionsSheet, CreateGroupChatModal } from '../features/chat';
 import type { ChatStackParamList } from '../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<ChatStackParamList>;
+
+type TabKey = 'direct' | 'groups' | 'matches';
+
+const TABS: { key: TabKey; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'direct', label: 'Direct', icon: 'chatbubble-outline' },
+  { key: 'groups', label: 'Groups', icon: 'people-outline' },
+  { key: 'matches', label: 'Matches', icon: 'tennisball-outline' },
+];
 
 const Chat = () => {
   const { colors, isDark } = useThemeStyles();
@@ -43,10 +53,14 @@ const Chat = () => {
   const { session } = useAuth();
   const playerId = session?.user?.id;
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<TabKey>('direct');
   
   // State for conversation actions sheet
   const [selectedConversation, setSelectedConversation] = useState<ConversationPreview | null>(null);
   const [showActionsSheet, setShowActionsSheet] = useState(false);
+  
+  // State for create group chat modal
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
 
   const {
     data: conversations,
@@ -69,18 +83,55 @@ const Chat = () => {
   // Fetch blocked user IDs to show "You blocked this user" in conversation preview
   const { data: blockedUserIds = new Set<string>() } = useBlockedUserIds(playerId);
 
-  // Filter conversations based on search query and exclude archived
+  // Categorize conversations into tabs
+  const categorizedConversations = useMemo(() => {
+    if (!conversations) return { direct: [], groups: [], matches: [] };
+    
+    const direct: ConversationPreview[] = [];
+    const groups: ConversationPreview[] = [];
+    const matches: ConversationPreview[] = [];
+    
+    conversations.forEach((conv) => {
+      // Match chats: has match_id (both direct and group types)
+      if (conv.match_id) {
+        matches.push(conv);
+      }
+      // Groups & Communities: networks with type 'player_group', 'club', or 'community'
+      else if (conv.network_type && ['player_group', 'club', 'community'].includes(conv.network_type)) {
+        groups.push(conv);
+      }
+      // Direct chats: direct messages not linked to matches + manually created groups (network_type = 'friends')
+      else {
+        direct.push(conv);
+      }
+    });
+    
+    return { direct, groups, matches };
+  }, [conversations]);
+
+  // Get counts for each tab (excluding archived)
+  const tabCounts = useMemo(() => {
+    return {
+      direct: categorizedConversations.direct.filter(c => !c.is_archived).length,
+      groups: categorizedConversations.groups.filter(c => !c.is_archived).length,
+      matches: categorizedConversations.matches.filter(c => !c.is_archived).length,
+    };
+  }, [categorizedConversations]);
+
+  // Filter conversations based on active tab, search query and exclude archived
   const { filteredConversations, archivedCount } = useMemo(() => {
     if (!conversations) return { filteredConversations: [], archivedCount: 0 };
 
-    // Count archived conversations
-    const archived = conversations.filter((c) => c.is_archived);
-    const archivedCount = archived.length;
+    // Count total archived conversations across all categories
+    const archivedCount = conversations.filter((c) => c.is_archived).length;
 
-    // When searching, include all conversations
+    // Get conversations for active tab
+    const tabConversations = categorizedConversations[activeTab];
+
+    // When searching, search across current tab only
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
-      const filtered = conversations.filter((conversation) => {
+      const filtered = tabConversations.filter((conversation) => {
         // Search by conversation title (group name)
         if (conversation.title?.toLowerCase().includes(query)) {
           return true;
@@ -94,20 +145,43 @@ const Chat = () => {
             return true;
           }
         }
+        // Search by match info (for match chats)
+        if (conversation.match_info) {
+          const sportName = conversation.match_info.sport_name?.toLowerCase() || '';
+          if (sportName.includes(query)) {
+            return true;
+          }
+        }
         return false;
       });
       return { filteredConversations: filtered, archivedCount };
     }
 
     // Filter out archived conversations for normal view
-    const filtered = conversations.filter((c) => !c.is_archived);
+    const filtered = tabConversations.filter((c) => !c.is_archived);
     return { filteredConversations: filtered, archivedCount };
-  }, [conversations, searchQuery]);
+  }, [conversations, categorizedConversations, activeTab, searchQuery]);
 
   // Navigate to archived chats
   const handleArchivedPress = useCallback(() => {
     navigation.navigate('ArchivedChats');
   }, [navigation]);
+
+  // Handle new group button press
+  const handleNewGroupPress = useCallback(() => {
+    setShowCreateGroupModal(true);
+  }, []);
+
+  // Handle group creation success - navigate to the new chat
+  const handleGroupCreated = useCallback((conversationId: string) => {
+    // Refetch conversations to include the new group
+    refetch();
+    // Navigate to the new conversation
+    navigation.navigate('ChatScreen', {
+      conversationId,
+      title: undefined, // Will be loaded from conversation
+    });
+  }, [refetch, navigation]);
 
   const handleConversationPress = useCallback(
     (conversation: ConversationPreview) => {
@@ -192,18 +266,39 @@ const Chat = () => {
       );
     }
     
+    // Tab-specific empty messages
+    const emptyMessages = {
+      direct: {
+        icon: 'chatbubble-outline' as keyof typeof Ionicons.glyphMap,
+        title: 'No direct messages yet',
+        subtitle: 'Start a conversation with another player',
+      },
+      groups: {
+        icon: 'people-outline' as keyof typeof Ionicons.glyphMap,
+        title: 'No group chats yet',
+        subtitle: 'Join a group or community to start chatting',
+      },
+      matches: {
+        icon: 'tennisball-outline' as keyof typeof Ionicons.glyphMap,
+        title: 'No match chats yet',
+        subtitle: 'Join a match to start chatting with opponents',
+      },
+    };
+    
+    const { icon, title, subtitle } = emptyMessages[activeTab];
+    
     return (
       <View style={styles.emptyContainer}>
-        <Ionicons name="chatbubbles-outline" size={64} color={colors.textMuted} />
+        <Ionicons name={icon} size={64} color={colors.textMuted} />
         <Text style={[styles.emptyTitle, { color: colors.text }]}>
-          No conversations yet
+          {title}
         </Text>
         <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
-          Join a group or start a conversation with another player
+          {subtitle}
         </Text>
       </View>
     );
-  }, [isLoading, colors, searchQuery]);
+  }, [isLoading, colors, searchQuery, activeTab]);
 
   const renderSeparator = useCallback(
     () => <View style={[styles.separator, { backgroundColor: colors.border }]} />,
@@ -281,11 +376,61 @@ const Chat = () => {
             </TouchableOpacity>
           )}
         </View>
-        <TouchableOpacity style={styles.newGroupButton}>
+        <TouchableOpacity style={styles.newGroupButton} onPress={handleNewGroupPress}>
           <Text style={[styles.newGroupText, { color: primary[500] }]}>
             New group
           </Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Tab Bar */}
+      <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
+        {TABS.map((tab) => {
+          const isActive = activeTab === tab.key;
+          const count = tabCounts[tab.key];
+          return (
+            <TouchableOpacity
+              key={tab.key}
+              style={[
+                styles.tab,
+                isActive && styles.activeTab,
+                isActive && { borderBottomColor: primary[500] },
+              ]}
+              onPress={() => setActiveTab(tab.key)}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={tab.icon}
+                size={18}
+                color={isActive ? primary[500] : colors.textMuted}
+                style={styles.tabIcon}
+              />
+              <Text
+                style={[
+                  styles.tabLabel,
+                  { 
+                    color: isActive ? primary[500] : colors.textMuted,
+                    fontWeight: isActive ? '600' : '500',
+                  },
+                ]}
+              >
+                {tab.label}
+              </Text>
+              {count > 0 && (
+                <View
+                  style={[
+                    styles.tabBadge,
+                    { backgroundColor: isActive ? primary[500] : neutral[400] },
+                  ]}
+                >
+                  <Text style={styles.tabBadgeText}>
+                    {count > 99 ? '99+' : count}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {/* Content */}
@@ -327,6 +472,13 @@ const Chat = () => {
         onTogglePin={handleTogglePin}
         onToggleMute={handleToggleMute}
         onToggleArchive={handleToggleArchive}
+      />
+
+      {/* Create Group Chat Modal */}
+      <CreateGroupChatModal
+        visible={showCreateGroupModal}
+        onClose={() => setShowCreateGroupModal(false)}
+        onSuccess={handleGroupCreated}
       />
     </SafeAreaView>
   );
@@ -437,6 +589,44 @@ const styles = StyleSheet.create({
     fontSize: fontSizePixels.base,
     marginTop: spacingPixels[2],
     textAlign: 'center',
+  },
+  // Tab bar styles
+  tabBar: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    paddingHorizontal: spacingPixels[2],
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[3],
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  activeTab: {
+    borderBottomWidth: 2,
+  },
+  tabIcon: {
+    marginRight: spacingPixels[1],
+  },
+  tabLabel: {
+    fontSize: fontSizePixels.sm,
+  },
+  tabBadge: {
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: spacingPixels[1],
+    paddingHorizontal: spacingPixels[1],
+  },
+  tabBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
 

@@ -15,6 +15,7 @@ import {
   notifyPlayerKicked,
   notifyMatchInvitation,
 } from '../notifications/notificationFactory';
+import { createMatchChat } from '../chat/chatService';
 import type {
   Match,
   TablesInsert,
@@ -918,6 +919,81 @@ export async function deleteMatch(matchId: string): Promise<void> {
 // =============================================================================
 
 /**
+ * Helper function to check if a match is full and create a chat if so.
+ * Called after a player joins or a join request is accepted.
+ * 
+ * @param matchId - The match ID
+ * @param triggeredBy - The player ID who triggered the action (for created_by in chat)
+ */
+async function createMatchChatIfFull(matchId: string, triggeredBy: string): Promise<void> {
+  try {
+    // Get match details with participants
+    const { data: match, error: matchError } = await supabase
+      .from('match')
+      .select(`
+        id,
+        format,
+        match_date,
+        created_by,
+        sport:sport_id (
+          name
+        ),
+        participants:match_participant (
+          player_id,
+          status
+        )
+      `)
+      .eq('id', matchId)
+      .single();
+
+    if (matchError || !match) {
+      console.error('[createMatchChatIfFull] Failed to fetch match:', matchError);
+      return;
+    }
+
+    // Calculate capacity
+    const totalSpots = match.format === 'doubles' ? 4 : 2;
+    const joinedParticipants = match.participants?.filter(
+      (p: { status: string }) => p.status === 'joined'
+    ) ?? [];
+    const joinedCount = joinedParticipants.length;
+
+    // Match is full when: host (1) + joined participants = total spots
+    const isFull = 1 + joinedCount >= totalSpots;
+
+    if (isFull) {
+      // Collect all player IDs: host + all joined participants
+      const allPlayerIds = [
+        match.created_by,
+        ...joinedParticipants.map((p: { player_id: string }) => p.player_id),
+      ];
+
+      // Remove duplicates (in case host is in participants somehow)
+      const uniquePlayerIds = [...new Set(allPlayerIds)];
+
+      const sportName = (match.sport as { name?: string } | null)?.name || 'Match';
+      const matchFormat = match.format as 'singles' | 'doubles';
+
+      // Create the match chat (fire and forget)
+      createMatchChat(
+        matchId,
+        triggeredBy,
+        uniquePlayerIds,
+        matchFormat,
+        sportName,
+        match.match_date
+      ).then(conversation => {
+        console.log(`[createMatchChatIfFull] Created ${matchFormat} chat for match ${matchId}:`, conversation.id);
+      }).catch(err => {
+        console.error('[createMatchChatIfFull] Failed to create match chat:', err);
+      });
+    }
+  } catch (error) {
+    console.error('[createMatchChatIfFull] Error:', error);
+  }
+}
+
+/**
  * Join match result with status info
  */
 export interface JoinMatchResult {
@@ -1173,6 +1249,9 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
         console.error('Failed to send player joined notifications:', err);
       });
     }
+
+    // Create match chat if this join made the match full
+    createMatchChatIfFull(matchId, playerId);
   }
 
   return {
@@ -1402,6 +1481,9 @@ export async function acceptJoinRequest(
   ).catch(err => {
     console.error('Failed to send join accepted notification:', err);
   });
+
+  // Create match chat if this acceptance made the match full
+  createMatchChatIfFull(matchId, hostId);
 
   return updatedParticipant as MatchParticipant;
 }

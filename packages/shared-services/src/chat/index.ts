@@ -79,4 +79,10 @@ export {
   // Chat Agreement
   hasAgreedToChatRules,
   agreeToChatRules,
+  
+  // Conversation Management
+  type UpdateConversationInput,
+  updateConversation,
+  addConversationParticipant,
+  removeConversationParticipant,
 } from './chatService';
