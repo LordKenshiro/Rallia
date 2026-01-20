@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { spacingPixels, primary, secondary, neutral } from '@rallia/design-system';
 import { mediumHaptic } from '@rallia/shared-utils';
 import { useThemeStyles } from '../../hooks';
-import { useOverlay, useSport } from '../../context';
+import { useOverlay, useSport, useLocationMode } from '../../context';
 import { SportStep, type Sport } from './SportStep';
 import { PostalCodeStep } from './PostalCodeStep';
 import { LocationPermissionStep } from './LocationPermissionStep';
@@ -31,6 +31,7 @@ export function PreOnboardingScreen() {
   const { isDark } = useThemeStyles();
   const { isSplashComplete, onSportSelectionComplete } = useOverlay();
   const { setSelectedSportsOrdered } = useSport();
+  const { setLocationMode } = useLocationMode();
 
   // Wizard state
   const [currentStep, setCurrentStep] = useState<WizardStep>(1);
@@ -162,8 +163,11 @@ export function PreOnboardingScreen() {
       mediumHaptic();
       // Complete the pre-onboarding flow
       onSportSelectionComplete(selectedSports);
+      // Set location mode to home so effective location uses the home location
+      // that was just collected in step 2
+      await setLocationMode('home');
     },
-    [selectedSports, onSportSelectionComplete]
+    [selectedSports, onSportSelectionComplete, setLocationMode]
   );
 
   // Back navigation
