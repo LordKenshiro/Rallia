@@ -11,15 +11,29 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { MatchCard, MyMatchCard, Text, Heading, Button, Spinner } from '@rallia/shared-components';
+import {
+  MatchCard,
+  MyMatchCard,
+  Text,
+  Heading,
+  Button,
+  Spinner,
+  LocationSelector,
+} from '@rallia/shared-components';
 import {
   useAuth,
   useThemeStyles,
   useTranslation,
-  useUserLocation,
+  useEffectiveLocation,
   type TranslationKey,
 } from '../hooks';
-import { useOverlay, useActionsSheet, useSport, useMatchDetailSheet } from '../context';
+import {
+  useOverlay,
+  useActionsSheet,
+  useSport,
+  useMatchDetailSheet,
+  useUserHomeLocation,
+} from '../context';
 import {
   useProfile,
   useTheme,
@@ -48,15 +62,22 @@ const Home = () => {
   const appNavigation = useAppNavigation();
 
   // Get user's current location and player preferences for nearby matches
-  const { location: _realLocation } = useUserLocation();
+  const {
+    location,
+    locationMode,
+    setLocationMode,
+    hasHomeLocation,
+    hasBothLocationOptions,
+  } = useEffectiveLocation();
+  const { homeLocation } = useUserHomeLocation();
   const { player, maxTravelDistanceKm, loading: playerLoading } = usePlayer();
   const { selectedSport, isLoading: sportLoading } = useSport();
 
-  // TODO: Remove this hardcoded Montreal location after testing
-  // Using downtown Montreal coordinates for development/testing
-  const MONTREAL_DEV_LOCATION = { latitude: 45.5017, longitude: -73.5673 };
-  const location = MONTREAL_DEV_LOCATION; // Use hardcoded location for testing
-  // const location = _realLocation; // Uncomment to use real location
+  // Default search radius for signed-out users (10km)
+  const GUEST_SEARCH_RADIUS_KM = 15;
+
+  // Use player's travel distance if signed in, otherwise use guest default
+  const searchRadiusKm = session ? maxTravelDistanceKm : GUEST_SEARCH_RADIUS_KM;
 
   // Determine if we should show the nearby matches section
   // For dev: always show since we're using hardcoded location
@@ -76,7 +97,7 @@ const Home = () => {
   } = useNearbyMatches({
     latitude: location?.latitude,
     longitude: location?.longitude,
-    maxDistanceKm: maxTravelDistanceKm,
+    maxDistanceKm: searchRadiusKm,
     sportId: selectedSport?.id,
     userGender: player?.gender,
     limit: 20,
@@ -193,7 +214,7 @@ const Home = () => {
     );
   }, [isFetchingNextPage, colors.primary]);
 
-  // Render empty state with helpful message about travel distance
+  // Render empty state with helpful message about travel distance (signed in) or simple message (signed out)
   const renderEmptyComponent = useCallback(
     () => (
       <View style={styles.emptyContainer}>
@@ -204,45 +225,68 @@ const Home = () => {
           {t('home.nearbyEmpty.title')}
         </Text>
         <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-          {t('home.nearbyEmpty.description', { distance: maxTravelDistanceKm })}
-        </Text>
-        <Text size="sm" color={colors.textMuted} style={styles.emptySuggestion}>
-          {t('home.nearbyEmpty.suggestion')}
+          {session
+            ? t('home.nearbyEmpty.description', { distance: maxTravelDistanceKm })
+            : t('home.nearbyEmpty.guestDescription')}
         </Text>
         {session && (
-          <Button
-            variant="outline"
-            onPress={() => appNavigation.navigate('Settings')}
-            style={styles.updateSettingsButton}
-            isDark={isDark}
-            themeColors={{
-              primary: colors.primary,
-              primaryForeground: colors.primaryForeground,
-              buttonActive: colors.buttonActive,
-              buttonInactive: colors.buttonInactive,
-              buttonTextActive: colors.buttonTextActive,
-              buttonTextInactive: colors.buttonTextInactive,
-              text: colors.text,
-              textMuted: colors.textMuted,
-              border: colors.border,
-              background: colors.background,
-            }}
-          >
-            {t('home.nearbyEmpty.updateSettings')}
-          </Button>
+          <>
+            <Text size="sm" color={colors.textMuted} style={styles.emptySuggestion}>
+              {t('home.nearbyEmpty.suggestion')}
+            </Text>
+            <Button
+              variant="outline"
+              onPress={() => appNavigation.navigate('Settings')}
+              style={styles.updateSettingsButton}
+              isDark={isDark}
+              themeColors={{
+                primary: colors.primary,
+                primaryForeground: colors.primaryForeground,
+                buttonActive: colors.buttonActive,
+                buttonInactive: colors.buttonInactive,
+                buttonTextActive: colors.buttonTextActive,
+                buttonTextInactive: colors.buttonTextInactive,
+                text: colors.text,
+                textMuted: colors.textMuted,
+                border: colors.border,
+                background: colors.background,
+              }}
+            >
+              {t('home.nearbyEmpty.updateSettings')}
+            </Button>
+          </>
         )}
       </View>
     ),
-    [colors.card, colors.text, colors.textMuted, t, maxTravelDistanceKm, session, appNavigation]
+    [colors, t, maxTravelDistanceKm, session, appNavigation, isDark]
   );
 
-  // Render section header with "Soon & Nearby" title and "View All" button
+  // Render section header with "Soon & Nearby" title, location selector, and "View All" button
   const renderSectionHeader = useCallback(() => {
+    // Get a short label for the home location (postal code or city)
+    const homeLocationLabel =
+      homeLocation?.postalCode || homeLocation?.formattedAddress?.split(',')[0];
+
     return (
       <View style={[styles.sectionHeader]}>
-        <Text size="xl" weight="bold" color={colors.text}>
-          {t('home.soonAndNearby' as TranslationKey)}
-        </Text>
+        <View style={styles.sectionTitleRow}>
+          <Text size="xl" weight="bold" color={colors.text}>
+            {t('home.soonAndNearby' as TranslationKey)}
+          </Text>
+          {/* Only show LocationSelector when both GPS and home location are available */}
+          {hasBothLocationOptions && (
+            <View style={styles.locationSelectorWrapper}>
+              <LocationSelector
+                selectedMode={locationMode}
+                onSelectMode={setLocationMode}
+                hasHomeLocation={hasHomeLocation}
+                homeLocationLabel={homeLocationLabel}
+                isDark={isDark}
+                t={t as (key: string) => string}
+              />
+            </View>
+          )}
+        </View>
         <TouchableOpacity
           style={styles.viewAllButton}
           onPress={() => navigation.navigate('PublicMatches')}
@@ -260,7 +304,18 @@ const Home = () => {
         </TouchableOpacity>
       </View>
     );
-  }, [colors.text, colors.primary, navigation, t]);
+  }, [
+    colors.text,
+    colors.primary,
+    navigation,
+    t,
+    locationMode,
+    setLocationMode,
+    hasHomeLocation,
+    hasBothLocationOptions,
+    homeLocation,
+    isDark,
+  ]);
 
   // Render "My Matches" section with horizontal scroll
   const renderMyMatchesSection = useCallback(() => {
@@ -589,6 +644,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[5],
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+  },
+  locationSelectorWrapper: {
+    marginLeft: spacingPixels[1],
   },
   viewAllButton: {
     flexDirection: 'row',

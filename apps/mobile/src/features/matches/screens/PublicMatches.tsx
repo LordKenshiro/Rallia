@@ -15,11 +15,11 @@ import {
   usePublicMatchFilters,
   type PublicMatch,
 } from '@rallia/shared-hooks';
-import { useAuth, useThemeStyles, useTranslation, useUserLocation } from '../../../hooks';
+import { useAuth, useThemeStyles, useTranslation, useEffectiveLocation } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
-import { useMatchDetailSheet, useSport } from '../../../context';
+import { useMatchDetailSheet, useSport, useUserHomeLocation } from '../../../context';
 import { Logger } from '@rallia/shared-services';
-import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
+import { spacingPixels } from '@rallia/design-system';
 import { SearchBar, MatchFiltersBar } from '../components';
 
 // =============================================================================
@@ -73,14 +73,20 @@ export default function PublicMatches() {
   const isDark = theme === 'dark';
 
   // Get user location and preferences
-  const { location: _realLocation } = useUserLocation();
+  const {
+    location,
+    locationMode,
+    setLocationMode,
+    hasHomeLocation,
+    hasBothLocationOptions,
+  } = useEffectiveLocation();
+  const { homeLocation } = useUserHomeLocation();
   const { player, loading: playerLoading } = usePlayer();
   const { selectedSport, isLoading: sportLoading } = useSport();
 
-  // TODO: Remove this hardcoded Montreal location after testing
-  const MONTREAL_DEV_LOCATION = { latitude: 45.5017, longitude: -73.5673 };
-  const location = MONTREAL_DEV_LOCATION; // Use hardcoded location for testing
-  // const location = _realLocation; // Uncomment to use real location
+  // Get a short label for the home location (postal code or city)
+  const homeLocationLabel =
+    homeLocation?.postalCode || homeLocation?.formattedAddress?.split(',')[0];
 
   // Filter state - default is no distance filter (shows all location types)
   const {
@@ -127,21 +133,22 @@ export default function PublicMatches() {
 
   // Filter out matches where user is creator or participant (show only joinable matches)
   const filteredMatches = useMemo(() => {
-    if (!session?.user?.id) return matches;
+    const userId = session?.user?.id;
+    if (!userId) return matches;
 
     return matches.filter(match => {
       // Exclude if user is the creator
-      if (match.created_by === session.user.id) return false;
+      if (match.created_by === userId) return false;
 
       // Exclude if user is a participant
       const isParticipant = match.participants?.some(
-        p => p.player_id === session.user.id && p.status === 'joined'
+        p => p.player_id === userId && p.status === 'joined'
       );
       if (isParticipant) return false;
 
       return true;
     });
-  }, [matches, session?.user?.id]);
+  }, [matches, session]);
 
   // Handle infinite scroll
   const handleEndReached = useCallback(() => {
@@ -249,17 +256,19 @@ export default function PublicMatches() {
       {/* Fixed Header - Search and Filters always visible */}
       <View style={styles.headerContainer}>
         {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <SearchBar
-            value={filters.searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder={t('publicMatches.searchPlaceholder' as TranslationKey)}
-            isLoading={isFetching && debouncedSearchQuery !== filters.searchQuery}
-            onClear={clearSearch}
-          />
+        <View style={styles.searchRow}>
+          <View style={styles.searchContainer}>
+            <SearchBar
+              value={filters.searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder={t('publicMatches.searchPlaceholder' as TranslationKey)}
+              isLoading={isFetching && debouncedSearchQuery !== filters.searchQuery}
+              onClear={clearSearch}
+            />
+          </View>
         </View>
 
-        {/* Filter Chips */}
+        {/* Filter Chips with Location Selector */}
         <MatchFiltersBar
           format={filters.format}
           matchType={filters.matchType}
@@ -281,6 +290,11 @@ export default function PublicMatches() {
           onDistanceChange={setDistance}
           onReset={resetFilters}
           hasActiveFilters={hasActiveFilters}
+          showLocationSelector={hasBothLocationOptions}
+          locationMode={locationMode}
+          onLocationModeChange={setLocationMode}
+          hasHomeLocation={hasHomeLocation}
+          homeLocationLabel={homeLocationLabel}
         />
       </View>
 
@@ -345,9 +359,15 @@ const styles = StyleSheet.create({
   headerContainer: {
     paddingTop: spacingPixels[5],
   },
-  searchContainer: {
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: spacingPixels[4],
     marginBottom: spacingPixels[2],
+    gap: spacingPixels[2],
+  },
+  searchContainer: {
+    flex: 1,
   },
   resultsContainer: {
     paddingHorizontal: spacingPixels[4],

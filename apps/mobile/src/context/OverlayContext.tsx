@@ -1,11 +1,15 @@
 /**
- * OverlayContext - Permission and first-time overlay management
+ * OverlayContext - Splash and first-time flow management
  *
  * This context manages:
- * 1. First-time sport selection overlay (shown after splash for new users)
- * 2. Requesting native permissions (Location, Calendar) after overlays complete
+ * 1. Splash animation completion state
+ * 2. First-time pre-onboarding state (determines navigation flow)
+ * 3. Requesting native permissions (Notifications, Calendar) after pre-onboarding
  *
- * Flow: Splash -> Sport Selection (first-time only) -> Permission requests
+ * Note: Location permission is now handled within the pre-onboarding wizard (step 3),
+ * so it's NOT requested here after the flow completes.
+ *
+ * Flow: Splash -> PreOnboarding Screen (first-time only) -> Main App -> Permission requests
  */
 
 import React, {
@@ -45,9 +49,7 @@ interface OverlayContextType {
   setOnHomeScreen: (isOnHome: boolean) => void;
   /** Notify that splash animation has completed */
   setSplashComplete: (complete: boolean) => void;
-  /** Whether the sport selection overlay should be visible */
-  showSportSelectionOverlay: boolean;
-  /** Whether splash animation has completed (triggers overlay entrance animation) */
+  /** Whether splash animation has completed (triggers screen entrance animation) */
   isSplashComplete: boolean;
   /** Whether sport selection has been completed (or was already done for returning users) */
   isSportSelectionComplete: boolean;
@@ -71,12 +73,12 @@ interface OverlayProviderProps {
 
 export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) => {
   // Permission handling
+  // Note: Location permission is handled in the pre-onboarding wizard (step 3),
+  // so we only request notifications and calendar here
   const {
     shouldShowNotificationOverlay,
-    shouldShowLocationOverlay,
     shouldShowCalendarOverlay,
     requestNotificationPermission,
-    requestLocationPermission,
     requestCalendarPermission,
     loading: permissionsLoading,
   } = usePermissions();
@@ -86,7 +88,6 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
   // ==========================================================================
   const [, setIsOnHomeScreen] = useState(false);
   const [isSplashComplete, setIsSplashComplete] = useState(false);
-  const [showSportSelectionOverlay, setShowSportSelectionOverlay] = useState(false);
   const [isSportSelectionComplete, setIsSportSelectionComplete] = useState(false);
   const [hasCheckedSportSelection, setHasCheckedSportSelection] = useState(false);
 
@@ -94,9 +95,8 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
   const hasRequestedPermissions = useRef(false);
 
   // ==========================================================================
-  // CHECK IF SPORT SELECTION OVERLAY SHOULD BE SHOWN
-  // Show it immediately for first-time users so it's rendered beneath the splash
-  // and visible as soon as splash fades out (no delay between splash and overlay)
+  // CHECK IF SPORT SELECTION HAS BEEN COMPLETED
+  // This determines whether to show SportSelectionScreen or Main in navigation
   // ==========================================================================
   useEffect(() => {
     const checkSportSelectionStatus = async () => {
@@ -105,18 +105,13 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
         if (hasSeenOverlay === 'true') {
           // User has already completed sport selection
           setIsSportSelectionComplete(true);
-          setShowSportSelectionOverlay(false);
         } else {
-          // First-time user: show overlay immediately (beneath splash)
-          // The splash has zIndex 9999, sport selection has 9998
-          // So sport selection renders beneath and is visible when splash fades
-          Logger.logNavigation('show_sport_selection_overlay', { trigger: 'first_time_user' });
-          setShowSportSelectionOverlay(true);
+          // First-time user: navigation will show SportSelectionScreen
+          Logger.logNavigation('sport_selection_required', { trigger: 'first_time_user' });
         }
       } catch (error) {
         Logger.error('Failed to check sport selection status', error as Error);
-        // On error, show the overlay to be safe
-        setShowSportSelectionOverlay(true);
+        // On error, assume sport selection is needed (safer default)
       }
       setHasCheckedSportSelection(true);
     };
@@ -151,7 +146,7 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
         if (shouldShowNotificationOverlay) {
           Logger.logNavigation('request_native_permission', {
             permission: 'notifications',
-            trigger: 'post_sport_selection',
+            trigger: 'post_preonboarding',
           });
           const notificationGranted = await requestNotificationPermission();
           Logger.logUserAction('permission_result', {
@@ -163,27 +158,14 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
           await new Promise(resolve => setTimeout(resolve, ANIMATION_DELAYS.OVERLAY_STAGGER));
         }
 
-        // Request location permission if needed
-        if (shouldShowLocationOverlay) {
-          Logger.logNavigation('request_native_permission', {
-            permission: 'location',
-            trigger: 'post_sport_selection',
-          });
-          const locationGranted = await requestLocationPermission();
-          Logger.logUserAction('permission_result', {
-            permission: 'location',
-            granted: locationGranted,
-          });
-
-          // Small delay between permission dialogs
-          await new Promise(resolve => setTimeout(resolve, ANIMATION_DELAYS.OVERLAY_STAGGER));
-        }
+        // Note: Location permission is now handled in the pre-onboarding wizard (step 3)
+        // so we skip it here
 
         // Request calendar permission if needed
         if (shouldShowCalendarOverlay) {
           Logger.logNavigation('request_native_permission', {
             permission: 'calendar',
-            trigger: 'post_sport_selection',
+            trigger: 'post_preonboarding',
           });
           const calendarGranted = await requestCalendarPermission();
           Logger.logUserAction('permission_result', {
@@ -201,10 +183,8 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
     isSportSelectionComplete,
     permissionsLoading,
     shouldShowNotificationOverlay,
-    shouldShowLocationOverlay,
     shouldShowCalendarOverlay,
     requestNotificationPermission,
-    requestLocationPermission,
     requestCalendarPermission,
   ]);
 
@@ -229,9 +209,6 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
       primarySport: orderedSports[0]?.name,
     });
 
-    // Hide the overlay
-    setShowSportSelectionOverlay(false);
-
     // Mark as shown in AsyncStorage
     try {
       await AsyncStorage.setItem(SPORT_SELECTION_SHOWN_KEY, 'true');
@@ -239,7 +216,7 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
       Logger.error('Failed to save sport selection status', error as Error);
     }
 
-    // Mark sport selection as complete (will trigger permission requests)
+    // Mark sport selection as complete (navigation will switch to Main, and permission requests will trigger)
     setIsSportSelectionComplete(true);
   }, []);
 
@@ -250,7 +227,6 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
   const contextValue: OverlayContextType = {
     setOnHomeScreen: handleSetOnHomeScreen,
     setSplashComplete: handleSetSplashComplete,
-    showSportSelectionOverlay,
     isSplashComplete,
     isSportSelectionComplete,
     onSportSelectionComplete: handleSportSelectionComplete,

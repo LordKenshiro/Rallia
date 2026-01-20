@@ -168,7 +168,7 @@ interface WizardHeaderProps {
 const WizardHeader: React.FC<WizardHeaderProps> = ({
   currentStep,
   onBack,
-  onBackToLanding,
+  onBackToLanding: _onBackToLanding,
   onClose,
   colors,
   t,
@@ -177,20 +177,7 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
     <View style={[styles.header, { borderBottomColor: colors.border }]}>
       {/* Back button (visible on all steps) */}
       <View style={styles.headerLeft}>
-        {currentStep === 1 ? (
-          <TouchableOpacity
-            onPress={() => {
-              Keyboard.dismiss();
-              lightHaptic();
-              onBackToLanding();
-            }}
-            style={styles.headerButton}
-            accessibilityLabel={t('common.back' as TranslationKey)}
-            accessibilityRole="button"
-          >
-            <Ionicons name="chevron-back" size={24} color={colors.buttonActive} />
-          </TouchableOpacity>
-        ) : (
+        {currentStep !== 1 && (
           <TouchableOpacity
             onPress={() => {
               Keyboard.dismiss();
@@ -266,7 +253,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     updateFormData,
     goToNextStep,
     goToPrevStep,
-    canGoBack,
     isLastStep,
     resetWizard,
     hasTennis,
@@ -288,7 +274,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   const { refetch: refetchPlayer } = usePlayer();
 
   // Sport context to refetch player sports when onboarding completes
-  const { refetch: refetchSports, setSelectedSport } = useSport();
+  const { refetch: refetchSports, setSelectedSport, selectedSport } = useSport();
 
   // State to store selected sports for SuccessStep
   const [selectedSportsForSuccess, setSelectedSportsForSuccess] = useState<
@@ -310,7 +296,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     if (formData.savedProfilePictureUrl && !lastUploadedProfileUrl) {
       setLastUploadedProfileUrl(formData.savedProfilePictureUrl);
     }
-  }, [formData.savedProfilePictureUrl, lastUploadedProfileUrl]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.savedProfilePictureUrl]);
 
   // Fetch selected sports when reaching success step
   useEffect(() => {
@@ -667,6 +654,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     refetchProfile,
     refetchPlayer,
     refetchSports,
+    lastUploadedProfileUrl,
   ]);
 
   // Handle next button press
@@ -777,6 +765,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             t={t}
             isDark={isDark}
             selectedSports={selectedSportsForSuccess}
+            currentSport={selectedSport}
             onSelectInitialSport={handleSelectInitialSport}
           />
         );
@@ -810,6 +799,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           t={t}
           isDark={isDark}
           selectedSports={selectedSportsForSuccess}
+          currentSport={selectedSport}
           onSelectInitialSport={handleSelectInitialSport}
         />
       </View>

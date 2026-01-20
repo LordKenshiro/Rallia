@@ -24,6 +24,9 @@ import type {
 // =============================================================================
 
 export type RootStackParamList = {
+  // First-time pre-onboarding wizard (shown before Main for new users)
+  PreOnboarding: undefined;
+
   // App entry point
   Main: NavigatorScreenParams<BottomTabParamList>;
 

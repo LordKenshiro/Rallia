@@ -137,7 +137,7 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
   onComplete,
 }) => {
   const { theme } = useTheme();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const isDark = theme === 'dark';
 
   // State
@@ -183,6 +183,8 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
     isLoadingOpponents,
     participant,
     isLoadingParticipant,
+    matchContext,
+    isLoadingMatchContext,
   } = useMatchFeedback(feedbackData.matchId, feedbackData.reviewerId, {
     onOutcomeSuccess: result => {
       if (result.feedbackCompleted) {
@@ -464,8 +466,8 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
     transform: [{ translateX: translateX.value + gestureTranslateX.value }],
   }));
 
-  // Loading state while fetching opponents and participant data
-  if (isLoadingOpponents || isLoadingParticipant) {
+  // Loading state while fetching opponents, participant data, and match context
+  if (isLoadingOpponents || isLoadingParticipant || isLoadingMatchContext) {
     return (
       <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
         <View style={styles.loadingContainer}>
@@ -540,8 +542,10 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
                   opponents={opponents}
                   noShowPlayerIds={noShowPlayerIds}
                   onNoShowPlayerIdsChange={setNoShowPlayerIds}
+                  matchContext={matchContext}
                   colors={colors}
                   t={t}
+                  locale={locale}
                   isDark={isDark}
                 />
               </View>

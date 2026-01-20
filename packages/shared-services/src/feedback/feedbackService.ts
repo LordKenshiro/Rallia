@@ -14,6 +14,7 @@ import type {
   MatchReportResult,
   OpponentForFeedback,
   MatchParticipant,
+  MatchContextForFeedback,
 } from '@rallia/shared-types';
 import { REPORT_REASON_PRIORITY } from '@rallia/shared-types';
 
@@ -95,7 +96,7 @@ export async function submitMatchOutcome(input: MatchOutcomeInput): Promise<Matc
 
     // Create reputation events for submitting feedback
     try {
-      for (const _ of noShowPlayerIds) {
+      for (let i = 0; i < noShowPlayerIds.length; i++) {
         await createReputationEvent(reviewerId, 'feedback_submitted', { matchId });
       }
     } catch (repError) {
@@ -337,6 +338,111 @@ export async function getReviewerParticipant(
   }
 
   return data;
+}
+
+// Type for match context query result
+interface MatchContextQueryResult {
+  id: string;
+  match_date: string;
+  start_time: string;
+  end_time: string | null;
+  format: string | null;
+  sport: {
+    name: string;
+    slug: string;
+  } | null;
+  facility: {
+    name: string;
+    city: string | null;
+  } | null;
+  participants: Array<{
+    player_id: string;
+    status: string;
+    player: {
+      id: string;
+      profile: {
+        first_name: string | null;
+        display_name: string | null;
+      } | null;
+    } | null;
+  }>;
+}
+
+/**
+ * Get match context for displaying in the feedback wizard.
+ * Returns key information to help players identify which match they're rating.
+ */
+export async function getMatchContextForFeedback(
+  matchId: string,
+  reviewerId: string
+): Promise<MatchContextForFeedback | null> {
+  const { data, error } = await supabase
+    .from('match')
+    .select(
+      `
+      id,
+      match_date,
+      start_time,
+      end_time,
+      format,
+      sport:sport_id (
+        name,
+        slug
+      ),
+      facility:facility_id (
+        name,
+        city
+      ),
+      participants:match_participant (
+        player_id,
+        status,
+        player:player_id (
+          id,
+          profile (
+            first_name,
+            display_name
+          )
+        )
+      )
+    `
+    )
+    .eq('id', matchId)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      return null;
+    }
+    console.error('[feedbackService] Failed to get match context:', error);
+    throw new Error('Failed to load match context');
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  const matchData = data as unknown as MatchContextQueryResult;
+
+  // Get opponent names (exclude the reviewer)
+  const opponentNames = matchData.participants
+    .filter(p => p.player_id !== reviewerId && p.status === 'joined')
+    .map(p => {
+      const profile = p.player?.profile;
+      return profile?.display_name || profile?.first_name || 'Player';
+    });
+
+  return {
+    matchId: matchData.id,
+    matchDate: matchData.match_date,
+    startTime: matchData.start_time,
+    endTime: matchData.end_time || undefined,
+    sportName: matchData.sport?.name || 'Unknown Sport',
+    sportSlug: matchData.sport?.slug || 'tennis',
+    facilityName: matchData.facility?.name || undefined,
+    city: matchData.facility?.city || undefined,
+    format: matchData.format || undefined,
+    opponentNames,
+  };
 }
 
 // ============================================

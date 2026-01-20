@@ -23,7 +23,7 @@ import {
   SportSelector,
 } from '@rallia/shared-components';
 import { useUnreadNotificationCount, useProfile } from '@rallia/shared-hooks';
-import { useActionsSheet, useSport } from '../context';
+import { useActionsSheet, useSport, useOverlay } from '../context';
 import { useAuth, useThemeStyles, useTranslation } from '../hooks';
 import { useTheme } from '@rallia/shared-hooks';
 import { useAppNavigation } from './hooks';
@@ -48,6 +48,7 @@ import SharedLists from '../screens/SharedLists';
 import SharedListDetail from '../screens/SharedListDetail';
 import Groups from '../screens/Groups';
 import GroupDetail from '../screens/GroupDetail';
+import PreOnboardingScreen from '../screens/PreOnboarding';
 
 // Components
 import { ThemeLogo } from '../components/ThemeLogo';
@@ -111,11 +112,11 @@ function SportSelectorWithContext() {
   const { theme } = useTheme();
   const { session } = useAuth();
   const { contentMode } = useActionsSheet();
-  const { profile, refetch } = useProfile();
+  const { refetch } = useProfile();
   const isDark = theme === 'dark';
 
   // Determine if user is a guest (not signed in)
-  const isGuest = !session?.user;
+  // const isGuest = !session?.user;
 
   // Refetch profile when auth state changes (e.g., user first authenticates)
   useEffect(() => {
@@ -138,9 +139,9 @@ function SportSelectorWithContext() {
 
   // For signed-in users, only show if onboarding is completed
   // For guests, always allow (they browse all public matches)
-  if (!isGuest && !profile?.onboarding_completed) {
-    return null;
-  }
+  // if (!isGuest && !profile?.onboarding_completed) {
+  //   return null;
+  // }
 
   // Don't show sport selector if user has only one or no sports
   if (!userSports || userSports.length <= 1) {
@@ -600,22 +601,33 @@ function ThemedBackButton({
  * Main App Navigator
  *
  * Structure:
- * - Main: Bottom tabs with minimal stacks
+ * - PreOnboarding: First-time wizard (sports, postal code, location permission) for new users
+ * - Main: Bottom tabs with minimal stacks (shown after pre-onboarding complete)
  * - Shared screens: UserProfile, SportProfile, Settings, Notifications, Map, RatingProofs
  *   These are full-screen (tabs hidden) and accessible from anywhere
  */
 export default function AppNavigator() {
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
+  const { isSportSelectionComplete } = useOverlay();
   const sharedOptions = getSharedScreenOptions(colors);
 
   return (
     <RootStack.Navigator
       id="RootStack"
-      initialRouteName="Main"
+      initialRouteName={isSportSelectionComplete ? 'Main' : 'PreOnboarding'}
       screenOptions={fastAnimationOptions}
     >
-      {/* Main app entry */}
+      {/* First-time pre-onboarding wizard - shown before Main for new users */}
+      {!isSportSelectionComplete && (
+        <RootStack.Screen
+          name="PreOnboarding"
+          component={PreOnboardingScreen}
+          options={{ headerShown: false, animation: 'fade' }}
+        />
+      )}
+
+      {/* Main app entry - only rendered after sport selection is complete */}
       <RootStack.Screen name="Main" component={BottomTabs} options={{ headerShown: false }} />
 
       {/* Shared screens - full screen, tabs hidden */}

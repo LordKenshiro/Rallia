@@ -5,7 +5,7 @@
  */
 import './src/lib/supabase';
 
-import { useEffect, type PropsWithChildren } from 'react';
+import { useEffect, useState, type PropsWithChildren } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -19,7 +19,6 @@ import { MatchDetailSheet } from './src/components/MatchDetailSheet';
 import { PlayerInviteSheet } from './src/components/PlayerInviteSheet';
 import { FeedbackSheet } from './src/components/FeedbackSheet';
 import { SplashOverlay } from './src/components/SplashOverlay';
-import { SportSelectionOverlay } from './src/components/SportSelectionOverlay';
 import { ErrorBoundary } from '@rallia/shared-components';
 import {
   ThemeProvider,
@@ -45,7 +44,9 @@ import {
   DeepLinkProvider,
   useDeepLink,
   useOverlay,
-  useSport,
+  UserLocationProvider,
+  useUserHomeLocation,
+  LocationModeProvider,
 } from './src/context';
 import { usePushNotifications } from './src/hooks';
 
@@ -102,12 +103,39 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
   }, [userId, isLocaleReady, syncLocaleToDatabase]);
 
   return (
-    <ProfileProvider userId={userId}>
-      <PlayerProvider userId={userId}>
-        <SportProvider userId={userId}>{children}</SportProvider>
-      </PlayerProvider>
-    </ProfileProvider>
+    <UserLocationProvider>
+      <LocationModeProvider>
+        <HomeLocationSync userId={userId} />
+        <ProfileProvider userId={userId}>
+          <PlayerProvider userId={userId}>
+            <SportProvider userId={userId}>{children}</SportProvider>
+          </PlayerProvider>
+        </ProfileProvider>
+      </LocationModeProvider>
+    </UserLocationProvider>
   );
+}
+
+/**
+ * HomeLocationSync - Syncs home location to database when user is authenticated.
+ * Must be inside UserLocationProvider.
+ */
+function HomeLocationSync({ userId }: { userId: string | undefined }) {
+  const { hasHomeLocation, syncToDatabase } = useUserHomeLocation();
+  const [hasSynced, setHasSynced] = useState(false);
+
+  // Sync home location to database when user is first authenticated
+  useEffect(() => {
+    if (userId && hasHomeLocation && !hasSynced) {
+      syncToDatabase(userId).then(success => {
+        if (success) {
+          setHasSynced(true);
+        }
+      });
+    }
+  }, [userId, hasHomeLocation, hasSynced, syncToDatabase]);
+
+  return null;
 }
 
 /**
@@ -140,23 +168,7 @@ function PendingFeedbackHandler() {
 
 function AppContent() {
   const { theme } = useTheme();
-  const {
-    setSplashComplete,
-    showSportSelectionOverlay,
-    isSplashComplete,
-    onSportSelectionComplete,
-  } = useOverlay();
-  const { setSelectedSportsOrdered } = useSport();
-
-  // Handle sport selection completion - update SportContext and notify OverlayContext
-  const handleSportSelectionComplete = async (
-    orderedSports: Parameters<typeof setSelectedSportsOrdered>[0]
-  ) => {
-    // Update SportContext with the ordered selection
-    await setSelectedSportsOrdered(orderedSports);
-    // Notify OverlayContext that selection is complete
-    onSportSelectionComplete(orderedSports);
-  };
+  const { setSplashComplete } = useOverlay();
 
   return (
     <>
@@ -174,12 +186,6 @@ function AppContent() {
       <FeedbackSheet />
       {/* Pending Feedback Handler - auto-opens FeedbackSheet on app launch if needed */}
       <PendingFeedbackHandler />
-      {/* Sport Selection Overlay - shows for first-time users after splash */}
-      <SportSelectionOverlay
-        visible={showSportSelectionOverlay}
-        startAnimation={isSplashComplete}
-        onComplete={handleSportSelectionComplete}
-      />
       {/* Splash overlay - renders on top of everything */}
       <SplashOverlay onAnimationComplete={() => setSplashComplete(true)} />
     </>

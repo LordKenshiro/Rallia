@@ -5,7 +5,7 @@
 
 import React, { useCallback, useMemo } from 'react';
 import { View, ScrollView, StyleSheet, Pressable } from 'react-native';
-import { Text } from '@rallia/shared-components';
+import { Text, LocationSelector, type LocationMode } from '@rallia/shared-components';
 import { useTheme, DISTANCE_OPTIONS } from '@rallia/shared-hooks';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
@@ -77,6 +77,16 @@ interface MatchFiltersBarProps {
   onReset?: () => void;
   /** Whether any filter is active */
   hasActiveFilters?: boolean;
+  /** Location selector props - only shown when both GPS and home location are available */
+  showLocationSelector?: boolean;
+  /** Currently selected location mode */
+  locationMode?: LocationMode;
+  /** Callback when location mode is selected */
+  onLocationModeChange?: (mode: LocationMode) => void;
+  /** Whether the home location is available */
+  hasHomeLocation?: boolean;
+  /** Label for home location (e.g., "H2X 1Y4" or "Montreal") */
+  homeLocationLabel?: string;
 }
 
 // Filter option definitions
@@ -130,11 +140,14 @@ function FilterChip({
   }));
 
   const handlePressIn = useCallback(() => {
+    // Reanimated shared values are mutable by design
+    // eslint-disable-next-line react-hooks/immutability
     scale.value = withSpring(0.95, { damping: 15, stiffness: 400 });
     selectionHaptic(); // Immediate haptic feedback on touch
   }, [scale]);
 
   const handlePressOut = useCallback(() => {
+    // eslint-disable-next-line react-hooks/immutability
     scale.value = withSpring(1, { damping: 15, stiffness: 400 });
   }, [scale]);
 
@@ -232,6 +245,11 @@ export function MatchFiltersBar({
   onDistanceChange,
   onReset,
   hasActiveFilters = false,
+  showLocationSelector = false,
+  locationMode,
+  onLocationModeChange,
+  hasHomeLocation = false,
+  homeLocationLabel,
 }: MatchFiltersBarProps) {
   const { theme } = useTheme();
   const { colors } = useThemeStyles();
@@ -326,6 +344,20 @@ export function MatchFiltersBar({
               )}
             </AnimatedPressable>
           </FilterGroup>
+        )}
+
+        {/* Location Selector - Shows when both GPS and home location are available */}
+        {showLocationSelector && locationMode && onLocationModeChange && (
+          <View style={styles.locationSelectorWrapper}>
+            <LocationSelector
+              selectedMode={locationMode}
+              onSelectMode={onLocationModeChange}
+              hasHomeLocation={hasHomeLocation}
+              homeLocationLabel={homeLocationLabel}
+              isDark={isDark}
+              t={t as (key: string) => string}
+            />
+          </View>
         )}
 
         {/* Distance Filter - First for prominence */}
@@ -512,6 +544,10 @@ const styles = StyleSheet.create({
     gap: spacingPixels[4],
     flexDirection: 'row',
     alignItems: 'flex-start',
+  },
+  locationSelectorWrapper: {
+    justifyContent: 'flex-end',
+    alignSelf: 'flex-end',
   },
   filterGroup: {
     gap: spacingPixels[1.5],

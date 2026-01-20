@@ -19,14 +19,13 @@ import { Text, Button } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
 import { MATCH_DURATION_ENUM_LABELS } from '@rallia/shared-types';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
+import { useSport } from '../context';
 import {
   spacingPixels,
   radiusPixels,
   fontSizePixels,
   fontWeightNumeric,
-  shadowsNative,
   primary,
-  status,
 } from '@rallia/design-system';
 
 const BASE_BLACK = '#000000';
@@ -71,8 +70,9 @@ const SportProfile = () => {
   const navigation = useAppNavigation();
   const route = useRoute<SportProfileRouteProp>();
   const { sportId, sportName } = route.params;
-  const { colors, shadows, isDark } = useThemeStyles();
+  const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
+  const { refetch: refetchSportContext } = useSport();
 
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string>('');
@@ -421,6 +421,36 @@ const SportProfile = () => {
         return;
       }
 
+      // Check if user is trying to deactivate their last active sport
+      if (!newValue && playerSportId) {
+        const { count, error: countError } = await withTimeout(
+          (async () =>
+            supabase
+              .from('player_sport')
+              .select('id', { count: 'exact', head: true })
+              .eq('player_id', user.id)
+              .eq('is_active', true))(),
+          10000,
+          'Failed to check active sports - connection timeout'
+        );
+
+        if (countError) {
+          Logger.error('Failed to count active sports', countError as Error, {
+            playerId: user.id,
+          });
+          throw countError;
+        }
+
+        // If user only has 1 active sport (this one), prevent deactivation
+        if (count !== null && count <= 1) {
+          Alert.alert(
+            t('alerts.cannotDeactivate'),
+            t('alerts.mustHaveOneSport')
+          );
+          return;
+        }
+      }
+
       if (playerSportId) {
         // Entry exists: Update is_active field
         const updateResult = await withTimeout(
@@ -447,6 +477,9 @@ const SportProfile = () => {
         } else {
           Alert.alert(t('alerts.success'), message);
         }
+
+        // Refresh SportContext to update userSports across the app
+        refetchSportContext();
 
         // Refresh data if activated
         if (newValue) {
@@ -485,6 +518,9 @@ const SportProfile = () => {
           } else {
             Alert.alert(t('alerts.success'), message);
           }
+
+          // Refresh SportContext to update userSports across the app
+          refetchSportContext();
 
           // Refresh data to load ratings and preferences
           await fetchSportProfileData();

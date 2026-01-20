@@ -1,6 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@rallia/shared-services';
 import type { Sport } from './useSports';
+
+/** Storage key for guest-selected sports (must match SportContext) */
+const GUEST_SPORTS_STORAGE_KEY = '@rallia/guest-selected-sports';
+
+/**
+ * Guest sport format stored in AsyncStorage by SportSelectionScreen
+ */
+interface GuestSport {
+  id: string;
+  name: string;
+  display_name: string;
+  icon_url?: string | null;
+}
 
 /**
  * Player sport data with nested sport information
@@ -79,6 +93,15 @@ export const usePlayerSports = (playerId: string | undefined) => {
         throw new Error(sportsError.message);
       }
 
+      // If authenticated user has no player sports, check for guest-selected sports
+      if (!data || data.length === 0) {
+        const guestSports = await loadGuestSportsAsFallback(playerId);
+        if (guestSports.length > 0) {
+          setPlayerSports(guestSports);
+          return;
+        }
+      }
+
       setPlayerSports(data || []);
     } catch (err) {
       console.error('Error fetching player sports:', err);
@@ -88,6 +111,38 @@ export const usePlayerSports = (playerId: string | undefined) => {
       setLoading(false);
     }
   }, [playerId]);
+
+  /**
+   * Load guest-selected sports from AsyncStorage and transform to PlayerSport format.
+   * This is used as a fallback when an authenticated user has no player sport records.
+   */
+  const loadGuestSportsAsFallback = async (currentPlayerId: string): Promise<PlayerSport[]> => {
+    try {
+      const savedSportsJson = await AsyncStorage.getItem(GUEST_SPORTS_STORAGE_KEY);
+      if (!savedSportsJson) return [];
+
+      const guestSports: GuestSport[] = JSON.parse(savedSportsJson);
+      if (!guestSports || guestSports.length === 0) return [];
+
+      // Transform guest sports to PlayerSport format
+      return guestSports.map((guestSport, index) => ({
+        player_id: currentPlayerId,
+        sport_id: guestSport.id,
+        is_primary: index === 0, // First selected sport is primary
+        is_active: true,
+        sport: {
+          id: guestSport.id,
+          name: guestSport.name,
+          display_name: guestSport.display_name,
+          icon_url: guestSport.icon_url ?? null,
+          is_active: true,
+        },
+      }));
+    } catch (parseError) {
+      console.error('Failed to parse guest sports fallback:', parseError);
+      return [];
+    }
+  };
 
   // Fetch when playerId changes
   useEffect(() => {

@@ -729,6 +729,10 @@
       "outcome": "Match Outcome",
       "feedback": "Feedback"
     },
+    "matchContext": {
+      "vsPlayer": "vs {name}",
+      "vsPlayers": "vs {names}"
+    },
     "outcomeStep": {
       "title": "How did the match go?",
       "subtitle": "Let us know if the match happened as planned",
@@ -797,7 +801,9 @@
     "sportDeactivated": "{sport} deactivated",
     "sportAdded": "{sport} added and activated successfully!",
     "sportNotAdded": "{sport} not added",
-    "preferencesUpdated": "Preferences updated successfully"
+    "preferencesUpdated": "Preferences updated successfully",
+    "cannotDeactivate": "Cannot Deactivate Sport",
+    "mustHaveOneSport": "You must have at least one active sport. Please activate another sport before deactivating this one."
   },
   "actions": {
     "welcome": "Welcome to Rallia",
@@ -1047,7 +1053,7 @@
     "signInPrompt": "Please sign in to create and access your games",
     "user": "User",
     "subtitle": "The best way to find your next tennis or pickleball partner",
-    "soonAndNearby": "Soon & Nearby",
+    "soonAndNearby": "Nearby Games",
     "publicMatches": "Public Games",
     "viewAll": "View All",
     "myMatches": "My Games",
@@ -1058,8 +1064,16 @@
     "nearbyEmpty": {
       "title": "No nearby games found",
       "description": "There are no upcoming games within your {distance} km travel distance.",
+      "guestDescription": "There are no upcoming games nearby.",
       "suggestion": "Try increasing your maximum travel distance in your profile to see more games.",
       "updateSettings": "Update Settings"
+    },
+    "location": {
+      "title": "Search Location",
+      "current": "Current Location",
+      "currentDescription": "Use your GPS location",
+      "home": "Home",
+      "homeNotSet": "Set your home location in settings"
     },
     "header": {
       "ctaButton": "Join Waitlist"
@@ -2054,11 +2068,77 @@
     }
   },
   "sportSelectionOverlay": {
-    "title": "What sports do you play?",
-    "subtitle": "Select one or more sports.",
+    "welcomeBadge": "👋 Welcome to Rallia",
+    "title": "Let's find your game",
+    "subtitle": "Choose the sports you love playing. You can always add more later!",
     "loading": "Loading sports...",
-    "getStarted": "Get Started",
-    "selectionHint": "You'll start with {sport}"
+    "getStarted": "Let's Go!",
+    "selectAtLeastOne": "Select a sport to continue",
+    "selectionHint": "You will start with {sport}",
+    "tapToSelect": "Tap to add",
+    "tapToRemove": "Tap to remove"
+  },
+  "preOnboarding": {
+    "step": "Step {current} of {total}",
+    "postalCode": {
+      "title": "Where do you play?",
+      "subtitle": "Your postal code helps us find matches and players in your area. No more scrolling through games across the country!",
+      "whyNeeded": "We use this to show you matches you can actually get to",
+      "placeholder": "Enter your postal code",
+      "placeholderCA": "e.g., H2X 1Y4",
+      "placeholderUS": "e.g., 90210",
+      "verifying": "Finding your area...",
+      "verified": "Perfect! We found your area",
+      "continue": "Find Matches Near Me",
+      "benefits": {
+        "title": "With your postal code, you'll:",
+        "item1": "See matches within your travel distance",
+        "item2": "Connect with local players",
+        "item3": "Get notified about games nearby",
+        "findPlayers": {
+          "title": "Find players near you",
+          "description": "Match with players in your area who are at your level"
+        },
+        "discoverCourts": {
+          "title": "Discover local courts",
+          "description": "Find the best courts and clubs nearby"
+        },
+        "joinEvents": {
+          "title": "Never miss a game",
+          "description": "Get notified about matches in your neighborhood"
+        }
+      },
+      "privacy": "We never share your exact address",
+      "errors": {
+        "invalid": "Please enter a valid postal code",
+        "invalidCA": "Please enter a valid Canadian postal code (e.g., H2X 1Y4)",
+        "invalidUS": "Please enter a valid US ZIP code (e.g., 90210)",
+        "notFound": "We couldn't find this postal code. Please check and try again.",
+        "networkError": "Connection error. Please try again."
+      }
+    },
+    "locationPermission": {
+      "title": "Get the best match recommendations",
+      "subtitle": "Enable location to see exactly how far matches are and never miss a game nearby",
+      "whyNeeded": "Your device's GPS gives us precise distances so you know exactly how long it takes to get there",
+      "comparison": {
+        "without": "Without GPS",
+        "withoutExample": "~5 km away",
+        "with": "With GPS",
+        "withExample": "2.3 km • 8 min"
+      },
+      "benefits": {
+        "title": "With precise location, you'll:",
+        "item1": "See exact distances to matches",
+        "item2": "Find the closest available courts",
+        "item3": "Get real-time match alerts when you're nearby",
+        "item4": "Discover players in your neighborhood"
+      },
+      "enable": "Enable Precise Location",
+      "skip": "Maybe Later",
+      "privacyNote": "Your location stays on your device and is only used to calculate distances. We never track or store your movements.",
+      "skipNote": "You can always enable this later in Settings"
+    }
   },
   "reputation": {
     "tiers": {

@@ -89,30 +89,68 @@ BEGIN
       NOW()
     );
     
-    -- Create profile for this user (use full_name instead of assuming columns)
-    INSERT INTO profile (
-      id,
-      full_name,
-      display_name,
-      email,
-      profile_picture_url,
-      birth_date,
-      onboarding_completed,
-      account_status,
-      email_verified
-    )
-    VALUES (
-      new_user_id,
-      profile_names[i],
-      profile_displays[i],
-      profile_emails[i],
-      'https://i.pravatar.cc/150?u=' || profile_displays[i],
-      ('1990-01-01'::DATE + (i * 365 || ' days')::INTERVAL)::DATE,
-      true,
-      'active',
-      true
-    )
-    ON CONFLICT (id) DO NOTHING;
+    -- Create profile for this user (handle both full_name and first_name/last_name schemas)
+    -- Check which schema is available and insert accordingly
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_schema = 'public' AND table_name = 'profile' AND column_name = 'first_name'
+    ) THEN
+      -- Use first_name/last_name schema
+      INSERT INTO profile (
+        id,
+        first_name,
+        last_name,
+        display_name,
+        email,
+        profile_picture_url,
+        birth_date,
+        onboarding_completed,
+        account_status,
+        email_verified
+      )
+      VALUES (
+        new_user_id,
+        SPLIT_PART(profile_names[i], ' ', 1),
+        CASE 
+          WHEN position(' ' IN profile_names[i]) > 0 
+          THEN substring(profile_names[i] FROM position(' ' IN profile_names[i]) + 1)
+          ELSE NULL
+        END,
+        profile_displays[i],
+        profile_emails[i],
+        'https://i.pravatar.cc/150?u=' || profile_displays[i],
+        ('1990-01-01'::DATE + (i * 365 || ' days')::INTERVAL)::DATE,
+        true,
+        'active',
+        true
+      )
+      ON CONFLICT (id) DO NOTHING;
+    ELSE
+      -- Use full_name schema (legacy)
+      INSERT INTO profile (
+        id,
+        full_name,
+        display_name,
+        email,
+        profile_picture_url,
+        birth_date,
+        onboarding_completed,
+        account_status,
+        email_verified
+      )
+      VALUES (
+        new_user_id,
+        profile_names[i],
+        profile_displays[i],
+        profile_emails[i],
+        'https://i.pravatar.cc/150?u=' || profile_displays[i],
+        ('1990-01-01'::DATE + (i * 365 || ' days')::INTERVAL)::DATE,
+        true,
+        'active',
+        true
+      )
+      ON CONFLICT (id) DO NOTHING;
+    END IF;
     
     -- Create player record for this user
     INSERT INTO player (
@@ -268,6 +306,9 @@ BEGIN
     'public', 'direct', 'Looking for a competitive singles match!',
     now_time - INTERVAL '5 days', now_time - INTERVAL '5 days'
   );
+  -- Create participant record for match creator
+  INSERT INTO match_participant (match_id, player_id, status, is_host, created_at, updated_at)
+  VALUES (match_id, creator_1_id, 'joined', true, now_time - INTERVAL '5 days', now_time - INTERVAL '5 days');
   
   -- Tennis Match 2: Today in 5 hours - Singles, Full, Practice, Free court
   match_id := gen_random_uuid();
@@ -287,6 +328,9 @@ BEGIN
     true, 'split_equal', 'public', 'direct', 'Practice session',
     now_time - INTERVAL '3 days', now_time - INTERVAL '3 days'
   );
+  -- Create participant record for match creator
+  INSERT INTO match_participant (match_id, player_id, status, is_host, created_at, updated_at)
+  VALUES (match_id, creator_2_id, 'joined', true, now_time - INTERVAL '3 days', now_time - INTERVAL '3 days');
   INSERT INTO match_participant (match_id, player_id, status, is_host, created_at, updated_at)
   VALUES (match_id, creator_3_id, 'joined', false, now_time - INTERVAL '2 days', now_time - INTERVAL '2 days');
   
@@ -307,6 +351,9 @@ BEGIN
     true, 'split_equal', 'public', 'direct', 'Morning doubles practice - need 2 more!',
     now_time - INTERVAL '2 days', now_time - INTERVAL '2 days'
   );
+  -- Create participant record for match creator
+  INSERT INTO match_participant (match_id, player_id, status, is_host, created_at, updated_at)
+  VALUES (match_id, creator_3_id, 'joined', true, now_time - INTERVAL '2 days', now_time - INTERVAL '2 days');
   INSERT INTO match_participant (match_id, player_id, status, is_host, created_at, updated_at)
   VALUES (match_id, creator_4_id, 'joined', false, now_time - INTERVAL '1 day', now_time - INTERVAL '1 day');
   
@@ -328,7 +375,9 @@ BEGIN
     'public', 'direct', 'Competitive doubles match',
     now_time - INTERVAL '4 days', now_time - INTERVAL '4 days'
   );
+  -- Create participant record for match creator
   INSERT INTO match_participant (match_id, player_id, status, is_host, created_at, updated_at) VALUES
+    (match_id, creator_4_id, 'joined', true, now_time - INTERVAL '4 days', now_time - INTERVAL '4 days'),
     (match_id, creator_5_id, 'joined', false, now_time - INTERVAL '3 days', now_time - INTERVAL '3 days'),
     (match_id, creator_6_id, 'joined', false, now_time - INTERVAL '2 days', now_time - INTERVAL '2 days'),
     (match_id, creator_7_id, 'joined', false, now_time - INTERVAL '1 day', now_time - INTERVAL '1 day');
@@ -351,8 +400,10 @@ BEGIN
     'Great match!',
     now_time - INTERVAL '6 days', now_time - INTERVAL '1 day'
   );
-  INSERT INTO match_participant (match_id, player_id, status, is_host, created_at, updated_at)
-  VALUES (match_id, creator_1_id, 'joined', false, now_time - INTERVAL '5 days', now_time - INTERVAL '5 days');
+  -- Create participant record for match creator
+  INSERT INTO match_participant (match_id, player_id, status, is_host, created_at, updated_at) VALUES
+    (match_id, creator_5_id, 'joined', true, now_time - INTERVAL '6 days', now_time - INTERVAL '6 days'),
+    (match_id, creator_1_id, 'joined', false, now_time - INTERVAL '5 days', now_time - INTERVAL '5 days');
   
   -- ============================================================================
   -- PICKLEBALL MATCHES
@@ -375,6 +426,9 @@ BEGIN
     'Beginner-friendly pickleball session!',
     now_time - INTERVAL '2 days', now_time - INTERVAL '2 days'
   );
+  -- Create participant record for match creator
+  INSERT INTO match_participant (match_id, player_id, status, is_host, created_at, updated_at)
+  VALUES (match_id, creator_6_id, 'joined', true, now_time - INTERVAL '2 days', now_time - INTERVAL '2 days');
   
   -- Pickleball Match 2: Tomorrow afternoon - Doubles, Open, Competitive
   match_id := gen_random_uuid();
@@ -393,8 +447,10 @@ BEGIN
     'Intermediate doubles game - looking for 3 more!',
     now_time - INTERVAL '3 days', now_time - INTERVAL '3 days'
   );
-  INSERT INTO match_participant (match_id, player_id, status, is_host, created_at, updated_at)
-  VALUES (match_id, creator_8_id, 'joined', false, now_time - INTERVAL '2 days', now_time - INTERVAL '2 days');
+  -- Create participant record for match creator
+  INSERT INTO match_participant (match_id, player_id, status, is_host, created_at, updated_at) VALUES
+    (match_id, creator_7_id, 'joined', true, now_time - INTERVAL '3 days', now_time - INTERVAL '3 days'),
+    (match_id, creator_8_id, 'joined', false, now_time - INTERVAL '2 days', now_time - INTERVAL '2 days');
   
   -- Pickleball Match 3: Next week - Doubles, Full, High level
   match_id := gen_random_uuid();
@@ -413,7 +469,9 @@ BEGIN
     'Advanced players only! Looking for a serious game.',
     now_time - INTERVAL '1 day', now_time - INTERVAL '1 day'
   );
+  -- Create participant record for match creator
   INSERT INTO match_participant (match_id, player_id, status, is_host, created_at, updated_at) VALUES
+    (match_id, creator_8_id, 'joined', true, now_time - INTERVAL '1 day', now_time - INTERVAL '1 day'),
     (match_id, creator_1_id, 'joined', false, now_time - INTERVAL '12 hours', now_time - INTERVAL '12 hours'),
     (match_id, creator_2_id, 'joined', false, now_time - INTERVAL '8 hours', now_time - INTERVAL '8 hours'),
     (match_id, creator_3_id, 'joined', false, now_time - INTERVAL '4 hours', now_time - INTERVAL '4 hours');
@@ -435,7 +493,9 @@ BEGIN
     'Mixed doubles - all skill levels welcome!',
     now_time - INTERVAL '4 days', now_time - INTERVAL '4 days'
   );
+  -- Create participant record for match creator
   INSERT INTO match_participant (match_id, player_id, status, is_host, created_at, updated_at) VALUES
+    (match_id, creator_2_id, 'joined', true, now_time - INTERVAL '4 days', now_time - INTERVAL '4 days'),
     (match_id, creator_5_id, 'joined', false, now_time - INTERVAL '3 days', now_time - INTERVAL '3 days'),
     (match_id, creator_8_id, 'joined', false, now_time - INTERVAL '2 days', now_time - INTERVAL '2 days');
   
@@ -454,6 +514,9 @@ BEGIN
     'public', 'direct', 'Flexible on location - downtown area preferred',
     now_time - INTERVAL '1 day', now_time - INTERVAL '1 day'
   );
+  -- Create participant record for match creator
+  INSERT INTO match_participant (match_id, player_id, status, is_host, created_at, updated_at)
+  VALUES (match_id, creator_4_id, 'joined', true, now_time - INTERVAL '1 day', now_time - INTERVAL '1 day');
   
   RAISE NOTICE 'Successfully seeded 5 tennis matches and 5 pickleball matches';
 END $$;

@@ -4,13 +4,14 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   type ReactNode,
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePlayerSports } from '@rallia/shared-hooks';
-import { SportService } from '@rallia/shared-services';
 
 const SPORT_STORAGE_KEY = '@rallia/selected-sport';
+const GUEST_SPORTS_STORAGE_KEY = '@rallia/guest-selected-sports';
 
 /**
  * Sport interface for context consumption
@@ -48,96 +49,49 @@ interface SportProviderProps {
 export function SportProvider({ children, userId }: SportProviderProps) {
   const { playerSports, loading: playerSportsLoading, refetch } = usePlayerSports(userId);
   const [selectedSport, setSelectedSportState] = useState<Sport | null>(null);
-  const [userSports, setUserSports] = useState<Sport[]>([]);
   const [allSports, setAllSports] = useState<Sport[]>([]);
-  const [allSportsLoading, setAllSportsLoading] = useState(false);
+  const [guestSportsLoading, setGuestSportsLoading] = useState(!userId); // Start loading if guest
 
-  // Fetch all sports for guest users (no userId)
-  useEffect(() => {
-    if (!userId) {
-      setAllSportsLoading(true);
-      SportService.getAllSports()
-        .then(({ data, error }) => {
-          if (error) {
-            console.error('Failed to fetch all sports:', error);
-            return;
-          }
-          if (data) {
-            const sports: Sport[] = data.map(s => ({
-              id: s.id,
-              name: s.name,
-              display_name: s.display_name,
-              icon_url: s.icon_url,
-            }));
-            setAllSports(sports);
-            // Initialize selected sport for guest user
-            if (sports.length > 0) {
-              initializeSelectedSport(sports, null);
-            }
-          }
-        })
-        .finally(() => {
-          setAllSportsLoading(false);
-        });
-    } else {
-      // Clear all sports when user logs in (will use playerSports instead)
-      setAllSports([]);
+  // Derive userSports from playerSports using useMemo (avoids setState in effect)
+  const { userSports, primarySport } = useMemo(() => {
+    if (!userId || !playerSports || playerSports.length === 0) {
+      return { userSports: [] as Sport[], primarySport: null as Sport | null };
     }
-  }, [userId]);
 
-  // Process player sports data into Sport[] format (for authenticated users)
-  useEffect(() => {
-    if (!userId) return; // Skip for guest users
+    const sports: Sport[] = [];
+    let primary: Sport | null = null;
 
-    if (playerSports && playerSports.length > 0) {
-      const sports: Sport[] = [];
-      let primarySport: Sport | null = null;
+    playerSports.forEach(ps => {
+      const sportData = Array.isArray(ps.sport) ? ps.sport[0] : ps.sport;
+      if (
+        sportData &&
+        typeof sportData === 'object' &&
+        ps.is_active === true &&
+        sportData.is_active === true
+      ) {
+        const sport: Sport = {
+          id: sportData.id,
+          name: sportData.name,
+          display_name: sportData.display_name,
+          icon_url: sportData.icon_url,
+        };
+        sports.push(sport);
 
-      playerSports.forEach(ps => {
-        // Only include sports that are active both at the player_sport level and sport level
-        const sportData = Array.isArray(ps.sport) ? ps.sport[0] : ps.sport;
-        if (
-          sportData &&
-          typeof sportData === 'object' &&
-          ps.is_active === true &&
-          sportData.is_active === true
-        ) {
-          const sport: Sport = {
-            id: sportData.id,
-            name: sportData.name,
-            display_name: sportData.display_name,
-            icon_url: sportData.icon_url,
-          };
-          sports.push(sport);
-
-          // Track primary sport
-          if (ps.is_primary) {
-            primarySport = sport;
-          }
+        if (ps.is_primary) {
+          primary = sport;
         }
-      });
-
-      setUserSports(sports);
-
-      // Initialize selected sport from storage or use primary/first sport
-      if (sports.length > 0) {
-        initializeSelectedSport(sports, primarySport);
-      } else {
-        // No active sports - clear selected sport
-        setSelectedSportState(null);
       }
-    } else if (!playerSportsLoading) {
-      setUserSports([]);
-      setSelectedSportState(null);
-    }
-  }, [playerSports, playerSportsLoading, userId]);
+    });
 
-  const initializeSelectedSport = async (sports: Sport[], primarySport: Sport | null) => {
+    return { userSports: sports, primarySport: primary };
+  }, [userId, playerSports]);
+
+  // Initialize selected sport from storage or use primary/first sport
+  const initializeSelectedSport = useCallback(async (sports: Sport[], primary: Sport | null) => {
     try {
       const savedSportId = await AsyncStorage.getItem(SPORT_STORAGE_KEY);
 
       if (savedSportId) {
-        // Try to find the saved sport in user's sports
         const savedSport = sports.find(s => s.id === savedSportId);
         if (savedSport) {
           setSelectedSportState(savedSport);
@@ -145,20 +99,81 @@ export function SportProvider({ children, userId }: SportProviderProps) {
         }
       }
 
-      // Fall back to primary sport or first sport
-      const defaultSport = primarySport || sports[0];
+      const defaultSport = primary || sports[0];
       setSelectedSportState(defaultSport);
 
-      // Save the default selection
       if (defaultSport) {
         await AsyncStorage.setItem(SPORT_STORAGE_KEY, defaultSport.id);
       }
     } catch (error) {
       console.error('Failed to initialize selected sport:', error);
-      // Fall back to primary or first sport
-      setSelectedSportState(primarySport || sports[0] || null);
+      setSelectedSportState(primary || sports[0] || null);
     }
-  };
+  }, []);
+
+  // Load guest sports from storage (no userId)
+  useEffect(() => {
+    if (userId) {
+      // Clear all sports when user logs in (will use playerSports instead)
+      setAllSports([]);
+      setGuestSportsLoading(false);
+      return;
+    }
+
+    // Check if guest has already selected sports
+    AsyncStorage.getItem(GUEST_SPORTS_STORAGE_KEY)
+      .then(savedSportsJson => {
+        if (savedSportsJson) {
+          try {
+            const savedSports: Sport[] = JSON.parse(savedSportsJson);
+            if (savedSports.length > 0) {
+              setAllSports(savedSports);
+              initializeSelectedSport(savedSports, null);
+              return;
+            }
+          } catch (parseError) {
+            console.error('Failed to parse saved guest sports:', parseError);
+          }
+        }
+        setAllSports([]);
+      })
+      .catch(error => {
+        console.error('Failed to load guest sports:', error);
+        setAllSports([]);
+      })
+      .finally(() => {
+        setGuestSportsLoading(false);
+      });
+  }, [userId, initializeSelectedSport]);
+
+  // Initialize selected sport for authenticated users when sports change
+  useEffect(() => {
+    if (!userId) return;
+    if (playerSportsLoading) return;
+
+    if (userSports.length > 0) {
+      initializeSelectedSport(userSports, primarySport);
+    } else {
+      setSelectedSportState(null);
+    }
+  }, [userId, userSports, primarySport, playerSportsLoading, initializeSelectedSport]);
+
+  // Sync authenticated user's sports to AsyncStorage
+  // This ensures guest sports storage stays up-to-date with the user's current preferences
+  // So if they sign out, their sport preferences persist
+  useEffect(() => {
+    if (!userId) return; // Only for authenticated users
+    if (playerSportsLoading) return; // Wait until loading is complete
+    if (userSports.length === 0) return; // Don't overwrite with empty array
+
+    AsyncStorage.setItem(GUEST_SPORTS_STORAGE_KEY, JSON.stringify(userSports))
+      .then(() => {
+        console.log('[SportProvider] Synced user sports to AsyncStorage:', userSports.length);
+      })
+      .catch(error => {
+        console.error('[SportProvider] Failed to sync user sports to AsyncStorage:', error);
+      });
+  }, [userId, userSports, playerSportsLoading]);
 
   const setSelectedSport = useCallback(async (sport: Sport) => {
     try {
@@ -174,6 +189,7 @@ export function SportProvider({ children, userId }: SportProviderProps) {
   /**
    * Set sports from an ordered selection (first-time user flow).
    * The first sport in the array becomes the default selected sport.
+   * For guest users, only the selected sports will be available.
    */
   const setSelectedSportsOrdered = useCallback(
     async (orderedSports: Sport[]) => {
@@ -186,21 +202,20 @@ export function SportProvider({ children, userId }: SportProviderProps) {
         await AsyncStorage.setItem(SPORT_STORAGE_KEY, primarySport.id);
         setSelectedSportState(primarySport);
 
-        // For guest users, update the available sports to match selection order
+        // For guest users, save and use only the selected sports
         if (!userId) {
-          // Keep all sports available but ensure selected ones are prioritized
-          // The user can still see all sports via the selector
-          setAllSports(prev => {
-            // Move selected sports to the front in order
-            const selectedIds = new Set(orderedSports.map(s => s.id));
-            const unselected = prev.filter(s => !selectedIds.has(s.id));
-            return [...orderedSports, ...unselected];
-          });
+          // Persist the guest's sport selection
+          await AsyncStorage.setItem(GUEST_SPORTS_STORAGE_KEY, JSON.stringify(orderedSports));
+          // Set only the selected sports as available
+          setAllSports(orderedSports);
         }
       } catch (error) {
         console.error('Failed to save ordered sport selection:', error);
         // Still update state even if storage fails
         setSelectedSportState(primarySport);
+        if (!userId) {
+          setAllSports(orderedSports);
+        }
       }
     },
     [userId]
@@ -208,7 +223,7 @@ export function SportProvider({ children, userId }: SportProviderProps) {
 
   // For guest users, use allSports; for authenticated users, use userSports
   const availableSports = userId ? userSports : allSports;
-  const isLoading = userId ? playerSportsLoading : allSportsLoading;
+  const isLoading = userId ? playerSportsLoading : guestSportsLoading;
 
   const value: SportContextValue = {
     selectedSport,

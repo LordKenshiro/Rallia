@@ -31,6 +31,7 @@ export * from './usePreferredFacility';
 export * from './useFacilityReservationContact';
 export * from './useCourtAvailability';
 export * from './usePlacesAutocomplete';
+export * from './usePostalCodeGeocode';
 export * from './usePlayerSearch';
 export * from './useInviteToMatch';
 export * from './usePlayerReputation';

@@ -125,6 +125,33 @@ export interface FeedbackSheetData {
 }
 
 /**
+ * Match context data for displaying in the feedback wizard.
+ * Contains the key info to help players identify which match they're rating.
+ */
+export interface MatchContextForFeedback {
+  /** The match ID */
+  matchId: string;
+  /** Match date in ISO format */
+  matchDate: string;
+  /** Start time in HH:MM format */
+  startTime: string;
+  /** End time in HH:MM format (optional) */
+  endTime?: string;
+  /** Sport name */
+  sportName: string;
+  /** Sport icon/slug for display */
+  sportSlug: string;
+  /** Facility name (if available) */
+  facilityName?: string;
+  /** City where match was held */
+  city?: string;
+  /** Match format (e.g., "singles", "doubles") */
+  format?: string;
+  /** List of opponent names for quick reference */
+  opponentNames: string[];
+}
+
+/**
  * Form state for a single opponent's feedback.
  */
 export interface OpponentFeedbackFormState {

@@ -16,6 +16,7 @@ import type {
   MatchOutcomeEnum,
   CancellationReasonEnum,
   OpponentForFeedback,
+  MatchContextForFeedback,
 } from '@rallia/shared-types';
 import type { TranslationKey } from '../../../../hooks/useTranslation';
 
@@ -42,6 +43,8 @@ interface MatchOutcomeStepProps {
   noShowPlayerIds: string[];
   /** Callback when no-show player selection changes */
   onNoShowPlayerIdsChange: (playerIds: string[]) => void;
+  /** Match context for display (date, time, sport, location) */
+  matchContext?: MatchContextForFeedback | null;
   /** Theme colors */
   colors: {
     text: string;
@@ -54,7 +57,9 @@ interface MatchOutcomeStepProps {
     cardBackground: string;
   };
   /** Translation function */
-  t: (key: TranslationKey) => string;
+  t: (key: TranslationKey, options?: Record<string, string | number>) => string;
+  /** Current locale code */
+  locale: string;
   /** Whether dark mode is active */
   isDark: boolean;
 }
@@ -187,6 +192,181 @@ const ReasonCard: React.FC<ReasonCardProps> = ({ icon, label, selected, onPress,
 );
 
 // =============================================================================
+// MATCH CONTEXT CARD (shows which match is being rated)
+// =============================================================================
+
+interface MatchContextCardProps {
+  matchContext: MatchContextForFeedback;
+  colors: MatchOutcomeStepProps['colors'];
+  t: (key: TranslationKey, options?: Record<string, string | number>) => string;
+  locale: string;
+  isDark: boolean;
+}
+
+/**
+ * Format a date for display using the current locale
+ */
+const formatMatchDate = (dateStr: string, locale: string): string => {
+  const date = new Date(dateStr + 'T00:00:00'); // Ensure local timezone parsing
+  // Convert locale code to BCP 47 format for toLocaleDateString
+  const localeCode = locale === 'fr-CA' ? 'fr-CA' : 'en-US';
+  return date.toLocaleDateString(localeCode, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
+/**
+ * Format time for display using the current locale
+ */
+const formatMatchTime = (timeStr: string, locale: string): string => {
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  const date = new Date();
+  date.setHours(hours, minutes);
+  // Convert locale code to BCP 47 format for toLocaleTimeString
+  const localeCode = locale === 'fr-CA' ? 'fr-CA' : 'en-US';
+  // French uses 24-hour format, English uses 12-hour with AM/PM
+  const isFrench = locale.startsWith('fr');
+  return date.toLocaleTimeString(localeCode, {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: !isFrench,
+  });
+};
+
+/**
+ * Capitalize the first letter of a string
+ */
+const capitalizeFirst = (str: string): string => {
+  if (!str) return str;
+  return str.charAt(0).toUpperCase() + str.slice(1);
+};
+
+/**
+ * Get sport icon name based on sport slug
+ */
+const getSportIcon = (slug: string): keyof typeof Ionicons.glyphMap => {
+  switch (slug) {
+    case 'tennis':
+      return 'tennisball-outline';
+    case 'padel':
+      return 'tennisball-outline';
+    case 'pickleball':
+      return 'tennisball-outline';
+    case 'badminton':
+      return 'tennisball-outline';
+    case 'squash':
+      return 'tennisball-outline';
+    default:
+      return 'tennisball-outline';
+  }
+};
+
+const MatchContextCard: React.FC<MatchContextCardProps> = ({
+  matchContext,
+  colors,
+  t,
+  locale,
+  isDark,
+}) => {
+  const formattedDate = formatMatchDate(matchContext.matchDate, locale);
+  const formattedTime = formatMatchTime(matchContext.startTime, locale);
+  const sportIcon = getSportIcon(matchContext.sportSlug);
+
+  // Build location string
+  const location = matchContext.facilityName
+    ? matchContext.city
+      ? `${matchContext.facilityName}, ${matchContext.city}`
+      : matchContext.facilityName
+    : matchContext.city || undefined;
+
+  // Build opponent string using i18next interpolation
+  const opponentDisplay =
+    matchContext.opponentNames.length > 0
+      ? matchContext.opponentNames.length === 1
+        ? t('matchFeedback.matchContext.vsPlayer' as TranslationKey, {
+            name: matchContext.opponentNames[0],
+          })
+        : t('matchFeedback.matchContext.vsPlayers' as TranslationKey, {
+            names: matchContext.opponentNames.join(', '),
+          })
+      : undefined;
+
+  // Translate format (singles/doubles)
+  const translatedFormat =
+    matchContext.format === 'singles'
+      ? t('match.format.singles' as TranslationKey)
+      : matchContext.format === 'doubles'
+        ? t('match.format.doubles' as TranslationKey)
+        : matchContext.format;
+
+  return (
+    <View
+      style={[
+        styles.matchContextCard,
+        {
+          backgroundColor: isDark ? `${colors.buttonActive}15` : `${colors.buttonActive}08`,
+          borderColor: isDark ? `${colors.buttonActive}40` : `${colors.buttonActive}25`,
+        },
+      ]}
+    >
+      {/* Sport icon and name */}
+      <View style={styles.matchContextHeader}>
+        <View style={[styles.sportIconContainer, { backgroundColor: `${colors.buttonActive}20` }]}>
+          <Ionicons name={sportIcon} size={20} color={colors.buttonActive} />
+        </View>
+        <View style={styles.matchContextHeaderText}>
+          <Text size="base" weight="bold" color={colors.text}>
+            {capitalizeFirst(matchContext.sportName)}
+            {matchContext.format && (
+              <Text size="base" weight="regular" color={colors.textMuted}>
+                {' '}
+                · {translatedFormat}
+              </Text>
+            )}
+          </Text>
+          {opponentDisplay && (
+            <Text size="sm" weight="semibold" color={colors.buttonActive}>
+              {opponentDisplay}
+            </Text>
+          )}
+        </View>
+      </View>
+
+      {/* Date, time, and location details */}
+      <View style={styles.matchContextDetails}>
+        <View style={styles.matchContextRow}>
+          <Ionicons name="calendar-outline" size={16} color={colors.textMuted} />
+          <Text size="sm" color={colors.text} style={styles.matchContextDetailText}>
+            {formattedDate}
+          </Text>
+        </View>
+        <View style={styles.matchContextRow}>
+          <Ionicons name="time-outline" size={16} color={colors.textMuted} />
+          <Text size="sm" color={colors.text} style={styles.matchContextDetailText}>
+            {formattedTime}
+          </Text>
+        </View>
+        {location && (
+          <View style={styles.matchContextRow}>
+            <Ionicons name="location-outline" size={16} color={colors.textMuted} />
+            <Text
+              size="sm"
+              color={colors.text}
+              style={styles.matchContextDetailText}
+              numberOfLines={1}
+            >
+              {location}
+            </Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+};
+
+// =============================================================================
 // PLAYER SELECT CARD (for no-show selection)
 // =============================================================================
 
@@ -262,9 +442,11 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
   opponents,
   noShowPlayerIds,
   onNoShowPlayerIdsChange,
+  matchContext,
   colors,
   t,
-  isDark: _isDark,
+  locale,
+  isDark,
 }) => {
   const handleOutcomeChange = useCallback(
     (newOutcome: MatchOutcomeEnum) => {
@@ -312,6 +494,17 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
+      {/* Match Context Card - shows which match is being rated */}
+      {matchContext && (
+        <MatchContextCard
+          matchContext={matchContext}
+          colors={colors}
+          t={t}
+          locale={locale}
+          isDark={isDark}
+        />
+      )}
+
       {/* Title */}
       <View style={styles.header}>
         <Text size="xl" weight="bold" color={colors.text}>
@@ -452,6 +645,44 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: spacingPixels[4],
     paddingBottom: spacingPixels[8],
+  },
+  // Match Context Card styles
+  matchContextCard: {
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+    padding: spacingPixels[4],
+    marginBottom: spacingPixels[5],
+  },
+  matchContextHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacingPixels[3],
+    marginBottom: spacingPixels[3],
+  },
+  sportIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: radiusPixels.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  matchContextHeaderText: {
+    flex: 1,
+    gap: spacingPixels[0.5] ?? 2,
+  },
+  matchContextDetails: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacingPixels[3],
+    marginTop: spacingPixels[1],
+  },
+  matchContextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+  },
+  matchContextDetailText: {
+    marginLeft: 2,
   },
   header: {
     marginBottom: spacingPixels[6],

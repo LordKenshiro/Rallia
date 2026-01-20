@@ -54,7 +54,14 @@ export type { MatchCardProps } from './MatchCard.native';
 export type { MyMatchCardProps } from './MyMatchCard.native';
 
 // Header Components
-export { ProfilePictureButton, NotificationButton, SettingsButton, SportSelector } from './headers';
+export {
+  ProfilePictureButton,
+  NotificationButton,
+  SettingsButton,
+  SportSelector,
+  LocationSelector,
+} from './headers';
+export type { LocationSelectorProps, LocationMode } from './headers';
 
 // Overlays
 export { PermissionOverlay, LocationPermissionOverlay, CalendarAccessOverlay } from './overlays';

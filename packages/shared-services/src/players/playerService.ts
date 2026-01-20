@@ -4,7 +4,21 @@
  */
 
 import { supabase } from '../supabase';
-import type { Profile } from '@rallia/shared-types';
+
+// =============================================================================
+// HOME LOCATION TYPES
+// =============================================================================
+
+export interface HomeLocation {
+  /** Normalized postal code */
+  postalCode: string;
+  /** Country code: 'CA' or 'US' */
+  country: 'CA' | 'US';
+  /** Latitude of postal code centroid */
+  latitude: number;
+  /** Longitude of postal code centroid */
+  longitude: number;
+}
 
 // =============================================================================
 // TYPES
@@ -393,4 +407,85 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     hasMore,
     nextOffset: hasMore ? offset + limit : null,
   };
+}
+
+// =============================================================================
+// HOME LOCATION SYNC
+// =============================================================================
+
+/**
+ * Sync home location to the player table.
+ * Called after user authentication to persist postal code location.
+ *
+ * @param playerId - The player's user ID
+ * @param location - The home location data from pre-onboarding
+ * @returns Success status
+ */
+export async function syncHomeLocation(
+  playerId: string,
+  location: HomeLocation
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase
+      .from('player')
+      .update({
+        postal_code: location.postalCode,
+        postal_code_country: location.country,
+        postal_code_lat: location.latitude,
+        postal_code_long: location.longitude,
+        // PostGIS point: ST_MakePoint(longitude, latitude)
+        postal_code_location: `POINT(${location.longitude} ${location.latitude})`,
+      })
+      .eq('id', playerId);
+
+    if (error) {
+      console.error('[PlayerService] Failed to sync home location:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[PlayerService] Error syncing home location:', errorMessage);
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
+ * Get player's home location from the database.
+ *
+ * @param playerId - The player's user ID
+ * @returns The home location or null if not set
+ */
+export async function getHomeLocation(playerId: string): Promise<HomeLocation | null> {
+  try {
+    const { data, error } = await supabase
+      .from('player')
+      .select('postal_code, postal_code_country, postal_code_lat, postal_code_long')
+      .eq('id', playerId)
+      .single();
+
+    if (error || !data) {
+      return null;
+    }
+
+    if (
+      !data.postal_code ||
+      !data.postal_code_country ||
+      !data.postal_code_lat ||
+      !data.postal_code_long
+    ) {
+      return null;
+    }
+
+    return {
+      postalCode: data.postal_code,
+      country: data.postal_code_country as 'CA' | 'US',
+      latitude: data.postal_code_lat,
+      longitude: data.postal_code_long,
+    };
+  } catch (error) {
+    console.error('[PlayerService] Error fetching home location:', error);
+    return null;
+  }
 }

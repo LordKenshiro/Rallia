@@ -11,6 +11,7 @@ import {
   submitMatchReport,
   getOpponentsForFeedback,
   getReviewerParticipant,
+  getMatchContextForFeedback,
 } from '@rallia/shared-services';
 import type {
   MatchOutcomeInput,
@@ -32,6 +33,8 @@ export const feedbackKeys = {
     [...feedbackKeys.all, 'opponents', matchId, reviewerId] as const,
   participant: (matchId: string, reviewerId: string) =>
     [...feedbackKeys.all, 'participant', matchId, reviewerId] as const,
+  matchContext: (matchId: string, reviewerId: string) =>
+    [...feedbackKeys.all, 'matchContext', matchId, reviewerId] as const,
 };
 
 /**
@@ -133,6 +136,17 @@ export function useMatchFeedback(
     staleTime: 30000,
   });
 
+  /**
+   * Query for match context (date, time, sport, location, opponents)
+   * Used to display which match the user is giving feedback for
+   */
+  const matchContextQuery = useQuery({
+    queryKey: feedbackKeys.matchContext(matchId!, reviewerId!),
+    queryFn: () => getMatchContextForFeedback(matchId!, reviewerId!),
+    enabled: !!matchId && !!reviewerId,
+    staleTime: 60000, // 1 minute - match context doesn't change
+  });
+
   // ============================================
   // MUTATIONS
   // ============================================
@@ -223,6 +237,11 @@ export function useMatchFeedback(
     /** Whether participant is loading */
     isLoadingParticipant: participantQuery.isLoading,
 
+    /** Match context for display in feedback wizard */
+    matchContext: matchContextQuery.data,
+    /** Whether match context is loading */
+    isLoadingMatchContext: matchContextQuery.isLoading,
+
     /** Opponents who haven't been rated yet */
     unratedOpponents: (opponentsQuery.data ?? []).filter(o => !o.hasExistingFeedback),
 
@@ -255,6 +274,7 @@ export function useMatchFeedback(
     isLoading:
       opponentsQuery.isLoading ||
       participantQuery.isLoading ||
+      matchContextQuery.isLoading ||
       outcomeMutation.isPending ||
       feedbackMutation.isPending ||
       reportMutation.isPending,

@@ -5,7 +5,7 @@
  * Migrated from SportSelectionOverlay with theme-aware colors.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, Image, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Spinner } from '@rallia/shared-components';
@@ -17,6 +17,7 @@ import { selectionHaptic } from '@rallia/shared-utils';
 import type { Sport } from '@rallia/shared-types';
 import type { TranslationKey } from '@rallia/shared-translations';
 import type { OnboardingFormData } from '../../../hooks/useOnboardingWizard';
+import { useSport } from '../../../../../context/SportContext';
 
 interface ThemeColors {
   background: string;
@@ -48,6 +49,10 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
   const [sports, setSports] = useState<Sport[]>([]);
   const [isLoadingSports, setIsLoadingSports] = useState(true);
   const [playerId, setPlayerId] = useState<string | null>(null);
+
+  // Get guest-selected sports from context (selected in SportSelectionScreen)
+  const { userSports: contextSports } = useSport();
+  const hasPrePopulatedFromContext = useRef(false);
 
   // Fetch player ID
   useEffect(() => {
@@ -111,10 +116,45 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
     fetchSports();
   }, []);
 
-  // Load already selected sports from database
+  // Pre-populate from guest sports context (selected in SportSelectionScreen)
+  // This runs before/instead of database lookup for guest users
+  useEffect(() => {
+    if (
+      !hasPrePopulatedFromContext.current &&
+      sports.length > 0 &&
+      contextSports.length > 0 &&
+      formData.selectedSportIds.length === 0
+    ) {
+      hasPrePopulatedFromContext.current = true;
+
+      // Map context sports to available sports by ID
+      const preSelectedIds: string[] = [];
+      const preSelectedNames: string[] = [];
+
+      contextSports.forEach(contextSport => {
+        const matchingSport = sports.find(s => s.id === contextSport.id);
+        if (matchingSport) {
+          preSelectedIds.push(matchingSport.id);
+          preSelectedNames.push(matchingSport.name);
+        }
+      });
+
+      if (preSelectedIds.length > 0) {
+        onUpdateFormData({
+          selectedSportIds: preSelectedIds,
+          selectedSportNames: preSelectedNames,
+        });
+      }
+    }
+  }, [sports, contextSports, formData.selectedSportIds.length, onUpdateFormData]);
+
+  // Load already selected sports from database (for authenticated users)
   useEffect(() => {
     const loadSelectedSportIds = async () => {
       if (!playerId) return;
+
+      // Skip if already pre-populated from context
+      if (hasPrePopulatedFromContext.current) return;
 
       const { data, error } = await DatabaseService.PlayerSport.getPlayerSports(playerId);
       if (data && !error) {
@@ -235,7 +275,9 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
               key={sport.id}
               style={[
                 styles.sportCard,
-                { borderColor: isSelected ? colors.buttonActive : 'transparent' },
+                isSelected
+                  ? { borderWidth: 3, borderColor: colors.buttonActive }
+                  : styles.sportCardUnselected,
                 isLastCard && styles.lastSportCard,
               ]}
               onPress={() => toggleSport(sport.id)}
@@ -301,7 +343,9 @@ const styles = StyleSheet.create({
     marginBottom: spacingPixels[4],
     overflow: 'hidden',
     position: 'relative',
-    borderWidth: 3,
+  },
+  sportCardUnselected: {
+    borderWidth: 0,
   },
   lastSportCard: {
     marginBottom: 0,

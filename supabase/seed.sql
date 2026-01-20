@@ -2,10 +2,17 @@
 -- Creates a profile for existing auth users and seeds 30 notifications
 
 -- First, create a profile for the auth user if it doesn't exist
-INSERT INTO profile (id, full_name, email, onboarding_completed)
+INSERT INTO profile (id, first_name, last_name, email, onboarding_completed)
 SELECT 
   id,
-  COALESCE(raw_user_meta_data->>'full_name', 'Test User'),
+  COALESCE(
+    raw_user_meta_data->>'first_name',
+    SPLIT_PART(COALESCE(raw_user_meta_data->>'full_name', 'Test User'), ' ', 1)
+  ),
+  COALESCE(
+    raw_user_meta_data->>'last_name',
+    NULLIF(SPLIT_PART(COALESCE(raw_user_meta_data->>'full_name', ''), ' ', 2), '')
+  ),
   email,
   true
 FROM auth.users

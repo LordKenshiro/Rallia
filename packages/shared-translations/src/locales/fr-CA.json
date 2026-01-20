@@ -729,6 +729,10 @@
       "outcome": "Résultat du match",
       "feedback": "Évaluation"
     },
+    "matchContext": {
+      "vsPlayer": "contre {name}",
+      "vsPlayers": "contre {names}"
+    },
     "outcomeStep": {
       "title": "Comment s'est passé le match?",
       "subtitle": "Dites-nous si le match a eu lieu comme prévu",
@@ -797,7 +801,9 @@
     "sportDeactivated": "{sport} désactivé",
     "sportAdded": "{sport} ajouté et activé avec succès!",
     "sportNotAdded": "{sport} non ajouté",
-    "preferencesUpdated": "Préférences mises à jour avec succès"
+    "preferencesUpdated": "Préférences mises à jour avec succès",
+    "cannotDeactivate": "Impossible de désactiver le sport",
+    "mustHaveOneSport": "Vous devez avoir au moins un sport actif. Veuillez activer un autre sport avant de désactiver celui-ci."
   },
   "actions": {
     "welcome": "Bienvenue sur Rallia",
@@ -1047,7 +1053,7 @@
     "signInPrompt": "Veuillez vous connecter pour créer et accéder à vos parties",
     "user": "Utilisateur",
     "subtitle": "La meilleure façon de trouver votre prochain partenaire de tennis ou de pickleball",
-    "soonAndNearby": "Bientôt et à proximité",
+    "soonAndNearby": "Parties à proximité",
     "publicMatches": "Parties publiques",
     "viewAll": "Voir tout",
     "myMatches": "Mes parties",
@@ -1058,8 +1064,16 @@
     "nearbyEmpty": {
       "title": "Aucune partie à proximité",
       "description": "Il n'y a pas de parties à venir dans votre rayon de {distance} km.",
+      "guestDescription": "Il n'y a pas de parties à venir à proximité.",
       "suggestion": "Essayez d'augmenter votre distance maximale de déplacement dans votre profil pour voir plus de parties.",
       "updateSettings": "Modifier les paramètres"
+    },
+    "location": {
+      "title": "Lieu de recherche",
+      "current": "Position actuelle",
+      "currentDescription": "Utiliser votre position GPS",
+      "home": "Domicile",
+      "homeNotSet": "Définir votre domicile dans les paramètres"
     },
     "header": {
       "ctaButton": "Rejoindre la liste"
@@ -2054,11 +2068,77 @@
     }
   },
   "sportSelectionOverlay": {
-    "title": "Quels sports pratiquez-vous?",
-    "subtitle": "Sélectionnez un ou plusieurs sports.",
+    "welcomeBadge": "👋 Bienvenue sur Rallia",
+    "title": "Trouvons votre partie",
+    "subtitle": "Choisissez les sports que vous aimez pratiquer. Vous pourrez en ajouter d'autres plus tard!",
     "loading": "Chargement des sports...",
-    "getStarted": "Commencer",
-    "selectionHint": "Vous commencerez avec {sport}"
+    "getStarted": "C'est parti!",
+    "selectAtLeastOne": "Sélectionnez un sport pour continuer",
+    "selectionHint": "Vous commencerez avec {sport}",
+    "tapToSelect": "Touchez pour ajouter",
+    "tapToRemove": "Touchez pour retirer"
+  },
+  "preOnboarding": {
+    "step": "Étape {current} sur {total}",
+    "postalCode": {
+      "title": "Où jouez-vous?",
+      "subtitle": "Votre code postal nous aide à trouver des parties et des joueurs près de chez vous. Fini de parcourir des parties à l'autre bout du pays!",
+      "whyNeeded": "Nous utilisons cela pour vous montrer des parties que vous pouvez réellement atteindre",
+      "placeholder": "Entrez votre code postal",
+      "placeholderCA": "ex. H2X 1Y4",
+      "placeholderUS": "ex. 90210",
+      "verifying": "Recherche de votre région...",
+      "verified": "Parfait! Nous avons trouvé votre région",
+      "continue": "Trouver des parties près de moi",
+      "benefits": {
+        "title": "Avec votre code postal, vous pourrez:",
+        "item1": "Voir des parties à distance raisonnable",
+        "item2": "Vous connecter avec des joueurs locaux",
+        "item3": "Être notifié des parties à proximité",
+        "findPlayers": {
+          "title": "Trouvez des joueurs près de vous",
+          "description": "Jouez avec des partenaires de votre niveau dans votre région"
+        },
+        "discoverCourts": {
+          "title": "Découvrez les terrains locaux",
+          "description": "Trouvez les meilleurs courts et clubs à proximité"
+        },
+        "joinEvents": {
+          "title": "Ne manquez jamais une partie",
+          "description": "Soyez notifié des matchs dans votre quartier"
+        }
+      },
+      "privacy": "Nous ne partageons jamais votre adresse exacte",
+      "errors": {
+        "invalid": "Veuillez entrer un code postal valide",
+        "invalidCA": "Veuillez entrer un code postal canadien valide (ex. H2X 1Y4)",
+        "invalidUS": "Veuillez entrer un code ZIP américain valide (ex. 90210)",
+        "notFound": "Nous n'avons pas trouvé ce code postal. Veuillez vérifier et réessayer.",
+        "networkError": "Erreur de connexion. Veuillez réessayer."
+      }
+    },
+    "locationPermission": {
+      "title": "Obtenez les meilleures recommandations",
+      "subtitle": "Activez la localisation pour voir exactement à quelle distance se trouvent les parties et ne jamais manquer une partie à proximité",
+      "whyNeeded": "Le GPS de votre appareil nous donne des distances précises pour que vous sachiez exactement combien de temps il faut pour vous y rendre",
+      "comparison": {
+        "without": "Sans GPS",
+        "withoutExample": "~5 km",
+        "with": "Avec GPS",
+        "withExample": "2.3 km • 8 min"
+      },
+      "benefits": {
+        "title": "Avec la localisation précise, vous pourrez:",
+        "item1": "Voir les distances exactes jusqu'aux parties",
+        "item2": "Trouver les terrains disponibles les plus proches",
+        "item3": "Recevoir des alertes en temps réel quand vous êtes à proximité",
+        "item4": "Découvrir des joueurs dans votre quartier"
+      },
+      "enable": "Activer la localisation précise",
+      "skip": "Peut-être plus tard",
+      "privacyNote": "Votre localisation reste sur votre appareil et n'est utilisée que pour calculer les distances. Nous ne suivons jamais vos déplacements.",
+      "skipNote": "Vous pourrez toujours l'activer plus tard dans les Paramètres"
+    }
   },
   "reputation": {
     "tiers": {

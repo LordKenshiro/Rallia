@@ -6,6 +6,7 @@ export * from './useImagePicker';
 export * from './usePermissions';
 export * from './useTranslation';
 export * from './useUserLocation';
+export * from './useEffectiveLocation';
 export * from './usePushNotifications';
 
 // Theme hooks - import from native files directly for proper TypeScript resolution
