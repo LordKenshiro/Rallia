@@ -18,18 +18,18 @@ import type { ReputationEventType, ReputationTier, TierConfig } from './reputati
  */
 export const DEFAULT_EVENT_IMPACTS: Record<ReputationEventType, number> = {
   // Match-related
-  match_completed: 25,
+  match_completed: 12,
   match_no_show: -50,
   match_ghosted: -20,
-  match_on_time: 5,
+  match_on_time: 3,
   match_late: -10,
   match_cancelled_early: 0,
   match_cancelled_late: -25,
   match_repeat_opponent: 3,
 
   // Peer reviews
-  review_received_5star: 20,
-  review_received_4star: 10,
+  review_received_5star: 10,
+  review_received_4star: 5,
   review_received_3star: 0,
   review_received_2star: -5,
   review_received_1star: -10,

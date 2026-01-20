@@ -116,6 +116,13 @@ Matches are grouped into intuitive date sections:
 | Last Week | Within the past 7 days |
 | Earlier | Beyond 7 days ago |
 
+**Past Match Display:**
+
+- Completed matches show feedback status (pending feedback, feedback submitted)
+- Closed matches show aggregated star ratings (your rating, their rating)
+- Mutually cancelled matches show "Cancelled" badge
+- See [Match Closure](./match-closure.md) for the post-match UI specification
+
 ### Features
 
 - **SectionList** with sticky section headers (optional)
@@ -316,10 +323,19 @@ The footer shows context-appropriate actions:
 | Non-participant   | Request mode | Request to Join     | —            |
 | Non-participant   | Full         | Join Waitlist       | —            |
 | Anyone            | In Progress  | "Match in progress" | —            |
+| Participant       | Completed    | Give Feedback       | —            |
 | Anyone            | Completed    | "Match completed"   | —            |
+| Anyone            | Closed       | View Results        | —            |
 | Anyone            | Cancelled    | "Match cancelled"   | —            |
 
 **Share Button**: Always visible, allows sharing match details.
+
+**Feedback Button** (Completed matches only):
+
+- Shown to participants when match status is `completed` AND `feedback_completed = false`
+- Hidden when `feedback_completed = true` or match is `closed`
+- Opens the Feedback Wizard modal
+- See [Match Closure](./match-closure.md) for the feedback wizard flow
 
 ### Confirmation Modals
 

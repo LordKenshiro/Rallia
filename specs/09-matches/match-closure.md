@@ -56,7 +56,12 @@ The feedback form is presented as a multi-step wizard in a modal (bottom sheet o
 
 ```mermaid
 flowchart TD
-    Start[Modal Opens] --> Step1[Step 1: Opponent 1 Feedback]
+    Start[Modal Opens] --> Step0[Step 0: Match Outcome]
+    Step0 --> OutcomeCheck{What happened?}
+    OutcomeCheck -->|Played| Step1[Step 1: Opponent 1 Feedback]
+    OutcomeCheck -->|Mutual Cancel| SaveOutcome[Save outcome, close modal]
+    OutcomeCheck -->|Opponent No-Show| SelectNoShows[Select no-show players]
+    SelectNoShows --> SaveNoShow[Save no-show feedback, close modal]
     Step1 --> Save1[Save to DB]
     Save1 --> MoreOpponents{More opponents?}
     MoreOpponents -->|Yes| StepN[Step N: Opponent N Feedback]
@@ -65,9 +70,38 @@ flowchart TD
     MoreOpponents -->|No| Complete[Close modal]
 ```
 
-### Opponent Feedback Steps
+### Step 0: Match Outcome (Intro Step)
 
-One step per opponent. In doubles, up to 3 steps (one for each of the other players).
+Before rating individual opponents, the user answers "Did this match take place?"
+
+| Element  | Details                                                                            |
+| -------- | ---------------------------------------------------------------------------------- |
+| Question | "Did this match take place?"                                                       |
+| Option 1 | **Played** - Match happened as planned → proceeds to opponent feedback             |
+| Option 2 | **Mutual Cancel** - Both/all agreed not to play → saves outcome, closes modal      |
+| Option 3 | **Opponent No-Show** - One or more opponents didn't show → select who, then closes |
+
+This sets the `match_outcome` field on the `match_participant` record, which is used for:
+
+- Mutual cancellation detection at closure (majority rule)
+- Skipping opponent feedback if match didn't happen
+
+**If Mutual Cancel selected:**
+
+- Optional cancellation reason dropdown appears (weather, court unavailable, emergency, other)
+- `feedback_completed` is set to `true` immediately
+- No opponent feedback steps are shown
+
+**If Opponent No-Show selected:**
+
+- User selects which opponent(s) didn't show
+- Feedback records are created with `showed_up = false`
+- `feedback_completed` is set to `true` immediately
+- No further opponent feedback steps are shown
+
+### Opponent Feedback Steps (Steps 1-N)
+
+One step per opponent. In doubles, up to 3 steps (one for each of the other players). Only shown if match outcome is "Played".
 
 | Element                    | Details                                                                   |
 | -------------------------- | ------------------------------------------------------------------------- |
@@ -226,20 +260,57 @@ Added to the **match record** at closure:
 | Field               | Type      | Description                                                                   |
 | ------------------- | --------- | ----------------------------------------------------------------------------- |
 | closed_at           | timestamp | When match was closed (48h after end)                                         |
-| mutually_cancelled  | boolean   | True if all players marked all opponents as no-show                           |
+| mutually_cancelled  | boolean   | True if majority of participants have `match_outcome = 'mutual_cancel'`       |
 | cancellation_reason | enum      | Reason for mutual cancellation (weather, court_unavailable, emergency, other) |
 | cancellation_notes  | text      | Free text notes if reason is "other" (nullable)                               |
 
 ## Automatic Closure
 
-48 hours after match end time:
+48 hours after match end time, an automated job runs hourly to close eligible matches:
 
-1. Match automatically flagged as closed
-2. System checks for mutual cancellation (all players marked all opponents as no-show)
+1. Match automatically flagged as closed (`closed_at` set to current timestamp)
+2. System checks for mutual cancellation (majority of participants have `match_outcome = 'mutual_cancel'`)
 3. If mutual cancellation: match flagged as `mutually_cancelled`, cancellation reason aggregated, no reputation events
 4. If not: feedback records are analyzed and aggregated per participant
 5. Aggregated feedback is recorded on each match participant record
 6. Reputation events are created based on aggregated feedback
+
+### Closure Job Implementation
+
+The closure job is implemented as a Supabase Edge Function (`close-matches`) triggered hourly by cron-job.org.
+
+**Database Function:**
+
+A SQL function `get_matches_ready_for_closure(cutoff_hours, batch_limit)` handles timezone-aware querying:
+
+- Combines `match_date + end_time` and converts using `timezone()` function
+- Handles midnight-spanning matches (when `end_time < start_time`, end is next day)
+- Excludes matches where `closed_at IS NOT NULL` or `cancelled_at IS NOT NULL`
+
+**Edge Function Flow:**
+
+1. Authenticate via `x-cron-secret` header
+2. Call `get_matches_ready_for_closure()` RPC to get eligible matches
+3. For each match:
+   - Fetch all participants with their `match_outcome`
+   - Check for mutual cancellation (majority have `match_outcome = 'mutual_cancel'`)
+   - If mutual cancel: set `mutually_cancelled = true`, skip reputation events
+   - If not: aggregate feedback for each participant using majority rule
+   - Create reputation events with `base_impact` from `reputation_config` table
+   - Update `match_participant` with aggregated fields
+   - Set `match.closed_at` to current timestamp
+4. Return JSON summary with success/failure counts
+
+**Error Handling:**
+
+- Errors are caught per-match to avoid blocking other matches
+- Failed matches remain with `closed_at IS NULL` and will be retried next hour
+- Summary includes error details for monitoring
+
+**Cron Schedule:**
+
+- Triggered hourly by cron-job.org (`0 * * * *`)
+- Batch limit of 100 matches per run to avoid timeouts
 
 ## Reputation Event Creation
 
@@ -253,18 +324,26 @@ Added to the **match record** at closure:
 
 ### Mutual Cancellation Detection
 
-Before processing individual feedback, the system checks for mutual cancellation:
+Before processing individual feedback, the system checks for mutual cancellation using the `match_outcome` field on the `match_participant` record (set during the feedback intro step):
 
-**Singles:** If both players mark each other as no-show → mutual cancellation detected
-**Doubles:** If all players mark all opponents as no-show → mutual cancellation detected
+**Detection Rule (Majority):**
+
+- **Singles:** If both participants have `match_outcome = 'mutual_cancel'` → mutual cancellation detected
+- **Doubles:** If majority (3+ of 4) participants have `match_outcome = 'mutual_cancel'` → mutual cancellation detected
+
+The system uses the `match_outcome` field rather than aggregating `match_feedback` records because:
+
+1. It captures the participant's explicit answer to "Did this match take place?"
+2. It's set during the intro step, even if the user doesn't complete opponent feedback
+3. It provides a clearer signal of intent (played vs cancelled vs opponent no-show)
 
 When mutual cancellation is detected:
 
 - No `match_no_show` events are created for anyone
 - No `match_completed` events are created
-- Match is flagged as "mutually cancelled"
+- Match is flagged as `mutually_cancelled = true`
 - No reputation impact for any participant
-- Cancellation reason is aggregated from feedback (most common reason selected)
+- Cancellation reason is aggregated from `match_participant.cancellation_reason` (most common reason selected)
 
 **Reason Aggregation:**
 
@@ -333,36 +412,45 @@ flowchart TD
 | Show/No-show   | Majority rule (2/3+ agreement required). **Tie (2-2): benefit of doubt** |
 | Late           | Majority rule (2/3+ agreement required). **Tie (2-2): benefit of doubt** |
 | Star rating    | Average, rounded to nearest integer                                      |
-| No-show source | Feedback from no-show players is **ignored**                             |
+| No-show source | Feedback from no-show players is **ignored** (see filtering rule below)  |
+
+**Filtering Rule:**
+
+Before aggregating feedback for a participant, the system first determines which players were no-shows (using majority rule on all feedback). Feedback **from** players who were marked as no-shows by others is then excluded from aggregation. This prevents no-show players from influencing the reputation of players who actually attended.
 
 **Benefit of Doubt Rule:**
 
 - If a tie occurs (e.g., 2-2 in doubles), no negative impact results
-- For show/no-show: If tied, no `match_no_show` event is created
-- For late: If tied, no `match_late` event is created (but `match_on_time` may still be created if majority says on-time)
+- For show/no-show: If tied, player is treated as having showed up (no `match_no_show` event)
+- For late: If tied, player is treated as on-time (no `match_late` event, `match_on_time` is created)
 
 ### Match Participant Feedback Fields
 
 Fields added to the **match participant record** for tracking feedback:
 
-| Field              | Type      | Description                                          | When Updated             |
-| ------------------ | --------- | ---------------------------------------------------- | ------------------------ |
-| feedback_completed | boolean   | Has this player submitted feedback for all opponents | When last opponent rated |
-| showed_up          | boolean   | Final show/no-show determination (nullable)          | At 48h closure           |
-| was_late           | boolean   | Final late determination (nullable)                  | At 48h closure           |
-| star_rating        | int (1-5) | Averaged star rating, rounded (nullable)             | At 48h closure           |
-| aggregated_at      | timestamp | When aggregation was computed                        | At 48h closure           |
+| Field               | Type      | Description                                                 | When Updated                  |
+| ------------------- | --------- | ----------------------------------------------------------- | ----------------------------- |
+| match_outcome       | enum      | Participant's answer: played/mutual_cancel/opponent_no_show | Intro step of feedback wizard |
+| feedback_completed  | boolean   | Has this player submitted feedback for all opponents        | When last opponent rated      |
+| showed_up           | boolean   | Final show/no-show determination (nullable)                 | At 48h closure                |
+| was_late            | boolean   | Final late determination (nullable)                         | At 48h closure                |
+| star_rating         | int (1-5) | Averaged star rating, rounded (nullable)                    | At 48h closure                |
+| aggregated_at       | timestamp | When aggregation was computed                               | At 48h closure                |
+| cancellation_reason | enum      | Reason for mutual cancellation (nullable)                   | Intro step if mutual_cancel   |
+| cancellation_notes  | text      | Free text if cancellation_reason is "other"                 | Intro step if mutual_cancel   |
 
 **Notes:**
 
-- `feedback_completed` is updated immediately when the player rates their last opponent
+- `match_outcome` is set during the intro step of the feedback wizard and is used for mutual cancellation detection
+- `match_outcome` enum values: `played`, `mutual_cancel`, `opponent_no_show`
+- `feedback_completed` is updated immediately when the player rates their last opponent (or immediately if mutual_cancel/opponent_no_show)
 - `feedback_completed` is used to hide the feedback button in the match detail sheet
-- Fields (`showed_up`, `was_late`, `star_rating`) are `nullable` - if no valid feedback was received, these remain null
-- For singles: values come directly from opponent's feedback
-- For doubles: values come from majority rule and averaging (see aggregation rules above)
+- Aggregated fields (`showed_up`, `was_late`, `star_rating`) are `nullable` - if no valid feedback was received, these remain null
+- For singles: aggregated values come directly from opponent's feedback
+- For doubles: aggregated values come from majority rule and averaging (see aggregation rules above)
 - **Ties in majority rule:** If a tie occurs (e.g., 2-2), benefit of doubt applies - no negative values are set
 - **Substitute handling:** If a substitute showed up, it should be marked as no-show (same reputation impact)
-- These values are used to create reputation events
+- Aggregated values are used to create reputation events at the 48-hour closure mark
 
 ### Reputation Events Reference
 

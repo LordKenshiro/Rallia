@@ -8,15 +8,14 @@ The match system is the core of Rallia. It enables players to create, send, acce
 
 ## Sub-documents
 
-| Document                                                 | Description                           |
-| -------------------------------------------------------- | ------------------------------------- |
-| [match-creation.md](./match-creation.md)                 | Manual match creation process         |
-| [auto-generated-matches.md](./auto-generated-matches.md) | Weekly automatic match suggestions    |
-| [match-reception.md](./match-reception.md)               | How players receive match invitations |
-| [match-lifecycle.md](./match-lifecycle.md)               | Accept, refuse, cancel flows          |
-| [match-closure.md](./match-closure.md)                   | Expiration and feedback               |
-| [match-visualization.md](./match-visualization.md)       | Viewing matches in the app            |
-| [last-minute-matches.md](./last-minute-matches.md)       | Finding matches within 24 hours       |
+| Document                                                 | Description                                                        |
+| -------------------------------------------------------- | ------------------------------------------------------------------ |
+| [match-creation.md](./match-creation.md)                 | Manual match creation process                                      |
+| [auto-generated-matches.md](./auto-generated-matches.md) | Weekly automatic match suggestions                                 |
+| [match-reception.md](./match-reception.md)               | How players receive match invitations                              |
+| [match-lifecycle.md](./match-lifecycle.md)               | Accept, refuse, cancel flows                                       |
+| [match-closure.md](./match-closure.md)                   | Feedback wizard, aggregation, reputation events, automated closure |
+| [match-visualization.md](./match-visualization.md)       | Viewing matches in the app                                         |
 
 ## User Stories
 

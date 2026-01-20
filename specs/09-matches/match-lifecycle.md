@@ -281,10 +281,21 @@ Reputation penalties (`match_cancelled_late`, -25 impact) apply based on whether
 ### Match Closed (`closed`)
 
 - 48 hours have passed since end_time AND match is full
-- Match is archived
+- Match is archived (`closed_at` timestamp is set)
 - No actions allowed
 - Historical record only
 - Only matches that were full at start_time can reach this state
+
+**What happens at closure:**
+
+An automated job runs hourly to close eligible matches. When a match is closed:
+
+1. **Mutual cancellation check**: If majority of participants selected `match_outcome = 'mutual_cancel'`, match is flagged as `mutually_cancelled` with no reputation impact
+2. **Feedback aggregation**: For non-cancelled matches, each participant's feedback is aggregated using majority rule (benefit of doubt on ties)
+3. **Reputation events created**: Based on aggregated feedback (`match_completed`, `match_no_show`, `match_on_time`, `match_late`, star ratings)
+4. **Participant records updated**: `showed_up`, `was_late`, `star_rating`, `aggregated_at` fields are set
+
+See [Match Closure](./match-closure.md) for complete details on the feedback and closure system.
 
 ## Match Reminders
 
