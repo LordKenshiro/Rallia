@@ -26,7 +26,6 @@ import {
   secondary,
   accent,
   neutral,
-  status,
   base,
   duration,
 } from '@rallia/design-system';
@@ -131,6 +130,8 @@ const GRADIENT_STRIP_HEIGHT = 4;
 
 // Slot sizes
 const SLOT_SIZE = 32;
+const CHIP_BG_ALPHA_LIGHT = '15';
+const CHIP_BG_ALPHA_DARK = '30';
 
 /**
  * Most Wanted colors using design system accent scale
@@ -186,9 +187,6 @@ interface ThemeColors {
   primaryLight: string;
   secondary: string;
   secondaryLight: string;
-  statusOpen: string;
-  statusFull: string;
-  statusCompleted: string;
   slotEmpty: string;
   slotEmptyBorder: string;
   avatarPlaceholder: string;
@@ -426,6 +424,9 @@ const PlayerSlots: React.FC<PlayerSlotsProps> = ({
     ? (match.participants?.filter(p => p.status === 'requested').length ?? 0)
     : 0;
 
+  const invitedBadgeColor = isDark ? primary[400] : primary[500];
+  const pendingBadgeColor = isDark ? secondary[400] : secondary[500];
+
   // Build slots array
   const slots: Array<{
     filled: boolean;
@@ -515,7 +516,7 @@ const PlayerSlots: React.FC<PlayerSlotsProps> = ({
       <Text
         size="xs"
         weight="medium"
-        color={participantInfo.spotsLeft > 0 ? colors.statusOpen : colors.textMuted}
+        color={participantInfo.spotsLeft > 0 ? colors.primary : colors.textMuted}
         style={styles.spotsText}
       >
         {spotsText}
@@ -526,18 +527,18 @@ const PlayerSlots: React.FC<PlayerSlotsProps> = ({
           style={[
             styles.invitedBadge,
             {
-              backgroundColor: isDark ? `${primary[400]}25` : `${primary[500]}15`,
-              borderColor: isDark ? primary[400] : primary[500],
+              backgroundColor: `${invitedBadgeColor}${isDark ? '25' : '15'}`,
+              borderColor: invitedBadgeColor,
             },
           ]}
         >
           <Ionicons
             name="mail-outline"
             size={12}
-            color={isDark ? primary[400] : primary[500]}
+            color={invitedBadgeColor}
             style={styles.invitedIcon}
           />
-          <Text size="xs" weight="semibold" color={isDark ? primary[400] : primary[500]}>
+          <Text size="xs" weight="semibold" color={invitedBadgeColor}>
             {t('match.invited')}
           </Text>
         </View>
@@ -548,20 +549,18 @@ const PlayerSlots: React.FC<PlayerSlotsProps> = ({
           style={[
             styles.invitedBadge,
             {
-              backgroundColor: isDark
-                ? `${status.warning.DEFAULT}25`
-                : `${status.warning.DEFAULT}15`,
-              borderColor: status.warning.DEFAULT,
+              backgroundColor: `${pendingBadgeColor}${isDark ? '25' : '15'}`,
+              borderColor: pendingBadgeColor,
             },
           ]}
         >
           <Ionicons
             name="person-add-outline"
             size={12}
-            color={status.warning.DEFAULT}
+            color={pendingBadgeColor}
             style={styles.invitedIcon}
           />
-          <Text size="xs" weight="semibold" color={status.warning.DEFAULT}>
+          <Text size="xs" weight="semibold" color={pendingBadgeColor}>
             {t('match.pendingRequests', { count: pendingRequestsCount })}
           </Text>
         </View>
@@ -717,105 +716,113 @@ const CardFooter: React.FC<CardFooterProps> = ({
     !playerHasCheckedIn &&
     locationAllowsCheckIn;
 
+  const ctaPositive = isDark ? primary[400] : primary[500];
+  const ctaDestructive = isDark ? secondary[400] : secondary[500];
+  const ctaAccent = isDark ? accent[400] : accent[500];
+  const ctaNeutralBg = isDark ? neutral[700] : neutral[200];
+  const ctaNeutralText = colors.text;
+
   // Determine button label, style, and icon based on state
   // CTA Color Matrix:
-  // - Check-in/Feedback/Join/Ask to Join/Join Waitlist → success green
+  // - Check-in/Feedback/Join/Ask to Join/Join Waitlist → primary
   // - Edit → accent
-  // - Cancel/Leave/Cancelled → error red
+  // - Cancel/Leave/Cancelled → secondary
   // - View/View Results → neutral
-  // - Pending → warning
-  // - On Waitlist → warning
+  // - Pending/Waitlisted → neutral background + secondary text
   let ctaLabel: string;
   let ctaBgColor: string;
   let ctaTextColor: string;
   let ctaDisabled = false;
+  let ctaBorderColor: string | null = null;
   let ctaIcon: keyof typeof Ionicons.glyphMap | null = 'arrow-forward';
 
   // Check-in CTA (highest priority when conditions are met)
   if (playerNeedsCheckIn) {
     ctaLabel = t('matchDetail.checkIn');
-    ctaBgColor = status.success.DEFAULT;
+    ctaBgColor = ctaPositive;
     ctaTextColor = base.white;
     ctaIcon = 'checkmark-circle-outline';
   } else if (hasJoined && playerHasCheckedIn && !isInProgress && !hasMatchEnded) {
     // Participant has checked in but game hasn't started yet → Show "Checked-in" (success green, disabled look)
     ctaLabel = t('matchDetail.checkedIn');
-    ctaBgColor = isDark ? `${status.success.DEFAULT}30` : `${status.success.DEFAULT}20`;
-    ctaTextColor = status.success.DEFAULT;
+    ctaBgColor = `${ctaPositive}${isDark ? '30' : '20'}`;
+    ctaTextColor = ctaPositive;
     ctaDisabled = true;
     ctaIcon = 'checkmark-circle';
   } else if (playerNeedsFeedback) {
     // Feedback CTA (when match ended and player needs feedback)
     ctaLabel = t('matchDetail.provideFeedback');
-    ctaBgColor = status.success.DEFAULT;
+    ctaBgColor = ctaPositive;
     ctaTextColor = base.white;
     ctaIcon = 'star-outline';
   } else if (isCancelled) {
     // Match is cancelled → Cancelled (danger red, disabled)
     ctaLabel = t('match.cta.cancelled');
-    ctaBgColor = isDark ? `${status.error.DEFAULT}30` : `${status.error.DEFAULT}20`;
-    ctaTextColor = status.error.DEFAULT;
+    ctaBgColor = `${ctaDestructive}${isDark ? '30' : '20'}`;
+    ctaTextColor = ctaDestructive;
     ctaDisabled = true;
     ctaIcon = 'close-circle-outline';
   } else if (hasResult) {
     // Match with results → View Results (neutral)
     ctaLabel = t('match.cta.viewResults');
-    ctaBgColor = isDark ? neutral[700] : neutral[200];
-    ctaTextColor = colors.text;
+    ctaBgColor = ctaNeutralBg;
+    ctaTextColor = ctaNeutralText;
     ctaIcon = 'eye-outline';
   } else if (hasMatchStarted) {
     // Match has started but no results yet → View (neutral, no actions allowed)
     ctaLabel = t('match.cta.view');
-    ctaBgColor = isDark ? neutral[700] : neutral[200];
-    ctaTextColor = colors.text;
+    ctaBgColor = ctaNeutralBg;
+    ctaTextColor = ctaNeutralText;
     ctaIcon = 'eye-outline';
   } else if (isOwner) {
     // Owner (match not ended) → Edit
     ctaLabel = t('match.cta.edit');
-    ctaBgColor = isDark ? accent[500] : accent[500];
+    ctaBgColor = ctaAccent;
     ctaTextColor = base.white;
     ctaIcon = 'create-outline';
   } else if (isWaitlisted) {
-    // On Waitlist → warning
+    // On Waitlist → neutral background with secondary emphasis
     ctaLabel = t('match.cta.waitlisted');
-    ctaBgColor = isDark ? `${status.warning.DEFAULT}30` : `${status.warning.DEFAULT}20`;
-    ctaTextColor = status.warning.DEFAULT;
+    ctaBgColor = ctaNeutralBg;
+    ctaTextColor = ctaDestructive;
+    ctaBorderColor = ctaDestructive;
     ctaIcon = 'list-outline';
   } else if (hasJoined) {
     // Leave → danger red
     ctaLabel = t('match.cta.leave');
-    ctaBgColor = status.error.DEFAULT;
+    ctaBgColor = ctaDestructive;
     ctaTextColor = base.white;
     ctaIcon = 'exit-outline';
   } else if (hasPendingRequest) {
-    // Pending → warning (disabled)
+    // Pending → neutral background with secondary emphasis (disabled)
     ctaLabel = t('match.cta.pending');
-    ctaBgColor = isDark ? `${status.warning.DEFAULT}30` : `${status.warning.DEFAULT}20`;
-    ctaTextColor = status.warning.DEFAULT;
+    ctaBgColor = ctaNeutralBg;
+    ctaTextColor = ctaDestructive;
+    ctaBorderColor = ctaDestructive;
     ctaDisabled = true;
     ctaIcon = 'hourglass-outline';
   } else if (isInvited && !isFull && !isRequestMode) {
     // Invited (pending status) to direct-join match with spots → Accept Invitation (success green)
     ctaLabel = t('match.cta.acceptInvitation');
-    ctaBgColor = status.success.DEFAULT;
+    ctaBgColor = ctaPositive;
     ctaTextColor = base.white;
     ctaIcon = 'checkmark-circle-outline';
   } else if (isFull) {
     // Join Waitlist → success green
     ctaLabel = t('match.cta.joinWaitlist');
-    ctaBgColor = status.success.DEFAULT;
+    ctaBgColor = ctaPositive;
     ctaTextColor = base.white;
     ctaIcon = 'list-outline';
   } else if (isRequestMode) {
     // Ask to Join → success green
     ctaLabel = t('match.cta.askToJoin');
-    ctaBgColor = status.success.DEFAULT;
+    ctaBgColor = ctaPositive;
     ctaTextColor = base.white;
     ctaIcon = 'hand-left-outline';
   } else {
     // Join → success green
     ctaLabel = t('match.cta.join');
-    ctaBgColor = status.success.DEFAULT;
+    ctaBgColor = ctaPositive;
     ctaTextColor = base.white;
     ctaIcon = 'arrow-forward';
   }
@@ -827,6 +834,7 @@ const CardFooter: React.FC<CardFooterProps> = ({
         style={[
           styles.ctaButton,
           { backgroundColor: ctaBgColor },
+          ctaBorderColor && { borderWidth: 1, borderColor: ctaBorderColor },
           ctaDisabled && styles.ctaButtonDisabled,
         ]}
         onPress={onPress}
@@ -974,9 +982,6 @@ const MatchCard: React.FC<MatchCardProps> = ({
       primaryLight: isDark ? primary[900] : primary[50],
       secondary: isDark ? secondary[400] : secondary[500],
       secondaryLight: isDark ? secondary[900] : secondary[50],
-      statusOpen: status.success.DEFAULT,
-      statusFull: status.warning.DEFAULT,
-      statusCompleted: status.info.DEFAULT,
       slotEmpty: isDark ? neutral[800] : neutral[100],
       slotEmptyBorder: isDark ? neutral[500] : neutral[400], // Better contrast for empty slots
       avatarPlaceholder: isDark ? neutral[700] : neutral[200],
@@ -986,6 +991,20 @@ const MatchCard: React.FC<MatchCardProps> = ({
     }),
     [themeColors, isDark, tierAccentColors]
   );
+
+  const chipAlpha = isDark ? CHIP_BG_ALPHA_DARK : CHIP_BG_ALPHA_LIGHT;
+  const getChipColors = (baseColor: string) => ({
+    bgColor: `${baseColor}${chipAlpha}`,
+    textColor: baseColor,
+    iconColor: baseColor,
+  });
+
+  const chipColors = {
+    primary: getChipColors(isDark ? primary[400] : primary[500]),
+    secondary: getChipColors(isDark ? secondary[400] : secondary[500]),
+    accent: getChipColors(isDark ? accent[400] : accent[500]),
+    tier: getChipColors(colors.tierAccent),
+  } as const;
 
   // Computed values
   const participantInfo = getParticipantInfo(match);
@@ -1014,6 +1033,8 @@ const MatchCard: React.FC<MatchCardProps> = ({
   // - "isUrgent" (< 3 hours) but not in_progress = starting soon = countdown animation
   const isOngoing = derivedStatus === 'in_progress';
   const isStartingSoon = isUrgent && !isOngoing;
+  const liveColor = isDark ? secondary[400] : secondary[500];
+  const soonColor = isDark ? accent[400] : accent[500];
 
   // Start animation when match is urgent or ongoing
   useEffect(() => {
@@ -1093,9 +1114,20 @@ const MatchCard: React.FC<MatchCardProps> = ({
     badges.push({
       key: 'courtBooked',
       label: t('match.courtStatus.courtBooked'),
-      bgColor: isDark ? `${mwColors.border}30` : `${mwColors.border}20`,
-      textColor: mwColors.border,
+      bgColor: chipColors.accent.bgColor,
+      textColor: chipColors.accent.textColor,
       icon: 'checkmark-circle',
+    });
+  }
+
+  // Join mode badge (request-based)
+  if (match.join_mode === 'request') {
+    badges.push({
+      key: 'joinMode',
+      label: t('match.joinMode.request'),
+      bgColor: chipColors.secondary.bgColor,
+      textColor: chipColors.secondary.textColor,
+      icon: 'hand-left-outline',
     });
   }
 
@@ -1105,20 +1137,8 @@ const MatchCard: React.FC<MatchCardProps> = ({
     badges.push({
       key: 'playerExpectation',
       label: isCompetitive ? t('matchDetail.competitive') : t('matchDetail.casual'),
-      bgColor: isCompetitive
-        ? isDark
-          ? `${accent[400]}30`
-          : `${accent[500]}20`
-        : isDark
-          ? `${primary[400]}30`
-          : `${primary[500]}20`,
-      textColor: isCompetitive
-        ? isDark
-          ? accent[400]
-          : accent[500]
-        : isDark
-          ? primary[400]
-          : primary[500],
+      bgColor: isCompetitive ? chipColors.accent.bgColor : chipColors.primary.bgColor,
+      textColor: isCompetitive ? chipColors.accent.textColor : chipColors.primary.textColor,
       icon: isCompetitive ? 'trophy' : 'happy',
     });
   }
@@ -1128,8 +1148,8 @@ const MatchCard: React.FC<MatchCardProps> = ({
     badges.push({
       key: 'cost',
       label: costDisplay,
-      bgColor: match.is_court_free ? `${status.success.DEFAULT}20` : colors.tierAccentLight,
-      textColor: match.is_court_free ? status.success.DEFAULT : colors.tierAccent,
+      bgColor: match.is_court_free ? chipColors.primary.bgColor : chipColors.tier.bgColor,
+      textColor: match.is_court_free ? chipColors.primary.textColor : chipColors.tier.textColor,
       icon: match.is_court_free ? 'checkmark-circle' : 'cash-outline',
     });
   }
@@ -1139,8 +1159,8 @@ const MatchCard: React.FC<MatchCardProps> = ({
     badges.push({
       key: 'rating',
       label: match.min_rating_score.label,
-      bgColor: colors.tierAccentLight,
-      textColor: colors.tierAccent,
+      bgColor: chipColors.tier.bgColor,
+      textColor: chipColors.tier.textColor,
       icon: 'analytics',
     });
   }
@@ -1241,7 +1261,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
                     style={[
                       styles.liveRing,
                       {
-                        backgroundColor: status.error.DEFAULT,
+                        backgroundColor: liveColor,
                         transform: [{ scale: liveRingScale }],
                         opacity: liveRingOpacity,
                       },
@@ -1252,7 +1272,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
                     style={[
                       styles.liveDot,
                       {
-                        backgroundColor: status.error.DEFAULT,
+                        backgroundColor: liveColor,
                         opacity: liveDotOpacity,
                       },
                     ]}
@@ -1270,30 +1290,18 @@ const MatchCard: React.FC<MatchCardProps> = ({
                     },
                   ]}
                 >
-                  <Ionicons name="chevron-forward" size={14} color={status.warning.DEFAULT} />
+                  <Ionicons name="chevron-forward" size={14} color={soonColor} />
                 </Animated.View>
               )}
               <Ionicons
                 name={isOngoing ? 'radio' : isStartingSoon ? 'time' : 'calendar-outline'}
                 size={16}
-                color={
-                  isOngoing
-                    ? status.error.DEFAULT
-                    : isStartingSoon
-                      ? status.warning.DEFAULT
-                      : colors.tierAccent
-                }
+                color={isOngoing ? liveColor : isStartingSoon ? soonColor : colors.tierAccent}
               />
               <Text
                 size="base"
                 weight="bold"
-                color={
-                  isOngoing
-                    ? status.error.DEFAULT
-                    : isStartingSoon
-                      ? status.warning.DEFAULT
-                      : colors.text
-                }
+                color={isOngoing ? liveColor : isStartingSoon ? soonColor : colors.text}
                 style={styles.timeText}
                 numberOfLines={1}
               >
@@ -1463,7 +1471,7 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     // Subtle shadow for depth
-    shadowColor: '#ef4444',
+    shadowColor: secondary[500],
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
     shadowRadius: 4,

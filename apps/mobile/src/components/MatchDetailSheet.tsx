@@ -24,6 +24,8 @@ import {
   Linking,
   Platform,
   Alert,
+  Animated,
+  Easing,
 } from 'react-native';
 import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
@@ -39,6 +41,8 @@ import {
   accent,
   neutral,
   status,
+  base,
+  duration,
 } from '@rallia/design-system';
 import {
   lightHaptic,
@@ -68,7 +72,7 @@ import type {
   OpponentForFeedback,
 } from '@rallia/shared-types';
 
-const BASE_WHITE = '#ffffff';
+// Use base.white from design system for consistency
 
 // =============================================================================
 // TYPES & CONSTANTS
@@ -93,6 +97,57 @@ function getMatchTier(courtStatus: string | null, creatorReputationScore?: numbe
   return 'regular';
 }
 
+/**
+ * Tier-based color palettes for accent strips and backgrounds
+ * Built from @rallia/design-system tokens for consistency
+ *
+ * Tier Strategy:
+ * - mostWanted: accent (amber/gold) - premium, highly desirable
+ * - readyToPlay: secondary (coral/red) - court ready, energetic
+ * - regular: primary (teal) - standard matches
+ */
+const TIER_PALETTES = {
+  // Most Wanted - accent palette (amber/gold - premium, highly desirable)
+  mostWanted: {
+    light: {
+      background: accent[50],
+      accentStart: accent[500],
+      accentEnd: accent[400],
+    },
+    dark: {
+      background: '#3d2b10',
+      accentStart: accent[400],
+      accentEnd: accent[300],
+    },
+  },
+  // Ready to Play - secondary palette (coral/red tones)
+  readyToPlay: {
+    light: {
+      background: secondary[50],
+      accentStart: secondary[500],
+      accentEnd: secondary[400],
+    },
+    dark: {
+      background: secondary[900],
+      accentStart: secondary[400],
+      accentEnd: secondary[300],
+    },
+  },
+  // Regular - primary palette (teal/mint - fresh, standard)
+  regular: {
+    light: {
+      background: primary[50],
+      accentStart: primary[500],
+      accentEnd: primary[400],
+    },
+    dark: {
+      background: primary[950],
+      accentStart: primary[400],
+      accentEnd: primary[300],
+    },
+  },
+} as const;
+
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -116,6 +171,9 @@ interface ThemeColors {
   icon: string;
   iconMuted: string;
   avatarPlaceholder: string;
+  // Tier-aware accent colors (set based on match tier)
+  tierAccent: string;
+  tierAccentLight: string;
 }
 
 // =============================================================================
@@ -403,6 +461,10 @@ interface ParticipantAvatarProps {
   isCheckedIn?: boolean;
   colors: ThemeColors;
   isDark: boolean;
+  /** Tier accent color for host badge and filled avatar borders */
+  tierAccent?: string;
+  /** Tier accent light color for non-host filled avatar borders */
+  tierAccentLight?: string;
 }
 
 const ParticipantAvatar: React.FC<ParticipantAvatarProps> = ({
@@ -412,45 +474,58 @@ const ParticipantAvatar: React.FC<ParticipantAvatarProps> = ({
   isCheckedIn,
   colors,
   isDark,
-}) => (
-  <View style={styles.participantAvatarWrapper}>
-    <View
-      style={[
-        styles.participantAvatar,
-        isEmpty
-          ? {
-              backgroundColor: colors.slotEmpty,
-              borderWidth: 2,
-              borderColor: colors.slotEmptyBorder,
-            }
-          : {
-              backgroundColor: avatarUrl ? colors.primary : colors.avatarPlaceholder,
-              borderWidth: 2,
-              borderColor: colors.cardBackground,
-            },
-        isHost && { borderWidth: 2, borderColor: colors.secondary },
-      ]}
-    >
-      {!isEmpty && avatarUrl ? (
-        <Image source={{ uri: avatarUrl }} style={styles.participantAvatarImage} />
-      ) : !isEmpty ? (
-        <Ionicons name="person" size={18} color={isDark ? neutral[400] : neutral[500]} />
-      ) : (
-        <Ionicons name="add" size={20} color={colors.slotEmptyBorder} />
+  tierAccent,
+  tierAccentLight,
+}) => {
+  // Use tier accent colors if provided, otherwise fall back to theme colors
+  const hostBorderColor = tierAccent || colors.secondary;
+  const filledBorderColor = tierAccentLight || colors.cardBackground;
+  const hostBadgeBgColor = tierAccent || colors.secondary;
+
+  return (
+    <View style={styles.participantAvatarWrapper}>
+      <View
+        style={[
+          styles.participantAvatar,
+          isEmpty
+            ? {
+                backgroundColor: colors.slotEmpty,
+                borderWidth: 2,
+                borderColor: colors.slotEmptyBorder,
+              }
+            : {
+                backgroundColor: avatarUrl ? hostBorderColor : colors.avatarPlaceholder,
+                borderWidth: isHost ? 2.5 : 2,
+                borderColor: isHost ? hostBorderColor : filledBorderColor,
+                shadowColor: isHost ? hostBorderColor : filledBorderColor,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: isHost ? 0.3 : 0.15,
+                shadowRadius: 4,
+                elevation: isHost ? 3 : 2,
+              },
+        ]}
+      >
+        {!isEmpty && avatarUrl ? (
+          <Image source={{ uri: avatarUrl }} style={styles.participantAvatarImage} />
+        ) : !isEmpty ? (
+          <Ionicons name="person" size={18} color={isDark ? neutral[400] : neutral[500]} />
+        ) : (
+          <Ionicons name="add" size={20} color={colors.slotEmptyBorder} />
+        )}
+      </View>
+      {isHost && (
+        <View style={[styles.hostBadge, { backgroundColor: hostBadgeBgColor }]}>
+          <Ionicons name="star" size={8} color={base.white} />
+        </View>
+      )}
+      {isCheckedIn && (
+        <View style={[styles.checkedInBadge, { backgroundColor: status.success.DEFAULT }]}>
+          <Ionicons name="checkmark" size={8} color={base.white} />
+        </View>
       )}
     </View>
-    {isHost && (
-      <View style={[styles.hostBadge, { backgroundColor: colors.secondary }]}>
-        <Ionicons name="star" size={8} color={BASE_WHITE} />
-      </View>
-    )}
-    {isCheckedIn && (
-      <View style={[styles.checkedInBadge, { backgroundColor: status.success.DEFAULT }]}>
-        <Ionicons name="checkmark" size={8} color={BASE_WHITE} />
-      </View>
-    )}
-  </View>
-);
+  );
+};
 
 interface CheckInButtonProps {
   playerId: string | undefined;
@@ -589,6 +664,9 @@ export const MatchDetailSheet: React.FC = () => {
     null
   );
   const [showRequesterModal, setShowRequesterModal] = useState(false);
+
+  // Animated pulse effect for live/urgent time indicators
+  const urgentPulseAnimation = useMemo(() => new Animated.Value(0), []);
 
   // Match actions hook
   const {
@@ -859,6 +937,9 @@ export const MatchDetailSheet: React.FC = () => {
       icon: themeColors.foreground,
       iconMuted: themeColors.mutedForeground,
       avatarPlaceholder: isDark ? neutral[700] : neutral[200],
+      // Default tier accent colors (will be overridden by actual tier after early return)
+      tierAccent: isDark ? primary[400] : primary[500],
+      tierAccentLight: isDark ? primary[700] : primary[200],
     }),
     [themeColors, isDark]
   );
@@ -1140,6 +1221,89 @@ export const MatchDetailSheet: React.FC = () => {
     );
   }, [selectedMatch, isCreatorEarly]);
 
+  // Compute match status for animation (must be before early return for hooks rules)
+  const derivedStatusForAnimation = useMemo(() => {
+    if (!selectedMatch) return null;
+    return deriveMatchStatus({
+      cancelled_at: selectedMatch.cancelled_at,
+      match_date: selectedMatch.match_date,
+      start_time: selectedMatch.start_time,
+      end_time: selectedMatch.end_time,
+      timezone: selectedMatch.timezone,
+      result: selectedMatch.result,
+    });
+  }, [selectedMatch]);
+
+  const isUrgentForAnimation = useMemo(() => {
+    if (!selectedMatch) return false;
+    const { isUrgent } = getRelativeTimeDisplay(
+      selectedMatch.match_date,
+      selectedMatch.start_time,
+      selectedMatch.end_time,
+      selectedMatch.timezone,
+      locale,
+      t
+    );
+    return isUrgent;
+  }, [selectedMatch, locale, t]);
+
+  const isOngoingForAnimation = derivedStatusForAnimation === 'in_progress';
+  const isStartingSoonForAnimation = isUrgentForAnimation && !isOngoingForAnimation;
+
+  // Start animation when match is urgent or ongoing (must be before early return for hooks rules)
+  React.useEffect(() => {
+    if (isOngoingForAnimation || isStartingSoonForAnimation) {
+      const animationDuration = isOngoingForAnimation ? duration.extraSlow : duration.verySlow;
+      const pulseAnim = Animated.loop(
+        Animated.sequence([
+          Animated.timing(urgentPulseAnimation, {
+            toValue: 1,
+            duration: animationDuration,
+            easing: Easing.bezier(0.4, 0, 0.2, 1),
+            useNativeDriver: true,
+          }),
+          Animated.timing(urgentPulseAnimation, {
+            toValue: 0,
+            duration: animationDuration,
+            easing: Easing.bezier(0.4, 0, 0.2, 1),
+            useNativeDriver: true,
+          }),
+        ])
+      );
+
+      pulseAnim.start();
+      return () => {
+        pulseAnim.stop();
+      };
+    }
+  }, [isOngoingForAnimation, isStartingSoonForAnimation, urgentPulseAnimation]);
+
+  // Animation interpolations (must be before early return for hooks rules)
+  const liveRingScale = urgentPulseAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 2.5],
+  });
+
+  const liveRingOpacity = urgentPulseAnimation.interpolate({
+    inputRange: [0, 0.3, 1],
+    outputRange: [0.8, 0.4, 0],
+  });
+
+  const liveDotOpacity = urgentPulseAnimation.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [1, 0.7, 1],
+  });
+
+  const countdownBounce = urgentPulseAnimation.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0, 3, 0],
+  });
+
+  const countdownOpacity = urgentPulseAnimation.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0.6, 1, 0.6],
+  });
+
   // Render nothing if no match is selected
   if (!selectedMatch) {
     return (
@@ -1165,6 +1329,36 @@ export const MatchDetailSheet: React.FC = () => {
   // Determine match tier and get tier-specific accent colors
   const creatorReputationScore = match.created_by_player?.reputation_score;
   const tier = getMatchTier(match.court_status, creatorReputationScore);
+  const tierPaletteColors = TIER_PALETTES[tier][isDark ? 'dark' : 'light'];
+
+  // Tier-aware accent colors
+  const tierAccent = (() => {
+    switch (tier) {
+      case 'mostWanted':
+        return isDark ? accent[400] : accent[500];
+      case 'readyToPlay':
+        return isDark ? secondary[400] : secondary[500];
+      case 'regular':
+      default:
+        return isDark ? primary[400] : primary[500];
+    }
+  })();
+
+  const tierAccentLight = (() => {
+    switch (tier) {
+      case 'mostWanted':
+        return isDark ? accent[700] : accent[200];
+      case 'readyToPlay':
+        return isDark ? secondary[700] : secondary[200];
+      case 'regular':
+      default:
+        return isDark ? primary[700] : primary[200];
+    }
+  })();
+
+  // Live/urgent indicator colors
+  const liveColor = isDark ? secondary[400] : secondary[500];
+  const soonColor = isDark ? accent[400] : accent[500];
 
   const { label: timeLabel, isUrgent } = getRelativeTimeDisplay(
     match.match_date,
@@ -1215,6 +1409,12 @@ export const MatchDetailSheet: React.FC = () => {
   const isInProgress = derivedStatus === 'in_progress';
   const hasMatchEnded = derivedStatus === 'completed';
   const hasResult = !!match.result;
+
+  // Determine animation type for time indicator:
+  // - isInProgress = live indicator
+  // - isUrgent (< 3 hours) but not in_progress = starting soon
+  const isOngoing = derivedStatus === 'in_progress';
+  const isStartingSoon = isUrgent && !isOngoing;
 
   // Check if start time has passed
   const startTimeDiffMs = getTimeDifferenceFromNow(
@@ -1422,13 +1622,22 @@ export const MatchDetailSheet: React.FC = () => {
   // 6. Request mode → "Request to Join" button
   // 7. Default → "Join Now" button
   const renderActionButtons = () => {
-    // Prepare theme colors for Button component - success green for join actions
+    // CTA colors matching MatchCard for consistency:
+    // - Positive (Join/Check-in/Feedback): primary (teal)
+    // - Destructive (Leave/Cancel): secondary (coral)
+    // - Edit: accent (amber)
+    // - Pending/Waitlisted: neutral bg with secondary text
+    const ctaPositive = isDark ? primary[400] : primary[500];
+    const ctaDestructive = isDark ? secondary[400] : secondary[500];
+    const ctaAccent = isDark ? accent[400] : accent[500];
+
+    // Prepare theme colors for Button component - primary/teal for join actions
     const successThemeColors = {
-      primary: status.success.DEFAULT,
-      primaryForeground: BASE_WHITE,
-      buttonActive: status.success.DEFAULT,
+      primary: ctaPositive,
+      primaryForeground: base.white,
+      buttonActive: ctaPositive,
       buttonInactive: neutral[300],
-      buttonTextActive: BASE_WHITE,
+      buttonTextActive: base.white,
       buttonTextInactive: neutral[500],
       text: colors.text,
       textMuted: colors.textMuted,
@@ -1438,11 +1647,11 @@ export const MatchDetailSheet: React.FC = () => {
 
     // Accent theme colors for edit actions
     const accentThemeColors = {
-      primary: accent[500],
-      primaryForeground: BASE_WHITE,
-      buttonActive: accent[500],
+      primary: ctaAccent,
+      primaryForeground: base.white,
+      buttonActive: ctaAccent,
       buttonInactive: neutral[300],
-      buttonTextActive: BASE_WHITE,
+      buttonTextActive: base.white,
       buttonTextInactive: neutral[500],
       text: colors.text,
       textMuted: colors.textMuted,
@@ -1450,13 +1659,13 @@ export const MatchDetailSheet: React.FC = () => {
       background: colors.cardBackground,
     };
 
-    // Destructive button theme colors for cancel/leave
+    // Destructive button theme colors for cancel/leave - secondary (coral)
     const destructiveThemeColors = {
-      primary: status.error.DEFAULT,
-      primaryForeground: BASE_WHITE,
-      buttonActive: status.error.DEFAULT,
+      primary: ctaDestructive,
+      primaryForeground: base.white,
+      buttonActive: ctaDestructive,
       buttonInactive: neutral[300],
-      buttonTextActive: BASE_WHITE,
+      buttonTextActive: base.white,
       buttonTextInactive: neutral[500],
       text: colors.text,
       textMuted: colors.textMuted,
@@ -1464,13 +1673,13 @@ export const MatchDetailSheet: React.FC = () => {
       background: colors.cardBackground,
     };
 
-    // Warning accent theme colors for pending states
+    // Warning/pending state theme colors - neutral bg with secondary text (matching MatchCard)
     const warningThemeColors = {
-      primary: accent[500],
-      primaryForeground: BASE_WHITE,
-      buttonActive: isDark ? accent[900] : accent[100],
+      primary: ctaDestructive,
+      primaryForeground: base.white,
+      buttonActive: isDark ? neutral[700] : neutral[200],
       buttonInactive: neutral[300],
-      buttonTextActive: isDark ? accent[300] : accent[700],
+      buttonTextActive: ctaDestructive,
       buttonTextInactive: neutral[500],
       text: colors.text,
       textMuted: colors.textMuted,
@@ -1613,13 +1822,8 @@ export const MatchDetailSheet: React.FC = () => {
     if (isCreator && playerHasCheckedIn && !isInProgress && !hasMatchEnded) {
       return (
         <View style={styles.matchEndedContainer}>
-          <Ionicons name="checkmark-circle" size={20} color={status.success.DEFAULT} />
-          <Text
-            size="sm"
-            weight="medium"
-            color={status.success.DEFAULT}
-            style={styles.matchEndedText}
-          >
+          <Ionicons name="checkmark-circle" size={20} color={ctaPositive} />
+          <Text size="sm" weight="medium" color={ctaPositive} style={styles.matchEndedText}>
             {t('matchDetail.checkedIn' as TranslationKey)}
           </Text>
         </View>
@@ -1740,13 +1944,8 @@ export const MatchDetailSheet: React.FC = () => {
     if (isParticipant && playerHasCheckedIn && !isInProgress) {
       return (
         <View style={styles.matchEndedContainer}>
-          <Ionicons name="checkmark-circle" size={20} color={status.success.DEFAULT} />
-          <Text
-            size="sm"
-            weight="medium"
-            color={status.success.DEFAULT}
-            style={styles.matchEndedText}
-          >
+          <Ionicons name="checkmark-circle" size={20} color={ctaPositive} />
+          <Text size="sm" weight="medium" color={ctaPositive} style={styles.matchEndedText}>
             {t('matchDetail.checkedIn' as TranslationKey)}
           </Text>
         </View>
@@ -1841,15 +2040,59 @@ export const MatchDetailSheet: React.FC = () => {
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <View style={styles.headerTop}>
           <View style={styles.headerTitleSection}>
-            {/* Match Date/Time - same format as cards */}
+            {/* Match Date/Time - same format as cards with live/urgent indicators */}
             <View style={styles.dateRow}>
+              {/* "Live" indicator for ongoing matches */}
+              {isOngoing && (
+                <View style={styles.liveIndicatorContainer}>
+                  {/* Expanding ring that fades out */}
+                  <Animated.View
+                    style={[
+                      styles.liveRing,
+                      {
+                        backgroundColor: liveColor,
+                        transform: [{ scale: liveRingScale }],
+                        opacity: liveRingOpacity,
+                      },
+                    ]}
+                  />
+                  {/* Solid core dot */}
+                  <Animated.View
+                    style={[
+                      styles.liveDot,
+                      {
+                        backgroundColor: liveColor,
+                        opacity: liveDotOpacity,
+                      },
+                    ]}
+                  />
+                </View>
+              )}
+              {/* Bouncing chevron for starting soon */}
+              {isStartingSoon && (
+                <Animated.View
+                  style={[
+                    styles.countdownIndicator,
+                    {
+                      transform: [{ translateX: countdownBounce }],
+                      opacity: countdownOpacity,
+                    },
+                  ]}
+                >
+                  <Ionicons name="chevron-forward" size={16} color={soonColor} />
+                </Animated.View>
+              )}
               <Ionicons
-                name="calendar-outline"
+                name={isOngoing ? 'radio' : isStartingSoon ? 'time' : 'calendar-outline'}
                 size={20}
-                color={colors.iconMuted}
+                color={isOngoing ? liveColor : isStartingSoon ? soonColor : tierAccent}
                 style={styles.calendarIcon}
               />
-              <Text size="xl" weight="bold" color={isUrgent ? colors.secondary : colors.text}>
+              <Text
+                size="xl"
+                weight="bold"
+                color={isOngoing ? liveColor : isStartingSoon ? soonColor : colors.text}
+              >
                 {timeLabel}
               </Text>
             </View>
@@ -1902,20 +2145,20 @@ export const MatchDetailSheet: React.FC = () => {
               {
                 backgroundColor: isFull
                   ? status.info.DEFAULT + '15'
-                  : status.success.DEFAULT + '15',
-                borderColor: isFull ? status.info.DEFAULT : status.success.DEFAULT,
+                  : (isDark ? primary[400] : primary[500]) + '15',
+                borderColor: isFull ? status.info.DEFAULT : isDark ? primary[400] : primary[500],
               },
             ]}
           >
             <Ionicons
               name={isFull ? 'list-outline' : 'checkmark-circle-outline'}
               size={18}
-              color={isFull ? status.info.DEFAULT : status.success.DEFAULT}
+              color={isFull ? status.info.DEFAULT : isDark ? primary[400] : primary[500]}
             />
             <Text
               size="sm"
               weight="medium"
-              color={isFull ? status.info.DEFAULT : status.success.DEFAULT}
+              color={isFull ? status.info.DEFAULT : isDark ? primary[400] : primary[500]}
               style={styles.pendingBannerText}
             >
               {isFull
@@ -2058,6 +2301,8 @@ export const MatchDetailSheet: React.FC = () => {
                     isCheckedIn={p.isCheckedIn}
                     colors={colors}
                     isDark={isDark}
+                    tierAccent={tierAccent}
+                    tierAccentLight={tierAccentLight}
                   />
                   {/* Kick button for host to remove joined participants (not for host avatar, not for empty slots, not if match ended, in progress, or within 24h of start) */}
                   {isCreator &&
@@ -2068,13 +2313,16 @@ export const MatchDetailSheet: React.FC = () => {
                     !isInProgress &&
                     !cannotKickWithin24h && (
                       <TouchableOpacity
-                        style={[styles.kickButton, { backgroundColor: status.error.DEFAULT }]}
+                        style={[
+                          styles.kickButton,
+                          { backgroundColor: isDark ? secondary[400] : secondary[500] },
+                        ]}
                         onPress={() => handleKickParticipant(p.participantId!)}
                         disabled={isKicking}
                         activeOpacity={0.7}
                         hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
                       >
-                        <Ionicons name="close" size={10} color={BASE_WHITE} />
+                        <Ionicons name="close" size={10} color={base.white} />
                       </TouchableOpacity>
                     )}
                 </View>
@@ -2200,7 +2448,7 @@ export const MatchDetailSheet: React.FC = () => {
                           style={styles.pendingRequestAvatarImage}
                         />
                       ) : (
-                        <Ionicons name="person" size={16} color={BASE_WHITE} />
+                        <Ionicons name="person" size={16} color={base.white} />
                       )}
                     </View>
                     <View style={styles.pendingRequestNameContainer}>
@@ -2252,7 +2500,9 @@ export const MatchDetailSheet: React.FC = () => {
                           backgroundColor:
                             acceptingRequestId === request.id || isFull || isInProgress
                               ? neutral[400]
-                              : status.success.DEFAULT,
+                              : isDark
+                                ? primary[400]
+                                : primary[500],
                         },
                       ]}
                       onPress={() => request.id && handleAcceptRequest(request.id)}
@@ -2261,19 +2511,19 @@ export const MatchDetailSheet: React.FC = () => {
                       }
                       activeOpacity={0.7}
                     >
-                      <Ionicons name="checkmark" size={18} color={BASE_WHITE} />
+                      <Ionicons name="checkmark" size={18} color={base.white} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[
                         styles.requestActionButton,
                         styles.rejectButton,
-                        { backgroundColor: status.error.DEFAULT },
+                        { backgroundColor: isDark ? secondary[400] : secondary[500] },
                       ]}
                       onPress={() => request.id && handleRejectRequest(request.id)}
                       disabled={isAccepting || isRejecting}
                       activeOpacity={0.7}
                     >
-                      <Ionicons name="close" size={18} color={BASE_WHITE} />
+                      <Ionicons name="close" size={18} color={base.white} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -2352,7 +2602,7 @@ export const MatchDetailSheet: React.FC = () => {
                               style={styles.pendingRequestAvatarImage}
                             />
                           ) : (
-                            <Ionicons name="person" size={16} color={BASE_WHITE} />
+                            <Ionicons name="person" size={16} color={base.white} />
                           )}
                         </View>
                         <View style={styles.pendingRequestNameContainer}>
@@ -2407,13 +2657,13 @@ export const MatchDetailSheet: React.FC = () => {
                               }
                               activeOpacity={0.7}
                             >
-                              <Ionicons name="refresh" size={18} color={BASE_WHITE} />
+                              <Ionicons name="refresh" size={18} color={base.white} />
                             </TouchableOpacity>
                             {/* Cancel button for pending invitations */}
                             <TouchableOpacity
                               style={[
                                 styles.requestActionButton,
-                                { backgroundColor: status.error.DEFAULT },
+                                { backgroundColor: isDark ? secondary[400] : secondary[500] },
                               ]}
                               onPress={() => invitation.id && handleCancelInvite(invitation.id)}
                               disabled={
@@ -2421,7 +2671,7 @@ export const MatchDetailSheet: React.FC = () => {
                               }
                               activeOpacity={0.7}
                             >
-                              <Ionicons name="close" size={18} color={BASE_WHITE} />
+                              <Ionicons name="close" size={18} color={base.white} />
                             </TouchableOpacity>
                           </>
                         ) : (
@@ -2446,7 +2696,7 @@ export const MatchDetailSheet: React.FC = () => {
                             }
                             activeOpacity={0.7}
                           >
-                            <Ionicons name="refresh" size={18} color={BASE_WHITE} />
+                            <Ionicons name="refresh" size={18} color={base.white} />
                           </TouchableOpacity>
                         )}
                       </View>
@@ -2722,6 +2972,35 @@ const styles = StyleSheet.create({
   handleIndicator: {
     width: spacingPixels[10],
   },
+  // Live indicator styles for ongoing matches
+  liveIndicatorContainer: {
+    width: 12,
+    height: 12,
+    marginRight: spacingPixels[2],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  liveRing: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    // Subtle shadow for depth
+    shadowColor: secondary[500],
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  // "Starting soon" countdown indicator
+  countdownIndicator: {
+    marginRight: spacingPixels[0.5],
+  },
   sheetContent: {
     flex: 1,
   },
@@ -2858,7 +3137,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: BASE_WHITE,
+    borderColor: base.white,
   },
   checkedInBadge: {
     position: 'absolute',
@@ -2870,7 +3149,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: BASE_WHITE,
+    borderColor: base.white,
   },
   participantAvatarWithAction: {
     position: 'relative',

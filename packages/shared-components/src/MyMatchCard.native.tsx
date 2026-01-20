@@ -25,7 +25,6 @@ import {
   secondary,
   accent,
   neutral,
-  status,
   base,
   duration,
 } from '@rallia/design-system';
@@ -645,6 +644,8 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
   // - "isUrgent" (< 3 hours) but not in_progress = starting soon = countdown animation
   const isOngoing = derivedStatus === 'in_progress';
   const isStartingSoon = isUrgent && !isOngoing;
+  const liveColor = isDark ? secondary[400] : secondary[500];
+  const soonColor = isDark ? accent[400] : accent[500];
 
   // Start animation when match is ongoing or starting soon
   useEffect(() => {
@@ -776,7 +777,7 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
                 style={[
                   styles.liveRing,
                   {
-                    backgroundColor: status.error.DEFAULT,
+                    backgroundColor: liveColor,
                     transform: [{ scale: liveRingScale }],
                     opacity: liveRingOpacity,
                   },
@@ -786,7 +787,7 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
                 style={[
                   styles.liveDot,
                   {
-                    backgroundColor: status.error.DEFAULT,
+                    backgroundColor: liveColor,
                     opacity: liveDotOpacity,
                   },
                 ]}
@@ -804,20 +805,14 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
                 },
               ]}
             >
-              <Ionicons name="chevron-forward" size={10} color={status.warning.DEFAULT} />
+              <Ionicons name="chevron-forward" size={10} color={soonColor} />
             </Animated.View>
           )}
           {/* Day label - always show */}
           <Text
             size="xs"
             weight="semibold"
-            color={
-              isOngoing
-                ? status.error.DEFAULT
-                : isStartingSoon
-                  ? status.warning.DEFAULT
-                  : colors.textMuted
-            }
+            color={isOngoing ? liveColor : isStartingSoon ? soonColor : colors.textMuted}
             style={styles.dayLabel}
           >
             {dayLabel.toUpperCase()}
@@ -828,9 +823,7 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
         <Text
           size="lg"
           weight="bold"
-          color={
-            isOngoing ? status.error.DEFAULT : isStartingSoon ? status.warning.DEFAULT : colors.text
-          }
+          color={isOngoing ? liveColor : isStartingSoon ? soonColor : colors.text}
           numberOfLines={1}
         >
           {timeLabel}
@@ -963,7 +956,7 @@ const styles = StyleSheet.create({
     height: 5,
     borderRadius: 2.5,
     // Subtle shadow for depth
-    shadowColor: '#ef4444',
+    shadowColor: secondary[500],
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
     shadowRadius: 3,

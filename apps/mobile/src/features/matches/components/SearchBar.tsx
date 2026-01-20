@@ -12,6 +12,7 @@ import {
   spacingPixels,
   radiusPixels,
   fontSizePixels,
+  fontFamilyNative,
   lightTheme,
   darkTheme,
   neutral,
@@ -119,6 +120,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: fontSizePixels.base,
+    fontFamily: fontFamilyNative.body,
     paddingVertical: 0, // Remove default padding
   },
   loadingIndicator: {
