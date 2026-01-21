@@ -1295,6 +1295,22 @@
       "upcoming": "À venir",
       "past": "Passés"
     },
+    "filters": {
+      "all": "Tous",
+      "hosting": "Organisées",
+      "confirmed": "Confirmées",
+      "pending": "En attente",
+      "requested": "Demandées",
+      "waitlisted": "Liste d'attente",
+      "needsPlayers": "Incomplet",
+      "readyToPlay": "Prêt",
+      "feedbackNeeded": "Évaluation",
+      "played": "Jouées",
+      "hosted": "Organisées",
+      "asParticipant": "Participé",
+      "expired": "Expirées",
+      "cancelled": "Annulées"
+    },
     "time": {
       "today": "Aujourd'hui",
       "tomorrow": "Demain",
@@ -1312,6 +1328,10 @@
     "emptyPast": {
       "title": "Aucune partie passée",
       "description": "Vos parties terminées apparaîtront ici"
+    },
+    "emptyFiltered": {
+      "title": "Aucune partie trouvée",
+      "description": "Aucune partie ne correspond au filtre « {filter} »"
     }
   },
   "publicMatches": {

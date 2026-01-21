@@ -23,6 +23,7 @@ export * from './useMatchActions';
 export * from './useMatchFeedback';
 export * from './useNearbyMatches';
 export * from './usePlayerMatches';
+export * from './usePlayerMatchFilters';
 export * from './usePublicMatches';
 export * from './usePublicMatchFilters';
 export * from './useRatingScoresForSport';

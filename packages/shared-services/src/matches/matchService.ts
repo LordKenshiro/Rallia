@@ -2498,11 +2498,38 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
 /**
  * Parameters for fetching player's matches
  */
+/**
+ * Status filter values for upcoming matches
+ */
+export type UpcomingStatusFilter =
+  | 'all'
+  | 'hosting'
+  | 'confirmed'
+  | 'pending'
+  | 'requested'
+  | 'waitlisted'
+  | 'needs_players'
+  | 'ready_to_play';
+
+/**
+ * Status filter values for past matches
+ */
+export type PastStatusFilter =
+  | 'all'
+  | 'feedback_needed'
+  | 'played'
+  | 'hosted'
+  | 'as_participant'
+  | 'expired'
+  | 'cancelled';
+
 export interface GetPlayerMatchesParams {
   userId: string;
   timeFilter: 'upcoming' | 'past';
   /** Optional sport ID to filter matches by */
   sportId?: string;
+  /** Optional status filter for filtering matches by participant status, role, or match state */
+  statusFilter?: UpcomingStatusFilter | PastStatusFilter;
   limit?: number;
   offset?: number;
 }
@@ -2513,16 +2540,18 @@ export interface GetPlayerMatchesParams {
  * Returns full match details with profiles.
  */
 export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams) {
-  const { userId, timeFilter, sportId, limit = 20, offset = 0 } = params;
+  const { userId, timeFilter, sportId, statusFilter = 'all', limit = 20, offset = 0 } = params;
 
   // Use RPC function for timezone-aware filtering based on match END time
   // This ensures matches are considered "past" when their end_time has passed in the match's timezone
+  // Status filter is applied server-side for proper pagination
   const { data: matchIdResults, error: rpcError } = await supabase.rpc('get_player_matches', {
     p_player_id: userId,
     p_time_filter: timeFilter,
     p_sport_id: sportId ?? null,
     p_limit: limit + 1, // Fetch one extra to check if there are more
     p_offset: offset,
+    p_status_filter: statusFilter,
   });
 
   if (rpcError) {

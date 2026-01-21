@@ -19,20 +19,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { MatchCard, Text } from '@rallia/shared-components';
-import { useTheme, usePlayerMatches, useMatch } from '@rallia/shared-hooks';
+import { useTheme, usePlayerMatches, useMatch, usePlayerMatchFilters } from '@rallia/shared-hooks';
 import type { MatchWithDetails } from '@rallia/shared-types';
 import { useAuth, useThemeStyles, useTranslation } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { useMatchDetailSheet, useDeepLink, useSport } from '../../../context';
 import { Logger } from '@rallia/shared-services';
-import {
-  lightTheme,
-  darkTheme,
-  spacingPixels,
-  radiusPixels,
-  primary,
-  neutral,
-} from '@rallia/design-system';
+import { PlayerMatchFilterChips } from '../components';
+import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
 
 // =============================================================================
 // TYPES
@@ -170,6 +164,35 @@ export default function PlayerMatches() {
   // Tab state
   const [activeTab, setActiveTab] = useState<TimeFilter>('upcoming');
 
+  // Filter state
+  const {
+    upcomingFilter,
+    pastFilter,
+    toggleUpcomingFilter,
+    togglePastFilter,
+    resetUpcomingFilter,
+    resetPastFilter,
+  } = usePlayerMatchFilters();
+
+  // Get current filter based on active tab
+  const currentStatusFilter = activeTab === 'upcoming' ? upcomingFilter : pastFilter;
+
+  // Handle tab change - reset filters when switching tabs
+  const handleTabChange = useCallback(
+    (tab: TimeFilter) => {
+      if (tab !== activeTab) {
+        setActiveTab(tab);
+        // Reset the filter for the tab we're leaving
+        if (activeTab === 'upcoming') {
+          resetUpcomingFilter();
+        } else {
+          resetPastFilter();
+        }
+      }
+    },
+    [activeTab, resetUpcomingFilter, resetPastFilter]
+  );
+
   // Deep link handling - use ref to avoid cascading renders from setState in effect
   const pendingMatchIdRef = useRef<string | null>(null);
   const [pendingMatchId, setPendingMatchId] = useState<string | null>(null);
@@ -217,7 +240,7 @@ export default function PlayerMatches() {
     [isDark]
   );
 
-  // Fetch matches based on active tab
+  // Fetch matches based on active tab and filter
   const {
     matches,
     isLoading,
@@ -230,6 +253,7 @@ export default function PlayerMatches() {
     userId: session?.user?.id,
     timeFilter: activeTab,
     sportId: selectedSport?.id,
+    statusFilter: currentStatusFilter,
     limit: 20,
     enabled: !!session?.user?.id,
   });
@@ -277,21 +301,77 @@ export default function PlayerMatches() {
     [colors]
   );
 
-  // Render empty state
+  // Render empty state - shows filter-specific messages when a filter is active
   const renderEmptyState = () => {
-    const emptyKey = activeTab === 'upcoming' ? 'emptyUpcoming' : 'emptyPast';
+    const isFiltered = currentStatusFilter !== 'all';
+
+    // Determine icon based on filter or tab
+    const getIcon = (): keyof typeof Ionicons.glyphMap => {
+      if (!isFiltered) {
+        return activeTab === 'upcoming' ? 'calendar-outline' : 'time-outline';
+      }
+      // Filter-specific icons
+      switch (currentStatusFilter) {
+        case 'hosting':
+        case 'hosted':
+          return 'person-outline';
+        case 'confirmed':
+          return 'checkmark-circle-outline';
+        case 'pending':
+          return 'hourglass-outline';
+        case 'requested':
+          return 'paper-plane-outline';
+        case 'waitlisted':
+          return 'list-outline';
+        case 'needs_players':
+          return 'people-outline';
+        case 'ready_to_play':
+          return 'checkmark-done-outline';
+        case 'feedback_needed':
+          return 'chatbubble-outline';
+        case 'played':
+          return 'trophy-outline';
+        case 'as_participant':
+          return 'people-outline';
+        case 'expired':
+          return 'time-outline';
+        case 'cancelled':
+          return 'close-circle-outline';
+        default:
+          return 'search-outline';
+      }
+    };
+
+    // Get appropriate translation keys
+    const getEmptyContent = () => {
+      if (!isFiltered) {
+        const emptyKey = activeTab === 'upcoming' ? 'emptyUpcoming' : 'emptyPast';
+        return {
+          title: t(`playerMatches.${emptyKey}.title` as TranslationKey),
+          description: t(`playerMatches.${emptyKey}.description` as TranslationKey),
+        };
+      }
+      // Filter-specific empty state
+      return {
+        title: t(`playerMatches.emptyFiltered.title` as TranslationKey),
+        description: t(`playerMatches.emptyFiltered.description` as TranslationKey, {
+          filter: t(
+            `playerMatches.filters.${currentStatusFilter === 'needs_players' ? 'needsPlayers' : currentStatusFilter === 'ready_to_play' ? 'readyToPlay' : currentStatusFilter === 'feedback_needed' ? 'feedbackNeeded' : currentStatusFilter === 'as_participant' ? 'asParticipant' : currentStatusFilter}` as TranslationKey
+          ),
+        }),
+      };
+    };
+
+    const { title, description } = getEmptyContent();
+
     return (
       <View style={styles.emptyContainer}>
-        <Ionicons
-          name={activeTab === 'upcoming' ? 'calendar-outline' : 'time-outline'}
-          size={64}
-          color={colors.textMuted}
-        />
+        <Ionicons name={getIcon()} size={64} color={colors.textMuted} />
         <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
-          {t(`playerMatches.${emptyKey}.title` as TranslationKey)}
+          {title}
         </Text>
         <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-          {t(`playerMatches.${emptyKey}.description` as TranslationKey)}
+          {description}
         </Text>
       </View>
     );
@@ -315,7 +395,7 @@ export default function PlayerMatches() {
           styles.tab,
           activeTab === 'upcoming' && { backgroundColor: tabColors.activeBackground },
         ]}
-        onPress={() => setActiveTab('upcoming')}
+        onPress={() => handleTabChange('upcoming')}
         activeOpacity={0.8}
       >
         <Text
@@ -331,7 +411,7 @@ export default function PlayerMatches() {
           styles.tab,
           activeTab === 'past' && { backgroundColor: tabColors.activeBackground },
         ]}
-        onPress={() => setActiveTab('past')}
+        onPress={() => handleTabChange('past')}
         activeOpacity={0.8}
       >
         <Text
@@ -345,10 +425,24 @@ export default function PlayerMatches() {
     </View>
   );
 
+  // Render filter chips
+  const renderFilterChips = () => (
+    <PlayerMatchFilterChips
+      timeFilter={activeTab}
+      upcomingFilter={upcomingFilter}
+      pastFilter={pastFilter}
+      onUpcomingFilterToggle={toggleUpcomingFilter}
+      onPastFilterToggle={togglePastFilter}
+    />
+  );
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       {/* Tab Bar */}
       {renderTabBar()}
+
+      {/* Filter Chips */}
+      {renderFilterChips()}
 
       {/* Content */}
       {isLoading ? (

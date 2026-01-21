@@ -1295,6 +1295,22 @@
       "upcoming": "Upcoming",
       "past": "Past"
     },
+    "filters": {
+      "all": "All",
+      "hosting": "Hosting",
+      "confirmed": "Confirmed",
+      "pending": "Pending",
+      "requested": "Requested",
+      "waitlisted": "Waitlisted",
+      "needsPlayers": "Needs Players",
+      "readyToPlay": "Ready",
+      "feedbackNeeded": "Feedback",
+      "played": "Played",
+      "hosted": "Hosted",
+      "asParticipant": "Joined",
+      "expired": "Expired",
+      "cancelled": "Cancelled"
+    },
     "time": {
       "today": "Today",
       "tomorrow": "Tomorrow",
@@ -1312,6 +1328,10 @@
     "emptyPast": {
       "title": "No past games",
       "description": "Your completed games will appear here"
+    },
+    "emptyFiltered": {
+      "title": "No games found",
+      "description": "No games match the \"{filter}\" filter"
     }
   },
   "publicMatches": {
