@@ -830,6 +830,12 @@
     "cannotDeactivate": "Cannot Deactivate Sport",
     "mustHaveOneSport": "You must have at least one active sport. Please activate another sport before deactivating this one."
   },
+  "sportSelector": {
+    "selectSport": "Select a sport",
+    "switchConfirmTitle": "Switch Sport?",
+    "switchConfirmMessage": "You are about to switch sports. Your match feed will update to show games for the selected sport.",
+    "switchConfirmButton": "Switch"
+  },
   "actions": {
     "welcome": "Welcome to Rallia",
     "welcomeSubtitle": "Sign in to start playing",

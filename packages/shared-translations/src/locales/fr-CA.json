@@ -830,6 +830,12 @@
     "cannotDeactivate": "Impossible de désactiver le sport",
     "mustHaveOneSport": "Vous devez avoir au moins un sport actif. Veuillez activer un autre sport avant de désactiver celui-ci."
   },
+  "sportSelector": {
+    "selectSport": "Sélectionnez un sport",
+    "switchConfirmTitle": "Changer de sport?",
+    "switchConfirmMessage": "Vous êtes sur le point de changer de sport. Votre fil de parties sera mis à jour pour afficher les parties du sport sélectionné.",
+    "switchConfirmButton": "Changer"
+  },
   "actions": {
     "welcome": "Bienvenue sur Rallia",
     "welcomeSubtitle": "Connectez-vous pour commencer à jouer",

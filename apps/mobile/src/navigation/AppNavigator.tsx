@@ -117,6 +117,7 @@ function SportSelectorWithContext() {
   const { session } = useAuth();
   const { contentMode } = useActionsSheet();
   const { refetch } = useProfile();
+  const { t } = useTranslation();
   const isDark = theme === 'dark';
 
   // Determine if user is a guest (not signed in)
@@ -158,6 +159,8 @@ function SportSelectorWithContext() {
       userSports={userSports}
       onSelectSport={setSelectedSport}
       isDark={isDark}
+      confirmBeforeSwitch
+      t={t as (key: string) => string}
     />
   );
 }
