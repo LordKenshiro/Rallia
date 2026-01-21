@@ -54,6 +54,23 @@ export type JoinModeFilter = 'all' | 'direct' | 'request';
 export type DistanceFilter = 'all' | 2 | 5 | 10;
 
 /**
+ * Available duration filter values (in minutes)
+ * '120+' includes 120 minutes and custom durations
+ */
+export type DurationFilter = 'all' | '30' | '60' | '90' | '120+';
+
+/**
+ * Available court status filter values
+ */
+export type CourtStatusFilter = 'all' | 'reserved' | 'to_reserve';
+
+/**
+ * Specific date filter - ISO date string (YYYY-MM-DD) or null
+ * When set, overrides the dateRange filter
+ */
+export type SpecificDateFilter = string | null;
+
+/**
  * All available distance options (numeric values only for iteration)
  */
 export const DISTANCE_OPTIONS_NUMERIC: (2 | 5 | 10)[] = [2, 5, 10];
@@ -67,6 +84,16 @@ export const DISTANCE_OPTIONS: DistanceFilter[] = ['all', 2, 5, 10];
  * Default distance filter value (no distance filter = all locations)
  */
 export const DEFAULT_DISTANCE: DistanceFilter = 'all';
+
+/**
+ * All available duration options
+ */
+export const DURATION_OPTIONS: DurationFilter[] = ['all', '30', '60', '90', '120+'];
+
+/**
+ * All available court status options
+ */
+export const COURT_STATUS_OPTIONS: CourtStatusFilter[] = ['all', 'reserved', 'to_reserve'];
 
 /**
  * Find the closest numeric distance option to a given value
@@ -107,6 +134,9 @@ export interface PublicMatchFilters {
   cost: CostFilter;
   joinMode: JoinModeFilter;
   distance: DistanceFilter;
+  duration: DurationFilter;
+  courtStatus: CourtStatusFilter;
+  specificDate: SpecificDateFilter;
 }
 
 /**
@@ -151,6 +181,12 @@ export interface UsePublicMatchFiltersReturn {
   setJoinMode: (joinMode: JoinModeFilter) => void;
   /** Set the distance filter */
   setDistance: (distance: DistanceFilter) => void;
+  /** Set the duration filter */
+  setDuration: (duration: DurationFilter) => void;
+  /** Set the court status filter */
+  setCourtStatus: (courtStatus: CourtStatusFilter) => void;
+  /** Set the specific date filter */
+  setSpecificDate: (specificDate: SpecificDateFilter) => void;
   /** Reset all filters to defaults */
   resetFilters: () => void;
   /** Clear just the search query */
@@ -181,6 +217,9 @@ export function usePublicMatchFilters(
     cost: 'all',
     joinMode: 'all',
     distance: initialDistance,
+    duration: 'all',
+    courtStatus: 'all',
+    specificDate: null,
   };
 
   // Initialize filters with defaults merged with any initial values
@@ -206,7 +245,10 @@ export function usePublicMatchFilters(
       filters.skillLevel !== 'all' ||
       filters.gender !== 'all' ||
       filters.cost !== 'all' ||
-      filters.joinMode !== 'all'
+      filters.joinMode !== 'all' ||
+      filters.duration !== 'all' ||
+      filters.courtStatus !== 'all' ||
+      filters.specificDate !== null
     );
   }, [filters]);
 
@@ -221,6 +263,9 @@ export function usePublicMatchFilters(
     if (filters.gender !== 'all') count++;
     if (filters.cost !== 'all') count++;
     if (filters.joinMode !== 'all') count++;
+    if (filters.duration !== 'all') count++;
+    if (filters.courtStatus !== 'all') count++;
+    if (filters.specificDate !== null) count++;
     return count;
   }, [filters]);
 
@@ -265,6 +310,18 @@ export function usePublicMatchFilters(
     setFilters(prev => ({ ...prev, distance }));
   }, []);
 
+  const setDuration = useCallback((duration: DurationFilter) => {
+    setFilters(prev => ({ ...prev, duration }));
+  }, []);
+
+  const setCourtStatus = useCallback((courtStatus: CourtStatusFilter) => {
+    setFilters(prev => ({ ...prev, courtStatus }));
+  }, []);
+
+  const setSpecificDate = useCallback((specificDate: SpecificDateFilter) => {
+    setFilters(prev => ({ ...prev, specificDate }));
+  }, []);
+
   // Reset all filters to defaults (uses player's initial distance preference)
   const resetFilters = useCallback(() => {
     setFilters({
@@ -278,6 +335,9 @@ export function usePublicMatchFilters(
       cost: 'all',
       joinMode: 'all',
       distance: defaultDistance,
+      duration: 'all',
+      courtStatus: 'all',
+      specificDate: null,
     });
   }, [defaultDistance]);
 
@@ -301,6 +361,9 @@ export function usePublicMatchFilters(
     setCost,
     setJoinMode,
     setDistance,
+    setDuration,
+    setCourtStatus,
+    setSpecificDate,
     resetFilters,
     clearSearch,
   };

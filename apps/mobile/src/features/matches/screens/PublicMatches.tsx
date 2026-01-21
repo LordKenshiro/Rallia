@@ -73,13 +73,8 @@ export default function PublicMatches() {
   const isDark = theme === 'dark';
 
   // Get user location and preferences
-  const {
-    location,
-    locationMode,
-    setLocationMode,
-    hasHomeLocation,
-    hasBothLocationOptions,
-  } = useEffectiveLocation();
+  const { location, locationMode, setLocationMode, hasHomeLocation, hasBothLocationOptions } =
+    useEffectiveLocation();
   const { homeLocation } = useUserHomeLocation();
   const { player, loading: playerLoading } = usePlayer();
   const { selectedSport, isLoading: sportLoading } = useSport();
@@ -103,6 +98,9 @@ export default function PublicMatches() {
     setCost,
     setJoinMode,
     setDistance,
+    setDuration,
+    setCourtStatus,
+    setSpecificDate,
     resetFilters,
     clearSearch,
   } = usePublicMatchFilters();
@@ -279,6 +277,9 @@ export default function PublicMatches() {
           cost={filters.cost}
           joinMode={filters.joinMode}
           distance={filters.distance}
+          duration={filters.duration}
+          courtStatus={filters.courtStatus}
+          specificDate={filters.specificDate}
           onFormatChange={setFormat}
           onMatchTypeChange={setMatchType}
           onDateRangeChange={setDateRange}
@@ -288,6 +289,9 @@ export default function PublicMatches() {
           onCostChange={setCost}
           onJoinModeChange={setJoinMode}
           onDistanceChange={setDistance}
+          onDurationChange={setDuration}
+          onCourtStatusChange={setCourtStatus}
+          onSpecificDateChange={setSpecificDate}
           onReset={resetFilters}
           hasActiveFilters={hasActiveFilters}
           showLocationSelector={hasBothLocationOptions}

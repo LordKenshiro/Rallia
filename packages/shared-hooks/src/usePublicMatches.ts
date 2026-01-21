@@ -121,6 +121,9 @@ export function usePublicMatches(options: UsePublicMatchesOptions) {
       gender: filters.gender,
       cost: filters.cost,
       joinMode: filters.joinMode,
+      duration: filters.duration,
+      courtStatus: filters.courtStatus,
+      specificDate: filters.specificDate,
       userGender,
       limit,
     }),
@@ -143,6 +146,9 @@ export function usePublicMatches(options: UsePublicMatchesOptions) {
         gender: filters.gender,
         cost: filters.cost,
         joinMode: filters.joinMode,
+        duration: filters.duration,
+        courtStatus: filters.courtStatus,
+        specificDate: filters.specificDate,
         userGender,
         limit,
         offset: pageParam as number,
@@ -166,7 +172,7 @@ export function usePublicMatches(options: UsePublicMatchesOptions) {
   const matches = useMemo(() => {
     if (!query.data?.pages) return [];
     return query.data.pages.flatMap(page => page.matches);
-  }, [query.data?.pages]);
+  }, [query.data]);
 
   // Stable refetch callback for pull-to-refresh
   const refresh = useCallback(async () => {

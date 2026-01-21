@@ -980,7 +980,7 @@ export async function deleteMatch(matchId: string): Promise<void> {
 /**
  * Helper function to check if a match is full and create a chat if so.
  * Called after a player joins or a join request is accepted.
- * 
+ *
  * @param matchId - The match ID
  * @param triggeredBy - The player ID who triggered the action (for created_by in chat)
  */
@@ -989,7 +989,8 @@ async function createMatchChatIfFull(matchId: string, triggeredBy: string): Prom
     // Get match details with participants
     const { data: match, error: matchError } = await supabase
       .from('match')
-      .select(`
+      .select(
+        `
         id,
         format,
         match_date,
@@ -1001,7 +1002,8 @@ async function createMatchChatIfFull(matchId: string, triggeredBy: string): Prom
           player_id,
           status
         )
-      `)
+      `
+      )
       .eq('id', matchId)
       .single();
 
@@ -1012,9 +1014,8 @@ async function createMatchChatIfFull(matchId: string, triggeredBy: string): Prom
 
     // Calculate capacity
     const totalSpots = match.format === 'doubles' ? 4 : 2;
-    const joinedParticipants = match.participants?.filter(
-      (p: { status: string }) => p.status === 'joined'
-    ) ?? [];
+    const joinedParticipants =
+      match.participants?.filter((p: { status: string }) => p.status === 'joined') ?? [];
     const joinedCount = joinedParticipants.length;
 
     // Match is full when: host (1) + joined participants = total spots
@@ -1041,11 +1042,16 @@ async function createMatchChatIfFull(matchId: string, triggeredBy: string): Prom
         matchFormat,
         sportName,
         match.match_date
-      ).then(conversation => {
-        console.log(`[createMatchChatIfFull] Created ${matchFormat} chat for match ${matchId}:`, conversation.id);
-      }).catch(err => {
-        console.error('[createMatchChatIfFull] Failed to create match chat:', err);
-      });
+      )
+        .then(conversation => {
+          console.log(
+            `[createMatchChatIfFull] Created ${matchFormat} chat for match ${matchId}:`,
+            conversation.id
+          );
+        })
+        .catch(err => {
+          console.error('[createMatchChatIfFull] Failed to create match chat:', err);
+        });
     }
   } catch (error) {
     console.error('[createMatchChatIfFull] Error:', error);
@@ -2771,6 +2777,12 @@ export interface SearchPublicMatchesParams {
   gender?: 'all' | 'male' | 'female';
   cost?: 'all' | 'free' | 'paid';
   joinMode?: 'all' | 'direct' | 'request';
+  /** Duration filter (in minutes), '120+' includes 120 and custom */
+  duration?: 'all' | '30' | '60' | '90' | '120+';
+  /** Court status filter */
+  courtStatus?: 'all' | 'reserved' | 'to_reserve';
+  /** Specific date filter (ISO date string YYYY-MM-DD), overrides dateRange when set */
+  specificDate?: string | null;
   /** The viewing user's gender for eligibility filtering */
   userGender?: string | null;
   limit?: number;
@@ -2807,6 +2819,9 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     gender = 'all',
     cost = 'all',
     joinMode = 'all',
+    duration = 'all',
+    courtStatus = 'all',
+    specificDate,
     userGender,
     limit = 20,
     offset = 0,
@@ -2830,6 +2845,9 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     p_gender: gender === 'all' ? null : gender,
     p_cost: cost === 'all' ? null : cost,
     p_join_mode: joinMode === 'all' ? null : joinMode,
+    p_duration: duration === 'all' ? null : duration,
+    p_court_status: courtStatus === 'all' ? null : courtStatus,
+    p_specific_date: specificDate || null,
     p_limit: limit + 1, // Fetch one extra to check if more exist
     p_offset: offset,
     p_user_gender: userGender || null, // Pass user's gender for eligibility filtering

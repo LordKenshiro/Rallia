@@ -1373,6 +1373,25 @@
         "label": "Distance",
         "all": "All"
       },
+      "duration": {
+        "label": "Duration",
+        "all": "Any",
+        "30": "30 min",
+        "60": "1 hour",
+        "90": "1.5 hours",
+        "120+": "2+ hours"
+      },
+      "courtStatus": {
+        "label": "Court",
+        "all": "Any",
+        "reserved": "Reserved",
+        "to_reserve": "To book"
+      },
+      "specificDate": {
+        "label": "Date",
+        "pick": "Pick date",
+        "clear": "Clear"
+      },
       "reset": "Reset"
     },
     "empty": {

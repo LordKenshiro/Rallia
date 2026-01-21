@@ -1373,6 +1373,25 @@
         "label": "Distance",
         "all": "Tout"
       },
+      "duration": {
+        "label": "Durée",
+        "all": "Toutes",
+        "30": "30 min",
+        "60": "1 heure",
+        "90": "1,5 heures",
+        "120+": "2+ heures"
+      },
+      "courtStatus": {
+        "label": "Terrain",
+        "all": "Tous",
+        "reserved": "Réservé",
+        "to_reserve": "À réserver"
+      },
+      "specificDate": {
+        "label": "Date",
+        "pick": "Choisir une date",
+        "clear": "Effacer"
+      },
       "reset": "Réinitialiser"
     },
     "empty": {
