@@ -46,6 +46,7 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
   t,
   isDark,
 }) => {
+  const toast = useToast();
   const [sports, setSports] = useState<Sport[]>([]);
   const [isLoadingSports, setIsLoadingSports] = useState(true);
   const [playerId, setPlayerId] = useState<string | null>(null);

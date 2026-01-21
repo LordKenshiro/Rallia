@@ -8,6 +8,7 @@ import {
   Animated,
   ActivityIndicator,
   Linking,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay, useToast } from '@rallia/shared-components';

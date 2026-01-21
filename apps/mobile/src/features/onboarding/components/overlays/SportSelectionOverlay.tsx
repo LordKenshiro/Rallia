@@ -6,6 +6,7 @@ import {
   Image,
   ScrollView,
   Animated,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay, Text, Heading, Button, Spinner, useToast } from '@rallia/shared-components';

@@ -13,6 +13,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Linking,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';

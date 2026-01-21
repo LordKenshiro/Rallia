@@ -650,7 +650,7 @@ export default function MatchFiltersBar({
               hasHomeLocation={hasHomeLocation}
               homeLocationLabel={homeLocationLabel}
               isDark={isDark}
-              t={t}
+              t={t as (key: string) => string}
             />
           </View>
         )}

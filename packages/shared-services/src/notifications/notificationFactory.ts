@@ -322,6 +322,7 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
 
   // Feedback - normal priority
   feedback_request: 'normal',
+  score_confirmation: 'normal',
 };
 
 /**
@@ -350,6 +351,7 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   support: 'Message from Rallia',
   system: 'Rallia Update',
   feedback_request: 'How Was Your Game?',
+  score_confirmation: 'Confirm Match Score',
 };
 
 /**
@@ -385,6 +387,8 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   system: 'We have an update for you. Tap to learn more.',
   feedback_request:
     'Rate your {sportName} game with {playerName}. Your feedback helps the community!',
+  score_confirmation:
+    '{playerName} submitted the score for your {sportName} game. Please confirm or dispute.',
 };
 
 /**
