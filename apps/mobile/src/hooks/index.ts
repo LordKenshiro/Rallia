@@ -9,6 +9,9 @@ export * from './useUserLocation';
 export * from './useEffectiveLocation';
 export * from './usePushNotifications';
 
+// Group chat hooks
+export * from './groupChat';
+
 // Theme hooks - import from native files directly for proper TypeScript resolution
 export {
   ThemeProvider,

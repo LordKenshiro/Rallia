@@ -7,12 +7,18 @@
 -- PHASE 1: CREATE CANCELLATION REASON ENUM
 -- =============================================================================
 
-CREATE TYPE cancellation_reason_enum AS ENUM (
-  'weather',
-  'court_unavailable',
-  'emergency',
-  'other'
-);
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'cancellation_reason_enum') THEN
+        CREATE TYPE cancellation_reason_enum AS ENUM (
+          'weather',
+          'court_unavailable',
+          'emergency',
+          'other'
+        );
+    END IF;
+END
+$$;
 
 COMMENT ON TYPE cancellation_reason_enum IS 'Reason for mutual match cancellation reported by participant';
 

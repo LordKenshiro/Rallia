@@ -4,10 +4,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   Alert,
-  Platform,
-  ToastAndroid,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,7 +12,7 @@ import { useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import { useAppNavigation } from '../navigation/hooks';
 import type { RootStackParamList } from '../navigation/types';
-import { Text, Button } from '@rallia/shared-components';
+import { Text, Button, Skeleton, useToast } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
 import { MATCH_DURATION_ENUM_LABELS } from '@rallia/shared-types';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
@@ -73,6 +70,7 @@ const SportProfile = () => {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
   const { refetch: refetchSportContext } = useSport();
+  const toast = useToast();
 
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string>('');
@@ -389,10 +387,10 @@ const SportProfile = () => {
       Logger.debug('sport_profile_data_refreshed', { sportId });
 
       // Show success message
-      Alert.alert(t('alerts.success'), t('alerts.availabilitiesUpdated'));
+      toast.success(t('alerts.availabilitiesUpdated'));
     } catch (error) {
       Logger.error('Failed to save rating', error as Error, { sportId, ratingScoreId });
-      Alert.alert(t('alerts.error'), getNetworkErrorMessage(error));
+      toast.error(getNetworkErrorMessage(error));
     }
   };
 
@@ -472,11 +470,7 @@ const SportProfile = () => {
           ? t('alerts.sportActivated', { sport: sportName })
           : t('alerts.sportDeactivated', { sport: sportName });
 
-        if (Platform.OS === 'android') {
-          ToastAndroid.show(message, ToastAndroid.SHORT);
-        } else {
-          Alert.alert(t('alerts.success'), message);
-        }
+        toast.success(message);
 
         // Refresh SportContext to update userSports across the app
         refetchSportContext();
@@ -513,11 +507,7 @@ const SportProfile = () => {
 
           // Show success message
           const message = t('alerts.sportAdded', { sport: sportName });
-          if (Platform.OS === 'android') {
-            ToastAndroid.show(message, ToastAndroid.SHORT);
-          } else {
-            Alert.alert(t('alerts.success'), message);
-          }
+          toast.success(message);
 
           // Refresh SportContext to update userSports across the app
           refetchSportContext();
@@ -529,14 +519,12 @@ const SportProfile = () => {
           setIsActive(false);
 
           // Optional: Show a subtle message
-          if (Platform.OS === 'android') {
-            ToastAndroid.show(t('alerts.sportNotAdded', { sport: sportName }), ToastAndroid.SHORT);
-          }
+          toast.info(t('alerts.sportNotAdded', { sport: sportName }));
         }
       }
     } catch (error) {
       Logger.error('Failed to toggle sport active status', error as Error, { sportId, sportName });
-      Alert.alert(t('alerts.error'), getNetworkErrorMessage(error));
+      toast.error(getNetworkErrorMessage(error));
     }
   };
 
@@ -623,17 +611,7 @@ const SportProfile = () => {
       });
 
       // For now, just show a success message
-      if (Platform.OS === 'android') {
-        ToastAndroid.show(
-          t('alerts.peerRatingRequestsSent', { count: selectedPlayerIds.length }),
-          ToastAndroid.SHORT
-        );
-      } else {
-        Alert.alert(
-          t('alerts.success'),
-          t('alerts.peerRatingRequestsSent', { count: selectedPlayerIds.length })
-        );
-      }
+      toast.success(t('alerts.peerRatingRequestsSent', { count: selectedPlayerIds.length }));
 
       setShowPeerRatingRequestOverlay(false);
     } catch (error) {
@@ -641,7 +619,7 @@ const SportProfile = () => {
         count: selectedPlayerIds.length,
         sportId,
       });
-      Alert.alert(t('alerts.error'), t('alerts.failedToSendPeerRatingRequests'));
+      toast.error(t('alerts.failedToSendPeerRatingRequests'));
     }
   };
 
@@ -652,17 +630,7 @@ const SportProfile = () => {
       Logger.logUserAction('send_reference_requests', { count: selectedPlayerIds.length, sportId });
 
       // For now, just show a success message
-      if (Platform.OS === 'android') {
-        ToastAndroid.show(
-          t('alerts.referenceRequestsSent', { count: selectedPlayerIds.length }),
-          ToastAndroid.SHORT
-        );
-      } else {
-        Alert.alert(
-          t('alerts.success'),
-          t('alerts.referenceRequestsSent', { count: selectedPlayerIds.length })
-        );
-      }
+      toast.success(t('alerts.referenceRequestsSent', { count: selectedPlayerIds.length }));
 
       setShowReferenceRequestOverlay(false);
     } catch (error) {
@@ -670,7 +638,7 @@ const SportProfile = () => {
         count: selectedPlayerIds.length,
         sportId,
       });
-      Alert.alert(t('alerts.error'), t('alerts.failedToSendReferenceRequests'));
+      toast.error(t('alerts.failedToSendReferenceRequests'));
     }
   };
 
@@ -717,17 +685,13 @@ const SportProfile = () => {
       setShowPreferencesOverlay(false);
 
       // Show success message
-      if (Platform.OS === 'android') {
-        ToastAndroid.show(t('alerts.preferencesUpdated'), ToastAndroid.SHORT);
-      } else {
-        Alert.alert(t('alerts.success'), t('alerts.availabilitiesUpdated'));
-      }
+      toast.success(t('alerts.preferencesUpdated'));
 
       // Refresh data
       await fetchSportProfileData();
     } catch (error) {
       Logger.error('Failed to save sport preferences', error as Error, { sportId, playerSportId });
-      Alert.alert(t('alerts.error'), getNetworkErrorMessage(error));
+      toast.error(getNetworkErrorMessage(error));
     }
   };
 
@@ -735,10 +699,26 @@ const SportProfile = () => {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.loadingText, { color: colors.textMuted }]}>
-            {t('profile.loading.sportProfile', { sport: sportName })}
-          </Text>
+          {/* Sport Profile Skeleton */}
+          <View style={[styles.card, { backgroundColor: colors.card }]}>
+            <Skeleton width={180} height={18} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            <View style={{ marginTop: 12, flexDirection: 'row', gap: 12 }}>
+              <Skeleton width={80} height={40} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+              <Skeleton width={80} height={40} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            </View>
+          </View>
+          <View style={[styles.card, { backgroundColor: colors.card, marginTop: 16 }]}>
+            <Skeleton width={120} height={18} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            <Skeleton width="100%" height={60} borderRadius={12} backgroundColor={colors.cardBackground} highlightColor={colors.border} style={{ marginTop: 12 }} />
+          </View>
+          <View style={[styles.card, { backgroundColor: colors.card, marginTop: 16 }]}>
+            <Skeleton width={150} height={18} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            <View style={{ marginTop: 12, gap: 8 }}>
+              <Skeleton width="100%" height={48} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+              <Skeleton width="100%" height={48} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+              <Skeleton width="100%" height={48} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            </View>
+          </View>
         </View>
       </SafeAreaView>
     );

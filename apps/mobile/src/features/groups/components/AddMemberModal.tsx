@@ -12,12 +12,11 @@ import {
   TextInput,
   FlatList,
   ActivityIndicator,
-  Alert,
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { Text } from '@rallia/shared-components';
+import { Text, useToast } from '@rallia/shared-components';
 import { useThemeStyles, useAuth } from '../../../hooks';
 import { useDebounce, useAddGroupMember } from '@rallia/shared-hooks';
 import { supabase } from '@rallia/shared-services';
@@ -49,6 +48,7 @@ export function AddMemberModal({
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
   const playerId = session?.user?.id;
+  const toast = useToast();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestedPlayers, setSuggestedPlayers] = useState<PlayerProfile[]>([]);
@@ -174,20 +174,18 @@ export function AddMemberModal({
     async (memberPlayerId: string) => {
       if (!playerId) return;
 
-      try {
-        await addMemberMutation.mutateAsync({
-          groupId,
-          inviterId: playerId,
-          playerIdToAdd: memberPlayerId,
-        });
-        Alert.alert('Success', 'Member added to the group');
-        onSuccess();
-      } catch (error) {
-        Alert.alert('Error', error instanceof Error ? error.message : 'Failed to add member');
-      }
-    },
-    [groupId, playerId, addMemberMutation, onSuccess]
-  );
+    try {
+      await addMemberMutation.mutateAsync({
+        groupId,
+        inviterId: playerId,
+        playerIdToAdd: memberPlayerId,
+      });
+      toast.success('Member added to the group');
+      onSuccess();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to add member');
+    }
+  }, [groupId, playerId, addMemberMutation, onSuccess, toast]);
 
   const renderPlayerItem = useCallback(
     ({ item }: { item: PlayerProfile }) => (

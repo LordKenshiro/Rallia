@@ -3,7 +3,7 @@
  * Shows group details with tabs: Home, Leaderboard, Activity
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -14,6 +14,7 @@ import {
   Image,
   ScrollView,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -30,6 +31,9 @@ import {
   useIsGroupModerator,
   useLeaveGroup,
   useDeleteGroup,
+  useGroupMatches,
+  useMostRecentGroupMatch,
+  useGroupLeaderboard,
   type GroupActivity as GroupActivityType,
 } from '@rallia/shared-hooks';
 import type { RootStackParamList } from '../navigation/types';
@@ -39,7 +43,16 @@ import {
   AddMemberModal,
   MemberListModal,
   GroupOptionsModal,
+  InviteLinkModal,
+  RecentGamesModal,
 } from '../features/groups';
+import {
+  AddScoreIntroModal,
+  MatchTypeModal,
+  AddScoreModal,
+  PendingScoresSection,
+  type MatchType,
+} from '../features/matches';
 
 const HEADER_HEIGHT = 140;
 
@@ -68,20 +81,79 @@ export default function GroupDetailScreen() {
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [showMemberListModal, setShowMemberListModal] = useState(false);
   const [showOptionsModal, setShowOptionsModal] = useState(false);
+  const [showInviteLinkModal, setShowInviteLinkModal] = useState(false);
+  const [showRecentGamesModal, setShowRecentGamesModal] = useState(false);
+  const [leaderboardPeriod, setLeaderboardPeriod] = useState<30 | 90 | 180 | 0>(30);
+  // Add Score flow state
+  const [showAddScoreIntro, setShowAddScoreIntro] = useState(false);
+  const [showMatchTypeModal, setShowMatchTypeModal] = useState(false);
+  const [showAddScoreModal, setShowAddScoreModal] = useState(false);
+  const [selectedMatchType, setSelectedMatchType] = useState<MatchType>('single');
+  const [hasSeenAddScoreIntro, setHasSeenAddScoreIntro] = useState<boolean | null>(null);
+
+  // Storage key for "never show intro again"
+  const ADD_SCORE_INTRO_KEY = 'rallia_add_score_intro_dismissed';
+
+  // Check if user has dismissed the intro before
+  useEffect(() => {
+    const checkIntroDismissed = async () => {
+      try {
+        const dismissed = await AsyncStorage.getItem(ADD_SCORE_INTRO_KEY);
+        setHasSeenAddScoreIntro(dismissed === 'true');
+      } catch (error) {
+        console.error('Error reading intro preference:', error);
+        setHasSeenAddScoreIntro(false);
+      }
+    };
+    checkIntroDismissed();
+  }, []);
 
   const { data: group, isLoading, refetch } = useGroupWithMembers(groupId);
   const { data: stats } = useGroupStats(groupId);
   const { data: activities } = useGroupActivity(groupId, 50);
   const { data: isModerator } = useIsGroupModerator(groupId, playerId);
+  const { data: recentMatch } = useMostRecentGroupMatch(groupId);
+  const { data: allMatches } = useGroupMatches(groupId, 180, 100);
+  const { data: leaderboard } = useGroupLeaderboard(groupId, leaderboardPeriod === 0 ? 3650 : leaderboardPeriod);
 
   const leaveGroupMutation = useLeaveGroup();
   const deleteGroupMutation = useDeleteGroup();
 
   const handleOpenChat = useCallback(() => {
     if (group?.conversation_id) {
-      navigation.navigate('Chat', { conversationId: group.conversation_id });
+      navigation.navigate('Chat', { 
+        conversationId: group.conversation_id,
+        title: group.name,
+      });
     }
   }, [group, navigation]);
+
+  const handleAddGame = useCallback(() => {
+    // Check if user has seen the intro before
+    if (hasSeenAddScoreIntro === false) {
+      // First time - show the intro
+      setShowAddScoreIntro(true);
+    } else {
+      // User has dismissed intro before - go directly to match type
+      setShowMatchTypeModal(true);
+    }
+  }, [hasSeenAddScoreIntro]);
+
+  const handleAddScoreIntroComplete = useCallback(() => {
+    setShowAddScoreIntro(false);
+    setShowMatchTypeModal(true);
+  }, []);
+
+  const handleMatchTypeSelect = useCallback((type: MatchType) => {
+    setSelectedMatchType(type);
+    setShowMatchTypeModal(false);
+    setShowAddScoreModal(true);
+  }, []);
+
+  const handleAddScoreSuccess = useCallback((_matchId: string) => {
+    setShowAddScoreModal(false);
+    refetch(); // Refresh group data including leaderboard
+  }, [refetch]);
 
   const handleLeaveGroup = useCallback(() => {
     Alert.alert('Leave Group', 'Are you sure you want to leave this group?', [
@@ -142,6 +214,14 @@ export default function GroupDetailScreen() {
       onPress: () => void;
       destructive?: boolean;
     }[] = [];
+
+    // Share invite link - available to all members
+    options.push({
+      id: 'invite',
+      label: 'Share Invite Link',
+      icon: 'link-outline',
+      onPress: () => setShowInviteLinkModal(true),
+    });
 
     if (isModerator) {
       options.push({
@@ -231,9 +311,17 @@ export default function GroupDetailScreen() {
 
     switch (activity.activity_type) {
       case 'member_joined':
+        // Show "Added by [name]" if someone else added them
+        if (activity.added_by_name) {
+          return `${actorName} was added by ${activity.added_by_name}`;
+        }
         return `${actorName} joined the group`;
       case 'member_left':
         return `${actorName} left the group`;
+      case 'member_promoted':
+        return `${actorName} promoted a member to moderator`;
+      case 'member_demoted':
+        return `${actorName} demoted a moderator to member`;
       case 'game_created':
         return `${actorName} created a new game`;
       case 'message_sent':
@@ -276,6 +364,15 @@ export default function GroupDetailScreen() {
       case 'home':
         return (
           <View style={styles.tabContent}>
+            {/* Pending Score Confirmations */}
+            {playerId && (
+              <PendingScoresSection
+                playerId={playerId}
+                groupId={groupId}
+                title="Scores to Confirm"
+              />
+            )}
+
             {/* Stats Card */}
             <View
               style={[
@@ -427,39 +524,411 @@ export default function GroupDetailScreen() {
                   </Text>
                 </TouchableOpacity>
               </View>
-              {/* Placeholder - will be implemented with match tracking */}
-              <Text
-                size="sm"
-                style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}
-              >
-                No games played yet
-              </Text>
+              {/* Show top 3 from leaderboard preview or empty state */}
+              {leaderboard && leaderboard.length > 0 ? (
+                <View style={styles.leaderboardPreviewList}>
+                  {leaderboard.slice(0, 3).map((entry, index) => (
+                    <View key={entry.player_id} style={styles.leaderboardPreviewItem}>
+                      <Text weight="semibold" style={{ color: colors.textMuted, width: 20 }}>
+                        {index + 1}.
+                      </Text>
+                      <View style={[styles.smallAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+                        {entry.player?.profile?.profile_picture_url ? (
+                          <Image
+                            source={{ uri: entry.player.profile.profile_picture_url }}
+                            style={styles.avatarImage}
+                          />
+                        ) : (
+                          <Ionicons name="person" size={14} color={colors.textMuted} />
+                        )}
+                      </View>
+                      <Text size="sm" style={{ color: colors.text, flex: 1, marginLeft: 8 }}>
+                        {entry.player?.profile?.first_name || 'Player'}
+                      </Text>
+                      <Text size="sm" weight="semibold" style={{ color: colors.primary }}>
+                        {entry.games_played}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text size="sm" style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}>
+                  No games played yet
+                </Text>
+              )}
             </View>
           </View>
         );
 
-      case 'leaderboard':
+      case 'leaderboard': {
+        const periodOptions = [
+          { value: 30, label: '30 days' },
+          { value: 90, label: '90 days' },
+          { value: 180, label: '180 days' },
+          { value: 0, label: 'All time' },
+        ];
+        
         return (
           <View style={styles.tabContent}>
-            <View
-              style={[
-                styles.leaderboardCard,
-                { backgroundColor: colors.cardBackground, borderColor: colors.border },
-              ]}
-            >
-              <Text weight="semibold" size="lg" style={{ color: colors.text, marginBottom: 16 }}>
-                Group Leaderboard
-              </Text>
-              {/* Placeholder */}
-              <View style={styles.emptyLeaderboard}>
-                <Ionicons name="trophy-outline" size={48} color={colors.textMuted} />
-                <Text style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}>
-                  Play games with group members to appear on the leaderboard
-                </Text>
+            {/* Recent Games Section */}
+            <View style={[styles.recentGamesCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionTitle}>
+                  <Ionicons name="time" size={20} color={colors.textSecondary} />
+                  <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
+                    Recent games
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => setShowRecentGamesModal(true)}>
+                  <Text size="sm" style={{ color: colors.primary }}>
+                    View all
+                  </Text>
+                </TouchableOpacity>
               </View>
+              
+              {/* Most Recent Match Card */}
+              {recentMatch?.match ? (
+                <TouchableOpacity 
+                  style={[styles.matchCard, { backgroundColor: isDark ? '#1C1C1E' : '#F8F8F8', borderColor: colors.border }]}
+                  onPress={() => {
+                    navigation.navigate('PlayedMatchDetail', { match: recentMatch });
+                  }}
+                  activeOpacity={0.7}
+                >
+                  {/* Match Header */}
+                  <View style={styles.matchHeader}>
+                    <View style={styles.matchInfo}>
+                      <Ionicons 
+                        name={recentMatch.match.sport?.name?.toLowerCase() === 'tennis' ? 'tennisball' : 'american-football'} 
+                        size={16} 
+                        color={colors.primary} 
+                      />
+                      <Text size="sm" style={{ color: colors.textSecondary, marginLeft: 6 }}>
+                        {recentMatch.match.sport?.name || 'Sport'} · {new Date(recentMatch.match.match_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </Text>
+                    </View>
+                    <View style={[
+                      styles.matchBadge, 
+                      { backgroundColor: recentMatch.match.player_expectation === 'competitive' ? '#E8F5E9' : '#FFF3E0' }
+                    ]}>
+                      <Ionicons 
+                        name={recentMatch.match.player_expectation === 'competitive' ? 'trophy' : 'fitness'} 
+                        size={12} 
+                        color={recentMatch.match.player_expectation === 'competitive' ? '#2E7D32' : '#EF6C00'} 
+                      />
+                      <Text size="xs" weight="semibold" style={{ 
+                        color: recentMatch.match.player_expectation === 'competitive' ? '#2E7D32' : '#EF6C00',
+                        marginLeft: 4,
+                      }}>
+                        {recentMatch.match.player_expectation === 'competitive' ? 'Competitive' : 'Practice'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Players - Team-based layout */}
+                  <View style={styles.matchPlayersContainer}>
+                    {/* Team 1 Card */}
+                    {(() => {
+                      const team1Players = recentMatch.match.participants.filter(p => p.team_number === 1);
+                      const isWinner = recentMatch.match?.result?.winning_team === 1;
+                      const isDoubles = team1Players.length > 1;
+                      
+                      return (
+                        <View style={[
+                          styles.teamCard,
+                          isWinner && styles.winnerTeamCard,
+                          isWinner && { borderColor: '#F59E0B' },
+                        ]}>
+                          {isWinner && (
+                            <View style={styles.teamWinnerBadge}>
+                              <Ionicons name="trophy" size={12} color="#F59E0B" />
+                            </View>
+                          )}
+                          
+                          {/* Team Avatars - overlapping for doubles, tappable to view profile */}
+                          <View style={styles.teamAvatarsContainer}>
+                            {team1Players.map((participant, index) => (
+                              <TouchableOpacity 
+                                key={participant.id} 
+                                style={[
+                                  styles.teamPlayerAvatar, 
+                                  { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
+                                  index > 0 && styles.teamAvatarOverlap,
+                                ]}
+                                onPress={() => participant.player_id && navigation.navigate('PlayerProfile', { playerId: participant.player_id })}
+                                activeOpacity={0.7}
+                              >
+                                {participant.player?.profile?.profile_picture_url ? (
+                                  <Image
+                                    source={{ uri: participant.player.profile.profile_picture_url }}
+                                    style={styles.teamAvatarImage}
+                                  />
+                                ) : (
+                                  <Ionicons name="person" size={20} color={colors.textMuted} />
+                                )}
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                          
+                          {/* Team Names */}
+                          <Text 
+                            size="xs" 
+                            weight={isWinner ? 'semibold' : 'regular'} 
+                            style={{ color: colors.text, marginTop: 6, textAlign: 'center' }}
+                            numberOfLines={2}
+                          >
+                            {team1Players.map(p => p.player?.profile?.first_name || 'Player').join(', ')}
+                          </Text>
+                          
+                          {/* Team Score - same for all team members */}
+                          {recentMatch.match?.result && (
+                            <Text 
+                              size="sm" 
+                              weight="bold" 
+                              style={{ 
+                                color: isWinner ? '#F59E0B' : colors.textMuted,
+                                marginTop: 4,
+                              }}
+                            >
+                              {recentMatch.match.result.sets && recentMatch.match.result.sets.length > 0
+                                ? recentMatch.match.result.sets
+                                    .sort((a, b) => a.set_number - b.set_number)
+                                    .map(set => set.team1_score)
+                                    .join('  ')
+                                : recentMatch.match.result.team1_score ?? '-'}
+                            </Text>
+                          )}
+                        </View>
+                      );
+                    })()}
+
+                    {/* VS */}
+                    <Text weight="semibold" style={{ color: colors.textMuted, marginHorizontal: 12 }}>vs</Text>
+
+                    {/* Team 2 Card */}
+                    {(() => {
+                      const team2Players = recentMatch.match.participants.filter(p => p.team_number === 2);
+                      const isWinner = recentMatch.match?.result?.winning_team === 2;
+                      const isDoubles = team2Players.length > 1;
+                      
+                      return (
+                        <View style={[
+                          styles.teamCard,
+                          isWinner && styles.winnerTeamCard,
+                          isWinner && { borderColor: '#F59E0B' },
+                        ]}>
+                          {isWinner && (
+                            <View style={styles.teamWinnerBadge}>
+                              <Ionicons name="trophy" size={12} color="#F59E0B" />
+                            </View>
+                          )}
+                          
+                          {/* Team Avatars - overlapping for doubles, tappable to view profile */}
+                          <View style={styles.teamAvatarsContainer}>
+                            {team2Players.map((participant, index) => (
+                              <TouchableOpacity 
+                                key={participant.id} 
+                                style={[
+                                  styles.teamPlayerAvatar, 
+                                  { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
+                                  index > 0 && styles.teamAvatarOverlap,
+                                ]}
+                                onPress={() => participant.player_id && navigation.navigate('PlayerProfile', { playerId: participant.player_id })}
+                                activeOpacity={0.7}
+                              >
+                                {participant.player?.profile?.profile_picture_url ? (
+                                  <Image
+                                    source={{ uri: participant.player.profile.profile_picture_url }}
+                                    style={styles.teamAvatarImage}
+                                  />
+                                ) : (
+                                  <Ionicons name="person" size={20} color={colors.textMuted} />
+                                )}
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                          
+                          {/* Team Names */}
+                          <Text 
+                            size="xs" 
+                            weight={isWinner ? 'semibold' : 'regular'} 
+                            style={{ color: colors.text, marginTop: 6, textAlign: 'center' }}
+                            numberOfLines={2}
+                          >
+                            {team2Players.map(p => p.player?.profile?.first_name || 'Player').join(', ')}
+                          </Text>
+                          
+                          {/* Team Score - same for all team members */}
+                          {recentMatch.match?.result && (
+                            <Text 
+                              size="sm" 
+                              weight="bold" 
+                              style={{ 
+                                color: isWinner ? '#F59E0B' : colors.textMuted,
+                                marginTop: 4,
+                              }}
+                            >
+                              {recentMatch.match.result.sets && recentMatch.match.result.sets.length > 0
+                                ? recentMatch.match.result.sets
+                                    .sort((a, b) => a.set_number - b.set_number)
+                                    .map(set => set.team2_score)
+                                    .join('  ')
+                                : recentMatch.match.result.team2_score ?? '-'}
+                            </Text>
+                          )}
+                        </View>
+                      );
+                    })()}
+                  </View>
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.emptyMatch}>
+                  <Ionicons name="tennisball-outline" size={32} color={colors.textMuted} />
+                  <Text size="sm" style={{ color: colors.textSecondary, marginTop: 8 }}>
+                    No recent games
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Leaderboard Section */}
+            <View style={[styles.leaderboardCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionTitle}>
+                  <Ionicons name="podium" size={20} color={colors.textSecondary} />
+                  <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
+                    Leaderboard
+                  </Text>
+                  <TouchableOpacity style={styles.infoButton}>
+                    <Ionicons name="information-circle-outline" size={18} color={colors.textMuted} />
+                  </TouchableOpacity>
+                </View>
+                
+                {/* Period Filter Dropdown */}
+                <TouchableOpacity 
+                  style={[styles.periodFilter, { backgroundColor: isDark ? '#2C2C2E' : '#F0F0F0' }]}
+                  onPress={() => {
+                    const nextIndex = (periodOptions.findIndex(o => o.value === leaderboardPeriod) + 1) % periodOptions.length;
+                    setLeaderboardPeriod(periodOptions[nextIndex].value as 30 | 90 | 180 | 0);
+                  }}
+                >
+                  <Text size="sm" style={{ color: colors.text }}>
+                    {periodOptions.find(o => o.value === leaderboardPeriod)?.label}
+                  </Text>
+                  <Ionicons name="chevron-down" size={16} color={colors.textMuted} style={{ marginLeft: 4 }} />
+                </TouchableOpacity>
+              </View>
+
+              {leaderboard && leaderboard.length > 0 ? (
+                <>
+                  {/* Podium for top 3 */}
+                  {leaderboard.length >= 3 && (
+                    <View style={styles.podiumContainer}>
+                      {/* 2nd Place */}
+                      <View style={styles.podiumItem}>
+                        <View style={[styles.podiumAvatar, styles.podiumAvatar2nd, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+                          {leaderboard[1].player?.profile?.profile_picture_url ? (
+                            <Image
+                              source={{ uri: leaderboard[1].player.profile.profile_picture_url }}
+                              style={styles.avatarImage}
+                            />
+                          ) : (
+                            <Ionicons name="person" size={28} color={colors.textMuted} />
+                          )}
+                          <View style={[styles.rankBadge, { backgroundColor: '#C0C0C0' }]}>
+                            <Text size="xs" weight="bold" style={{ color: '#FFF' }}>2</Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      {/* 1st Place */}
+                      <View style={styles.podiumItem}>
+                        <View style={[styles.podiumAvatar, styles.podiumAvatar1st, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+                          {leaderboard[0].player?.profile?.profile_picture_url ? (
+                            <Image
+                              source={{ uri: leaderboard[0].player.profile.profile_picture_url }}
+                              style={styles.avatarImage}
+                            />
+                          ) : (
+                            <Ionicons name="person" size={32} color={colors.textMuted} />
+                          )}
+                          <View style={[styles.rankBadge, styles.rankBadge1st, { backgroundColor: '#FFD700' }]}>
+                            <Ionicons name="trophy" size={14} color="#FFF" />
+                          </View>
+                        </View>
+                      </View>
+
+                      {/* 3rd Place */}
+                      <View style={styles.podiumItem}>
+                        <View style={[styles.podiumAvatar, styles.podiumAvatar3rd, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+                          {leaderboard[2].player?.profile?.profile_picture_url ? (
+                            <Image
+                              source={{ uri: leaderboard[2].player.profile.profile_picture_url }}
+                              style={styles.avatarImage}
+                            />
+                          ) : (
+                            <Ionicons name="person" size={24} color={colors.textMuted} />
+                          )}
+                          <View style={[styles.rankBadge, { backgroundColor: '#CD7F32' }]}>
+                            <Text size="xs" weight="bold" style={{ color: '#FFF' }}>3</Text>
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Stats Header */}
+                  <View style={styles.leaderboardHeader}>
+                    <Text size="xs" style={{ color: colors.textMuted, flex: 1 }}>Players</Text>
+                    <Text size="xs" style={{ color: colors.textMuted, width: 80, textAlign: 'center' }}>Games played</Text>
+                  </View>
+
+                  {/* Leaderboard List */}
+                  {leaderboard.map((entry, index) => (
+                    <View key={entry.player_id} style={[styles.leaderboardRow, { borderBottomColor: colors.border }]}>
+                      <View style={styles.leaderboardRank}>
+                        {index < 3 ? (
+                          <View style={[
+                            styles.topRankBadge, 
+                            { backgroundColor: index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : '#CD7F32' }
+                          ]}>
+                            <Text size="xs" weight="bold" style={{ color: '#FFF' }}>{index + 1}</Text>
+                          </View>
+                        ) : (
+                          <Text style={{ color: colors.textMuted }}>{index + 1}</Text>
+                        )}
+                      </View>
+                      <View style={[styles.leaderboardAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+                        {entry.player?.profile?.profile_picture_url ? (
+                          <Image
+                            source={{ uri: entry.player.profile.profile_picture_url }}
+                            style={styles.avatarImage}
+                          />
+                        ) : (
+                          <Ionicons name="person" size={18} color={colors.textMuted} />
+                        )}
+                      </View>
+                      <Text size="sm" style={{ color: colors.text, flex: 1, marginLeft: 12 }}>
+                        {entry.player?.profile?.display_name || entry.player?.profile?.first_name || 'Player'}
+                      </Text>
+                      <Text size="sm" weight="semibold" style={{ color: colors.text, width: 80, textAlign: 'center' }}>
+                        {entry.games_played}
+                      </Text>
+                    </View>
+                  ))}
+                </>
+              ) : (
+                <View style={styles.emptyLeaderboard}>
+                  <Ionicons name="trophy-outline" size={48} color={colors.textMuted} />
+                  <Text style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}>
+                    Play games with group members to appear on the leaderboard
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
         );
+      }
 
       case 'activity':
         return (
@@ -697,16 +1166,28 @@ export default function GroupDetailScreen() {
         <View style={{ height: 80 }} />
       </ScrollView>
 
-      {/* Chat Button */}
-      <TouchableOpacity
-        style={[styles.chatButton, { backgroundColor: colors.primary }]}
-        onPress={handleOpenChat}
-      >
-        <Ionicons name="chatbubbles" size={20} color="#FFFFFF" />
-        <Text weight="semibold" style={styles.chatButtonText}>
-          Chat with members
-        </Text>
-      </TouchableOpacity>
+      {/* Bottom Action Button - changes based on active tab */}
+      {activeTab === 'leaderboard' ? (
+        <TouchableOpacity
+          style={[styles.chatButton, { backgroundColor: colors.primary }]}
+          onPress={handleAddGame}
+        >
+          <Ionicons name="add-circle" size={20} color="#FFFFFF" />
+          <Text weight="semibold" style={styles.chatButtonText}>
+            Add a played game
+          </Text>
+        </TouchableOpacity>
+      ) : activeTab === 'home' ? (
+        <TouchableOpacity
+          style={[styles.chatButton, { backgroundColor: colors.primary }]}
+          onPress={handleOpenChat}
+        >
+          <Ionicons name="chatbubbles" size={20} color="#FFFFFF" />
+          <Text weight="semibold" style={styles.chatButtonText}>
+            Chat with members
+          </Text>
+        </TouchableOpacity>
+      ) : null}
 
       {/* Modals */}
       <EditGroupModal
@@ -737,6 +1218,10 @@ export default function GroupDetailScreen() {
         currentUserId={playerId || ''}
         isModerator={isModerator || false}
         onMemberRemoved={() => refetch()}
+        onPlayerPress={(playerId) => {
+          setShowMemberListModal(false);
+          navigation.navigate('PlayerProfile', { playerId });
+        }}
       />
 
       <GroupOptionsModal
@@ -744,6 +1229,61 @@ export default function GroupDetailScreen() {
         onClose={() => setShowOptionsModal(false)}
         options={menuOptions}
         title="Group Options"
+      />
+
+      {group && (
+        <InviteLinkModal
+          visible={showInviteLinkModal}
+          onClose={() => setShowInviteLinkModal(false)}
+          groupId={groupId}
+          groupName={group.name}
+          currentUserId={playerId || ''}
+          isModerator={isModerator || false}
+        />
+      )}
+
+      <RecentGamesModal
+        visible={showRecentGamesModal}
+        onClose={() => setShowRecentGamesModal(false)}
+        matches={allMatches || []}
+        onMatchPress={(match) => {
+          setShowRecentGamesModal(false);
+          navigation.navigate('PlayedMatchDetail', { match });
+        }}
+        onPlayerPress={(playerId) => {
+          setShowRecentGamesModal(false);
+          navigation.navigate('PlayerProfile', { playerId });
+        }}
+      />
+
+      {/* Add Score Flow Modals */}
+      <AddScoreIntroModal
+        visible={showAddScoreIntro}
+        onClose={() => setShowAddScoreIntro(false)}
+        onAddScore={handleAddScoreIntroComplete}
+        onNeverShowAgain={async () => {
+          try {
+            await AsyncStorage.setItem(ADD_SCORE_INTRO_KEY, 'true');
+            setHasSeenAddScoreIntro(true);
+          } catch (error) {
+            console.error('Error saving intro preference:', error);
+          }
+          handleAddScoreIntroComplete();
+        }}
+      />
+
+      <MatchTypeModal
+        visible={showMatchTypeModal}
+        onClose={() => setShowMatchTypeModal(false)}
+        onSelect={handleMatchTypeSelect}
+      />
+
+      <AddScoreModal
+        visible={showAddScoreModal}
+        onClose={() => setShowAddScoreModal(false)}
+        onSuccess={handleAddScoreSuccess}
+        matchType={selectedMatchType}
+        networkId={groupId}
       />
     </SafeAreaView>
   );
@@ -988,5 +1528,240 @@ const styles = StyleSheet.create({
   chatButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+  },
+  // Leaderboard Preview List
+  leaderboardPreviewList: {
+    marginTop: 12,
+  },
+  leaderboardPreviewItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  smallAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  // Recent Games Card
+  recentGamesCard: {
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  // Match Card Styles
+  matchCard: {
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  matchHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  matchInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  matchBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  matchPlayersContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    paddingHorizontal: 8,
+  },
+  teamContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  // New Team Card styles for Recent Games (groups players per team)
+  teamCard: {
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    minWidth: 90,
+    maxWidth: 120,
+  },
+  winnerTeamCard: {
+    borderWidth: 2,
+  },
+  teamAvatarsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  teamPlayerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  teamAvatarOverlap: {
+    marginLeft: -12,
+  },
+  teamAvatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  teamWinnerBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#FFF',
+    borderRadius: 10,
+    padding: 2,
+  },
+  // Original player card styles (kept for backward compatibility)
+  playerCard: {
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  winnerCard: {
+    borderWidth: 2,
+  },
+  playerAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  winnerBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#FFF',
+    borderRadius: 10,
+    padding: 2,
+  },
+  scoresRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  emptyMatch: {
+    alignItems: 'center',
+    paddingVertical: 24,
+  },
+  // Leaderboard Section Styles
+  infoButton: {
+    marginLeft: 8,
+  },
+  periodFilter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  // Podium Styles
+  podiumContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    marginVertical: 24,
+  },
+  podiumItem: {
+    alignItems: 'center',
+    marginHorizontal: 8,
+  },
+  podiumAvatar: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 35,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  podiumAvatar1st: {
+    width: 70,
+    height: 70,
+  },
+  podiumAvatar2nd: {
+    width: 56,
+    height: 56,
+    marginBottom: 12,
+    borderRadius: 28,
+  },
+  podiumAvatar3rd: {
+    width: 48,
+    height: 48,
+    marginBottom: 20,
+    borderRadius: 24,
+  },
+  rankBadge: {
+    position: 'absolute',
+    bottom: -4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rankBadge1st: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    bottom: -6,
+  },
+  // Leaderboard List Styles
+  leaderboardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  leaderboardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+  },
+  leaderboardRank: {
+    width: 32,
+    alignItems: 'center',
+  },
+  topRankBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  leaderboardAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
   },
 });

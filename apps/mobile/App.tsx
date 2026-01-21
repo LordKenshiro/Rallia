@@ -20,7 +20,6 @@ import { MatchDetailSheet } from './src/components/MatchDetailSheet';
 import { PlayerInviteSheet } from './src/components/PlayerInviteSheet';
 import { FeedbackSheet } from './src/components/FeedbackSheet';
 import { SplashOverlay } from './src/components/SplashOverlay';
-import { ErrorBoundary } from '@rallia/shared-components';
 import {
   ThemeProvider,
   useTheme,
@@ -29,6 +28,7 @@ import {
   useNotificationRealtime,
   usePendingFeedbackCheck,
 } from '@rallia/shared-hooks';
+import { ErrorBoundary, ToastProvider, NetworkProvider } from '@rallia/shared-components';
 import { Logger } from './src/services/logger';
 import {
   AuthProvider,
@@ -262,25 +262,29 @@ export default function App() {
           <QueryClientProvider client={queryClient}>
             <LocaleProvider>
               <ThemeProvider>
-                <DeepLinkProvider>
-                  <OverlayProvider>
-                    <AuthProvider>
-                      <AuthenticatedProviders>
-                        <ActionsSheetProvider>
-                          <MatchDetailSheetProvider>
-                            <PlayerInviteSheetProvider>
-                              <FeedbackSheetProvider>
-                                <BottomSheetModalProvider>
-                                  <AppContent />
-                                </BottomSheetModalProvider>
-                              </FeedbackSheetProvider>
-                            </PlayerInviteSheetProvider>
-                          </MatchDetailSheetProvider>
-                        </ActionsSheetProvider>
-                      </AuthenticatedProviders>
-                    </AuthProvider>
-                  </OverlayProvider>
-                </DeepLinkProvider>
+                <NetworkProvider>
+                  <ToastProvider>
+                    <DeepLinkProvider>
+                      <OverlayProvider>
+                        <AuthProvider>
+                          <AuthenticatedProviders>
+                            <ActionsSheetProvider>
+                              <MatchDetailSheetProvider>
+                                <PlayerInviteSheetProvider>
+                                  <FeedbackSheetProvider>
+                                    <BottomSheetModalProvider>
+                                      <AppContent />
+                                    </BottomSheetModalProvider>
+                                  </FeedbackSheetProvider>
+                                </PlayerInviteSheetProvider>
+                              </MatchDetailSheetProvider>
+                            </ActionsSheetProvider>
+                          </AuthenticatedProviders>
+                        </AuthProvider>
+                      </OverlayProvider>
+                    </DeepLinkProvider>       
+                  </ToastProvider>
+                </NetworkProvider>
               </ThemeProvider>
             </LocaleProvider>
           </QueryClientProvider>

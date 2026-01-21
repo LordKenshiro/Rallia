@@ -5,12 +5,11 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { Text, Button } from '@rallia/shared-components';
+import { Text, Button, Skeleton, useToast } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
 import { RatingProofWithFile, RatingProofsScreenParams } from '@rallia/shared-types';
 import AddRatingProofOverlay from '../features/ratings/components/AddRatingProofOverlay';
@@ -35,6 +34,7 @@ const RatingProofs: React.FC = () => {
   const { playerRatingScoreId, sportName: _sportName, ratingValue, isOwnProfile } = route.params;
   const { colors, shadows } = useThemeStyles();
   const { locale } = useTranslation();
+  const toast = useToast();
 
   const [proofs, setProofs] = useState<RatingProofWithFile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,7 +106,7 @@ const RatingProofs: React.FC = () => {
       setProofs(result.data || []);
     } catch (error) {
       Logger.error('Failed to fetch rating proofs', error as Error, { playerRatingScoreId });
-      Alert.alert('Error', getNetworkErrorMessage(error));
+      toast.error(getNetworkErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -115,13 +115,13 @@ const RatingProofs: React.FC = () => {
   const handleSelectProofType = (type: 'external_link' | 'video' | 'image' | 'document') => {
     // TODO: Open appropriate input form based on type
     Logger.logUserAction('select_proof_type', { type, playerRatingScoreId });
-    Alert.alert('Coming Soon', `Adding ${type} proof will be implemented next`);
+    toast.info(`Adding ${type} proof will be implemented next`);
   };
 
   const handleEditProof = (proof: RatingProofWithFile) => {
     // TODO: Open edit overlay
     Logger.logUserAction('edit_proof_pressed', { proofId: proof.id, playerRatingScoreId });
-    Alert.alert('Coming Soon', 'Edit proof feature will be implemented next');
+    toast.info('Edit proof feature will be implemented next');
   };
 
   const handleDeleteProof = async (proofId: string) => {
@@ -144,14 +144,14 @@ const RatingProofs: React.FC = () => {
 
               if (result.error) throw result.error;
 
-              Alert.alert('Success', 'Proof deleted successfully');
+              toast.success('Proof deleted successfully');
               fetchProofs();
             } catch (error) {
               Logger.error('Failed to delete proof', error as Error, {
                 proofId,
                 playerRatingScoreId,
               });
-              Alert.alert('Error', getNetworkErrorMessage(error));
+              toast.error(getNetworkErrorMessage(error));
             }
           },
         },
@@ -276,7 +276,21 @@ const RatingProofs: React.FC = () => {
       {/* Content */}
       {loading ? (
         <View style={[styles.loadingContainer, { backgroundColor: colors.card }]}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          {/* Rating Proofs Skeleton */}
+          <View style={[styles.titleSection, { backgroundColor: colors.card }]}>
+            <Skeleton width={140} height={20} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+          </View>
+          <View style={{ padding: 16, gap: 12 }}>
+            {[...Array(3)].map((_, index) => (
+              <View key={index} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <Skeleton width={60} height={60} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+                <View style={{ flex: 1 }}>
+                  <Skeleton width={150} height={16} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+                  <Skeleton width={100} height={14} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} style={{ marginTop: 4 }} />
+                </View>
+              </View>
+            ))}
+          </View>
         </View>
       ) : (
         <View style={[styles.content, { backgroundColor: colors.card }]}>

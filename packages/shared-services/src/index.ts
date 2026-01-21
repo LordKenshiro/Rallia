@@ -20,6 +20,8 @@ export * from './reputation';
 export * from './shared-contacts';
 export * from './match-share';
 export * from './groups';
+export * from './chat';
+export * from './reports';
 
 // Export default DatabaseService
 export { default } from './database';

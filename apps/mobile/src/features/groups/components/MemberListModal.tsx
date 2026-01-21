@@ -3,11 +3,20 @@
  * Modal showing all group members with management options
  */
 
-import React, { useCallback, useState, useMemo } from 'react';
-import { View, Modal, TouchableOpacity, StyleSheet, FlatList, Alert, Image } from 'react-native';
+import React, { useCallback, useState, useMemo, useEffect } from 'react';
+import {
+  View,
+  Modal,
+  TouchableOpacity,
+  StyleSheet,
+  FlatList,
+  Alert,
+  Image,
+  TextInput,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { Text } from '@rallia/shared-components';
+import { Text, useToast } from '@rallia/shared-components';
 import { useThemeStyles } from '../../../hooks';
 import {
   useRemoveGroupMember,
@@ -25,6 +34,46 @@ interface MemberListModalProps {
   currentUserId: string;
   isModerator: boolean;
   onMemberRemoved: () => void;
+  onPlayerPress?: (playerId: string) => void;
+}
+
+/**
+ * Format a date as relative time or date string for join dates
+ */
+function formatJoinDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffDays === 0) return 'Joined today';
+  if (diffDays === 1) return 'Joined yesterday';
+  if (diffDays < 7) return `Joined ${diffDays} days ago`;
+  if (diffDays < 30) return `Joined ${Math.floor(diffDays / 7)} weeks ago`;
+  
+  return `Joined ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined })}`;
+}
+
+/**
+ * Format last active status - returns null if never active
+ */
+function formatLastActive(dateStr: string | null | undefined): { text: string; isOnline: boolean } | null {
+  if (!dateStr) return null;
+  
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  // Consider online if active within last 5 minutes
+  if (diffMins < 5) return { text: 'Online now', isOnline: true };
+  if (diffMins < 60) return { text: `Active ${diffMins}m ago`, isOnline: false };
+  if (diffHours < 24) return { text: `Active ${diffHours}h ago`, isOnline: false };
+  if (diffDays < 7) return { text: `Active ${diffDays}d ago`, isOnline: false };
+  
+  return { text: `Active ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`, isOnline: false };
 }
 
 export function MemberListModal({
@@ -34,11 +83,33 @@ export function MemberListModal({
   currentUserId,
   isModerator,
   onMemberRemoved,
+  onPlayerPress,
 }: MemberListModalProps) {
   const { colors, isDark } = useThemeStyles();
+  const toast = useToast();
 
   const [selectedMember, setSelectedMember] = useState<GroupMember | null>(null);
   const [showMemberOptions, setShowMemberOptions] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Clear search when modal closes
+  useEffect(() => {
+    if (!visible) {
+      setSearchQuery('');
+    }
+  }, [visible]);
+
+  // Filter members based on search query
+  const filteredMembers = useMemo(() => {
+    if (!searchQuery.trim()) return group.members;
+    const query = searchQuery.toLowerCase().trim();
+    return group.members.filter(member => {
+      const firstName = member.player?.profile?.first_name?.toLowerCase() || '';
+      const lastName = member.player?.profile?.last_name?.toLowerCase() || '';
+      const displayName = member.player?.profile?.display_name?.toLowerCase() || '';
+      return firstName.includes(query) || lastName.includes(query) || displayName.includes(query);
+    });
+  }, [group.members, searchQuery]);
 
   const removeGroupMemberMutation = useRemoveGroupMember();
   const promoteMemberMutation = usePromoteMember();
@@ -79,13 +150,10 @@ export function MemberListModal({
                 moderatorId: currentUserId,
                 playerIdToPromote: selectedMember.player_id,
               });
-              Alert.alert('Success', 'Member promoted to moderator');
+              toast.success('Member promoted to moderator');
               onMemberRemoved();
             } catch (error) {
-              Alert.alert(
-                'Error',
-                error instanceof Error ? error.message : 'Failed to promote member'
-              );
+              toast.error(error instanceof Error ? error.message : 'Failed to promote member');
             }
           },
         });
@@ -101,13 +169,10 @@ export function MemberListModal({
                 moderatorId: currentUserId,
                 playerIdToDemote: selectedMember.player_id,
               });
-              Alert.alert('Success', 'Moderator demoted to member');
+              toast.success('Moderator demoted to member');
               onMemberRemoved();
             } catch (error) {
-              Alert.alert(
-                'Error',
-                error instanceof Error ? error.message : 'Failed to demote member'
-              );
+              toast.error(error instanceof Error ? error.message : 'Failed to demote member');
             }
           },
         });
@@ -134,13 +199,10 @@ export function MemberListModal({
                       moderatorId: currentUserId,
                       playerIdToRemove: selectedMember.player_id,
                     });
-                    Alert.alert('Success', 'Member removed from group');
+                    toast.success('Member removed from group');
                     onMemberRemoved();
                   } catch (error) {
-                    Alert.alert(
-                      'Error',
-                      error instanceof Error ? error.message : 'Failed to remove member'
-                    );
+                    toast.error(error instanceof Error ? error.message : 'Failed to remove member');
                   }
                 },
               },
@@ -160,6 +222,7 @@ export function MemberListModal({
     promoteMemberMutation,
     demoteMemberMutation,
     onMemberRemoved,
+    toast,
   ]);
 
   // Get member info for the options modal
@@ -173,22 +236,25 @@ export function MemberListModal({
       role: selectedMember.role,
       isCreator: group.created_by === selectedMember.player_id,
       profilePictureUrl: selectedMember.player?.profile?.profile_picture_url,
+      playerId: selectedMember.player_id,
     };
   }, [selectedMember, group]);
 
-  const renderMemberItem = useCallback(
-    ({ item }: { item: GroupMember }) => {
-      const isCreator = group.created_by === item.player_id;
-      const isSelf = item.player_id === currentUserId;
-      const canManage = isModerator && !isSelf && !isCreator;
+  const renderMemberItem = useCallback(({ item }: { item: GroupMember }) => {
+    const isCreator = group.created_by === item.player_id;
+    const isSelf = item.player_id === currentUserId;
+    const canManage = isModerator && !isSelf && !isCreator;
+    const lastActive = formatLastActive(item.player?.profile?.last_active_at);
+    const joinDate = formatJoinDate(item.joined_at);
 
-      return (
-        <TouchableOpacity
-          style={[styles.memberItem, { borderBottomColor: colors.border }]}
-          onPress={() => handleMemberOptions(item)}
-          disabled={!canManage}
-          activeOpacity={canManage ? 0.7 : 1}
-        >
+    return (
+      <TouchableOpacity
+        style={[styles.memberItem, { borderBottomColor: colors.border }]}
+        onPress={() => handleMemberOptions(item)}
+        disabled={!canManage}
+        activeOpacity={canManage ? 0.7 : 1}
+      >
+        <View style={styles.avatarContainer}>
           <View style={[styles.memberAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
             {item.player?.profile?.profile_picture_url ? (
               <Image
@@ -199,41 +265,45 @@ export function MemberListModal({
               <Ionicons name="person" size={24} color={colors.textMuted} />
             )}
           </View>
+          {/* Online indicator */}
+          {lastActive?.isOnline && (
+            <View style={styles.onlineIndicator} />
+          )}
+        </View>
 
-          <View style={styles.memberInfo}>
-            <View style={styles.memberNameRow}>
-              <Text weight="medium" style={{ color: colors.text }}>
-                {item.player?.profile?.display_name ||
-                  `${item.player?.profile?.first_name || ''} ${item.player?.profile?.last_name || ''}`.trim() ||
-                  'Unknown'}
-              </Text>
-              {isSelf && (
-                <Text size="xs" style={{ color: colors.textSecondary, marginLeft: 6 }}>
-                  (You)
-                </Text>
-              )}
-            </View>
-            <View style={styles.memberBadges}>
-              {item.role === 'moderator' && (
-                <View style={[styles.badge, { backgroundColor: isDark ? '#FF9500' : '#FFF3E0' }]}>
-                  <Text size="xs" style={{ color: isDark ? '#FFFFFF' : '#FF9500' }}>
-                    Moderator
-                  </Text>
-                </View>
-              )}
-              {isCreator && (
-                <View
-                  style={[styles.badge, { backgroundColor: isDark ? colors.primary : '#E8F5E9' }]}
-                >
-                  <Text size="xs" style={{ color: isDark ? '#FFFFFF' : colors.primary }}>
-                    Creator
-                  </Text>
-                </View>
-              )}
-            </View>
+        <View style={styles.memberInfo}>
+          <View style={styles.memberNameRow}>
+            <Text weight="medium" style={{ color: colors.text }}>
+              {item.player?.profile?.display_name ||
+                `${item.player?.profile?.first_name || ''} ${item.player?.profile?.last_name || ''}`.trim() ||
+                'Unknown'}
+            </Text>
           </View>
+          {/* Last active / Join date */}
+          <Text size="xs" style={{ color: lastActive?.isOnline ? colors.primary : colors.textMuted, marginTop: 2 }}>
+            {lastActive ? lastActive.text : joinDate}
+          </Text>
+          <View style={styles.memberBadges}>
+            {item.role === 'moderator' && (
+              <View style={[styles.badge, { backgroundColor: isDark ? '#FF9500' : '#FFF3E0' }]}>
+                <Text size="xs" style={{ color: isDark ? '#FFFFFF' : '#FF9500' }}>
+                  Moderator
+                </Text>
+              </View>
+            )}
+            {isCreator && (
+              <View
+                style={[styles.badge, { backgroundColor: isDark ? colors.primary : '#E8F5E9' }]}
+              >
+                <Text size="xs" style={{ color: isDark ? '#FFFFFF' : colors.primary }}>
+                  Creator
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
 
-          {canManage && <Ionicons name="ellipsis-horizontal" size={20} color={colors.textMuted} />}
+        {canManage && <Ionicons name="ellipsis-horizontal" size={20} color={colors.textMuted} />}
         </TouchableOpacity>
       );
     },
@@ -257,9 +327,32 @@ export function MemberListModal({
               </TouchableOpacity>
             </View>
 
+            {/* Search Bar - show when 10+ members */}
+            {group.member_count >= 10 && (
+              <View style={[styles.searchContainer, { borderBottomColor: colors.border }]}>
+                <View style={[styles.searchInputContainer, { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}>
+                  <Ionicons name="search-outline" size={18} color={colors.textMuted} style={styles.searchIcon} />
+                  <TextInput
+                    style={[styles.searchInput, { color: colors.text }]}
+                    placeholder="Search members..."
+                    placeholderTextColor={colors.textMuted}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  {searchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setSearchQuery('')}>
+                      <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            )}
+
             {/* Member List */}
             <FlatList
-              data={group.members}
+              data={filteredMembers}
               renderItem={renderMemberItem}
               keyExtractor={item => item.id}
               showsVerticalScrollIndicator={false}
@@ -278,6 +371,11 @@ export function MemberListModal({
         }}
         member={selectedMemberInfo}
         options={memberOptions}
+        onAvatarPress={(playerId) => {
+          setShowMemberOptions(false);
+          setSelectedMember(null);
+          onPlayerPress?.(playerId);
+        }}
       />
     </>
   );
@@ -307,6 +405,26 @@ const styles = StyleSheet.create({
   closeButton: {
     padding: 4,
   },
+  searchContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 36,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    paddingVertical: 0,
+  },
   listContent: {
     paddingBottom: 24,
   },
@@ -317,6 +435,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
   },
+  avatarContainer: {
+    position: 'relative',
+    marginRight: 12,
+  },
   memberAvatar: {
     width: 48,
     height: 48,
@@ -324,12 +446,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-    marginRight: 12,
   },
   avatarImage: {
     width: 48,
     height: 48,
     borderRadius: 24,
+  },
+  onlineIndicator: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#34C759', // iOS green
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   memberInfo: {
     flex: 1,

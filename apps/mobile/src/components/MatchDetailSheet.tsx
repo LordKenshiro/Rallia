@@ -71,6 +71,7 @@ import type {
   MatchParticipantWithPlayer,
   OpponentForFeedback,
 } from '@rallia/shared-types';
+import { navigationRef } from '../navigation';
 
 // Use base.white from design system for consistency
 
@@ -618,6 +619,7 @@ const CheckInButton: React.FC<CheckInButtonProps> = ({
       isDark={isDark}
       loading={isLoading}
       disabled={isLoading}
+      leftIcon={<Ionicons name="checkmark-circle-outline" size={18} color={base.white} />}
     >
       {t('matchDetail.checkIn' as TranslationKey)}
     </Button>
@@ -1469,6 +1471,7 @@ export const MatchDetailSheet: React.FC = () => {
   const participantAvatars: Array<{
     key: string;
     participantId?: string;
+    playerId?: string;
     avatarUrl?: string | null;
     isHost: boolean;
     isEmpty: boolean;
@@ -1492,6 +1495,7 @@ export const MatchDetailSheet: React.FC = () => {
   participantAvatars.push({
     key: 'host',
     avatarUrl: getProfilePictureUrl(hostProfile?.profile_picture_url),
+    playerId: match.created_by,
     isHost: true,
     isEmpty: false,
     name: hostName.split(' ')[0],
@@ -1511,6 +1515,7 @@ export const MatchDetailSheet: React.FC = () => {
     participantAvatars.push({
       key: p.id || `participant-${i}`,
       participantId: p.id,
+      playerId: p.player_id,
       avatarUrl: getProfilePictureUrl(p.player?.profile?.profile_picture_url),
       isHost: false,
       isEmpty: false,
@@ -1755,6 +1760,7 @@ export const MatchDetailSheet: React.FC = () => {
               style={styles.actionButton}
               themeColors={successThemeColors}
               isDark={isDark}
+              leftIcon={<Ionicons name="star-outline" size={18} color={base.white} />}
             >
               {t('matchDetail.provideFeedback' as TranslationKey)}
             </Button>
@@ -1837,6 +1843,7 @@ export const MatchDetailSheet: React.FC = () => {
             style={styles.actionButton}
             themeColors={accentThemeColors}
             isDark={isDark}
+            leftIcon={<Ionicons name="create-outline" size={18} color={base.white} />}
           >
             {t('common.edit' as TranslationKey)}
           </Button>
@@ -1847,6 +1854,7 @@ export const MatchDetailSheet: React.FC = () => {
             themeColors={destructiveThemeColors}
             isDark={isDark}
             loading={isCancelling}
+            leftIcon={<Ionicons name="close-circle-outline" size={18} color={base.white} />}
           >
             {t('matches.cancelMatch' as TranslationKey)}
           </Button>
@@ -1864,6 +1872,7 @@ export const MatchDetailSheet: React.FC = () => {
           themeColors={warningThemeColors}
           isDark={isDark}
           loading={isCancellingRequest}
+          leftIcon={<Ionicons name="close-outline" size={18} color={ctaDestructive} />}
         >
           {t('matchActions.cancelRequest' as TranslationKey)}
         </Button>
@@ -1882,6 +1891,7 @@ export const MatchDetailSheet: React.FC = () => {
           isDark={isDark}
           loading={isJoining}
           disabled={isJoining}
+          leftIcon={<Ionicons name="checkmark-circle-outline" size={18} color={base.white} />}
         >
           {t('match.cta.acceptInvitation' as TranslationKey)}
         </Button>
@@ -1898,6 +1908,7 @@ export const MatchDetailSheet: React.FC = () => {
           themeColors={warningThemeColors}
           isDark={isDark}
           loading={isLeaving}
+          leftIcon={<Ionicons name="exit-outline" size={18} color={ctaDestructive} />}
         >
           {t('matchActions.leaveWaitlist' as TranslationKey)}
         </Button>
@@ -1916,6 +1927,7 @@ export const MatchDetailSheet: React.FC = () => {
             isDark={isDark}
             loading={isJoining}
             disabled={isJoining}
+            leftIcon={<Ionicons name="hand-left-outline" size={18} color={base.white} />}
           >
             {t('matchDetail.requestToJoin' as TranslationKey)}
           </Button>
@@ -1931,6 +1943,7 @@ export const MatchDetailSheet: React.FC = () => {
           isDark={isDark}
           loading={isJoining}
           disabled={isJoining}
+          leftIcon={<Ionicons name="add-circle-outline" size={18} color={base.white} />}
         >
           {t('matchDetail.joinNow' as TranslationKey)}
         </Button>
@@ -1959,6 +1972,7 @@ export const MatchDetailSheet: React.FC = () => {
           themeColors={destructiveThemeColors}
           isDark={isDark}
           loading={isLeaving}
+          leftIcon={<Ionicons name="log-out-outline" size={18} color={base.white} />}
         >
           {t('matches.leaveMatch' as TranslationKey)}
         </Button>
@@ -1976,6 +1990,7 @@ export const MatchDetailSheet: React.FC = () => {
           isDark={isDark}
           loading={isJoining}
           disabled={isJoining}
+          leftIcon={<Ionicons name="list-outline" size={18} color={base.white} />}
         >
           {t('matchActions.joinWaitlist' as TranslationKey)}
         </Button>
@@ -1993,6 +2008,7 @@ export const MatchDetailSheet: React.FC = () => {
           isDark={isDark}
           loading={isJoining}
           disabled={isJoining}
+          leftIcon={<Ionicons name="hand-left-outline" size={18} color={base.white} />}
         >
           {t('matchDetail.requestToJoin' as TranslationKey)}
         </Button>
@@ -2009,6 +2025,7 @@ export const MatchDetailSheet: React.FC = () => {
         isDark={isDark}
         loading={isJoining}
         disabled={isJoining}
+        leftIcon={<Ionicons name="add-circle-outline" size={18} color={base.white} />}
       >
         {t('matchDetail.joinNow' as TranslationKey)}
       </Button>
@@ -2291,16 +2308,27 @@ export const MatchDetailSheet: React.FC = () => {
             {participantAvatars.map((p, _index) => (
               <View key={p.key} style={styles.participantWithLabel}>
                 <View style={styles.participantAvatarWithAction}>
-                  <ParticipantAvatar
-                    avatarUrl={p.avatarUrl}
-                    isHost={p.isHost}
-                    isEmpty={p.isEmpty}
-                    isCheckedIn={p.isCheckedIn}
-                    colors={colors}
-                    isDark={isDark}
-                    tierAccent={tierAccent}
-                    tierAccentLight={tierAccentLight}
-                  />
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (!p.isEmpty && p.playerId && navigationRef.isReady()) {
+                        closeSheet();
+                        navigationRef.navigate('PlayerProfile', { playerId: p.playerId });
+                      }
+                    }}
+                    activeOpacity={p.isEmpty ? 1 : 0.7}
+                    disabled={p.isEmpty}
+                  >
+                    <ParticipantAvatar
+                      avatarUrl={p.avatarUrl}
+                      isHost={p.isHost}
+                      isEmpty={p.isEmpty}
+                      isCheckedIn={p.isCheckedIn}
+                      colors={colors}
+                      isDark={isDark}
+                      tierAccent={tierAccent}
+                      tierAccentLight={tierAccentLight}
+                    />
+                  </TouchableOpacity>
                   {/* Kick button for host to remove joined participants (not for host avatar, not for empty slots, not if match ended, in progress, or within 24h of start) */}
                   {isCreator &&
                     !p.isHost &&
@@ -2822,14 +2850,34 @@ export const MatchDetailSheet: React.FC = () => {
           },
         ]}
       >
-        {renderActionButtons()}
-        <TouchableOpacity
-          style={[styles.shareButton, { backgroundColor: themeColors.muted }]}
-          onPress={handleShare}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="share-outline" size={22} color={colors.text} />
-        </TouchableOpacity>
+        <View style={styles.actionButtonsContainer}>
+          {renderActionButtons()}
+        </View>
+        {startTimeDiffMs >= 0 && (
+          <TouchableOpacity
+            style={[
+              styles.shareButton,
+              isCreator && styles.shareButtonCompact,
+              {
+                backgroundColor: isDark ? secondary[500] : secondary[500],
+                shadowColor: secondary[600],
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.25,
+                shadowRadius: 4,
+                elevation: 4,
+              },
+            ]}
+            onPress={handleShare}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="share-social" size={18} color={base.white} />
+            {!isCreator && (
+              <Text size="sm" weight="semibold" color={base.white} numberOfLines={1}>
+                {t('matchDetail.inviteFriends' as TranslationKey)}
+              </Text>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Leave Match Confirmation Modal */}
@@ -3337,25 +3385,43 @@ const styles = StyleSheet.create({
   // Sticky Footer
   stickyFooter: {
     flexDirection: 'row',
-    paddingHorizontal: spacingPixels[5],
+    paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[4],
     paddingBottom: spacingPixels[6],
-    gap: spacingPixels[3],
+    gap: spacingPixels[2],
     borderTopWidth: StyleSheet.hairlineWidth,
+    alignItems: 'center',
+  },
+  actionButtonsContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: spacingPixels[2],
+    minWidth: 0, // Allow shrinking
   },
   actionButton: {
     flex: 1,
+    minWidth: 0, // Allow shrinking
   },
   cancelButton: {
-    flex: 0,
-    paddingHorizontal: spacingPixels[4],
+    flex: 1,
+    minWidth: 0, // Allow shrinking
+    paddingHorizontal: spacingPixels[2],
   },
   shareButton: {
-    width: spacingPixels[12],
-    height: spacingPixels[12],
-    borderRadius: radiusPixels.lg,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: spacingPixels[1.5],
+    paddingHorizontal: spacingPixels[4],
+    minHeight: spacingPixels[11], // 44px - balanced size between 40px and 48px
+    borderRadius: radiusPixels.lg,
+    flexShrink: 0, // Don't shrink the share button
+  },
+  shareButtonCompact: {
+    paddingHorizontal: 0,
+    width: spacingPixels[11], // Square icon-only button, same as minHeight (44px)
+    minHeight: spacingPixels[11], // 44px - balanced size
+    gap: 0, // No gap when icon-only
   },
   matchEndedContainer: {
     flex: 1,

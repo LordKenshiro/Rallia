@@ -49,8 +49,9 @@ import {
  * - mostWanted: Court booked + high reputation creator (90%+) → accent/gold
  * - readyToPlay: Court booked only → secondary/coral
  * - regular: Default → primary/teal
+ * - expired: Match started but not full (disabled appearance) → neutral/gray
  */
-type MatchTier = 'mostWanted' | 'readyToPlay' | 'regular';
+type MatchTier = 'mostWanted' | 'readyToPlay' | 'regular' | 'expired';
 
 /**
  * Threshold for "high reputation" creator (percentage 0-100)
@@ -116,6 +117,19 @@ const TIER_PALETTES = {
       background: primary[950], // Very dark teal background
       accentStart: primary[400], // #2dd4bf
       accentEnd: primary[300], // #5eead4
+    },
+  },
+  // Expired - neutral/gray palette (disabled, past matches)
+  expired: {
+    light: {
+      background: neutral[100], // Light gray background
+      accentStart: neutral[400], // Gray accent
+      accentEnd: neutral[300], // Lighter gray
+    },
+    dark: {
+      background: neutral[900], // Dark gray background
+      accentStart: neutral[500], // Gray accent
+      accentEnd: neutral[400], // Slightly lighter gray
     },
   },
 } as const;
@@ -722,22 +736,30 @@ const CardFooter: React.FC<CardFooterProps> = ({
   const ctaNeutralBg = isDark ? neutral[700] : neutral[200];
   const ctaNeutralText = colors.text;
 
+  // Check if match is expired (started or ended but not full)
+  const isExpired = (isInProgress || hasMatchEnded) && !isFull;
+
   // Determine button label, style, and icon based on state
   // CTA Color Matrix:
   // - Check-in/Feedback/Join/Ask to Join/Join Waitlist → primary
   // - Edit → accent
   // - Cancel/Leave/Cancelled → secondary
-  // - View/View Results → neutral
+  // - View/View Results/Expired → neutral
   // - Pending/Waitlisted → neutral background + secondary text
   let ctaLabel: string;
   let ctaBgColor: string;
   let ctaTextColor: string;
   let ctaDisabled = false;
   let ctaBorderColor: string | null = null;
-  let ctaIcon: keyof typeof Ionicons.glyphMap | null = 'arrow-forward';
+  let ctaIcon: keyof typeof Ionicons.glyphMap | null = 'add-circle-outline';
 
-  // Check-in CTA (highest priority when conditions are met)
-  if (playerNeedsCheckIn) {
+  // Expired match (highest priority) → Always show "View" CTA
+  if (isExpired) {
+    ctaLabel = t('match.cta.view');
+    ctaBgColor = ctaNeutralBg;
+    ctaTextColor = ctaNeutralText;
+    ctaIcon = 'eye-outline';
+  } else if (playerNeedsCheckIn) {
     ctaLabel = t('matchDetail.checkIn');
     ctaBgColor = ctaPositive;
     ctaTextColor = base.white;
@@ -792,7 +814,7 @@ const CardFooter: React.FC<CardFooterProps> = ({
     ctaLabel = t('match.cta.leave');
     ctaBgColor = ctaDestructive;
     ctaTextColor = base.white;
-    ctaIcon = 'exit-outline';
+    ctaIcon = 'log-out-outline';
   } else if (hasPendingRequest) {
     // Pending → neutral background with secondary emphasis (disabled)
     ctaLabel = t('match.cta.pending');
@@ -800,7 +822,7 @@ const CardFooter: React.FC<CardFooterProps> = ({
     ctaTextColor = ctaDestructive;
     ctaBorderColor = ctaDestructive;
     ctaDisabled = true;
-    ctaIcon = 'hourglass-outline';
+    ctaIcon = 'close-outline';
   } else if (isInvited && !isFull && !isRequestMode) {
     // Invited (pending status) to direct-join match with spots → Accept Invitation (success green)
     ctaLabel = t('match.cta.acceptInvitation');
@@ -824,7 +846,7 @@ const CardFooter: React.FC<CardFooterProps> = ({
     ctaLabel = t('match.cta.join');
     ctaBgColor = ctaPositive;
     ctaTextColor = base.white;
-    ctaIcon = 'arrow-forward';
+    ctaIcon = 'add-circle-outline';
   }
 
   return (
@@ -864,9 +886,30 @@ const MatchCard: React.FC<MatchCardProps> = ({
   locale,
   currentPlayerId,
 }) => {
+  // Compute participant info early to check for expired state
+  const participantInfo = getParticipantInfo(match);
+  const isFull = participantInfo.spotsLeft === 0;
+
+  // Derive match status to check for expired state
+  const derivedStatus = deriveMatchStatus({
+    cancelled_at: match.cancelled_at,
+    match_date: match.match_date,
+    start_time: match.start_time,
+    end_time: match.end_time,
+    timezone: match.timezone,
+    result: match.result,
+  });
+  const isInProgress = derivedStatus === 'in_progress';
+  const hasMatchEnded = derivedStatus === 'completed';
+
+  // Check if match is expired (started or ended but not full)
+  const isExpired = (isInProgress || hasMatchEnded) && !isFull;
+
   // Determine match tier based on court status and creator reputation
+  // Override with 'expired' tier if match is expired
   const creatorReputationScore = match.created_by_player?.reputation_score;
-  const tier = getMatchTier(match.court_status, creatorReputationScore);
+  const baseTier = getMatchTier(match.court_status, creatorReputationScore);
+  const tier: MatchTier = isExpired ? 'expired' : baseTier;
   const isMostWanted = tier === 'mostWanted';
 
   // Get most wanted colors from design system (for animated glow)
@@ -957,6 +1000,11 @@ const MatchCard: React.FC<MatchCardProps> = ({
             accent: isDark ? secondary[400] : secondary[500],
             accentLight: isDark ? secondary[700] : secondary[200],
           };
+        case 'expired':
+          return {
+            accent: isDark ? neutral[500] : neutral[400],
+            accentLight: isDark ? neutral[700] : neutral[300],
+          };
         case 'regular':
         default:
           return {
@@ -1006,17 +1054,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
     tier: getChipColors(colors.tierAccent),
   } as const;
 
-  // Computed values
-  const participantInfo = getParticipantInfo(match);
-  // Derive status from match attributes instead of using denormalized status field
-  const derivedStatus = deriveMatchStatus({
-    cancelled_at: match.cancelled_at,
-    match_date: match.match_date,
-    start_time: match.start_time,
-    end_time: match.end_time,
-    timezone: match.timezone,
-    result: match.result,
-  });
+  // Computed values (participantInfo and derivedStatus already computed above for expired check)
   const { label: timeLabel, isUrgent } = getRelativeTimeDisplay(
     match.match_date,
     match.start_time,
@@ -1196,6 +1234,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
           {
             backgroundColor: tierPaletteColors.background,
             borderColor: dynamicBorderColor,
+            opacity: isExpired ? 0.7 : 1,
           },
           isMostWanted && styles.premiumCard,
         ]}
@@ -1253,8 +1292,8 @@ const MatchCard: React.FC<MatchCardProps> = ({
           {/* Time & Status row */}
           <View style={styles.topRow}>
             <View style={styles.timeContainer}>
-              {/* "Live" indicator for ongoing matches */}
-              {isOngoing && (
+              {/* "Live" indicator for ongoing matches (not shown when expired) */}
+              {isOngoing && !isExpired && (
                 <View style={styles.liveIndicatorContainer}>
                   {/* Expanding ring that fades out */}
                   <Animated.View
@@ -1279,8 +1318,8 @@ const MatchCard: React.FC<MatchCardProps> = ({
                   />
                 </View>
               )}
-              {/* Bouncing chevron for starting soon */}
-              {isStartingSoon && (
+              {/* Bouncing chevron for starting soon (not shown when expired) */}
+              {isStartingSoon && !isExpired && (
                 <Animated.View
                   style={[
                     styles.countdownIndicator,
@@ -1294,14 +1333,38 @@ const MatchCard: React.FC<MatchCardProps> = ({
                 </Animated.View>
               )}
               <Ionicons
-                name={isOngoing ? 'radio' : isStartingSoon ? 'time' : 'calendar-outline'}
+                name={
+                  isExpired
+                    ? 'close-circle-outline'
+                    : isOngoing
+                      ? 'radio'
+                      : isStartingSoon
+                        ? 'time'
+                        : 'calendar-outline'
+                }
                 size={16}
-                color={isOngoing ? liveColor : isStartingSoon ? soonColor : colors.tierAccent}
+                color={
+                  isExpired
+                    ? colors.textMuted
+                    : isOngoing
+                      ? liveColor
+                      : isStartingSoon
+                        ? soonColor
+                        : colors.tierAccent
+                }
               />
               <Text
                 size="base"
                 weight="bold"
-                color={isOngoing ? liveColor : isStartingSoon ? soonColor : colors.text}
+                color={
+                  isExpired
+                    ? colors.textMuted
+                    : isOngoing
+                      ? liveColor
+                      : isStartingSoon
+                        ? soonColor
+                        : colors.text
+                }
                 style={styles.timeText}
                 numberOfLines={1}
               >

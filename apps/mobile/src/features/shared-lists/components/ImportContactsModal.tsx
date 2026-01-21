@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import * as Contacts from 'expo-contacts';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
 import { primary, neutral } from '@rallia/design-system';
 import { bulkCreateSharedContacts, type SharedContact } from '@rallia/shared-services';
@@ -58,6 +58,7 @@ const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
   isDark,
   onClose,
 }) => {
+  const toast = useToast();
   const [contacts, setContacts] = useState<DeviceContact[]>([]);
   const [filteredContacts, setFilteredContacts] = useState<DeviceContact[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -179,7 +180,7 @@ const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
   const handleImport = async () => {
     const selectedContacts = contacts.filter(c => c.selected);
     if (selectedContacts.length === 0) {
-      Alert.alert('No Selection', 'Please select at least one contact to import.');
+      toast.warning('Please select at least one contact to import.');
       return;
     }
 
@@ -196,14 +197,13 @@ const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
         })),
       });
 
-      Alert.alert(
-        'Success',
-        `${selectedContacts.length} ${selectedContacts.length === 1 ? 'contact' : 'contacts'} imported successfully.`,
-        [{ text: 'OK', onPress: () => onClose(true) }]
+      toast.success(
+        `${selectedContacts.length} ${selectedContacts.length === 1 ? 'contact' : 'contacts'} imported successfully.`
       );
+      onClose(true);
     } catch (error) {
       console.error('Failed to import contacts:', error);
-      Alert.alert('Error', 'Failed to import contacts. Please try again.');
+      toast.error('Failed to import contacts. Please try again.');
     } finally {
       setIsImporting(false);
     }

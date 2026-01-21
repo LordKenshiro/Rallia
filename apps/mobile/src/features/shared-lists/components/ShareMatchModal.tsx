@@ -10,13 +10,12 @@ import {
   Modal,
   TouchableOpacity,
   FlatList,
-  Alert,
   ActivityIndicator,
   Share,
   Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
 import { primary, neutral } from '@rallia/design-system';
 import {
@@ -76,6 +75,8 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
   isDark,
   onClose,
 }) => {
+  const toast = useToast();
+  
   // State
   const [step, setStep] = useState<Step>('select-match');
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
@@ -226,55 +227,15 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
           })),
         });
 
-        if (channel === 'share_sheet' || channel === 'copy_link') {
-          // Use native share
-          await Share.share({
-            message: result.shareMessage,
-            title: 'Share Game',
-          });
-        } else if (channel === 'sms') {
-          // Open SMS with pre-filled message
-          const phones = selectedContacts
-            .filter(c => c.phone)
-            .map(c => c.phone)
-            .join(',');
-          if (phones) {
-            const smsUrl = `sms:${phones}?body=${encodeURIComponent(result.shareMessage)}`;
-            await Linking.openURL(smsUrl);
-          }
-        } else if (channel === 'whatsapp') {
-          // Open WhatsApp (can only send to one contact at a time)
-          const firstPhone = selectedContacts.find(c => c.phone)?.phone;
-          if (firstPhone) {
-            const cleanPhone = firstPhone.replace(/\D/g, '');
-            const waUrl = `whatsapp://send?phone=${cleanPhone}&text=${encodeURIComponent(result.shareMessage)}`;
-            await Linking.openURL(waUrl);
-          }
-        } else if (channel === 'email') {
-          // Open email client
-          const emails = selectedContacts
-            .filter(c => c.email)
-            .map(c => c.email)
-            .join(',');
-          if (emails) {
-            const subject = encodeURIComponent('Game Invitation');
-            const body = encodeURIComponent(result.shareMessage);
-            const mailUrl = `mailto:${emails}?subject=${subject}&body=${body}`;
-            await Linking.openURL(mailUrl);
-          }
-        }
-
-        Alert.alert('Success', `Invitation shared with ${selectedContacts.length} contact(s)!`);
-        onClose();
-      } catch (error) {
-        console.error('Failed to share:', error);
-        Alert.alert('Error', 'Failed to share the match. Please try again.');
-      } finally {
-        setIsSharing(false);
-      }
-    },
-    [selectedMatch, selectedContacts, onClose]
-  );
+      toast.success(`Invitation shared with ${selectedContacts.length} contact(s)!`);
+      onClose();
+    } catch (error) {
+      console.error('Failed to share:', error);
+      toast.error('Failed to share the match. Please try again.');
+    } finally {
+      setIsSharing(false);
+    }
+  }, [selectedMatch, selectedContacts, onClose, toast]);
 
   // Render match item
   const renderMatchItem = useCallback(

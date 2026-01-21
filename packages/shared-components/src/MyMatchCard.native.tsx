@@ -46,8 +46,9 @@ import {
  * - mostWanted: Court booked + high reputation creator (90%+) → accent/gold
  * - readyToPlay: Court booked only → secondary/coral
  * - regular: Default → primary/teal
+ * - expired: Match started but not full (disabled appearance) → neutral/gray
  */
-type MatchTier = 'mostWanted' | 'readyToPlay' | 'regular';
+type MatchTier = 'mostWanted' | 'readyToPlay' | 'regular' | 'expired';
 
 /**
  * Threshold for "high reputation" creator (percentage 0-100)
@@ -113,6 +114,19 @@ const TIER_PALETTES = {
       background: primary[950], // Very dark teal background
       accentStart: primary[400],
       accentEnd: primary[300],
+    },
+  },
+  // Expired - neutral/gray palette (disabled, past matches)
+  expired: {
+    light: {
+      background: neutral[100], // Light gray background
+      accentStart: neutral[400], // Gray accent
+      accentEnd: neutral[300], // Lighter gray
+    },
+    dark: {
+      background: neutral[900], // Dark gray background
+      accentStart: neutral[500], // Gray accent
+      accentEnd: neutral[400], // Slightly lighter gray
     },
   },
 } as const;
@@ -560,9 +574,31 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
   pendingRequestCount = 0,
   isInvited = false,
 }) => {
+  // Calculate participant info early to check for expired state
+  const participants = match.participants?.filter(p => p.status === 'joined') ?? [];
+  const total = match.format === 'doubles' ? 4 : 2;
+  const isFull = participants.length >= total;
+
+  // Derive match status early to check for expired state
+  const derivedStatus = deriveMatchStatus({
+    cancelled_at: match.cancelled_at,
+    match_date: match.match_date,
+    start_time: match.start_time,
+    end_time: match.end_time,
+    timezone: match.timezone,
+    result: match.result,
+  });
+  const isInProgress = derivedStatus === 'in_progress';
+  const hasMatchEnded = derivedStatus === 'completed';
+
+  // Check if match is expired (started or ended but not full)
+  const isExpired = (isInProgress || hasMatchEnded) && !isFull;
+
   // Determine match tier based on court status and creator reputation
+  // Override with 'expired' tier if match is expired
   const creatorReputationScore = match.created_by_player?.reputation_score;
-  const tier = getMatchTier(match.court_status, creatorReputationScore);
+  const baseTier = getMatchTier(match.court_status, creatorReputationScore);
+  const tier: MatchTier = isExpired ? 'expired' : baseTier;
   const isMostWanted = tier === 'mostWanted';
 
   // Get most wanted colors from design system
@@ -587,6 +623,11 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
           return {
             accent: isDark ? secondary[400] : secondary[500],
             accentLight: isDark ? secondary[700] : secondary[200],
+          };
+        case 'expired':
+          return {
+            accent: isDark ? neutral[500] : neutral[400],
+            accentLight: isDark ? neutral[700] : neutral[300],
           };
         case 'regular':
         default:
@@ -629,20 +670,10 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
   // Get location - check facility first, then custom location, fallback to TBD
   const locationName = match.facility?.name ?? match.location_name ?? t('matchDetail.locationTBD');
 
-  // Derive match status to determine if ongoing
-  const derivedStatus = deriveMatchStatus({
-    cancelled_at: match.cancelled_at,
-    match_date: match.match_date,
-    start_time: match.start_time,
-    end_time: match.end_time,
-    timezone: match.timezone,
-    result: match.result,
-  });
-
-  // Determine animation type:
+  // Determine animation type (derivedStatus already computed above for expired check):
   // - "in_progress" = ongoing match = live indicator animation
   // - "isUrgent" (< 3 hours) but not in_progress = starting soon = countdown animation
-  const isOngoing = derivedStatus === 'in_progress';
+  const isOngoing = isInProgress;
   const isStartingSoon = isUrgent && !isOngoing;
   const liveColor = isDark ? secondary[400] : secondary[500];
   const soonColor = isDark ? accent[400] : accent[500];
@@ -753,6 +784,7 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
           shadowOpacity: isDark ? 0.2 : 0.15,
           shadowRadius: isDark ? 8 : 10,
           elevation: isDark ? 3 : 2,
+          opacity: isExpired ? 0.7 : 1,
         },
         isMostWanted && [styles.premiumCard, { shadowColor: mwColors.shadow }],
       ]}
@@ -770,8 +802,17 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
       <View style={styles.content}>
         {/* Day label with indicator */}
         <View style={styles.dayLabelRow}>
-          {/* "Live" indicator for ongoing matches */}
-          {isOngoing && (
+          {/* Expired indicator icon */}
+          {isExpired && (
+            <Ionicons
+              name="close-circle-outline"
+              size={12}
+              color={colors.textMuted}
+              style={styles.expiredIcon}
+            />
+          )}
+          {/* "Live" indicator for ongoing matches (not shown when expired) */}
+          {isOngoing && !isExpired && (
             <View style={styles.liveIndicatorContainer}>
               <Animated.View
                 style={[
@@ -794,8 +835,8 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
               />
             </View>
           )}
-          {/* Bouncing chevron for starting soon */}
-          {isStartingSoon && (
+          {/* Bouncing chevron for starting soon (not shown when expired) */}
+          {isStartingSoon && !isExpired && (
             <Animated.View
               style={[
                 styles.countdownIndicator,
@@ -812,7 +853,7 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
           <Text
             size="xs"
             weight="semibold"
-            color={isOngoing ? liveColor : isStartingSoon ? soonColor : colors.textMuted}
+            color={isExpired ? colors.textMuted : isOngoing ? liveColor : isStartingSoon ? soonColor : colors.textMuted}
             style={styles.dayLabel}
           >
             {dayLabel.toUpperCase()}
@@ -823,7 +864,7 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
         <Text
           size="lg"
           weight="bold"
-          color={isOngoing ? liveColor : isStartingSoon ? soonColor : colors.text}
+          color={isExpired ? colors.textMuted : isOngoing ? liveColor : isStartingSoon ? soonColor : colors.text}
           numberOfLines={1}
         >
           {timeLabel}
@@ -965,6 +1006,10 @@ const styles = StyleSheet.create({
   // "Starting soon" countdown indicator
   countdownIndicator: {
     marginRight: spacingPixels[0.5],
+  },
+  // Expired icon indicator
+  expiredIcon: {
+    marginRight: spacingPixels[1],
   },
 
   locationRow: {

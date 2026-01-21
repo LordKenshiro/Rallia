@@ -506,7 +506,7 @@
     "level": "Level",
     "joinMatch": "Join game",
     "leaveMatch": "Leave game",
-    "cancelMatch": "Cancel game",
+    "cancelMatch": "Cancel",
     "matchDetails": "Game details"
   },
   "matchActions": {
@@ -592,7 +592,29 @@
     "mustBeLoggedIn": "Please sign in to create a game."
   },
   "chat": {
-    "empty": "No messages yet"
+    "empty": "No messages yet",
+    "inbox": "Inbox",
+    "search": "Search players",
+    "newGroup": "New group",
+    "noConversations": "No conversations yet",
+    "noConversationsSubtitle": "Join a group or start a conversation with another player",
+    "typeMessage": "Type your message",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "participants": "{{count}} participant",
+    "participants_plural": "{{count}} participants",
+    "agreement": {
+      "welcome": "Welcome to",
+      "description": "This is a group chat - all members of this community will see your messages",
+      "chatRules": "Chat rules",
+      "warning": "Content will be removed and users banned for violations of our community guidelines",
+      "agree": "I agree"
+    },
+    "rules": {
+      "noHarassment": "No harassment, hate speech, sexual language",
+      "noAdvertising": "No advertising or self promotion",
+      "noDisrespect": "No disrespect!"
+    }
   },
   "map": {
     "placeholder": "Map View"
@@ -711,6 +733,7 @@
     "matchInProgress": "Game in progress",
     "matchExpired": "This game has expired",
     "share": "Share",
+    "inviteFriends": "Share",
     "shareMessage": "Check out this game on Rallia!",
     "shareInvite": "Join me for {sport}!",
     "shareDateTime": "{date} at {time}",

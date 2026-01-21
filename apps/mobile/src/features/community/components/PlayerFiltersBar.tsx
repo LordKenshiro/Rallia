@@ -72,6 +72,9 @@ export type DuprFilter =
 // Distance in km (5km increments up to 50km)
 export type DistanceFilter = 'all' | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 40 | 45 | 50;
 
+// Sort options
+export type SortOption = 'name_asc' | 'name_desc' | 'rating_high' | 'rating_low' | 'distance' | 'recently_active';
+
 export interface PlayerFilters {
   favorites: boolean;
   blocked: boolean;
@@ -80,6 +83,7 @@ export interface PlayerFilters {
   maxDistance: DistanceFilter;
   availability: AvailabilityFilter;
   playStyle: PlayStyleFilter;
+  sortBy: SortOption;
 }
 
 export const DEFAULT_PLAYER_FILTERS: PlayerFilters = {
@@ -90,6 +94,7 @@ export const DEFAULT_PLAYER_FILTERS: PlayerFilters = {
   maxDistance: 'all',
   availability: 'all',
   playStyle: 'all',
+  sortBy: 'name_asc',
 };
 
 // =============================================================================
@@ -138,8 +143,18 @@ const DUPR_OPTIONS: DuprFilter[] = [
   '8.0',
 ];
 const DISTANCE_OPTIONS: DistanceFilter[] = ['all', 5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
+const SORT_OPTIONS: SortOption[] = ['name_asc', 'name_desc', 'rating_high', 'rating_low', 'distance', 'recently_active'];
 
 // Labels
+
+const SORT_LABELS: Record<SortOption, string> = {
+  name_asc: 'Name (A-Z)',
+  name_desc: 'Name (Z-A)',
+  rating_high: 'Rating (High to Low)',
+  rating_low: 'Rating (Low to High)',
+  distance: 'Distance (Nearest)',
+  recently_active: 'Recently Active',
+};
 const GENDER_LABELS: Record<GenderFilter, string> = {
   all: 'All',
   male: 'Men',
@@ -415,6 +430,7 @@ export function PlayerFiltersBar({
   const [showDistanceDropdown, setShowDistanceDropdown] = useState(false);
   const [showAvailabilityDropdown, setShowAvailabilityDropdown] = useState(false);
   const [showStyleDropdown, setShowStyleDropdown] = useState(false);
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
 
   // Determine which skill options to use based on sport
   const isTennis = sportName?.toLowerCase().includes('tennis');
@@ -425,7 +441,7 @@ export function PlayerFiltersBar({
   // Users can filter to see players willing to travel at least X km
   const availableDistanceOptions = DISTANCE_OPTIONS;
 
-  // Check if any filter is active
+  // Check if any filter is active (excluding default sort)
   const hasActiveFilters = useMemo(() => {
     return (
       filters.favorites ||
@@ -434,7 +450,8 @@ export function PlayerFiltersBar({
       filters.skillLevel !== 'all' ||
       filters.maxDistance !== 'all' ||
       filters.availability !== 'all' ||
-      filters.playStyle !== 'all'
+      filters.playStyle !== 'all' ||
+      (filters.sortBy && filters.sortBy !== 'name_asc')
     );
   }, [filters]);
 
@@ -494,6 +511,10 @@ export function PlayerFiltersBar({
     [filters, onFiltersChange]
   );
 
+  const handleSortChange = useCallback((value: SortOption) => {
+    onFiltersChange({ ...filters, sortBy: value });
+  }, [filters, onFiltersChange]);
+
   const handleReset = useCallback(() => {
     lightHaptic();
     onReset?.();
@@ -505,6 +526,7 @@ export function PlayerFiltersBar({
   const getDistanceLabel = (v: DistanceFilter) => (v === 'all' ? 'All' : `${v} km`);
   const getAvailabilityLabel = (v: AvailabilityFilter) => AVAILABILITY_LABELS[v];
   const getStyleLabel = (v: PlayStyleFilter) => PLAY_STYLE_LABELS[v];
+  const getSortLabel = (v: SortOption) => SORT_LABELS[v];
 
   // Display values for chips
   const genderDisplay = filters.gender === 'all' ? 'Gender' : GENDER_LABELS[filters.gender];
@@ -513,6 +535,7 @@ export function PlayerFiltersBar({
   const availabilityDisplay =
     filters.availability === 'all' ? 'Time' : AVAILABILITY_LABELS[filters.availability];
   const styleDisplay = filters.playStyle === 'all' ? 'Style' : PLAY_STYLE_LABELS[filters.playStyle];
+  const sortDisplay = SORT_LABELS[filters.sortBy || 'name_asc'];
 
   return (
     <View style={styles.container}>
@@ -597,6 +620,16 @@ export function PlayerFiltersBar({
           isDark={isDark}
         />
 
+        {/* Sort Option */}
+        <FilterChip
+          label="Sort"
+          value={sortDisplay}
+          isActive={filters.sortBy !== 'name_asc'}
+          onPress={() => setShowSortDropdown(true)}
+          isDark={isDark}
+          icon="swap-vertical-outline"
+        />
+
         {/* Reset Button - only show when filters are active */}
         {hasActiveFilters && onReset && (
           <TouchableOpacity
@@ -676,6 +709,17 @@ export function PlayerFiltersBar({
         onClose={() => setShowStyleDropdown(false)}
         isDark={isDark}
         getLabel={getStyleLabel}
+      />
+
+      <FilterDropdown
+        visible={showSortDropdown}
+        title="Sort Players By"
+        options={SORT_OPTIONS}
+        selectedValue={filters.sortBy || 'name_asc'}
+        onSelect={handleSortChange}
+        onClose={() => setShowSortDropdown(false)}
+        isDark={isDark}
+        getLabel={getSortLabel}
       />
     </View>
   );

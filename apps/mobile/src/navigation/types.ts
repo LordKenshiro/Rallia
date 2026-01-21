@@ -41,7 +41,9 @@ export type RootStackParamList = {
   Map: { focusLocation?: { lat: number; lng: number } } | undefined;
   RatingProofs: RatingProofsScreenParams;
   GroupDetail: { groupId: string; groupName?: string }; // Group detail view
+  GroupChatInfo: { conversationId: string }; // Group chat info/settings view
   Chat: { conversationId: string; title?: string }; // Direct chat navigation
+  PlayedMatchDetail: { match: unknown }; // Played match detail view
 };
 
 // =============================================================================
@@ -100,6 +102,7 @@ export type CommunityStackParamList = {
 export type ChatStackParamList = {
   Conversations: undefined;
   ChatScreen: { conversationId: string; title?: string };
+  ArchivedChats: undefined;
 };
 
 // =============================================================================
