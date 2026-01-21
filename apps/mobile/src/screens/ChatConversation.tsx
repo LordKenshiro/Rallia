@@ -25,6 +25,7 @@ import {
   useMarkMessagesAsRead,
   useToggleReaction,
   useChatRealtime,
+  useReactionsRealtime,
   useChatAgreement,
   useAgreeToChatRules,
   useEditMessage,
@@ -166,8 +167,11 @@ export default function ChatConversationScreen() {
     sendTyping(isTyping);
   }, [sendTyping]);
 
-  // Real-time subscription
+  // Real-time subscriptions for messages (including edits and deletes)
   useChatRealtime(conversationId, playerId);
+  
+  // Real-time subscription for reactions
+  useReactionsRealtime(conversationId);
 
   // Mark messages as read when entering the conversation
   useEffect(() => {

@@ -5,7 +5,6 @@
 
 import { useEffect, useCallback, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
-import type { RealtimeChannel } from '@supabase/supabase-js';
 import {
   getPlayerConversations,
   getConversation,
@@ -21,9 +20,9 @@ import {
   togglePinConversation,
   toggleArchiveConversation,
   toggleReaction,
-  getMessagesReactions,
   subscribeToMessages,
   subscribeToConversations,
+  subscribeToReactions,
   unsubscribeFromChannel,
   getTotalUnreadCount,
   getConversationByNetworkId,
@@ -237,7 +236,7 @@ export function useDeleteMessage() {
     mutationFn: ({
       messageId,
       senderId,
-      conversationId,
+      conversationId: _conversationId,
     }: {
       messageId: string;
       senderId: string;
@@ -435,46 +434,139 @@ export function useTotalUnreadCount(playerId: string | undefined) {
 
 /**
  * Subscribe to real-time messages in a conversation
+ * Handles new messages, edits, and deletions
  */
 export function useChatRealtime(
   conversationId: string | undefined,
   playerId: string | undefined,
-  onNewMessage?: (message: Message) => void
+  callbacks?: {
+    onNewMessage?: (message: Message) => void;
+    onMessageUpdated?: (message: Message) => void;
+    onMessageDeleted?: (messageId: string) => void;
+  }
 ) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!conversationId || !playerId) return;
 
-    const channel = subscribeToMessages(conversationId, (newMessage) => {
-      // Add message to cache
-      queryClient.setQueryData(
-        chatKeys.messages(conversationId),
-        (oldData: { pages: MessageWithSender[][]; pageParams: number[] } | undefined) => {
-          if (!oldData) return oldData;
-          
-          const newPages = [...oldData.pages];
-          // Only add if not already present (avoid duplicates)
-          const exists = newPages[0]?.some((m) => m.id === newMessage.id);
-          if (!exists) {
-            newPages[0] = [newMessage as MessageWithSender, ...(newPages[0] || [])];
+    const channel = subscribeToMessages(conversationId, {
+      // Handle new messages
+      onInsert: (newMessage) => {
+        queryClient.setQueryData(
+          chatKeys.messages(conversationId),
+          (oldData: { pages: MessageWithSender[][]; pageParams: number[] } | undefined) => {
+            if (!oldData) return oldData;
+            
+            const newPages = [...oldData.pages];
+            // Only add if not already present (avoid duplicates)
+            const exists = newPages[0]?.some((m) => m.id === newMessage.id);
+            if (!exists) {
+              newPages[0] = [newMessage as MessageWithSender, ...(newPages[0] || [])];
+            }
+            
+            return {
+              ...oldData,
+              pages: newPages,
+            };
           }
-          
-          return {
-            ...oldData,
-            pages: newPages,
-          };
-        }
-      );
+        );
 
-      // Call custom handler
-      onNewMessage?.(newMessage);
+        // Call custom handler
+        callbacks?.onNewMessage?.(newMessage);
+      },
+
+      // Handle message edits
+      onUpdate: (updatedMessage) => {
+        queryClient.setQueryData(
+          chatKeys.messages(conversationId),
+          (oldData: { pages: MessageWithSender[][]; pageParams: number[] } | undefined) => {
+            if (!oldData) return oldData;
+            
+            // Update the message in the cache
+            const newPages = oldData.pages.map((page) =>
+              page.map((msg) =>
+                msg.id === updatedMessage.id
+                  ? { ...msg, ...updatedMessage }
+                  : msg
+              )
+            );
+            
+            return {
+              ...oldData,
+              pages: newPages,
+            };
+          }
+        );
+
+        // Call custom handler
+        callbacks?.onMessageUpdated?.(updatedMessage);
+      },
+
+      // Handle message deletions
+      onDelete: (messageId) => {
+        queryClient.setQueryData(
+          chatKeys.messages(conversationId),
+          (oldData: { pages: MessageWithSender[][]; pageParams: number[] } | undefined) => {
+            if (!oldData) return oldData;
+            
+            // Mark message as deleted in the cache (soft delete)
+            // Or remove it entirely depending on your UI needs
+            const newPages = oldData.pages.map((page) =>
+              page.map((msg) =>
+                msg.id === messageId
+                  ? { ...msg, is_deleted: true, content: '' }
+                  : msg
+              )
+            );
+            
+            return {
+              ...oldData,
+              pages: newPages,
+            };
+          }
+        );
+
+        // Call custom handler
+        callbacks?.onMessageDeleted?.(messageId);
+      },
     });
 
     return () => {
       unsubscribeFromChannel(channel);
     };
-  }, [conversationId, playerId, queryClient, onNewMessage]);
+  }, [conversationId, playerId, queryClient, callbacks]);
+}
+
+/**
+ * Subscribe to real-time reaction changes in a conversation
+ */
+export function useReactionsRealtime(conversationId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!conversationId) return;
+
+    const channel = subscribeToReactions(conversationId, ({ messageId: _messageId }) => {
+      // Invalidate reactions for the affected message
+      // We invalidate all reactions queries since we don't know which specific query contains this message
+      queryClient.invalidateQueries({
+        queryKey: chatKeys.all,
+        predicate: (query) => 
+          query.queryKey[0] === 'chat' && 
+          query.queryKey[1] === 'reactions',
+      });
+
+      // Also invalidate the messages query to refresh reaction counts
+      queryClient.invalidateQueries({
+        queryKey: chatKeys.messages(conversationId),
+      });
+    });
+
+    return () => {
+      unsubscribeFromChannel(channel);
+    };
+  }, [conversationId, queryClient]);
 }
 
 /**
@@ -605,7 +697,8 @@ export function useTypingIndicators(
       return;
     }
 
-    const channel = subscribeToTypingIndicators(
+    // Subscribe to typing indicators (channel is managed internally)
+    subscribeToTypingIndicators(
       conversationId,
       playerId,
       playerName,

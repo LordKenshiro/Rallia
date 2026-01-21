@@ -23,7 +23,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Text, Skeleton } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useAuth } from '../hooks';
-import { usePlayerGroups, useCreateGroup, type Group } from '@rallia/shared-hooks';
+import { usePlayerGroups, useCreateGroup, usePlayerGroupsRealtime, type Group } from '@rallia/shared-hooks';
 import type { RootStackParamList } from '../navigation/types';
 import { CreateGroupModal, QRScannerModal } from '../features/groups';
 
@@ -49,6 +49,9 @@ export default function GroupsScreen() {
     isRefetching,
     refetch,
   } = usePlayerGroups(playerId);
+
+  // Subscribe to real-time updates for player's groups
+  usePlayerGroupsRealtime(playerId);
 
   const createGroupMutation = useCreateGroup();
 

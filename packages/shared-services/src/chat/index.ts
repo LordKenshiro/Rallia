@@ -70,7 +70,9 @@ export {
   // Real-time Subscriptions
   subscribeToMessages,
   subscribeToConversations,
+  subscribeToReactions,
   unsubscribeFromChannel,
+  type MessageEventCallback,
   
   // Utility Functions
   getTotalUnreadCount,

@@ -35,6 +35,8 @@ import {
   useGroupMatches,
   useMostRecentGroupMatch,
   useGroupLeaderboard,
+  useGroupRealtime,
+  useScoreConfirmationsRealtime,
   type GroupActivity as GroupActivityType,
 } from '@rallia/shared-hooks';
 import type { RootStackParamList } from '../navigation/types';
@@ -116,6 +118,11 @@ export default function GroupDetailScreen() {
   const { data: recentMatch } = useMostRecentGroupMatch(groupId);
   const { data: allMatches } = useGroupMatches(groupId, 180, 100);
   const { data: leaderboard } = useGroupLeaderboard(groupId, leaderboardPeriod === 0 ? 3650 : leaderboardPeriod);
+
+  // Subscribe to real-time updates for this group
+  useGroupRealtime(groupId, playerId);
+  // Subscribe to real-time score confirmation updates
+  useScoreConfirmationsRealtime(playerId);
 
   const leaveGroupMutation = useLeaveGroup();
   const deleteGroupMutation = useDeleteGroup();
@@ -605,7 +612,6 @@ export default function GroupDetailScreen() {
                     {(() => {
                       const team1Players = recentMatch.match.participants.filter(p => p.team_number === 1);
                       const isWinner = recentMatch.match?.result?.winning_team === 1;
-                      const isDoubles = team1Players.length > 1;
                       
                       return (
                         <View style={[
@@ -683,7 +689,6 @@ export default function GroupDetailScreen() {
                     {(() => {
                       const team2Players = recentMatch.match.participants.filter(p => p.team_number === 2);
                       const isWinner = recentMatch.match?.result?.winning_team === 2;
-                      const isDoubles = team2Players.length > 1;
                       
                       return (
                         <View style={[

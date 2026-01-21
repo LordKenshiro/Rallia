@@ -28,10 +28,11 @@ import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { primary, neutral } from '@rallia/design-system';
 import {
-  getSharedContacts,
-  deleteSharedContact,
+  useSharedContacts,
+  useDeleteSharedContact,
+  useSharedContactsRealtime,
   type SharedContact,
-} from '@rallia/shared-services';
+} from '@rallia/shared-hooks';
 import { useThemeStyles } from '../hooks';
 import type { CommunityStackParamList } from '../navigation/types';
 import { AddContactModal, ContactCard, ImportContactsModal } from '../features/shared-lists';
@@ -50,12 +51,16 @@ const SharedListDetail: React.FC = () => {
   const { listId, listName } = route.params;
 
   // State
-  const [contacts, setContacts] = useState<SharedContact[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [editingContact, setEditingContact] = useState<SharedContact | null>(null);
+
+  // Queries and mutations
+  const { data: contacts = [], isLoading, isRefetching, refetch } = useSharedContacts(listId);
+  const deleteContactMutation = useDeleteSharedContact();
+
+  // Subscribe to real-time updates for this list's contacts
+  useSharedContactsRealtime(listId);
 
   // Set header title
   useEffect(() => {
@@ -64,30 +69,10 @@ const SharedListDetail: React.FC = () => {
     });
   }, [navigation, listName]);
 
-  // Fetch contacts
-  const fetchContacts = useCallback(async () => {
-    try {
-      const data = await getSharedContacts(listId);
-      setContacts(data);
-    } catch (error) {
-      console.error('Failed to fetch contacts:', error);
-      Alert.alert('Error', 'Failed to load contacts. Please try again.');
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  }, [listId]);
-
-  // Initial load
-  useEffect(() => {
-    fetchContacts();
-  }, [fetchContacts]);
-
   // Refresh handler
   const handleRefresh = useCallback(() => {
-    setIsRefreshing(true);
-    fetchContacts();
-  }, [fetchContacts]);
+    refetch();
+  }, [refetch]);
 
   // Add contact manually
   const handleAddManually = useCallback(() => {
@@ -118,8 +103,7 @@ const SharedListDetail: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await deleteSharedContact(contact.id);
-              setContacts(prev => prev.filter(c => c.id !== contact.id));
+              await deleteContactMutation.mutateAsync({ contactId: contact.id, listId });
             } catch (error) {
               console.error('Failed to delete contact:', error);
               Alert.alert('Error', 'Failed to delete the contact. Please try again.');
@@ -128,23 +112,19 @@ const SharedListDetail: React.FC = () => {
         },
       ]
     );
-  }, []);
+  }, [deleteContactMutation, listId]);
 
   // Modal close handlers
-  const handleAddModalClose = useCallback((refreshNeeded?: boolean) => {
+  const handleAddModalClose = useCallback(() => {
     setShowAddModal(false);
     setEditingContact(null);
-    if (refreshNeeded) {
-      fetchContacts();
-    }
-  }, [fetchContacts]);
+    // No need to manually refetch - React Query + Realtime handles it
+  }, []);
 
-  const handleImportModalClose = useCallback((refreshNeeded?: boolean) => {
+  const handleImportModalClose = useCallback(() => {
     setShowImportModal(false);
-    if (refreshNeeded) {
-      fetchContacts();
-    }
-  }, [fetchContacts]);
+    // No need to manually refetch - React Query + Realtime handles it
+  }, []);
 
   // Render contact item
   const renderContactItem = useCallback(
@@ -256,7 +236,7 @@ const SharedListDetail: React.FC = () => {
         ListEmptyComponent={renderEmpty}
         refreshControl={
           <RefreshControl
-            refreshing={isRefreshing}
+            refreshing={isRefetching}
             onRefresh={handleRefresh}
             tintColor={colors.primary}
           />

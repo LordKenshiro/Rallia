@@ -3,6 +3,7 @@
  * React Query hooks for managing player groups
  */
 
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getPlayerGroups,
@@ -33,6 +34,14 @@ import {
   getPendingScoreConfirmations,
   confirmMatchScore,
   disputeMatchScore,
+  // Realtime functions
+  subscribeToGroupMembers,
+  subscribeToGroupActivity,
+  subscribeToGroupMatches,
+  subscribeToGroupSettings,
+  subscribeToPlayerGroups,
+  subscribeToScoreConfirmations,
+  unsubscribeFromGroupChannel,
   type Group,
   type GroupWithMembers,
   type GroupMember,
@@ -500,3 +509,129 @@ export type {
   CreatePlayedMatchInput,
   PendingScoreConfirmation,
 };
+
+// =============================================================================
+// REALTIME HOOKS
+// =============================================================================
+
+/**
+ * Subscribe to real-time updates for player's groups list
+ * Automatically refreshes when the player joins or leaves a group
+ */
+export function usePlayerGroupsRealtime(playerId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!playerId) return;
+
+    const channel = subscribeToPlayerGroups(playerId, () => {
+      // Refresh the groups list when membership changes
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.playerGroups(playerId),
+      });
+    });
+
+    return () => {
+      unsubscribeFromGroupChannel(channel);
+    };
+  }, [playerId, queryClient]);
+}
+
+/**
+ * Subscribe to real-time updates for a specific group
+ * Handles member changes, activity, matches, and settings updates
+ */
+export function useGroupRealtime(groupId: string | undefined, playerId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!groupId || !playerId) return;
+
+    // Subscribe to member changes (joins, leaves, role changes)
+    const membersChannel = subscribeToGroupMembers(groupId, () => {
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.withMembers(groupId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.stats(groupId),
+      });
+    });
+
+    // Subscribe to activity feed updates
+    const activityChannel = subscribeToGroupActivity(groupId, () => {
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.activity(groupId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.stats(groupId),
+      });
+    });
+
+    // Subscribe to match/score changes
+    const matchesChannel = subscribeToGroupMatches(groupId, () => {
+      // Refresh all match-related data
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.matches(groupId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.recentMatch(groupId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.leaderboard(groupId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.stats(groupId),
+      });
+      // Also refresh pending confirmations for the current player
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.pendingConfirmations(playerId),
+      });
+    });
+
+    // Subscribe to group settings changes (name, description, cover)
+    const settingsChannel = subscribeToGroupSettings(groupId, (payload) => {
+      if (payload.eventType === 'DELETE') {
+        // Group was deleted, invalidate all related queries
+        queryClient.invalidateQueries({
+          queryKey: groupKeys.playerGroups(playerId),
+        });
+      } else {
+        // Group was updated
+        queryClient.invalidateQueries({
+          queryKey: groupKeys.detail(groupId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: groupKeys.withMembers(groupId),
+        });
+      }
+    });
+
+    return () => {
+      unsubscribeFromGroupChannel(membersChannel);
+      unsubscribeFromGroupChannel(activityChannel);
+      unsubscribeFromGroupChannel(matchesChannel);
+      unsubscribeFromGroupChannel(settingsChannel);
+    };
+  }, [groupId, playerId, queryClient]);
+}
+
+/**
+ * Subscribe to real-time updates for pending score confirmations
+ */
+export function useScoreConfirmationsRealtime(playerId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!playerId) return;
+
+    const channel = subscribeToScoreConfirmations(playerId, () => {
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.pendingConfirmations(playerId),
+      });
+    });
+
+    return () => {
+      unsubscribeFromGroupChannel(channel);
+    };
+  }, [playerId, queryClient]);
+}

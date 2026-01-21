@@ -36,6 +36,7 @@ export * from './useGroups';
 export * from './useChat';
 export * from './useBlockedStatus';
 export * from './useFavoriteStatus';
+export * from './useSharedLists';
 
 // Platform-specific exports - Metro resolves .native.ts for React Native builds
 // Web bundlers will use the stub .ts files which throw helpful errors at runtime

@@ -9,7 +9,7 @@
  * - Share matches with contacts via SMS/Email/WhatsApp
  */
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -28,10 +28,11 @@ import { lightHaptic } from '@rallia/shared-utils';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { primary } from '@rallia/design-system';
 import {
-  getSharedContactLists,
-  deleteSharedContactList,
+  useSharedLists,
+  useDeleteSharedList,
+  useSharedListsRealtime,
   type SharedContactList,
-} from '@rallia/shared-services';
+} from '@rallia/shared-hooks';
 import { useThemeStyles, useAuth } from '../hooks';
 import type { CommunityStackParamList } from '../navigation/types';
 import { CreateListModal, SharedListCard, ShareMatchModal } from '../features/shared-lists';
@@ -42,15 +43,20 @@ const SharedLists: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
+  const playerId = session?.user?.id;
 
   // State
-  const [lists, setLists] = useState<SharedContactList[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [editingList, setEditingList] = useState<SharedContactList | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Queries and mutations
+  const { data: lists = [], isLoading, isRefetching, refetch } = useSharedLists();
+  const deleteListMutation = useDeleteSharedList();
+
+  // Subscribe to real-time updates for shared lists
+  useSharedListsRealtime(playerId);
 
   // Filter lists based on search query
   const filteredLists = useMemo(() => {
@@ -62,30 +68,10 @@ const SharedLists: React.FC = () => {
     );
   }, [lists, searchQuery]);
 
-  // Fetch lists
-  const fetchLists = useCallback(async () => {
-    try {
-      const data = await getSharedContactLists();
-      setLists(data);
-    } catch (error) {
-      console.error('Failed to fetch lists:', error);
-      Alert.alert('Error', 'Failed to load your shared lists. Please try again.');
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  }, []);
-
-  // Initial load
-  useEffect(() => {
-    fetchLists();
-  }, [fetchLists]);
-
   // Refresh handler
   const handleRefresh = useCallback(() => {
-    setIsRefreshing(true);
-    fetchLists();
-  }, [fetchLists]);
+    refetch();
+  }, [refetch]);
 
   // Create list handler
   const handleCreateList = useCallback(() => {
@@ -113,8 +99,7 @@ const SharedLists: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await deleteSharedContactList(list.id);
-              setLists(prev => prev.filter(l => l.id !== list.id));
+              await deleteListMutation.mutateAsync(list.id);
             } catch (error) {
               console.error('Failed to delete list:', error);
               Alert.alert('Error', 'Failed to delete the list. Please try again.');
@@ -123,7 +108,7 @@ const SharedLists: React.FC = () => {
         },
       ]
     );
-  }, []);
+  }, [deleteListMutation]);
 
   // View list details handler
   const handleViewList = useCallback((list: SharedContactList) => {
@@ -131,13 +116,11 @@ const SharedLists: React.FC = () => {
   }, [navigation]);
 
   // Modal close handler
-  const handleModalClose = useCallback((refreshNeeded?: boolean) => {
+  const handleModalClose = useCallback(() => {
     setShowCreateModal(false);
     setEditingList(null);
-    if (refreshNeeded) {
-      fetchLists();
-    }
-  }, [fetchLists]);
+    // No need to manually refetch - React Query + Realtime handles it
+  }, []);
 
   // Render list item
   const renderListItem = useCallback(
@@ -302,7 +285,7 @@ const SharedLists: React.FC = () => {
         ListEmptyComponent={renderEmpty}
         refreshControl={
           <RefreshControl
-            refreshing={isRefreshing}
+            refreshing={isRefetching}
             onRefresh={handleRefresh}
             tintColor={colors.primary}
           />

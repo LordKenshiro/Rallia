@@ -12,14 +12,30 @@ import type { Message, MessageStatus, TypingIndicator } from './chatTypes';
 // ============================================================================
 
 /**
- * Subscribe to new messages in a conversation
+ * Callback types for message events
+ */
+export type MessageEventCallback = {
+  onInsert?: (message: Message) => void;
+  onUpdate?: (message: Message) => void;
+  onDelete?: (messageId: string) => void;
+};
+
+/**
+ * Subscribe to all message events in a conversation (INSERT, UPDATE, DELETE)
+ * Handles new messages, edits, and deletions
  */
 export function subscribeToMessages(
   conversationId: string,
-  onMessage: (message: Message) => void
+  onMessageOrCallbacks: ((message: Message) => void) | MessageEventCallback
 ): RealtimeChannel {
+  // Support both legacy single callback and new multi-callback format
+  const callbacks: MessageEventCallback = typeof onMessageOrCallbacks === 'function'
+    ? { onInsert: onMessageOrCallbacks }
+    : onMessageOrCallbacks;
+
   const channel = supabase
     .channel(`messages:${conversationId}`)
+    // Handle new messages
     .on(
       'postgres_changes',
       {
@@ -30,10 +46,73 @@ export function subscribeToMessages(
       },
       (payload) => {
         const msg = payload.new as Message;
-        onMessage({
+        callbacks.onInsert?.({
           ...msg,
           status: (msg.status || 'sent') as MessageStatus,
         });
+      }
+    )
+    // Handle message edits
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'message',
+        filter: `conversation_id=eq.${conversationId}`,
+      },
+      (payload) => {
+        const msg = payload.new as Message;
+        callbacks.onUpdate?.({
+          ...msg,
+          status: (msg.status || 'sent') as MessageStatus,
+        });
+      }
+    )
+    // Handle message deletions
+    .on(
+      'postgres_changes',
+      {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'message',
+        filter: `conversation_id=eq.${conversationId}`,
+      },
+      (payload) => {
+        const oldMsg = payload.old as { id: string };
+        callbacks.onDelete?.(oldMsg.id);
+      }
+    )
+    .subscribe();
+
+  return channel;
+}
+
+/**
+ * Subscribe to message reactions in a conversation
+ */
+export function subscribeToReactions(
+  conversationId: string,
+  onReactionChange: (payload: { eventType: 'INSERT' | 'DELETE'; reaction: unknown; messageId: string }) => void
+): RealtimeChannel {
+  const channel = supabase
+    .channel(`reactions:${conversationId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'message_reaction',
+      },
+      (payload) => {
+        const reaction = (payload.new || payload.old) as { message_id?: string };
+        if (reaction.message_id) {
+          onReactionChange({
+            eventType: payload.eventType as 'INSERT' | 'DELETE',
+            reaction: payload.new || payload.old,
+            messageId: reaction.message_id,
+          });
+        }
       }
     )
     .subscribe();
