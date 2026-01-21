@@ -18,6 +18,7 @@ import {
 import * as Contacts from 'expo-contacts';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
+import { selectionHaptic, lightHaptic } from '@rallia/shared-utils';
 import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
 import { primary, neutral } from '@rallia/design-system';
 import { bulkCreateSharedContacts, type SharedContact } from '@rallia/shared-services';
@@ -160,6 +161,7 @@ const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
 
   // Toggle contact selection
   const toggleContact = useCallback((contactId: string) => {
+    selectionHaptic();
     setContacts(prev =>
       prev.map(c => (c.id === contactId ? { ...c, selected: !c.selected } : c))
     );
@@ -170,6 +172,7 @@ const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
 
   // Select/deselect all
   const toggleSelectAll = useCallback(() => {
+    lightHaptic();
     const allSelected = filteredContacts.every(c => c.selected);
     const filteredIds = new Set(filteredContacts.map(c => c.id));
 

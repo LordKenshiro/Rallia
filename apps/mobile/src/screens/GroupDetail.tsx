@@ -23,6 +23,7 @@ import type { RouteProp } from '@react-navigation/native';
 import Svg, { Circle } from 'react-native-svg';
 
 import { Text } from '@rallia/shared-components';
+import { lightHaptic, selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useAuth } from '../hooks';
 import {
   useGroupWithMembers,
@@ -121,6 +122,7 @@ export default function GroupDetailScreen() {
 
   const handleOpenChat = useCallback(() => {
     if (group?.conversation_id) {
+      lightHaptic();
       navigation.navigate('Chat', { 
         conversationId: group.conversation_id,
         title: group.name,
@@ -129,6 +131,7 @@ export default function GroupDetailScreen() {
   }, [group, navigation]);
 
   const handleAddGame = useCallback(() => {
+    mediumHaptic();
     // Check if user has seen the intro before
     if (hasSeenAddScoreIntro === false) {
       // First time - show the intro
@@ -145,6 +148,7 @@ export default function GroupDetailScreen() {
   }, []);
 
   const handleMatchTypeSelect = useCallback((type: MatchType) => {
+    selectionHaptic();
     setSelectedMatchType(type);
     setShowMatchTypeModal(false);
     setShowAddScoreModal(true);

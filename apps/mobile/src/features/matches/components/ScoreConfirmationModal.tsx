@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button, useToast } from '@rallia/shared-components';
+import { successHaptic, warningHaptic, lightHaptic } from '@rallia/shared-utils';
 import { useThemeStyles } from '../../../hooks';
 import { 
   useConfirmMatchScore, 
@@ -52,11 +53,13 @@ export function ScoreConfirmationModal({
   const handleConfirm = useCallback(async () => {
     if (!confirmation) return;
     
+    lightHaptic();
     try {
       await confirmMutation.mutateAsync({
         matchResultId: confirmation.match_result_id,
         playerId,
       });
+      successHaptic();
       toast.success('The match score has been confirmed.');
       onClose();
     } catch (error) {
@@ -68,10 +71,12 @@ export function ScoreConfirmationModal({
     if (!confirmation) return;
     
     if (!showDisputeReason) {
+      warningHaptic();
       setShowDisputeReason(true);
       return;
     }
     
+    lightHaptic();
     try {
       await disputeMutation.mutateAsync({
         matchResultId: confirmation.match_result_id,
@@ -88,6 +93,7 @@ export function ScoreConfirmationModal({
   }, [confirmation, playerId, disputeMutation, showDisputeReason, disputeReason, onClose, toast]);
 
   const handleClose = useCallback(() => {
+    lightHaptic();
     setShowDisputeReason(false);
     setDisputeReason('');
     onClose();

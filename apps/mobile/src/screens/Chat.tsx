@@ -21,6 +21,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text, SkeletonConversation } from '@rallia/shared-components';
+import { lightHaptic, selectionHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useAuth } from '../hooks';
 import { spacingPixels, fontSizePixels, primary, neutral } from '@rallia/design-system';
 import {
@@ -163,11 +164,13 @@ const Chat = () => {
 
   // Navigate to archived chats
   const handleArchivedPress = useCallback(() => {
+    lightHaptic();
     navigation.navigate('ArchivedChats');
   }, [navigation]);
 
   // Handle new group button press
   const handleNewGroupPress = useCallback(() => {
+    lightHaptic();
     setShowCreateGroupModal(true);
   }, []);
 
@@ -184,6 +187,7 @@ const Chat = () => {
 
   const handleConversationPress = useCallback(
     (conversation: ConversationPreview) => {
+      lightHaptic();
       navigation.navigate('ChatScreen', {
         conversationId: conversation.id,
         title: conversation.title || undefined,
@@ -193,6 +197,7 @@ const Chat = () => {
   );
 
   const handleConversationLongPress = useCallback((conversation: ConversationPreview) => {
+    selectionHaptic();
     setSelectedConversation(conversation);
     setShowActionsSheet(true);
   }, []);
@@ -395,7 +400,10 @@ const Chat = () => {
                 isActive && styles.activeTab,
                 isActive && { borderBottomColor: primary[500] },
               ]}
-              onPress={() => setActiveTab(tab.key)}
+              onPress={() => {
+                selectionHaptic();
+                setActiveTab(tab.key);
+              }}
               activeOpacity={0.7}
             >
               <Ionicons

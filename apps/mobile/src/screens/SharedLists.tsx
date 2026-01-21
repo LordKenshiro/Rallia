@@ -24,6 +24,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Skeleton, SkeletonCard } from '@rallia/shared-components';
+import { lightHaptic } from '@rallia/shared-utils';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { primary } from '@rallia/design-system';
 import {
@@ -88,12 +89,14 @@ const SharedLists: React.FC = () => {
 
   // Create list handler
   const handleCreateList = useCallback(() => {
+    lightHaptic();
     setEditingList(null);
     setShowCreateModal(true);
   }, []);
 
   // Edit list handler
   const handleEditList = useCallback((list: SharedContactList) => {
+    lightHaptic();
     setEditingList(list);
     setShowCreateModal(true);
   }, []);

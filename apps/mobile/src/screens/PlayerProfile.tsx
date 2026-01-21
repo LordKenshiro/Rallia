@@ -21,13 +21,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import * as Haptics from 'expo-haptics';
 import { Text, Skeleton, SkeletonAvatar } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
 import { useGetOrCreateDirectConversation } from '@rallia/shared-hooks';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
-import { getProfilePictureUrl } from '@rallia/shared-utils';
+import { getProfilePictureUrl, lightHaptic, mediumHaptic } from '@rallia/shared-utils';
 import { formatDateMonthYear } from '../utils/dateFormatting';
 import type { RootStackParamList } from '../navigation/types';
 import type { Profile, Player } from '@rallia/shared-types';
@@ -500,7 +499,7 @@ const PlayerProfile = () => {
     if (!currentUserId || chatLoading) return;
     
     setChatLoading(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    lightHaptic();
     
     try {
       const conversation = await getOrCreateDirectConversation.mutateAsync({
@@ -529,7 +528,7 @@ const PlayerProfile = () => {
     if (!currentUserId || favoriteLoading) return;
     
     setFavoriteLoading(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    lightHaptic();
     
     try {
       if (isFavorite) {
@@ -571,7 +570,7 @@ const PlayerProfile = () => {
     if (!currentUserId || blockLoading) return;
     
     setBlockLoading(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    mediumHaptic();
     
     try {
       if (isBlocked) {

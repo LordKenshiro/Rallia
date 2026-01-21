@@ -17,6 +17,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text, useToast } from '@rallia/shared-components';
+import { lightHaptic, successHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useAuth } from '../../../hooks';
 import { useDebounce, useAddGroupMember } from '@rallia/shared-hooks';
 import { supabase } from '@rallia/shared-services';
@@ -159,6 +160,7 @@ export function AddMemberModal({
   }, [searchResults, suggestedPlayers, currentMemberIds, searchQuery]);
 
   const handleClose = useCallback(() => {
+    lightHaptic();
     setSearchQuery('');
     setSearchResults([]);
     onClose();
@@ -167,12 +169,14 @@ export function AddMemberModal({
   const handleAddMember = useCallback(async (memberPlayerId: string) => {
     if (!playerId) return;
 
+    lightHaptic();
     try {
       await addMemberMutation.mutateAsync({
         groupId,
         inviterId: playerId,
         playerIdToAdd: memberPlayerId,
       });
+      successHaptic();
       toast.success('Member added to the group');
       onSuccess();
     } catch (error) {

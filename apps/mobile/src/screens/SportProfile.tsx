@@ -28,7 +28,7 @@ import {
 
 const BASE_BLACK = '#000000';
 
-import * as Haptics from 'expo-haptics';
+import { mediumHaptic, selectionHaptic } from '@rallia/shared-utils';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import TennisRatingOverlay from '../features/onboarding/components/overlays/TennisRatingOverlay';
 import PickleballRatingOverlay from '../features/onboarding/components/overlays/PickleballRatingOverlay';
@@ -409,7 +409,7 @@ const SportProfile = () => {
 
   const handleToggleActive = async (newValue: boolean) => {
     try {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      mediumHaptic();
 
       const {
         data: { user },
@@ -967,7 +967,7 @@ const SportProfile = () => {
               <TouchableOpacity
                 style={styles.editIconButton}
                 onPress={() => {
-                  Haptics.selectionAsync();
+                  selectionHaptic();
                   setShowPreferencesOverlay(true);
                 }}
               >

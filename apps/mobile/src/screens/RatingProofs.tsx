@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Text, Button, Skeleton, useToast } from '@rallia/shared-components';
+import { lightHaptic, warningHaptic } from '@rallia/shared-utils';
 import { supabase, Logger } from '@rallia/shared-services';
 import { RatingProofWithFile, RatingProofsScreenParams } from '@rallia/shared-types';
 import AddRatingProofOverlay from '../features/ratings/components/AddRatingProofOverlay';
@@ -43,6 +44,7 @@ const RatingProofs: React.FC = () => {
 
   // Define handleAddProof before useLayoutEffect that uses it
   const handleAddProof = useCallback(() => {
+    lightHaptic();
     setShowAddProofOverlay(true);
   }, []);
 
@@ -119,12 +121,14 @@ const RatingProofs: React.FC = () => {
   };
 
   const handleEditProof = (proof: RatingProofWithFile) => {
+    lightHaptic();
     // TODO: Open edit overlay
     Logger.logUserAction('edit_proof_pressed', { proofId: proof.id, playerRatingScoreId });
     toast.info('Edit proof feature will be implemented next');
   };
 
   const handleDeleteProof = async (proofId: string) => {
+    warningHaptic();
     Alert.alert(
       'Delete Proof',
       'Are you sure you want to delete this proof? This action cannot be undone.',

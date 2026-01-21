@@ -13,6 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
+import { lightHaptic } from '@rallia/shared-utils';
 import { useAuth, useThemeStyles } from '../hooks';
 import { useSport } from '../context';
 import { spacingPixels } from '@rallia/design-system';
@@ -66,19 +67,23 @@ const Community = () => {
 
   // Action button handlers
   const handleShareLists = useCallback(() => {
+    lightHaptic();
     navigation.navigate('ShareLists');
   }, [navigation]);
 
   const handleGroups = useCallback(() => {
+    lightHaptic();
     navigation.navigate('Groups');
   }, [navigation]);
 
   const handleCommunities = useCallback(() => {
+    lightHaptic();
     // TODO: Implement communities functionality
     Alert.alert('Communities', 'This feature is coming soon!');
   }, []);
 
   const handleTournaments = useCallback(() => {
+    lightHaptic();
     // TODO: Implement tournaments functionality
     Alert.alert('Tournaments', 'This feature is coming soon!');
   }, []);

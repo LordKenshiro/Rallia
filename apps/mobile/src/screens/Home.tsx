@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { MatchCard, MyMatchCard, Text, Heading, Button, Skeleton, SkeletonMatchCard } from '@rallia/shared-components';
+import { lightHaptic } from '@rallia/shared-utils';
 import {
   useAuth,
   useThemeStyles,
@@ -248,7 +249,10 @@ const Home = () => {
         </Text>
         <TouchableOpacity
           style={styles.viewAllButton}
-          onPress={() => navigation.navigate('PublicMatches')}
+          onPress={() => {
+            lightHaptic();
+            navigation.navigate('PublicMatches');
+          }}
           activeOpacity={0.7}
         >
           <Text size="base" weight="medium" color={colors.primary}>
@@ -279,7 +283,10 @@ const Home = () => {
           </Text>
           <TouchableOpacity
             style={styles.viewAllButton}
-            onPress={() => navigation.navigate('PlayerMatches')}
+            onPress={() => {
+              lightHaptic();
+              navigation.navigate('PlayerMatches');
+            }}
             activeOpacity={0.7}
           >
             <Text size="base" weight="medium" color={colors.primary}>

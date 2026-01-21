@@ -21,6 +21,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Text, Skeleton } from '@rallia/shared-components';
+import { lightHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useAuth } from '../hooks';
 import { usePlayerGroups, useCreateGroup, type Group } from '@rallia/shared-hooks';
 import type { RootStackParamList } from '../navigation/types';
@@ -83,6 +84,7 @@ export default function GroupsScreen() {
   }, [refetch, navigation]);
 
   const handleGroupPress = useCallback((group: Group) => {
+    lightHaptic();
     navigation.navigate('GroupDetail', { groupId: group.id });
   }, [navigation]);
 
