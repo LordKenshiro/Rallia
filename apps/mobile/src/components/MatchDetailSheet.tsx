@@ -14,7 +14,7 @@
  */
 
 import * as React from 'react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -61,6 +61,7 @@ import { usePlayerInviteSheet } from '../context/PlayerInviteSheetContext';
 import { useFeedbackSheet } from '../context/FeedbackSheetContext';
 import { useTranslation, usePermissions, type TranslationKey } from '../hooks';
 import { useTheme, usePlayer, useMatchActions } from '@rallia/shared-hooks';
+import { getMatchChat } from '@rallia/shared-services';
 import { shareMatch } from '../utils';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import { ConfirmationModal } from './ConfirmationModal';
@@ -665,6 +666,31 @@ export const MatchDetailSheet: React.FC = () => {
   );
   const [showRequesterModal, setShowRequesterModal] = useState(false);
 
+  // Match conversation state (for chat button)
+  const [matchConversationId, setMatchConversationId] = useState<string | null>(null);
+
+  // Fetch match conversation when match changes
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchMatchConversation = async () => {
+      if (selectedMatch?.id) {
+        const conversation = await getMatchChat(selectedMatch.id);
+        if (isMounted) {
+          setMatchConversationId(conversation?.id ?? null);
+        }
+      } else if (isMounted) {
+        setMatchConversationId(null);
+      }
+    };
+
+    fetchMatchConversation();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedMatch?.id]);
+
   // Animated pulse effect for live/urgent time indicators
   const urgentPulseAnimation = useMemo(() => new Animated.Value(0), []);
 
@@ -923,6 +949,36 @@ export const MatchDetailSheet: React.FC = () => {
       // Silently handle errors
     }
   }, [selectedMatch, t, locale]);
+
+  // Handle opening the match chat conversation
+  const handleOpenChat = useCallback(() => {
+    if (!matchConversationId || !selectedMatch) return;
+
+    lightHaptic();
+    closeSheet();
+
+    // Generate chat title from match info (sport name + date)
+    const chatTitle = selectedMatch.sport?.name
+      ? `${selectedMatch.sport.name} - ${formatIntuitiveDateInTimezone(selectedMatch.match_date, selectedMatch.timezone, locale)}`
+      : t('matchDetail.title' as TranslationKey);
+
+    // Use setTimeout to ensure navigation happens after sheet close animation
+    // Navigate through the Chat tab to the specific conversation
+    setTimeout(() => {
+      if (navigationRef.isReady()) {
+        navigationRef.navigate('Main', {
+          screen: 'Chat',
+          params: {
+            screen: 'ChatScreen',
+            params: {
+              conversationId: matchConversationId,
+              title: chatTitle,
+            },
+          },
+        });
+      }
+    }, 100);
+  }, [matchConversationId, selectedMatch, closeSheet, locale, t]);
 
   // Helper to redirect to auth sheet if user is not authenticated
   const requireAuth = useCallback((): boolean => {
@@ -2800,9 +2856,7 @@ export const MatchDetailSheet: React.FC = () => {
           },
         ]}
       >
-        <View style={styles.actionButtonsContainer}>
-          {renderActionButtons()}
-        </View>
+        <View style={styles.actionButtonsContainer}>{renderActionButtons()}</View>
         {startTimeDiffMs >= 0 && (
           <TouchableOpacity
             style={[
@@ -2826,6 +2880,26 @@ export const MatchDetailSheet: React.FC = () => {
                 {t('matchDetail.inviteFriends' as TranslationKey)}
               </Text>
             )}
+          </TouchableOpacity>
+        )}
+        {/* Chat Button - only for joined participants when conversation exists */}
+        {currentPlayerParticipant && matchConversationId && (
+          <TouchableOpacity
+            style={[
+              styles.chatButton,
+              {
+                backgroundColor: isDark ? primary[600] : primary[500],
+                shadowColor: primary[600],
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.25,
+                shadowRadius: 4,
+                elevation: 4,
+              },
+            ]}
+            onPress={handleOpenChat}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="chatbubble" size={18} color={base.white} />
           </TouchableOpacity>
         )}
       </View>
@@ -3372,6 +3446,17 @@ const styles = StyleSheet.create({
     width: spacingPixels[11], // Square icon-only button, same as minHeight (44px)
     minHeight: spacingPixels[11], // 44px - balanced size
     gap: 0, // No gap when icon-only
+  },
+  chatButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[1.5],
+    paddingHorizontal: spacingPixels[4],
+    minHeight: spacingPixels[11], // 44px - same as share button
+    borderRadius: radiusPixels.lg,
+    flexShrink: 0,
+    marginLeft: spacingPixels[2],
   },
   matchEndedContainer: {
     flex: 1,

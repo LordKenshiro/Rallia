@@ -745,7 +745,8 @@
     "open": "Open",
     "competitive": "Competitive",
     "practice": "Practice",
-    "casual": "Casual"
+    "casual": "Casual",
+    "openChat": "Open Chat"
   },
   "matchFeedback": {
     "title": "Match Feedback",

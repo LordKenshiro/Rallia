@@ -745,7 +745,8 @@
     "open": "Ouvert",
     "competitive": "Compétitif",
     "practice": "Pratique",
-    "casual": "Récréatif"
+    "casual": "Récréatif",
+    "openChat": "Ouvrir le chat"
   },
   "matchFeedback": {
     "title": "Évaluation du match",
