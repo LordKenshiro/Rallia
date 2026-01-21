@@ -25,7 +25,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 
-import { Text } from '@rallia/shared-components';
+import { Text, Skeleton, SkeletonAvatar } from '@rallia/shared-components';
 import { 
   useThemeStyles, 
   useAuth,
@@ -202,7 +202,26 @@ export default function GroupChatInfoScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={primary[500]} />
+          {/* Group Chat Info Skeleton */}
+          <View style={{ alignItems: 'center', paddingVertical: 24 }}>
+            <SkeletonAvatar size={100} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            <Skeleton width={150} height={18} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} style={{ marginTop: 16 }} />
+            <Skeleton width={100} height={14} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} style={{ marginTop: 8 }} />
+          </View>
+          <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
+            <Skeleton width={100} height={16} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            <View style={{ marginTop: 12, gap: 12 }}>
+              {[...Array(4)].map((_, index) => (
+                <View key={index} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <SkeletonAvatar size={48} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+                  <View style={{ flex: 1 }}>
+                    <Skeleton width={120} height={16} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+                    <Skeleton width={80} height={14} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} style={{ marginTop: 4 }} />
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
         </View>
       </SafeAreaView>
     );

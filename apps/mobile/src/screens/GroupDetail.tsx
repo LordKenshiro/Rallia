@@ -595,110 +595,160 @@ export default function GroupDetailScreen() {
                     </View>
                   </View>
 
-                  {/* Players */}
+                  {/* Players - Team-based layout */}
                   <View style={styles.matchPlayersContainer}>
-                    {/* Team 1 */}
-                    <View style={styles.teamContainer}>
-                      {recentMatch.match.participants
-                        .filter(p => p.team_number === 1)
-                        .map((participant) => (
-                          <View key={participant.id} style={[
-                            styles.playerCard,
-                            recentMatch.match?.result?.winning_team === 1 && styles.winnerCard,
-                            recentMatch.match?.result?.winning_team === 1 && { borderColor: '#F59E0B' },
-                          ]}>
-                            {recentMatch.match?.result?.winning_team === 1 && (
-                              <View style={styles.winnerBadge}>
-                                <Ionicons name="trophy" size={12} color="#F59E0B" />
-                              </View>
-                            )}
-                            <View style={[styles.playerAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-                              {participant.player?.profile?.profile_picture_url ? (
-                                <Image
-                                  source={{ uri: participant.player.profile.profile_picture_url }}
-                                  style={styles.avatarImage}
-                                />
-                              ) : (
-                                <Ionicons name="person" size={24} color={colors.textMuted} />
-                              )}
+                    {/* Team 1 Card */}
+                    {(() => {
+                      const team1Players = recentMatch.match.participants.filter(p => p.team_number === 1);
+                      const isWinner = recentMatch.match?.result?.winning_team === 1;
+                      const isDoubles = team1Players.length > 1;
+                      
+                      return (
+                        <View style={[
+                          styles.teamCard,
+                          isWinner && styles.winnerTeamCard,
+                          isWinner && { borderColor: '#F59E0B' },
+                        ]}>
+                          {isWinner && (
+                            <View style={styles.teamWinnerBadge}>
+                              <Ionicons name="trophy" size={12} color="#F59E0B" />
                             </View>
-                            <Text size="sm" weight={recentMatch.match?.result?.winning_team === 1 ? 'semibold' : 'regular'} style={{ color: colors.text, marginTop: 4 }}>
-                              {participant.player?.profile?.first_name || 'Player'}
-                            </Text>
-                            {/* Set scores under player - show individual set game scores */}
-                            {recentMatch.match?.result && (
-                              <Text 
-                                size="sm" 
-                                weight="bold" 
-                                style={{ 
-                                  color: recentMatch.match.result.winning_team === 1 ? '#F59E0B' : colors.textMuted,
-                                  marginTop: 4,
-                                }}
+                          )}
+                          
+                          {/* Team Avatars - overlapping for doubles, tappable to view profile */}
+                          <View style={styles.teamAvatarsContainer}>
+                            {team1Players.map((participant, index) => (
+                              <TouchableOpacity 
+                                key={participant.id} 
+                                style={[
+                                  styles.teamPlayerAvatar, 
+                                  { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
+                                  index > 0 && styles.teamAvatarOverlap,
+                                ]}
+                                onPress={() => participant.player_id && navigation.navigate('PlayerProfile', { playerId: participant.player_id })}
+                                activeOpacity={0.7}
                               >
-                                {recentMatch.match.result.sets && recentMatch.match.result.sets.length > 0
-                                  ? recentMatch.match.result.sets
-                                      .sort((a, b) => a.set_number - b.set_number)
-                                      .map(set => set.team1_score)
-                                      .join('  ')
-                                  : recentMatch.match.result.team1_score ?? '-'}
-                              </Text>
-                            )}
+                                {participant.player?.profile?.profile_picture_url ? (
+                                  <Image
+                                    source={{ uri: participant.player.profile.profile_picture_url }}
+                                    style={styles.teamAvatarImage}
+                                  />
+                                ) : (
+                                  <Ionicons name="person" size={20} color={colors.textMuted} />
+                                )}
+                              </TouchableOpacity>
+                            ))}
                           </View>
-                        ))}
-                    </View>
+                          
+                          {/* Team Names */}
+                          <Text 
+                            size="xs" 
+                            weight={isWinner ? 'semibold' : 'regular'} 
+                            style={{ color: colors.text, marginTop: 6, textAlign: 'center' }}
+                            numberOfLines={2}
+                          >
+                            {team1Players.map(p => p.player?.profile?.first_name || 'Player').join(', ')}
+                          </Text>
+                          
+                          {/* Team Score - same for all team members */}
+                          {recentMatch.match?.result && (
+                            <Text 
+                              size="sm" 
+                              weight="bold" 
+                              style={{ 
+                                color: isWinner ? '#F59E0B' : colors.textMuted,
+                                marginTop: 4,
+                              }}
+                            >
+                              {recentMatch.match.result.sets && recentMatch.match.result.sets.length > 0
+                                ? recentMatch.match.result.sets
+                                    .sort((a, b) => a.set_number - b.set_number)
+                                    .map(set => set.team1_score)
+                                    .join('  ')
+                                : recentMatch.match.result.team1_score ?? '-'}
+                            </Text>
+                          )}
+                        </View>
+                      );
+                    })()}
 
                     {/* VS */}
                     <Text weight="semibold" style={{ color: colors.textMuted, marginHorizontal: 12 }}>vs</Text>
 
-                    {/* Team 2 */}
-                    <View style={styles.teamContainer}>
-                      {recentMatch.match.participants
-                        .filter(p => p.team_number === 2)
-                        .map((participant) => (
-                          <View key={participant.id} style={[
-                            styles.playerCard,
-                            recentMatch.match?.result?.winning_team === 2 && styles.winnerCard,
-                            recentMatch.match?.result?.winning_team === 2 && { borderColor: '#F59E0B' },
-                          ]}>
-                            {recentMatch.match?.result?.winning_team === 2 && (
-                              <View style={styles.winnerBadge}>
-                                <Ionicons name="trophy" size={12} color="#F59E0B" />
-                              </View>
-                            )}
-                            <View style={[styles.playerAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-                              {participant.player?.profile?.profile_picture_url ? (
-                                <Image
-                                  source={{ uri: participant.player.profile.profile_picture_url }}
-                                  style={styles.avatarImage}
-                                />
-                              ) : (
-                                <Ionicons name="person" size={24} color={colors.textMuted} />
-                              )}
+                    {/* Team 2 Card */}
+                    {(() => {
+                      const team2Players = recentMatch.match.participants.filter(p => p.team_number === 2);
+                      const isWinner = recentMatch.match?.result?.winning_team === 2;
+                      const isDoubles = team2Players.length > 1;
+                      
+                      return (
+                        <View style={[
+                          styles.teamCard,
+                          isWinner && styles.winnerTeamCard,
+                          isWinner && { borderColor: '#F59E0B' },
+                        ]}>
+                          {isWinner && (
+                            <View style={styles.teamWinnerBadge}>
+                              <Ionicons name="trophy" size={12} color="#F59E0B" />
                             </View>
-                            <Text size="sm" weight={recentMatch.match?.result?.winning_team === 2 ? 'semibold' : 'regular'} style={{ color: colors.text, marginTop: 4 }}>
-                              {participant.player?.profile?.first_name || 'Player'}
-                            </Text>
-                            {/* Set scores under player - show individual set game scores */}
-                            {recentMatch.match?.result && (
-                              <Text 
-                                size="sm" 
-                                weight="bold" 
-                                style={{ 
-                                  color: recentMatch.match.result.winning_team === 2 ? '#F59E0B' : colors.textMuted,
-                                  marginTop: 4,
-                                }}
+                          )}
+                          
+                          {/* Team Avatars - overlapping for doubles, tappable to view profile */}
+                          <View style={styles.teamAvatarsContainer}>
+                            {team2Players.map((participant, index) => (
+                              <TouchableOpacity 
+                                key={participant.id} 
+                                style={[
+                                  styles.teamPlayerAvatar, 
+                                  { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
+                                  index > 0 && styles.teamAvatarOverlap,
+                                ]}
+                                onPress={() => participant.player_id && navigation.navigate('PlayerProfile', { playerId: participant.player_id })}
+                                activeOpacity={0.7}
                               >
-                                {recentMatch.match.result.sets && recentMatch.match.result.sets.length > 0
-                                  ? recentMatch.match.result.sets
-                                      .sort((a, b) => a.set_number - b.set_number)
-                                      .map(set => set.team2_score)
-                                      .join('  ')
-                                  : recentMatch.match.result.team2_score ?? '-'}
-                              </Text>
-                            )}
+                                {participant.player?.profile?.profile_picture_url ? (
+                                  <Image
+                                    source={{ uri: participant.player.profile.profile_picture_url }}
+                                    style={styles.teamAvatarImage}
+                                  />
+                                ) : (
+                                  <Ionicons name="person" size={20} color={colors.textMuted} />
+                                )}
+                              </TouchableOpacity>
+                            ))}
                           </View>
-                        ))}
-                    </View>
+                          
+                          {/* Team Names */}
+                          <Text 
+                            size="xs" 
+                            weight={isWinner ? 'semibold' : 'regular'} 
+                            style={{ color: colors.text, marginTop: 6, textAlign: 'center' }}
+                            numberOfLines={2}
+                          >
+                            {team2Players.map(p => p.player?.profile?.first_name || 'Player').join(', ')}
+                          </Text>
+                          
+                          {/* Team Score - same for all team members */}
+                          {recentMatch.match?.result && (
+                            <Text 
+                              size="sm" 
+                              weight="bold" 
+                              style={{ 
+                                color: isWinner ? '#F59E0B' : colors.textMuted,
+                                marginTop: 4,
+                              }}
+                            >
+                              {recentMatch.match.result.sets && recentMatch.match.result.sets.length > 0
+                                ? recentMatch.match.result.sets
+                                    .sort((a, b) => a.set_number - b.set_number)
+                                    .map(set => set.team2_score)
+                                    .join('  ')
+                                : recentMatch.match.result.team2_score ?? '-'}
+                            </Text>
+                          )}
+                        </View>
+                      );
+                    })()}
                   </View>
                 </TouchableOpacity>
               ) : (
@@ -1109,6 +1159,10 @@ export default function GroupDetailScreen() {
         currentUserId={playerId || ''}
         isModerator={isModerator || false}
         onMemberRemoved={() => refetch()}
+        onPlayerPress={(playerId) => {
+          setShowMemberListModal(false);
+          navigation.navigate('PlayerProfile', { playerId });
+        }}
       />
 
       <GroupOptionsModal
@@ -1136,6 +1190,10 @@ export default function GroupDetailScreen() {
         onMatchPress={(match) => {
           setShowRecentGamesModal(false);
           navigation.navigate('PlayedMatchDetail', { match });
+        }}
+        onPlayerPress={(playerId) => {
+          setShowRecentGamesModal(false);
+          navigation.navigate('PlayerProfile', { playerId });
         }}
       />
 
@@ -1471,6 +1529,51 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  // New Team Card styles for Recent Games (groups players per team)
+  teamCard: {
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    minWidth: 90,
+    maxWidth: 120,
+  },
+  winnerTeamCard: {
+    borderWidth: 2,
+  },
+  teamAvatarsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  teamPlayerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  teamAvatarOverlap: {
+    marginLeft: -12,
+  },
+  teamAvatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  teamWinnerBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#FFF',
+    borderRadius: 10,
+    padding: 2,
+  },
+  // Original player card styles (kept for backward compatibility)
   playerCard: {
     alignItems: 'center',
     padding: 8,

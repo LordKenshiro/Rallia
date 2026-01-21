@@ -9,18 +9,15 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
-  Keyboard,
-  TouchableWithoutFeedback,
+  Alert,
 } from 'react-native';
+import { Skeleton, SkeletonAvatar, useToast } from '@rallia/shared-components';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 
-import { Text } from '@rallia/shared-components';
 import { useThemeStyles, useAuth, useProfile } from '../hooks';
-import { spacingPixels, primary } from '@rallia/design-system';
 import {
   useConversation,
   useMessages,
@@ -53,6 +50,7 @@ import {
   EditMessageModal,
   ChatSearchBar,
   BlockedUserModal,
+  ReportUserModal,
 } from '../features/chat';
 import type { MessageListRef } from '../features/chat';
 import type { RootStackParamList, ChatStackParamList } from '../navigation/types';
@@ -76,6 +74,7 @@ export default function ChatConversationScreen() {
   const { colors } = useThemeStyles();
   const { session } = useAuth();
   const { profile } = useProfile();
+  const toast = useToast();
   const playerId = session?.user?.id;
   // Get player name for typing indicator - use type assertion since DB types may not include first_name directly
   const playerName = (profile as { first_name?: string } | null)?.first_name || 'User';
@@ -101,6 +100,9 @@ export default function ChatConversationScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [highlightedMessageIds, setHighlightedMessageIds] = useState<string[]>([]);
   const [currentHighlightedId, setCurrentHighlightedId] = useState<string | undefined>();
+  
+  // Report modal state
+  const [showReportModal, setShowReportModal] = useState(false);
   
   // Ref for MessageList to scroll to messages
   const messageListRef = React.useRef<MessageListRef>(null);
@@ -172,6 +174,7 @@ export default function ChatConversationScreen() {
     if (conversationId && playerId) {
       markAsReadMutation.mutate({ conversationId, playerId });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId, playerId]);
 
   // Fetch network info for group chats (for cover image)
@@ -294,7 +297,6 @@ export default function ChatConversationScreen() {
   // Block status for direct chats
   const {
     isBlocked,
-    isLoading: isLoadingBlockStatus,
     isToggling: isTogglingBlock,
     toggleBlock,
     unblockUser,
@@ -303,7 +305,6 @@ export default function ChatConversationScreen() {
   // Favorite status for direct chats
   const {
     isFavorite,
-    isToggling: isTogglingFavorite,
     toggleFavorite,
   } = useFavoriteStatus(playerId, otherUserId);
 
@@ -372,14 +373,39 @@ export default function ChatConversationScreen() {
   }, [unblockUser]);
 
   const handleReport = useCallback(() => {
-    // TODO: Implement report functionality
-    console.log('Report pressed');
-  }, []);
+    if (!isDirectChat || !otherUserId) {
+      Alert.alert('Cannot Report', 'You can only report users in direct conversations');
+      return;
+    }
+    setShowReportModal(true);
+  }, [isDirectChat, otherUserId]);
 
   const handleClearChat = useCallback(() => {
-    // TODO: Implement clear chat functionality
-    console.log('Clear chat pressed');
-  }, []);
+    if (!playerId) return;
+    
+    Alert.alert(
+      'Clear Your Messages',
+      'This will delete all messages you sent in this conversation. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { clearChatForUser } = await import('@rallia/shared-services');
+              const deletedCount = await clearChatForUser(conversationId, playerId);
+              refetchMessages();
+              toast.success(`${deletedCount} message${deletedCount !== 1 ? 's' : ''} deleted`);
+            } catch (error) {
+              console.error('Failed to clear chat:', error);
+              toast.error('Failed to clear messages. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  }, [conversationId, playerId, refetchMessages, toast]);
 
   const handleCloseSearch = useCallback(() => {
     setShowSearchBar(false);
@@ -552,7 +578,36 @@ export default function ChatConversationScreen() {
           onClearChat={handleClearChat}
         />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={primary[500]} />
+          {/* Message Skeleton Loaders */}
+          {[...Array(6)].map((_, index) => {
+            const isMe = index % 3 === 0;
+            return (
+              <View 
+                key={index} 
+                style={[
+                  styles.messageSkeletonRow, 
+                  isMe ? styles.messageSkeletonRowRight : styles.messageSkeletonRowLeft
+                ]}
+              >
+                {!isMe && (
+                  <SkeletonAvatar 
+                    size={32} 
+                    backgroundColor={colors.cardBackground} 
+                    highlightColor={colors.border} 
+                  />
+                )}
+                <View style={[styles.messageSkeleton, isMe && styles.messageSkeletonRight]}>
+                  <Skeleton 
+                    width={isMe ? 150 : 200} 
+                    height={50} 
+                    borderRadius={16}
+                    backgroundColor={colors.cardBackground} 
+                    highlightColor={colors.border} 
+                  />
+                </View>
+              </View>
+            );
+          })}
         </View>
       </View>
     );
@@ -677,6 +732,18 @@ export default function ChatConversationScreen() {
         onSave={handleSaveEditedMessage}
         isSaving={editMessageMutation.isPending}
       />
+
+      {/* Report User Modal */}
+      {isDirectChat && otherUserId && playerId && (
+        <ReportUserModal
+          visible={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          reporterId={playerId}
+          reportedId={otherUserId}
+          reportedName={headerTitle}
+          conversationId={conversationId}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -687,7 +754,25 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 20,
+  },
+  messageSkeletonRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginBottom: 16,
+  },
+  messageSkeletonRowLeft: {
+    justifyContent: 'flex-start',
+  },
+  messageSkeletonRowRight: {
+    justifyContent: 'flex-end',
+  },
+  messageSkeleton: {
+    marginLeft: 8,
+  },
+  messageSkeletonRight: {
+    marginLeft: 0,
+    marginRight: 0,
   },
 });

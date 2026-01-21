@@ -3,7 +3,7 @@
  * Modal showing all group members with management options
  */
 
-import React, { useCallback, useState, useMemo } from 'react';
+import React, { useCallback, useState, useMemo, useEffect } from 'react';
 import {
   View,
   Modal,
@@ -12,10 +12,11 @@ import {
   FlatList,
   Alert,
   Image,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { Text } from '@rallia/shared-components';
+import { Text, useToast } from '@rallia/shared-components';
 import { useThemeStyles } from '../../../hooks';
 import {
   useRemoveGroupMember,
@@ -33,6 +34,7 @@ interface MemberListModalProps {
   currentUserId: string;
   isModerator: boolean;
   onMemberRemoved: () => void;
+  onPlayerPress?: (playerId: string) => void;
 }
 
 /**
@@ -90,11 +92,33 @@ export function MemberListModal({
   currentUserId,
   isModerator,
   onMemberRemoved,
+  onPlayerPress,
 }: MemberListModalProps) {
   const { colors, isDark } = useThemeStyles();
+  const toast = useToast();
 
   const [selectedMember, setSelectedMember] = useState<GroupMember | null>(null);
   const [showMemberOptions, setShowMemberOptions] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Clear search when modal closes
+  useEffect(() => {
+    if (!visible) {
+      setSearchQuery('');
+    }
+  }, [visible]);
+
+  // Filter members based on search query
+  const filteredMembers = useMemo(() => {
+    if (!searchQuery.trim()) return group.members;
+    const query = searchQuery.toLowerCase().trim();
+    return group.members.filter(member => {
+      const firstName = member.player?.profile?.first_name?.toLowerCase() || '';
+      const lastName = member.player?.profile?.last_name?.toLowerCase() || '';
+      const displayName = member.player?.profile?.display_name?.toLowerCase() || '';
+      return firstName.includes(query) || lastName.includes(query) || displayName.includes(query);
+    });
+  }, [group.members, searchQuery]);
 
   const removeGroupMemberMutation = useRemoveGroupMember();
   const promoteMemberMutation = usePromoteMember();
@@ -129,10 +153,10 @@ export function MemberListModal({
                 moderatorId: currentUserId,
                 playerIdToPromote: selectedMember.player_id,
               });
-              Alert.alert('Success', 'Member promoted to moderator');
+              toast.success('Member promoted to moderator');
               onMemberRemoved();
             } catch (error) {
-              Alert.alert('Error', error instanceof Error ? error.message : 'Failed to promote member');
+              toast.error(error instanceof Error ? error.message : 'Failed to promote member');
             }
           },
         });
@@ -148,10 +172,10 @@ export function MemberListModal({
                 moderatorId: currentUserId,
                 playerIdToDemote: selectedMember.player_id,
               });
-              Alert.alert('Success', 'Moderator demoted to member');
+              toast.success('Moderator demoted to member');
               onMemberRemoved();
             } catch (error) {
-              Alert.alert('Error', error instanceof Error ? error.message : 'Failed to demote member');
+              toast.error(error instanceof Error ? error.message : 'Failed to demote member');
             }
           },
         });
@@ -178,10 +202,10 @@ export function MemberListModal({
                       moderatorId: currentUserId,
                       playerIdToRemove: selectedMember.player_id,
                     });
-                    Alert.alert('Success', 'Member removed from group');
+                    toast.success('Member removed from group');
                     onMemberRemoved();
                   } catch (error) {
-                    Alert.alert('Error', error instanceof Error ? error.message : 'Failed to remove member');
+                    toast.error(error instanceof Error ? error.message : 'Failed to remove member');
                   }
                 },
               },
@@ -201,6 +225,7 @@ export function MemberListModal({
     promoteMemberMutation,
     demoteMemberMutation,
     onMemberRemoved,
+    toast,
   ]);
 
   // Get member info for the options modal
@@ -213,6 +238,7 @@ export function MemberListModal({
       role: selectedMember.role,
       isCreator: group.created_by === selectedMember.player_id,
       profilePictureUrl: selectedMember.player?.profile?.profile_picture_url,
+      playerId: selectedMember.player_id,
     };
   }, [selectedMember, group]);
 
@@ -315,9 +341,32 @@ export function MemberListModal({
               </TouchableOpacity>
             </View>
 
+            {/* Search Bar - show when 10+ members */}
+            {group.member_count >= 10 && (
+              <View style={[styles.searchContainer, { borderBottomColor: colors.border }]}>
+                <View style={[styles.searchInputContainer, { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}>
+                  <Ionicons name="search-outline" size={18} color={colors.textMuted} style={styles.searchIcon} />
+                  <TextInput
+                    style={[styles.searchInput, { color: colors.text }]}
+                    placeholder="Search members..."
+                    placeholderTextColor={colors.textMuted}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  {searchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setSearchQuery('')}>
+                      <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            )}
+
             {/* Member List */}
             <FlatList
-              data={group.members}
+              data={filteredMembers}
               renderItem={renderMemberItem}
               keyExtractor={(item) => item.id}
               showsVerticalScrollIndicator={false}
@@ -336,6 +385,11 @@ export function MemberListModal({
         }}
         member={selectedMemberInfo}
         options={memberOptions}
+        onAvatarPress={(playerId) => {
+          setShowMemberOptions(false);
+          setSelectedMember(null);
+          onPlayerPress?.(playerId);
+        }}
       />
     </>
   );
@@ -364,6 +418,26 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: 4,
+  },
+  searchContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 36,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    paddingVertical: 0,
   },
   listContent: {
     paddingBottom: 24,

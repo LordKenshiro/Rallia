@@ -2,7 +2,8 @@
  * Add Score Modal
  *
  * Multi-step modal for adding a played game score.
- * Steps: Find Opponent → Match Details → Match Expectation → Winner & Scores
+ * Singles: Find Opponent → Match Details → Match Expectation → Winner & Scores
+ * Doubles: Find Opponents → Match Details → Match Expectation → Create Teams → Winner & Scores
  */
 
 import React, { useCallback, useState } from 'react';
@@ -23,9 +24,9 @@ import { AddScoreProvider, useAddScore } from './AddScoreContext';
 import { FindOpponentStep } from './FindOpponentStep';
 import { MatchDetailsStep } from './MatchDetailsStep';
 import { MatchExpectationStep } from './MatchExpectationStep';
+import { CreateTeamsStep } from './CreateTeamsStep';
 import { WinnerScoresStep } from './WinnerScoresStep';
 import type { MatchType, AddScoreStep } from './types';
-import { ADD_SCORE_STEPS } from './types';
 import { useCreatePlayedMatch, type CreatePlayedMatchInput } from '@rallia/shared-hooks';
 import { getSportIdByName } from '@rallia/shared-services';
 import { useAuth } from '../../../../context/AuthContext';
@@ -50,6 +51,7 @@ function AddScoreContent({
   const {
     currentStep,
     currentStepIndex,
+    totalSteps,
     goToNextStep,
     goToPreviousStep,
     canGoBack,
@@ -92,11 +94,21 @@ function AddScoreContent({
       // Get opponent IDs
       const opponentIds = (formData.opponents || []).map((p) => p.id);
       
-      // Build team player IDs
-      const team1PlayerIds = formData.partner 
-        ? [user.id, formData.partner.id]  // Doubles with partner
-        : [user.id];                       // Singles
-      const team2PlayerIds = opponentIds;
+      // Build team player IDs based on singles vs doubles
+      let team1PlayerIds: string[];
+      let team2PlayerIds: string[];
+      
+      if (formData.matchType === 'double' && formData.partner) {
+        // Doubles: Team 1 = current user + partner, Team 2 = remaining 2 opponents
+        team1PlayerIds = [user.id, formData.partner.id];
+        team2PlayerIds = (formData.opponents || [])
+          .filter((p) => p.id !== formData.partner?.id)
+          .map((p) => p.id);
+      } else {
+        // Singles: Team 1 = current user, Team 2 = opponent
+        team1PlayerIds = [user.id];
+        team2PlayerIds = opponentIds;
+      }
 
       // Transform formData to CreatePlayedMatchInput
       // winnerId and sets are used directly from parameters (not formData) to avoid async state issues
@@ -150,6 +162,8 @@ function AddScoreContent({
         return <MatchDetailsStep onContinue={goToNextStep} />;
       case 'match-expectation':
         return <MatchExpectationStep onContinue={goToNextStep} />;
+      case 'create-teams':
+        return <CreateTeamsStep onContinue={goToNextStep} />;
       case 'winner-scores':
         return <WinnerScoresStep onSubmit={handleSubmit} isSubmitting={isSubmitting} />;
       default:
@@ -161,6 +175,7 @@ function AddScoreContent({
     'find-opponent': 'Add Score',
     'match-details': 'Add Score',
     'match-expectation': 'Add Score',
+    'create-teams': 'Add Score',
     'winner-scores': 'Add Score',
   };
 
@@ -193,9 +208,9 @@ function AddScoreContent({
         </TouchableOpacity>
       </View>
 
-      {/* Progress indicator */}
+      {/* Progress indicator - dynamic based on match type */}
       <View style={styles.progressContainer}>
-        {ADD_SCORE_STEPS.map((_, index) => (
+        {Array.from({ length: totalSteps }).map((_, index) => (
           <View
             key={index}
             style={[

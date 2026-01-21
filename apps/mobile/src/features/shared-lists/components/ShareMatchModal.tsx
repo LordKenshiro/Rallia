@@ -10,13 +10,12 @@ import {
   Modal,
   TouchableOpacity,
   FlatList,
-  Alert,
   ActivityIndicator,
   Share,
   Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
 import { primary, neutral } from '@rallia/design-system';
 import {
@@ -76,6 +75,8 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
   isDark,
   onClose,
 }) => {
+  const toast = useToast();
+  
   // State
   const [step, setStep] = useState<Step>('select-match');
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
@@ -251,15 +252,15 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
         }
       }
 
-      Alert.alert('Success', `Invitation shared with ${selectedContacts.length} contact(s)!`);
+      toast.success(`Invitation shared with ${selectedContacts.length} contact(s)!`);
       onClose();
     } catch (error) {
       console.error('Failed to share:', error);
-      Alert.alert('Error', 'Failed to share the match. Please try again.');
+      toast.error('Failed to share the match. Please try again.');
     } finally {
       setIsSharing(false);
     }
-  }, [selectedMatch, selectedContacts, onClose]);
+  }, [selectedMatch, selectedContacts, onClose, toast]);
 
   // Render match item
   const renderMatchItem = useCallback(({ item }: { item: MatchItem }) => {

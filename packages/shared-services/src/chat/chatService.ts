@@ -63,6 +63,7 @@ export {
   markMessagesAsRead,
   deleteMessage,
   editMessage,
+  clearChatForUser,
 } from './messageService';
 
 // ============================================================================

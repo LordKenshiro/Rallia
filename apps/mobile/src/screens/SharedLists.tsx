@@ -9,21 +9,21 @@
  * - Share matches with contacts via SMS/Email/WhatsApp
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
   FlatList,
   TouchableOpacity,
   Alert,
-  ActivityIndicator,
   RefreshControl,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, Skeleton, SkeletonCard } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { primary } from '@rallia/design-system';
 import {
@@ -49,6 +49,17 @@ const SharedLists: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [editingList, setEditingList] = useState<SharedContactList | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filter lists based on search query
+  const filteredLists = useMemo(() => {
+    if (!searchQuery.trim()) return lists;
+    const query = searchQuery.toLowerCase().trim();
+    return lists.filter(list => 
+      list.name.toLowerCase().includes(query) ||
+      (list.description?.toLowerCase().includes(query))
+    );
+  }, [lists, searchQuery]);
 
   // Fetch lists
   const fetchLists = useCallback(async () => {
@@ -172,7 +183,40 @@ const SharedLists: React.FC = () => {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom']}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          {/* Share Match CTA Skeleton */}
+          <Skeleton 
+            width="100%" 
+            height={80} 
+            borderRadius={radiusPixels.lg}
+            backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+            highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+            style={{ marginBottom: spacingPixels[4] }}
+          />
+          {/* Search Skeleton */}
+          <Skeleton 
+            width="100%" 
+            height={44} 
+            borderRadius={radiusPixels.lg}
+            backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+            highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+            style={{ marginBottom: spacingPixels[4] }}
+          />
+          {/* List Items Skeleton */}
+          {[1, 2, 3, 4].map((i) => (
+            <SkeletonCard 
+              key={i}
+              showAvatar={false}
+              lines={2}
+              backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+              highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+              style={{ 
+                backgroundColor: colors.cardBackground, 
+                marginBottom: spacingPixels[3],
+                borderRadius: radiusPixels.lg,
+                padding: spacingPixels[4],
+              }}
+            />
+          ))}
         </View>
       </SafeAreaView>
     );
@@ -219,9 +263,32 @@ const SharedLists: React.FC = () => {
         )}
       </View>
 
+      {/* Search Bar - only show when there are lists */}
+      {lists.length > 0 && (
+        <View style={styles.searchContainer}>
+          <View style={[styles.searchInputContainer, { backgroundColor: colors.inputBackground || (isDark ? '#2C2C2E' : '#F2F2F7') }]}>
+            <Ionicons name="search-outline" size={20} color={colors.textMuted} style={styles.searchIcon} />
+            <TextInput
+              style={[styles.searchInput, { color: colors.text }]}
+              placeholder="Search lists..."
+              placeholderTextColor={colors.textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
+
       {/* Lists */}
       <FlatList
-        data={lists}
+        data={filteredLists}
         keyExtractor={item => item.id}
         renderItem={renderListItem}
         contentContainerStyle={[
@@ -268,8 +335,7 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: spacingPixels[4],
   },
   shareMatchCta: {
     flexDirection: 'row',
@@ -306,6 +372,25 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[2],
     borderRadius: radiusPixels.lg,
     gap: spacingPixels[1],
+  },
+  searchContainer: {
+    paddingHorizontal: spacingPixels[4],
+    paddingBottom: spacingPixels[2],
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: radiusPixels.lg,
+    paddingHorizontal: spacingPixels[3],
+    height: 40,
+  },
+  searchIcon: {
+    marginRight: spacingPixels[2],
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    paddingVertical: 0,
   },
   listContent: {
     paddingHorizontal: spacingPixels[4],

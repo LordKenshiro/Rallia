@@ -29,6 +29,7 @@ interface MemberInfo {
   role: 'member' | 'moderator';
   isCreator: boolean;
   profilePictureUrl?: string | null;
+  playerId?: string;
 }
 
 interface MemberOptionsModalProps {
@@ -36,6 +37,7 @@ interface MemberOptionsModalProps {
   onClose: () => void;
   member: MemberInfo | null;
   options: OptionItem[];
+  onAvatarPress?: (playerId: string) => void;
 }
 
 export function MemberOptionsModal({
@@ -43,6 +45,7 @@ export function MemberOptionsModal({
   onClose,
   member,
   options,
+  onAvatarPress,
 }: MemberOptionsModalProps) {
   const { colors, isDark } = useThemeStyles();
 
@@ -61,7 +64,17 @@ export function MemberOptionsModal({
             <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
               {/* Member Header */}
               <View style={[styles.memberHeader, { borderBottomColor: colors.border }]}>
-                <View style={[styles.avatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+                <TouchableOpacity 
+                  style={[styles.avatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}
+                  onPress={() => {
+                    if (member.playerId && onAvatarPress) {
+                      onClose();
+                      onAvatarPress(member.playerId);
+                    }
+                  }}
+                  activeOpacity={0.7}
+                  disabled={!member.playerId || !onAvatarPress}
+                >
                   {member.profilePictureUrl ? (
                     <Image
                       source={{ uri: member.profilePictureUrl }}
@@ -70,7 +83,7 @@ export function MemberOptionsModal({
                   ) : (
                     <Ionicons name="person" size={32} color={colors.textMuted} />
                   )}
-                </View>
+                </TouchableOpacity>
                 <View style={styles.memberInfo}>
                   <Text weight="semibold" size="lg" style={{ color: colors.text }}>
                     {member.name}

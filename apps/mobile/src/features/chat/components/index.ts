@@ -21,3 +21,4 @@ export { EditMessageModal } from './EditMessageModal';
 export { BlockedUserModal } from './BlockedUserModal';
 export { CreateGroupChatModal } from './CreateGroupChatModal';
 export { AddMembersToGroupModal } from './AddMembersToGroupModal';
+export { ReportUserModal } from './ReportUserModal';

@@ -284,3 +284,31 @@ export async function editMessage(
     read_by: data.read_by as string[] | null,
   } : null;
 }
+
+/**
+ * Clear all messages in a conversation for a specific user
+ * This soft-deletes messages sent by the user only
+ */
+export async function clearChatForUser(
+  conversationId: string,
+  playerId: string
+): Promise<number> {
+  // Soft delete all messages sent by this user in this conversation
+  const { data, error } = await supabase
+    .from('message')
+    .update({ 
+      deleted_at: new Date().toISOString(),
+      content: '', // Clear content for privacy
+    })
+    .eq('conversation_id', conversationId)
+    .eq('sender_id', playerId)
+    .is('deleted_at', null)
+    .select('id');
+
+  if (error) {
+    console.error('Error clearing chat:', error);
+    throw error;
+  }
+
+  return data?.length || 0;
+}

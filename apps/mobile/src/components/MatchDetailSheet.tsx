@@ -60,6 +60,7 @@ import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import { ConfirmationModal } from './ConfirmationModal';
 import { RequesterDetailsModal } from './RequesterDetailsModal';
 import type { PlayerWithProfile, MatchParticipantWithPlayer } from '@rallia/shared-types';
+import { navigationRef } from '../navigation';
 
 const BASE_WHITE = '#ffffff';
 
@@ -849,6 +850,7 @@ export const MatchDetailSheet: React.FC = () => {
   const participantAvatars: Array<{
     key: string;
     participantId?: string;
+    playerId?: string;
     avatarUrl?: string | null;
     isHost: boolean;
     isEmpty: boolean;
@@ -858,6 +860,7 @@ export const MatchDetailSheet: React.FC = () => {
   // Host first - normalize URL to use current environment's Supabase URL
   participantAvatars.push({
     key: 'host',
+    playerId: match.created_by,
     avatarUrl: getProfilePictureUrl(creatorProfile?.profile_picture_url),
     isHost: true,
     isEmpty: false,
@@ -875,6 +878,7 @@ export const MatchDetailSheet: React.FC = () => {
       participantAvatars.push({
         key: p.id || `participant-${i}`,
         participantId: p.id,
+        playerId: p.player_id,
         avatarUrl: getProfilePictureUrl(p.player?.profile?.profile_picture_url),
         isHost: false,
         isEmpty: false,
@@ -1481,13 +1485,24 @@ export const MatchDetailSheet: React.FC = () => {
             {participantAvatars.map((p, index) => (
               <View key={p.key} style={styles.participantWithLabel}>
                 <View style={styles.participantAvatarWithAction}>
-                  <ParticipantAvatar
-                    avatarUrl={p.avatarUrl}
-                    isHost={p.isHost}
-                    isEmpty={p.isEmpty}
-                    colors={colors}
-                    isDark={isDark}
-                  />
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (!p.isEmpty && p.playerId && navigationRef.isReady()) {
+                        closeSheet();
+                        navigationRef.navigate('PlayerProfile', { playerId: p.playerId });
+                      }
+                    }}
+                    activeOpacity={p.isEmpty ? 1 : 0.7}
+                    disabled={p.isEmpty}
+                  >
+                    <ParticipantAvatar
+                      avatarUrl={p.avatarUrl}
+                      isHost={p.isHost}
+                      isEmpty={p.isEmpty}
+                      colors={colors}
+                      isDark={isDark}
+                    />
+                  </TouchableOpacity>
                   {/* Kick button for host to remove joined participants (not for host avatar, not for empty slots, not if match ended) */}
                   {isCreator && !p.isHost && !p.isEmpty && p.participantId && !hasMatchEnded && (
                     <TouchableOpacity

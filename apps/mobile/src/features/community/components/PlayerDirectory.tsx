@@ -11,12 +11,11 @@ import {
   StyleSheet,
   FlatList,
   TextInput,
-  ActivityIndicator,
   RefreshControl,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, SkeletonPlayerCard, Skeleton } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
 import { usePlayerSearch, usePlayer } from '@rallia/shared-hooks';
 import type { PlayerSearchResult } from '@rallia/shared-services';
@@ -69,7 +68,8 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
       filters.skillLevel !== 'all' ||
       filters.availability !== 'all' ||
       filters.playStyle !== 'all' ||
-      filters.maxDistance !== 'all'
+      filters.maxDistance !== 'all' ||
+      (filters.sortBy && filters.sortBy !== 'name_asc')
     );
   }, [filters]);
 
@@ -82,6 +82,7 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     availability: filters.availability,
     playStyle: filters.playStyle,
     maxDistance: filters.maxDistance,
+    sortBy: filters.sortBy,
   }), [filters]);
 
   // Filter change handler
@@ -249,6 +250,57 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     enabled: !!sportId && !!currentUserId,
   });
 
+  // Sort players based on selected sort option
+  const sortedPlayers = useMemo(() => {
+    if (!players || players.length === 0) return players;
+    
+    const sorted = [...players];
+    const sortBy = filters.sortBy || 'name_asc';
+    
+    switch (sortBy) {
+      case 'name_asc':
+        return sorted.sort((a, b) => {
+          const nameA = a.display_name || a.first_name || '';
+          const nameB = b.display_name || b.first_name || '';
+          return nameA.localeCompare(nameB);
+        });
+      case 'name_desc':
+        return sorted.sort((a, b) => {
+          const nameA = a.display_name || a.first_name || '';
+          const nameB = b.display_name || b.first_name || '';
+          return nameB.localeCompare(nameA);
+        });
+      case 'rating_high':
+        return sorted.sort((a, b) => {
+          const ratingA = a.rating?.value || 0;
+          const ratingB = b.rating?.value || 0;
+          return ratingB - ratingA;
+        });
+      case 'rating_low':
+        return sorted.sort((a, b) => {
+          const ratingA = a.rating?.value || 0;
+          const ratingB = b.rating?.value || 0;
+          return ratingA - ratingB;
+        });
+      case 'distance':
+        // Distance not available in current data - fallback to name
+        return sorted.sort((a, b) => {
+          const nameA = a.display_name || a.first_name || '';
+          const nameB = b.display_name || b.first_name || '';
+          return nameA.localeCompare(nameB);
+        });
+      case 'recently_active':
+        // Last active not available in current data - fallback to name
+        return sorted.sort((a, b) => {
+          const nameA = a.display_name || a.first_name || '';
+          const nameB = b.display_name || b.first_name || '';
+          return nameA.localeCompare(nameB);
+        });
+      default:
+        return sorted;
+    }
+  }, [players, filters.sortBy]);
+
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
@@ -286,7 +338,11 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     if (!isFetchingNextPage) return null;
     return (
       <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color={colors.primary} />
+        <SkeletonPlayerCard 
+          backgroundColor={colors.inputBackground}
+          highlightColor={colors.border}
+          style={{ paddingHorizontal: spacingPixels[4] }}
+        />
       </View>
     );
   };
@@ -347,17 +403,46 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text size="sm" color={colors.textMuted} style={styles.loadingText}>
-          Loading players...
-        </Text>
+        {/* Skeleton search bar */}
+        <View style={[styles.searchContainer, { marginBottom: spacingPixels[4] }]}>
+          <Skeleton 
+            width="100%" 
+            height={44} 
+            borderRadius={radiusPixels.lg}
+            backgroundColor={colors.inputBackground}
+            highlightColor={colors.border}
+          />
+        </View>
+        {/* Skeleton filter chips */}
+        <View style={[styles.skeletonFilters, { marginBottom: spacingPixels[4] }]}>
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton 
+              key={i}
+              width={80} 
+              height={32} 
+              borderRadius={16}
+              backgroundColor={colors.inputBackground}
+              highlightColor={colors.border}
+              style={{ marginRight: spacingPixels[2] }}
+            />
+          ))}
+        </View>
+        {/* Skeleton player cards */}
+        {[1, 2, 3, 4, 5].map((i) => (
+          <SkeletonPlayerCard 
+            key={i}
+            backgroundColor={colors.inputBackground}
+            highlightColor={colors.border}
+            style={{ marginBottom: spacingPixels[3], paddingHorizontal: spacingPixels[4] }}
+          />
+        ))}
       </View>
     );
   }
 
   return (
     <FlatList
-      data={players}
+      data={sortedPlayers}
       renderItem={renderPlayer}
       keyExtractor={item => item.id}
       ListHeaderComponent={renderHeader}
@@ -365,7 +450,7 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
       ListFooterComponent={renderFooter}
       contentContainerStyle={[
         styles.listContent,
-        players.length === 0 && styles.emptyListContent,
+        sortedPlayers.length === 0 && styles.emptyListContent,
       ]}
       onEndReached={handleEndReached}
       onEndReachedThreshold={0.5}
@@ -385,11 +470,11 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingTop: spacingPixels[3],
   },
-  loadingText: {
-    marginTop: spacingPixels[3],
+  skeletonFilters: {
+    flexDirection: 'row',
+    paddingHorizontal: spacingPixels[4],
   },
   searchContainer: {
     paddingHorizontal: spacingPixels[4],

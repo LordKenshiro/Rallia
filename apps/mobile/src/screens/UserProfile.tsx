@@ -5,13 +5,13 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  ActivityIndicator,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppNavigation } from '../navigation/hooks';
-import { Text } from '@rallia/shared-components';
+import { Text, Skeleton, SkeletonAvatar, useToast } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
 import { replaceImage } from '../services/imageUpload';
 import { useImagePicker, useThemeStyles, useTranslation } from '../hooks';
@@ -66,6 +66,7 @@ const UserProfile = () => {
   const navigation = useAppNavigation();
   const { colors, shadows, isDark } = useThemeStyles();
   const { t, locale } = useTranslation();
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -154,10 +155,10 @@ const UserProfile = () => {
       // Update local state
       setProfile(prev => (prev ? { ...prev, profile_picture_url: url } : null));
 
-      Alert.alert(t('alerts.success'), t('profile.changePhoto'));
+      toast.success(t('profile.changePhoto'));
     } catch (error) {
       Logger.error('Failed to upload profile picture', error as Error, { userId: profile?.id });
-      Alert.alert(t('alerts.error'), getNetworkErrorMessage(error));
+      toast.error(getNetworkErrorMessage(error));
     } finally {
       setUploadingImage(false);
     }
@@ -475,10 +476,10 @@ const UserProfile = () => {
       // Close the overlay
       setShowAvailabilitiesOverlay(false);
 
-      Alert.alert(t('alerts.success'), t('alerts.availabilitiesUpdated'));
+      toast.success(t('alerts.availabilitiesUpdated'));
     } catch (error) {
       Logger.error('Failed to save availabilities', error as Error, { playerId: player?.id });
-      Alert.alert(t('alerts.error'), getNetworkErrorMessage(error));
+      toast.error(getNetworkErrorMessage(error));
     }
   };
 
@@ -530,10 +531,25 @@ const UserProfile = () => {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.loadingText, { color: colors.textMuted }]}>
-            {t('profile.loading.profile')}
-          </Text>
+          {/* Profile Header Skeleton */}
+          <View style={[styles.profileHeader, { backgroundColor: colors.card }]}>
+            <SkeletonAvatar size={120} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            <View style={{ marginTop: 16, alignItems: 'center' }}>
+              <Skeleton width={150} height={18} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+              <Skeleton width={100} height={14} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} style={{ marginTop: 8 }} />
+            </View>
+          </View>
+          {/* Profile Details Skeleton */}
+          <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
+            <View style={[styles.card, { backgroundColor: colors.card }]}>
+              <Skeleton width={120} height={18} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+              <View style={{ marginTop: 12, gap: 12 }}>
+                <Skeleton width="100%" height={44} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+                <Skeleton width="100%" height={44} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+                <Skeleton width="100%" height={44} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+              </View>
+            </View>
+          </View>
         </View>
       </SafeAreaView>
     );

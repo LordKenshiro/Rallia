@@ -25,8 +25,8 @@ export interface SetScore {
 
 export interface AddScoreFormData {
   matchType: MatchType;
-  opponents: SelectedPlayer[];  // 1 for singles, 2 for doubles
-  partner?: SelectedPlayer;     // Only for doubles
+  opponents: SelectedPlayer[];  // 1 for singles, 3 for doubles (you + 3 others = 4 players)
+  partner?: SelectedPlayer;     // Only for doubles - the teammate you select from the 3 players
   matchDate: Date;
   location?: string;
   sport: Sport;
@@ -40,11 +40,25 @@ export type AddScoreStep =
   | 'find-opponent'
   | 'match-details'
   | 'match-expectation'
+  | 'create-teams'      // Only for doubles - pick your partner
   | 'winner-scores';
 
-export const ADD_SCORE_STEPS: AddScoreStep[] = [
+// Steps for singles matches
+export const SINGLES_SCORE_STEPS: AddScoreStep[] = [
   'find-opponent',
   'match-details',
   'match-expectation',
   'winner-scores',
 ];
+
+// Steps for doubles matches (includes team creation)
+export const DOUBLES_SCORE_STEPS: AddScoreStep[] = [
+  'find-opponent',
+  'match-details',
+  'match-expectation',
+  'create-teams',
+  'winner-scores',
+];
+
+// Default steps (will be overridden based on match type)
+export const ADD_SCORE_STEPS: AddScoreStep[] = SINGLES_SCORE_STEPS;

@@ -5,12 +5,11 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, useToast } from '@rallia/shared-components';
 import { Logger } from '@rallia/shared-services';
 import { useTheme } from '@rallia/shared-hooks';
 import { useAppNavigation } from '../navigation/hooks';
@@ -33,6 +32,7 @@ import { lightHaptic, warningHaptic, getProfilePictureUrl } from '@rallia/shared
 
 const SettingsScreen: React.FC = () => {
   const navigation = useAppNavigation();
+  const toast = useToast();
   const {
     locale,
     setLocale,
@@ -83,7 +83,7 @@ const SettingsScreen: React.FC = () => {
       Logger.logUserAction('language_changed', { locale: newLocale });
     } catch (error) {
       Logger.error('Failed to change language', error as Error);
-      Alert.alert(t('common.error'), t('errors.unknown'));
+      toast.error(t('errors.unknown'));
     } finally {
       setIsChangingLocale(false);
     }

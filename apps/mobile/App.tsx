@@ -17,7 +17,7 @@ import { navigationRef } from './src/navigation';
 import { ActionsBottomSheet } from './src/components/ActionsBottomSheet';
 import { MatchDetailSheet } from './src/components/MatchDetailSheet';
 import { SplashOverlay } from './src/components/SplashOverlay';
-import { ErrorBoundary } from '@rallia/shared-components';
+import { ErrorBoundary, ToastProvider, NetworkProvider } from '@rallia/shared-components';
 import { ThemeProvider, useTheme } from '@rallia/shared-hooks';
 import { Logger } from './src/services/logger';
 import {
@@ -123,19 +123,23 @@ export default function App() {
           <QueryClientProvider client={queryClient}>
             <LocaleProvider>
               <ThemeProvider>
-                <AuthProvider>
-                  <AuthenticatedProviders>
-                    <OverlayProvider>
-                      <ActionsSheetProvider>
-                        <MatchDetailSheetProvider>
-                          <BottomSheetModalProvider>
-                            <AppContent />
-                          </BottomSheetModalProvider>
-                        </MatchDetailSheetProvider>
-                      </ActionsSheetProvider>
-                    </OverlayProvider>
-                  </AuthenticatedProviders>
-                </AuthProvider>
+                <NetworkProvider>
+                  <ToastProvider>
+                    <AuthProvider>
+                      <AuthenticatedProviders>
+                        <OverlayProvider>
+                          <ActionsSheetProvider>
+                            <MatchDetailSheetProvider>
+                              <BottomSheetModalProvider>
+                                <AppContent />
+                              </BottomSheetModalProvider>
+                            </MatchDetailSheetProvider>
+                          </ActionsSheetProvider>
+                        </OverlayProvider>
+                      </AuthenticatedProviders>
+                    </AuthProvider>
+                  </ToastProvider>
+                </NetworkProvider>
               </ThemeProvider>
             </LocaleProvider>
           </QueryClientProvider>

@@ -11,7 +11,6 @@ import {
   View,
   StyleSheet,
   FlatList,
-  ActivityIndicator,
   RefreshControl,
   TextInput,
   TouchableOpacity,
@@ -21,7 +20,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
-import { Text } from '@rallia/shared-components';
+import { Text, SkeletonConversation } from '@rallia/shared-components';
 import { useThemeStyles, useAuth } from '../hooks';
 import { spacingPixels, fontSizePixels, primary, neutral } from '@rallia/design-system';
 import {
@@ -436,7 +435,14 @@ const Chat = () => {
       {/* Content */}
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={primary[500]} />
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <SkeletonConversation 
+              key={i}
+              backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+              highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+              style={{ paddingHorizontal: spacingPixels[4] }}
+            />
+          ))}
         </View>
       ) : (
         <FlatList

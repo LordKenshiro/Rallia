@@ -2,9 +2,10 @@
  * Winner Scores Step
  *
  * Select the winner and enter set scores.
+ * For doubles, shows team cards with 2 overlapping profile pictures per team.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -31,8 +32,19 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
   const { colors, isDark } = useThemeStyles();
   const { formData, updateFormData } = useAddScore();
   const { profile } = useProfile();
-  const opponents = formData.opponents || [];
+  const partner = formData.partner;
+  const isDoubles = formData.matchType === 'double';
   const isFriendly = formData.expectation === 'friendly';
+
+  // For doubles: Team 1 = You + Partner, Team 2 = remaining 2 opponents
+  // For singles: Team 1 = You, Team 2 = Opponent
+  const team2Players = useMemo(() => {
+    const opponents = formData.opponents || [];
+    if (isDoubles && partner) {
+      return opponents.filter((p) => p.id !== partner.id);
+    }
+    return opponents;
+  }, [isDoubles, partner, formData.opponents]);
 
   // Team 1 = current user (and partner for doubles)
   // Team 2 = opponents
@@ -106,6 +118,46 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
 
   const canSubmit = isFriendly || (winner !== null);
 
+  // Helper to render avatar with fallback
+  const renderAvatar = (
+    imageUrl: string | undefined | null,
+    name: string,
+    isPrimary: boolean,
+    isOverlap: boolean = false
+  ) => (
+    <View
+      style={[
+        styles.teamAvatarCircle,
+        isOverlap && styles.avatarOverlap,
+        { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
+      ]}
+    >
+      {imageUrl ? (
+        <Image source={{ uri: imageUrl }} style={styles.avatarImage} />
+      ) : (
+        <Text weight="bold" size="lg" style={{ color: isPrimary ? colors.primary : colors.textMuted }}>
+          {(name || 'P')[0].toUpperCase()}
+        </Text>
+      )}
+    </View>
+  );
+
+  // Get team 1 display name
+  const getTeam1Name = () => {
+    if (isDoubles && partner) {
+      return `You, ${partner.firstName}`;
+    }
+    return 'You';
+  };
+
+  // Get team 2 display name
+  const getTeam2Name = () => {
+    if (isDoubles && team2Players.length >= 2) {
+      return `${team2Players[0]?.firstName}, ${team2Players[1]?.firstName}`;
+    }
+    return team2Players[0]?.displayName || team2Players[0]?.firstName || 'Opponent';
+  };
+
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -122,7 +174,7 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
 
       {/* Team selection */}
       <View style={styles.teamsContainer}>
-        {/* Team 1 - You */}
+        {/* Team 1 - You (and partner for doubles) */}
         <TouchableOpacity
           style={[
             styles.teamCard,
@@ -141,21 +193,20 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
               <Ionicons name="trophy" size={16} color="#FFD700" />
             </View>
           )}
-          <View style={[styles.teamAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-            {profile?.profile_picture_url ? (
-              <Image
-                source={{ uri: profile.profile_picture_url }}
-                style={styles.avatarImage}
-              />
-            ) : (
-              <Ionicons name="person" size={32} color={colors.primary} />
-            )}
+          
+          {/* Team 1 avatars */}
+          <View style={styles.teamAvatarsRow}>
+            {renderAvatar(profile?.profile_picture_url, 'You', true)}
+            {isDoubles && partner && renderAvatar(partner.profilePictureUrl, partner.firstName, true, true)}
           </View>
+          
           <Text
             weight={winner === 'team1' ? 'semibold' : 'regular'}
-            style={{ color: colors.text, marginTop: 8 }}
+            size="sm"
+            style={[styles.teamName, { color: colors.text }]}
+            numberOfLines={2}
           >
-            You
+            {getTeam1Name()}
           </Text>
         </TouchableOpacity>
 
@@ -178,22 +229,20 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
               <Ionicons name="trophy" size={16} color="#FFD700" />
             </View>
           )}
-          <View style={[styles.teamAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-            {opponents[0]?.profilePictureUrl ? (
-              <Image
-                source={{ uri: opponents[0].profilePictureUrl }}
-                style={styles.avatarImage}
-              />
-            ) : (
-              <Ionicons name="person" size={32} color={colors.textMuted} />
-            )}
+          
+          {/* Team 2 avatars */}
+          <View style={styles.teamAvatarsRow}>
+            {team2Players[0] && renderAvatar(team2Players[0].profilePictureUrl, team2Players[0].firstName, false)}
+            {isDoubles && team2Players[1] && renderAvatar(team2Players[1].profilePictureUrl, team2Players[1].firstName, false, true)}
           </View>
+          
           <Text
             weight={winner === 'team2' ? 'semibold' : 'regular'}
-            style={{ color: colors.text, marginTop: 8 }}
-            numberOfLines={1}
+            size="sm"
+            style={[styles.teamName, { color: colors.text }]}
+            numberOfLines={2}
           >
-            {opponents[0]?.displayName || opponents[0]?.firstName || 'Opponent'}
+            {getTeam2Name()}
           </Text>
         </TouchableOpacity>
       </View>
@@ -313,6 +362,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 2,
     position: 'relative',
+    minHeight: 140,
   },
   winnerBadge: {
     position: 'absolute',
@@ -322,18 +372,33 @@ const styles = StyleSheet.create({
     padding: 4,
     borderRadius: 8,
   },
-  teamAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+  teamAvatarsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  teamAvatarCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  avatarOverlap: {
+    marginLeft: -12,
   },
   avatarImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
+  teamName: {
+    textAlign: 'center',
+    marginTop: 4,
   },
   scoresSection: {
     marginBottom: 24,

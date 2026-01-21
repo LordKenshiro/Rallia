@@ -36,6 +36,7 @@ export {
   markMessagesAsRead,
   deleteMessage,
   editMessage,
+  clearChatForUser,
   
   // Participant Operations
   toggleMuteConversation,

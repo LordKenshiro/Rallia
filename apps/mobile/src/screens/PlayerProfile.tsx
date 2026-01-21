@@ -13,8 +13,8 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  ActivityIndicator,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,7 +22,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as Haptics from 'expo-haptics';
-import { Text } from '@rallia/shared-components';
+import { Text, Skeleton, SkeletonAvatar } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
 import { useGetOrCreateDirectConversation } from '@rallia/shared-hooks';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
@@ -630,10 +630,32 @@ const PlayerProfile = () => {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.loadingText, { color: colors.textMuted }]}>
-            Loading profile...
-          </Text>
+          {/* Player Profile Skeleton */}
+          <View style={[styles.profileHeader, { backgroundColor: colors.card }]}>
+            <SkeletonAvatar size={120} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            <View style={{ marginTop: 16, alignItems: 'center' }}>
+              <Skeleton width={150} height={18} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+              <Skeleton width={80} height={14} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} style={{ marginTop: 8 }} />
+            </View>
+            {/* Action buttons skeleton */}
+            <View style={{ flexDirection: 'row', marginTop: 16, gap: 12 }}>
+              <Skeleton width={140} height={44} borderRadius={22} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+              <Skeleton width={140} height={44} borderRadius={22} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            </View>
+          </View>
+          {/* Stats cards skeleton */}
+          <View style={{ flexDirection: 'row', paddingHorizontal: 16, marginTop: 16, gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Skeleton width="100%" height={80} borderRadius={12} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Skeleton width="100%" height={80} borderRadius={12} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            </View>
+          </View>
+          {/* Info section skeleton */}
+          <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
+            <Skeleton width="100%" height={120} borderRadius={12} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+          </View>
         </View>
       </SafeAreaView>
     );

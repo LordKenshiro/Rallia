@@ -2,15 +2,16 @@
  * Add Score Context
  *
  * Context provider for managing state across the Add Score flow.
+ * Handles dynamic steps based on match type (singles vs doubles).
  */
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import type {
   MatchType,
   AddScoreFormData,
   AddScoreStep,
 } from './types';
-import { ADD_SCORE_STEPS } from './types';
+import { SINGLES_SCORE_STEPS, DOUBLES_SCORE_STEPS } from './types';
 
 interface AddScoreContextType {
   // Form data
@@ -21,6 +22,7 @@ interface AddScoreContextType {
   // Navigation
   currentStep: AddScoreStep;
   currentStepIndex: number;
+  totalSteps: number;
   goToNextStep: () => boolean;
   goToPreviousStep: () => boolean;
   canGoNext: boolean;
@@ -61,10 +63,16 @@ export function AddScoreProvider({
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [matchType, setMatchTypeState] = useState<MatchType | null>(initialMatchType || null);
 
-  const currentStep = ADD_SCORE_STEPS[currentStepIndex];
-  const isLastStep = currentStepIndex === ADD_SCORE_STEPS.length - 1;
+  // Get the appropriate steps based on match type
+  const steps = useMemo(() => {
+    return matchType === 'double' ? DOUBLES_SCORE_STEPS : SINGLES_SCORE_STEPS;
+  }, [matchType]);
+
+  const currentStep = steps[currentStepIndex];
+  const totalSteps = steps.length;
+  const isLastStep = currentStepIndex === steps.length - 1;
   const canGoBack = currentStepIndex > 0;
-  const canGoNext = currentStepIndex < ADD_SCORE_STEPS.length - 1;
+  const canGoNext = currentStepIndex < steps.length - 1;
 
   const updateFormData = useCallback((data: Partial<AddScoreFormData>) => {
     setFormData((prev) => ({ ...prev, ...data }));
@@ -85,12 +93,12 @@ export function AddScoreProvider({
   }, []);
 
   const goToNextStep = useCallback(() => {
-    if (currentStepIndex < ADD_SCORE_STEPS.length - 1) {
+    if (currentStepIndex < steps.length - 1) {
       setCurrentStepIndex((prev) => prev + 1);
       return true;
     }
     return false;
-  }, [currentStepIndex]);
+  }, [currentStepIndex, steps.length]);
 
   const goToPreviousStep = useCallback(() => {
     if (currentStepIndex > 0) {
@@ -106,6 +114,7 @@ export function AddScoreProvider({
     resetFormData,
     currentStep,
     currentStepIndex,
+    totalSteps,
     goToNextStep,
     goToPreviousStep,
     canGoNext,

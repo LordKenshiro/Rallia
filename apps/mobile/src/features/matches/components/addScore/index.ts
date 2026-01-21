@@ -9,6 +9,7 @@ export { AddScoreProvider, useAddScore } from './AddScoreContext';
 export { FindOpponentStep } from './FindOpponentStep';
 export { MatchDetailsStep } from './MatchDetailsStep';
 export { MatchExpectationStep } from './MatchExpectationStep';
+export { CreateTeamsStep } from './CreateTeamsStep';
 export { WinnerScoresStep } from './WinnerScoresStep';
 
 export type {
@@ -21,4 +22,4 @@ export type {
   AddScoreStep,
 } from './types';
 
-export { ADD_SCORE_STEPS } from './types';
+export { ADD_SCORE_STEPS, SINGLES_SCORE_STEPS, DOUBLES_SCORE_STEPS } from './types';

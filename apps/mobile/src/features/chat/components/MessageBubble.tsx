@@ -332,7 +332,7 @@ function MessageBubbleComponent({
                 {renderContent()}
               </View>
 
-              {/* Timestamp and edited indicator */}
+              {/* Timestamp, edited indicator, and delivery status */}
               <View style={styles.timestampRow}>
                 {isEdited && !isDeleted && (
                   <Text
@@ -352,6 +352,55 @@ function MessageBubbleComponent({
                 >
                   {formattedTime}
                 </Text>
+                {/* Delivery status indicators - only for own messages */}
+                {isOwnMessage && !isDeleted && (
+                  <View style={styles.deliveryStatus}>
+                    {message.status === 'failed' ? (
+                      <Ionicons 
+                        name="alert-circle" 
+                        size={14} 
+                        color={status.error.DEFAULT} 
+                      />
+                    ) : message.status === 'read' ? (
+                      <View style={styles.doubleCheck}>
+                        <Ionicons 
+                          name="checkmark" 
+                          size={12} 
+                          color="rgba(255,255,255,0.9)" 
+                          style={styles.checkFirst}
+                        />
+                        <Ionicons 
+                          name="checkmark" 
+                          size={12} 
+                          color="rgba(255,255,255,0.9)" 
+                          style={styles.checkSecond}
+                        />
+                      </View>
+                    ) : message.status === 'delivered' ? (
+                      <View style={styles.doubleCheck}>
+                        <Ionicons 
+                          name="checkmark" 
+                          size={12} 
+                          color="rgba(255,255,255,0.6)" 
+                          style={styles.checkFirst}
+                        />
+                        <Ionicons 
+                          name="checkmark" 
+                          size={12} 
+                          color="rgba(255,255,255,0.6)" 
+                          style={styles.checkSecond}
+                        />
+                      </View>
+                    ) : (
+                      // 'sent' status - single check
+                      <Ionicons 
+                        name="checkmark" 
+                        size={14} 
+                        color="rgba(255,255,255,0.6)" 
+                      />
+                    )}
+                  </View>
+                )}
               </View>
             </Pressable>
 
@@ -502,6 +551,22 @@ const styles = StyleSheet.create({
   },
   timestamp: {
     fontSize: fontSizePixels.xs,
+  },
+  deliveryStatus: {
+    marginLeft: spacingPixels[1],
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  doubleCheck: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: 16,
+  },
+  checkFirst: {
+    marginRight: -6,
+  },
+  checkSecond: {
+    marginLeft: 0,
   },
   reactionsContainer: {
     flexDirection: 'row',

@@ -126,8 +126,8 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
       if (matchType === 'single') {
         return [player];
       }
-      // For doubles, allow up to 2 opponents (the opposing team)
-      if (prev.length < 2) {
+      // For doubles, allow up to 3 opponents (you + 3 others = 4 players total)
+      if (prev.length < 3) {
         return [...prev, player];
       }
       return prev;
@@ -152,7 +152,7 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
 
   const canContinue = matchType === 'single'
     ? selectedPlayers.length >= 1
-    : selectedPlayers.length >= 1; // For doubles, at least 1 opponent
+    : selectedPlayers.length >= 3; // For doubles, need exactly 3 players (you + 3 others = 4 total)
 
   const renderPlayerItem = ({ item }: { item: SelectedPlayer }) => {
     const isSelected = isPlayerSelected(item.id);
@@ -198,8 +198,13 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Title */}
       <Text weight="bold" size="xl" style={[styles.title, { color: colors.text }]}>
-        Find your opponent
+        {matchType === 'double' ? 'Find your opponents' : 'Find your opponent'}
       </Text>
+      {matchType === 'double' && (
+        <Text size="sm" style={[styles.subtitle, { color: colors.textSecondary }]}>
+          Select 3 players (you + 3 others = 4 players for doubles)
+        </Text>
+      )}
 
       {/* Search input */}
       <View style={[styles.searchContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
@@ -333,7 +338,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   title: {
-    marginBottom: 24,
+    marginBottom: 8,
+  },
+  subtitle: {
+    marginBottom: 16,
   },
   searchContainer: {
     flexDirection: 'row',

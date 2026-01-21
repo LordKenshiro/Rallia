@@ -13,13 +13,12 @@ import {
   TouchableOpacity,
   Image,
   TextInput,
-  Alert,
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Button } from '@rallia/shared-components';
+import { Text, Button, useToast } from '@rallia/shared-components';
 import { useThemeStyles } from '../../../hooks';
 import { 
   useConfirmMatchScore, 
@@ -41,6 +40,7 @@ export function ScoreConfirmationModal({
   playerId,
 }: ScoreConfirmationModalProps) {
   const { colors, isDark } = useThemeStyles();
+  const toast = useToast();
   const [showDisputeReason, setShowDisputeReason] = useState(false);
   const [disputeReason, setDisputeReason] = useState('');
   
@@ -57,12 +57,12 @@ export function ScoreConfirmationModal({
         matchResultId: confirmation.match_result_id,
         playerId,
       });
-      Alert.alert('Score Confirmed', 'The match score has been confirmed.');
+      toast.success('The match score has been confirmed.');
       onClose();
     } catch (error) {
-      Alert.alert('Error', 'Failed to confirm score. Please try again.');
+      toast.error('Failed to confirm score. Please try again.');
     }
-  }, [confirmation, playerId, confirmMutation, onClose]);
+  }, [confirmation, playerId, confirmMutation, onClose, toast]);
 
   const handleDispute = useCallback(async () => {
     if (!confirmation) return;
@@ -78,17 +78,14 @@ export function ScoreConfirmationModal({
         playerId,
         reason: disputeReason.trim() || undefined,
       });
-      Alert.alert(
-        'Score Disputed',
-        'The match score has been disputed. Please contact your opponent to resolve the issue.'
-      );
+      toast.warning('Score disputed. Please contact your opponent to resolve the issue.');
       setShowDisputeReason(false);
       setDisputeReason('');
       onClose();
     } catch (error) {
-      Alert.alert('Error', 'Failed to dispute score. Please try again.');
+      toast.error('Failed to dispute score. Please try again.');
     }
-  }, [confirmation, playerId, disputeMutation, showDisputeReason, disputeReason, onClose]);
+  }, [confirmation, playerId, disputeMutation, showDisputeReason, disputeReason, onClose, toast]);
 
   const handleClose = useCallback(() => {
     setShowDisputeReason(false);

@@ -11,7 +11,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
-  ActivityIndicator,
   Alert,
   Image,
   Dimensions,
@@ -21,7 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { Text } from '@rallia/shared-components';
+import { Text, Skeleton } from '@rallia/shared-components';
 import { useThemeStyles, useAuth } from '../hooks';
 import { usePlayerGroups, useCreateGroup, type Group } from '@rallia/shared-hooks';
 import type { RootStackParamList } from '../navigation/types';
@@ -190,7 +189,60 @@ export default function GroupsScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom']}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          {/* Header skeleton */}
+          <View style={styles.headerSkeleton}>
+            <Skeleton 
+              width={100} 
+              height={24} 
+              backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+              highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+            />
+            <View style={styles.headerSkeletonButtons}>
+              <Skeleton 
+                width={36} 
+                height={36} 
+                circle
+                backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                style={{ marginRight: 12 }}
+              />
+              <Skeleton 
+                width={36} 
+                height={36} 
+                circle
+                backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+              />
+            </View>
+          </View>
+          {/* Grid skeleton */}
+          <View style={styles.gridSkeleton}>
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <View key={i} style={[styles.cardSkeleton, { backgroundColor: colors.cardBackground }]}>
+                <Skeleton 
+                  width="100%" 
+                  height={CARD_WIDTH * 0.6} 
+                  borderRadius={12}
+                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                  style={{ marginBottom: 12 }}
+                />
+                <Skeleton 
+                  width="70%" 
+                  height={16} 
+                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                  style={{ marginBottom: 8 }}
+                />
+                <Skeleton 
+                  width="50%" 
+                  height={12} 
+                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                />
+              </View>
+            ))}
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -269,8 +321,27 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
+    padding: CARD_PADDING,
+  },
+  headerSkeleton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 20,
+  },
+  headerSkeletonButtons: {
+    flexDirection: 'row',
+  },
+  gridSkeleton: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: CARD_GAP,
+  },
+  cardSkeleton: {
+    width: CARD_WIDTH,
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: CARD_GAP,
   },
   listContent: {
     padding: CARD_PADDING,

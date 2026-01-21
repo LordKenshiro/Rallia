@@ -8,7 +8,6 @@ import {
   View,
   StyleSheet,
   FlatList,
-  ActivityIndicator,
   RefreshControl,
   TouchableOpacity,
 } from 'react-native';
@@ -17,7 +16,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
-import { Text } from '@rallia/shared-components';
+import { Text, SkeletonConversation } from '@rallia/shared-components';
 import { useThemeStyles, useAuth } from '../hooks';
 import { spacingPixels, fontSizePixels, primary } from '@rallia/design-system';
 import {
@@ -170,7 +169,9 @@ const ArchivedChats = () => {
       {/* Content */}
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={primary[500]} />
+          {[...Array(5)].map((_, index) => (
+            <SkeletonConversation key={index} />
+          ))}
         </View>
       ) : (
         <FlatList

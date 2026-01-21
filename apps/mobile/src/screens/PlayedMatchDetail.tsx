@@ -186,6 +186,11 @@ export default function PlayedMatchDetailScreen() {
     navigation.goBack();
   };
 
+  // Navigate to player profile
+  const handlePlayerPress = (playerId: string) => {
+    navigation.navigate('PlayerProfile', { playerId });
+  };
+
   // Render a player row (list style like the design)
   const renderPlayerRow = (
     participants: NonNullable<typeof matchData>['participants'],
@@ -200,20 +205,32 @@ export default function PlayedMatchDetailScreen() {
         )}
       </View>
       
-      {/* Avatar */}
-      <View style={styles.playerAvatarSmall}>
-        {participants.length > 0 && getPlayerAvatar(participants[0]) ? (
-          <Image 
-            source={{ uri: getPlayerAvatar(participants[0])! }} 
-            style={styles.avatarSmall} 
-          />
-        ) : (
-          <View style={[styles.avatarPlaceholderSmall, { backgroundColor: primary[100] }]}>
-            <Text style={{ color: primary[500], fontWeight: '600', fontSize: fontSizePixels.sm }}>
-              {participants.length > 0 ? getPlayerName(participants[0]).charAt(0).toUpperCase() : '?'}
-            </Text>
-          </View>
-        )}
+      {/* Avatar(s) - Show overlapping avatars for doubles, tappable to view profile */}
+      <View style={styles.teamAvatarsContainer}>
+        {participants.map((participant, index) => (
+          <TouchableOpacity 
+            key={participant.id}
+            style={[
+              styles.playerAvatarSmall,
+              index > 0 && { marginLeft: -12, zIndex: participants.length - index }
+            ]}
+            onPress={() => participant.player_id && handlePlayerPress(participant.player_id)}
+            activeOpacity={0.7}
+          >
+            {getPlayerAvatar(participant) ? (
+              <Image 
+                source={{ uri: getPlayerAvatar(participant)! }} 
+                style={styles.avatarSmall} 
+              />
+            ) : (
+              <View style={[styles.avatarPlaceholderSmall, { backgroundColor: primary[100] }]}>
+                <Text style={{ color: primary[500], fontWeight: '600', fontSize: fontSizePixels.sm }}>
+                  {getPlayerName(participant).charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        ))}
       </View>
       
       {/* Player name(s) */}
@@ -438,12 +455,18 @@ const styles = StyleSheet.create({
     width: 28,
     alignItems: 'center',
   },
+  teamAvatarsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: spacingPixels[3],
+  },
   playerAvatarSmall: {
     width: 40,
     height: 40,
     borderRadius: 20,
     overflow: 'hidden',
-    marginRight: spacingPixels[3],
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   avatarSmall: {
     width: '100%',
