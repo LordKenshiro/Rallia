@@ -2,11 +2,14 @@
 -- These columns store the user's home location based on their postal code
 -- Used for finding nearby matches and calculating distances
 
+-- Ensure PostGIS extension is enabled (required for geography type)
+CREATE EXTENSION IF NOT EXISTS postgis WITH SCHEMA extensions;
+
 ALTER TABLE player ADD COLUMN IF NOT EXISTS postal_code VARCHAR(20);
 ALTER TABLE player ADD COLUMN IF NOT EXISTS postal_code_country VARCHAR(2); -- 'CA' or 'US'
 ALTER TABLE player ADD COLUMN IF NOT EXISTS postal_code_lat DECIMAL(9,6);
 ALTER TABLE player ADD COLUMN IF NOT EXISTS postal_code_long DECIMAL(9,6);
-ALTER TABLE player ADD COLUMN IF NOT EXISTS postal_code_location GEOGRAPHY(Point,4326);
+ALTER TABLE player ADD COLUMN IF NOT EXISTS postal_code_location extensions.geography(Point,4326);
 
 -- Index for spatial queries (find players near a location)
 CREATE INDEX IF NOT EXISTS idx_player_postal_code_location_geo 

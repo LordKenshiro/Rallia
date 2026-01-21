@@ -8,37 +8,53 @@
 -- =============================================================================
 
 -- Match outcome (for explicit "did match happen?" question)
-CREATE TYPE match_outcome_enum AS ENUM (
-  'played',           -- Match happened as planned
-  'mutual_cancel',    -- Both/all parties agreed not to play
-  'opponent_no_show'  -- At least one opponent didn't show
-);
+DO $$ BEGIN
+  CREATE TYPE match_outcome_enum AS ENUM (
+    'played',           -- Match happened as planned
+    'mutual_cancel',    -- Both/all parties agreed not to play
+    'opponent_no_show'  -- At least one opponent didn't show
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 COMMENT ON TYPE match_outcome_enum IS 'Participant-reported match outcome for feedback';
 
 -- Match report reason (different from existing report_reason)
-CREATE TYPE match_report_reason_enum AS ENUM (
-  'harassment',
-  'unsportsmanlike',
-  'safety',
-  'misrepresented_level',
-  'inappropriate'
-);
+DO $$ BEGIN
+  CREATE TYPE match_report_reason_enum AS ENUM (
+    'harassment',
+    'unsportsmanlike',
+    'safety',
+    'misrepresented_level',
+    'inappropriate'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 COMMENT ON TYPE match_report_reason_enum IS 'Reason for reporting a player after a match';
 
 -- Match report priority
-CREATE TYPE match_report_priority_enum AS ENUM ('high', 'medium', 'low');
+DO $$ BEGIN
+  CREATE TYPE match_report_priority_enum AS ENUM ('high', 'medium', 'low');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 COMMENT ON TYPE match_report_priority_enum IS 'Priority level for moderation queue';
 
 -- Match report status (different from existing report_status)
-CREATE TYPE match_report_status_enum AS ENUM (
-  'pending',
-  'reviewed',
-  'dismissed',
-  'action_taken'
-);
+DO $$ BEGIN
+  CREATE TYPE match_report_status_enum AS ENUM (
+    'pending',
+    'reviewed',
+    'dismissed',
+    'action_taken'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 COMMENT ON TYPE match_report_status_enum IS 'Moderation status for match reports';
 
@@ -77,8 +93,12 @@ ALTER TABLE match_participant
   ADD COLUMN IF NOT EXISTS checked_in_at TIMESTAMPTZ;
 
 -- Add check constraint for star_rating
-ALTER TABLE match_participant
-  ADD CONSTRAINT check_star_rating CHECK (star_rating IS NULL OR (star_rating >= 1 AND star_rating <= 5));
+DO $$ BEGIN
+  ALTER TABLE match_participant
+    ADD CONSTRAINT check_star_rating CHECK (star_rating IS NULL OR (star_rating >= 1 AND star_rating <= 5));
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 COMMENT ON COLUMN match_participant.match_outcome IS 'Participant answer to "Did this match take place?"';
 COMMENT ON COLUMN match_participant.feedback_completed IS 'Whether participant has submitted feedback';
@@ -92,7 +112,7 @@ COMMENT ON COLUMN match_participant.checked_in_at IS 'Location-verified check-in
 -- PHASE 5: CREATE match_feedback TABLE
 -- =============================================================================
 
-CREATE TABLE match_feedback (
+CREATE TABLE IF NOT EXISTS match_feedback (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   match_id UUID NOT NULL REFERENCES match(id) ON DELETE CASCADE,
   reviewer_id UUID NOT NULL REFERENCES player(id) ON DELETE CASCADE,
@@ -112,7 +132,7 @@ COMMENT ON TABLE match_feedback IS 'Per-opponent feedback submitted after a matc
 -- PHASE 6: CREATE match_report TABLE
 -- =============================================================================
 
-CREATE TABLE match_report (
+CREATE TABLE IF NOT EXISTS match_report (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   match_id UUID NOT NULL REFERENCES match(id) ON DELETE CASCADE,
   reporter_id UUID NOT NULL REFERENCES player(id) ON DELETE CASCADE,
@@ -137,24 +157,24 @@ COMMENT ON TABLE match_report IS 'Reports filed against players during match fee
 -- =============================================================================
 
 -- For querying feedback by match
-CREATE INDEX idx_match_feedback_match_id ON match_feedback(match_id);
+CREATE INDEX IF NOT EXISTS idx_match_feedback_match_id ON match_feedback(match_id);
 
 -- For querying feedback received by a player
-CREATE INDEX idx_match_feedback_opponent_id ON match_feedback(opponent_id);
+CREATE INDEX IF NOT EXISTS idx_match_feedback_opponent_id ON match_feedback(opponent_id);
 
 -- For querying reports by match
-CREATE INDEX idx_match_report_match_id ON match_report(match_id);
+CREATE INDEX IF NOT EXISTS idx_match_report_match_id ON match_report(match_id);
 
 -- For moderation queue (pending reports by priority)
-CREATE INDEX idx_match_report_pending ON match_report(priority, created_at)
+CREATE INDEX IF NOT EXISTS idx_match_report_pending ON match_report(priority, created_at)
   WHERE status = 'pending';
 
 -- For finding matches pending closure
-CREATE INDEX idx_match_pending_closure ON match(end_time)
+CREATE INDEX IF NOT EXISTS idx_match_pending_closure ON match(end_time)
   WHERE closed_at IS NULL AND cancelled_at IS NULL;
 
 -- For finding participants who haven't submitted feedback
-CREATE INDEX idx_match_participant_pending_feedback ON match_participant(match_id)
+CREATE INDEX IF NOT EXISTS idx_match_participant_pending_feedback ON match_participant(match_id)
   WHERE feedback_completed = false AND status = 'joined';
 
 -- =============================================================================
@@ -164,6 +184,7 @@ CREATE INDEX idx_match_participant_pending_feedback ON match_participant(match_i
 -- match_feedback RLS
 ALTER TABLE match_feedback ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS match_feedback_select ON match_feedback;
 CREATE POLICY match_feedback_select ON match_feedback FOR SELECT
   USING (
     reviewer_id = auth.uid() OR
@@ -171,6 +192,7 @@ CREATE POLICY match_feedback_select ON match_feedback FOR SELECT
     is_match_participant(match_id, auth.uid())
   );
 
+DROP POLICY IF EXISTS match_feedback_insert ON match_feedback;
 CREATE POLICY match_feedback_insert ON match_feedback FOR INSERT
   WITH CHECK (
     reviewer_id = auth.uid() AND
@@ -180,9 +202,11 @@ CREATE POLICY match_feedback_insert ON match_feedback FOR INSERT
 -- match_report RLS
 ALTER TABLE match_report ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS match_report_select ON match_report;
 CREATE POLICY match_report_select ON match_report FOR SELECT
   USING (reporter_id = auth.uid());
 
+DROP POLICY IF EXISTS match_report_insert ON match_report;
 CREATE POLICY match_report_insert ON match_report FOR INSERT
   WITH CHECK (
     reporter_id = auth.uid() AND
