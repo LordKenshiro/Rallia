@@ -137,8 +137,7 @@ The following tables exist in both schemas and appear to match:
 - `sport`
 - `play_style`
 - `play_attribute`
-- `player_sport_profile`
-- `player_play_attribute`
+- `player_sport`
 - `rating_system`
 - `rating_score`
 - `player_rating_score`
@@ -175,7 +174,7 @@ These tables exist in TypeScript but are NOT part of Phase 1 requirements:
 - `network_type` - Likely from Phase 4
 - `notification` - Likely from Phase 4
 - `player_review` - Likely from Phase 2
-- `player_sport` - Different from `player_sport_profile`
+- `player_sport` - Primary table linking players to sports
 - `rating` - Different from `rating_system`
 - `reference_request` - Different from `rating_reference_request`
 - `report` - Likely from Phase 4

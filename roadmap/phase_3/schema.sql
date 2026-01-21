@@ -196,9 +196,8 @@ COMMENT ON TABLE "player_location" IS 'Approximate player locations for map disp
 -- BASE TABLES:
 -- - auth_users, profiles, admins
 -- - organizations, organization_members
--- - players, player_availabilities
+-- - players, player_availabilities, player_sport
 -- - sports, play_styles, play_attributes
--- - player_sport_profiles, player_play_attributes
 -- - rating_systems, rating_scores, player_rating_scores
 -- - files, rating_proofs
 -- - rating_reference_requests, peer_rating_requests

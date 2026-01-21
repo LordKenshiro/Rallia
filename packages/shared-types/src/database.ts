@@ -168,9 +168,8 @@ export type Sport = TableRow<'sport'>;
 export type PlayStyle = TableRow<'play_style'>;
 export type PlayAttribute = TableRow<'play_attribute'>;
 
-// Player Sport Profile (replaces player_sport)
-export type PlayerSportProfile = TableRow<'player_sport_profile'>;
-export type PlayerPlayAttribute = TableRow<'player_play_attribute'>;
+// Player Sport (links players to sports with preferences)
+export type PlayerSport = TableRow<'player_sport'>;
 
 // Rating System (replaces rating)
 export type RatingSystem = TableRow<'rating_system'>;
@@ -260,8 +259,7 @@ export type AdminInsert = TableInsert<'admin'>;
 export type SportInsert = TableInsert<'sport'>;
 export type PlayStyleInsert = TableInsert<'play_style'>;
 export type PlayAttributeInsert = TableInsert<'play_attribute'>;
-export type PlayerSportProfileInsert = TableInsert<'player_sport_profile'>;
-export type PlayerPlayAttributeInsert = TableInsert<'player_play_attribute'>;
+export type PlayerSportInsert = TableInsert<'player_sport'>;
 export type RatingSystemInsert = TableInsert<'rating_system'>;
 export type RatingScoreInsert = TableInsert<'rating_score'>;
 export type PlayerRatingScoreInsert = TableInsert<'player_rating_score'>;
@@ -300,8 +298,7 @@ export type AdminUpdate = TableUpdate<'admin'>;
 export type SportUpdate = TableUpdate<'sport'>;
 export type PlayStyleUpdate = TableUpdate<'play_style'>;
 export type PlayAttributeUpdate = TableUpdate<'play_attribute'>;
-export type PlayerSportProfileUpdate = TableUpdate<'player_sport_profile'>;
-export type PlayerPlayAttributeUpdate = TableUpdate<'player_play_attribute'>;
+export type PlayerSportUpdate = TableUpdate<'player_sport'>;
 export type RatingSystemUpdate = TableUpdate<'rating_system'>;
 export type RatingScoreUpdate = TableUpdate<'rating_score'>;
 export type PlayerRatingScoreUpdate = TableUpdate<'player_rating_score'>;
@@ -343,10 +340,9 @@ export interface PlayerWithProfile extends Player {
   sportRatingValue?: number;
 }
 
-/** Player sport profile with sport details */
-export interface PlayerSportProfileWithDetails extends PlayerSportProfile {
+/** Player sport with sport details */
+export interface PlayerSportWithDetails extends PlayerSport {
   sport: Sport;
-  play_style?: PlayStyle;
 }
 
 /** Player rating score with full rating hierarchy */
@@ -610,9 +606,5 @@ export type { Database } from './supabase';
 // (Use these during migration, then remove)
 // ============================================
 
-/** @deprecated Use PlayerSportProfile instead */
-export type PlayerSport = PlayerSportProfile;
-/** @deprecated Use PlayerSportProfileInsert instead */
-export type PlayerSportInsert = PlayerSportProfileInsert;
-/** @deprecated Use PlayerSportProfileUpdate instead */
-export type PlayerSportUpdate = PlayerSportProfileUpdate;
+/** @deprecated Use PlayerSportWithDetails instead */
+export type PlayerSportProfileWithDetails = PlayerSportWithDetails;

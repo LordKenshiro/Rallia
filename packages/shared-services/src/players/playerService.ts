@@ -246,32 +246,20 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
   }
 
   // Step 5: Apply play style filter if specified
+  // Uses player_sport.preferred_play_style enum column directly
   if (filters.playStyle && filters.playStyle !== 'all') {
-    // First get play_style_id for the given play style name
-    const { data: playStyleData, error: playStyleError } = await supabase
-      .from('play_style')
-      .select('id')
+    const { data: styledPlayers, error: styledError } = await supabase
+      .from('player_sport')
+      .select('player_id')
+      .in('player_id', playerIds)
       .eq('sport_id', sportId)
-      .ilike('name', filters.playStyle.replace(/_/g, ' ')); // Convert snake_case to space separated
+      .eq('preferred_play_style', filters.playStyle);
 
-    if (playStyleError) {
-      console.error('[searchPlayersForSport] Error fetching play style:', playStyleError);
-    } else if (playStyleData && playStyleData.length > 0) {
-      const playStyleIds = playStyleData.map(ps => ps.id);
-
-      const { data: styledPlayers, error: styledError } = await supabase
-        .from('player_sport_profile')
-        .select('player_id')
-        .in('player_id', playerIds)
-        .eq('sport_id', sportId)
-        .in('play_style_id', playStyleIds);
-
-      if (styledError) {
-        console.error('[searchPlayersForSport] Error filtering by play style:', styledError);
-      } else if (styledPlayers) {
-        const styledPlayerIds = styledPlayers.map(p => p.player_id);
-        playerIds = playerIds.filter(id => styledPlayerIds.includes(id));
-      }
+    if (styledError) {
+      console.error('[searchPlayersForSport] Error filtering by play style:', styledError);
+    } else if (styledPlayers) {
+      const styledPlayerIds = styledPlayers.map(p => p.player_id);
+      playerIds = playerIds.filter(id => styledPlayerIds.includes(id));
     }
 
     if (playerIds.length === 0) {

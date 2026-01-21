@@ -1,4088 +1,4095 @@
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[]
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
   graphql_public: {
     Tables: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Views: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Functions: {
       graphql: {
         Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
+          extensions?: Json;
+          operationName?: string;
+          query?: string;
+          variables?: Json;
+        };
+        Returns: Json;
+      };
+    };
     Enums: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     CompositeTypes: {
-      [_ in never]: never
-    }
-  }
+      [_ in never]: never;
+    };
+  };
   public: {
     Tables: {
       admin: {
         Row: {
-          assigned_at: string
-          id: string
-          notes: string | null
-          permissions: Json | null
-          role: Database["public"]["Enums"]["admin_role_enum"]
-        }
+          assigned_at: string;
+          id: string;
+          notes: string | null;
+          permissions: Json | null;
+          role: Database['public']['Enums']['admin_role_enum'];
+        };
         Insert: {
-          assigned_at?: string
-          id: string
-          notes?: string | null
-          permissions?: Json | null
-          role: Database["public"]["Enums"]["admin_role_enum"]
-        }
+          assigned_at?: string;
+          id: string;
+          notes?: string | null;
+          permissions?: Json | null;
+          role: Database['public']['Enums']['admin_role_enum'];
+        };
         Update: {
-          assigned_at?: string
-          id?: string
-          notes?: string | null
-          permissions?: Json | null
-          role?: Database["public"]["Enums"]["admin_role_enum"]
-        }
+          assigned_at?: string;
+          id?: string;
+          notes?: string | null;
+          permissions?: Json | null;
+          role?: Database['public']['Enums']['admin_role_enum'];
+        };
         Relationships: [
           {
-            foreignKeyName: "admin_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "profile"
-            referencedColumns: ["id"]
+            foreignKeyName: 'admin_id_fkey';
+            columns: ['id'];
+            isOneToOne: true;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       booking: {
         Row: {
-          booking_date: string
-          court_slot_id: string
-          created_at: string | null
-          end_time: string
-          id: string
-          notes: string | null
-          payment_method: Database["public"]["Enums"]["payment_method"] | null
-          payment_status: Database["public"]["Enums"]["payment_status"] | null
-          player_id: string
-          start_time: string
-          status: Database["public"]["Enums"]["booking_status"] | null
-          total_price: number | null
-          updated_at: string | null
-        }
+          booking_date: string;
+          court_slot_id: string;
+          created_at: string | null;
+          end_time: string;
+          id: string;
+          notes: string | null;
+          payment_method: Database['public']['Enums']['payment_method'] | null;
+          payment_status: Database['public']['Enums']['payment_status'] | null;
+          player_id: string;
+          start_time: string;
+          status: Database['public']['Enums']['booking_status'] | null;
+          total_price: number | null;
+          updated_at: string | null;
+        };
         Insert: {
-          booking_date: string
-          court_slot_id: string
-          created_at?: string | null
-          end_time: string
-          id?: string
-          notes?: string | null
-          payment_method?: Database["public"]["Enums"]["payment_method"] | null
-          payment_status?: Database["public"]["Enums"]["payment_status"] | null
-          player_id: string
-          start_time: string
-          status?: Database["public"]["Enums"]["booking_status"] | null
-          total_price?: number | null
-          updated_at?: string | null
-        }
+          booking_date: string;
+          court_slot_id: string;
+          created_at?: string | null;
+          end_time: string;
+          id?: string;
+          notes?: string | null;
+          payment_method?: Database['public']['Enums']['payment_method'] | null;
+          payment_status?: Database['public']['Enums']['payment_status'] | null;
+          player_id: string;
+          start_time: string;
+          status?: Database['public']['Enums']['booking_status'] | null;
+          total_price?: number | null;
+          updated_at?: string | null;
+        };
         Update: {
-          booking_date?: string
-          court_slot_id?: string
-          created_at?: string | null
-          end_time?: string
-          id?: string
-          notes?: string | null
-          payment_method?: Database["public"]["Enums"]["payment_method"] | null
-          payment_status?: Database["public"]["Enums"]["payment_status"] | null
-          player_id?: string
-          start_time?: string
-          status?: Database["public"]["Enums"]["booking_status"] | null
-          total_price?: number | null
-          updated_at?: string | null
-        }
+          booking_date?: string;
+          court_slot_id?: string;
+          created_at?: string | null;
+          end_time?: string;
+          id?: string;
+          notes?: string | null;
+          payment_method?: Database['public']['Enums']['payment_method'] | null;
+          payment_status?: Database['public']['Enums']['payment_status'] | null;
+          player_id?: string;
+          start_time?: string;
+          status?: Database['public']['Enums']['booking_status'] | null;
+          total_price?: number | null;
+          updated_at?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "booking_court_slot_id_fkey"
-            columns: ["court_slot_id"]
-            isOneToOne: false
-            referencedRelation: "court_slot"
-            referencedColumns: ["id"]
+            foreignKeyName: 'booking_court_slot_id_fkey';
+            columns: ['court_slot_id'];
+            isOneToOne: false;
+            referencedRelation: 'court_slot';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "booking_player_id_fkey"
-            columns: ["player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'booking_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       conversation: {
         Row: {
-          conversation_type: Database["public"]["Enums"]["conversation_type"]
-          created_at: string | null
-          created_by: string
-          id: string
-          match_id: string | null
-          title: string | null
-          updated_at: string | null
-        }
+          conversation_type: Database['public']['Enums']['conversation_type'];
+          created_at: string | null;
+          created_by: string;
+          id: string;
+          match_id: string | null;
+          picture_url: string | null;
+          title: string | null;
+          updated_at: string | null;
+        };
         Insert: {
-          conversation_type: Database["public"]["Enums"]["conversation_type"]
-          created_at?: string | null
-          created_by: string
-          id?: string
-          match_id?: string | null
-          title?: string | null
-          updated_at?: string | null
-        }
+          conversation_type: Database['public']['Enums']['conversation_type'];
+          created_at?: string | null;
+          created_by: string;
+          id?: string;
+          match_id?: string | null;
+          picture_url?: string | null;
+          title?: string | null;
+          updated_at?: string | null;
+        };
         Update: {
-          conversation_type?: Database["public"]["Enums"]["conversation_type"]
-          created_at?: string | null
-          created_by?: string
-          id?: string
-          match_id?: string | null
-          title?: string | null
-          updated_at?: string | null
-        }
+          conversation_type?: Database['public']['Enums']['conversation_type'];
+          created_at?: string | null;
+          created_by?: string;
+          id?: string;
+          match_id?: string | null;
+          picture_url?: string | null;
+          title?: string | null;
+          updated_at?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "conversation_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'conversation_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "conversation_match_id_fkey"
-            columns: ["match_id"]
-            isOneToOne: false
-            referencedRelation: "match"
-            referencedColumns: ["id"]
+            foreignKeyName: 'conversation_match_id_fkey';
+            columns: ['match_id'];
+            isOneToOne: false;
+            referencedRelation: 'match';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       conversation_participant: {
         Row: {
-          conversation_id: string
-          created_at: string | null
-          id: string
-          is_muted: boolean | null
-          joined_at: string | null
-          last_read_at: string | null
-          player_id: string
-          updated_at: string | null
-        }
+          archived_at: string | null;
+          conversation_id: string;
+          created_at: string | null;
+          id: string;
+          is_archived: boolean | null;
+          is_muted: boolean | null;
+          is_pinned: boolean | null;
+          joined_at: string | null;
+          last_read_at: string | null;
+          pinned_at: string | null;
+          player_id: string;
+          updated_at: string | null;
+        };
         Insert: {
-          conversation_id: string
-          created_at?: string | null
-          id?: string
-          is_muted?: boolean | null
-          joined_at?: string | null
-          last_read_at?: string | null
-          player_id: string
-          updated_at?: string | null
-        }
+          archived_at?: string | null;
+          conversation_id: string;
+          created_at?: string | null;
+          id?: string;
+          is_archived?: boolean | null;
+          is_muted?: boolean | null;
+          is_pinned?: boolean | null;
+          joined_at?: string | null;
+          last_read_at?: string | null;
+          pinned_at?: string | null;
+          player_id: string;
+          updated_at?: string | null;
+        };
         Update: {
-          conversation_id?: string
-          created_at?: string | null
-          id?: string
-          is_muted?: boolean | null
-          joined_at?: string | null
-          last_read_at?: string | null
-          player_id?: string
-          updated_at?: string | null
-        }
+          archived_at?: string | null;
+          conversation_id?: string;
+          created_at?: string | null;
+          id?: string;
+          is_archived?: boolean | null;
+          is_muted?: boolean | null;
+          is_pinned?: boolean | null;
+          joined_at?: string | null;
+          last_read_at?: string | null;
+          pinned_at?: string | null;
+          player_id?: string;
+          updated_at?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "conversation_participant_conversation_id_fkey"
-            columns: ["conversation_id"]
-            isOneToOne: false
-            referencedRelation: "conversation"
-            referencedColumns: ["id"]
+            foreignKeyName: 'conversation_participant_conversation_id_fkey';
+            columns: ['conversation_id'];
+            isOneToOne: false;
+            referencedRelation: 'conversation';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "conversation_participant_player_id_fkey"
-            columns: ["player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'conversation_participant_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       court: {
         Row: {
-          attributes: Json | null
-          availability_status: Database["public"]["Enums"]["availability_enum"]
-          court_number: number | null
-          created_at: string
-          external_provider_id: string | null
-          facility_id: string
-          id: string
-          indoor: boolean
-          is_active: boolean
-          lighting: boolean
-          lines_marked_for_multiple_sports: boolean
-          name: string | null
-          notes: string | null
-          surface_type: Database["public"]["Enums"]["surface_type_enum"] | null
-          updated_at: string
-        }
+          attributes: Json | null;
+          availability_status: Database['public']['Enums']['availability_enum'];
+          court_number: number | null;
+          created_at: string;
+          external_provider_id: string | null;
+          facility_id: string;
+          id: string;
+          indoor: boolean;
+          is_active: boolean;
+          lighting: boolean;
+          lines_marked_for_multiple_sports: boolean;
+          name: string | null;
+          notes: string | null;
+          surface_type: Database['public']['Enums']['surface_type_enum'] | null;
+          updated_at: string;
+        };
         Insert: {
-          attributes?: Json | null
-          availability_status?: Database["public"]["Enums"]["availability_enum"]
-          court_number?: number | null
-          created_at?: string
-          external_provider_id?: string | null
-          facility_id: string
-          id?: string
-          indoor?: boolean
-          is_active?: boolean
-          lighting?: boolean
-          lines_marked_for_multiple_sports?: boolean
-          name?: string | null
-          notes?: string | null
-          surface_type?: Database["public"]["Enums"]["surface_type_enum"] | null
-          updated_at?: string
-        }
+          attributes?: Json | null;
+          availability_status?: Database['public']['Enums']['availability_enum'];
+          court_number?: number | null;
+          created_at?: string;
+          external_provider_id?: string | null;
+          facility_id: string;
+          id?: string;
+          indoor?: boolean;
+          is_active?: boolean;
+          lighting?: boolean;
+          lines_marked_for_multiple_sports?: boolean;
+          name?: string | null;
+          notes?: string | null;
+          surface_type?: Database['public']['Enums']['surface_type_enum'] | null;
+          updated_at?: string;
+        };
         Update: {
-          attributes?: Json | null
-          availability_status?: Database["public"]["Enums"]["availability_enum"]
-          court_number?: number | null
-          created_at?: string
-          external_provider_id?: string | null
-          facility_id?: string
-          id?: string
-          indoor?: boolean
-          is_active?: boolean
-          lighting?: boolean
-          lines_marked_for_multiple_sports?: boolean
-          name?: string | null
-          notes?: string | null
-          surface_type?: Database["public"]["Enums"]["surface_type_enum"] | null
-          updated_at?: string
-        }
+          attributes?: Json | null;
+          availability_status?: Database['public']['Enums']['availability_enum'];
+          court_number?: number | null;
+          created_at?: string;
+          external_provider_id?: string | null;
+          facility_id?: string;
+          id?: string;
+          indoor?: boolean;
+          is_active?: boolean;
+          lighting?: boolean;
+          lines_marked_for_multiple_sports?: boolean;
+          name?: string | null;
+          notes?: string | null;
+          surface_type?: Database['public']['Enums']['surface_type_enum'] | null;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "courts_facility_id_fkey"
-            columns: ["facility_id"]
-            isOneToOne: false
-            referencedRelation: "facility"
-            referencedColumns: ["id"]
+            foreignKeyName: 'courts_facility_id_fkey';
+            columns: ['facility_id'];
+            isOneToOne: false;
+            referencedRelation: 'facility';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       court_slot: {
         Row: {
-          court_id: string
-          created_at: string | null
-          day_of_week: Database["public"]["Enums"]["day_of_week"]
-          end_time: string
-          id: string
-          is_available: boolean | null
-          price: number | null
-          start_time: string
-          updated_at: string | null
-        }
+          court_id: string;
+          created_at: string | null;
+          day_of_week: Database['public']['Enums']['day_of_week'];
+          end_time: string;
+          id: string;
+          is_available: boolean | null;
+          price: number | null;
+          start_time: string;
+          updated_at: string | null;
+        };
         Insert: {
-          court_id: string
-          created_at?: string | null
-          day_of_week: Database["public"]["Enums"]["day_of_week"]
-          end_time: string
-          id?: string
-          is_available?: boolean | null
-          price?: number | null
-          start_time: string
-          updated_at?: string | null
-        }
+          court_id: string;
+          created_at?: string | null;
+          day_of_week: Database['public']['Enums']['day_of_week'];
+          end_time: string;
+          id?: string;
+          is_available?: boolean | null;
+          price?: number | null;
+          start_time: string;
+          updated_at?: string | null;
+        };
         Update: {
-          court_id?: string
-          created_at?: string | null
-          day_of_week?: Database["public"]["Enums"]["day_of_week"]
-          end_time?: string
-          id?: string
-          is_available?: boolean | null
-          price?: number | null
-          start_time?: string
-          updated_at?: string | null
-        }
+          court_id?: string;
+          created_at?: string | null;
+          day_of_week?: Database['public']['Enums']['day_of_week'];
+          end_time?: string;
+          id?: string;
+          is_available?: boolean | null;
+          price?: number | null;
+          start_time?: string;
+          updated_at?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "court_slot_court_id_fkey"
-            columns: ["court_id"]
-            isOneToOne: false
-            referencedRelation: "court"
-            referencedColumns: ["id"]
+            foreignKeyName: 'court_slot_court_id_fkey';
+            columns: ['court_id'];
+            isOneToOne: false;
+            referencedRelation: 'court';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       court_sport: {
         Row: {
-          court_id: string
-          created_at: string
-          id: string
-          sport_id: string
-          updated_at: string
-        }
+          court_id: string;
+          created_at: string;
+          id: string;
+          sport_id: string;
+          updated_at: string;
+        };
         Insert: {
-          court_id: string
-          created_at?: string
-          id?: string
-          sport_id: string
-          updated_at?: string
-        }
+          court_id: string;
+          created_at?: string;
+          id?: string;
+          sport_id: string;
+          updated_at?: string;
+        };
         Update: {
-          court_id?: string
-          created_at?: string
-          id?: string
-          sport_id?: string
-          updated_at?: string
-        }
+          court_id?: string;
+          created_at?: string;
+          id?: string;
+          sport_id?: string;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "court_sport_court_id_fkey"
-            columns: ["court_id"]
-            isOneToOne: false
-            referencedRelation: "court"
-            referencedColumns: ["id"]
+            foreignKeyName: 'court_sport_court_id_fkey';
+            columns: ['court_id'];
+            isOneToOne: false;
+            referencedRelation: 'court';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "court_sport_sport_id_fkey"
-            columns: ["sport_id"]
-            isOneToOne: false
-            referencedRelation: "sport"
-            referencedColumns: ["id"]
+            foreignKeyName: 'court_sport_sport_id_fkey';
+            columns: ['sport_id'];
+            isOneToOne: false;
+            referencedRelation: 'sport';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       data_provider: {
         Row: {
-          api_base_url: string
-          api_config: Json | null
-          booking_url_template: string | null
-          created_at: string
-          id: string
-          is_active: boolean
-          name: string
-          provider_type: string
-          updated_at: string
-        }
+          api_base_url: string;
+          api_config: Json | null;
+          booking_url_template: string | null;
+          created_at: string;
+          id: string;
+          is_active: boolean;
+          name: string;
+          provider_type: string;
+          updated_at: string;
+        };
         Insert: {
-          api_base_url: string
-          api_config?: Json | null
-          booking_url_template?: string | null
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          name: string
-          provider_type: string
-          updated_at?: string
-        }
+          api_base_url: string;
+          api_config?: Json | null;
+          booking_url_template?: string | null;
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          name: string;
+          provider_type: string;
+          updated_at?: string;
+        };
         Update: {
-          api_base_url?: string
-          api_config?: Json | null
-          booking_url_template?: string | null
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          name?: string
-          provider_type?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
+          api_base_url?: string;
+          api_config?: Json | null;
+          booking_url_template?: string | null;
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          name?: string;
+          provider_type?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       delivery_attempt: {
         Row: {
-          attempt_number: number
-          channel: Database["public"]["Enums"]["delivery_channel_enum"]
-          created_at: string
-          error_message: string | null
-          id: string
-          invitation_id: string | null
-          notification_id: string | null
-          provider_response: Json | null
-          status: Database["public"]["Enums"]["delivery_status_enum"]
-        }
+          attempt_number: number;
+          channel: Database['public']['Enums']['delivery_channel_enum'];
+          created_at: string;
+          error_message: string | null;
+          id: string;
+          invitation_id: string | null;
+          notification_id: string | null;
+          provider_response: Json | null;
+          status: Database['public']['Enums']['delivery_status_enum'];
+        };
         Insert: {
-          attempt_number: number
-          channel: Database["public"]["Enums"]["delivery_channel_enum"]
-          created_at?: string
-          error_message?: string | null
-          id?: string
-          invitation_id?: string | null
-          notification_id?: string | null
-          provider_response?: Json | null
-          status: Database["public"]["Enums"]["delivery_status_enum"]
-        }
+          attempt_number: number;
+          channel: Database['public']['Enums']['delivery_channel_enum'];
+          created_at?: string;
+          error_message?: string | null;
+          id?: string;
+          invitation_id?: string | null;
+          notification_id?: string | null;
+          provider_response?: Json | null;
+          status: Database['public']['Enums']['delivery_status_enum'];
+        };
         Update: {
-          attempt_number?: number
-          channel?: Database["public"]["Enums"]["delivery_channel_enum"]
-          created_at?: string
-          error_message?: string | null
-          id?: string
-          invitation_id?: string | null
-          notification_id?: string | null
-          provider_response?: Json | null
-          status?: Database["public"]["Enums"]["delivery_status_enum"]
-        }
+          attempt_number?: number;
+          channel?: Database['public']['Enums']['delivery_channel_enum'];
+          created_at?: string;
+          error_message?: string | null;
+          id?: string;
+          invitation_id?: string | null;
+          notification_id?: string | null;
+          provider_response?: Json | null;
+          status?: Database['public']['Enums']['delivery_status_enum'];
+        };
         Relationships: [
           {
-            foreignKeyName: "delivery_attempt_notification_id_fkey"
-            columns: ["notification_id"]
-            isOneToOne: false
-            referencedRelation: "notification"
-            referencedColumns: ["id"]
+            foreignKeyName: 'delivery_attempt_notification_id_fkey';
+            columns: ['notification_id'];
+            isOneToOne: false;
+            referencedRelation: 'notification';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "delivery_attempts_invitation_id_fkey"
-            columns: ["invitation_id"]
-            isOneToOne: false
-            referencedRelation: "invitation"
-            referencedColumns: ["id"]
+            foreignKeyName: 'delivery_attempts_invitation_id_fkey';
+            columns: ['invitation_id'];
+            isOneToOne: false;
+            referencedRelation: 'invitation';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       facility: {
         Row: {
-          address: string | null
-          archived_at: string | null
-          attributes: Json | null
-          city: string | null
-          country: Database["public"]["Enums"]["country_enum"] | null
-          created_at: string
-          data_provider_id: string | null
-          description: string | null
-          external_provider_id: string | null
-          facility_type:
-            | Database["public"]["Enums"]["facility_type_enum"]
-            | null
-          id: string
-          is_active: boolean
-          latitude: number | null
-          location: unknown
-          longitude: number | null
-          membership_required: boolean
-          name: string
-          organization_id: string
-          postal_code: string | null
-          slug: string
-          timezone: string | null
-          updated_at: string
-        }
+          address: string | null;
+          archived_at: string | null;
+          attributes: Json | null;
+          city: string | null;
+          country: Database['public']['Enums']['country_enum'] | null;
+          created_at: string;
+          data_provider_id: string | null;
+          description: string | null;
+          external_provider_id: string | null;
+          facility_type: Database['public']['Enums']['facility_type_enum'] | null;
+          id: string;
+          is_active: boolean;
+          latitude: number | null;
+          location: unknown;
+          longitude: number | null;
+          membership_required: boolean;
+          name: string;
+          organization_id: string;
+          postal_code: string | null;
+          slug: string;
+          timezone: string | null;
+          updated_at: string;
+        };
         Insert: {
-          address?: string | null
-          archived_at?: string | null
-          attributes?: Json | null
-          city?: string | null
-          country?: Database["public"]["Enums"]["country_enum"] | null
-          created_at?: string
-          data_provider_id?: string | null
-          description?: string | null
-          external_provider_id?: string | null
-          facility_type?:
-            | Database["public"]["Enums"]["facility_type_enum"]
-            | null
-          id?: string
-          is_active?: boolean
-          latitude?: number | null
-          location?: unknown
-          longitude?: number | null
-          membership_required?: boolean
-          name: string
-          organization_id: string
-          postal_code?: string | null
-          slug: string
-          timezone?: string | null
-          updated_at?: string
-        }
+          address?: string | null;
+          archived_at?: string | null;
+          attributes?: Json | null;
+          city?: string | null;
+          country?: Database['public']['Enums']['country_enum'] | null;
+          created_at?: string;
+          data_provider_id?: string | null;
+          description?: string | null;
+          external_provider_id?: string | null;
+          facility_type?: Database['public']['Enums']['facility_type_enum'] | null;
+          id?: string;
+          is_active?: boolean;
+          latitude?: number | null;
+          location?: unknown;
+          longitude?: number | null;
+          membership_required?: boolean;
+          name: string;
+          organization_id: string;
+          postal_code?: string | null;
+          slug: string;
+          timezone?: string | null;
+          updated_at?: string;
+        };
         Update: {
-          address?: string | null
-          archived_at?: string | null
-          attributes?: Json | null
-          city?: string | null
-          country?: Database["public"]["Enums"]["country_enum"] | null
-          created_at?: string
-          data_provider_id?: string | null
-          description?: string | null
-          external_provider_id?: string | null
-          facility_type?:
-            | Database["public"]["Enums"]["facility_type_enum"]
-            | null
-          id?: string
-          is_active?: boolean
-          latitude?: number | null
-          location?: unknown
-          longitude?: number | null
-          membership_required?: boolean
-          name?: string
-          organization_id?: string
-          postal_code?: string | null
-          slug?: string
-          timezone?: string | null
-          updated_at?: string
-        }
+          address?: string | null;
+          archived_at?: string | null;
+          attributes?: Json | null;
+          city?: string | null;
+          country?: Database['public']['Enums']['country_enum'] | null;
+          created_at?: string;
+          data_provider_id?: string | null;
+          description?: string | null;
+          external_provider_id?: string | null;
+          facility_type?: Database['public']['Enums']['facility_type_enum'] | null;
+          id?: string;
+          is_active?: boolean;
+          latitude?: number | null;
+          location?: unknown;
+          longitude?: number | null;
+          membership_required?: boolean;
+          name?: string;
+          organization_id?: string;
+          postal_code?: string | null;
+          slug?: string;
+          timezone?: string | null;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "facility_data_provider_id_fkey"
-            columns: ["data_provider_id"]
-            isOneToOne: false
-            referencedRelation: "data_provider"
-            referencedColumns: ["id"]
+            foreignKeyName: 'facility_data_provider_id_fkey';
+            columns: ['data_provider_id'];
+            isOneToOne: false;
+            referencedRelation: 'data_provider';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "facility_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organization"
-            referencedColumns: ["id"]
+            foreignKeyName: 'facility_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organization';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       facility_contact: {
         Row: {
-          attributes: Json | null
-          contact_type: Database["public"]["Enums"]["facility_contact_type_enum"]
-          created_at: string
-          email: string | null
-          facility_id: string
-          id: string
-          is_primary: boolean
-          notes: string | null
-          phone: string | null
-          sport_id: string | null
-          updated_at: string
-          website: string | null
-        }
+          attributes: Json | null;
+          contact_type: Database['public']['Enums']['facility_contact_type_enum'];
+          created_at: string;
+          email: string | null;
+          facility_id: string;
+          id: string;
+          is_primary: boolean;
+          notes: string | null;
+          phone: string | null;
+          sport_id: string | null;
+          updated_at: string;
+          website: string | null;
+        };
         Insert: {
-          attributes?: Json | null
-          contact_type: Database["public"]["Enums"]["facility_contact_type_enum"]
-          created_at?: string
-          email?: string | null
-          facility_id: string
-          id?: string
-          is_primary?: boolean
-          notes?: string | null
-          phone?: string | null
-          sport_id?: string | null
-          updated_at?: string
-          website?: string | null
-        }
+          attributes?: Json | null;
+          contact_type: Database['public']['Enums']['facility_contact_type_enum'];
+          created_at?: string;
+          email?: string | null;
+          facility_id: string;
+          id?: string;
+          is_primary?: boolean;
+          notes?: string | null;
+          phone?: string | null;
+          sport_id?: string | null;
+          updated_at?: string;
+          website?: string | null;
+        };
         Update: {
-          attributes?: Json | null
-          contact_type?: Database["public"]["Enums"]["facility_contact_type_enum"]
-          created_at?: string
-          email?: string | null
-          facility_id?: string
-          id?: string
-          is_primary?: boolean
-          notes?: string | null
-          phone?: string | null
-          sport_id?: string | null
-          updated_at?: string
-          website?: string | null
-        }
+          attributes?: Json | null;
+          contact_type?: Database['public']['Enums']['facility_contact_type_enum'];
+          created_at?: string;
+          email?: string | null;
+          facility_id?: string;
+          id?: string;
+          is_primary?: boolean;
+          notes?: string | null;
+          phone?: string | null;
+          sport_id?: string | null;
+          updated_at?: string;
+          website?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "facility_contact_facility_id_fkey"
-            columns: ["facility_id"]
-            isOneToOne: false
-            referencedRelation: "facility"
-            referencedColumns: ["id"]
+            foreignKeyName: 'facility_contact_facility_id_fkey';
+            columns: ['facility_id'];
+            isOneToOne: false;
+            referencedRelation: 'facility';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "facility_contacts_sport_id_fkey"
-            columns: ["sport_id"]
-            isOneToOne: false
-            referencedRelation: "sport"
-            referencedColumns: ["id"]
+            foreignKeyName: 'facility_contacts_sport_id_fkey';
+            columns: ['sport_id'];
+            isOneToOne: false;
+            referencedRelation: 'sport';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       facility_file: {
         Row: {
-          display_order: number | null
-          facility_id: string
-          file_id: string
-          id: string
-          is_primary: boolean | null
-        }
+          display_order: number | null;
+          facility_id: string;
+          file_id: string;
+          id: string;
+          is_primary: boolean | null;
+        };
         Insert: {
-          display_order?: number | null
-          facility_id: string
-          file_id: string
-          id?: string
-          is_primary?: boolean | null
-        }
+          display_order?: number | null;
+          facility_id: string;
+          file_id: string;
+          id?: string;
+          is_primary?: boolean | null;
+        };
         Update: {
-          display_order?: number | null
-          facility_id?: string
-          file_id?: string
-          id?: string
-          is_primary?: boolean | null
-        }
+          display_order?: number | null;
+          facility_id?: string;
+          file_id?: string;
+          id?: string;
+          is_primary?: boolean | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "facility_file_facility_id_fkey"
-            columns: ["facility_id"]
-            isOneToOne: false
-            referencedRelation: "facility"
-            referencedColumns: ["id"]
+            foreignKeyName: 'facility_file_facility_id_fkey';
+            columns: ['facility_id'];
+            isOneToOne: false;
+            referencedRelation: 'facility';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "facility_file_file_id_fkey"
-            columns: ["file_id"]
-            isOneToOne: false
-            referencedRelation: "file"
-            referencedColumns: ["id"]
+            foreignKeyName: 'facility_file_file_id_fkey';
+            columns: ['file_id'];
+            isOneToOne: false;
+            referencedRelation: 'file';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       facility_image: {
         Row: {
-          created_at: string
-          description: string | null
-          display_order: number
-          facility_id: string
-          file_size: number | null
-          id: string
-          is_primary: boolean
-          metadata: Json | null
-          mime_type: string | null
-          storage_key: string
-          thumbnail_url: string | null
-          uploaded_at: string
-          url: string
-        }
+          created_at: string;
+          description: string | null;
+          display_order: number;
+          facility_id: string;
+          file_size: number | null;
+          id: string;
+          is_primary: boolean;
+          metadata: Json | null;
+          mime_type: string | null;
+          storage_key: string;
+          thumbnail_url: string | null;
+          uploaded_at: string;
+          url: string;
+        };
         Insert: {
-          created_at?: string
-          description?: string | null
-          display_order?: number
-          facility_id: string
-          file_size?: number | null
-          id?: string
-          is_primary?: boolean
-          metadata?: Json | null
-          mime_type?: string | null
-          storage_key: string
-          thumbnail_url?: string | null
-          uploaded_at?: string
-          url: string
-        }
+          created_at?: string;
+          description?: string | null;
+          display_order?: number;
+          facility_id: string;
+          file_size?: number | null;
+          id?: string;
+          is_primary?: boolean;
+          metadata?: Json | null;
+          mime_type?: string | null;
+          storage_key: string;
+          thumbnail_url?: string | null;
+          uploaded_at?: string;
+          url: string;
+        };
         Update: {
-          created_at?: string
-          description?: string | null
-          display_order?: number
-          facility_id?: string
-          file_size?: number | null
-          id?: string
-          is_primary?: boolean
-          metadata?: Json | null
-          mime_type?: string | null
-          storage_key?: string
-          thumbnail_url?: string | null
-          uploaded_at?: string
-          url?: string
-        }
+          created_at?: string;
+          description?: string | null;
+          display_order?: number;
+          facility_id?: string;
+          file_size?: number | null;
+          id?: string;
+          is_primary?: boolean;
+          metadata?: Json | null;
+          mime_type?: string | null;
+          storage_key?: string;
+          thumbnail_url?: string | null;
+          uploaded_at?: string;
+          url?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "facility_image_facility_id_fkey"
-            columns: ["facility_id"]
-            isOneToOne: false
-            referencedRelation: "facility"
-            referencedColumns: ["id"]
+            foreignKeyName: 'facility_image_facility_id_fkey';
+            columns: ['facility_id'];
+            isOneToOne: false;
+            referencedRelation: 'facility';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       facility_sport: {
         Row: {
-          created_at: string
-          facility_id: string
-          id: string
-          sport_id: string
-          updated_at: string
-        }
+          created_at: string;
+          facility_id: string;
+          id: string;
+          sport_id: string;
+          updated_at: string;
+        };
         Insert: {
-          created_at?: string
-          facility_id: string
-          id?: string
-          sport_id: string
-          updated_at?: string
-        }
+          created_at?: string;
+          facility_id: string;
+          id?: string;
+          sport_id: string;
+          updated_at?: string;
+        };
         Update: {
-          created_at?: string
-          facility_id?: string
-          id?: string
-          sport_id?: string
-          updated_at?: string
-        }
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          sport_id?: string;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "facility_sport_facility_id_fkey"
-            columns: ["facility_id"]
-            isOneToOne: false
-            referencedRelation: "facility"
-            referencedColumns: ["id"]
+            foreignKeyName: 'facility_sport_facility_id_fkey';
+            columns: ['facility_id'];
+            isOneToOne: false;
+            referencedRelation: 'facility';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "facility_sport_sport_id_fkey"
-            columns: ["sport_id"]
-            isOneToOne: false
-            referencedRelation: "sport"
-            referencedColumns: ["id"]
+            foreignKeyName: 'facility_sport_sport_id_fkey';
+            columns: ['sport_id'];
+            isOneToOne: false;
+            referencedRelation: 'sport';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       file: {
         Row: {
-          created_at: string
-          deleted_at: string | null
-          file_size: number
-          file_type: Database["public"]["Enums"]["file_type_enum"]
-          id: string
-          is_deleted: boolean
-          metadata: Json | null
-          mime_type: string
-          original_name: string
-          storage_key: string
-          thumbnail_url: string | null
-          updated_at: string
-          uploaded_by: string
-          url: string
-        }
+          created_at: string;
+          deleted_at: string | null;
+          file_size: number;
+          file_type: Database['public']['Enums']['file_type_enum'];
+          id: string;
+          is_deleted: boolean;
+          metadata: Json | null;
+          mime_type: string;
+          original_name: string;
+          storage_key: string;
+          thumbnail_url: string | null;
+          updated_at: string;
+          uploaded_by: string;
+          url: string;
+        };
         Insert: {
-          created_at?: string
-          deleted_at?: string | null
-          file_size: number
-          file_type: Database["public"]["Enums"]["file_type_enum"]
-          id?: string
-          is_deleted?: boolean
-          metadata?: Json | null
-          mime_type: string
-          original_name: string
-          storage_key: string
-          thumbnail_url?: string | null
-          updated_at?: string
-          uploaded_by: string
-          url: string
-        }
+          created_at?: string;
+          deleted_at?: string | null;
+          file_size: number;
+          file_type: Database['public']['Enums']['file_type_enum'];
+          id?: string;
+          is_deleted?: boolean;
+          metadata?: Json | null;
+          mime_type: string;
+          original_name: string;
+          storage_key: string;
+          thumbnail_url?: string | null;
+          updated_at?: string;
+          uploaded_by: string;
+          url: string;
+        };
         Update: {
-          created_at?: string
-          deleted_at?: string | null
-          file_size?: number
-          file_type?: Database["public"]["Enums"]["file_type_enum"]
-          id?: string
-          is_deleted?: boolean
-          metadata?: Json | null
-          mime_type?: string
-          original_name?: string
-          storage_key?: string
-          thumbnail_url?: string | null
-          updated_at?: string
-          uploaded_by?: string
-          url?: string
-        }
+          created_at?: string;
+          deleted_at?: string | null;
+          file_size?: number;
+          file_type?: Database['public']['Enums']['file_type_enum'];
+          id?: string;
+          is_deleted?: boolean;
+          metadata?: Json | null;
+          mime_type?: string;
+          original_name?: string;
+          storage_key?: string;
+          thumbnail_url?: string | null;
+          updated_at?: string;
+          uploaded_by?: string;
+          url?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "file_uploaded_by_fkey"
-            columns: ["uploaded_by"]
-            isOneToOne: false
-            referencedRelation: "profile"
-            referencedColumns: ["id"]
+            foreignKeyName: 'file_uploaded_by_fkey';
+            columns: ['uploaded_by'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       group_activity: {
         Row: {
-          activity_type: string
-          created_at: string
-          id: string
-          metadata: Json | null
-          network_id: string
-          player_id: string
-          related_entity_id: string | null
-        }
+          activity_type: string;
+          created_at: string;
+          id: string;
+          metadata: Json | null;
+          network_id: string;
+          player_id: string;
+          related_entity_id: string | null;
+        };
         Insert: {
-          activity_type: string
-          created_at?: string
-          id?: string
-          metadata?: Json | null
-          network_id: string
-          player_id: string
-          related_entity_id?: string | null
-        }
+          activity_type: string;
+          created_at?: string;
+          id?: string;
+          metadata?: Json | null;
+          network_id: string;
+          player_id: string;
+          related_entity_id?: string | null;
+        };
         Update: {
-          activity_type?: string
-          created_at?: string
-          id?: string
-          metadata?: Json | null
-          network_id?: string
-          player_id?: string
-          related_entity_id?: string | null
-        }
+          activity_type?: string;
+          created_at?: string;
+          id?: string;
+          metadata?: Json | null;
+          network_id?: string;
+          player_id?: string;
+          related_entity_id?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "group_activity_network_id_fkey"
-            columns: ["network_id"]
-            isOneToOne: false
-            referencedRelation: "network"
-            referencedColumns: ["id"]
+            foreignKeyName: 'group_activity_network_id_fkey';
+            columns: ['network_id'];
+            isOneToOne: false;
+            referencedRelation: 'network';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "group_activity_player_id_fkey"
-            columns: ["player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'group_activity_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       invitation: {
         Row: {
-          accepted_at: string | null
-          admin_role: Database["public"]["Enums"]["admin_role_enum"] | null
-          created_at: string
-          email: string | null
-          expires_at: string
-          id: string
-          invited_user_id: string | null
-          inviter_id: string
-          metadata: Json | null
-          organization_id: string | null
-          phone: string | null
-          revoke_reason: string | null
-          revoked_at: string | null
-          revoked_by: string | null
-          role: Database["public"]["Enums"]["app_role_enum"]
-          source: Database["public"]["Enums"]["invite_source_enum"]
-          status: Database["public"]["Enums"]["invite_status_enum"]
-          token: string
-          updated_at: string
-        }
+          accepted_at: string | null;
+          admin_role: Database['public']['Enums']['admin_role_enum'] | null;
+          created_at: string;
+          email: string | null;
+          expires_at: string;
+          id: string;
+          invited_user_id: string | null;
+          inviter_id: string;
+          metadata: Json | null;
+          organization_id: string | null;
+          phone: string | null;
+          revoke_reason: string | null;
+          revoked_at: string | null;
+          revoked_by: string | null;
+          role: Database['public']['Enums']['app_role_enum'];
+          source: Database['public']['Enums']['invite_source_enum'];
+          status: Database['public']['Enums']['invite_status_enum'];
+          token: string;
+          updated_at: string;
+        };
         Insert: {
-          accepted_at?: string | null
-          admin_role?: Database["public"]["Enums"]["admin_role_enum"] | null
-          created_at?: string
-          email?: string | null
-          expires_at: string
-          id?: string
-          invited_user_id?: string | null
-          inviter_id: string
-          metadata?: Json | null
-          organization_id?: string | null
-          phone?: string | null
-          revoke_reason?: string | null
-          revoked_at?: string | null
-          revoked_by?: string | null
-          role?: Database["public"]["Enums"]["app_role_enum"]
-          source?: Database["public"]["Enums"]["invite_source_enum"]
-          status?: Database["public"]["Enums"]["invite_status_enum"]
-          token: string
-          updated_at?: string
-        }
+          accepted_at?: string | null;
+          admin_role?: Database['public']['Enums']['admin_role_enum'] | null;
+          created_at?: string;
+          email?: string | null;
+          expires_at: string;
+          id?: string;
+          invited_user_id?: string | null;
+          inviter_id: string;
+          metadata?: Json | null;
+          organization_id?: string | null;
+          phone?: string | null;
+          revoke_reason?: string | null;
+          revoked_at?: string | null;
+          revoked_by?: string | null;
+          role?: Database['public']['Enums']['app_role_enum'];
+          source?: Database['public']['Enums']['invite_source_enum'];
+          status?: Database['public']['Enums']['invite_status_enum'];
+          token: string;
+          updated_at?: string;
+        };
         Update: {
-          accepted_at?: string | null
-          admin_role?: Database["public"]["Enums"]["admin_role_enum"] | null
-          created_at?: string
-          email?: string | null
-          expires_at?: string
-          id?: string
-          invited_user_id?: string | null
-          inviter_id?: string
-          metadata?: Json | null
-          organization_id?: string | null
-          phone?: string | null
-          revoke_reason?: string | null
-          revoked_at?: string | null
-          revoked_by?: string | null
-          role?: Database["public"]["Enums"]["app_role_enum"]
-          source?: Database["public"]["Enums"]["invite_source_enum"]
-          status?: Database["public"]["Enums"]["invite_status_enum"]
-          token?: string
-          updated_at?: string
-        }
+          accepted_at?: string | null;
+          admin_role?: Database['public']['Enums']['admin_role_enum'] | null;
+          created_at?: string;
+          email?: string | null;
+          expires_at?: string;
+          id?: string;
+          invited_user_id?: string | null;
+          inviter_id?: string;
+          metadata?: Json | null;
+          organization_id?: string | null;
+          phone?: string | null;
+          revoke_reason?: string | null;
+          revoked_at?: string | null;
+          revoked_by?: string | null;
+          role?: Database['public']['Enums']['app_role_enum'];
+          source?: Database['public']['Enums']['invite_source_enum'];
+          status?: Database['public']['Enums']['invite_status_enum'];
+          token?: string;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "invitation_invited_user_id_fkey"
-            columns: ["invited_user_id"]
-            isOneToOne: false
-            referencedRelation: "profile"
-            referencedColumns: ["id"]
+            foreignKeyName: 'invitation_invited_user_id_fkey';
+            columns: ['invited_user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "invitation_inviter_id_fkey"
-            columns: ["inviter_id"]
-            isOneToOne: false
-            referencedRelation: "profile"
-            referencedColumns: ["id"]
+            foreignKeyName: 'invitation_inviter_id_fkey';
+            columns: ['inviter_id'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "invitation_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organization"
-            referencedColumns: ["id"]
+            foreignKeyName: 'invitation_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organization';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "invitation_revoked_by_fkey"
-            columns: ["revoked_by"]
-            isOneToOne: false
-            referencedRelation: "profile"
-            referencedColumns: ["id"]
+            foreignKeyName: 'invitation_revoked_by_fkey';
+            columns: ['revoked_by'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       match: {
         Row: {
-          booking_id: string | null
-          cancelled_at: string | null
-          closed_at: string | null
-          cost_split_type:
-            | Database["public"]["Enums"]["cost_split_type_enum"]
-            | null
-          court_id: string | null
-          court_status: Database["public"]["Enums"]["court_status_enum"] | null
-          created_at: string | null
-          created_by: string
-          custom_duration_minutes: number | null
-          custom_latitude: number | null
-          custom_longitude: number | null
-          duration: Database["public"]["Enums"]["match_duration_enum"] | null
-          end_time: string
-          estimated_cost: number | null
-          facility_id: string | null
-          format: Database["public"]["Enums"]["match_format_enum"] | null
-          id: string
-          is_court_free: boolean | null
-          join_mode: Database["public"]["Enums"]["match_join_mode_enum"] | null
-          location: unknown
-          location_address: string | null
-          location_name: string | null
-          location_type:
-            | Database["public"]["Enums"]["location_type_enum"]
-            | null
-          match_date: string
-          min_rating_score_id: string | null
-          mutually_cancelled: boolean | null
-          notes: string | null
-          player_expectation: Database["public"]["Enums"]["match_type_enum"]
-          preferred_opponent_gender:
-            | Database["public"]["Enums"]["gender_type"]
-            | null
-          sport_id: string
-          start_time: string
-          timezone: string
-          updated_at: string | null
-          visibility:
-            | Database["public"]["Enums"]["match_visibility_enum"]
-            | null
-        }
+          booking_id: string | null;
+          cancelled_at: string | null;
+          closed_at: string | null;
+          cost_split_type: Database['public']['Enums']['cost_split_type_enum'] | null;
+          court_id: string | null;
+          court_status: Database['public']['Enums']['court_status_enum'] | null;
+          created_at: string | null;
+          created_by: string;
+          custom_duration_minutes: number | null;
+          custom_latitude: number | null;
+          custom_longitude: number | null;
+          duration: Database['public']['Enums']['match_duration_enum'] | null;
+          end_time: string;
+          estimated_cost: number | null;
+          facility_id: string | null;
+          format: Database['public']['Enums']['match_format_enum'] | null;
+          id: string;
+          is_court_free: boolean | null;
+          join_mode: Database['public']['Enums']['match_join_mode_enum'] | null;
+          location: unknown;
+          location_address: string | null;
+          location_name: string | null;
+          location_type: Database['public']['Enums']['location_type_enum'] | null;
+          match_date: string;
+          min_rating_score_id: string | null;
+          mutually_cancelled: boolean | null;
+          notes: string | null;
+          player_expectation: Database['public']['Enums']['match_type_enum'];
+          preferred_opponent_gender: Database['public']['Enums']['gender_type'] | null;
+          sport_id: string;
+          start_time: string;
+          timezone: string;
+          updated_at: string | null;
+          visibility: Database['public']['Enums']['match_visibility_enum'] | null;
+        };
         Insert: {
-          booking_id?: string | null
-          cancelled_at?: string | null
-          closed_at?: string | null
-          cost_split_type?:
-            | Database["public"]["Enums"]["cost_split_type_enum"]
-            | null
-          court_id?: string | null
-          court_status?: Database["public"]["Enums"]["court_status_enum"] | null
-          created_at?: string | null
-          created_by: string
-          custom_duration_minutes?: number | null
-          custom_latitude?: number | null
-          custom_longitude?: number | null
-          duration?: Database["public"]["Enums"]["match_duration_enum"] | null
-          end_time: string
-          estimated_cost?: number | null
-          facility_id?: string | null
-          format?: Database["public"]["Enums"]["match_format_enum"] | null
-          id?: string
-          is_court_free?: boolean | null
-          join_mode?: Database["public"]["Enums"]["match_join_mode_enum"] | null
-          location?: unknown
-          location_address?: string | null
-          location_name?: string | null
-          location_type?:
-            | Database["public"]["Enums"]["location_type_enum"]
-            | null
-          match_date: string
-          min_rating_score_id?: string | null
-          mutually_cancelled?: boolean | null
-          notes?: string | null
-          player_expectation?: Database["public"]["Enums"]["match_type_enum"]
-          preferred_opponent_gender?:
-            | Database["public"]["Enums"]["gender_type"]
-            | null
-          sport_id: string
-          start_time: string
-          timezone?: string
-          updated_at?: string | null
-          visibility?:
-            | Database["public"]["Enums"]["match_visibility_enum"]
-            | null
-        }
+          booking_id?: string | null;
+          cancelled_at?: string | null;
+          closed_at?: string | null;
+          cost_split_type?: Database['public']['Enums']['cost_split_type_enum'] | null;
+          court_id?: string | null;
+          court_status?: Database['public']['Enums']['court_status_enum'] | null;
+          created_at?: string | null;
+          created_by: string;
+          custom_duration_minutes?: number | null;
+          custom_latitude?: number | null;
+          custom_longitude?: number | null;
+          duration?: Database['public']['Enums']['match_duration_enum'] | null;
+          end_time: string;
+          estimated_cost?: number | null;
+          facility_id?: string | null;
+          format?: Database['public']['Enums']['match_format_enum'] | null;
+          id?: string;
+          is_court_free?: boolean | null;
+          join_mode?: Database['public']['Enums']['match_join_mode_enum'] | null;
+          location?: unknown;
+          location_address?: string | null;
+          location_name?: string | null;
+          location_type?: Database['public']['Enums']['location_type_enum'] | null;
+          match_date: string;
+          min_rating_score_id?: string | null;
+          mutually_cancelled?: boolean | null;
+          notes?: string | null;
+          player_expectation?: Database['public']['Enums']['match_type_enum'];
+          preferred_opponent_gender?: Database['public']['Enums']['gender_type'] | null;
+          sport_id: string;
+          start_time: string;
+          timezone?: string;
+          updated_at?: string | null;
+          visibility?: Database['public']['Enums']['match_visibility_enum'] | null;
+        };
         Update: {
-          booking_id?: string | null
-          cancelled_at?: string | null
-          closed_at?: string | null
-          cost_split_type?:
-            | Database["public"]["Enums"]["cost_split_type_enum"]
-            | null
-          court_id?: string | null
-          court_status?: Database["public"]["Enums"]["court_status_enum"] | null
-          created_at?: string | null
-          created_by?: string
-          custom_duration_minutes?: number | null
-          custom_latitude?: number | null
-          custom_longitude?: number | null
-          duration?: Database["public"]["Enums"]["match_duration_enum"] | null
-          end_time?: string
-          estimated_cost?: number | null
-          facility_id?: string | null
-          format?: Database["public"]["Enums"]["match_format_enum"] | null
-          id?: string
-          is_court_free?: boolean | null
-          join_mode?: Database["public"]["Enums"]["match_join_mode_enum"] | null
-          location?: unknown
-          location_address?: string | null
-          location_name?: string | null
-          location_type?:
-            | Database["public"]["Enums"]["location_type_enum"]
-            | null
-          match_date?: string
-          min_rating_score_id?: string | null
-          mutually_cancelled?: boolean | null
-          notes?: string | null
-          player_expectation?: Database["public"]["Enums"]["match_type_enum"]
-          preferred_opponent_gender?:
-            | Database["public"]["Enums"]["gender_type"]
-            | null
-          sport_id?: string
-          start_time?: string
-          timezone?: string
-          updated_at?: string | null
-          visibility?:
-            | Database["public"]["Enums"]["match_visibility_enum"]
-            | null
-        }
+          booking_id?: string | null;
+          cancelled_at?: string | null;
+          closed_at?: string | null;
+          cost_split_type?: Database['public']['Enums']['cost_split_type_enum'] | null;
+          court_id?: string | null;
+          court_status?: Database['public']['Enums']['court_status_enum'] | null;
+          created_at?: string | null;
+          created_by?: string;
+          custom_duration_minutes?: number | null;
+          custom_latitude?: number | null;
+          custom_longitude?: number | null;
+          duration?: Database['public']['Enums']['match_duration_enum'] | null;
+          end_time?: string;
+          estimated_cost?: number | null;
+          facility_id?: string | null;
+          format?: Database['public']['Enums']['match_format_enum'] | null;
+          id?: string;
+          is_court_free?: boolean | null;
+          join_mode?: Database['public']['Enums']['match_join_mode_enum'] | null;
+          location?: unknown;
+          location_address?: string | null;
+          location_name?: string | null;
+          location_type?: Database['public']['Enums']['location_type_enum'] | null;
+          match_date?: string;
+          min_rating_score_id?: string | null;
+          mutually_cancelled?: boolean | null;
+          notes?: string | null;
+          player_expectation?: Database['public']['Enums']['match_type_enum'];
+          preferred_opponent_gender?: Database['public']['Enums']['gender_type'] | null;
+          sport_id?: string;
+          start_time?: string;
+          timezone?: string;
+          updated_at?: string | null;
+          visibility?: Database['public']['Enums']['match_visibility_enum'] | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "match_booking_id_fkey"
-            columns: ["booking_id"]
-            isOneToOne: false
-            referencedRelation: "booking"
-            referencedColumns: ["id"]
+            foreignKeyName: 'match_booking_id_fkey';
+            columns: ['booking_id'];
+            isOneToOne: false;
+            referencedRelation: 'booking';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "match_court_id_fkey"
-            columns: ["court_id"]
-            isOneToOne: false
-            referencedRelation: "court"
-            referencedColumns: ["id"]
+            foreignKeyName: 'match_court_id_fkey';
+            columns: ['court_id'];
+            isOneToOne: false;
+            referencedRelation: 'court';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "match_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'match_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "match_facility_id_fkey"
-            columns: ["facility_id"]
-            isOneToOne: false
-            referencedRelation: "facility"
-            referencedColumns: ["id"]
+            foreignKeyName: 'match_facility_id_fkey';
+            columns: ['facility_id'];
+            isOneToOne: false;
+            referencedRelation: 'facility';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "match_min_rating_score_id_fkey"
-            columns: ["min_rating_score_id"]
-            isOneToOne: false
-            referencedRelation: "rating_score"
-            referencedColumns: ["id"]
+            foreignKeyName: 'match_min_rating_score_id_fkey';
+            columns: ['min_rating_score_id'];
+            isOneToOne: false;
+            referencedRelation: 'rating_score';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "match_sport_id_fkey"
-            columns: ["sport_id"]
-            isOneToOne: false
-            referencedRelation: "sport"
-            referencedColumns: ["id"]
+            foreignKeyName: 'match_sport_id_fkey';
+            columns: ['sport_id'];
+            isOneToOne: false;
+            referencedRelation: 'sport';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       match_feedback: {
         Row: {
-          comments: string | null
-          created_at: string
-          id: string
-          match_id: string
-          opponent_id: string
-          reviewer_id: string
-          showed_up: boolean
-          star_rating: number | null
-          was_late: boolean | null
-        }
+          comments: string | null;
+          created_at: string;
+          id: string;
+          match_id: string;
+          opponent_id: string;
+          reviewer_id: string;
+          showed_up: boolean;
+          star_rating: number | null;
+          was_late: boolean | null;
+        };
         Insert: {
-          comments?: string | null
-          created_at?: string
-          id?: string
-          match_id: string
-          opponent_id: string
-          reviewer_id: string
-          showed_up: boolean
-          star_rating?: number | null
-          was_late?: boolean | null
-        }
+          comments?: string | null;
+          created_at?: string;
+          id?: string;
+          match_id: string;
+          opponent_id: string;
+          reviewer_id: string;
+          showed_up: boolean;
+          star_rating?: number | null;
+          was_late?: boolean | null;
+        };
         Update: {
-          comments?: string | null
-          created_at?: string
-          id?: string
-          match_id?: string
-          opponent_id?: string
-          reviewer_id?: string
-          showed_up?: boolean
-          star_rating?: number | null
-          was_late?: boolean | null
-        }
+          comments?: string | null;
+          created_at?: string;
+          id?: string;
+          match_id?: string;
+          opponent_id?: string;
+          reviewer_id?: string;
+          showed_up?: boolean;
+          star_rating?: number | null;
+          was_late?: boolean | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "match_feedback_match_id_fkey"
-            columns: ["match_id"]
-            isOneToOne: false
-            referencedRelation: "match"
-            referencedColumns: ["id"]
+            foreignKeyName: 'match_feedback_match_id_fkey';
+            columns: ['match_id'];
+            isOneToOne: false;
+            referencedRelation: 'match';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "match_feedback_opponent_id_fkey"
-            columns: ["opponent_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'match_feedback_opponent_id_fkey';
+            columns: ['opponent_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "match_feedback_reviewer_id_fkey"
-            columns: ["reviewer_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'match_feedback_reviewer_id_fkey';
+            columns: ['reviewer_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
+      match_network: {
+        Row: {
+          id: string;
+          match_id: string;
+          network_id: string;
+          posted_at: string;
+          posted_by: string;
+        };
+        Insert: {
+          id?: string;
+          match_id: string;
+          network_id: string;
+          posted_at?: string;
+          posted_by: string;
+        };
+        Update: {
+          id?: string;
+          match_id?: string;
+          network_id?: string;
+          posted_at?: string;
+          posted_by?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'match_network_match_id_fkey';
+            columns: ['match_id'];
+            isOneToOne: false;
+            referencedRelation: 'match';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'match_network_network_id_fkey';
+            columns: ['network_id'];
+            isOneToOne: false;
+            referencedRelation: 'network';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'match_network_posted_by_fkey';
+            columns: ['posted_by'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       match_participant: {
         Row: {
-          aggregated_at: string | null
-          cancellation_notes: string | null
-          cancellation_reason:
-            | Database["public"]["Enums"]["cancellation_reason_enum"]
-            | null
-          checked_in_at: string | null
-          created_at: string | null
-          feedback_completed: boolean
-          id: string
-          is_host: boolean | null
-          match_id: string
-          match_outcome:
-            | Database["public"]["Enums"]["match_outcome_enum"]
-            | null
-          player_id: string
-          score: number | null
-          showed_up: boolean | null
-          star_rating: number | null
-          status:
-            | Database["public"]["Enums"]["match_participant_status_enum"]
-            | null
-          team_number: number | null
-          updated_at: string | null
-          was_late: boolean | null
-        }
+          aggregated_at: string | null;
+          cancellation_notes: string | null;
+          cancellation_reason: Database['public']['Enums']['cancellation_reason_enum'] | null;
+          checked_in_at: string | null;
+          created_at: string | null;
+          feedback_completed: boolean;
+          id: string;
+          is_host: boolean | null;
+          match_id: string;
+          match_outcome: Database['public']['Enums']['match_outcome_enum'] | null;
+          player_id: string;
+          score: number | null;
+          showed_up: boolean | null;
+          star_rating: number | null;
+          status: Database['public']['Enums']['match_participant_status_enum'] | null;
+          team_number: number | null;
+          updated_at: string | null;
+          was_late: boolean | null;
+        };
         Insert: {
-          aggregated_at?: string | null
-          cancellation_notes?: string | null
-          cancellation_reason?:
-            | Database["public"]["Enums"]["cancellation_reason_enum"]
-            | null
-          checked_in_at?: string | null
-          created_at?: string | null
-          feedback_completed?: boolean
-          id?: string
-          is_host?: boolean | null
-          match_id: string
-          match_outcome?:
-            | Database["public"]["Enums"]["match_outcome_enum"]
-            | null
-          player_id: string
-          score?: number | null
-          showed_up?: boolean | null
-          star_rating?: number | null
-          status?:
-            | Database["public"]["Enums"]["match_participant_status_enum"]
-            | null
-          team_number?: number | null
-          updated_at?: string | null
-          was_late?: boolean | null
-        }
+          aggregated_at?: string | null;
+          cancellation_notes?: string | null;
+          cancellation_reason?: Database['public']['Enums']['cancellation_reason_enum'] | null;
+          checked_in_at?: string | null;
+          created_at?: string | null;
+          feedback_completed?: boolean;
+          id?: string;
+          is_host?: boolean | null;
+          match_id: string;
+          match_outcome?: Database['public']['Enums']['match_outcome_enum'] | null;
+          player_id: string;
+          score?: number | null;
+          showed_up?: boolean | null;
+          star_rating?: number | null;
+          status?: Database['public']['Enums']['match_participant_status_enum'] | null;
+          team_number?: number | null;
+          updated_at?: string | null;
+          was_late?: boolean | null;
+        };
         Update: {
-          aggregated_at?: string | null
-          cancellation_notes?: string | null
-          cancellation_reason?:
-            | Database["public"]["Enums"]["cancellation_reason_enum"]
-            | null
-          checked_in_at?: string | null
-          created_at?: string | null
-          feedback_completed?: boolean
-          id?: string
-          is_host?: boolean | null
-          match_id?: string
-          match_outcome?:
-            | Database["public"]["Enums"]["match_outcome_enum"]
-            | null
-          player_id?: string
-          score?: number | null
-          showed_up?: boolean | null
-          star_rating?: number | null
-          status?:
-            | Database["public"]["Enums"]["match_participant_status_enum"]
-            | null
-          team_number?: number | null
-          updated_at?: string | null
-          was_late?: boolean | null
-        }
+          aggregated_at?: string | null;
+          cancellation_notes?: string | null;
+          cancellation_reason?: Database['public']['Enums']['cancellation_reason_enum'] | null;
+          checked_in_at?: string | null;
+          created_at?: string | null;
+          feedback_completed?: boolean;
+          id?: string;
+          is_host?: boolean | null;
+          match_id?: string;
+          match_outcome?: Database['public']['Enums']['match_outcome_enum'] | null;
+          player_id?: string;
+          score?: number | null;
+          showed_up?: boolean | null;
+          star_rating?: number | null;
+          status?: Database['public']['Enums']['match_participant_status_enum'] | null;
+          team_number?: number | null;
+          updated_at?: string | null;
+          was_late?: boolean | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "match_participant_match_id_fkey"
-            columns: ["match_id"]
-            isOneToOne: false
-            referencedRelation: "match"
-            referencedColumns: ["id"]
+            foreignKeyName: 'match_participant_match_id_fkey';
+            columns: ['match_id'];
+            isOneToOne: false;
+            referencedRelation: 'match';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "match_participant_player_id_fkey"
-            columns: ["player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'match_participant_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       match_report: {
         Row: {
-          created_at: string
-          details: string | null
-          id: string
-          match_id: string
-          priority: Database["public"]["Enums"]["match_report_priority_enum"]
-          reason: Database["public"]["Enums"]["match_report_reason_enum"]
-          reported_id: string
-          reporter_id: string
-          reviewed_at: string | null
-          reviewed_by: string | null
-          status: Database["public"]["Enums"]["match_report_status_enum"]
-        }
+          created_at: string;
+          details: string | null;
+          id: string;
+          match_id: string;
+          priority: Database['public']['Enums']['match_report_priority_enum'];
+          reason: Database['public']['Enums']['match_report_reason_enum'];
+          reported_id: string;
+          reporter_id: string;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          status: Database['public']['Enums']['match_report_status_enum'];
+        };
         Insert: {
-          created_at?: string
-          details?: string | null
-          id?: string
-          match_id: string
-          priority: Database["public"]["Enums"]["match_report_priority_enum"]
-          reason: Database["public"]["Enums"]["match_report_reason_enum"]
-          reported_id: string
-          reporter_id: string
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: Database["public"]["Enums"]["match_report_status_enum"]
-        }
+          created_at?: string;
+          details?: string | null;
+          id?: string;
+          match_id: string;
+          priority: Database['public']['Enums']['match_report_priority_enum'];
+          reason: Database['public']['Enums']['match_report_reason_enum'];
+          reported_id: string;
+          reporter_id: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: Database['public']['Enums']['match_report_status_enum'];
+        };
         Update: {
-          created_at?: string
-          details?: string | null
-          id?: string
-          match_id?: string
-          priority?: Database["public"]["Enums"]["match_report_priority_enum"]
-          reason?: Database["public"]["Enums"]["match_report_reason_enum"]
-          reported_id?: string
-          reporter_id?: string
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: Database["public"]["Enums"]["match_report_status_enum"]
-        }
+          created_at?: string;
+          details?: string | null;
+          id?: string;
+          match_id?: string;
+          priority?: Database['public']['Enums']['match_report_priority_enum'];
+          reason?: Database['public']['Enums']['match_report_reason_enum'];
+          reported_id?: string;
+          reporter_id?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: Database['public']['Enums']['match_report_status_enum'];
+        };
         Relationships: [
           {
-            foreignKeyName: "match_report_match_id_fkey"
-            columns: ["match_id"]
-            isOneToOne: false
-            referencedRelation: "match"
-            referencedColumns: ["id"]
+            foreignKeyName: 'match_report_match_id_fkey';
+            columns: ['match_id'];
+            isOneToOne: false;
+            referencedRelation: 'match';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "match_report_reported_id_fkey"
-            columns: ["reported_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'match_report_reported_id_fkey';
+            columns: ['reported_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "match_report_reporter_id_fkey"
-            columns: ["reporter_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'match_report_reporter_id_fkey';
+            columns: ['reporter_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "match_report_reviewed_by_fkey"
-            columns: ["reviewed_by"]
-            isOneToOne: false
-            referencedRelation: "profile"
-            referencedColumns: ["id"]
+            foreignKeyName: 'match_report_reviewed_by_fkey';
+            columns: ['reviewed_by'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       match_result: {
         Row: {
-          created_at: string | null
-          id: string
-          is_verified: boolean | null
-          match_id: string
-          team1_score: number | null
-          team2_score: number | null
-          updated_at: string | null
-          verified_at: string | null
-          winning_team: number | null
-        }
+          confirmation_deadline: string | null;
+          confirmed_by: string | null;
+          created_at: string | null;
+          dispute_reason: string | null;
+          disputed: boolean | null;
+          id: string;
+          is_verified: boolean | null;
+          match_id: string;
+          submitted_by: string | null;
+          team1_score: number | null;
+          team2_score: number | null;
+          updated_at: string | null;
+          verified_at: string | null;
+          winning_team: number | null;
+        };
         Insert: {
-          created_at?: string | null
-          id?: string
-          is_verified?: boolean | null
-          match_id: string
-          team1_score?: number | null
-          team2_score?: number | null
-          updated_at?: string | null
-          verified_at?: string | null
-          winning_team?: number | null
-        }
+          confirmation_deadline?: string | null;
+          confirmed_by?: string | null;
+          created_at?: string | null;
+          dispute_reason?: string | null;
+          disputed?: boolean | null;
+          id?: string;
+          is_verified?: boolean | null;
+          match_id: string;
+          submitted_by?: string | null;
+          team1_score?: number | null;
+          team2_score?: number | null;
+          updated_at?: string | null;
+          verified_at?: string | null;
+          winning_team?: number | null;
+        };
         Update: {
-          created_at?: string | null
-          id?: string
-          is_verified?: boolean | null
-          match_id?: string
-          team1_score?: number | null
-          team2_score?: number | null
-          updated_at?: string | null
-          verified_at?: string | null
-          winning_team?: number | null
-        }
+          confirmation_deadline?: string | null;
+          confirmed_by?: string | null;
+          created_at?: string | null;
+          dispute_reason?: string | null;
+          disputed?: boolean | null;
+          id?: string;
+          is_verified?: boolean | null;
+          match_id?: string;
+          submitted_by?: string | null;
+          team1_score?: number | null;
+          team2_score?: number | null;
+          updated_at?: string | null;
+          verified_at?: string | null;
+          winning_team?: number | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "match_result_match_id_fkey"
-            columns: ["match_id"]
-            isOneToOne: true
-            referencedRelation: "match"
-            referencedColumns: ["id"]
+            foreignKeyName: 'match_result_confirmed_by_fkey';
+            columns: ['confirmed_by'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+          {
+            foreignKeyName: 'match_result_match_id_fkey';
+            columns: ['match_id'];
+            isOneToOne: true;
+            referencedRelation: 'match';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'match_result_submitted_by_fkey';
+            columns: ['submitted_by'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      match_set: {
+        Row: {
+          created_at: string | null;
+          id: string;
+          match_result_id: string;
+          set_number: number;
+          team1_score: number;
+          team2_score: number;
+        };
+        Insert: {
+          created_at?: string | null;
+          id?: string;
+          match_result_id: string;
+          set_number: number;
+          team1_score: number;
+          team2_score: number;
+        };
+        Update: {
+          created_at?: string | null;
+          id?: string;
+          match_result_id?: string;
+          set_number?: number;
+          team1_score?: number;
+          team2_score?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'match_set_match_result_id_fkey';
+            columns: ['match_result_id'];
+            isOneToOne: false;
+            referencedRelation: 'match_result';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       match_share: {
         Row: {
-          created_at: string
-          expires_at: string | null
-          id: string
-          match_id: string
-          share_channel: Database["public"]["Enums"]["share_channel_enum"]
-          share_link_token: string | null
-          shared_at: string
-          shared_by: string
-          updated_at: string
-        }
+          created_at: string;
+          expires_at: string | null;
+          id: string;
+          match_id: string;
+          share_channel: Database['public']['Enums']['share_channel_enum'];
+          share_link_token: string | null;
+          shared_at: string;
+          shared_by: string;
+          updated_at: string;
+        };
         Insert: {
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          match_id: string
-          share_channel: Database["public"]["Enums"]["share_channel_enum"]
-          share_link_token?: string | null
-          shared_at?: string
-          shared_by: string
-          updated_at?: string
-        }
+          created_at?: string;
+          expires_at?: string | null;
+          id?: string;
+          match_id: string;
+          share_channel: Database['public']['Enums']['share_channel_enum'];
+          share_link_token?: string | null;
+          shared_at?: string;
+          shared_by: string;
+          updated_at?: string;
+        };
         Update: {
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          match_id?: string
-          share_channel?: Database["public"]["Enums"]["share_channel_enum"]
-          share_link_token?: string | null
-          shared_at?: string
-          shared_by?: string
-          updated_at?: string
-        }
+          created_at?: string;
+          expires_at?: string | null;
+          id?: string;
+          match_id?: string;
+          share_channel?: Database['public']['Enums']['share_channel_enum'];
+          share_link_token?: string | null;
+          shared_at?: string;
+          shared_by?: string;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "match_share_match_id_fkey"
-            columns: ["match_id"]
-            isOneToOne: false
-            referencedRelation: "match"
-            referencedColumns: ["id"]
+            foreignKeyName: 'match_share_match_id_fkey';
+            columns: ['match_id'];
+            isOneToOne: false;
+            referencedRelation: 'match';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "match_share_shared_by_fkey"
-            columns: ["shared_by"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'match_share_shared_by_fkey';
+            columns: ['shared_by'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       match_share_recipient: {
         Row: {
-          contact_id: string | null
-          contact_list_id: string | null
-          converted_player_id: string | null
-          created_at: string
-          id: string
-          recipient_email: string | null
-          recipient_name: string
-          recipient_phone: string | null
-          responded_at: string | null
-          response_note: string | null
-          sent_at: string | null
-          share_id: string
-          status: Database["public"]["Enums"]["share_status_enum"]
-          updated_at: string
-          viewed_at: string | null
-        }
+          contact_id: string | null;
+          contact_list_id: string | null;
+          converted_player_id: string | null;
+          created_at: string;
+          id: string;
+          recipient_email: string | null;
+          recipient_name: string;
+          recipient_phone: string | null;
+          responded_at: string | null;
+          response_note: string | null;
+          sent_at: string | null;
+          share_id: string;
+          status: Database['public']['Enums']['share_status_enum'];
+          updated_at: string;
+          viewed_at: string | null;
+        };
         Insert: {
-          contact_id?: string | null
-          contact_list_id?: string | null
-          converted_player_id?: string | null
-          created_at?: string
-          id?: string
-          recipient_email?: string | null
-          recipient_name: string
-          recipient_phone?: string | null
-          responded_at?: string | null
-          response_note?: string | null
-          sent_at?: string | null
-          share_id: string
-          status?: Database["public"]["Enums"]["share_status_enum"]
-          updated_at?: string
-          viewed_at?: string | null
-        }
+          contact_id?: string | null;
+          contact_list_id?: string | null;
+          converted_player_id?: string | null;
+          created_at?: string;
+          id?: string;
+          recipient_email?: string | null;
+          recipient_name: string;
+          recipient_phone?: string | null;
+          responded_at?: string | null;
+          response_note?: string | null;
+          sent_at?: string | null;
+          share_id: string;
+          status?: Database['public']['Enums']['share_status_enum'];
+          updated_at?: string;
+          viewed_at?: string | null;
+        };
         Update: {
-          contact_id?: string | null
-          contact_list_id?: string | null
-          converted_player_id?: string | null
-          created_at?: string
-          id?: string
-          recipient_email?: string | null
-          recipient_name?: string
-          recipient_phone?: string | null
-          responded_at?: string | null
-          response_note?: string | null
-          sent_at?: string | null
-          share_id?: string
-          status?: Database["public"]["Enums"]["share_status_enum"]
-          updated_at?: string
-          viewed_at?: string | null
-        }
+          contact_id?: string | null;
+          contact_list_id?: string | null;
+          converted_player_id?: string | null;
+          created_at?: string;
+          id?: string;
+          recipient_email?: string | null;
+          recipient_name?: string;
+          recipient_phone?: string | null;
+          responded_at?: string | null;
+          response_note?: string | null;
+          sent_at?: string | null;
+          share_id?: string;
+          status?: Database['public']['Enums']['share_status_enum'];
+          updated_at?: string;
+          viewed_at?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "match_share_recipient_contact_id_fkey"
-            columns: ["contact_id"]
-            isOneToOne: false
-            referencedRelation: "shared_contact"
-            referencedColumns: ["id"]
+            foreignKeyName: 'match_share_recipient_contact_id_fkey';
+            columns: ['contact_id'];
+            isOneToOne: false;
+            referencedRelation: 'shared_contact';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "match_share_recipient_contact_list_id_fkey"
-            columns: ["contact_list_id"]
-            isOneToOne: false
-            referencedRelation: "shared_contact_list"
-            referencedColumns: ["id"]
+            foreignKeyName: 'match_share_recipient_contact_list_id_fkey';
+            columns: ['contact_list_id'];
+            isOneToOne: false;
+            referencedRelation: 'shared_contact_list';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "match_share_recipient_converted_player_id_fkey"
-            columns: ["converted_player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'match_share_recipient_converted_player_id_fkey';
+            columns: ['converted_player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "match_share_recipient_share_id_fkey"
-            columns: ["share_id"]
-            isOneToOne: false
-            referencedRelation: "match_share"
-            referencedColumns: ["id"]
+            foreignKeyName: 'match_share_recipient_share_id_fkey';
+            columns: ['share_id'];
+            isOneToOne: false;
+            referencedRelation: 'match_share';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       message: {
         Row: {
-          content: string
-          conversation_id: string
-          created_at: string | null
-          id: string
-          read_by: Json | null
-          sender_id: string
-          status: Database["public"]["Enums"]["message_status"] | null
-          updated_at: string | null
-        }
+          content: string;
+          conversation_id: string;
+          created_at: string | null;
+          deleted_at: string | null;
+          edited_at: string | null;
+          id: string;
+          is_edited: boolean | null;
+          read_by: Json | null;
+          reply_to_message_id: string | null;
+          search_vector: unknown;
+          sender_id: string;
+          status: Database['public']['Enums']['message_status'] | null;
+          updated_at: string | null;
+        };
         Insert: {
-          content: string
-          conversation_id: string
-          created_at?: string | null
-          id?: string
-          read_by?: Json | null
-          sender_id: string
-          status?: Database["public"]["Enums"]["message_status"] | null
-          updated_at?: string | null
-        }
+          content: string;
+          conversation_id: string;
+          created_at?: string | null;
+          deleted_at?: string | null;
+          edited_at?: string | null;
+          id?: string;
+          is_edited?: boolean | null;
+          read_by?: Json | null;
+          reply_to_message_id?: string | null;
+          search_vector?: unknown;
+          sender_id: string;
+          status?: Database['public']['Enums']['message_status'] | null;
+          updated_at?: string | null;
+        };
         Update: {
-          content?: string
-          conversation_id?: string
-          created_at?: string | null
-          id?: string
-          read_by?: Json | null
-          sender_id?: string
-          status?: Database["public"]["Enums"]["message_status"] | null
-          updated_at?: string | null
-        }
+          content?: string;
+          conversation_id?: string;
+          created_at?: string | null;
+          deleted_at?: string | null;
+          edited_at?: string | null;
+          id?: string;
+          is_edited?: boolean | null;
+          read_by?: Json | null;
+          reply_to_message_id?: string | null;
+          search_vector?: unknown;
+          sender_id?: string;
+          status?: Database['public']['Enums']['message_status'] | null;
+          updated_at?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "message_conversation_id_fkey"
-            columns: ["conversation_id"]
-            isOneToOne: false
-            referencedRelation: "conversation"
-            referencedColumns: ["id"]
+            foreignKeyName: 'message_conversation_id_fkey';
+            columns: ['conversation_id'];
+            isOneToOne: false;
+            referencedRelation: 'conversation';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "message_sender_id_fkey"
-            columns: ["sender_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'message_reply_to_message_id_fkey';
+            columns: ['reply_to_message_id'];
+            isOneToOne: false;
+            referencedRelation: 'message';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+          {
+            foreignKeyName: 'message_sender_id_fkey';
+            columns: ['sender_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      message_reaction: {
+        Row: {
+          created_at: string | null;
+          emoji: string;
+          id: string;
+          message_id: string;
+          player_id: string;
+        };
+        Insert: {
+          created_at?: string | null;
+          emoji: string;
+          id?: string;
+          message_id: string;
+          player_id: string;
+        };
+        Update: {
+          created_at?: string | null;
+          emoji?: string;
+          id?: string;
+          message_id?: string;
+          player_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'message_reaction_message_id_fkey';
+            columns: ['message_id'];
+            isOneToOne: false;
+            referencedRelation: 'message';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'message_reaction_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       network: {
         Row: {
-          conversation_id: string | null
-          cover_image_url: string | null
-          created_at: string | null
-          created_by: string
-          description: string | null
-          id: string
-          is_private: boolean | null
-          max_members: number | null
-          member_count: number
-          name: string
-          network_type_id: string
-          updated_at: string | null
-        }
+          conversation_id: string | null;
+          cover_image_url: string | null;
+          created_at: string | null;
+          created_by: string;
+          description: string | null;
+          id: string;
+          invite_code: string | null;
+          is_private: boolean | null;
+          max_members: number | null;
+          member_count: number;
+          name: string;
+          network_type_id: string;
+          updated_at: string | null;
+        };
         Insert: {
-          conversation_id?: string | null
-          cover_image_url?: string | null
-          created_at?: string | null
-          created_by: string
-          description?: string | null
-          id?: string
-          is_private?: boolean | null
-          max_members?: number | null
-          member_count?: number
-          name: string
-          network_type_id: string
-          updated_at?: string | null
-        }
+          conversation_id?: string | null;
+          cover_image_url?: string | null;
+          created_at?: string | null;
+          created_by: string;
+          description?: string | null;
+          id?: string;
+          invite_code?: string | null;
+          is_private?: boolean | null;
+          max_members?: number | null;
+          member_count?: number;
+          name: string;
+          network_type_id: string;
+          updated_at?: string | null;
+        };
         Update: {
-          conversation_id?: string | null
-          cover_image_url?: string | null
-          created_at?: string | null
-          created_by?: string
-          description?: string | null
-          id?: string
-          is_private?: boolean | null
-          max_members?: number | null
-          member_count?: number
-          name?: string
-          network_type_id?: string
-          updated_at?: string | null
-        }
+          conversation_id?: string | null;
+          cover_image_url?: string | null;
+          created_at?: string | null;
+          created_by?: string;
+          description?: string | null;
+          id?: string;
+          invite_code?: string | null;
+          is_private?: boolean | null;
+          max_members?: number | null;
+          member_count?: number;
+          name?: string;
+          network_type_id?: string;
+          updated_at?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "network_conversation_id_fkey"
-            columns: ["conversation_id"]
-            isOneToOne: false
-            referencedRelation: "conversation"
-            referencedColumns: ["id"]
+            foreignKeyName: 'network_conversation_id_fkey';
+            columns: ['conversation_id'];
+            isOneToOne: false;
+            referencedRelation: 'conversation';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "network_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'network_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "network_network_type_id_fkey"
-            columns: ["network_type_id"]
-            isOneToOne: false
-            referencedRelation: "network_type"
-            referencedColumns: ["id"]
+            foreignKeyName: 'network_network_type_id_fkey';
+            columns: ['network_type_id'];
+            isOneToOne: false;
+            referencedRelation: 'network_type';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       network_member: {
         Row: {
-          added_by: string | null
-          created_at: string | null
-          id: string
-          joined_at: string | null
-          network_id: string
-          player_id: string
-          role: Database["public"]["Enums"]["network_member_role_enum"]
-          status: Database["public"]["Enums"]["network_member_status"] | null
-          updated_at: string | null
-        }
+          added_by: string | null;
+          created_at: string | null;
+          id: string;
+          joined_at: string | null;
+          network_id: string;
+          player_id: string;
+          role: Database['public']['Enums']['network_member_role_enum'];
+          status: Database['public']['Enums']['network_member_status'] | null;
+          updated_at: string | null;
+        };
         Insert: {
-          added_by?: string | null
-          created_at?: string | null
-          id?: string
-          joined_at?: string | null
-          network_id: string
-          player_id: string
-          role?: Database["public"]["Enums"]["network_member_role_enum"]
-          status?: Database["public"]["Enums"]["network_member_status"] | null
-          updated_at?: string | null
-        }
+          added_by?: string | null;
+          created_at?: string | null;
+          id?: string;
+          joined_at?: string | null;
+          network_id: string;
+          player_id: string;
+          role?: Database['public']['Enums']['network_member_role_enum'];
+          status?: Database['public']['Enums']['network_member_status'] | null;
+          updated_at?: string | null;
+        };
         Update: {
-          added_by?: string | null
-          created_at?: string | null
-          id?: string
-          joined_at?: string | null
-          network_id?: string
-          player_id?: string
-          role?: Database["public"]["Enums"]["network_member_role_enum"]
-          status?: Database["public"]["Enums"]["network_member_status"] | null
-          updated_at?: string | null
-        }
+          added_by?: string | null;
+          created_at?: string | null;
+          id?: string;
+          joined_at?: string | null;
+          network_id?: string;
+          player_id?: string;
+          role?: Database['public']['Enums']['network_member_role_enum'];
+          status?: Database['public']['Enums']['network_member_status'] | null;
+          updated_at?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "network_member_added_by_fkey"
-            columns: ["added_by"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'network_member_added_by_fkey';
+            columns: ['added_by'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "network_member_network_id_fkey"
-            columns: ["network_id"]
-            isOneToOne: false
-            referencedRelation: "network"
-            referencedColumns: ["id"]
+            foreignKeyName: 'network_member_network_id_fkey';
+            columns: ['network_id'];
+            isOneToOne: false;
+            referencedRelation: 'network';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "network_member_player_id_fkey"
-            columns: ["player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'network_member_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       network_type: {
         Row: {
-          created_at: string | null
-          description: string | null
-          display_name: string
-          id: string
-          is_active: boolean | null
-          name: string
-        }
+          created_at: string | null;
+          description: string | null;
+          display_name: string;
+          id: string;
+          is_active: boolean | null;
+          name: string;
+        };
         Insert: {
-          created_at?: string | null
-          description?: string | null
-          display_name: string
-          id?: string
-          is_active?: boolean | null
-          name: string
-        }
+          created_at?: string | null;
+          description?: string | null;
+          display_name: string;
+          id?: string;
+          is_active?: boolean | null;
+          name: string;
+        };
         Update: {
-          created_at?: string | null
-          description?: string | null
-          display_name?: string
-          id?: string
-          is_active?: boolean | null
-          name?: string
-        }
-        Relationships: []
-      }
+          created_at?: string | null;
+          description?: string | null;
+          display_name?: string;
+          id?: string;
+          is_active?: boolean | null;
+          name?: string;
+        };
+        Relationships: [];
+      };
       notification: {
         Row: {
-          body: string | null
-          created_at: string
-          expires_at: string | null
-          id: string
-          payload: Json | null
-          priority:
-            | Database["public"]["Enums"]["notification_priority_enum"]
-            | null
-          read_at: string | null
-          scheduled_at: string | null
-          target_id: string | null
-          title: string
-          type: Database["public"]["Enums"]["notification_type_enum"]
-          updated_at: string
-          user_id: string
-        }
+          body: string | null;
+          created_at: string;
+          expires_at: string | null;
+          id: string;
+          payload: Json | null;
+          priority: Database['public']['Enums']['notification_priority_enum'] | null;
+          read_at: string | null;
+          scheduled_at: string | null;
+          target_id: string | null;
+          title: string;
+          type: Database['public']['Enums']['notification_type_enum'];
+          updated_at: string;
+          user_id: string;
+        };
         Insert: {
-          body?: string | null
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          payload?: Json | null
-          priority?:
-            | Database["public"]["Enums"]["notification_priority_enum"]
-            | null
-          read_at?: string | null
-          scheduled_at?: string | null
-          target_id?: string | null
-          title: string
-          type: Database["public"]["Enums"]["notification_type_enum"]
-          updated_at?: string
-          user_id: string
-        }
+          body?: string | null;
+          created_at?: string;
+          expires_at?: string | null;
+          id?: string;
+          payload?: Json | null;
+          priority?: Database['public']['Enums']['notification_priority_enum'] | null;
+          read_at?: string | null;
+          scheduled_at?: string | null;
+          target_id?: string | null;
+          title: string;
+          type: Database['public']['Enums']['notification_type_enum'];
+          updated_at?: string;
+          user_id: string;
+        };
         Update: {
-          body?: string | null
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          payload?: Json | null
-          priority?:
-            | Database["public"]["Enums"]["notification_priority_enum"]
-            | null
-          read_at?: string | null
-          scheduled_at?: string | null
-          target_id?: string | null
-          title?: string
-          type?: Database["public"]["Enums"]["notification_type_enum"]
-          updated_at?: string
-          user_id?: string
-        }
+          body?: string | null;
+          created_at?: string;
+          expires_at?: string | null;
+          id?: string;
+          payload?: Json | null;
+          priority?: Database['public']['Enums']['notification_priority_enum'] | null;
+          read_at?: string | null;
+          scheduled_at?: string | null;
+          target_id?: string | null;
+          title?: string;
+          type?: Database['public']['Enums']['notification_type_enum'];
+          updated_at?: string;
+          user_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "notification_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profile"
-            referencedColumns: ["id"]
+            foreignKeyName: 'notification_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       notification_preference: {
         Row: {
-          channel: Database["public"]["Enums"]["delivery_channel_enum"]
-          created_at: string
-          enabled: boolean
-          id: string
-          notification_type: Database["public"]["Enums"]["notification_type_enum"]
-          updated_at: string
-          user_id: string
-        }
+          channel: Database['public']['Enums']['delivery_channel_enum'];
+          created_at: string;
+          enabled: boolean;
+          id: string;
+          notification_type: Database['public']['Enums']['notification_type_enum'];
+          updated_at: string;
+          user_id: string;
+        };
         Insert: {
-          channel: Database["public"]["Enums"]["delivery_channel_enum"]
-          created_at?: string
-          enabled?: boolean
-          id?: string
-          notification_type: Database["public"]["Enums"]["notification_type_enum"]
-          updated_at?: string
-          user_id: string
-        }
+          channel: Database['public']['Enums']['delivery_channel_enum'];
+          created_at?: string;
+          enabled?: boolean;
+          id?: string;
+          notification_type: Database['public']['Enums']['notification_type_enum'];
+          updated_at?: string;
+          user_id: string;
+        };
         Update: {
-          channel?: Database["public"]["Enums"]["delivery_channel_enum"]
-          created_at?: string
-          enabled?: boolean
-          id?: string
-          notification_type?: Database["public"]["Enums"]["notification_type_enum"]
-          updated_at?: string
-          user_id?: string
-        }
+          channel?: Database['public']['Enums']['delivery_channel_enum'];
+          created_at?: string;
+          enabled?: boolean;
+          id?: string;
+          notification_type?: Database['public']['Enums']['notification_type_enum'];
+          updated_at?: string;
+          user_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "notification_preference_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profile"
-            referencedColumns: ["id"]
+            foreignKeyName: 'notification_preference_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       organization: {
         Row: {
-          address: string | null
-          city: string | null
-          country: Database["public"]["Enums"]["country_enum"] | null
-          created_at: string
-          data_provider_id: string | null
-          description: string | null
-          email: string | null
-          id: string
-          is_active: boolean
-          name: string
-          nature: Database["public"]["Enums"]["organization_nature_enum"]
-          owner_id: string | null
-          phone: string | null
-          postal_code: string | null
-          slug: string
-          type: Database["public"]["Enums"]["organization_type_enum"] | null
-          updated_at: string
-          website: string | null
-        }
+          address: string | null;
+          city: string | null;
+          country: Database['public']['Enums']['country_enum'] | null;
+          created_at: string;
+          data_provider_id: string | null;
+          description: string | null;
+          email: string | null;
+          id: string;
+          is_active: boolean;
+          name: string;
+          nature: Database['public']['Enums']['organization_nature_enum'];
+          owner_id: string | null;
+          phone: string | null;
+          postal_code: string | null;
+          slug: string;
+          type: Database['public']['Enums']['organization_type_enum'] | null;
+          updated_at: string;
+          website: string | null;
+        };
         Insert: {
-          address?: string | null
-          city?: string | null
-          country?: Database["public"]["Enums"]["country_enum"] | null
-          created_at?: string
-          data_provider_id?: string | null
-          description?: string | null
-          email?: string | null
-          id?: string
-          is_active?: boolean
-          name: string
-          nature: Database["public"]["Enums"]["organization_nature_enum"]
-          owner_id?: string | null
-          phone?: string | null
-          postal_code?: string | null
-          slug: string
-          type?: Database["public"]["Enums"]["organization_type_enum"] | null
-          updated_at?: string
-          website?: string | null
-        }
+          address?: string | null;
+          city?: string | null;
+          country?: Database['public']['Enums']['country_enum'] | null;
+          created_at?: string;
+          data_provider_id?: string | null;
+          description?: string | null;
+          email?: string | null;
+          id?: string;
+          is_active?: boolean;
+          name: string;
+          nature: Database['public']['Enums']['organization_nature_enum'];
+          owner_id?: string | null;
+          phone?: string | null;
+          postal_code?: string | null;
+          slug: string;
+          type?: Database['public']['Enums']['organization_type_enum'] | null;
+          updated_at?: string;
+          website?: string | null;
+        };
         Update: {
-          address?: string | null
-          city?: string | null
-          country?: Database["public"]["Enums"]["country_enum"] | null
-          created_at?: string
-          data_provider_id?: string | null
-          description?: string | null
-          email?: string | null
-          id?: string
-          is_active?: boolean
-          name?: string
-          nature?: Database["public"]["Enums"]["organization_nature_enum"]
-          owner_id?: string | null
-          phone?: string | null
-          postal_code?: string | null
-          slug?: string
-          type?: Database["public"]["Enums"]["organization_type_enum"] | null
-          updated_at?: string
-          website?: string | null
-        }
+          address?: string | null;
+          city?: string | null;
+          country?: Database['public']['Enums']['country_enum'] | null;
+          created_at?: string;
+          data_provider_id?: string | null;
+          description?: string | null;
+          email?: string | null;
+          id?: string;
+          is_active?: boolean;
+          name?: string;
+          nature?: Database['public']['Enums']['organization_nature_enum'];
+          owner_id?: string | null;
+          phone?: string | null;
+          postal_code?: string | null;
+          slug?: string;
+          type?: Database['public']['Enums']['organization_type_enum'] | null;
+          updated_at?: string;
+          website?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "organization_data_provider_id_fkey"
-            columns: ["data_provider_id"]
-            isOneToOne: false
-            referencedRelation: "data_provider"
-            referencedColumns: ["id"]
+            foreignKeyName: 'organization_data_provider_id_fkey';
+            columns: ['data_provider_id'];
+            isOneToOne: false;
+            referencedRelation: 'data_provider';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "organization_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "profile"
-            referencedColumns: ["id"]
+            foreignKeyName: 'organization_owner_id_fkey';
+            columns: ['owner_id'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       organization_member: {
         Row: {
-          id: string
-          invited_by: string | null
-          joined_at: string
-          left_at: string | null
-          organization_id: string
-          permissions: Json | null
-          role: Database["public"]["Enums"]["role_enum"]
-          user_id: string
-        }
+          id: string;
+          invited_by: string | null;
+          joined_at: string;
+          left_at: string | null;
+          organization_id: string;
+          permissions: Json | null;
+          role: Database['public']['Enums']['role_enum'];
+          user_id: string;
+        };
         Insert: {
-          id?: string
-          invited_by?: string | null
-          joined_at?: string
-          left_at?: string | null
-          organization_id: string
-          permissions?: Json | null
-          role: Database["public"]["Enums"]["role_enum"]
-          user_id: string
-        }
+          id?: string;
+          invited_by?: string | null;
+          joined_at?: string;
+          left_at?: string | null;
+          organization_id: string;
+          permissions?: Json | null;
+          role: Database['public']['Enums']['role_enum'];
+          user_id: string;
+        };
         Update: {
-          id?: string
-          invited_by?: string | null
-          joined_at?: string
-          left_at?: string | null
-          organization_id?: string
-          permissions?: Json | null
-          role?: Database["public"]["Enums"]["role_enum"]
-          user_id?: string
-        }
+          id?: string;
+          invited_by?: string | null;
+          joined_at?: string;
+          left_at?: string | null;
+          organization_id?: string;
+          permissions?: Json | null;
+          role?: Database['public']['Enums']['role_enum'];
+          user_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "organization_member_invited_by_fkey"
-            columns: ["invited_by"]
-            isOneToOne: false
-            referencedRelation: "profile"
-            referencedColumns: ["id"]
+            foreignKeyName: 'organization_member_invited_by_fkey';
+            columns: ['invited_by'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "organization_member_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organization"
-            referencedColumns: ["id"]
+            foreignKeyName: 'organization_member_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organization';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "organization_member_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profile"
-            referencedColumns: ["id"]
+            foreignKeyName: 'organization_member_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       peer_rating_request: {
         Row: {
-          assigned_rating_score_id: string | null
-          created_at: string
-          evaluator_id: string
-          expires_at: string
-          id: string
-          message: string | null
-          rating_system_id: string
-          requester_id: string
-          responded_at: string | null
-          response_message: string | null
-          status: Database["public"]["Enums"]["rating_request_status_enum"]
-          updated_at: string
-        }
+          assigned_rating_score_id: string | null;
+          created_at: string;
+          evaluator_id: string;
+          expires_at: string;
+          id: string;
+          message: string | null;
+          rating_system_id: string;
+          requester_id: string;
+          responded_at: string | null;
+          response_message: string | null;
+          status: Database['public']['Enums']['rating_request_status_enum'];
+          updated_at: string;
+        };
         Insert: {
-          assigned_rating_score_id?: string | null
-          created_at?: string
-          evaluator_id: string
-          expires_at: string
-          id?: string
-          message?: string | null
-          rating_system_id: string
-          requester_id: string
-          responded_at?: string | null
-          response_message?: string | null
-          status?: Database["public"]["Enums"]["rating_request_status_enum"]
-          updated_at?: string
-        }
+          assigned_rating_score_id?: string | null;
+          created_at?: string;
+          evaluator_id: string;
+          expires_at: string;
+          id?: string;
+          message?: string | null;
+          rating_system_id: string;
+          requester_id: string;
+          responded_at?: string | null;
+          response_message?: string | null;
+          status?: Database['public']['Enums']['rating_request_status_enum'];
+          updated_at?: string;
+        };
         Update: {
-          assigned_rating_score_id?: string | null
-          created_at?: string
-          evaluator_id?: string
-          expires_at?: string
-          id?: string
-          message?: string | null
-          rating_system_id?: string
-          requester_id?: string
-          responded_at?: string | null
-          response_message?: string | null
-          status?: Database["public"]["Enums"]["rating_request_status_enum"]
-          updated_at?: string
-        }
+          assigned_rating_score_id?: string | null;
+          created_at?: string;
+          evaluator_id?: string;
+          expires_at?: string;
+          id?: string;
+          message?: string | null;
+          rating_system_id?: string;
+          requester_id?: string;
+          responded_at?: string | null;
+          response_message?: string | null;
+          status?: Database['public']['Enums']['rating_request_status_enum'];
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "peer_rating_requests_assigned_rating_score_id_fkey"
-            columns: ["assigned_rating_score_id"]
-            isOneToOne: false
-            referencedRelation: "rating_score"
-            referencedColumns: ["id"]
+            foreignKeyName: 'peer_rating_requests_assigned_rating_score_id_fkey';
+            columns: ['assigned_rating_score_id'];
+            isOneToOne: false;
+            referencedRelation: 'rating_score';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "peer_rating_requests_rating_system_id_fkey"
-            columns: ["rating_system_id"]
-            isOneToOne: false
-            referencedRelation: "rating_system"
-            referencedColumns: ["id"]
+            foreignKeyName: 'peer_rating_requests_rating_system_id_fkey';
+            columns: ['rating_system_id'];
+            isOneToOne: false;
+            referencedRelation: 'rating_system';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       play_attribute: {
         Row: {
-          category: string | null
-          created_at: string | null
-          description: string | null
-          id: string
-          is_active: boolean
-          name: string
-          sport_id: string | null
-          updated_at: string | null
-        }
+          category: string | null;
+          created_at: string | null;
+          description: string | null;
+          id: string;
+          is_active: boolean;
+          name: string;
+          sport_id: string | null;
+          updated_at: string | null;
+        };
         Insert: {
-          category?: string | null
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          name: string
-          sport_id?: string | null
-          updated_at?: string | null
-        }
+          category?: string | null;
+          created_at?: string | null;
+          description?: string | null;
+          id?: string;
+          is_active?: boolean;
+          name: string;
+          sport_id?: string | null;
+          updated_at?: string | null;
+        };
         Update: {
-          category?: string | null
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          name?: string
-          sport_id?: string | null
-          updated_at?: string | null
-        }
+          category?: string | null;
+          created_at?: string | null;
+          description?: string | null;
+          id?: string;
+          is_active?: boolean;
+          name?: string;
+          sport_id?: string | null;
+          updated_at?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "play_attributes_sport_id_fkey"
-            columns: ["sport_id"]
-            isOneToOne: false
-            referencedRelation: "sport"
-            referencedColumns: ["id"]
+            foreignKeyName: 'play_attributes_sport_id_fkey';
+            columns: ['sport_id'];
+            isOneToOne: false;
+            referencedRelation: 'sport';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       play_style: {
         Row: {
-          created_at: string | null
-          description: string | null
-          id: string
-          is_active: boolean
-          name: string
-          sport_id: string
-          updated_at: string | null
-        }
+          created_at: string | null;
+          description: string | null;
+          id: string;
+          is_active: boolean;
+          name: string;
+          sport_id: string;
+          updated_at: string | null;
+        };
         Insert: {
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          name: string
-          sport_id: string
-          updated_at?: string | null
-        }
+          created_at?: string | null;
+          description?: string | null;
+          id?: string;
+          is_active?: boolean;
+          name: string;
+          sport_id: string;
+          updated_at?: string | null;
+        };
         Update: {
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          name?: string
-          sport_id?: string
-          updated_at?: string | null
-        }
+          created_at?: string | null;
+          description?: string | null;
+          id?: string;
+          is_active?: boolean;
+          name?: string;
+          sport_id?: string;
+          updated_at?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "play_styles_sport_id_fkey"
-            columns: ["sport_id"]
-            isOneToOne: false
-            referencedRelation: "sport"
-            referencedColumns: ["id"]
+            foreignKeyName: 'play_styles_sport_id_fkey';
+            columns: ['sport_id'];
+            isOneToOne: false;
+            referencedRelation: 'sport';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       player: {
         Row: {
-          created_at: string | null
-          expo_push_token: string | null
-          gender: Database["public"]["Enums"]["gender_type"] | null
-          id: string
-          max_travel_distance: number | null
-          notification_match_requests: boolean | null
-          notification_messages: boolean | null
-          notification_reminders: boolean | null
-          playing_hand: Database["public"]["Enums"]["playing_hand"] | null
-          postal_code: string | null
-          postal_code_country: string | null
-          postal_code_lat: number | null
-          postal_code_location: unknown
-          postal_code_long: number | null
-          privacy_show_age: boolean | null
-          privacy_show_location: boolean | null
-          privacy_show_stats: boolean | null
-          push_notifications_enabled: boolean | null
-          reputation_score: number
-          updated_at: string | null
-        }
+          chat_rules_agreed_at: string | null;
+          created_at: string | null;
+          expo_push_token: string | null;
+          gender: Database['public']['Enums']['gender_type'] | null;
+          id: string;
+          last_seen_at: string | null;
+          max_travel_distance: number | null;
+          notification_match_requests: boolean | null;
+          notification_messages: boolean | null;
+          notification_reminders: boolean | null;
+          playing_hand: Database['public']['Enums']['playing_hand'] | null;
+          postal_code: string | null;
+          postal_code_country: string | null;
+          postal_code_lat: number | null;
+          postal_code_location: unknown;
+          postal_code_long: number | null;
+          privacy_show_age: boolean | null;
+          privacy_show_location: boolean | null;
+          privacy_show_stats: boolean | null;
+          push_notifications_enabled: boolean | null;
+          reputation_score: number;
+          updated_at: string | null;
+        };
         Insert: {
-          created_at?: string | null
-          expo_push_token?: string | null
-          gender?: Database["public"]["Enums"]["gender_type"] | null
-          id: string
-          max_travel_distance?: number | null
-          notification_match_requests?: boolean | null
-          notification_messages?: boolean | null
-          notification_reminders?: boolean | null
-          playing_hand?: Database["public"]["Enums"]["playing_hand"] | null
-          postal_code?: string | null
-          postal_code_country?: string | null
-          postal_code_lat?: number | null
-          postal_code_location?: unknown
-          postal_code_long?: number | null
-          privacy_show_age?: boolean | null
-          privacy_show_location?: boolean | null
-          privacy_show_stats?: boolean | null
-          push_notifications_enabled?: boolean | null
-          reputation_score?: number
-          updated_at?: string | null
-        }
+          chat_rules_agreed_at?: string | null;
+          created_at?: string | null;
+          expo_push_token?: string | null;
+          gender?: Database['public']['Enums']['gender_type'] | null;
+          id: string;
+          last_seen_at?: string | null;
+          max_travel_distance?: number | null;
+          notification_match_requests?: boolean | null;
+          notification_messages?: boolean | null;
+          notification_reminders?: boolean | null;
+          playing_hand?: Database['public']['Enums']['playing_hand'] | null;
+          postal_code?: string | null;
+          postal_code_country?: string | null;
+          postal_code_lat?: number | null;
+          postal_code_location?: unknown;
+          postal_code_long?: number | null;
+          privacy_show_age?: boolean | null;
+          privacy_show_location?: boolean | null;
+          privacy_show_stats?: boolean | null;
+          push_notifications_enabled?: boolean | null;
+          reputation_score?: number;
+          updated_at?: string | null;
+        };
         Update: {
-          created_at?: string | null
-          expo_push_token?: string | null
-          gender?: Database["public"]["Enums"]["gender_type"] | null
-          id?: string
-          max_travel_distance?: number | null
-          notification_match_requests?: boolean | null
-          notification_messages?: boolean | null
-          notification_reminders?: boolean | null
-          playing_hand?: Database["public"]["Enums"]["playing_hand"] | null
-          postal_code?: string | null
-          postal_code_country?: string | null
-          postal_code_lat?: number | null
-          postal_code_location?: unknown
-          postal_code_long?: number | null
-          privacy_show_age?: boolean | null
-          privacy_show_location?: boolean | null
-          privacy_show_stats?: boolean | null
-          push_notifications_enabled?: boolean | null
-          reputation_score?: number
-          updated_at?: string | null
-        }
+          chat_rules_agreed_at?: string | null;
+          created_at?: string | null;
+          expo_push_token?: string | null;
+          gender?: Database['public']['Enums']['gender_type'] | null;
+          id?: string;
+          last_seen_at?: string | null;
+          max_travel_distance?: number | null;
+          notification_match_requests?: boolean | null;
+          notification_messages?: boolean | null;
+          notification_reminders?: boolean | null;
+          playing_hand?: Database['public']['Enums']['playing_hand'] | null;
+          postal_code?: string | null;
+          postal_code_country?: string | null;
+          postal_code_lat?: number | null;
+          postal_code_location?: unknown;
+          postal_code_long?: number | null;
+          privacy_show_age?: boolean | null;
+          privacy_show_location?: boolean | null;
+          privacy_show_stats?: boolean | null;
+          push_notifications_enabled?: boolean | null;
+          reputation_score?: number;
+          updated_at?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "player_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "profile"
-            referencedColumns: ["id"]
+            foreignKeyName: 'player_id_fkey';
+            columns: ['id'];
+            isOneToOne: true;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       player_availability: {
         Row: {
-          created_at: string
-          day: Database["public"]["Enums"]["day_enum"]
-          id: string
-          is_active: boolean
-          period: Database["public"]["Enums"]["period_enum"]
-          player_id: string
-          updated_at: string
-        }
+          created_at: string;
+          day: Database['public']['Enums']['day_enum'];
+          id: string;
+          is_active: boolean;
+          period: Database['public']['Enums']['period_enum'];
+          player_id: string;
+          updated_at: string;
+        };
         Insert: {
-          created_at?: string
-          day: Database["public"]["Enums"]["day_enum"]
-          id?: string
-          is_active?: boolean
-          period: Database["public"]["Enums"]["period_enum"]
-          player_id: string
-          updated_at?: string
-        }
+          created_at?: string;
+          day: Database['public']['Enums']['day_enum'];
+          id?: string;
+          is_active?: boolean;
+          period: Database['public']['Enums']['period_enum'];
+          player_id: string;
+          updated_at?: string;
+        };
         Update: {
-          created_at?: string
-          day?: Database["public"]["Enums"]["day_enum"]
-          id?: string
-          is_active?: boolean
-          period?: Database["public"]["Enums"]["period_enum"]
-          player_id?: string
-          updated_at?: string
-        }
+          created_at?: string;
+          day?: Database['public']['Enums']['day_enum'];
+          id?: string;
+          is_active?: boolean;
+          period?: Database['public']['Enums']['period_enum'];
+          player_id?: string;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "player_availability_player_id_fkey"
-            columns: ["player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'player_availability_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       player_block: {
         Row: {
-          blocked_player_id: string
-          created_at: string | null
-          id: string
-          player_id: string
-        }
+          blocked_player_id: string;
+          created_at: string | null;
+          id: string;
+          player_id: string;
+        };
         Insert: {
-          blocked_player_id: string
-          created_at?: string | null
-          id?: string
-          player_id: string
-        }
+          blocked_player_id: string;
+          created_at?: string | null;
+          id?: string;
+          player_id: string;
+        };
         Update: {
-          blocked_player_id?: string
-          created_at?: string | null
-          id?: string
-          player_id?: string
-        }
+          blocked_player_id?: string;
+          created_at?: string | null;
+          id?: string;
+          player_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "player_block_blocked_player_id_fkey"
-            columns: ["blocked_player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'player_block_blocked_player_id_fkey';
+            columns: ['blocked_player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "player_block_player_id_fkey"
-            columns: ["player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'player_block_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       player_favorite: {
         Row: {
-          created_at: string | null
-          favorite_player_id: string
-          id: string
-          player_id: string
-        }
+          created_at: string | null;
+          favorite_player_id: string;
+          id: string;
+          player_id: string;
+        };
         Insert: {
-          created_at?: string | null
-          favorite_player_id: string
-          id?: string
-          player_id: string
-        }
+          created_at?: string | null;
+          favorite_player_id: string;
+          id?: string;
+          player_id: string;
+        };
         Update: {
-          created_at?: string | null
-          favorite_player_id?: string
-          id?: string
-          player_id?: string
-        }
+          created_at?: string | null;
+          favorite_player_id?: string;
+          id?: string;
+          player_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "player_favorite_favorite_player_id_fkey"
-            columns: ["favorite_player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'player_favorite_favorite_player_id_fkey';
+            columns: ['favorite_player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "player_favorite_player_id_fkey"
-            columns: ["player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'player_favorite_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
-        ]
-      }
-      player_play_attribute: {
-        Row: {
-          created_at: string | null
-          id: string
-          play_attribute_id: string
-          player_sport_profile_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          play_attribute_id: string
-          player_sport_profile_id: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          play_attribute_id?: string
-          player_sport_profile_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "player_play_attributes_play_attribute_id_fkey"
-            columns: ["play_attribute_id"]
-            isOneToOne: false
-            referencedRelation: "play_attribute"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "player_play_attributes_player_sport_profile_id_fkey"
-            columns: ["player_sport_profile_id"]
-            isOneToOne: false
-            referencedRelation: "player_sport_profile"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+        ];
+      };
       player_rating_score: {
         Row: {
-          assigned_at: string
-          certified_at: string | null
-          certified_via:
-            | Database["public"]["Enums"]["rating_certification_method_enum"]
-            | null
-          created_at: string
-          evaluations_count: number
-          expires_at: string | null
-          external_rating_score_id: string | null
-          id: string
-          is_certified: boolean
-          last_evaluated_at: string | null
-          notes: string | null
-          player_id: string
-          rating_score_id: string
-          referrals_count: number
-          source: string | null
-          updated_at: string
-        }
+          assigned_at: string;
+          certified_at: string | null;
+          certified_via: Database['public']['Enums']['rating_certification_method_enum'] | null;
+          created_at: string;
+          evaluations_count: number;
+          expires_at: string | null;
+          external_rating_score_id: string | null;
+          id: string;
+          is_certified: boolean;
+          last_evaluated_at: string | null;
+          notes: string | null;
+          player_id: string;
+          rating_score_id: string;
+          referrals_count: number;
+          source: string | null;
+          updated_at: string;
+        };
         Insert: {
-          assigned_at?: string
-          certified_at?: string | null
-          certified_via?:
-            | Database["public"]["Enums"]["rating_certification_method_enum"]
-            | null
-          created_at?: string
-          evaluations_count?: number
-          expires_at?: string | null
-          external_rating_score_id?: string | null
-          id?: string
-          is_certified?: boolean
-          last_evaluated_at?: string | null
-          notes?: string | null
-          player_id: string
-          rating_score_id: string
-          referrals_count?: number
-          source?: string | null
-          updated_at?: string
-        }
+          assigned_at?: string;
+          certified_at?: string | null;
+          certified_via?: Database['public']['Enums']['rating_certification_method_enum'] | null;
+          created_at?: string;
+          evaluations_count?: number;
+          expires_at?: string | null;
+          external_rating_score_id?: string | null;
+          id?: string;
+          is_certified?: boolean;
+          last_evaluated_at?: string | null;
+          notes?: string | null;
+          player_id: string;
+          rating_score_id: string;
+          referrals_count?: number;
+          source?: string | null;
+          updated_at?: string;
+        };
         Update: {
-          assigned_at?: string
-          certified_at?: string | null
-          certified_via?:
-            | Database["public"]["Enums"]["rating_certification_method_enum"]
-            | null
-          created_at?: string
-          evaluations_count?: number
-          expires_at?: string | null
-          external_rating_score_id?: string | null
-          id?: string
-          is_certified?: boolean
-          last_evaluated_at?: string | null
-          notes?: string | null
-          player_id?: string
-          rating_score_id?: string
-          referrals_count?: number
-          source?: string | null
-          updated_at?: string
-        }
+          assigned_at?: string;
+          certified_at?: string | null;
+          certified_via?: Database['public']['Enums']['rating_certification_method_enum'] | null;
+          created_at?: string;
+          evaluations_count?: number;
+          expires_at?: string | null;
+          external_rating_score_id?: string | null;
+          id?: string;
+          is_certified?: boolean;
+          last_evaluated_at?: string | null;
+          notes?: string | null;
+          player_id?: string;
+          rating_score_id?: string;
+          referrals_count?: number;
+          source?: string | null;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "player_rating_scores_external_rating_score_id_fkey"
-            columns: ["external_rating_score_id"]
-            isOneToOne: false
-            referencedRelation: "rating_score"
-            referencedColumns: ["id"]
+            foreignKeyName: 'player_rating_scores_external_rating_score_id_fkey';
+            columns: ['external_rating_score_id'];
+            isOneToOne: false;
+            referencedRelation: 'rating_score';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "player_rating_scores_rating_score_id_fkey"
-            columns: ["rating_score_id"]
-            isOneToOne: false
-            referencedRelation: "rating_score"
-            referencedColumns: ["id"]
+            foreignKeyName: 'player_rating_scores_rating_score_id_fkey';
+            columns: ['rating_score_id'];
+            isOneToOne: false;
+            referencedRelation: 'rating_score';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       player_reputation: {
         Row: {
-          calculated_at: string
-          created_at: string
-          is_public: boolean | null
-          last_decay_calculation: string | null
-          matches_completed: number
-          min_events_for_public: number
-          negative_events: number
-          player_id: string
-          positive_events: number
-          reputation_score: number
-          reputation_tier: Database["public"]["Enums"]["reputation_tier"]
-          total_events: number
-          updated_at: string
-        }
+          calculated_at: string;
+          created_at: string;
+          is_public: boolean | null;
+          last_decay_calculation: string | null;
+          matches_completed: number;
+          min_events_for_public: number;
+          negative_events: number;
+          player_id: string;
+          positive_events: number;
+          reputation_score: number;
+          reputation_tier: Database['public']['Enums']['reputation_tier'];
+          total_events: number;
+          updated_at: string;
+        };
         Insert: {
-          calculated_at?: string
-          created_at?: string
-          is_public?: boolean | null
-          last_decay_calculation?: string | null
-          matches_completed?: number
-          min_events_for_public?: number
-          negative_events?: number
-          player_id: string
-          positive_events?: number
-          reputation_score?: number
-          reputation_tier?: Database["public"]["Enums"]["reputation_tier"]
-          total_events?: number
-          updated_at?: string
-        }
+          calculated_at?: string;
+          created_at?: string;
+          is_public?: boolean | null;
+          last_decay_calculation?: string | null;
+          matches_completed?: number;
+          min_events_for_public?: number;
+          negative_events?: number;
+          player_id: string;
+          positive_events?: number;
+          reputation_score?: number;
+          reputation_tier?: Database['public']['Enums']['reputation_tier'];
+          total_events?: number;
+          updated_at?: string;
+        };
         Update: {
-          calculated_at?: string
-          created_at?: string
-          is_public?: boolean | null
-          last_decay_calculation?: string | null
-          matches_completed?: number
-          min_events_for_public?: number
-          negative_events?: number
-          player_id?: string
-          positive_events?: number
-          reputation_score?: number
-          reputation_tier?: Database["public"]["Enums"]["reputation_tier"]
-          total_events?: number
-          updated_at?: string
-        }
+          calculated_at?: string;
+          created_at?: string;
+          is_public?: boolean | null;
+          last_decay_calculation?: string | null;
+          matches_completed?: number;
+          min_events_for_public?: number;
+          negative_events?: number;
+          player_id?: string;
+          positive_events?: number;
+          reputation_score?: number;
+          reputation_tier?: Database['public']['Enums']['reputation_tier'];
+          total_events?: number;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "player_reputation_player_id_fkey"
-            columns: ["player_id"]
-            isOneToOne: true
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'player_reputation_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: true;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       player_review: {
         Row: {
-          comment: string | null
-          created_at: string | null
-          id: string
-          match_id: string | null
-          rating: number | null
-          reviewed_id: string
-          reviewer_id: string
-          skill_rating_score_id: string | null
-          skill_rating_value: number | null
-          sport_id: string | null
-          updated_at: string | null
-        }
+          comment: string | null;
+          created_at: string | null;
+          id: string;
+          match_id: string | null;
+          rating: number | null;
+          reviewed_id: string;
+          reviewer_id: string;
+          skill_rating_score_id: string | null;
+          skill_rating_value: number | null;
+          sport_id: string | null;
+          updated_at: string | null;
+        };
         Insert: {
-          comment?: string | null
-          created_at?: string | null
-          id?: string
-          match_id?: string | null
-          rating?: number | null
-          reviewed_id: string
-          reviewer_id: string
-          skill_rating_score_id?: string | null
-          skill_rating_value?: number | null
-          sport_id?: string | null
-          updated_at?: string | null
-        }
+          comment?: string | null;
+          created_at?: string | null;
+          id?: string;
+          match_id?: string | null;
+          rating?: number | null;
+          reviewed_id: string;
+          reviewer_id: string;
+          skill_rating_score_id?: string | null;
+          skill_rating_value?: number | null;
+          sport_id?: string | null;
+          updated_at?: string | null;
+        };
         Update: {
-          comment?: string | null
-          created_at?: string | null
-          id?: string
-          match_id?: string | null
-          rating?: number | null
-          reviewed_id?: string
-          reviewer_id?: string
-          skill_rating_score_id?: string | null
-          skill_rating_value?: number | null
-          sport_id?: string | null
-          updated_at?: string | null
-        }
+          comment?: string | null;
+          created_at?: string | null;
+          id?: string;
+          match_id?: string | null;
+          rating?: number | null;
+          reviewed_id?: string;
+          reviewer_id?: string;
+          skill_rating_score_id?: string | null;
+          skill_rating_value?: number | null;
+          sport_id?: string | null;
+          updated_at?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "player_review_match_id_fkey"
-            columns: ["match_id"]
-            isOneToOne: false
-            referencedRelation: "match"
-            referencedColumns: ["id"]
+            foreignKeyName: 'player_review_match_id_fkey';
+            columns: ['match_id'];
+            isOneToOne: false;
+            referencedRelation: 'match';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "player_review_reviewed_id_fkey"
-            columns: ["reviewed_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'player_review_reviewed_id_fkey';
+            columns: ['reviewed_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "player_review_reviewer_id_fkey"
-            columns: ["reviewer_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'player_review_reviewer_id_fkey';
+            columns: ['reviewer_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       player_sport: {
         Row: {
-          created_at: string | null
-          id: string
-          is_active: boolean | null
-          is_primary: boolean | null
-          player_id: string
-          preferred_court: string | null
-          preferred_facility_id: string | null
-          preferred_match_duration:
-            | Database["public"]["Enums"]["match_duration_enum"]
-            | null
-          preferred_match_type:
-            | Database["public"]["Enums"]["match_type_enum"]
-            | null
-          preferred_play_attributes:
-            | Database["public"]["Enums"]["play_attribute_enum"][]
-            | null
-          preferred_play_style:
-            | Database["public"]["Enums"]["play_style_enum"]
-            | null
-          sport_id: string
-          updated_at: string | null
-        }
+          created_at: string | null;
+          id: string;
+          is_active: boolean | null;
+          is_primary: boolean | null;
+          player_id: string;
+          preferred_court: string | null;
+          preferred_facility_id: string | null;
+          preferred_match_duration: Database['public']['Enums']['match_duration_enum'] | null;
+          preferred_match_type: Database['public']['Enums']['match_type_enum'] | null;
+          preferred_play_attributes: Database['public']['Enums']['play_attribute_enum'][] | null;
+          preferred_play_style: Database['public']['Enums']['play_style_enum'] | null;
+          sport_id: string;
+          updated_at: string | null;
+        };
         Insert: {
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          is_primary?: boolean | null
-          player_id: string
-          preferred_court?: string | null
-          preferred_facility_id?: string | null
-          preferred_match_duration?:
-            | Database["public"]["Enums"]["match_duration_enum"]
-            | null
-          preferred_match_type?:
-            | Database["public"]["Enums"]["match_type_enum"]
-            | null
-          preferred_play_attributes?:
-            | Database["public"]["Enums"]["play_attribute_enum"][]
-            | null
-          preferred_play_style?:
-            | Database["public"]["Enums"]["play_style_enum"]
-            | null
-          sport_id: string
-          updated_at?: string | null
-        }
+          created_at?: string | null;
+          id?: string;
+          is_active?: boolean | null;
+          is_primary?: boolean | null;
+          player_id: string;
+          preferred_court?: string | null;
+          preferred_facility_id?: string | null;
+          preferred_match_duration?: Database['public']['Enums']['match_duration_enum'] | null;
+          preferred_match_type?: Database['public']['Enums']['match_type_enum'] | null;
+          preferred_play_attributes?: Database['public']['Enums']['play_attribute_enum'][] | null;
+          preferred_play_style?: Database['public']['Enums']['play_style_enum'] | null;
+          sport_id: string;
+          updated_at?: string | null;
+        };
         Update: {
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          is_primary?: boolean | null
-          player_id?: string
-          preferred_court?: string | null
-          preferred_facility_id?: string | null
-          preferred_match_duration?:
-            | Database["public"]["Enums"]["match_duration_enum"]
-            | null
-          preferred_match_type?:
-            | Database["public"]["Enums"]["match_type_enum"]
-            | null
-          preferred_play_attributes?:
-            | Database["public"]["Enums"]["play_attribute_enum"][]
-            | null
-          preferred_play_style?:
-            | Database["public"]["Enums"]["play_style_enum"]
-            | null
-          sport_id?: string
-          updated_at?: string | null
-        }
+          created_at?: string | null;
+          id?: string;
+          is_active?: boolean | null;
+          is_primary?: boolean | null;
+          player_id?: string;
+          preferred_court?: string | null;
+          preferred_facility_id?: string | null;
+          preferred_match_duration?: Database['public']['Enums']['match_duration_enum'] | null;
+          preferred_match_type?: Database['public']['Enums']['match_type_enum'] | null;
+          preferred_play_attributes?: Database['public']['Enums']['play_attribute_enum'][] | null;
+          preferred_play_style?: Database['public']['Enums']['play_style_enum'] | null;
+          sport_id?: string;
+          updated_at?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "player_sport_player_id_fkey"
-            columns: ["player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'player_sport_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "player_sport_preferred_facility_id_fkey"
-            columns: ["preferred_facility_id"]
-            isOneToOne: false
-            referencedRelation: "facility"
-            referencedColumns: ["id"]
+            foreignKeyName: 'player_sport_preferred_facility_id_fkey';
+            columns: ['preferred_facility_id'];
+            isOneToOne: false;
+            referencedRelation: 'facility';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "player_sport_sport_id_fkey"
-            columns: ["sport_id"]
-            isOneToOne: false
-            referencedRelation: "sport"
-            referencedColumns: ["id"]
+            foreignKeyName: 'player_sport_sport_id_fkey';
+            columns: ['sport_id'];
+            isOneToOne: false;
+            referencedRelation: 'sport';
+            referencedColumns: ['id'];
           },
-        ]
-      }
-      player_sport_profile: {
-        Row: {
-          created_at: string
-          id: string
-          is_active: boolean
-          play_style_id: string | null
-          player_id: string
-          preferred_court_surface:
-            | Database["public"]["Enums"]["surface_type_enum"]
-            | null
-          preferred_facility_id: string | null
-          preferred_match_duration: Database["public"]["Enums"]["match_duration_enum"]
-          preferred_match_type: Database["public"]["Enums"]["match_type_enum"]
-          sport_id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          play_style_id?: string | null
-          player_id: string
-          preferred_court_surface?:
-            | Database["public"]["Enums"]["surface_type_enum"]
-            | null
-          preferred_facility_id?: string | null
-          preferred_match_duration: Database["public"]["Enums"]["match_duration_enum"]
-          preferred_match_type: Database["public"]["Enums"]["match_type_enum"]
-          sport_id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          play_style_id?: string | null
-          player_id?: string
-          preferred_court_surface?:
-            | Database["public"]["Enums"]["surface_type_enum"]
-            | null
-          preferred_facility_id?: string | null
-          preferred_match_duration?: Database["public"]["Enums"]["match_duration_enum"]
-          preferred_match_type?: Database["public"]["Enums"]["match_type_enum"]
-          sport_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "player_sport_profiles_play_style_id_fkey"
-            columns: ["play_style_id"]
-            isOneToOne: false
-            referencedRelation: "play_style"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "player_sport_profiles_preferred_facility_id_fkey"
-            columns: ["preferred_facility_id"]
-            isOneToOne: false
-            referencedRelation: "facility"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "player_sport_profiles_sport_id_fkey"
-            columns: ["sport_id"]
-            isOneToOne: false
-            referencedRelation: "sport"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+        ];
+      };
       profile: {
         Row: {
-          account_status: Database["public"]["Enums"]["account_status"] | null
-          address: string | null
-          bio: string | null
-          birth_date: string | null
-          city: string | null
-          country: string | null
-          created_at: string | null
-          display_name: string | null
-          email: string
-          email_verified: boolean | null
-          first_name: string | null
-          id: string
-          is_active: boolean | null
-          last_active_at: string | null
-          last_name: string | null
-          onboarding_completed: boolean | null
-          phone: string | null
-          phone_verified: boolean | null
-          postal_code: string | null
-          preferred_locale: Database["public"]["Enums"]["locale_enum"] | null
-          profile_picture_url: string | null
-          province: string | null
-          updated_at: string | null
-        }
+          account_status: Database['public']['Enums']['account_status'] | null;
+          address: string | null;
+          bio: string | null;
+          birth_date: string | null;
+          city: string | null;
+          country: string | null;
+          created_at: string | null;
+          display_name: string | null;
+          email: string;
+          email_verified: boolean | null;
+          first_name: string | null;
+          id: string;
+          is_active: boolean | null;
+          last_active_at: string | null;
+          last_name: string | null;
+          onboarding_completed: boolean | null;
+          phone: string | null;
+          phone_verified: boolean | null;
+          postal_code: string | null;
+          preferred_locale: Database['public']['Enums']['locale_enum'] | null;
+          profile_picture_url: string | null;
+          province: string | null;
+          updated_at: string | null;
+        };
         Insert: {
-          account_status?: Database["public"]["Enums"]["account_status"] | null
-          address?: string | null
-          bio?: string | null
-          birth_date?: string | null
-          city?: string | null
-          country?: string | null
-          created_at?: string | null
-          display_name?: string | null
-          email: string
-          email_verified?: boolean | null
-          first_name?: string | null
-          id: string
-          is_active?: boolean | null
-          last_active_at?: string | null
-          last_name?: string | null
-          onboarding_completed?: boolean | null
-          phone?: string | null
-          phone_verified?: boolean | null
-          postal_code?: string | null
-          preferred_locale?: Database["public"]["Enums"]["locale_enum"] | null
-          profile_picture_url?: string | null
-          province?: string | null
-          updated_at?: string | null
-        }
+          account_status?: Database['public']['Enums']['account_status'] | null;
+          address?: string | null;
+          bio?: string | null;
+          birth_date?: string | null;
+          city?: string | null;
+          country?: string | null;
+          created_at?: string | null;
+          display_name?: string | null;
+          email: string;
+          email_verified?: boolean | null;
+          first_name?: string | null;
+          id: string;
+          is_active?: boolean | null;
+          last_active_at?: string | null;
+          last_name?: string | null;
+          onboarding_completed?: boolean | null;
+          phone?: string | null;
+          phone_verified?: boolean | null;
+          postal_code?: string | null;
+          preferred_locale?: Database['public']['Enums']['locale_enum'] | null;
+          profile_picture_url?: string | null;
+          province?: string | null;
+          updated_at?: string | null;
+        };
         Update: {
-          account_status?: Database["public"]["Enums"]["account_status"] | null
-          address?: string | null
-          bio?: string | null
-          birth_date?: string | null
-          city?: string | null
-          country?: string | null
-          created_at?: string | null
-          display_name?: string | null
-          email?: string
-          email_verified?: boolean | null
-          first_name?: string | null
-          id?: string
-          is_active?: boolean | null
-          last_active_at?: string | null
-          last_name?: string | null
-          onboarding_completed?: boolean | null
-          phone?: string | null
-          phone_verified?: boolean | null
-          postal_code?: string | null
-          preferred_locale?: Database["public"]["Enums"]["locale_enum"] | null
-          profile_picture_url?: string | null
-          province?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
+          account_status?: Database['public']['Enums']['account_status'] | null;
+          address?: string | null;
+          bio?: string | null;
+          birth_date?: string | null;
+          city?: string | null;
+          country?: string | null;
+          created_at?: string | null;
+          display_name?: string | null;
+          email?: string;
+          email_verified?: boolean | null;
+          first_name?: string | null;
+          id?: string;
+          is_active?: boolean | null;
+          last_active_at?: string | null;
+          last_name?: string | null;
+          onboarding_completed?: boolean | null;
+          phone?: string | null;
+          phone_verified?: boolean | null;
+          postal_code?: string | null;
+          preferred_locale?: Database['public']['Enums']['locale_enum'] | null;
+          profile_picture_url?: string | null;
+          province?: string | null;
+          updated_at?: string | null;
+        };
+        Relationships: [];
+      };
       rating_proof: {
         Row: {
-          created_at: string
-          description: string | null
-          external_url: string | null
-          file_id: string | null
-          id: string
-          is_active: boolean
-          player_rating_score_id: string
-          proof_type: Database["public"]["Enums"]["proof_type_enum"]
-          review_notes: string | null
-          reviewed_at: string | null
-          reviewed_by: string | null
-          status: Database["public"]["Enums"]["proof_status_enum"]
-          title: string
-          updated_at: string
-        }
+          created_at: string;
+          description: string | null;
+          external_url: string | null;
+          file_id: string | null;
+          id: string;
+          is_active: boolean;
+          player_rating_score_id: string;
+          proof_type: Database['public']['Enums']['proof_type_enum'];
+          review_notes: string | null;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          status: Database['public']['Enums']['proof_status_enum'];
+          title: string;
+          updated_at: string;
+        };
         Insert: {
-          created_at?: string
-          description?: string | null
-          external_url?: string | null
-          file_id?: string | null
-          id?: string
-          is_active?: boolean
-          player_rating_score_id: string
-          proof_type: Database["public"]["Enums"]["proof_type_enum"]
-          review_notes?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: Database["public"]["Enums"]["proof_status_enum"]
-          title: string
-          updated_at?: string
-        }
+          created_at?: string;
+          description?: string | null;
+          external_url?: string | null;
+          file_id?: string | null;
+          id?: string;
+          is_active?: boolean;
+          player_rating_score_id: string;
+          proof_type: Database['public']['Enums']['proof_type_enum'];
+          review_notes?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: Database['public']['Enums']['proof_status_enum'];
+          title: string;
+          updated_at?: string;
+        };
         Update: {
-          created_at?: string
-          description?: string | null
-          external_url?: string | null
-          file_id?: string | null
-          id?: string
-          is_active?: boolean
-          player_rating_score_id?: string
-          proof_type?: Database["public"]["Enums"]["proof_type_enum"]
-          review_notes?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: Database["public"]["Enums"]["proof_status_enum"]
-          title?: string
-          updated_at?: string
-        }
+          created_at?: string;
+          description?: string | null;
+          external_url?: string | null;
+          file_id?: string | null;
+          id?: string;
+          is_active?: boolean;
+          player_rating_score_id?: string;
+          proof_type?: Database['public']['Enums']['proof_type_enum'];
+          review_notes?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: Database['public']['Enums']['proof_status_enum'];
+          title?: string;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "rating_proof_file_id_fkey"
-            columns: ["file_id"]
-            isOneToOne: false
-            referencedRelation: "file"
-            referencedColumns: ["id"]
+            foreignKeyName: 'rating_proof_file_id_fkey';
+            columns: ['file_id'];
+            isOneToOne: false;
+            referencedRelation: 'file';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "rating_proof_player_rating_score_id_fkey"
-            columns: ["player_rating_score_id"]
-            isOneToOne: false
-            referencedRelation: "player_rating_score"
-            referencedColumns: ["id"]
+            foreignKeyName: 'rating_proof_player_rating_score_id_fkey';
+            columns: ['player_rating_score_id'];
+            isOneToOne: false;
+            referencedRelation: 'player_rating_score';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "rating_proof_reviewed_by_fkey"
-            columns: ["reviewed_by"]
-            isOneToOne: false
-            referencedRelation: "profile"
-            referencedColumns: ["id"]
+            foreignKeyName: 'rating_proof_reviewed_by_fkey';
+            columns: ['reviewed_by'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       rating_reference_request: {
         Row: {
-          created_at: string
-          expires_at: string
-          id: string
-          message: string | null
-          player_rating_score_id: string
-          rating_supported: boolean
-          referee_id: string
-          requester_id: string
-          responded_at: string | null
-          response_message: string | null
-          status: Database["public"]["Enums"]["rating_request_status_enum"]
-          updated_at: string
-        }
+          created_at: string;
+          expires_at: string;
+          id: string;
+          message: string | null;
+          player_rating_score_id: string;
+          rating_supported: boolean;
+          referee_id: string;
+          requester_id: string;
+          responded_at: string | null;
+          response_message: string | null;
+          status: Database['public']['Enums']['rating_request_status_enum'];
+          updated_at: string;
+        };
         Insert: {
-          created_at?: string
-          expires_at: string
-          id?: string
-          message?: string | null
-          player_rating_score_id: string
-          rating_supported?: boolean
-          referee_id: string
-          requester_id: string
-          responded_at?: string | null
-          response_message?: string | null
-          status?: Database["public"]["Enums"]["rating_request_status_enum"]
-          updated_at?: string
-        }
+          created_at?: string;
+          expires_at: string;
+          id?: string;
+          message?: string | null;
+          player_rating_score_id: string;
+          rating_supported?: boolean;
+          referee_id: string;
+          requester_id: string;
+          responded_at?: string | null;
+          response_message?: string | null;
+          status?: Database['public']['Enums']['rating_request_status_enum'];
+          updated_at?: string;
+        };
         Update: {
-          created_at?: string
-          expires_at?: string
-          id?: string
-          message?: string | null
-          player_rating_score_id?: string
-          rating_supported?: boolean
-          referee_id?: string
-          requester_id?: string
-          responded_at?: string | null
-          response_message?: string | null
-          status?: Database["public"]["Enums"]["rating_request_status_enum"]
-          updated_at?: string
-        }
+          created_at?: string;
+          expires_at?: string;
+          id?: string;
+          message?: string | null;
+          player_rating_score_id?: string;
+          rating_supported?: boolean;
+          referee_id?: string;
+          requester_id?: string;
+          responded_at?: string | null;
+          response_message?: string | null;
+          status?: Database['public']['Enums']['rating_request_status_enum'];
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "rating_reference_requests_player_rating_score_id_fkey"
-            columns: ["player_rating_score_id"]
-            isOneToOne: false
-            referencedRelation: "player_rating_score"
-            referencedColumns: ["id"]
+            foreignKeyName: 'rating_reference_requests_player_rating_score_id_fkey';
+            columns: ['player_rating_score_id'];
+            isOneToOne: false;
+            referencedRelation: 'player_rating_score';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       rating_score: {
         Row: {
-          created_at: string
-          description: string | null
-          id: string
-          label: string
-          max_value: number | null
-          min_value: number | null
-          rating_system_id: string
-          skill_level: Database["public"]["Enums"]["skill_level"] | null
-          updated_at: string
-          value: number | null
-        }
+          created_at: string;
+          description: string | null;
+          id: string;
+          label: string;
+          max_value: number | null;
+          min_value: number | null;
+          rating_system_id: string;
+          skill_level: Database['public']['Enums']['skill_level'] | null;
+          updated_at: string;
+          value: number | null;
+        };
         Insert: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          label: string
-          max_value?: number | null
-          min_value?: number | null
-          rating_system_id: string
-          skill_level?: Database["public"]["Enums"]["skill_level"] | null
-          updated_at?: string
-          value?: number | null
-        }
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          label: string;
+          max_value?: number | null;
+          min_value?: number | null;
+          rating_system_id: string;
+          skill_level?: Database['public']['Enums']['skill_level'] | null;
+          updated_at?: string;
+          value?: number | null;
+        };
         Update: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          label?: string
-          max_value?: number | null
-          min_value?: number | null
-          rating_system_id?: string
-          skill_level?: Database["public"]["Enums"]["skill_level"] | null
-          updated_at?: string
-          value?: number | null
-        }
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          label?: string;
+          max_value?: number | null;
+          min_value?: number | null;
+          rating_system_id?: string;
+          skill_level?: Database['public']['Enums']['skill_level'] | null;
+          updated_at?: string;
+          value?: number | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "rating_scores_rating_system_id_fkey"
-            columns: ["rating_system_id"]
-            isOneToOne: false
-            referencedRelation: "rating_system"
-            referencedColumns: ["id"]
+            foreignKeyName: 'rating_scores_rating_system_id_fkey';
+            columns: ['rating_system_id'];
+            isOneToOne: false;
+            referencedRelation: 'rating_system';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       rating_system: {
         Row: {
-          code: Database["public"]["Enums"]["rating_system_code_enum"]
-          created_at: string
-          default_initial_value: number | null
-          description: string | null
-          id: string
-          is_active: boolean
-          max_value: number
-          min_for_referral: number | null
-          min_value: number
-          name: string
-          sport_id: string
-          step: number
-          updated_at: string
-        }
+          code: Database['public']['Enums']['rating_system_code_enum'];
+          created_at: string;
+          default_initial_value: number | null;
+          description: string | null;
+          id: string;
+          is_active: boolean;
+          max_value: number;
+          min_for_referral: number | null;
+          min_value: number;
+          name: string;
+          sport_id: string;
+          step: number;
+          updated_at: string;
+        };
         Insert: {
-          code: Database["public"]["Enums"]["rating_system_code_enum"]
-          created_at?: string
-          default_initial_value?: number | null
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          max_value: number
-          min_for_referral?: number | null
-          min_value: number
-          name: string
-          sport_id: string
-          step?: number
-          updated_at?: string
-        }
+          code: Database['public']['Enums']['rating_system_code_enum'];
+          created_at?: string;
+          default_initial_value?: number | null;
+          description?: string | null;
+          id?: string;
+          is_active?: boolean;
+          max_value: number;
+          min_for_referral?: number | null;
+          min_value: number;
+          name: string;
+          sport_id: string;
+          step?: number;
+          updated_at?: string;
+        };
         Update: {
-          code?: Database["public"]["Enums"]["rating_system_code_enum"]
-          created_at?: string
-          default_initial_value?: number | null
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          max_value?: number
-          min_for_referral?: number | null
-          min_value?: number
-          name?: string
-          sport_id?: string
-          step?: number
-          updated_at?: string
-        }
+          code?: Database['public']['Enums']['rating_system_code_enum'];
+          created_at?: string;
+          default_initial_value?: number | null;
+          description?: string | null;
+          id?: string;
+          is_active?: boolean;
+          max_value?: number;
+          min_for_referral?: number | null;
+          min_value?: number;
+          name?: string;
+          sport_id?: string;
+          step?: number;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "rating_systems_sport_id_fkey"
-            columns: ["sport_id"]
-            isOneToOne: false
-            referencedRelation: "sport"
-            referencedColumns: ["id"]
+            foreignKeyName: 'rating_systems_sport_id_fkey';
+            columns: ['sport_id'];
+            isOneToOne: false;
+            referencedRelation: 'sport';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       reference_request: {
         Row: {
-          claimed_rating_score_id: string
-          completed_at: string | null
-          created_at: string
-          expires_at: string | null
-          id: string
-          referee_comment: string | null
-          referee_id: string
-          reference_rating_score_id: string | null
-          reference_rating_value: number | null
-          requester_id: string
-          responded_at: string | null
-          sport_id: string
-          status: string
-        }
+          claimed_rating_score_id: string;
+          completed_at: string | null;
+          created_at: string;
+          expires_at: string | null;
+          id: string;
+          referee_comment: string | null;
+          referee_id: string;
+          reference_rating_score_id: string | null;
+          reference_rating_value: number | null;
+          requester_id: string;
+          responded_at: string | null;
+          sport_id: string;
+          status: string;
+        };
         Insert: {
-          claimed_rating_score_id: string
-          completed_at?: string | null
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          referee_comment?: string | null
-          referee_id: string
-          reference_rating_score_id?: string | null
-          reference_rating_value?: number | null
-          requester_id: string
-          responded_at?: string | null
-          sport_id: string
-          status?: string
-        }
+          claimed_rating_score_id: string;
+          completed_at?: string | null;
+          created_at?: string;
+          expires_at?: string | null;
+          id?: string;
+          referee_comment?: string | null;
+          referee_id: string;
+          reference_rating_score_id?: string | null;
+          reference_rating_value?: number | null;
+          requester_id: string;
+          responded_at?: string | null;
+          sport_id: string;
+          status?: string;
+        };
         Update: {
-          claimed_rating_score_id?: string
-          completed_at?: string | null
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          referee_comment?: string | null
-          referee_id?: string
-          reference_rating_score_id?: string | null
-          reference_rating_value?: number | null
-          requester_id?: string
-          responded_at?: string | null
-          sport_id?: string
-          status?: string
-        }
+          claimed_rating_score_id?: string;
+          completed_at?: string | null;
+          created_at?: string;
+          expires_at?: string | null;
+          id?: string;
+          referee_comment?: string | null;
+          referee_id?: string;
+          reference_rating_score_id?: string | null;
+          reference_rating_value?: number | null;
+          requester_id?: string;
+          responded_at?: string | null;
+          sport_id?: string;
+          status?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "reference_request_referee_id_fkey"
-            columns: ["referee_id"]
-            isOneToOne: false
-            referencedRelation: "profile"
-            referencedColumns: ["id"]
+            foreignKeyName: 'reference_request_referee_id_fkey';
+            columns: ['referee_id'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "reference_request_requester_id_fkey"
-            columns: ["requester_id"]
-            isOneToOne: false
-            referencedRelation: "profile"
-            referencedColumns: ["id"]
+            foreignKeyName: 'reference_request_requester_id_fkey';
+            columns: ['requester_id'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       report: {
         Row: {
-          created_at: string | null
-          description: string | null
-          id: string
-          match_id: string | null
-          reason: Database["public"]["Enums"]["report_reason"]
-          reported_id: string
-          reporter_id: string
-          resolution_notes: string | null
-          reviewed_at: string | null
-          reviewed_by: string | null
-          status: Database["public"]["Enums"]["report_status"] | null
-          updated_at: string | null
-        }
+          created_at: string | null;
+          description: string | null;
+          id: string;
+          match_id: string | null;
+          reason: Database['public']['Enums']['report_reason'];
+          reported_id: string;
+          reporter_id: string;
+          resolution_notes: string | null;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          status: Database['public']['Enums']['report_status'] | null;
+          updated_at: string | null;
+        };
         Insert: {
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          match_id?: string | null
-          reason: Database["public"]["Enums"]["report_reason"]
-          reported_id: string
-          reporter_id: string
-          resolution_notes?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: Database["public"]["Enums"]["report_status"] | null
-          updated_at?: string | null
-        }
+          created_at?: string | null;
+          description?: string | null;
+          id?: string;
+          match_id?: string | null;
+          reason: Database['public']['Enums']['report_reason'];
+          reported_id: string;
+          reporter_id: string;
+          resolution_notes?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: Database['public']['Enums']['report_status'] | null;
+          updated_at?: string | null;
+        };
         Update: {
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          match_id?: string | null
-          reason?: Database["public"]["Enums"]["report_reason"]
-          reported_id?: string
-          reporter_id?: string
-          resolution_notes?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: Database["public"]["Enums"]["report_status"] | null
-          updated_at?: string | null
-        }
+          created_at?: string | null;
+          description?: string | null;
+          id?: string;
+          match_id?: string | null;
+          reason?: Database['public']['Enums']['report_reason'];
+          reported_id?: string;
+          reporter_id?: string;
+          resolution_notes?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: Database['public']['Enums']['report_status'] | null;
+          updated_at?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "report_match_id_fkey"
-            columns: ["match_id"]
-            isOneToOne: false
-            referencedRelation: "match"
-            referencedColumns: ["id"]
+            foreignKeyName: 'report_match_id_fkey';
+            columns: ['match_id'];
+            isOneToOne: false;
+            referencedRelation: 'match';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "report_reported_id_fkey"
-            columns: ["reported_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'report_reported_id_fkey';
+            columns: ['reported_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "report_reporter_id_fkey"
-            columns: ["reporter_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'report_reporter_id_fkey';
+            columns: ['reporter_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       reputation_config: {
         Row: {
-          created_at: string
-          decay_enabled: boolean
-          decay_half_life_days: number | null
-          default_impact: number
-          event_type: Database["public"]["Enums"]["reputation_event_type"]
-          id: string
-          is_active: boolean
-          max_impact: number | null
-          min_impact: number | null
-          updated_at: string
-        }
+          created_at: string;
+          decay_enabled: boolean;
+          decay_half_life_days: number | null;
+          default_impact: number;
+          event_type: Database['public']['Enums']['reputation_event_type'];
+          id: string;
+          is_active: boolean;
+          max_impact: number | null;
+          min_impact: number | null;
+          updated_at: string;
+        };
         Insert: {
-          created_at?: string
-          decay_enabled?: boolean
-          decay_half_life_days?: number | null
-          default_impact: number
-          event_type: Database["public"]["Enums"]["reputation_event_type"]
-          id?: string
-          is_active?: boolean
-          max_impact?: number | null
-          min_impact?: number | null
-          updated_at?: string
-        }
+          created_at?: string;
+          decay_enabled?: boolean;
+          decay_half_life_days?: number | null;
+          default_impact: number;
+          event_type: Database['public']['Enums']['reputation_event_type'];
+          id?: string;
+          is_active?: boolean;
+          max_impact?: number | null;
+          min_impact?: number | null;
+          updated_at?: string;
+        };
         Update: {
-          created_at?: string
-          decay_enabled?: boolean
-          decay_half_life_days?: number | null
-          default_impact?: number
-          event_type?: Database["public"]["Enums"]["reputation_event_type"]
-          id?: string
-          is_active?: boolean
-          max_impact?: number | null
-          min_impact?: number | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
+          created_at?: string;
+          decay_enabled?: boolean;
+          decay_half_life_days?: number | null;
+          default_impact?: number;
+          event_type?: Database['public']['Enums']['reputation_event_type'];
+          id?: string;
+          is_active?: boolean;
+          max_impact?: number | null;
+          min_impact?: number | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       reputation_event: {
         Row: {
-          base_impact: number
-          caused_by_player_id: string | null
-          created_at: string
-          event_occurred_at: string
-          event_type: Database["public"]["Enums"]["reputation_event_type"]
-          id: string
-          match_id: string | null
-          metadata: Json | null
-          player_id: string
-        }
+          base_impact: number;
+          caused_by_player_id: string | null;
+          created_at: string;
+          event_occurred_at: string;
+          event_type: Database['public']['Enums']['reputation_event_type'];
+          id: string;
+          match_id: string | null;
+          metadata: Json | null;
+          player_id: string;
+        };
         Insert: {
-          base_impact: number
-          caused_by_player_id?: string | null
-          created_at?: string
-          event_occurred_at?: string
-          event_type: Database["public"]["Enums"]["reputation_event_type"]
-          id?: string
-          match_id?: string | null
-          metadata?: Json | null
-          player_id: string
-        }
+          base_impact: number;
+          caused_by_player_id?: string | null;
+          created_at?: string;
+          event_occurred_at?: string;
+          event_type: Database['public']['Enums']['reputation_event_type'];
+          id?: string;
+          match_id?: string | null;
+          metadata?: Json | null;
+          player_id: string;
+        };
         Update: {
-          base_impact?: number
-          caused_by_player_id?: string | null
-          created_at?: string
-          event_occurred_at?: string
-          event_type?: Database["public"]["Enums"]["reputation_event_type"]
-          id?: string
-          match_id?: string | null
-          metadata?: Json | null
-          player_id?: string
-        }
+          base_impact?: number;
+          caused_by_player_id?: string | null;
+          created_at?: string;
+          event_occurred_at?: string;
+          event_type?: Database['public']['Enums']['reputation_event_type'];
+          id?: string;
+          match_id?: string | null;
+          metadata?: Json | null;
+          player_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "reputation_event_caused_by_player_id_fkey"
-            columns: ["caused_by_player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'reputation_event_caused_by_player_id_fkey';
+            columns: ['caused_by_player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "reputation_event_match_id_fkey"
-            columns: ["match_id"]
-            isOneToOne: false
-            referencedRelation: "match"
-            referencedColumns: ["id"]
+            foreignKeyName: 'reputation_event_match_id_fkey';
+            columns: ['match_id'];
+            isOneToOne: false;
+            referencedRelation: 'match';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "reputation_event_player_id_fkey"
-            columns: ["player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'reputation_event_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       shared_contact: {
         Row: {
-          created_at: string
-          device_contact_id: string | null
-          email: string | null
-          id: string
-          list_id: string
-          name: string
-          notes: string | null
-          phone: string | null
-          source: string
-          updated_at: string
-        }
+          created_at: string;
+          device_contact_id: string | null;
+          email: string | null;
+          id: string;
+          list_id: string;
+          name: string;
+          notes: string | null;
+          phone: string | null;
+          source: string;
+          updated_at: string;
+        };
         Insert: {
-          created_at?: string
-          device_contact_id?: string | null
-          email?: string | null
-          id?: string
-          list_id: string
-          name: string
-          notes?: string | null
-          phone?: string | null
-          source?: string
-          updated_at?: string
-        }
+          created_at?: string;
+          device_contact_id?: string | null;
+          email?: string | null;
+          id?: string;
+          list_id: string;
+          name: string;
+          notes?: string | null;
+          phone?: string | null;
+          source?: string;
+          updated_at?: string;
+        };
         Update: {
-          created_at?: string
-          device_contact_id?: string | null
-          email?: string | null
-          id?: string
-          list_id?: string
-          name?: string
-          notes?: string | null
-          phone?: string | null
-          source?: string
-          updated_at?: string
-        }
+          created_at?: string;
+          device_contact_id?: string | null;
+          email?: string | null;
+          id?: string;
+          list_id?: string;
+          name?: string;
+          notes?: string | null;
+          phone?: string | null;
+          source?: string;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "shared_contact_list_id_fkey"
-            columns: ["list_id"]
-            isOneToOne: false
-            referencedRelation: "shared_contact_list"
-            referencedColumns: ["id"]
+            foreignKeyName: 'shared_contact_list_id_fkey';
+            columns: ['list_id'];
+            isOneToOne: false;
+            referencedRelation: 'shared_contact_list';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       shared_contact_list: {
         Row: {
-          contact_count: number
-          created_at: string
-          description: string | null
-          id: string
-          name: string
-          player_id: string
-          updated_at: string
-        }
+          contact_count: number;
+          created_at: string;
+          description: string | null;
+          id: string;
+          name: string;
+          player_id: string;
+          updated_at: string;
+        };
         Insert: {
-          contact_count?: number
-          created_at?: string
-          description?: string | null
-          id?: string
-          name: string
-          player_id: string
-          updated_at?: string
-        }
+          contact_count?: number;
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          name: string;
+          player_id: string;
+          updated_at?: string;
+        };
         Update: {
-          contact_count?: number
-          created_at?: string
-          description?: string | null
-          id?: string
-          name?: string
-          player_id?: string
-          updated_at?: string
-        }
+          contact_count?: number;
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          name?: string;
+          player_id?: string;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "shared_contact_list_player_id_fkey"
-            columns: ["player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: 'shared_contact_list_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       sport: {
         Row: {
-          attributes: Json | null
-          created_at: string
-          description: string | null
-          display_name: string
-          icon_url: string | null
-          id: string
-          is_active: boolean
-          name: string
-          slug: string
-          updated_at: string
-        }
+          attributes: Json | null;
+          created_at: string;
+          description: string | null;
+          display_name: string;
+          icon_url: string | null;
+          id: string;
+          is_active: boolean;
+          name: string;
+          slug: string;
+          updated_at: string;
+        };
         Insert: {
-          attributes?: Json | null
-          created_at?: string
-          description?: string | null
-          display_name: string
-          icon_url?: string | null
-          id?: string
-          is_active?: boolean
-          name: string
-          slug: string
-          updated_at?: string
-        }
+          attributes?: Json | null;
+          created_at?: string;
+          description?: string | null;
+          display_name: string;
+          icon_url?: string | null;
+          id?: string;
+          is_active?: boolean;
+          name: string;
+          slug: string;
+          updated_at?: string;
+        };
         Update: {
-          attributes?: Json | null
-          created_at?: string
-          description?: string | null
-          display_name?: string
-          icon_url?: string | null
-          id?: string
-          is_active?: boolean
-          name?: string
-          slug?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
+          attributes?: Json | null;
+          created_at?: string;
+          description?: string | null;
+          display_name?: string;
+          icon_url?: string | null;
+          id?: string;
+          is_active?: boolean;
+          name?: string;
+          slug?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       verification_code: {
         Row: {
-          code: string
-          created_at: string | null
-          email: string
-          expires_at: string
-          id: string
-          ip_address: string | null
-          used: boolean | null
-          used_at: string | null
-          user_agent: string | null
-        }
+          code: string;
+          created_at: string | null;
+          email: string;
+          expires_at: string;
+          id: string;
+          ip_address: string | null;
+          used: boolean | null;
+          used_at: string | null;
+          user_agent: string | null;
+        };
         Insert: {
-          code: string
-          created_at?: string | null
-          email: string
-          expires_at: string
-          id?: string
-          ip_address?: string | null
-          used?: boolean | null
-          used_at?: string | null
-          user_agent?: string | null
-        }
+          code: string;
+          created_at?: string | null;
+          email: string;
+          expires_at: string;
+          id?: string;
+          ip_address?: string | null;
+          used?: boolean | null;
+          used_at?: string | null;
+          user_agent?: string | null;
+        };
         Update: {
-          code?: string
-          created_at?: string | null
-          email?: string
-          expires_at?: string
-          id?: string
-          ip_address?: string | null
-          used?: boolean | null
-          used_at?: string | null
-          user_agent?: string | null
-        }
-        Relationships: []
-      }
+          code?: string;
+          created_at?: string | null;
+          email?: string;
+          expires_at?: string;
+          id?: string;
+          ip_address?: string | null;
+          used?: boolean | null;
+          used_at?: string | null;
+          user_agent?: string | null;
+        };
+        Relationships: [];
+      };
       waitlist_signup: {
         Row: {
-          created_at: string | null
-          email: string
-          id: number
-          ip_address: string | null
-          location: string | null
-          name: string
-          phone: string | null
-        }
+          created_at: string | null;
+          email: string;
+          id: number;
+          ip_address: string | null;
+          location: string | null;
+          name: string;
+          phone: string | null;
+        };
         Insert: {
-          created_at?: string | null
-          email: string
-          id?: never
-          ip_address?: string | null
-          location?: string | null
-          name: string
-          phone?: string | null
-        }
+          created_at?: string | null;
+          email: string;
+          id?: never;
+          ip_address?: string | null;
+          location?: string | null;
+          name: string;
+          phone?: string | null;
+        };
         Update: {
-          created_at?: string | null
-          email?: string
-          id?: never
-          ip_address?: string | null
-          location?: string | null
-          name?: string
-          phone?: string | null
-        }
-        Relationships: []
-      }
-    }
+          created_at?: string | null;
+          email?: string;
+          id?: never;
+          ip_address?: string | null;
+          location?: string | null;
+          name?: string;
+          phone?: string | null;
+        };
+        Relationships: [];
+      };
+    };
     Views: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Functions: {
+      auto_confirm_expired_scores: { Args: never; Returns: number };
       calculate_reputation_tier: {
-        Args: { min_events?: number; score: number; total_events: number }
-        Returns: Database["public"]["Enums"]["reputation_tier"]
-      }
+        Args: { min_events?: number; score: number; total_events: number };
+        Returns: Database['public']['Enums']['reputation_tier'];
+      };
       check_peer_verification_threshold: {
-        Args: { p_player_id: string; p_sport_id: string; p_threshold?: number }
+        Args: { p_player_id: string; p_sport_id: string; p_threshold?: number };
         Returns: {
-          average_rating: number
-          peer_count: number
-          recommended_rating_score_id: string
-          should_create_verified: boolean
-        }[]
-      }
-      expire_old_reference_requests: { Args: never; Returns: number }
+          average_rating: number;
+          peer_count: number;
+          recommended_rating_score_id: string;
+          should_create_verified: boolean;
+        }[];
+      };
+      confirm_match_score: {
+        Args: { p_match_result_id: string; p_player_id: string };
+        Returns: boolean;
+      };
+      debug_check_conversation_participant: {
+        Args: { p_conversation_id: string; p_player_id: string };
+        Returns: {
+          is_participant: boolean;
+          participant_count: number;
+        }[];
+      };
+      dispute_match_score: {
+        Args: {
+          p_match_result_id: string;
+          p_player_id: string;
+          p_reason?: string;
+        };
+        Returns: boolean;
+      };
+      expire_old_reference_requests: { Args: never; Returns: number };
+      generate_unique_invite_code: { Args: never; Returns: string };
       get_gender_types: {
-        Args: never
+        Args: never;
         Returns: {
-          label: string
-          value: string
-        }[]
-      }
+          label: string;
+          value: string;
+        }[];
+      };
       get_match_duration_types: {
-        Args: never
+        Args: never;
         Returns: {
-          label: string
-          value: string
-        }[]
-      }
+          label: string;
+          value: string;
+        }[];
+      };
       get_match_type_types: {
-        Args: never
+        Args: never;
         Returns: {
-          label: string
-          value: string
-        }[]
-      }
+          label: string;
+          value: string;
+        }[];
+      };
+      get_matches_ready_for_closure: {
+        Args: { batch_limit?: number; cutoff_hours?: number };
+        Returns: {
+          format: Database['public']['Enums']['match_format_enum'];
+          id: string;
+        }[];
+      };
+      get_or_create_group_invite_code: {
+        Args: { group_id: string };
+        Returns: string;
+      };
+      get_pending_score_confirmations: {
+        Args: { p_player_id: string };
+        Returns: {
+          confirmation_deadline: string;
+          match_date: string;
+          match_id: string;
+          match_result_id: string;
+          network_id: string;
+          network_name: string;
+          opponent_avatar: string;
+          opponent_name: string;
+          player_team: number;
+          sport_icon_url: string;
+          sport_name: string;
+          submitted_by_avatar: string;
+          submitted_by_id: string;
+          submitted_by_name: string;
+          team1_score: number;
+          team2_score: number;
+          winning_team: number;
+        }[];
+      };
       get_player_matches: {
         Args: {
-          p_limit?: number
-          p_offset?: number
-          p_player_id: string
-          p_sport_id?: string
-          p_time_filter?: string
-        }
+          p_limit?: number;
+          p_offset?: number;
+          p_player_id: string;
+          p_sport_id?: string;
+          p_time_filter?: string;
+        };
         Returns: {
-          match_id: string
-        }[]
-      }
+          match_id: string;
+        }[];
+      };
+      get_player_online_status: {
+        Args: { player_uuid: string };
+        Returns: {
+          is_online: boolean;
+          last_seen: string;
+        }[];
+      };
       get_players_by_play_attributes: {
         Args: {
-          p_play_attributes: Database["public"]["Enums"]["play_attribute_enum"][]
-          p_sport_id: string
-        }
+          p_play_attributes: Database['public']['Enums']['play_attribute_enum'][];
+          p_sport_id: string;
+        };
         Returns: {
-          matching_attributes: number
-          play_attributes: Database["public"]["Enums"]["play_attribute_enum"][]
-          play_style: Database["public"]["Enums"]["play_style_enum"]
-          player_id: string
-        }[]
-      }
+          matching_attributes: number;
+          play_attributes: Database['public']['Enums']['play_attribute_enum'][];
+          play_style: Database['public']['Enums']['play_style_enum'];
+          player_id: string;
+        }[];
+      };
       get_players_by_play_style: {
         Args: {
-          p_play_style: Database["public"]["Enums"]["play_style_enum"]
-          p_sport_id: string
-        }
+          p_play_style: Database['public']['Enums']['play_style_enum'];
+          p_sport_id: string;
+        };
         Returns: {
-          play_attributes: Database["public"]["Enums"]["play_attribute_enum"][]
-          play_style: Database["public"]["Enums"]["play_style_enum"]
-          player_id: string
-        }[]
-      }
+          play_attributes: Database['public']['Enums']['play_attribute_enum'][];
+          play_style: Database['public']['Enums']['play_style_enum'];
+          player_id: string;
+        }[];
+      };
       get_playing_hand_types: {
-        Args: never
+        Args: never;
         Returns: {
-          label: string
-          value: string
-        }[]
-      }
+          label: string;
+          value: string;
+        }[];
+      };
       get_rating_scores_by_type: {
         Args: {
-          p_rating_system_code: Database["public"]["Enums"]["rating_system_code_enum"]
-          p_sport_name: string
-        }
+          p_rating_system_code: Database['public']['Enums']['rating_system_code_enum'];
+          p_sport_name: string;
+        };
         Returns: {
-          description: string
-          display_label: string
-          id: string
-          score_value: number
-          skill_level: Database["public"]["Enums"]["skill_level"]
-        }[]
-      }
+          description: string;
+          display_label: string;
+          id: string;
+          score_value: number;
+          skill_level: Database['public']['Enums']['skill_level'];
+        }[];
+      };
       get_rating_systems_for_sport: {
-        Args: { p_sport_name: string }
+        Args: { p_sport_name: string };
         Returns: {
-          code: Database["public"]["Enums"]["rating_system_code_enum"]
-          default_initial_value: number
-          description: string
-          id: string
-          is_active: boolean
-          max_value: number
-          min_value: number
-          name: string
-          step: number
-        }[]
-      }
+          code: Database['public']['Enums']['rating_system_code_enum'];
+          default_initial_value: number;
+          description: string;
+          id: string;
+          is_active: boolean;
+          max_value: number;
+          min_value: number;
+          name: string;
+          step: number;
+        }[];
+      };
       get_reputation_summary: {
-        Args: { target_player_id: string }
+        Args: { target_player_id: string };
         Returns: {
-          is_public: boolean
-          matches_completed: number
-          negative_events: number
-          positive_events: number
-          score: number
-          tier: Database["public"]["Enums"]["reputation_tier"]
-          total_events: number
-        }[]
-      }
+          is_public: boolean;
+          matches_completed: number;
+          negative_events: number;
+          positive_events: number;
+          score: number;
+          tier: Database['public']['Enums']['reputation_tier'];
+          total_events: number;
+        }[];
+      };
+      get_user_conversation_ids: {
+        Args: { user_id: string };
+        Returns: string[];
+      };
       get_user_created_match_ids: {
-        Args: { p_player_id: string }
-        Returns: string[]
-      }
+        Args: { p_player_id: string };
+        Returns: string[];
+      };
       get_user_participating_match_ids: {
-        Args: { p_player_id: string }
-        Returns: string[]
-      }
+        Args: { p_player_id: string };
+        Returns: string[];
+      };
       insert_notification: {
         Args: {
-          p_body?: string
-          p_expires_at?: string
-          p_payload?: Json
-          p_priority?: string
-          p_scheduled_at?: string
-          p_target_id?: string
-          p_title?: string
-          p_type: string
-          p_user_id: string
-        }
+          p_body?: string;
+          p_expires_at?: string;
+          p_payload?: Json;
+          p_priority?: string;
+          p_scheduled_at?: string;
+          p_target_id?: string;
+          p_title?: string;
+          p_type: string;
+          p_user_id: string;
+        };
         Returns: {
-          body: string | null
-          created_at: string
-          expires_at: string | null
-          id: string
-          payload: Json | null
-          priority:
-            | Database["public"]["Enums"]["notification_priority_enum"]
-            | null
-          read_at: string | null
-          scheduled_at: string | null
-          target_id: string | null
-          title: string
-          type: Database["public"]["Enums"]["notification_type_enum"]
-          updated_at: string
-          user_id: string
-        }
+          body: string | null;
+          created_at: string;
+          expires_at: string | null;
+          id: string;
+          payload: Json | null;
+          priority: Database['public']['Enums']['notification_priority_enum'] | null;
+          read_at: string | null;
+          scheduled_at: string | null;
+          target_id: string | null;
+          title: string;
+          type: Database['public']['Enums']['notification_type_enum'];
+          updated_at: string;
+          user_id: string;
+        };
         SetofOptions: {
-          from: "*"
-          to: "notification"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+          from: '*';
+          to: 'notification';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       insert_notifications: {
-        Args: { p_notifications: Json }
+        Args: { p_notifications: Json };
         Returns: {
-          body: string | null
-          created_at: string
-          expires_at: string | null
-          id: string
-          payload: Json | null
-          priority:
-            | Database["public"]["Enums"]["notification_priority_enum"]
-            | null
-          read_at: string | null
-          scheduled_at: string | null
-          target_id: string | null
-          title: string
-          type: Database["public"]["Enums"]["notification_type_enum"]
-          updated_at: string
-          user_id: string
-        }[]
+          body: string | null;
+          created_at: string;
+          expires_at: string | null;
+          id: string;
+          payload: Json | null;
+          priority: Database['public']['Enums']['notification_priority_enum'] | null;
+          read_at: string | null;
+          scheduled_at: string | null;
+          target_id: string | null;
+          title: string;
+          type: Database['public']['Enums']['notification_type_enum'];
+          updated_at: string;
+          user_id: string;
+        }[];
         SetofOptions: {
-          from: "*"
-          to: "notification"
-          isOneToOne: false
-          isSetofReturn: true
-        }
-      }
+          from: '*';
+          to: 'notification';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
       is_match_creator: {
-        Args: { p_match_id: string; p_player_id: string }
-        Returns: boolean
-      }
+        Args: { p_match_id: string; p_player_id: string };
+        Returns: boolean;
+      };
       is_match_participant: {
-        Args: { p_match_id: string; p_player_id: string }
-        Returns: boolean
-      }
+        Args: { p_match_id: string; p_player_id: string };
+        Returns: boolean;
+      };
       is_network_creator: {
-        Args: { network_id_param: string; user_id_param: string }
-        Returns: boolean
-      }
+        Args: { network_id_param: string; user_id_param: string };
+        Returns: boolean;
+      };
       is_network_member: {
-        Args: { network_id_param: string; user_id_param: string }
-        Returns: boolean
-      }
+        Args: { network_id_param: string; user_id_param: string };
+        Returns: boolean;
+      };
       is_network_moderator: {
-        Args: { network_id_param: string; user_id_param: string }
-        Returns: boolean
-      }
-      is_public_match: { Args: { p_match_id: string }; Returns: boolean }
+        Args: { network_id_param: string; user_id_param: string };
+        Returns: boolean;
+      };
+      is_player_online: { Args: { player_uuid: string }; Returns: boolean };
+      is_public_match: { Args: { p_match_id: string }; Returns: boolean };
+      join_group_by_invite_code: {
+        Args: { p_invite_code: string; p_player_id: string };
+        Returns: Json;
+      };
       recalculate_player_reputation: {
-        Args: { apply_decay?: boolean; target_player_id: string }
+        Args: { apply_decay?: boolean; target_player_id: string };
         Returns: {
-          calculated_at: string
-          created_at: string
-          is_public: boolean | null
-          last_decay_calculation: string | null
-          matches_completed: number
-          min_events_for_public: number
-          negative_events: number
-          player_id: string
-          positive_events: number
-          reputation_score: number
-          reputation_tier: Database["public"]["Enums"]["reputation_tier"]
-          total_events: number
-          updated_at: string
-        }
+          calculated_at: string;
+          created_at: string;
+          is_public: boolean | null;
+          last_decay_calculation: string | null;
+          matches_completed: number;
+          min_events_for_public: number;
+          negative_events: number;
+          player_id: string;
+          positive_events: number;
+          reputation_score: number;
+          reputation_tier: Database['public']['Enums']['reputation_tier'];
+          total_events: number;
+          updated_at: string;
+        };
         SetofOptions: {
-          from: "*"
-          to: "player_reputation"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+          from: '*';
+          to: 'player_reputation';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      reset_group_invite_code: {
+        Args: { p_group_id: string; p_moderator_id: string };
+        Returns: string;
+      };
+      search_conversation_messages: {
+        Args: { p_conversation_id: string; p_limit?: number; p_query: string };
+        Returns: {
+          content: string;
+          conversation_id: string;
+          created_at: string;
+          id: string;
+          rank: number;
+          sender_id: string;
+        }[];
+      };
       search_facilities_nearby: {
         Args: {
-          p_latitude: number
-          p_limit?: number
-          p_longitude: number
-          p_offset?: number
-          p_search_query?: string
-          p_sport_id: string
-        }
+          p_latitude: number;
+          p_limit?: number;
+          p_longitude: number;
+          p_offset?: number;
+          p_search_query?: string;
+          p_sport_id: string;
+        };
         Returns: {
-          address: string
-          booking_url_template: string
-          city: string
-          data_provider_id: string
-          data_provider_type: string
-          distance_meters: number
-          external_provider_id: string
-          id: string
-          name: string
-          timezone: string
-        }[]
-      }
+          address: string;
+          booking_url_template: string;
+          city: string;
+          data_provider_id: string;
+          data_provider_type: string;
+          distance_meters: number;
+          external_provider_id: string;
+          id: string;
+          name: string;
+          timezone: string;
+        }[];
+      };
       search_matches_nearby: {
         Args: {
-          p_latitude: number
-          p_limit?: number
-          p_longitude: number
-          p_max_distance_km: number
-          p_offset?: number
-          p_sport_id: string
-          p_user_gender?: string
-        }
+          p_latitude: number;
+          p_limit?: number;
+          p_longitude: number;
+          p_max_distance_km: number;
+          p_offset?: number;
+          p_sport_id: string;
+          p_user_gender?: string;
+        };
         Returns: {
-          distance_meters: number
-          match_id: string
-        }[]
-      }
+          distance_meters: number;
+          match_id: string;
+        }[];
+      };
       search_public_matches: {
         Args: {
-          p_cost?: string
-          p_date_range?: string
-          p_format?: string
-          p_gender?: string
-          p_join_mode?: string
-          p_latitude: number
-          p_limit?: number
-          p_longitude: number
-          p_match_type?: string
-          p_max_distance_km: number
-          p_offset?: number
-          p_search_query?: string
-          p_skill_level?: string
-          p_sport_id: string
-          p_time_of_day?: string
-          p_user_gender?: string
-        }
+          p_cost?: string;
+          p_date_range?: string;
+          p_format?: string;
+          p_gender?: string;
+          p_join_mode?: string;
+          p_latitude: number;
+          p_limit?: number;
+          p_longitude: number;
+          p_match_type?: string;
+          p_max_distance_km: number;
+          p_offset?: number;
+          p_search_query?: string;
+          p_skill_level?: string;
+          p_sport_id: string;
+          p_time_of_day?: string;
+          p_user_gender?: string;
+        };
         Returns: {
-          distance_meters: number
-          match_id: string
-        }[]
-      }
-    }
+          distance_meters: number;
+          match_id: string;
+        }[];
+      };
+    };
     Enums: {
-      account_status:
-        | "active"
-        | "suspended"
-        | "deleted"
-        | "pending_verification"
-      admin_role_enum: "super_admin" | "moderator" | "support"
-      app_role_enum: "player" | "organization_member" | "admin"
+      account_status: 'active' | 'suspended' | 'deleted' | 'pending_verification';
+      admin_role_enum: 'super_admin' | 'moderator' | 'support';
+      app_role_enum: 'player' | 'organization_member' | 'admin';
       availability_enum:
-        | "available"
-        | "unavailable"
-        | "maintenance"
-        | "reserved"
-        | "under_maintenance"
-        | "closed"
-      booking_status: "pending" | "confirmed" | "cancelled" | "completed"
-      cancellation_reason_enum:
-        | "weather"
-        | "court_unavailable"
-        | "emergency"
-        | "other"
-      conversation_type: "direct" | "group" | "match" | "announcement"
-      cost_split_type_enum: "host_pays" | "split_equal" | "custom"
-      country_enum: "Canada" | "United States"
-      court_status_enum: "reserved" | "to_reserve"
-      court_surface: "hard" | "clay" | "grass" | "carpet" | "synthetic"
-      court_type: "indoor" | "outdoor" | "covered"
-      day_enum:
-        | "monday"
-        | "tuesday"
-        | "wednesday"
-        | "thursday"
-        | "friday"
-        | "saturday"
-        | "sunday"
+        | 'available'
+        | 'unavailable'
+        | 'maintenance'
+        | 'reserved'
+        | 'under_maintenance'
+        | 'closed';
+      booking_status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+      cancellation_reason_enum: 'weather' | 'court_unavailable' | 'emergency' | 'other';
+      conversation_type: 'direct' | 'group' | 'match' | 'announcement';
+      cost_split_type_enum: 'host_pays' | 'split_equal' | 'custom';
+      country_enum: 'Canada' | 'United States';
+      court_status_enum: 'reserved' | 'to_reserve';
+      court_surface: 'hard' | 'clay' | 'grass' | 'carpet' | 'synthetic';
+      court_type: 'indoor' | 'outdoor' | 'covered';
+      day_enum: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
       day_of_week:
-        | "monday"
-        | "tuesday"
-        | "wednesday"
-        | "thursday"
-        | "friday"
-        | "saturday"
-        | "sunday"
-      delivery_channel_enum: "email" | "sms" | "push"
+        | 'monday'
+        | 'tuesday'
+        | 'wednesday'
+        | 'thursday'
+        | 'friday'
+        | 'saturday'
+        | 'sunday';
+      delivery_channel_enum: 'email' | 'sms' | 'push';
       delivery_status_enum:
-        | "pending"
-        | "success"
-        | "failed"
-        | "skipped_preference"
-        | "skipped_missing_contact"
-      facility_contact_type_enum:
-        | "general"
-        | "reservation"
-        | "maintenance"
-        | "other"
+        | 'pending'
+        | 'success'
+        | 'failed'
+        | 'skipped_preference'
+        | 'skipped_missing_contact';
+      facility_contact_type_enum: 'general' | 'reservation' | 'maintenance' | 'other';
       facility_type_enum:
-        | "park"
-        | "club"
-        | "indoor_center"
-        | "private"
-        | "other"
-        | "community_club"
-        | "municipal"
-        | "university"
-        | "school"
-        | "community_center"
-      file_type_enum: "image" | "video" | "document" | "audio" | "other"
-      gender_enum: "M" | "F" | "O" | "prefer_not_to_say"
-      gender_type: "male" | "female" | "other" | "prefer_not_to_say"
+        | 'park'
+        | 'club'
+        | 'indoor_center'
+        | 'private'
+        | 'other'
+        | 'community_club'
+        | 'municipal'
+        | 'university'
+        | 'school'
+        | 'community_center';
+      file_type_enum: 'image' | 'video' | 'document' | 'audio' | 'other';
+      gender_enum: 'M' | 'F' | 'O' | 'prefer_not_to_say';
+      gender_type: 'male' | 'female' | 'other' | 'prefer_not_to_say';
       invite_source_enum:
-        | "manual"
-        | "auto_match"
-        | "invite_list"
-        | "mailing_list"
-        | "growth_prompt"
-      invite_status_enum:
-        | "pending"
-        | "sent"
-        | "accepted"
-        | "expired"
-        | "bounced"
-        | "cancelled"
-      locale_enum: "en-US" | "en-CA" | "fr-CA" | "fr-FR"
-      location_type_enum: "facility" | "custom" | "tbd"
-      match_duration_enum: "30" | "60" | "90" | "120" | "custom"
-      match_format_enum: "singles" | "doubles"
-      match_join_mode_enum: "direct" | "request"
-      match_outcome_enum: "played" | "mutual_cancel" | "opponent_no_show"
+        | 'manual'
+        | 'auto_match'
+        | 'invite_list'
+        | 'mailing_list'
+        | 'growth_prompt';
+      invite_status_enum: 'pending' | 'sent' | 'accepted' | 'expired' | 'bounced' | 'cancelled';
+      locale_enum: 'en-US' | 'en-CA' | 'fr-CA' | 'fr-FR';
+      location_type_enum: 'facility' | 'custom' | 'tbd';
+      match_duration_enum: '30' | '60' | '90' | '120' | 'custom';
+      match_format_enum: 'singles' | 'doubles';
+      match_join_mode_enum: 'direct' | 'request';
+      match_outcome_enum: 'played' | 'mutual_cancel' | 'opponent_no_show';
       match_participant_status_enum:
-        | "pending"
-        | "requested"
-        | "joined"
-        | "declined"
-        | "left"
-        | "kicked"
-        | "waitlisted"
-        | "refused"
-        | "cancelled"
-      match_report_priority_enum: "high" | "medium" | "low"
+        | 'pending'
+        | 'requested'
+        | 'joined'
+        | 'declined'
+        | 'left'
+        | 'kicked'
+        | 'waitlisted'
+        | 'refused'
+        | 'cancelled';
+      match_report_priority_enum: 'high' | 'medium' | 'low';
       match_report_reason_enum:
-        | "harassment"
-        | "unsportsmanlike"
-        | "safety"
-        | "misrepresented_level"
-        | "inappropriate"
-      match_report_status_enum:
-        | "pending"
-        | "reviewed"
-        | "dismissed"
-        | "action_taken"
-      match_type_enum: "casual" | "competitive" | "both"
-      match_visibility_enum: "public" | "private"
-      member_role: "owner" | "admin" | "manager" | "staff" | "member"
-      member_status: "active" | "inactive" | "pending" | "suspended"
-      message_status: "sent" | "delivered" | "read" | "failed"
-      network_member_role_enum: "member" | "moderator"
-      network_member_status: "active" | "pending" | "blocked" | "removed"
-      network_visibility: "public" | "private" | "friends" | "club"
-      notification_priority_enum: "low" | "normal" | "high" | "urgent"
-      notification_status: "unread" | "read" | "archived"
+        | 'harassment'
+        | 'unsportsmanlike'
+        | 'safety'
+        | 'misrepresented_level'
+        | 'inappropriate';
+      match_report_status_enum: 'pending' | 'reviewed' | 'dismissed' | 'action_taken';
+      match_type_enum: 'casual' | 'competitive' | 'both';
+      match_visibility_enum: 'public' | 'private';
+      member_role: 'owner' | 'admin' | 'manager' | 'staff' | 'member';
+      member_status: 'active' | 'inactive' | 'pending' | 'suspended';
+      message_status: 'sent' | 'delivered' | 'read' | 'failed';
+      network_member_role_enum: 'member' | 'moderator';
+      network_member_status: 'active' | 'pending' | 'blocked' | 'removed';
+      network_visibility: 'public' | 'private' | 'friends' | 'club';
+      notification_priority_enum: 'low' | 'normal' | 'high' | 'urgent';
+      notification_status: 'unread' | 'read' | 'archived';
       notification_type:
-        | "match_request"
-        | "match_confirmation"
-        | "match_cancellation"
-        | "message"
-        | "friend_request"
-        | "system"
+        | 'match_request'
+        | 'match_confirmation'
+        | 'match_cancellation'
+        | 'message'
+        | 'friend_request'
+        | 'system';
       notification_type_enum:
-        | "match_invitation"
-        | "reminder"
-        | "payment"
-        | "support"
-        | "chat"
-        | "system"
-        | "match_join_request"
-        | "match_join_accepted"
-        | "match_join_rejected"
-        | "match_player_joined"
-        | "match_cancelled"
-        | "match_updated"
-        | "match_starting_soon"
-        | "match_completed"
-        | "player_kicked"
-        | "player_left"
-        | "new_message"
-        | "friend_request"
-        | "rating_verified"
-        | "feedback_request"
-      organization_nature_enum: "public" | "private"
-      organization_type:
-        | "club"
-        | "facility"
-        | "league"
-        | "academy"
-        | "association"
-      organization_type_enum: "club" | "municipality" | "city" | "association"
-      payment_method:
-        | "credit_card"
-        | "debit_card"
-        | "paypal"
-        | "cash"
-        | "bank_transfer"
-      payment_status: "pending" | "completed" | "failed" | "refunded"
-      period_enum: "morning" | "afternoon" | "evening"
+        | 'match_invitation'
+        | 'reminder'
+        | 'payment'
+        | 'support'
+        | 'chat'
+        | 'system'
+        | 'match_join_request'
+        | 'match_join_accepted'
+        | 'match_join_rejected'
+        | 'match_player_joined'
+        | 'match_cancelled'
+        | 'match_updated'
+        | 'match_starting_soon'
+        | 'match_completed'
+        | 'player_kicked'
+        | 'player_left'
+        | 'new_message'
+        | 'friend_request'
+        | 'rating_verified'
+        | 'feedback_request'
+        | 'score_confirmation';
+      organization_nature_enum: 'public' | 'private';
+      organization_type: 'club' | 'facility' | 'league' | 'academy' | 'association';
+      organization_type_enum: 'club' | 'municipality' | 'city' | 'association';
+      payment_method: 'credit_card' | 'debit_card' | 'paypal' | 'cash' | 'bank_transfer';
+      payment_status: 'pending' | 'completed' | 'failed' | 'refunded';
+      period_enum: 'morning' | 'afternoon' | 'evening';
       play_attribute_enum:
-        | "serve_speed_and_placement"
-        | "net_play"
-        | "court_coverage"
-        | "forehand_power"
-        | "shot_selection"
-        | "spin_control"
-      play_style_enum:
-        | "counterpuncher"
-        | "aggressive_baseliner"
-        | "serve_and_volley"
-        | "all_court"
-      playing_hand: "left" | "right" | "both"
-      playing_hand_enum: "right" | "left" | "both"
-      proof_status_enum: "pending" | "approved" | "rejected"
-      proof_type_enum: "external_link" | "file"
-      rating_certification_method_enum:
-        | "external_rating"
-        | "proof"
-        | "referrals"
-      rating_request_status_enum:
-        | "pending"
-        | "completed"
-        | "declined"
-        | "expired"
-        | "cancelled"
+        | 'serve_speed_and_placement'
+        | 'net_play'
+        | 'court_coverage'
+        | 'forehand_power'
+        | 'shot_selection'
+        | 'spin_control';
+      play_style_enum: 'counterpuncher' | 'aggressive_baseliner' | 'serve_and_volley' | 'all_court';
+      playing_hand: 'left' | 'right' | 'both';
+      playing_hand_enum: 'right' | 'left' | 'both';
+      proof_status_enum: 'pending' | 'approved' | 'rejected';
+      proof_type_enum: 'external_link' | 'file';
+      rating_certification_method_enum: 'external_rating' | 'proof' | 'referrals';
+      rating_request_status_enum: 'pending' | 'completed' | 'declined' | 'expired' | 'cancelled';
       rating_source_type:
-        | "self_reported"
-        | "api_verified"
-        | "peer_verified"
-        | "admin_verified"
-        | "reference_verified"
-      rating_system_code_enum:
-        | "ntrp"
-        | "utr"
-        | "self_tennis"
-        | "dupr"
-        | "self_pickle"
-      report_reason:
-        | "inappropriate_behavior"
-        | "harassment"
-        | "spam"
-        | "cheating"
-        | "other"
-      report_status: "pending" | "under_review" | "resolved" | "dismissed"
+        | 'self_reported'
+        | 'api_verified'
+        | 'peer_verified'
+        | 'admin_verified'
+        | 'reference_verified';
+      rating_system_code_enum: 'ntrp' | 'utr' | 'self_tennis' | 'dupr' | 'self_pickle';
+      report_reason: 'inappropriate_behavior' | 'harassment' | 'spam' | 'cheating' | 'other';
+      report_status: 'pending' | 'under_review' | 'resolved' | 'dismissed';
       reputation_event_type:
-        | "match_completed"
-        | "match_no_show"
-        | "match_ghosted"
-        | "match_on_time"
-        | "match_late"
-        | "match_cancelled_early"
-        | "match_cancelled_late"
-        | "match_repeat_opponent"
-        | "review_received_5star"
-        | "review_received_4star"
-        | "review_received_3star"
-        | "review_received_2star"
-        | "review_received_1star"
-        | "report_received"
-        | "report_dismissed"
-        | "report_upheld"
-        | "warning_issued"
-        | "suspension_lifted"
-        | "peer_rating_given"
-        | "first_match_bonus"
-        | "feedback_submitted"
-      reputation_tier: "unknown" | "bronze" | "silver" | "gold" | "platinum"
-      role_enum: "admin" | "staff" | "player" | "coach" | "owner"
-      share_channel_enum:
-        | "sms"
-        | "email"
-        | "whatsapp"
-        | "share_sheet"
-        | "copy_link"
-      share_status_enum:
-        | "pending"
-        | "sent"
-        | "viewed"
-        | "accepted"
-        | "expired"
-        | "cancelled"
-      skill_level: "beginner" | "intermediate" | "advanced" | "professional"
+        | 'match_completed'
+        | 'match_no_show'
+        | 'match_ghosted'
+        | 'match_on_time'
+        | 'match_late'
+        | 'match_cancelled_early'
+        | 'match_cancelled_late'
+        | 'match_repeat_opponent'
+        | 'review_received_5star'
+        | 'review_received_4star'
+        | 'review_received_3star'
+        | 'review_received_2star'
+        | 'review_received_1star'
+        | 'report_received'
+        | 'report_dismissed'
+        | 'report_upheld'
+        | 'warning_issued'
+        | 'suspension_lifted'
+        | 'peer_rating_given'
+        | 'first_match_bonus'
+        | 'feedback_submitted';
+      reputation_tier: 'unknown' | 'bronze' | 'silver' | 'gold' | 'platinum';
+      role_enum: 'admin' | 'staff' | 'player' | 'coach' | 'owner';
+      share_channel_enum: 'sms' | 'email' | 'whatsapp' | 'share_sheet' | 'copy_link';
+      share_status_enum: 'pending' | 'sent' | 'viewed' | 'accepted' | 'expired' | 'cancelled';
+      skill_level: 'beginner' | 'intermediate' | 'advanced' | 'professional';
       surface_type_enum:
-        | "hard"
-        | "clay"
-        | "grass"
-        | "synthetic"
-        | "carpet"
-        | "concrete"
-        | "asphalt"
-      time_period: "morning" | "afternoon" | "evening" | "night"
-      user_role: "player" | "admin" | "super_admin"
-    }
+        | 'hard'
+        | 'clay'
+        | 'grass'
+        | 'synthetic'
+        | 'carpet'
+        | 'concrete'
+        | 'asphalt';
+      time_period: 'morning' | 'afternoon' | 'evening' | 'night';
+      user_role: 'player' | 'admin' | 'super_admin';
+    };
     CompositeTypes: {
-      [_ in never]: never
-    }
-  }
-}
+      [_ in never]: never;
+    };
+  };
+};
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+type DatabaseWithoutInternals = Omit<Database, '__InternalSupabase'>;
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, 'public'>];
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])[TableName] extends {
+      Row: infer R;
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
+    ? (DefaultSchema['Tables'] & DefaultSchema['Views'])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R;
       }
       ? R
       : never
-    : never
+    : never;
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
+    | keyof DefaultSchema['Tables']
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
+      Insert: infer I;
     }
     ? I
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
+    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I;
       }
       ? I
       : never
-    : never
+    : never;
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
+    | keyof DefaultSchema['Tables']
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
+      Update: infer U;
     }
     ? U
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
+    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U;
       }
       ? U
       : never
-    : never
+    : never;
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
+    | keyof DefaultSchema['Enums']
     | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums']
     : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums'][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema['Enums']
+    ? DefaultSchema['Enums'][DefaultSchemaEnumNameOrOptions]
+    : never;
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
+    | keyof DefaultSchema['CompositeTypes']
     | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes']
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes'][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema['CompositeTypes']
+    ? DefaultSchema['CompositeTypes'][PublicCompositeTypeNameOrOptions]
+    : never;
 
 export const Constants = {
   graphql_public: {
@@ -4090,291 +4097,182 @@ export const Constants = {
   },
   public: {
     Enums: {
-      account_status: [
-        "active",
-        "suspended",
-        "deleted",
-        "pending_verification",
-      ],
-      admin_role_enum: ["super_admin", "moderator", "support"],
-      app_role_enum: ["player", "organization_member", "admin"],
+      account_status: ['active', 'suspended', 'deleted', 'pending_verification'],
+      admin_role_enum: ['super_admin', 'moderator', 'support'],
+      app_role_enum: ['player', 'organization_member', 'admin'],
       availability_enum: [
-        "available",
-        "unavailable",
-        "maintenance",
-        "reserved",
-        "under_maintenance",
-        "closed",
+        'available',
+        'unavailable',
+        'maintenance',
+        'reserved',
+        'under_maintenance',
+        'closed',
       ],
-      booking_status: ["pending", "confirmed", "cancelled", "completed"],
-      cancellation_reason_enum: [
-        "weather",
-        "court_unavailable",
-        "emergency",
-        "other",
-      ],
-      conversation_type: ["direct", "group", "match", "announcement"],
-      cost_split_type_enum: ["host_pays", "split_equal", "custom"],
-      country_enum: ["Canada", "United States"],
-      court_status_enum: ["reserved", "to_reserve"],
-      court_surface: ["hard", "clay", "grass", "carpet", "synthetic"],
-      court_type: ["indoor", "outdoor", "covered"],
-      day_enum: [
-        "monday",
-        "tuesday",
-        "wednesday",
-        "thursday",
-        "friday",
-        "saturday",
-        "sunday",
-      ],
-      day_of_week: [
-        "monday",
-        "tuesday",
-        "wednesday",
-        "thursday",
-        "friday",
-        "saturday",
-        "sunday",
-      ],
-      delivery_channel_enum: ["email", "sms", "push"],
+      booking_status: ['pending', 'confirmed', 'cancelled', 'completed'],
+      cancellation_reason_enum: ['weather', 'court_unavailable', 'emergency', 'other'],
+      conversation_type: ['direct', 'group', 'match', 'announcement'],
+      cost_split_type_enum: ['host_pays', 'split_equal', 'custom'],
+      country_enum: ['Canada', 'United States'],
+      court_status_enum: ['reserved', 'to_reserve'],
+      court_surface: ['hard', 'clay', 'grass', 'carpet', 'synthetic'],
+      court_type: ['indoor', 'outdoor', 'covered'],
+      day_enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+      day_of_week: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+      delivery_channel_enum: ['email', 'sms', 'push'],
       delivery_status_enum: [
-        "pending",
-        "success",
-        "failed",
-        "skipped_preference",
-        "skipped_missing_contact",
+        'pending',
+        'success',
+        'failed',
+        'skipped_preference',
+        'skipped_missing_contact',
       ],
-      facility_contact_type_enum: [
-        "general",
-        "reservation",
-        "maintenance",
-        "other",
-      ],
+      facility_contact_type_enum: ['general', 'reservation', 'maintenance', 'other'],
       facility_type_enum: [
-        "park",
-        "club",
-        "indoor_center",
-        "private",
-        "other",
-        "community_club",
-        "municipal",
-        "university",
-        "school",
-        "community_center",
+        'park',
+        'club',
+        'indoor_center',
+        'private',
+        'other',
+        'community_club',
+        'municipal',
+        'university',
+        'school',
+        'community_center',
       ],
-      file_type_enum: ["image", "video", "document", "audio", "other"],
-      gender_enum: ["M", "F", "O", "prefer_not_to_say"],
-      gender_type: ["male", "female", "other", "prefer_not_to_say"],
-      invite_source_enum: [
-        "manual",
-        "auto_match",
-        "invite_list",
-        "mailing_list",
-        "growth_prompt",
-      ],
-      invite_status_enum: [
-        "pending",
-        "sent",
-        "accepted",
-        "expired",
-        "bounced",
-        "cancelled",
-      ],
-      locale_enum: ["en-US", "en-CA", "fr-CA", "fr-FR"],
-      location_type_enum: ["facility", "custom", "tbd"],
-      match_duration_enum: ["30", "60", "90", "120", "custom"],
-      match_format_enum: ["singles", "doubles"],
-      match_join_mode_enum: ["direct", "request"],
-      match_outcome_enum: ["played", "mutual_cancel", "opponent_no_show"],
+      file_type_enum: ['image', 'video', 'document', 'audio', 'other'],
+      gender_enum: ['M', 'F', 'O', 'prefer_not_to_say'],
+      gender_type: ['male', 'female', 'other', 'prefer_not_to_say'],
+      invite_source_enum: ['manual', 'auto_match', 'invite_list', 'mailing_list', 'growth_prompt'],
+      invite_status_enum: ['pending', 'sent', 'accepted', 'expired', 'bounced', 'cancelled'],
+      locale_enum: ['en-US', 'en-CA', 'fr-CA', 'fr-FR'],
+      location_type_enum: ['facility', 'custom', 'tbd'],
+      match_duration_enum: ['30', '60', '90', '120', 'custom'],
+      match_format_enum: ['singles', 'doubles'],
+      match_join_mode_enum: ['direct', 'request'],
+      match_outcome_enum: ['played', 'mutual_cancel', 'opponent_no_show'],
       match_participant_status_enum: [
-        "pending",
-        "requested",
-        "joined",
-        "declined",
-        "left",
-        "kicked",
-        "waitlisted",
-        "refused",
-        "cancelled",
+        'pending',
+        'requested',
+        'joined',
+        'declined',
+        'left',
+        'kicked',
+        'waitlisted',
+        'refused',
+        'cancelled',
       ],
-      match_report_priority_enum: ["high", "medium", "low"],
+      match_report_priority_enum: ['high', 'medium', 'low'],
       match_report_reason_enum: [
-        "harassment",
-        "unsportsmanlike",
-        "safety",
-        "misrepresented_level",
-        "inappropriate",
+        'harassment',
+        'unsportsmanlike',
+        'safety',
+        'misrepresented_level',
+        'inappropriate',
       ],
-      match_report_status_enum: [
-        "pending",
-        "reviewed",
-        "dismissed",
-        "action_taken",
-      ],
-      match_type_enum: ["casual", "competitive", "both"],
-      match_visibility_enum: ["public", "private"],
-      member_role: ["owner", "admin", "manager", "staff", "member"],
-      member_status: ["active", "inactive", "pending", "suspended"],
-      message_status: ["sent", "delivered", "read", "failed"],
-      network_member_role_enum: ["member", "moderator"],
-      network_member_status: ["active", "pending", "blocked", "removed"],
-      network_visibility: ["public", "private", "friends", "club"],
-      notification_priority_enum: ["low", "normal", "high", "urgent"],
-      notification_status: ["unread", "read", "archived"],
+      match_report_status_enum: ['pending', 'reviewed', 'dismissed', 'action_taken'],
+      match_type_enum: ['casual', 'competitive', 'both'],
+      match_visibility_enum: ['public', 'private'],
+      member_role: ['owner', 'admin', 'manager', 'staff', 'member'],
+      member_status: ['active', 'inactive', 'pending', 'suspended'],
+      message_status: ['sent', 'delivered', 'read', 'failed'],
+      network_member_role_enum: ['member', 'moderator'],
+      network_member_status: ['active', 'pending', 'blocked', 'removed'],
+      network_visibility: ['public', 'private', 'friends', 'club'],
+      notification_priority_enum: ['low', 'normal', 'high', 'urgent'],
+      notification_status: ['unread', 'read', 'archived'],
       notification_type: [
-        "match_request",
-        "match_confirmation",
-        "match_cancellation",
-        "message",
-        "friend_request",
-        "system",
+        'match_request',
+        'match_confirmation',
+        'match_cancellation',
+        'message',
+        'friend_request',
+        'system',
       ],
       notification_type_enum: [
-        "match_invitation",
-        "reminder",
-        "payment",
-        "support",
-        "chat",
-        "system",
-        "match_join_request",
-        "match_join_accepted",
-        "match_join_rejected",
-        "match_player_joined",
-        "match_cancelled",
-        "match_updated",
-        "match_starting_soon",
-        "match_completed",
-        "player_kicked",
-        "player_left",
-        "new_message",
-        "friend_request",
-        "rating_verified",
-        "feedback_request",
+        'match_invitation',
+        'reminder',
+        'payment',
+        'support',
+        'chat',
+        'system',
+        'match_join_request',
+        'match_join_accepted',
+        'match_join_rejected',
+        'match_player_joined',
+        'match_cancelled',
+        'match_updated',
+        'match_starting_soon',
+        'match_completed',
+        'player_kicked',
+        'player_left',
+        'new_message',
+        'friend_request',
+        'rating_verified',
+        'feedback_request',
+        'score_confirmation',
       ],
-      organization_nature_enum: ["public", "private"],
-      organization_type: [
-        "club",
-        "facility",
-        "league",
-        "academy",
-        "association",
-      ],
-      organization_type_enum: ["club", "municipality", "city", "association"],
-      payment_method: [
-        "credit_card",
-        "debit_card",
-        "paypal",
-        "cash",
-        "bank_transfer",
-      ],
-      payment_status: ["pending", "completed", "failed", "refunded"],
-      period_enum: ["morning", "afternoon", "evening"],
+      organization_nature_enum: ['public', 'private'],
+      organization_type: ['club', 'facility', 'league', 'academy', 'association'],
+      organization_type_enum: ['club', 'municipality', 'city', 'association'],
+      payment_method: ['credit_card', 'debit_card', 'paypal', 'cash', 'bank_transfer'],
+      payment_status: ['pending', 'completed', 'failed', 'refunded'],
+      period_enum: ['morning', 'afternoon', 'evening'],
       play_attribute_enum: [
-        "serve_speed_and_placement",
-        "net_play",
-        "court_coverage",
-        "forehand_power",
-        "shot_selection",
-        "spin_control",
+        'serve_speed_and_placement',
+        'net_play',
+        'court_coverage',
+        'forehand_power',
+        'shot_selection',
+        'spin_control',
       ],
-      play_style_enum: [
-        "counterpuncher",
-        "aggressive_baseliner",
-        "serve_and_volley",
-        "all_court",
-      ],
-      playing_hand: ["left", "right", "both"],
-      playing_hand_enum: ["right", "left", "both"],
-      proof_status_enum: ["pending", "approved", "rejected"],
-      proof_type_enum: ["external_link", "file"],
-      rating_certification_method_enum: [
-        "external_rating",
-        "proof",
-        "referrals",
-      ],
-      rating_request_status_enum: [
-        "pending",
-        "completed",
-        "declined",
-        "expired",
-        "cancelled",
-      ],
+      play_style_enum: ['counterpuncher', 'aggressive_baseliner', 'serve_and_volley', 'all_court'],
+      playing_hand: ['left', 'right', 'both'],
+      playing_hand_enum: ['right', 'left', 'both'],
+      proof_status_enum: ['pending', 'approved', 'rejected'],
+      proof_type_enum: ['external_link', 'file'],
+      rating_certification_method_enum: ['external_rating', 'proof', 'referrals'],
+      rating_request_status_enum: ['pending', 'completed', 'declined', 'expired', 'cancelled'],
       rating_source_type: [
-        "self_reported",
-        "api_verified",
-        "peer_verified",
-        "admin_verified",
-        "reference_verified",
+        'self_reported',
+        'api_verified',
+        'peer_verified',
+        'admin_verified',
+        'reference_verified',
       ],
-      rating_system_code_enum: [
-        "ntrp",
-        "utr",
-        "self_tennis",
-        "dupr",
-        "self_pickle",
-      ],
-      report_reason: [
-        "inappropriate_behavior",
-        "harassment",
-        "spam",
-        "cheating",
-        "other",
-      ],
-      report_status: ["pending", "under_review", "resolved", "dismissed"],
+      rating_system_code_enum: ['ntrp', 'utr', 'self_tennis', 'dupr', 'self_pickle'],
+      report_reason: ['inappropriate_behavior', 'harassment', 'spam', 'cheating', 'other'],
+      report_status: ['pending', 'under_review', 'resolved', 'dismissed'],
       reputation_event_type: [
-        "match_completed",
-        "match_no_show",
-        "match_ghosted",
-        "match_on_time",
-        "match_late",
-        "match_cancelled_early",
-        "match_cancelled_late",
-        "match_repeat_opponent",
-        "review_received_5star",
-        "review_received_4star",
-        "review_received_3star",
-        "review_received_2star",
-        "review_received_1star",
-        "report_received",
-        "report_dismissed",
-        "report_upheld",
-        "warning_issued",
-        "suspension_lifted",
-        "peer_rating_given",
-        "first_match_bonus",
-        "feedback_submitted",
+        'match_completed',
+        'match_no_show',
+        'match_ghosted',
+        'match_on_time',
+        'match_late',
+        'match_cancelled_early',
+        'match_cancelled_late',
+        'match_repeat_opponent',
+        'review_received_5star',
+        'review_received_4star',
+        'review_received_3star',
+        'review_received_2star',
+        'review_received_1star',
+        'report_received',
+        'report_dismissed',
+        'report_upheld',
+        'warning_issued',
+        'suspension_lifted',
+        'peer_rating_given',
+        'first_match_bonus',
+        'feedback_submitted',
       ],
-      reputation_tier: ["unknown", "bronze", "silver", "gold", "platinum"],
-      role_enum: ["admin", "staff", "player", "coach", "owner"],
-      share_channel_enum: [
-        "sms",
-        "email",
-        "whatsapp",
-        "share_sheet",
-        "copy_link",
-      ],
-      share_status_enum: [
-        "pending",
-        "sent",
-        "viewed",
-        "accepted",
-        "expired",
-        "cancelled",
-      ],
-      skill_level: ["beginner", "intermediate", "advanced", "professional"],
-      surface_type_enum: [
-        "hard",
-        "clay",
-        "grass",
-        "synthetic",
-        "carpet",
-        "concrete",
-        "asphalt",
-      ],
-      time_period: ["morning", "afternoon", "evening", "night"],
-      user_role: ["player", "admin", "super_admin"],
+      reputation_tier: ['unknown', 'bronze', 'silver', 'gold', 'platinum'],
+      role_enum: ['admin', 'staff', 'player', 'coach', 'owner'],
+      share_channel_enum: ['sms', 'email', 'whatsapp', 'share_sheet', 'copy_link'],
+      share_status_enum: ['pending', 'sent', 'viewed', 'accepted', 'expired', 'cancelled'],
+      skill_level: ['beginner', 'intermediate', 'advanced', 'professional'],
+      surface_type_enum: ['hard', 'clay', 'grass', 'synthetic', 'carpet', 'concrete', 'asphalt'],
+      time_period: ['morning', 'afternoon', 'evening', 'night'],
+      user_role: ['player', 'admin', 'super_admin'],
     },
   },
-} as const
-
+} as const;

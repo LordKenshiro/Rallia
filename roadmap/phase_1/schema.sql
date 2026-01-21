@@ -347,25 +347,21 @@ CREATE TABLE "play_attribute" (
   "updated_at" timestamptz DEFAULT (now())
 );
 
-CREATE TABLE "player_sport_profile" (
+CREATE TABLE "player_sport" (
   "id" uuid PRIMARY KEY DEFAULT (gen_random_uuid()),
   "player_id" uuid NOT NULL,
   "sport_id" uuid NOT NULL,
-  "preferred_match_duration" match_duration_enum NOT NULL,
-  "preferred_match_type" match_type_enum NOT NULL,
-  "play_style_id" uuid,
+  "preferred_match_duration" match_duration_enum,
+  "preferred_match_type" match_type_enum,
+  "preferred_play_style" play_style_enum,
+  "preferred_play_attributes" play_attribute_enum[],
   "preferred_facility_id" uuid,
-  "preferred_court_surface" surface_type_enum,
-  "is_active" boolean NOT NULL DEFAULT true,
-  "created_at" timestamptz NOT NULL DEFAULT (now()),
-  "updated_at" timestamptz NOT NULL DEFAULT (now())
-);
-
-CREATE TABLE "player_play_attribute" (
-  "id" uuid PRIMARY KEY DEFAULT (gen_random_uuid()),
-  "player_sport_profile_id" uuid NOT NULL,
-  "play_attribute_id" uuid NOT NULL,
-  "created_at" timestamptz DEFAULT (now())
+  "preferred_court" varchar(100),
+  "is_primary" boolean DEFAULT false,
+  "is_active" boolean DEFAULT true,
+  "created_at" timestamptz DEFAULT (now()),
+  "updated_at" timestamptz DEFAULT (now()),
+  UNIQUE("player_id", "sport_id")
 );
 
 CREATE TABLE "rating_system" (
@@ -766,10 +762,8 @@ CREATE INDEX "idx_sport_name" ON "sport" ("name");
 CREATE INDEX "idx_sport_is_active" ON "sport" ("is_active");
 CREATE UNIQUE INDEX ON "play_style" ("sport_id", "name");
 CREATE UNIQUE INDEX ON "play_attribute" ("sport_id", "name");
-CREATE INDEX "idx_player_sport_profile_player_id" ON "player_sport_profile" ("player_id");
-CREATE INDEX "idx_player_sport_profile_sport_id" ON "player_sport_profile" ("sport_id");
-CREATE UNIQUE INDEX "uq_player_sport_profile_player_sport" ON "player_sport_profile" ("player_id", "sport_id");
-CREATE UNIQUE INDEX ON "player_play_attribute" ("player_sport_profile_id", "play_attribute_id");
+CREATE INDEX "idx_player_sport_player_id" ON "player_sport" ("player_id");
+CREATE INDEX "idx_player_sport_sport_id" ON "player_sport" ("sport_id");
 CREATE INDEX "idx_rating_system_code" ON "rating_system" ("code");
 CREATE UNIQUE INDEX "uq_rating_score_system_value" ON "rating_score" ("rating_system_id", "value");
 CREATE UNIQUE INDEX "uq_player_rating_score" ON "player_rating_score" ("player_id", "rating_score_id");
@@ -867,12 +861,9 @@ ALTER TABLE "player" ADD FOREIGN KEY ("id") REFERENCES "profile" ("id") ON DELET
 ALTER TABLE "player_availability" ADD FOREIGN KEY ("player_id") REFERENCES "player" ("id") ON DELETE CASCADE;
 ALTER TABLE "play_style" ADD FOREIGN KEY ("sport_id") REFERENCES "sport" ("id") ON DELETE CASCADE;
 ALTER TABLE "play_attribute" ADD FOREIGN KEY ("sport_id") REFERENCES "sport" ("id") ON DELETE SET NULL;
-ALTER TABLE "player_sport_profile" ADD FOREIGN KEY ("player_id") REFERENCES "player" ("id") ON DELETE CASCADE;
-ALTER TABLE "player_sport_profile" ADD FOREIGN KEY ("sport_id") REFERENCES "sport" ("id") ON DELETE RESTRICT;
-ALTER TABLE "player_sport_profile" ADD FOREIGN KEY ("play_style_id") REFERENCES "play_style" ("id") ON DELETE SET NULL;
-ALTER TABLE "player_sport_profile" ADD FOREIGN KEY ("preferred_facility_id") REFERENCES "facility" ("id") ON DELETE SET NULL;
-ALTER TABLE "player_play_attribute" ADD FOREIGN KEY ("player_sport_profile_id") REFERENCES "player_sport_profile" ("id") ON DELETE CASCADE;
-ALTER TABLE "player_play_attribute" ADD FOREIGN KEY ("play_attribute_id") REFERENCES "play_attribute" ("id") ON DELETE CASCADE;
+ALTER TABLE "player_sport" ADD FOREIGN KEY ("player_id") REFERENCES "player" ("id") ON DELETE CASCADE;
+ALTER TABLE "player_sport" ADD FOREIGN KEY ("sport_id") REFERENCES "sport" ("id") ON DELETE CASCADE;
+ALTER TABLE "player_sport" ADD FOREIGN KEY ("preferred_facility_id") REFERENCES "facility" ("id") ON DELETE SET NULL;
 ALTER TABLE "rating_system" ADD FOREIGN KEY ("sport_id") REFERENCES "sport" ("id") ON DELETE RESTRICT;
 ALTER TABLE "rating_score" ADD FOREIGN KEY ("rating_system_id") REFERENCES "rating_system" ("id") ON DELETE CASCADE;
 ALTER TABLE "player_rating_score" ADD FOREIGN KEY ("player_id") REFERENCES "player" ("id") ON DELETE CASCADE;

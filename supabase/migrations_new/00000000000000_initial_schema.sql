@@ -207,34 +207,28 @@ CREATE INDEX idx_rating_score_rating_system_id ON rating_score(rating_system_id)
 -- PLAYER PREFERENCES & RATINGS
 -- ============================================================================
 
--- Player Sport Profile (links players to sports with preferences)
-CREATE TABLE player_sport_profile (
+-- Player Sport (links players to sports with preferences)
+CREATE TABLE player_sport (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     player_id UUID NOT NULL REFERENCES player(id) ON DELETE CASCADE,
-    sport_id UUID NOT NULL REFERENCES sport(id) ON DELETE RESTRICT,
-    preferred_match_duration match_duration_enum NOT NULL,
-    preferred_match_type match_type_enum NOT NULL,
-    play_style_id UUID REFERENCES play_style(id) ON DELETE SET NULL,
+    sport_id UUID NOT NULL REFERENCES sport(id) ON DELETE CASCADE,
+    preferred_match_duration match_duration_enum,
+    preferred_match_type match_type_enum,
+    preferred_play_style play_style_enum,
+    preferred_play_attributes play_attribute_enum[],
     preferred_facility_id UUID,
-    preferred_court_surface surface_type_enum,
-    is_active BOOLEAN DEFAULT TRUE NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+    preferred_court VARCHAR(100),
+    is_primary BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(player_id, sport_id)
 );
 
-CREATE UNIQUE INDEX uq_player_sport_profile_player_sport ON player_sport_profile(player_id, sport_id);
-CREATE INDEX idx_player_sport_profile_player_id ON player_sport_profile(player_id);
-CREATE INDEX idx_player_sport_profile_sport_id ON player_sport_profile(sport_id);
+CREATE INDEX idx_player_sport_player_id ON player_sport(player_id);
+CREATE INDEX idx_player_sport_sport_id ON player_sport(sport_id);
 
--- Player Play Attributes junction table
-CREATE TABLE player_play_attribute (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    player_sport_profile_id UUID NOT NULL REFERENCES player_sport_profile(id) ON DELETE CASCADE,
-    play_attribute_id UUID NOT NULL REFERENCES play_attribute(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE UNIQUE INDEX uq_player_play_attribute ON player_play_attribute(player_sport_profile_id, play_attribute_id);
+COMMENT ON TABLE player_sport IS 'Links players to sports with their preferences';
 
 -- Player Rating Score
 CREATE TABLE player_rating_score (
@@ -438,9 +432,9 @@ CREATE INDEX idx_facility_active ON facility(is_active);
 
 COMMENT ON TABLE facility IS 'Physical facilities with courts';
 
--- Add FK constraint to player_sport_profile for preferred_facility
-ALTER TABLE player_sport_profile
-    ADD CONSTRAINT player_sport_profile_preferred_facility_id_fkey
+-- Add FK constraint to player_sport for preferred_facility
+ALTER TABLE player_sport
+    ADD CONSTRAINT player_sport_preferred_facility_id_fkey
     FOREIGN KEY (preferred_facility_id) REFERENCES facility(id) ON DELETE SET NULL;
 
 -- Facility Contact table
@@ -776,7 +770,7 @@ ALTER TABLE admin ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sport ENABLE ROW LEVEL SECURITY;
 ALTER TABLE rating_system ENABLE ROW LEVEL SECURITY;
 ALTER TABLE rating_score ENABLE ROW LEVEL SECURITY;
-ALTER TABLE player_sport_profile ENABLE ROW LEVEL SECURITY;
+ALTER TABLE player_sport ENABLE ROW LEVEL SECURITY;
 ALTER TABLE player_rating_score ENABLE ROW LEVEL SECURITY;
 ALTER TABLE player_availability ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notification ENABLE ROW LEVEL SECURITY;
@@ -800,9 +794,9 @@ CREATE POLICY "Anyone can view active sports" ON sport FOR SELECT USING (is_acti
 CREATE POLICY "Anyone can view active rating systems" ON rating_system FOR SELECT USING (is_active = true);
 CREATE POLICY "Anyone can view rating scores" ON rating_score FOR SELECT USING (true);
 
--- Player sport profile policies
-CREATE POLICY "Players can view sport profiles" ON player_sport_profile FOR SELECT USING (true);
-CREATE POLICY "Players can manage their own sport profiles" ON player_sport_profile FOR ALL USING (auth.uid() = player_id);
+-- Player sport policies
+CREATE POLICY "Players can view player sports" ON player_sport FOR SELECT USING (true);
+CREATE POLICY "Players can manage their own sports" ON player_sport FOR ALL USING (auth.uid() = player_id);
 
 -- Player rating score policies
 CREATE POLICY "Players can view rating scores" ON player_rating_score FOR SELECT USING (true);

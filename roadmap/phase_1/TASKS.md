@@ -156,7 +156,7 @@ CREATE TRIGGER trigger_record_player_rating_score_history
 | PublicProfileScreen    | Create read-only player profile view accessible by player and others        | 8h       |
 | Block Check Logic      | Respect player_blocks - hide blocked players from each other                | 4h       |
 | Player Info Display    | Display public player information (player table)                            | 4h       |
-| Sport Profiles Display | Display player_sport_profile information                                    | 4h       |
+| Sport Profiles Display | Display player_sport information                                            | 4h       |
 | Rating Display         | Display player_rating_score (public ratings)                                | 4h       |
 | Availability Display   | Display player_availability (if public)                                     | 3h       |
 | Rating Badges          | Display certification status (self-reported, peer-verified, proof-verified) | 4h       |
@@ -193,7 +193,7 @@ apps/mobile/src/features/players/
 | Favorite Facility Selection | Add facility selection for preferred courts                                               | 4h       |
 | Play Styles                 | Add play style selection (Aggressive, Defensive, All-Court, etc.) for each sport          | 6h       |
 | Play Attributes Editing     | Edit player_play_attributes                                                               | 6h       |
-| Sport Profiles Editing      | Edit player_sport_profile                                                                 | 6h       |
+| Sport Profiles Editing      | Edit player_sport                                                                         | 6h       |
 | Rating Score Management     | Edit player_rating_score (self-reported ratings)                                          | 4h       |
 | Rating History Tracking     | Implement automatic history recording when ratings change                                 | 2h       |
 | Availability Management     | Edit player_availability (public/private toggle)                                          | 4h       |

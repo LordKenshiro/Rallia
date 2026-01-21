@@ -234,8 +234,8 @@ COMMENT ON TABLE "privacy_policy_version" IS 'Version history of Privacy Policy.
 -- 
 -- BASE TABLES: (29 tables)
 -- auth_users, profiles, admins, organizations, organization_members,
--- players, player_availabilities, sports, play_styles, play_attributes,
--- player_sport_profiles, player_play_attributes, rating_systems, rating_scores,
+-- players, player_availabilities, player_sport, sports, play_styles, play_attributes,
+-- rating_systems, rating_scores,
 -- player_rating_scores, files, rating_proofs, rating_reference_requests,
 -- peer_rating_requests, facilities, facility_contacts, facility_images,
 -- facility_files, facility_sports, courts, court_sports, invitations

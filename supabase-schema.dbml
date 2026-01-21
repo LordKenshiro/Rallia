@@ -282,44 +282,6 @@ Enum surface_type_enum {
   concrete
 }
 
-Table player_sport_profiles {
-  id uuid [pk, default: `gen_random_uuid()`, note: 'Primary key']
-  player_id uuid [not null, note: 'Foreign key referencing player']
-  sport_id uuid [not null, note: 'Foreign key referencing sport']
-  
-  preferred_match_duration match_duration_enum [not null, note: 'Preferred match duration for this sport']
-  preferred_match_type match_type_enum [not null, note: 'Preferred match type for this sport (e.g., practice, match, both)']
-
-  play_style_id uuid [note: 'Foreign key referencing play style']
-  preferred_facility_id uuid
-
-  preferred_court_surface surface_type_enum
-
-  is_active boolean [default: true, not null]
-  
-  created_at timestamptz [default: `now()`, not null, note: 'Record creation timestamp']
-  updated_at timestamptz [default: `now()`, not null, note: 'Last update timestamp']
-
-  indexes {
-    player_id [name: 'idx_player_sport_profiles_player_id']
-    sport_id [name: 'idx_player_sport_profiles_sport_id']
-    (player_id, sport_id) [unique, name: 'uq_player_sport_profiles_player_sport']
-  }
-
-  note: 'Links players to the sports they play and stores sport-specific preferences.'
-}
-
-Table player_play_attributes {
-  id uuid [pk, default: `gen_random_uuid()`]
-  player_sport_profile_id uuid [not null]
-  play_attribute_id uuid [not null]
-  created_at timestamptz [default: `now()`]
-
-  indexes {
-    (player_sport_profile_id, play_attribute_id) [unique]
-  }
-}
-
 // ================================
 // RATING SYSTEMS (e.g. NTRP, DUPR, UTR)
 // ================================
@@ -823,16 +785,6 @@ Ref: play_styles.sport_id > sports.id [delete: cascade]
 
 // play_attributes
 Ref: play_attributes.sport_id > sports.id [delete: set null]
-
-// player_sport_profiles
-Ref: player_sport_profiles.player_id > players.id [delete: cascade]
-Ref: player_sport_profiles.sport_id > sports.id [delete: restrict]
-Ref: player_sport_profiles.play_style_id > play_styles.id [delete: set null]
-Ref: player_sport_profiles.preferred_facility_id > facilities.id [delete: set null]
-
-// player_play_attributes
-Ref: player_play_attributes.player_sport_profile_id > player_sport_profiles.id [delete: cascade]
-Ref: player_play_attributes.play_attribute_id > play_attributes.id [delete: cascade]
 
 // rating_systems
 Ref: rating_systems.sport_id > sports.id [delete: restrict]
