@@ -6,10 +6,9 @@ import {
   TouchableOpacity,
   ScrollView,
   Animated,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
-import { Overlay } from '@rallia/shared-components';
+import { Overlay, useToast } from '@rallia/shared-components';
 import { OnboardingService, Logger } from '@rallia/shared-services';
 import type { DayEnum, PeriodEnum, OnboardingAvailability } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
@@ -53,6 +52,7 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
   onSave,
 }) => {
   const { colors } = useThemeStyles();
+  const toast = useToast();
   const days: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const timeSlots: TimeSlot[] = ['AM', 'PM', 'EVE'];
 
@@ -164,9 +164,7 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
         if (error) {
           Logger.error('Failed to save player availability', error as Error, { availabilityData });
           setIsSaving(false);
-          Alert.alert('Error', 'Failed to save your availability. Please try again.', [
-            { text: 'OK' },
-          ]);
+          toast.error('Failed to save your availability. Please try again.');
           return;
         }
 
@@ -188,7 +186,7 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
       } catch (error) {
         Logger.error('Unexpected error saving availability', error as Error);
         setIsSaving(false);
-        Alert.alert('Error', 'An unexpected error occurred. Please try again.', [{ text: 'OK' }]);
+        toast.error('An unexpected error occurred. Please try again.');
       }
     }
   };

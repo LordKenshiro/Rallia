@@ -12,11 +12,10 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Alert,
   Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import DatabaseService, { Logger } from '@rallia/shared-services';
 import { selectionHaptic } from '@rallia/shared-utils';
@@ -111,6 +110,7 @@ export const RatingStep: React.FC<RatingStepProps> = ({
   t,
   isDark,
 }) => {
+  const toast = useToast();
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -155,7 +155,7 @@ export const RatingStep: React.FC<RatingStepProps> = ({
         setRatings(transformedRatings);
       } catch (error) {
         Logger.error(`Unexpected error loading ${sport} ratings`, error as Error);
-        Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+        toast.error('An unexpected error occurred. Please try again.');
       } finally {
         setIsLoading(false);
       }

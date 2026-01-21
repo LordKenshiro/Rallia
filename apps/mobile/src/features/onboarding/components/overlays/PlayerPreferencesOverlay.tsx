@@ -6,12 +6,11 @@ import {
   TouchableOpacity,
   ScrollView,
   Animated,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
-import { Overlay } from '@rallia/shared-components';
+import { Overlay, useToast } from '@rallia/shared-components';
 import { OnboardingService, SportService, Logger } from '@rallia/shared-services';
 import type { OnboardingPlayerPreferences } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
@@ -50,6 +49,7 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
   totalSteps = 8,
 }) => {
   const { colors, isDark } = useThemeStyles();
+  const toast = useToast();
   const [playingHand, setPlayingHand] = useState<'left' | 'right' | 'both'>('right');
   const [maxTravelDistance, setMaxTravelDistance] = useState<number>(6);
   const [matchDuration, setMatchDuration] = useState<'30' | '60' | '90' | '120'>('90');
@@ -150,9 +150,7 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
         if (error) {
           Logger.error('Failed to save player preferences', error as Error, { preferencesData });
           setIsSaving(false);
-          Alert.alert('Error', 'Failed to save your preferences. Please try again.', [
-            { text: 'OK' },
-          ]);
+          toast.error('Failed to save your preferences. Please try again.');
           return;
         }
 
@@ -177,7 +175,7 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
       } catch (error) {
         Logger.error('Unexpected error saving preferences', error as Error);
         setIsSaving(false);
-        Alert.alert('Error', 'An unexpected error occurred. Please try again.', [{ text: 'OK' }]);
+        toast.error('An unexpected error occurred. Please try again.');
       }
     }
   };

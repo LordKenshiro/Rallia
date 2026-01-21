@@ -6,9 +6,9 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, Image, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Spinner } from '@rallia/shared-components';
+import { Text, Spinner, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 
 const BASE_WHITE = '#ffffff';
@@ -78,7 +78,7 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
 
       if (error) {
         Logger.error('Failed to fetch sports', error as Error);
-        Alert.alert('Error', 'Failed to load sports. Please try again.');
+        toast.error('Failed to load sports. Please try again.');
         setSports([
           {
             id: 'tennis-fallback',
@@ -179,7 +179,7 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
     selectionHaptic();
 
     if (!playerId) {
-      Alert.alert('Error', 'Player not found. Please try again.');
+      toast.error('Player not found. Please try again.');
       return;
     }
 
@@ -226,7 +226,7 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
           selectedSportNames: [...formData.selectedSportNames, sport.name],
         });
       }
-      Alert.alert('Error', 'Failed to update sport selection. Please try again.');
+      toast.error('Failed to update sport selection. Please try again.');
     }
   };
 

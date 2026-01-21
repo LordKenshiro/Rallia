@@ -31,7 +31,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, mediumHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
 import { OnboardingService, SportService, Logger, DatabaseService } from '@rallia/shared-services';
@@ -272,6 +272,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   // but PlayerContext was initialized with null before the record existed.
   // Without this refetch, the player stays null until sign out/sign in.
   const { refetch: refetchPlayer } = usePlayer();
+  const toast = useToast();
 
   // Sport context to refetch player sports when onboarding completes
   const { refetch: refetchSports, setSelectedSport, selectedSport } = useSport();
@@ -367,7 +368,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           !formData.gender ||
           !formData.phoneNumber.trim()
         ) {
-          Alert.alert('Error', 'Please fill in all required fields');
+          toast.warning('Please fill in all required fields');
           warningHaptic();
           return false;
         }
@@ -412,7 +413,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
           if (error) {
             Logger.error('Failed to save personal info', error as Error);
-            Alert.alert('Error', 'Failed to save your information. Please try again.');
+            toast.error('Failed to save your information. Please try again.');
             setIsSaving(false);
             return false;
           }
@@ -421,14 +422,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           return true;
         } catch (error) {
           Logger.error('Unexpected error saving personal info', error as Error);
-          Alert.alert('Error', 'An unexpected error occurred.');
+          toast.error('An unexpected error occurred.');
           setIsSaving(false);
           return false;
         }
 
       case 'sports':
         if (formData.selectedSportIds.length === 0) {
-          Alert.alert('Error', 'Please select at least one sport');
+          toast.warning('Please select at least one sport');
           warningHaptic();
           return false;
         }
@@ -437,7 +438,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
       case 'tennis-rating':
         if (!formData.tennisRatingId) {
-          Alert.alert('Error', 'Please select your tennis rating');
+          toast.warning('Please select your tennis rating');
           warningHaptic();
           return false;
         }
@@ -447,7 +448,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           // Get current user ID for the rating
           const tennisUserId = await DatabaseService.Auth.getCurrentUserId();
           if (!tennisUserId) {
-            Alert.alert('Error', 'User not authenticated');
+            toast.error('User not authenticated');
             setIsSaving(false);
             return false;
           }
@@ -461,7 +462,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
           if (tennisRatingError) {
             Logger.error('Failed to save tennis rating', tennisRatingError as Error);
-            Alert.alert('Error', 'Failed to save your tennis rating. Please try again.');
+            toast.error('Failed to save your tennis rating. Please try again.');
             setIsSaving(false);
             return false;
           }
@@ -470,14 +471,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           return true;
         } catch (error) {
           Logger.error('Unexpected error saving tennis rating', error as Error);
-          Alert.alert('Error', 'An unexpected error occurred.');
+          toast.error('An unexpected error occurred.');
           setIsSaving(false);
           return false;
         }
 
       case 'pickleball-rating':
         if (!formData.pickleballRatingId) {
-          Alert.alert('Error', 'Please select your pickleball rating');
+          toast.warning('Please select your pickleball rating');
           warningHaptic();
           return false;
         }
@@ -501,7 +502,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
           if (pickleballRatingError) {
             Logger.error('Failed to save pickleball rating', pickleballRatingError as Error);
-            Alert.alert('Error', 'Failed to save your pickleball rating. Please try again.');
+            toast.error('Failed to save your pickleball rating. Please try again.');
             setIsSaving(false);
             return false;
           }
@@ -510,7 +511,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           return true;
         } catch (error) {
           Logger.error('Unexpected error saving pickleball rating', error as Error);
-          Alert.alert('Error', 'An unexpected error occurred.');
+          toast.error('An unexpected error occurred.');
           setIsSaving(false);
           return false;
         }
@@ -562,7 +563,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
           if (error) {
             Logger.error('Failed to save preferences', error as Error);
-            Alert.alert('Error', 'Failed to save your preferences. Please try again.');
+            toast.error('Failed to save your preferences. Please try again.');
             setIsSaving(false);
             return false;
           }
@@ -571,7 +572,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           return true;
         } catch (error) {
           Logger.error('Unexpected error saving preferences', error as Error);
-          Alert.alert('Error', 'An unexpected error occurred.');
+          toast.error('An unexpected error occurred.');
           setIsSaving(false);
           return false;
         }
@@ -613,7 +614,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
           if (error) {
             Logger.error('Failed to save availability', error as Error);
-            Alert.alert('Error', 'Failed to save your availability. Please try again.');
+            toast.error('Failed to save your availability. Please try again.');
             setIsSaving(false);
             return false;
           }
@@ -638,7 +639,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           return true;
         } catch (error) {
           Logger.error('Unexpected error saving availability', error as Error);
-          Alert.alert('Error', 'An unexpected error occurred.');
+          toast.error('An unexpected error occurred.');
           setIsSaving(false);
           return false;
         }

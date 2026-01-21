@@ -9,12 +9,11 @@ import {
   Animated,
   Alert,
   TextInput,
-  ToastAndroid,
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Overlay, Select, Button, Heading, Text, PhoneInput } from '@rallia/shared-components';
+import { Overlay, Select, Button, Heading, Text, PhoneInput, useToast } from '@rallia/shared-components';
 import { useImagePicker, useThemeStyles } from '../../../../hooks';
 import { COLORS } from '@rallia/shared-constants';
 import {
@@ -59,6 +58,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
   initialData,
 }) => {
   const { colors } = useThemeStyles();
+  const toast = useToast();
   const [firstName, setFirstName] = useState(initialData?.firstName || '');
   const [lastName, setLastName] = useState(initialData?.lastName || '');
   const [username, setUsername] = useState(initialData?.username || '');
@@ -186,14 +186,14 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
     mediumHaptic();
 
     if (!dateOfBirth) {
-      Alert.alert('Error', 'Please select your date of birth');
+      toast.warning('Please select your date of birth');
       return;
     }
 
     try {
       // Gender is now stored as the enum value (e.g., 'male', 'female')
       if (!gender) {
-        Alert.alert('Error', 'Please select a valid gender option');
+        toast.warning('Please select a valid gender option');
         return;
       }
 
@@ -248,7 +248,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
 
         if (!user) {
           setIsSaving(false);
-          Alert.alert('Error', 'User not found');
+          toast.error('User not found');
           return;
         }
 
@@ -282,7 +282,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         if (updateError) {
           Logger.error('Failed to update profile', updateError as Error, { userId: user.id });
           setIsSaving(false);
-          Alert.alert('Error', 'Failed to update your information. Please try again.');
+          toast.error('Failed to update your information. Please try again.');
           return;
         }
 
@@ -314,12 +314,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         }
 
         // Show success toast
-        if (Platform.OS === 'android') {
-          ToastAndroid.show('Successfully updated Personal Information', ToastAndroid.LONG);
-        } else {
-          // For iOS, use a brief Alert that auto-dismisses via timeout
-          Alert.alert('Success', 'Successfully updated Personal Information');
-        }
+        toast.success('Successfully updated Personal Information');
 
         // Close modal automatically after brief delay
         setTimeout(() => {
@@ -341,9 +336,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
           Logger.error('Failed to save personal info during onboarding', error as Error, {
             hasProfileImage: !!uploadedImageUrl,
           });
-          Alert.alert('Error', 'Failed to save your information. Please try again.', [
-            { text: 'OK' },
-          ]);
+          toast.error('Failed to save your information. Please try again.');
           return;
         }
 
@@ -380,7 +373,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
       }
     } catch (error) {
       Logger.error('Unexpected error saving personal info', error as Error, { mode });
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.', [{ text: 'OK' }]);
+      toast.error('An unexpected error occurred. Please try again.');
     }
   };
 

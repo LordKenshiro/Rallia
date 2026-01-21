@@ -5,13 +5,11 @@ import {
   TouchableOpacity,
   Platform,
   Animated,
-  Alert,
   TextInput,
-  ToastAndroid,
   ActivityIndicator,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
-import { Overlay, Button, Heading, Text } from '@rallia/shared-components';
+import { Overlay, Button, Heading, Text, useToast } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
 import { supabase, Logger } from '@rallia/shared-services';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
@@ -36,6 +34,7 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
   const { colors } = useThemeStyles();
   const { refetch: refetchPlayer } = usePlayer();
   const { refetch: refetchProfile } = useProfile();
+  const toast = useToast();
   const [username, setUsername] = useState(initialData?.username || '');
   const [bio, setBio] = useState(initialData?.bio || '');
   const [preferredPlayingHand, setPreferredPlayingHand] = useState<string>(
@@ -94,7 +93,7 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
 
       if (!user) {
         setIsSaving(false);
-        Alert.alert('Error', 'User not found');
+        toast.error('User not found');
         return;
       }
 
@@ -111,7 +110,7 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
       if (profileUpdateError) {
         Logger.error('Failed to update profile', profileUpdateError as Error, { userId: user.id });
         setIsSaving(false);
-        Alert.alert('Error', 'Failed to update your information. Please try again.');
+        toast.error('Failed to update your information. Please try again.');
         return;
       }
 
@@ -127,7 +126,7 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
       if (playerUpdateError) {
         Logger.error('Failed to update player', playerUpdateError as Error, { userId: user.id });
         setIsSaving(false);
-        Alert.alert('Error', 'Failed to update your information. Please try again.');
+        toast.error('Failed to update your information. Please try again.');
         return;
       }
 
@@ -149,11 +148,7 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
       await refetchProfile();
 
       // Show success toast
-      if (Platform.OS === 'android') {
-        ToastAndroid.show('Successfully updated Player Information', ToastAndroid.LONG);
-      } else {
-        Alert.alert('Success', 'Successfully updated Player Information');
-      }
+      toast.success('Successfully updated Player Information');
 
       // Close modal automatically after brief delay
       setTimeout(() => {
@@ -162,7 +157,7 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
     } catch (error) {
       Logger.error('Unexpected error updating player information', error as Error);
       setIsSaving(false);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      toast.error('An unexpected error occurred. Please try again.');
     }
   };
 

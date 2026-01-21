@@ -22,14 +22,13 @@ import {
   Image,
   Linking,
   Platform,
-  Alert,
   Animated,
   Easing,
 } from 'react-native';
 import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Button } from '@rallia/shared-components';
+import { Text, Button, useToast } from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -563,6 +562,7 @@ const CheckInButton: React.FC<CheckInButtonProps> = ({
   isDark,
   t,
 }) => {
+  const toast = useToast();
   const [isGettingLocation, setIsGettingLocation] = useState(false);
 
   const handleCheckIn = async () => {
@@ -599,10 +599,7 @@ const CheckInButton: React.FC<CheckInButtonProps> = ({
       });
     } catch (error) {
       errorHaptic();
-      Alert.alert(
-        t('matchDetail.checkInFailed' as TranslationKey),
-        t('matchDetail.checkInLocationError' as TranslationKey)
-      );
+      toast.error(t('matchDetail.checkInLocationError' as TranslationKey));
     } finally {
       setIsGettingLocation(false);
     }
@@ -640,6 +637,7 @@ export const MatchDetailSheet: React.FC = () => {
   const { player } = usePlayer();
   const { location: locationPermission } = usePermissions();
   const isDark = theme === 'dark';
+  const toast = useToast();
   const playerId = player?.id;
 
   // Confirmation modal states
@@ -697,61 +695,43 @@ export const MatchDetailSheet: React.FC = () => {
       successHaptic();
       closeSheet();
       if (result.status === 'joined') {
-        Alert.alert(
-          t('alerts.success' as TranslationKey),
-          t('matchActions.joinSuccess' as TranslationKey)
-        );
+        toast.success(t('matchActions.joinSuccess' as TranslationKey));
       } else if (result.status === 'waitlisted') {
-        Alert.alert(
-          t('alerts.success' as TranslationKey),
-          t('matchActions.waitlistSuccess' as TranslationKey)
-        );
+        toast.success(t('matchActions.waitlistSuccess' as TranslationKey));
       } else {
-        Alert.alert(
-          t('alerts.success' as TranslationKey),
-          t('matchActions.requestSent' as TranslationKey)
-        );
+        toast.success(t('matchActions.requestSent' as TranslationKey));
       }
     },
     onJoinError: error => {
       errorHaptic();
       // Handle specific error types with user-friendly messages
       if (error.message === 'GENDER_MISMATCH') {
-        Alert.alert(
-          t('alerts.error' as TranslationKey),
-          t('matchActions.genderMismatch' as TranslationKey)
-        );
+        toast.error(t('matchActions.genderMismatch' as TranslationKey));
       } else {
-        Alert.alert(t('alerts.error' as TranslationKey), error.message);
+        toast.error(error.message);
       }
     },
     onLeaveSuccess: () => {
       successHaptic();
       setShowLeaveModal(false);
       closeSheet();
-      Alert.alert(
-        t('alerts.success' as TranslationKey),
-        t('matchActions.leaveSuccess' as TranslationKey)
-      );
+      toast.success(t('matchActions.leaveSuccess' as TranslationKey));
     },
     onLeaveError: error => {
       errorHaptic();
       setShowLeaveModal(false);
-      Alert.alert(t('alerts.error' as TranslationKey), error.message);
+      toast.error(error.message);
     },
     onCancelSuccess: () => {
       successHaptic();
       setShowCancelModal(false);
       closeSheet();
-      Alert.alert(
-        t('alerts.success' as TranslationKey),
-        t('matchActions.cancelSuccess' as TranslationKey)
-      );
+      toast.success(t('matchActions.cancelSuccess' as TranslationKey));
     },
     onCancelError: error => {
       errorHaptic();
       setShowCancelModal(false);
-      Alert.alert(t('alerts.error' as TranslationKey), error.message);
+      toast.error(error.message);
     },
     onAcceptSuccess: participant => {
       successHaptic();
@@ -764,15 +744,12 @@ export const MatchDetailSheet: React.FC = () => {
           ),
         });
       }
-      Alert.alert(
-        t('alerts.success' as TranslationKey),
-        t('matchActions.acceptSuccess' as TranslationKey)
-      );
+      toast.success(t('matchActions.acceptSuccess' as TranslationKey));
     },
     onAcceptError: error => {
       errorHaptic();
       setAcceptingRequestId(null);
-      Alert.alert(t('alerts.error' as TranslationKey), error.message);
+      toast.error(error.message);
     },
     onRejectSuccess: participant => {
       successHaptic();
@@ -786,30 +763,24 @@ export const MatchDetailSheet: React.FC = () => {
           ),
         });
       }
-      Alert.alert(
-        t('alerts.success' as TranslationKey),
-        t('matchActions.rejectSuccess' as TranslationKey)
-      );
+      toast.success(t('matchActions.rejectSuccess' as TranslationKey));
     },
     onRejectError: error => {
       errorHaptic();
       setShowRejectModal(false);
       setRejectingParticipantId(null);
-      Alert.alert(t('alerts.error' as TranslationKey), error.message);
+      toast.error(error.message);
     },
     onCancelRequestSuccess: () => {
       successHaptic();
       setShowCancelRequestModal(false);
       closeSheet();
-      Alert.alert(
-        t('alerts.success' as TranslationKey),
-        t('matchActions.cancelRequestSuccess' as TranslationKey)
-      );
+      toast.success(t('matchActions.cancelRequestSuccess' as TranslationKey));
     },
     onCancelRequestError: error => {
       errorHaptic();
       setShowCancelRequestModal(false);
-      Alert.alert(t('alerts.error' as TranslationKey), error.message);
+      toast.error(error.message);
     },
     onKickSuccess: participant => {
       successHaptic();
@@ -823,16 +794,13 @@ export const MatchDetailSheet: React.FC = () => {
           ),
         });
       }
-      Alert.alert(
-        t('alerts.success' as TranslationKey),
-        t('matchActions.kickSuccess' as TranslationKey)
-      );
+      toast.success(t('matchActions.kickSuccess' as TranslationKey));
     },
     onKickError: error => {
       errorHaptic();
       setShowKickModal(false);
       setKickingParticipantId(null);
-      Alert.alert(t('alerts.error' as TranslationKey), error.message);
+      toast.error(error.message);
     },
     onCancelInviteSuccess: participant => {
       successHaptic();
@@ -846,16 +814,13 @@ export const MatchDetailSheet: React.FC = () => {
           ),
         });
       }
-      Alert.alert(
-        t('alerts.success' as TranslationKey),
-        t('matchActions.cancelInviteSuccess' as TranslationKey)
-      );
+      toast.success(t('matchActions.cancelInviteSuccess' as TranslationKey));
     },
     onCancelInviteError: error => {
       errorHaptic();
       setShowCancelInviteModal(false);
       setCancellingInvitationId(null);
-      Alert.alert(t('alerts.error' as TranslationKey), error.message);
+      toast.error(error.message);
     },
     onResendInviteSuccess: participant => {
       successHaptic();
@@ -868,15 +833,12 @@ export const MatchDetailSheet: React.FC = () => {
           ),
         });
       }
-      Alert.alert(
-        t('alerts.success' as TranslationKey),
-        t('matchActions.resendInviteSuccess' as TranslationKey)
-      );
+      toast.success(t('matchActions.resendInviteSuccess' as TranslationKey));
     },
     onResendInviteError: error => {
       errorHaptic();
       setResendingInvitationId(null);
-      Alert.alert(t('alerts.error' as TranslationKey), error.message);
+      toast.error(error.message);
     },
     onCheckInSuccess: () => {
       successHaptic();
@@ -890,29 +852,17 @@ export const MatchDetailSheet: React.FC = () => {
           participants: updatedParticipants,
         });
       }
-      Alert.alert(
-        t('alerts.success' as TranslationKey),
-        t('matchDetail.checkInSuccess' as TranslationKey)
-      );
+      toast.success(t('matchDetail.checkInSuccess' as TranslationKey));
     },
     onCheckInError: result => {
       errorHaptic();
       if (result.error === 'too_far') {
-        Alert.alert(
-          t('matchDetail.checkInFailed' as TranslationKey),
-          t('matchDetail.checkInTooFar' as TranslationKey)
-        );
+        toast.error(t('matchDetail.checkInTooFar' as TranslationKey));
       } else if (result.error === 'already_checked_in') {
         // Already checked in - just refresh the UI
-        Alert.alert(
-          t('alerts.info' as TranslationKey),
-          t('matchDetail.alreadyCheckedIn' as TranslationKey)
-        );
+        toast.info(t('matchDetail.alreadyCheckedIn' as TranslationKey));
       } else {
-        Alert.alert(
-          t('matchDetail.checkInFailed' as TranslationKey),
-          t('matchDetail.checkInError' as TranslationKey)
-        );
+        toast.error(t('matchDetail.checkInError' as TranslationKey));
       }
     },
   });

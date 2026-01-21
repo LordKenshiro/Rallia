@@ -6,10 +6,9 @@ import {
   Image,
   ScrollView,
   Animated,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Overlay, Text, Heading, Button, Spinner } from '@rallia/shared-components';
+import { Overlay, Text, Heading, Button, Spinner, useToast } from '@rallia/shared-components';
 import { Sport } from '@rallia/shared-types';
 import DatabaseService, { Logger } from '@rallia/shared-services';
 import ProgressIndicator from '../ProgressIndicator';
@@ -34,6 +33,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
   totalSteps = 8,
 }) => {
   const { colors } = useThemeStyles();
+  const toast = useToast();
   const [selectedSportIds, setSelectedSportIds] = useState<string[]>([]); // Store IDs for database operations
   const [sports, setSports] = useState<Sport[]>([]);
   const [isLoadingSports, setIsLoadingSports] = useState(true);
@@ -153,7 +153,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
     selectionHaptic();
 
     if (!playerId) {
-      Alert.alert('Error', 'Player not found. Please try again.');
+      toast.error('Player not found. Please try again.');
       return;
     }
 
@@ -189,7 +189,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
           return [...prev, sportId];
         }
       });
-      Alert.alert('Error', 'Failed to update sport selection. Please try again.');
+      toast.error('Failed to update sport selection. Please try again.');
     }
   };
 

@@ -13,12 +13,11 @@ import {
   TouchableOpacity,
   Modal,
   SafeAreaView,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, useToast } from '@rallia/shared-components';
 import { useThemeStyles } from '../../../../hooks';
 import { AddScoreProvider, useAddScore } from './AddScoreContext';
 import { FindOpponentStep } from './FindOpponentStep';
@@ -48,6 +47,7 @@ function AddScoreContent({
 }) {
   const { colors } = useThemeStyles();
   const { user } = useAuth();
+  const toast = useToast();
   const {
     currentStep,
     currentStepIndex,
@@ -75,7 +75,7 @@ function AddScoreContent({
     sets: Array<{ team1Score: number | null; team2Score: number | null }>
   ) => {
     if (!user?.id) {
-      Alert.alert('Error', 'You must be logged in to submit a score.');
+      toast.error('You must be logged in to submit a score.');
       return;
     }
 
@@ -86,7 +86,7 @@ function AddScoreContent({
       const sportId = await getSportIdByName(sportName);
       
       if (!sportId) {
-        Alert.alert('Error', `Could not find sport: ${sportName}`);
+        toast.error(`Could not find sport: ${sportName}`);
         setIsSubmitting(false);
         return;
       }
@@ -133,26 +133,16 @@ function AddScoreContent({
 
       const result = await createPlayedMatchMutation.mutateAsync(matchInput);
 
-      Alert.alert(
-        'Score Submitted!',
-        'Your score has been submitted. Your opponent has 24 hours to confirm.',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              onSuccess?.(result.matchId);
-              onClose();
-            },
-          },
-        ]
-      );
+      toast.success('Your score has been submitted. Your opponent has 24 hours to confirm.');
+      onSuccess?.(result.matchId);
+      onClose();
     } catch (error) {
       console.error('Error submitting score:', error);
-      Alert.alert('Error', 'Failed to submit score. Please try again.');
+      toast.error('Failed to submit score. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, user, onSuccess, onClose, createPlayedMatchMutation]);
+  }, [formData, user, onSuccess, onClose, createPlayedMatchMutation, toast]);
 
   const renderStep = () => {
     switch (currentStep) {

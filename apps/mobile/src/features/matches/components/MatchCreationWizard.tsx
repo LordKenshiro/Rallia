@@ -26,7 +26,7 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import * as Localization from 'expo-localization';
-import { Text, Button } from '@rallia/shared-components';
+import { Text, useToast } from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -243,6 +243,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   const { session } = useAuth();
   const { selectedSport } = useSport();
   const isDark = theme === 'dark';
+  const toast = useToast();
 
   // Determine if we're in edit mode
   const isEditMode = !!editMatch;
@@ -438,7 +439,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     },
     onError: err => {
       warningHaptic();
-      Alert.alert(t('errors.unknown' as TranslationKey), err.message);
+      toast.error(err.message);
     },
   });
 
@@ -453,7 +454,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     },
     onError: err => {
       warningHaptic();
-      Alert.alert(t('matchCreation.updateError' as TranslationKey), err.message);
+      toast.error(err.message);
     },
   });
 
@@ -586,20 +587,16 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   const goToNextStep = useCallback(async () => {
     Keyboard.dismiss();
 
-    // Special handling for step 1 (Where): show alert if facility or custom location is not selected
+    // Special handling for step 1 (Where): show toast if facility or custom location is not selected
     if (currentStep === 1) {
       if (values.locationType === 'facility' && !values.facilityId) {
         warningHaptic();
-        Alert.alert(t('matchCreation.validation.facilityRequired' as TranslationKey), '', [
-          { text: t('common.ok' as TranslationKey) },
-        ]);
+        toast.warning(t('matchCreation.validation.facilityRequired' as TranslationKey));
         return;
       }
       if (values.locationType === 'custom' && !values.locationName) {
         warningHaptic();
-        Alert.alert(t('matchCreation.validation.locationNameRequired' as TranslationKey), '', [
-          { text: t('common.ok' as TranslationKey) },
-        ]);
+        toast.warning(t('matchCreation.validation.locationNameRequired' as TranslationKey));
         return;
       }
     }
@@ -624,7 +621,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     if (currentStep < TOTAL_STEPS) {
       setCurrentStep(prev => prev + 1);
     }
-  }, [currentStep, validateStep, values, sportId, saveDraft, isEditMode, t]);
+  }, [currentStep, validateStep, values, sportId, saveDraft, isEditMode, t, toast]);
 
   // Navigate to previous step
   const goToPrevStep = useCallback(() => {
@@ -728,7 +725,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     }
 
     if (!session?.user?.id) {
-      Alert.alert(t('alerts.error'), t('errors.mustBeLoggedIn'));
+      toast.error(t('errors.mustBeLoggedIn'));
       return;
     }
 
@@ -792,10 +789,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
               ? t(`matchCreation.validation.errors.${validation.errorCode}` as TranslationKey)
               : t('matchCreation.validation.cannotUpdate' as TranslationKey);
 
-            Alert.alert(
-              t('matchCreation.validation.updateBlocked' as TranslationKey),
-              errorMessage
-            );
+            toast.error(errorMessage);
             return;
           }
 
@@ -893,6 +887,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     performUpdate,
     getImpactfulChanges,
     t,
+    toast,
   ]);
 
   // Handle close with confirmation

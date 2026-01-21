@@ -13,10 +13,9 @@ import {
   TextInput,
   ScrollView,
   Image,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Button } from '@rallia/shared-components';
+import { Text, Button, useToast } from '@rallia/shared-components';
 import { useThemeStyles } from '../../../../hooks';
 import { useProfile } from '@rallia/shared-hooks';
 import { primary } from '@rallia/design-system';
@@ -32,6 +31,7 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
   const { colors, isDark } = useThemeStyles();
   const { formData, updateFormData } = useAddScore();
   const { profile } = useProfile();
+  const toast = useToast();
   const partner = formData.partner;
   const isDoubles = formData.matchType === 'double';
   const isFriendly = formData.expectation === 'friendly';
@@ -89,7 +89,7 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
   const handleSubmit = useCallback(() => {
     // Validate
     if (!winner && !isFriendly) {
-      Alert.alert('Select Winner', 'Please select the winner of the match.');
+      toast.warning('Please select the winner of the match.');
       return;
     }
 
@@ -99,7 +99,7 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
         (set) => set.team1Score !== null && set.team2Score !== null
       );
       if (!hasValidScores) {
-        Alert.alert('Enter Scores', 'Please enter at least one set score.');
+        toast.warning('Please enter at least one set score.');
         return;
       }
     }
@@ -114,7 +114,7 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
 
     // Pass values directly to avoid React state async issues
     onSubmit(finalWinner, finalSets);
-  }, [winner, sets, isFriendly, updateFormData, onSubmit]);
+  }, [winner, sets, isFriendly, updateFormData, onSubmit, toast]);
 
   const canSubmit = isFriendly || (winner !== null);
 

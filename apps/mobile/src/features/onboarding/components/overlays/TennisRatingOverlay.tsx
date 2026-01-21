@@ -6,12 +6,11 @@ import {
   TouchableOpacity,
   ScrollView,
   Animated,
-  Alert,
   ActivityIndicator,
   Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Overlay } from '@rallia/shared-components';
+import { Overlay, useToast } from '@rallia/shared-components';
 import DatabaseService, { OnboardingService, SportService, Logger } from '@rallia/shared-services';
 import type { OnboardingRating } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
@@ -74,6 +73,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
   onSave,
 }) => {
   const { colors, isDark } = useThemeStyles();
+  const toast = useToast();
   const [selectedRating, setSelectedRating] = useState<string | null>(initialRating || null);
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -100,7 +100,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
             sport: 'tennis',
             system: 'ntrp',
           });
-          Alert.alert('Error', 'Failed to load ratings. Please try again.');
+          toast.error('Failed to load ratings. Please try again.');
           return;
         }
 
@@ -123,7 +123,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
     };
 
     loadRatings();
-  }, [visible]);
+  }, [visible, toast]);
 
   // Trigger animations when overlay becomes visible
   useEffect(() => {
@@ -184,7 +184,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
         if (sportError || !tennisSport) {
           Logger.error('Failed to fetch tennis sport', sportError as Error);
           setIsSaving(false);
-          Alert.alert('Error', 'Failed to save your rating. Please try again.', [{ text: 'OK' }]);
+          toast.error('Failed to save your rating. Please try again.');
           return;
         }
 
@@ -193,7 +193,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
 
         if (!selectedRatingData) {
           setIsSaving(false);
-          Alert.alert('Error', 'Invalid rating selected');
+          toast.error('Invalid rating selected');
           return;
         }
 
@@ -220,7 +220,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
       } catch (error) {
         Logger.error('Unexpected error saving tennis rating', error as Error);
         setIsSaving(false);
-        Alert.alert('Error', 'An unexpected error occurred. Please try again.', [{ text: 'OK' }]);
+        toast.error('An unexpected error occurred. Please try again.');
       }
     }
   };

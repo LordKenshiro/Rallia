@@ -13,13 +13,12 @@ import {
   TextInput,
   FlatList,
   ActivityIndicator,
-  Alert,
   Linking,
   SafeAreaView,
 } from 'react-native';
 import * as Contacts from 'expo-contacts';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Button } from '@rallia/shared-components';
+import { Text, Button, useToast } from '@rallia/shared-components';
 import { useThemeStyles } from '../../../../hooks';
 import type { SelectedPlayer } from './types';
 
@@ -47,6 +46,7 @@ export function ContactPickerModal({
   excludeIds = [],
 }: ContactPickerModalProps) {
   const { colors, isDark } = useThemeStyles();
+  const toast = useToast();
   const [contacts, setContacts] = useState<DeviceContact[]>([]);
   const [filteredContacts, setFilteredContacts] = useState<DeviceContact[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -94,11 +94,11 @@ export function ContactPickerModal({
       setFilteredContacts(transformedContacts);
     } catch (error) {
       console.error('Failed to load contacts:', error);
-      Alert.alert('Error', 'Failed to load contacts. Please try again.');
+      toast.error('Failed to load contacts. Please try again.');
     } finally {
       setIsLoading(false);
     }
-  }, [excludeIds]);
+  }, [excludeIds, toast]);
 
   // Load contacts when modal opens
   useEffect(() => {
