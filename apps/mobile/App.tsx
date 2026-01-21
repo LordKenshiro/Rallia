@@ -5,7 +5,8 @@
  */
 import './src/lib/supabase';
 
-import { useEffect, useState, type PropsWithChildren } from 'react';
+import { useEffect, useState, useCallback, type PropsWithChildren } from 'react';
+import { Linking } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -71,6 +72,32 @@ const queryClient = new QueryClient({
 });
 
 /**
+ * Parse match ID from deep link URL.
+ * Supports:
+ * - rallia://match/[id]
+ * - https://rallia.app/match/[id]
+ */
+function parseMatchIdFromUrl(url: string): string | null {
+  try {
+    // Handle custom scheme: rallia://match/[id]
+    const customSchemeMatch = url.match(/^rallia:\/\/match\/([a-zA-Z0-9-]+)/);
+    if (customSchemeMatch) {
+      return customSchemeMatch[1];
+    }
+
+    // Handle universal link: https://rallia.app/match/[id]
+    const universalLinkMatch = url.match(/^https?:\/\/rallia\.app\/match\/([a-zA-Z0-9-]+)/);
+    if (universalLinkMatch) {
+      return universalLinkMatch[1];
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * AuthenticatedProviders - Wraps providers that need userId from auth context.
  * This component sits inside AuthProvider and passes userId to ProfileProvider and PlayerProvider.
  */
@@ -80,6 +107,34 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
   const { setPendingMatchId } = useDeepLink();
   const { isSplashComplete } = useOverlay();
   const userId = user?.id;
+
+  // Handle incoming deep link URL
+  const handleDeepLink = useCallback(
+    (url: string | null) => {
+      if (!url) return;
+      const matchId = parseMatchIdFromUrl(url);
+      if (matchId) {
+        Logger.logNavigation('deep_link_received', { url, matchId });
+        setPendingMatchId(matchId);
+      }
+    },
+    [setPendingMatchId]
+  );
+
+  // Listen for deep links (both cold start and while app is running)
+  useEffect(() => {
+    // Handle URL that opened the app (cold start)
+    Linking.getInitialURL().then(handleDeepLink);
+
+    // Handle URLs while app is running
+    const subscription = Linking.addEventListener('url', event => {
+      handleDeepLink(event.url);
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [handleDeepLink]);
 
   // Register push notifications when user is authenticated
   // This will save the Expo push token to the player table

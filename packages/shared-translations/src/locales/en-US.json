@@ -712,6 +712,8 @@
     "matchExpired": "This game has expired",
     "share": "Share",
     "shareMessage": "Check out this game on Rallia!",
+    "shareInvite": "Join me for {sport}!",
+    "shareDateTime": "{date} at {time}",
     "distance": "Distance",
     "away": "away",
     "free": "Free",

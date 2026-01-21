@@ -20,7 +20,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
-  Share,
   Linking,
   Platform,
   Alert,
@@ -63,6 +62,7 @@ import { usePlayerInviteSheet } from '../context/PlayerInviteSheetContext';
 import { useFeedbackSheet } from '../context/FeedbackSheetContext';
 import { useTranslation, usePermissions, type TranslationKey } from '../hooks';
 import { useTheme, usePlayer, useMatchActions } from '@rallia/shared-hooks';
+import { shareMatch } from '../utils';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import { ConfirmationModal } from './ConfirmationModal';
 import { RequesterDetailsModal } from './RequesterDetailsModal';
@@ -961,19 +961,16 @@ export const MatchDetailSheet: React.FC = () => {
     closeSheet();
   }, [closeSheet]);
 
-  // Handle share
+  // Handle share - uses rich message with match details and deep link
   const handleShare = useCallback(async () => {
     if (!selectedMatch) return;
     lightHaptic();
     try {
-      await Share.share({
-        message: t('matchDetail.shareMessage' as TranslationKey),
-        // In production, this would be a deep link to the match
-      });
+      await shareMatch(selectedMatch, { t, locale });
     } catch {
       // Silently handle errors
     }
-  }, [selectedMatch, t]);
+  }, [selectedMatch, t, locale]);
 
   // Helper to redirect to auth sheet if user is not authenticated
   const requireAuth = useCallback((): boolean => {

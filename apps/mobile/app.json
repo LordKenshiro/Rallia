@@ -8,6 +8,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "scheme": "rallia",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -22,7 +23,8 @@
       },
       "bundleIdentifier": "com.mathisl971.rallia-app",
       "appleTeamId": "587DRRMTV8",
-      "usesAppleSignIn": true
+      "usesAppleSignIn": true,
+      "associatedDomains": ["applinks:rallia.app"]
     },
     "android": {
       "adaptiveIcon": {
@@ -36,7 +38,21 @@
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.RECORD_AUDIO"
       ],
-      "package": "com.mathisl971.ralliaapp"
+      "package": "com.mathisl971.ralliaapp",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "rallia.app",
+              "pathPrefix": "/match"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
