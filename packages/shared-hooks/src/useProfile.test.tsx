@@ -9,7 +9,7 @@
  * - User ID parameter handling
  */
 
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, render, screen } from '@testing-library/react';
 import { useProfile, ProfileProvider } from './useProfile';
 import { supabase } from '@rallia/shared-services';
 import React from 'react';
@@ -309,6 +309,15 @@ describe('useProfile', () => {
 
   describe('User ID Changes', () => {
     it('should refetch when ProfileProvider userId changes', async () => {
+      const TestComponent = () => {
+        const { profile, loading } = useProfile();
+        return (
+          <div data-testid="profile-display">
+            {loading ? 'Loading' : `Profile: ${profile?.id || 'null'}`}
+          </div>
+        );
+      };
+
       (supabase.from as jest.Mock).mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
@@ -320,27 +329,15 @@ describe('useProfile', () => {
         }),
       });
 
-      const wrapper = ({
-        children,
-        userId,
-      }: {
-        children: React.ReactNode;
-        userId?: string | undefined;
-      }) => <ProfileProvider userId={userId}>{children}</ProfileProvider>;
-
-      const { result, rerender } = renderHook(() => useProfile(), {
-        wrapper: wrapper as React.ComponentType<{
-          children: React.ReactNode;
-          userId?: string | undefined;
-        }>,
-        initialProps: { userId: 'user-123' },
-      });
+      const { rerender } = render(
+        <ProfileProvider userId="user-123">
+          <TestComponent />
+        </ProfileProvider>
+      );
 
       await waitFor(() => {
-        expect(result.current.loading).toBe(false);
+        expect(screen.getByTestId('profile-display').textContent).toBe('Profile: user-123');
       });
-
-      expect(result.current.profile?.id).toBe('user-123');
 
       // Update mock for new userId
       (supabase.from as jest.Mock).mockReturnValue({
@@ -355,13 +352,16 @@ describe('useProfile', () => {
       });
 
       // Change userId in provider
-      rerender({ userId: 'user-456' });
+      rerender(
+        <ProfileProvider userId="user-456">
+          <TestComponent />
+        </ProfileProvider>
+      );
 
       await waitFor(() => {
-        expect(result.current.loading).toBe(false);
+        expect(screen.getByTestId('profile-display').textContent).toBe('Profile: user-456');
       });
 
-      expect(result.current.profile?.id).toBe('user-456');
       // Should have fetched new profile
       expect(supabase.from).toHaveBeenCalledTimes(2);
     });
