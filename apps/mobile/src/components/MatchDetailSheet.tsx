@@ -1415,6 +1415,9 @@ export const MatchDetailSheet: React.FC = () => {
   const hasMatchEnded = derivedStatus === 'completed';
   const hasResult = !!match.result;
 
+  // Check if match is expired (started or ended but not full)
+  const isExpired = (isInProgress || hasMatchEnded) && !isFull;
+
   // Determine animation type for time indicator:
   // - isInProgress = live indicator
   // - isUrgent (< 3 hours) but not in_progress = starting soon
@@ -2062,8 +2065,8 @@ export const MatchDetailSheet: React.FC = () => {
           <View style={styles.headerTitleSection}>
             {/* Match Date/Time - same format as cards with live/urgent indicators */}
             <View style={styles.dateRow}>
-              {/* "Live" indicator for ongoing matches */}
-              {isOngoing && (
+              {/* "Live" indicator for ongoing matches (not shown when expired) */}
+              {isOngoing && !isExpired && (
                 <View style={styles.liveIndicatorContainer}>
                   {/* Expanding ring that fades out */}
                   <Animated.View
@@ -2088,8 +2091,8 @@ export const MatchDetailSheet: React.FC = () => {
                   />
                 </View>
               )}
-              {/* Bouncing chevron for starting soon */}
-              {isStartingSoon && (
+              {/* Bouncing chevron for starting soon (not shown when expired) */}
+              {isStartingSoon && !isExpired && (
                 <Animated.View
                   style={[
                     styles.countdownIndicator,
@@ -2103,15 +2106,39 @@ export const MatchDetailSheet: React.FC = () => {
                 </Animated.View>
               )}
               <Ionicons
-                name={isOngoing ? 'radio' : isStartingSoon ? 'time' : 'calendar-outline'}
+                name={
+                  isExpired
+                    ? 'close-circle-outline'
+                    : isOngoing
+                      ? 'radio'
+                      : isStartingSoon
+                        ? 'time'
+                        : 'calendar-outline'
+                }
                 size={20}
-                color={isOngoing ? liveColor : isStartingSoon ? soonColor : tierAccent}
+                color={
+                  isExpired
+                    ? colors.textMuted
+                    : isOngoing
+                      ? liveColor
+                      : isStartingSoon
+                        ? soonColor
+                        : tierAccent
+                }
                 style={styles.calendarIcon}
               />
               <Text
                 size="xl"
                 weight="bold"
-                color={isOngoing ? liveColor : isStartingSoon ? soonColor : colors.text}
+                color={
+                  isExpired
+                    ? colors.textMuted
+                    : isOngoing
+                      ? liveColor
+                      : isStartingSoon
+                        ? soonColor
+                        : colors.text
+                }
               >
                 {timeLabel}
               </Text>

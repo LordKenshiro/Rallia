@@ -2,7 +2,8 @@
  * Match Creation Wizard
  *
  * A 3-step wizard for creating matches with horizontal slide animations,
- * progress indicator, swipe gestures, and full i18n/theme support.
+ * progress indicator, and full i18n/theme support. Navigation between steps
+ * is done via buttons only (swipe disabled for better Android scroll behavior).
  */
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
@@ -20,10 +21,7 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   withTiming,
-  interpolate,
-  runOnJS,
 } from 'react-native-reanimated';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import * as Localization from 'expo-localization';
 import { Text, useToast } from '@rallia/shared-components';
@@ -55,7 +53,6 @@ import { PreferencesStep } from './steps/PreferencesStep';
 import { PlayerInviteStep } from './PlayerInviteStep';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const SWIPE_THRESHOLD = 50;
 const TOTAL_STEPS = 3;
 
 // =============================================================================
@@ -463,7 +460,6 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
 
   // Animation values
   const translateX = useSharedValue(0);
-  const gestureTranslateX = useSharedValue(0);
 
   // Track if initial draft check has been done
   const hasCheckedDraft = useRef(false);
@@ -957,25 +953,9 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     }
   }, [isDirty, values, currentStep, sportId, saveDraft, clearDraft, onClose, t, isEditMode]);
 
-  // Swipe gesture handler
-  const panGesture = Gesture.Pan()
-    .onUpdate(e => {
-      gestureTranslateX.value = e.translationX;
-    })
-    .onEnd(e => {
-      if (e.translationX > SWIPE_THRESHOLD && currentStep > 1) {
-        // Swipe right - go to previous step
-        runOnJS(goToPrevStep)();
-      } else if (e.translationX < -SWIPE_THRESHOLD && currentStep < TOTAL_STEPS) {
-        // Swipe left - attempt to go to next step
-        runOnJS(goToNextStep)();
-      }
-      gestureTranslateX.value = withTiming(0);
-    });
-
-  // Animated styles for step container
+  // Animated styles for step container (button navigation only, no swipe)
   const animatedStepStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value + gestureTranslateX.value }],
+    transform: [{ translateX: translateX.value }],
   }));
 
   // Success animation values
@@ -1173,57 +1153,51 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
       {/* Progress bar */}
       <ProgressBar currentStep={currentStep} totalSteps={TOTAL_STEPS} colors={colors} t={t} />
 
-      {/* Step content with swipe */}
+      {/* Step content (button navigation only) */}
       <View style={styles.stepsViewport}>
-        <GestureDetector gesture={panGesture}>
-          <Animated.View
-            style={[
-              styles.stepsContainer,
-              { width: SCREEN_WIDTH * TOTAL_STEPS },
-              animatedStepStyle,
-            ]}
-          >
-            {/* Step 1: Where */}
-            <View style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
-              <WhereStep
-                form={form}
-                colors={colors}
-                t={t}
-                isDark={isDark}
-                sportId={selectedSport?.id}
-                deviceTimezone={timezone}
-                onSlotBooked={handleSlotBooked}
-                preferredFacilityId={preferredFacilityId}
-                editMatch={editMatch}
-              />
-            </View>
+        <Animated.View
+          style={[styles.stepsContainer, { width: SCREEN_WIDTH * TOTAL_STEPS }, animatedStepStyle]}
+        >
+          {/* Step 1: Where */}
+          <View style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
+            <WhereStep
+              form={form}
+              colors={colors}
+              t={t}
+              isDark={isDark}
+              sportId={selectedSport?.id}
+              deviceTimezone={timezone}
+              onSlotBooked={handleSlotBooked}
+              preferredFacilityId={preferredFacilityId}
+              editMatch={editMatch}
+            />
+          </View>
 
-            {/* Step 2: When */}
-            <View style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
-              <WhenFormatStep
-                form={form}
-                colors={colors}
-                t={t}
-                isDark={isDark}
-                locale={locale}
-                isLocked={bookedSlotData !== null}
-              />
-            </View>
+          {/* Step 2: When */}
+          <View style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
+            <WhenFormatStep
+              form={form}
+              colors={colors}
+              t={t}
+              isDark={isDark}
+              locale={locale}
+              isLocked={bookedSlotData !== null}
+            />
+          </View>
 
-            {/* Step 3: Preferences */}
-            <View style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
-              <PreferencesStep
-                form={form}
-                colors={colors}
-                t={t}
-                isDark={isDark}
-                sportName={selectedSport?.name}
-                sportId={selectedSport?.id}
-                userId={session?.user?.id}
-              />
-            </View>
-          </Animated.View>
-        </GestureDetector>
+          {/* Step 3: Preferences */}
+          <View style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
+            <PreferencesStep
+              form={form}
+              colors={colors}
+              t={t}
+              isDark={isDark}
+              sportName={selectedSport?.name}
+              sportId={selectedSport?.id}
+              userId={session?.user?.id}
+            />
+          </View>
+        </Animated.View>
       </View>
 
       {/* Navigation buttons */}
