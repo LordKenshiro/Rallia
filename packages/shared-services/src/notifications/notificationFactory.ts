@@ -55,7 +55,9 @@ export interface FeedbackNotificationPayload {
   matchId: string;
   sportName?: string;
   playerName?: string;
+  opponentNames?: string; // Pre-formatted: "John" or "John, Jane, and Mike"
   matchDate?: string;
+  format?: 'singles' | 'doubles';
 }
 
 /**
@@ -322,6 +324,7 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
 
   // Feedback - normal priority
   feedback_request: 'normal',
+  feedback_reminder: 'normal',
   score_confirmation: 'normal',
 };
 
@@ -351,6 +354,7 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   support: 'Message from Rallia',
   system: 'Rallia Update',
   feedback_request: 'How Was Your Game?',
+  feedback_reminder: "Don't Forget to Rate Your Game",
   score_confirmation: 'Confirm Match Score',
 };
 
@@ -386,7 +390,9 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   support: 'Our support team has sent you a message. Tap to read.',
   system: 'We have an update for you. Tap to learn more.',
   feedback_request:
-    'Rate your {sportName} game with {playerName}. Your feedback helps the community!',
+    'Rate your {sportName} game with {opponentNames}. Your feedback helps the community!',
+  feedback_reminder:
+    'Your {sportName} game feedback closes in 24 hours. Rate your experience with {opponentNames}!',
   score_confirmation:
     '{playerName} submitted the score for your {sportName} game. Please confirm or dispute.',
 };
@@ -901,19 +907,41 @@ export async function notifyMatchCompleted(
 
 /**
  * Request feedback from a player about their match experience
+ * @param opponentNames - Pre-formatted string: "John" for singles or "John, Jane, and Mike" for doubles
  */
 export async function notifyFeedbackRequest(
   playerUserId: string,
   matchId: string,
   sportName: string,
-  opponentName?: string,
-  matchDate?: string
+  opponentNames?: string,
+  matchDate?: string,
+  format?: 'singles' | 'doubles'
 ): Promise<Notification> {
   return createNotification({
     type: 'feedback_request',
     userId: playerUserId,
     targetId: matchId,
-    payload: { matchId, sportName, playerName: opponentName, matchDate },
+    payload: { matchId, sportName, opponentNames, matchDate, format },
+  });
+}
+
+/**
+ * Send a feedback reminder to a player who hasn't completed their feedback
+ * @param opponentNames - Pre-formatted string: "John" for singles or "John, Jane, and Mike" for doubles
+ */
+export async function notifyFeedbackReminder(
+  playerUserId: string,
+  matchId: string,
+  sportName: string,
+  opponentNames?: string,
+  matchDate?: string,
+  format?: 'singles' | 'doubles'
+): Promise<Notification> {
+  return createNotification({
+    type: 'feedback_reminder',
+    userId: playerUserId,
+    targetId: matchId,
+    payload: { matchId, sportName, opponentNames, matchDate, format },
   });
 }
 
@@ -956,6 +984,7 @@ export const notificationFactory = {
   playerKicked: notifyPlayerKicked,
   matchCompleted: notifyMatchCompleted,
   feedbackRequest: notifyFeedbackRequest,
+  feedbackReminder: notifyFeedbackReminder,
   reminder: notifyReminder,
 
   // Social

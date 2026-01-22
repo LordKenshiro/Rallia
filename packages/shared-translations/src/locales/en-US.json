@@ -139,7 +139,10 @@
       "payment": "Payment",
       "support": "Support",
       "chat": "Message",
-      "system": "System"
+      "system": "System",
+      "feedback_request": "Feedback Request",
+      "feedback_reminder": "Feedback Reminder",
+      "score_confirmation": "Score Confirmation"
     },
     "categories": {
       "match": "Game Notifications",
@@ -237,7 +240,11 @@
       },
       "feedback_request": {
         "title": "How Was Your Game?",
-        "body": "Rate your {sportName} game with {playerName}. Your feedback helps the community!"
+        "body": "Rate your {sportName} game with {opponentNames}. Your feedback helps the community!"
+      },
+      "feedback_reminder": {
+        "title": "Don't Forget to Rate Your Game",
+        "body": "Your {sportName} game feedback closes in 24 hours. Rate your experience with {opponentNames}!"
       }
     }
   },

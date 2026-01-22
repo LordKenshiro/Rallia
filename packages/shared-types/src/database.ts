@@ -114,7 +114,10 @@ export type ExtendedNotificationTypeEnum =
   | 'player_left'
   | 'new_message'
   | 'friend_request'
-  | 'rating_verified';
+  | 'rating_verified'
+  | 'feedback_request'
+  | 'feedback_reminder'
+  | 'score_confirmation';
 
 // Extended delivery status (added by migration)
 export type ExtendedDeliveryStatusEnum =

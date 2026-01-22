@@ -315,6 +315,7 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   rating_verified: 'ribbon-outline',
   // Feedback types
   feedback_request: 'star-outline',
+  feedback_reminder: 'notifications-outline',
   score_confirmation: 'checkmark-done-outline',
 };
 
@@ -346,6 +347,7 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   rating_verified: '#4CAF50', // Green
   // Feedback types
   feedback_request: '#FFC107', // Amber
+  feedback_reminder: '#FF9800', // Orange
   score_confirmation: '#4CAF50', // Green
 };
 
@@ -373,6 +375,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   friend_request: 'Friend Request',
   rating_verified: 'Rating Verified',
   feedback_request: 'Feedback Request',
+  feedback_reminder: 'Feedback Reminder',
   score_confirmation: 'Score Confirmation',
 };
 
@@ -409,6 +412,7 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   system: 'system',
   // Feedback (match-related)
   feedback_request: 'match',
+  feedback_reminder: 'match',
   score_confirmation: 'match',
 };
 
@@ -480,9 +484,10 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   payment: { email: true, push: true, sms: false },
   support: { email: true, push: false, sms: false },
   system: { email: true, push: false, sms: false },
-  // Feedback types
-  feedback_request: { email: false, push: true, sms: false },
-  score_confirmation: { email: false, push: true, sms: false },
+  // Feedback types - both email and push for feedback reminders
+  feedback_request: { email: true, push: true, sms: false },
+  feedback_reminder: { email: true, push: true, sms: false },
+  score_confirmation: { email: true, push: true, sms: false },
 };
 
 // ============================================

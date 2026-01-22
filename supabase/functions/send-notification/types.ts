@@ -22,7 +22,10 @@ export type NotificationType =
   | 'reminder'
   | 'payment'
   | 'support'
-  | 'system';
+  | 'system'
+  | 'feedback_request'
+  | 'feedback_reminder'
+  | 'score_confirmation';
 
 export type DeliveryChannel = 'email' | 'push' | 'sms';
 
@@ -119,4 +122,7 @@ export const DEFAULT_PREFERENCES: Record<NotificationType, Record<DeliveryChanne
   payment: { email: true, push: true, sms: false },
   support: { email: true, push: false, sms: false },
   system: { email: true, push: false, sms: false },
+  feedback_request: { email: true, push: true, sms: false },
+  feedback_reminder: { email: true, push: true, sms: false },
+  score_confirmation: { email: true, push: true, sms: false },
 };

@@ -71,16 +71,15 @@ CREATE POLICY "match_network_insert_policy" ON public.match_network
     )
   );
 
--- Only the poster can delete their post (or moderators)
+-- Only the poster can delete their post (or network creator)
+-- Note: Moderator check will be added in a later migration after role column exists
 CREATE POLICY "match_network_delete_policy" ON public.match_network
   FOR DELETE USING (
     posted_by = auth.uid()
     OR
     EXISTS (
-      SELECT 1 FROM public.network_member nm
-      WHERE nm.network_id = match_network.network_id
-      AND nm.player_id = auth.uid()
-      AND nm.role = 'moderator'
-      AND nm.status = 'active'
+      SELECT 1 FROM public.network n
+      WHERE n.id = match_network.network_id
+      AND n.created_by = auth.uid()
     )
   );

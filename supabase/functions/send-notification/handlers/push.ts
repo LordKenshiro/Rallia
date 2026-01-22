@@ -12,7 +12,7 @@ const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
  */
 const SPORT_EMOJIS: Record<string, string> = {
   tennis: '🎾',
-  pickleball: '🏓',
+  pickleball: '',
   badminton: '🏸',
   squash: '🎾',
   padel: '🎾',
@@ -129,7 +129,7 @@ function buildPushPayload(notification: NotificationRecord, expoPushToken: strin
 
   // Enhance title with sport emoji for match-related notifications
   const enhancedTitle =
-    type.startsWith('match_') || type === 'feedback_request' || type === 'reminder'
+    type.startsWith('match_') || type === 'reminder'
       ? sportEmoji
         ? `${sportEmoji} ${title}`
         : title

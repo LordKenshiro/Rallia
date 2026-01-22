@@ -23,21 +23,40 @@ $$;
 
 -- =============================================================================
 -- FUNCTION: Check if user is a moderator of a network (SECURITY DEFINER to bypass RLS)
+-- Note: Returns false if role column doesn't exist yet (will be updated in later migration)
 -- =============================================================================
 CREATE OR REPLACE FUNCTION is_network_moderator(network_id_param UUID, user_id_param UUID)
 RETURNS BOOLEAN
-LANGUAGE sql
+LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 STABLE
 AS $$
-  SELECT EXISTS (
+BEGIN
+  -- Check if role column exists
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'network_member' 
+    AND column_name = 'role'
+  ) THEN
+    -- If role column doesn't exist, check if user is the network creator (acts as moderator)
+    RETURN EXISTS (
+      SELECT 1 FROM public.network
+      WHERE id = network_id_param
+      AND created_by = user_id_param
+    );
+  END IF;
+  
+  -- If role column exists, check for moderator role
+  RETURN EXISTS (
     SELECT 1 FROM public.network_member
     WHERE network_id = network_id_param
     AND player_id = user_id_param
     AND role = 'moderator'
     AND status = 'active'
   );
+END;
 $$;
 
 -- =============================================================================
@@ -78,20 +97,13 @@ CREATE POLICY "Members can view network members" ON public.network_member
   );
 
 -- Members can add new members
+-- Note: Role restrictions will be added in a later migration after role column exists
 CREATE POLICY "Members can add members" ON public.network_member
   FOR INSERT
   WITH CHECK (
     -- Must be a member or creator of the network
-    (
-      is_network_member(network_id, auth.uid())
-      OR is_network_creator(network_id, auth.uid())
-    )
-    -- Non-moderators can only add with 'member' role
-    AND (
-      role = 'member'
-      OR is_network_moderator(network_id, auth.uid())
-      OR is_network_creator(network_id, auth.uid())
-    )
+    is_network_member(network_id, auth.uid())
+    OR is_network_creator(network_id, auth.uid())
   );
 
 -- Only moderators can update member status/role

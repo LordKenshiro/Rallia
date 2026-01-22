@@ -359,9 +359,12 @@ CREATE TABLE IF NOT EXISTS public.group_activity (
   player_id UUID NOT NULL REFERENCES public.player(id) ON DELETE CASCADE,
   activity_type VARCHAR(50) NOT NULL CHECK (activity_type IN (
     'member_joined', 
-    'member_left', 
+    'member_left',
+    'member_promoted',
+    'member_demoted',
     'match_created', 
     'match_completed',
+    'game_created',
     'message_sent',
     'group_updated'
   )),

@@ -139,7 +139,10 @@
       "payment": "Paiement",
       "support": "Support",
       "chat": "Message",
-      "system": "Système"
+      "system": "Système",
+      "feedback_request": "Demande d'évaluation",
+      "feedback_reminder": "Rappel d'évaluation",
+      "score_confirmation": "Confirmation du score"
     },
     "categories": {
       "match": "Notifications de parties",
@@ -237,7 +240,11 @@
       },
       "feedback_request": {
         "title": "Comment était votre partie?",
-        "body": "Évaluez votre partie de {sportName} avec {playerName}. Votre avis aide la communauté!"
+        "body": "Évaluez votre partie de {sportName} avec {opponentNames}. Votre avis aide la communauté!"
+      },
+      "feedback_reminder": {
+        "title": "N'oubliez pas d'évaluer votre partie",
+        "body": "Les commentaires pour votre partie de {sportName} ferment dans 24 heures. Partagez votre expérience avec {opponentNames}!"
       }
     }
   },

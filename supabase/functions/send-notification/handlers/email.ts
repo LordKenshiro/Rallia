@@ -13,7 +13,7 @@ const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'noreply@rallia.com';
  */
 const SPORT_COLORS: Record<string, { primary: string; accent: string; emoji: string }> = {
   tennis: { primary: '#4DB8A8', accent: '#e6f7f4', emoji: '🎾' },
-  pickleball: { primary: '#F59E0B', accent: '#fef3c7', emoji: '🏓' },
+  pickleball: { primary: '#F59E0B', accent: '#fef3c7', emoji: '' },
   badminton: { primary: '#8B5CF6', accent: '#ede9fe', emoji: '🏸' },
   default: { primary: '#4DB8A8', accent: '#e6f7f4', emoji: '🏃' },
 };
