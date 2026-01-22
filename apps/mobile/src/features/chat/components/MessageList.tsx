@@ -1,0 +1,318 @@
+/**
+ * MessageList Component
+ * Displays messages in a chat with date separators and infinite scroll
+ * Supports search highlighting and navigation
+ */
+
+import React, { useCallback, useMemo, memo, useRef, useImperativeHandle, forwardRef } from 'react';
+import {
+  View,
+  FlatList,
+  StyleSheet,
+  ActivityIndicator,
+  RefreshControl,
+} from 'react-native';
+
+import { Text } from '@rallia/shared-components';
+import { useThemeStyles } from '../../../hooks';
+import { spacingPixels, fontSizePixels } from '@rallia/design-system';
+import type { MessageWithSender, ReactionSummary } from '@rallia/shared-services';
+import { MessageBubble } from './MessageBubble';
+
+export interface MessageListRef {
+  scrollToMessage: (messageId: string) => void;
+}
+
+interface MessageListProps {
+  messages: MessageWithSender[];
+  currentUserId: string;
+  onReact: (messageId: string, emoji: string) => void;
+  onLoadMore: () => void;
+  isLoadingMore: boolean;
+  hasMore: boolean;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
+  reactions?: Map<string, ReactionSummary[]>;
+  onReplyToMessage?: (message: MessageWithSender) => void;
+  onLongPressMessage?: (message: MessageWithSender, pageY?: number) => void;
+  searchQuery?: string;
+  highlightedMessageIds?: string[];
+  currentHighlightedId?: string;
+}
+
+// Helper to format date for separators
+function formatDateSeparator(date: Date): string {
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const isToday = date.toDateString() === now.toDateString();
+  const isYesterday = date.toDateString() === yesterday.toDateString();
+
+  if (isToday) {
+    return 'Today';
+  } else if (isYesterday) {
+    return 'Yesterday';
+  } else {
+    // Check if within last week
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays < 7) {
+      return date.toLocaleDateString('en-US', { weekday: 'long' });
+    }
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+}
+
+// Check if two messages are from the same day
+function isSameDay(date1: Date, date2: Date): boolean {
+  return date1.toDateString() === date2.toDateString();
+}
+
+// Check if we should show sender info (first message from this sender in a sequence)
+function shouldShowSenderInfo(
+  currentMessage: MessageWithSender,
+  previousMessage: MessageWithSender | undefined,
+  currentUserId: string
+): boolean {
+  // Always show for other's first message in a sequence
+  if (currentMessage.sender_id === currentUserId) return false;
+  if (!previousMessage) return true;
+  if (previousMessage.sender_id !== currentMessage.sender_id) return true;
+  
+  // Also show if there's been a significant time gap (5 minutes)
+  const timeDiff = new Date(currentMessage.created_at).getTime() -
+    new Date(previousMessage.created_at).getTime();
+  if (timeDiff > 5 * 60 * 1000) return true;
+  
+  return false;
+}
+
+function MessageListComponent({
+  messages,
+  currentUserId,
+  onReact,
+  onLoadMore,
+  isLoadingMore,
+  hasMore,
+  onRefresh,
+  isRefreshing = false,
+  reactions = new Map(),
+  onReplyToMessage,
+  onLongPressMessage,
+  searchQuery = '',
+  highlightedMessageIds = [],
+  currentHighlightedId,
+}: MessageListProps, ref: React.Ref<MessageListRef>) {
+  const { colors } = useThemeStyles();
+  const flatListRef = useRef<FlatList>(null);
+
+  // Create a set for O(1) lookup of highlighted IDs
+  const highlightedSet = useMemo(() => new Set(highlightedMessageIds), [highlightedMessageIds]);
+
+  // Messages come newest first from the API
+  // FlatList with inverted=true displays them with oldest at top, newest at bottom
+  // Date separators should appear ABOVE (visually) the first message of each day
+  const processedMessages = useMemo(() => {
+    const result: Array<{
+      type: 'message' | 'dateSeparator';
+      message?: MessageWithSender;
+      date?: string;
+      id: string;
+      showSenderInfo?: boolean;
+    }> = [];
+
+    // Messages are in descending order (newest first)
+    // In inverted list: first item (newest) appears at bottom, last item (oldest) at top
+    // We want: DateSeparator to appear ABOVE its day's messages
+    // In data terms: DateSeparator should come AFTER its day's messages
+    
+    for (let i = 0; i < messages.length; i++) {
+      const message = messages[i];
+      const messageDate = new Date(message.created_at);
+      const nextMessage = messages[i + 1]; // Older message (appears above in UI)
+      
+      // Determine if we should show sender info
+      const showSenderInfo = shouldShowSenderInfo(message, nextMessage, currentUserId);
+
+      // Add the message first
+      result.push({
+        type: 'message',
+        message,
+        id: message.id,
+        showSenderInfo,
+      });
+
+      // Check if we need a date separator AFTER this message (appears ABOVE in UI)
+      // Add separator if this is the last message OR the next message is from a different day
+      const needsSeparator = !nextMessage || !isSameDay(messageDate, new Date(nextMessage.created_at));
+      
+      if (needsSeparator) {
+        result.push({
+          type: 'dateSeparator',
+          date: formatDateSeparator(messageDate),
+          id: `date-${messageDate.toDateString()}`,
+        });
+      }
+    }
+
+    return result;
+  }, [messages, currentUserId]);
+
+  // Expose scrollToMessage method to parent
+  useImperativeHandle(ref, () => ({
+    scrollToMessage: (messageId: string) => {
+      // Find the index of the message in processedMessages
+      const index = processedMessages.findIndex(
+        item => item.type === 'message' && item.id === messageId
+      );
+      if (index !== -1 && flatListRef.current) {
+        flatListRef.current.scrollToIndex({
+          index,
+          animated: true,
+          viewPosition: 0.5, // Center the message on screen
+        });
+      }
+    },
+  }), [processedMessages]);
+
+  const handleReact = useCallback(
+    (messageId: string) => (emoji: string) => {
+      onReact(messageId, emoji);
+    },
+    [onReact]
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: typeof processedMessages[0] }) => {
+      if (item.type === 'dateSeparator') {
+        return (
+          <View style={styles.dateSeparatorContainer}>
+            <View style={[styles.dateSeparatorLine, { backgroundColor: colors.border }]} />
+            <Text style={[styles.dateSeparatorText, { color: colors.textMuted }]}>
+              {item.date}
+            </Text>
+            <View style={[styles.dateSeparatorLine, { backgroundColor: colors.border }]} />
+          </View>
+        );
+      }
+
+      if (item.message) {
+        const messageReactions = reactions.get(item.message.id) || [];
+        const isHighlighted = highlightedSet.has(item.message.id);
+        const isCurrentHighlight = item.message.id === currentHighlightedId;
+        
+        return (
+          <MessageBubble
+            message={item.message}
+            isOwnMessage={item.message.sender_id === currentUserId}
+            showSenderInfo={item.showSenderInfo || false}
+            onReact={handleReact(item.message.id)}
+            reactions={messageReactions}
+            onReplyPress={onReplyToMessage ? () => onReplyToMessage(item.message!) : undefined}
+            onLongPress={onLongPressMessage ? (pageY: number) => onLongPressMessage(item.message!, pageY) : undefined}
+            searchQuery={searchQuery}
+            isHighlighted={isHighlighted}
+            isCurrentHighlight={isCurrentHighlight}
+          />
+        );
+      }
+
+      return null;
+    },
+    [colors, currentUserId, handleReact, reactions, onReplyToMessage, onLongPressMessage, searchQuery, highlightedSet, currentHighlightedId]
+  );
+
+  const renderFooter = useCallback(() => {
+    if (!isLoadingMore) return null;
+    return (
+      <View style={styles.loadingFooter}>
+        <ActivityIndicator color={colors.textMuted} />
+      </View>
+    );
+  }, [isLoadingMore, colors]);
+
+  const keyExtractor = useCallback((item: typeof processedMessages[0]) => item.id, []);
+
+  const handleEndReached = useCallback(() => {
+    if (hasMore && !isLoadingMore) {
+      onLoadMore();
+    }
+  }, [hasMore, isLoadingMore, onLoadMore]);
+
+  // Handle scroll to index failure (item not rendered yet)
+  const handleScrollToIndexFailed = useCallback((info: {
+    index: number;
+    highestMeasuredFrameIndex: number;
+    averageItemLength: number;
+  }) => {
+    // Wait and try again
+    setTimeout(() => {
+      if (flatListRef.current && processedMessages.length > 0) {
+        flatListRef.current.scrollToIndex({
+          index: Math.min(info.index, processedMessages.length - 1),
+          animated: true,
+          viewPosition: 0.5,
+        });
+      }
+    }, 100);
+  }, [processedMessages.length]);
+
+  return (
+    <FlatList
+      ref={flatListRef}
+      data={processedMessages}
+      renderItem={renderItem}
+      keyExtractor={keyExtractor}
+      inverted
+      contentContainerStyle={styles.listContent}
+      onEndReached={handleEndReached}
+      onEndReachedThreshold={0.2}
+      ListFooterComponent={renderFooter}
+      refreshControl={
+        onRefresh ? (
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        ) : undefined
+      }
+      showsVerticalScrollIndicator={false}
+      initialNumToRender={20}
+      maxToRenderPerBatch={10}
+      windowSize={10}
+      onScrollToIndexFailed={handleScrollToIndexFailed}
+    />
+  );
+}
+
+export const MessageList = memo(forwardRef(MessageListComponent)) as React.MemoExoticComponent<
+  React.ForwardRefExoticComponent<MessageListProps & React.RefAttributes<MessageListRef>>
+>;
+
+const styles = StyleSheet.create({
+  listContent: {
+    paddingVertical: spacingPixels[4],
+  },
+  dateSeparatorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacingPixels[4],
+    paddingHorizontal: spacingPixels[6],
+  },
+  dateSeparatorLine: {
+    flex: 1,
+    height: 1,
+  },
+  dateSeparatorText: {
+    fontSize: fontSizePixels.xs,
+    fontWeight: '500',
+    paddingHorizontal: spacingPixels[3],
+    textTransform: 'capitalize',
+  },
+  loadingFooter: {
+    paddingVertical: spacingPixels[4],
+    alignItems: 'center',
+  },
+});

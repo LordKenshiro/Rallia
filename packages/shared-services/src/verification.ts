@@ -1,10 +1,14 @@
 import { supabase } from './supabase';
-import { Logger } from './logger';
+import { Logger } from '@rallia/shared-utils';
 
 /**
  * Verification Service
  * Handles email verification code generation, sending, and validation
  * Uses Supabase Edge Functions to securely send emails via Resend
+ *
+ * @deprecated This entire module is deprecated. Use the `useAuth` hook from `@rallia/shared-hooks` instead.
+ * The Supabase SDK provides native OTP support via `signInWithOtp()` and `verifyOtp()` methods
+ * which are simpler, more secure, and don't require custom Edge Functions.
  */
 
 /**
@@ -21,6 +25,9 @@ const getSupabaseFunctionUrl = (functionName: string): string => {
 /**
  * Send verification code via Supabase Edge Function
  * The Edge Function handles rate limiting, code generation, storage, and email sending
+ *
+ * @deprecated Use the `useAuth` hook from `@rallia/shared-hooks` with `signInWithEmail()` instead.
+ * The Supabase SDK handles OTP sending natively without needing custom Edge Functions.
  */
 export const sendVerificationCode = async (
   email: string,
@@ -35,18 +42,20 @@ export const sendVerificationCode = async (
     }
 
     // Get current session for authorization
-    const { data: { session } } = await supabase.auth.getSession();
-    
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     // Call Supabase Edge Function
     const functionUrl = getSupabaseFunctionUrl('send-verification-email');
     Logger.debug('Calling Edge Function', { url: functionUrl, email: email.split('@')[1] });
-    
+
     const response = await fetch(functionUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session?.access_token || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
-        'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '',
+        Authorization: `Bearer ${session?.access_token || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+        apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '',
       },
       body: JSON.stringify({
         email,
@@ -55,7 +64,7 @@ export const sendVerificationCode = async (
       }),
     });
 
-    const data = await response.json() as { error?: string; message?: string };
+    const data = (await response.json()) as { error?: string; message?: string };
 
     if (!response.ok) {
       Logger.error('Failed to send verification code', new Error(data.error || 'Unknown error'), {
@@ -76,6 +85,9 @@ export const sendVerificationCode = async (
 
 /**
  * Verify the code entered by the user via Supabase Edge Function
+ *
+ * @deprecated Use the `useAuth` hook from `@rallia/shared-hooks` with `verifyOtp()` instead.
+ * The Supabase SDK handles OTP verification natively without needing custom Edge Functions.
  */
 export const verifyCode = async (
   email: string,
@@ -83,18 +95,23 @@ export const verifyCode = async (
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     // Get current session for authorization
-    const { data: { session } } = await supabase.auth.getSession();
-    
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     const functionUrl = getSupabaseFunctionUrl('verify-code');
-    Logger.debug('Calling verify-code Edge Function', { url: functionUrl, emailDomain: email.split('@')[1] });
-    
+    Logger.debug('Calling verify-code Edge Function', {
+      url: functionUrl,
+      emailDomain: email.split('@')[1],
+    });
+
     // Call Supabase Edge Function
     const response = await fetch(functionUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session?.access_token || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
-        'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '',
+        Authorization: `Bearer ${session?.access_token || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+        apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '',
       },
       body: JSON.stringify({
         email,
@@ -102,13 +119,13 @@ export const verifyCode = async (
       }),
     });
 
-    const data = await response.json() as { error?: string; message?: string };
+    const data = (await response.json()) as { error?: string; message?: string };
 
     if (!response.ok) {
-      Logger.warn('Code verification failed', { 
-        status: response.status, 
+      Logger.warn('Code verification failed', {
+        status: response.status,
         error: data.error,
-        emailDomain: email.split('@')[1] 
+        emailDomain: email.split('@')[1],
       });
       return { success: false, error: data.error || 'Invalid or expired code' };
     }
@@ -131,7 +148,7 @@ const generatePasswordFromEmail = (email: string): string => {
   const salt = 'rallia_secure_2024_v2'; // Changed salt to force new passwords
   const combined = `${email.toLowerCase().trim()}:${salt}`;
   const hash = combined.split('').reduce((acc, char) => {
-    return ((acc << 5) - acc) + char.charCodeAt(0);
+    return (acc << 5) - acc + char.charCodeAt(0);
   }, 0);
   return `Ral_${Math.abs(hash)}_${email.length}_lia!`;
 };
@@ -139,13 +156,16 @@ const generatePasswordFromEmail = (email: string): string => {
 /**
  * Authenticate user after email verification
  * This function handles both new users and existing users
+ *
+ * @deprecated Use the `useAuth` hook from `@rallia/shared-hooks` with `verifyOtp()` instead.
+ * The Supabase SDK OTP flow automatically creates sessions without needing deterministic passwords.
  */
 export const authenticateAfterVerification = async (
   email: string
 ): Promise<{ success: boolean; userId?: string; error?: string; isNewUser?: boolean }> => {
   const normalizedEmail = email.toLowerCase().trim();
   const userPassword = generatePasswordFromEmail(normalizedEmail);
-  
+
   console.log('🔐 Authenticating user after verification:', normalizedEmail);
 
   // First, try to sign in (user might already exist)
@@ -161,7 +181,7 @@ export const authenticateAfterVerification = async (
 
   // If sign in failed, try to create the user
   console.log('📝 Sign in failed, attempting to create new user...');
-  
+
   const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
     email: normalizedEmail,
     password: userPassword,
@@ -179,19 +199,19 @@ export const authenticateAfterVerification = async (
       console.log('✅ New user created and signed in');
       return { success: true, userId: signUpData.user.id, isNewUser: true };
     }
-    
+
     // User created but no session - try signing in
     console.log('📝 User created, attempting sign in...');
     const { data: newSignIn, error: newSignInError } = await supabase.auth.signInWithPassword({
       email: normalizedEmail,
       password: userPassword,
     });
-    
+
     if (!newSignInError && newSignIn.session) {
       console.log('✅ New user signed in after creation');
       return { success: true, userId: signUpData.user.id, isNewUser: true };
     }
-    
+
     console.error('❌ Failed to sign in after user creation:', newSignInError);
     return { success: false, error: 'Account created but sign in failed. Please try again.' };
   }
@@ -201,19 +221,24 @@ export const authenticateAfterVerification = async (
     console.log('⚠️ User exists with different password - this should not happen with our flow');
     // This means the user was created outside our system or with old password
     // We cannot recover without admin access or password reset
-    return { 
-      success: false, 
-      error: 'Account exists but cannot sign in. Please contact support or use password reset.' 
+    return {
+      success: false,
+      error: 'Account exists but cannot sign in. Please contact support or use password reset.',
     };
   }
 
   console.error('❌ Authentication failed:', signUpError || signInError);
-  return { success: false, error: signUpError?.message || signInError?.message || 'Authentication failed' };
+  return {
+    success: false,
+    error: signUpError?.message || signInError?.message || 'Authentication failed',
+  };
 };
 
 /**
  * Create Supabase Auth user and confirm email
- * @deprecated Use authenticateAfterVerification instead
+ *
+ * @deprecated Use the `useAuth` hook from `@rallia/shared-hooks` with `signInWithEmail()` and `verifyOtp()` instead.
+ * The Supabase SDK OTP flow handles user creation automatically.
  */
 export const createAuthUser = async (
   email: string,
@@ -240,14 +265,16 @@ export const createAuthUser = async (
 
     if (error) {
       console.error('❌ Failed to create auth user:', error);
-      
+
       // Check if user already exists
-      if (error.message.includes('already registered') || 
-          error.message.includes('already exists') ||
-          error.message.includes('User already registered')) {
+      if (
+        error.message.includes('already registered') ||
+        error.message.includes('already exists') ||
+        error.message.includes('User already registered')
+      ) {
         return { success: false, error: 'User already registered' };
       }
-      
+
       return { success: false, error: error.message };
     }
 
@@ -261,51 +288,63 @@ export const createAuthUser = async (
     // Check if we got a session from signup
     if (!data.session) {
       console.warn('⚠️ No session returned from signUp - email confirmation may be required');
-      console.log('📧 User created but needs confirmation. Since we are bypassing verification, attempting sign in...');
-      
+      console.log(
+        '📧 User created but needs confirmation. Since we are bypassing verification, attempting sign in...'
+      );
+
       // In development/testing, we're bypassing email verification
       // Normally, Supabase would send a confirmation email
       // For now, we'll attempt to sign in and handle the "Email not confirmed" error
-      
+
       // Try to sign in - this might fail with "Email not confirmed"
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password: userPassword,
       });
-      
+
       if (signInError) {
         // Check if it's the email confirmation error
         if (signInError.message.includes('Email not confirmed')) {
           console.warn('⚠️ Email not confirmed - this is expected with email confirmation enabled');
-          console.log('💡 User account created successfully. Email confirmation is required by Supabase settings.');
-          console.log('💡 For development: Disable email confirmation in Supabase Dashboard → Authentication → Settings');
+          console.log(
+            '💡 User account created successfully. Email confirmation is required by Supabase settings.'
+          );
+          console.log(
+            '💡 For development: Disable email confirmation in Supabase Dashboard → Authentication → Settings'
+          );
           console.log('💡 Or manually confirm the user in Dashboard → Authentication → Users');
-          
+
           // Return success with user ID - they can manually confirm or we can handle this differently
           // For now, we'll return an error that includes instructions
-          return { 
-            success: false, 
-            error: 'Account created! Please check your email to confirm your account, or disable email confirmation in Supabase settings for development.',
-            userId: userId 
+          return {
+            success: false,
+            error:
+              'Account created! Please check your email to confirm your account, or disable email confirmation in Supabase settings for development.',
+            userId: userId,
           };
         }
-        
+
         console.error('❌ Failed to sign in after signup:', signInError);
-        return { success: false, error: `Account created but sign in failed: ${signInError.message}` };
+        return {
+          success: false,
+          error: `Account created but sign in failed: ${signInError.message}`,
+        };
       }
-      
+
       if (!signInData.session) {
         console.error('❌ No session after sign in');
         return { success: false, error: 'Failed to establish session' };
       }
-      
+
       console.log('✅ Signed in successfully after signup');
     } else {
       console.log('✅ Session created for user:', userId);
     }
 
     // Verify session was persisted
-    const { data: { session: verifySession } } = await supabase.auth.getSession();
+    const {
+      data: { session: verifySession },
+    } = await supabase.auth.getSession();
     if (verifySession) {
       console.log('✅ Session verified and persisted');
     } else {
@@ -323,7 +362,9 @@ export const createAuthUser = async (
 
 /**
  * Login existing Supabase Auth user
- * @deprecated Use authenticateAfterVerification instead
+ *
+ * @deprecated Use the `useAuth` hook from `@rallia/shared-hooks` with `signInWithEmail()` and `verifyOtp()` instead.
+ * The Supabase SDK OTP flow handles login automatically.
  */
 export const loginAuthUser = async (
   email: string,
@@ -361,7 +402,9 @@ export const loginAuthUser = async (
     console.log('✅ User logged in successfully:', userId);
 
     // Verify session was persisted
-    const { data: { session: verifySession } } = await supabase.auth.getSession();
+    const {
+      data: { session: verifySession },
+    } = await supabase.auth.getSession();
     if (verifySession) {
       console.log('✅ Session verified and persisted');
     } else {

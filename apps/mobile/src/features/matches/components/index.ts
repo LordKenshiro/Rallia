@@ -1,6 +1,24 @@
 /**
- * Matches Feature - Component Exports
- * Re-export from shared components
+ * Match Components
  */
 
-export { MatchCard } from '@rallia/shared-components';
+export { MatchCreationWizard } from './MatchCreationWizard';
+export * from './steps';
+
+// Public matches components
+export { SearchBar } from './SearchBar';
+export { default as MatchFiltersBar } from './MatchFiltersBar';
+
+// Player matches components
+export { default as PlayerMatchFilterChips } from './PlayerMatchFilterChips';
+
+// Add Score flow components
+export { AddScoreIntroModal } from './AddScoreIntroModal';
+export { MatchTypeModal } from './MatchTypeModal';
+export type { MatchType as MatchTypeSelection } from './MatchTypeModal';
+export * from './addScore';
+
+// Score confirmation components
+export { ScoreConfirmationModal } from './ScoreConfirmationModal';
+export { PendingScoreCard } from './PendingScoreCard';
+export { PendingScoresSection } from './PendingScoresSection';

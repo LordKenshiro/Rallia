@@ -49,28 +49,28 @@ export interface DividerProps {
 
 /**
  * Divider component for creating visual separations between content
- * 
+ *
  * @example
  * ```tsx
  * // Horizontal divider (default)
  * <Divider />
- * 
+ *
  * // Horizontal divider with spacing
  * <Divider spacing={16} />
- * 
+ *
  * // Thicker divider
  * <Divider thickness={2} />
- * 
+ *
  * // Custom color divider
  * <Divider color="#E0E0E0" />
- * 
+ *
  * // Vertical divider
  * <HStack>
  *   <Text>Left</Text>
  *   <Divider orientation="vertical" length={20} spacing={8} />
  *   <Text>Right</Text>
  * </HStack>
- * 
+ *
  * // Divider in a list
  * <VStack>
  *   <Text>Item 1</Text>
@@ -94,14 +94,14 @@ export const Divider: React.FC<DividerProps> = ({
 
   const dividerStyle: ViewStyle = isHorizontal
     ? {
-        width: length,
+        width: length as number | '100%' | 'auto',
         height: thickness,
         backgroundColor: color,
         marginVertical: spacing,
       }
     : {
         width: thickness,
-        height: length,
+        height: length as number | '100%' | 'auto',
         backgroundColor: color,
         marginHorizontal: spacing,
       };

@@ -1,12 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Alert, ActivityIndicator, Linking } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Animated,
+  ActivityIndicator,
+  Linking,
+  Alert,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Overlay } from '@rallia/shared-components';
-import { COLORS } from '@rallia/shared-constants';
+import { Overlay, useToast } from '@rallia/shared-components';
 import DatabaseService, { OnboardingService, SportService, Logger } from '@rallia/shared-services';
 import type { OnboardingRating } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
+import { useThemeStyles } from '../../../../hooks';
+import { primary } from '@rallia/design-system';
 
 interface TennisRatingOverlayProps {
   visible: boolean;
@@ -25,9 +36,31 @@ interface Rating {
   score_value: number;
   display_label: string;
   description: string;
-  skill_level: 'beginner' | 'intermediate' | 'advanced' | 'professional';
-  isHighlighted?: boolean;
+  skill_level: 'beginner' | 'intermediate' | 'advanced' | 'professional' | null;
 }
+
+/**
+ * Maps NTRP score value to a user-friendly skill level name
+ * NTRP 1.5 = Beginner 1, NTRP 2.0 = Beginner 2, NTRP 2.5 = Beginner 3
+ * NTRP 3.0 = Intermediate 1, NTRP 3.5 = Intermediate 2, NTRP 4.0 = Intermediate 3
+ * NTRP 4.5 = Advanced 1, NTRP 5.0 = Advanced 2, NTRP 5.5 = Advanced 3
+ * NTRP 6.0+ = Professional
+ */
+const getNtrpSkillLabel = (scoreValue: number): string => {
+  const mapping: Record<number, string> = {
+    1.5: 'Beginner 1',
+    2.0: 'Beginner 2',
+    2.5: 'Beginner 3',
+    3.0: 'Intermediate 1',
+    3.5: 'Intermediate 2',
+    4.0: 'Intermediate 3',
+    4.5: 'Advanced 1',
+    5.0: 'Advanced 2',
+    5.5: 'Advanced 3',
+    6.0: 'Professional',
+  };
+  return mapping[scoreValue] || `Level ${scoreValue}`;
+};
 
 const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
   visible,
@@ -40,6 +73,8 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
   initialRating,
   onSave,
 }) => {
+  const { colors, isDark } = useThemeStyles();
+  const toast = useToast();
   const [selectedRating, setSelectedRating] = useState<string | null>(initialRating || null);
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -53,28 +88,32 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
   useEffect(() => {
     const loadRatings = async () => {
       if (!visible) return;
-      
+
       setIsLoading(true);
       try {
-        const { data, error } = await DatabaseService.RatingScore.getRatingScoresBySport('tennis', 'ntrp');
-        
+        const { data, error } = await DatabaseService.RatingScore.getRatingScoresBySport(
+          'tennis',
+          'ntrp'
+        );
+
         if (error || !data) {
-          Logger.error('Failed to load tennis ratings', error as Error, { sport: 'tennis', system: 'ntrp' });
-          Alert.alert('Error', 'Failed to load ratings. Please try again.');
+          Logger.error('Failed to load tennis ratings', error as Error, {
+            sport: 'tennis',
+            system: 'ntrp',
+          });
+          toast.error('Failed to load ratings. Please try again.');
           return;
         }
-        
+
         // Transform database data to match UI expectations
-        const transformedRatings: Rating[] = data.map((rating) => ({
+        const transformedRatings: Rating[] = data.map(rating => ({
           id: rating.id,
           score_value: rating.score_value,
           display_label: rating.display_label,
-          description: rating.description,
-          skill_level: rating.skill_level,
-          // Highlight NTRP 3.0 (recreational level)
-          isHighlighted: rating.score_value === 3.0,
+          description: rating.description || '',
+          skill_level: rating.skill_level, // May be null in new schema
         }));
-        
+
         setRatings(transformedRatings);
       } catch (error) {
         Logger.error('Unexpected error loading tennis ratings', error as Error);
@@ -83,9 +122,9 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
         setIsLoading(false);
       }
     };
-    
+
     loadRatings();
-  }, [visible]);
+  }, [visible, toast]);
 
   // Trigger animations when overlay becomes visible
   useEffect(() => {
@@ -108,6 +147,14 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
     }
   }, [visible, fadeAnim, slideAnim]);
 
+  // Helper function to get skill category from NTRP score value
+  const getSkillCategory = (scoreValue: number): string => {
+    if (scoreValue <= 2.5) return 'beginner';
+    if (scoreValue <= 4.0) return 'intermediate';
+    if (scoreValue <= 5.5) return 'advanced';
+    return 'professional';
+  };
+
   // Helper function to get icon based on skill level
   const getRatingIcon = (skillLevel: string): keyof typeof Ionicons.glyphMap => {
     if (skillLevel === 'beginner') return 'star-outline';
@@ -118,74 +165,63 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
 
   const handleContinue = async () => {
     if (!selectedRating || isSaving) return;
-    
+
     mediumHaptic();
-    
+
     // Edit mode: use the onSave callback
     if (mode === 'edit' && onSave) {
       onSave(selectedRating);
       return;
     }
-    
+
     // Onboarding mode: save to database
     if (onContinue) {
       setIsSaving(true);
       try {
         // Get tennis sport ID
-        const { data: tennisSport, error: sportError } = await SportService.getSportByName('tennis');
-        
+        const { data: tennisSport, error: sportError } =
+          await SportService.getSportByName('tennis');
+
         if (sportError || !tennisSport) {
           Logger.error('Failed to fetch tennis sport', sportError as Error);
           setIsSaving(false);
-          Alert.alert(
-            'Error',
-            'Failed to save your rating. Please try again.',
-            [{ text: 'OK' }]
-          );
+          toast.error('Failed to save your rating. Please try again.');
           return;
         }
-        
+
         // Find the selected rating data
         const selectedRatingData = ratings.find(r => r.id === selectedRating);
-        
+
         if (!selectedRatingData) {
           setIsSaving(false);
-          Alert.alert('Error', 'Invalid rating selected');
+          toast.error('Invalid rating selected');
           return;
         }
-        
+
         // Save rating to database
         const ratingData: OnboardingRating = {
           sport_id: tennisSport.id,
           sport_name: 'tennis',
-          rating_type: 'ntrp',
+          rating_system_code: 'ntrp',
           score_value: selectedRatingData.score_value,
           display_label: selectedRatingData.display_label,
         };
-        
+
         const { error } = await OnboardingService.saveRatings([ratingData]);
-        
+
         if (error) {
           Logger.error('Failed to save tennis rating', error as Error, { ratingData });
           setIsSaving(false);
-          Alert.alert(
-            'Error',
-            'Failed to save your rating. Please try again.',
-            [{ text: 'OK' }]
-          );
+          Alert.alert('Error', 'Failed to save your rating. Please try again.', [{ text: 'OK' }]);
           return;
         }
-        
+
         Logger.debug('tennis_rating_saved', { ratingData });
         onContinue(selectedRating);
       } catch (error) {
         Logger.error('Unexpected error saving tennis rating', error as Error);
         setIsSaving(false);
-        Alert.alert(
-          'Error',
-          'An unexpected error occurred. Please try again.',
-          [{ text: 'OK' }]
-        );
+        toast.error('An unexpected error occurred. Please try again.');
       }
     }
   };
@@ -215,27 +251,31 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
 
         {/* Back Button */}
         <TouchableOpacity style={styles.backButton} onPress={onBack || onClose} activeOpacity={0.7}>
-          <Text style={styles.backButtonText}>←</Text>
+          <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
         </TouchableOpacity>
 
         {/* Title */}
-        <Text style={styles.title}>
+        <Text style={[styles.title, { color: colors.text }]}>
           {mode === 'edit' ? 'Update your tennis rating' : 'Tell us about your game'}
         </Text>
 
         {/* Sport Badge */}
-        <View style={styles.sportBadge}>
-          <Text style={styles.sportBadgeText}>Tennis</Text>
+        <View style={[styles.sportBadge, { backgroundColor: colors.primary }]}>
+          <Text style={[styles.sportBadgeText, { color: colors.primaryForeground }]}>Tennis</Text>
         </View>
 
         {/* Subtitle with NTRP link */}
-        <Text style={styles.subtitle}>
+        <Text style={[styles.subtitle, { color: colors.textMuted }]}>
           {mode === 'edit' ? (
             <>
               Learn more about the{' '}
-              <Text 
-                style={styles.link} 
-                onPress={() => Linking.openURL('https://www.usta.com/en/home/improve/national-tennis-rating-program.html')}
+              <Text
+                style={[styles.link, { color: colors.primary }]}
+                onPress={() =>
+                  Linking.openURL(
+                    'https://www.usta.com/en/home/improve/national-tennis-rating-program.html'
+                  )
+                }
               >
                 NTRP rating system
               </Text>
@@ -249,80 +289,99 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
         <ScrollView style={styles.ratingList} showsVerticalScrollIndicator={false}>
           {isLoading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={COLORS.primary} />
-              <Text style={styles.loadingText}>Loading ratings...</Text>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={[styles.loadingText, { color: colors.textMuted }]}>
+                Loading ratings...
+              </Text>
             </View>
           ) : (
             <View style={styles.ratingGrid}>
               {ratings.map(rating => (
-              <TouchableOpacity
-                key={rating.id}
-                style={[
-                  styles.ratingCard,
-                  rating.isHighlighted && styles.ratingCardHighlighted,
-                  selectedRating === rating.id && styles.ratingCardSelected,
-                ]}
-                onPress={() => {
-                  selectionHaptic();
-                  setSelectedRating(rating.id);
-                }}
-                activeOpacity={0.8}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                  <Ionicons
-                    name={getRatingIcon(rating.skill_level)}
-                    size={20}
-                    color={selectedRating === rating.id ? '#fff' : COLORS.primary}
-                    style={{ marginRight: 8 }}
-                  />
+                <TouchableOpacity
+                  key={rating.id}
+                  style={[
+                    styles.ratingCard,
+                    { backgroundColor: colors.inputBackground },
+                    selectedRating === rating.id && [
+                      styles.ratingCardSelected,
+                      {
+                        borderColor: colors.primary,
+                        backgroundColor: isDark ? colors.inputBackground : primary[50],
+                      },
+                    ],
+                  ]}
+                  onPress={() => {
+                    selectionHaptic();
+                    setSelectedRating(rating.id);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                    <Ionicons
+                      name={getRatingIcon(getSkillCategory(rating.score_value))}
+                      size={20}
+                      color={colors.primary}
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text
+                      style={[
+                        styles.ratingLevel,
+                        {
+                          color: selectedRating === rating.id ? colors.text : colors.text,
+                        },
+                      ]}
+                    >
+                      {getNtrpSkillLabel(rating.score_value)}
+                    </Text>
+                  </View>
                   <Text
                     style={[
-                      styles.ratingLevel,
-                      rating.isHighlighted && styles.ratingLevelHighlighted,
-                      selectedRating === rating.id && styles.ratingLevelSelected,
+                      styles.ratingNtrp,
+                      {
+                        color: selectedRating === rating.id ? colors.text : colors.textMuted,
+                      },
                     ]}
                   >
-                    {rating.skill_level.charAt(0).toUpperCase() + rating.skill_level.slice(1)}
+                    {rating.display_label}
                   </Text>
-                </View>
-                <Text
-                  style={[
-                    styles.ratingNtrp,
-                    rating.isHighlighted && styles.ratingNtrpHighlighted,
-                    selectedRating === rating.id && styles.ratingNtrpSelected,
-                  ]}
-                >
-                  {rating.display_label}
-                </Text>
-                <Text
-                  style={[
-                    styles.ratingDescription,
-                    rating.isHighlighted && styles.ratingDescriptionHighlighted,
-                    selectedRating === rating.id && styles.ratingDescriptionSelected,
-                  ]}
-                >
-                  {rating.description}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Text
+                    style={[
+                      styles.ratingDescription,
+                      {
+                        color: selectedRating === rating.id ? colors.text : colors.textMuted,
+                      },
+                    ]}
+                  >
+                    {rating.description}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
           )}
         </ScrollView>
 
         {/* Continue/Save Button */}
         <TouchableOpacity
-          style={[styles.continueButton, (!selectedRating || isSaving) && styles.continueButtonDisabled]}
+          style={[
+            styles.continueButton,
+            { backgroundColor: colors.primary },
+            (!selectedRating || isSaving) && [
+              styles.continueButtonDisabled,
+              { backgroundColor: colors.buttonInactive },
+            ],
+          ]}
           onPress={handleContinue}
           activeOpacity={selectedRating && !isSaving ? 0.8 : 1}
           disabled={!selectedRating || isSaving}
         >
           {isSaving ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <ActivityIndicator size="small" color={colors.primaryForeground} />
           ) : (
             <Text
               style={[
                 styles.continueButtonText,
-                !selectedRating && styles.continueButtonTextDisabled,
+                { color: colors.primaryForeground },
+                !selectedRating && [styles.continueButtonTextDisabled, { color: colors.textMuted }],
               ]}
             >
               {mode === 'edit' ? 'Save' : 'Continue'}
@@ -348,17 +407,14 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 24,
-    color: '#333',
   },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
     textAlign: 'center',
     marginBottom: 15,
   },
   sportBadge: {
-    backgroundColor: COLORS.primary,
     paddingHorizontal: 20,
     paddingVertical: 6,
     borderRadius: 16,
@@ -366,13 +422,11 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   sportBadgeText: {
-    color: '#fff',
     fontSize: 14,
     fontWeight: '600',
   },
   subtitle: {
     fontSize: 14,
-    color: '#666',
     marginBottom: 15,
   },
   ratingList: {
@@ -387,7 +441,6 @@ const styles = StyleSheet.create({
   },
   ratingCard: {
     width: '48%',
-    backgroundColor: '#F5F5F5',
     borderRadius: 12,
     padding: 12,
     marginBottom: 10,
@@ -395,55 +448,50 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   ratingCardHighlighted: {
-    backgroundColor: COLORS.primary,
+    // backgroundColor applied inline
   },
   ratingCardSelected: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primaryLight,
+    // borderColor and backgroundColor applied inline
   },
   ratingLevel: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 4,
   },
   ratingLevelHighlighted: {
-    color: '#fff',
+    // color applied inline
   },
   ratingLevelSelected: {
-    color: COLORS.primary,
+    // color applied inline
   },
   ratingNtrp: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#666',
     marginBottom: 6,
   },
   ratingNtrpHighlighted: {
-    color: '#E0F9F7',
+    // color applied inline
   },
   ratingNtrpSelected: {
-    color: COLORS.primary,
+    // color applied inline
   },
   ratingDescription: {
     fontSize: 11,
-    color: '#666',
     lineHeight: 16,
   },
   ratingDescriptionHighlighted: {
-    color: '#fff',
+    // color applied inline
   },
   ratingDescriptionSelected: {
-    color: '#333',
+    // color applied inline
   },
   continueButton: {
-    backgroundColor: COLORS.accent,
     borderRadius: 10,
     paddingVertical: 16,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 10,
-    shadowColor: '#000',
+    shadowColor: 'rgba(0, 0, 0, 0.2)',
     shadowOffset: {
       width: 0,
       height: 2,
@@ -453,17 +501,15 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   continueButtonDisabled: {
-    backgroundColor: '#D3D3D3',
     shadowOpacity: 0,
     elevation: 0,
   },
   continueButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
   continueButtonTextDisabled: {
-    color: '#999',
+    // color applied inline
   },
   loadingContainer: {
     flex: 1,
@@ -474,12 +520,11 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: '#666',
   },
   link: {
-    color: COLORS.primary,
     textDecorationLine: 'underline',
     fontWeight: '600',
+    // color will be set dynamically
   },
 });
 

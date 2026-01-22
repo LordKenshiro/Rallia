@@ -1,21 +1,27 @@
 /**
- * Type Definitions - Barrel Export
- * 
- * Export order matters: database.ts types take precedence over legacy types
- * See TYPE_MIGRATION_GUIDE.md for type conflict resolution details
+ * Shared Types - Barrel Export
+ *
+ * Type Architecture:
+ * - supabase.ts: Auto-generated types from Supabase (DO NOT EDIT)
+ * - database.ts: Derived types from supabase.ts (row types, enums, composites)
+ * - ui-types.ts: UI view models and navigation params (non-database types)
+ * - constants.ts: Display labels and domain constants
  */
 
-// Export database types first (canonical source of truth)
+// Database types (derived from Supabase generated types)
 export * from './database';
 
-// Export UI-specific match types (non-conflicting)
-export type { Match, AccessType } from './match';
+// UI-specific types (view models, navigation params)
+export * from './ui-types';
 
-// Export deprecated types for backwards compatibility (will be removed in v2.0)
-export type { LegacyMatchStatus, LegacyMatchType } from './match';
+// Match feedback types (wizard UI and mutations)
+export * from './feedback';
 
-// Export player types and preferences
-export * from './player';
+// Domain constants (display labels, mappings)
+export * from './constants';
 
-// Export rating proof types
-export * from './ratings';
+// Validation schemas (Zod)
+export * from './validation';
+
+// Re-export Database type and Supabase helper types for client typing
+export type { Database, Tables, TablesInsert, TablesUpdate, Enums } from './supabase';

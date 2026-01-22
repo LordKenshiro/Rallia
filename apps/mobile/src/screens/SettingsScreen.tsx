@@ -1,268 +1,387 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   ScrollView,
   Image,
-  Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase, Logger } from '@rallia/shared-services';
-import { useNavigation } from '@react-navigation/native';
+import { Text, useToast } from '@rallia/shared-components';
+import { Logger } from '@rallia/shared-services';
+import { useTheme } from '@rallia/shared-hooks';
+import { useAppNavigation } from '../navigation/hooks';
+import { useLocale } from '../context';
+import { useAuth, useTranslation } from '../hooks';
+import type { Locale } from '@rallia/shared-translations';
+import { useProfile } from '@rallia/shared-hooks';
+import {
+  lightTheme,
+  darkTheme,
+  spacingPixels,
+  radiusPixels,
+  primary,
+  neutral,
+  status,
+} from '@rallia/design-system';
+
+const BASE_WHITE = '#ffffff';
+import { lightHaptic, warningHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
 
 const SettingsScreen: React.FC = () => {
-  const navigation = useNavigation();
-  const [userName, setUserName] = useState('');
-  const [userEmail, setUserEmail] = useState('');
-  const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
-  const [selectedLanguage, setSelectedLanguage] = useState<'EN' | 'FR'>('EN');
-  const [selectedAppearance, setSelectedAppearance] = useState<'Light' | 'Dark' | 'System'>('Light');
+  const navigation = useAppNavigation();
+  const toast = useToast();
+  const {
+    locale,
+    setLocale,
+    isManuallySet,
+    isReady: isLocaleReady,
+    resetToDeviceLocale,
+    localeConfigs,
+    availableLocales,
+  } = useLocale();
+  const { t } = useTranslation();
 
-  // Check authentication on mount and redirect if not logged in
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        Alert.alert('Error', 'Please sign in to access settings');
-        navigation.goBack();
-        return;
-      }
-      fetchUserData();
-    };
-    checkAuth();
-  }, [navigation]);
+  const { isAuthenticated, loading: authLoading, signOut } = useAuth();
+  const { profile, loading: profileLoading } = useProfile();
 
-  const fetchUserData = async () => {
+  const [isChangingLocale, setIsChangingLocale] = useState(false);
+  const { theme, themePreference, setThemePreference } = useTheme();
+  const isDark = theme === 'dark';
+
+  // Theme-aware colors from design system
+  const themeColors = isDark ? darkTheme : lightTheme;
+  const colors = useMemo(
+    () => ({
+      background: themeColors.background,
+      cardBackground: themeColors.card,
+      text: themeColors.foreground,
+      textSecondary: isDark ? primary[300] : neutral[600],
+      textMuted: themeColors.mutedForeground,
+      border: themeColors.border,
+      icon: themeColors.foreground,
+      iconMuted: themeColors.mutedForeground,
+      buttonInactive: themeColors.muted,
+      buttonActive: isDark ? primary[500] : primary[600],
+      buttonTextInactive: themeColors.mutedForeground,
+      buttonTextActive: BASE_WHITE,
+      deleteButtonBg: isDark ? `${status.error.DEFAULT}20` : `${status.error.light}15`,
+      deleteButtonText: status.error.DEFAULT,
+    }),
+    [themeColors, isDark]
+  );
+
+  const handleLanguageChange = async (newLocale: Locale) => {
+    if (newLocale === locale || isChangingLocale) return;
+
+    lightHaptic();
+    setIsChangingLocale(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: profile } = await supabase
-        .from('profile')
-        .select('full_name, display_name, email, profile_picture_url')
-        .eq('id', user.id)
-        .single();
-
-      if (profile) {
-        setUserName(profile.display_name || profile.full_name || '');
-        setUserEmail(profile.email || user.email || '');
-        setProfilePictureUrl(profile.profile_picture_url);
-      }
+      await setLocale(newLocale);
+      Logger.logUserAction('language_changed', { locale: newLocale });
     } catch (error) {
-      Logger.error('Failed to fetch user data', error as Error);
+      Logger.error('Failed to change language', error as Error);
+      toast.error(t('errors.unknown'));
+    } finally {
+      setIsChangingLocale(false);
     }
   };
 
-  const handleSignOut = async () => {
+  const handleResetToSystemLocale = async () => {
+    if (!isManuallySet || isChangingLocale) return;
+
+    setIsChangingLocale(true);
     try {
-      await supabase.auth.signOut();
-      // Navigate to Home after successful sign out
-      (navigation as any).navigate('HomeScreen');
+      await resetToDeviceLocale();
+      Logger.logUserAction('language_reset_to_system');
     } catch (error) {
-      Logger.error('Failed to sign out', error as Error);
+      Logger.error('Failed to reset language', error as Error);
+    } finally {
+      setIsChangingLocale(false);
     }
   };
 
   const handleDeleteAccount = () => {
+    warningHaptic();
     // TODO: Implement delete account functionality
     Logger.logUserAction('delete_account_pressed');
   };
 
   const handleEditProfile = () => {
-    (navigation as any).navigate('UserProfile');
+    navigation.navigate('UserProfile', {});
   };
 
-  const SettingsItem = ({ 
-    icon, 
-    title, 
-    onPress 
-  }: { 
-    icon: keyof typeof Ionicons.glyphMap; 
-    title: string; 
+  const handleNotificationPreferences = () => {
+    lightHaptic();
+    navigation.navigate('NotificationPreferences');
+    Logger.logUserAction('notification_preferences_pressed');
+  };
+
+  const handlePermissions = () => {
+    lightHaptic();
+    navigation.navigate('Permissions');
+    Logger.logUserAction('permissions_pressed');
+  };
+
+  const SettingsItem = ({
+    icon,
+    title,
+    onPress,
+  }: {
+    icon: keyof typeof Ionicons.glyphMap;
+    title: string;
     onPress: () => void;
   }) => (
-    <TouchableOpacity style={styles.settingsItem} onPress={onPress}>
+    <TouchableOpacity
+      style={[
+        styles.settingsItem,
+        { backgroundColor: colors.background, borderBottomColor: colors.border },
+      ]}
+      onPress={() => {
+        lightHaptic();
+        onPress();
+      }}
+      activeOpacity={0.7}
+    >
       <View style={styles.settingsItemLeft}>
-        <Ionicons name={icon} size={20} color="#333" />
-        <Text style={styles.settingsItemText}>{title}</Text>
+        <Ionicons name={icon} size={20} color={colors.icon} />
+        <Text size="base" color={colors.text}>
+          {title}
+        </Text>
       </View>
-      <Ionicons name="chevron-forward" size={20} color="#999" />
+      <Ionicons name="chevron-forward" size={20} color={colors.iconMuted} />
     </TouchableOpacity>
   );
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* User Profile Section */}
-        <View style={styles.profileSection}>
-          {profilePictureUrl ? (
-            <Image 
-              source={{ uri: profilePictureUrl }} 
-              style={styles.profileImage} 
-            />
-          ) : (
-            <View style={styles.profileImagePlaceholder}>
-              <Ionicons name="person" size={32} color="#999" />
-            </View>
-          )}
-          <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{userName}</Text>
-            <Text style={styles.profileEmail}>{userEmail}</Text>
-          </View>
+  // Show loading indicator until i18n is ready
+  if (!isLocaleReady || authLoading || profileLoading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.buttonActive} />
         </View>
+      </SafeAreaView>
+    );
+  }
 
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      <ScrollView
+        style={[styles.scrollContent, { backgroundColor: colors.background }]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Edit Profile */}
-        <TouchableOpacity style={styles.editProfileButton} onPress={handleEditProfile}>
-          <Ionicons name="create-outline" size={18} color="#333" />
-          <Text style={styles.editProfileText}>Edit Profile</Text>
-          <Ionicons name="chevron-forward" size={20} color="#999" style={{ marginLeft: 'auto' }} />
-        </TouchableOpacity>
+        {isAuthenticated && (
+          <View style={[styles.profileGroup, { backgroundColor: colors.background }]}>
+            <View style={[styles.profileSection, { backgroundColor: colors.background }]}>
+              {profile?.profile_picture_url ? (
+                <Image
+                  source={{ uri: getProfilePictureUrl(profile.profile_picture_url) || '' }}
+                  style={styles.profileImage}
+                />
+              ) : (
+                <View style={styles.profileImagePlaceholder}>
+                  <Ionicons name="person" size={32} color={colors.iconMuted} />
+                </View>
+              )}
+              <View style={styles.profileInfo}>
+                <Text size="lg" weight="semibold" color={colors.text}>
+                  {profile?.display_name ||
+                    `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() ||
+                    ''}
+                </Text>
+                <Text size="sm" color={colors.textSecondary} style={styles.profileEmail}>
+                  {profile?.email || ''}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.editProfileButton,
+                { backgroundColor: colors.background, borderBottomColor: colors.border },
+              ]}
+              onPress={() => {
+                lightHaptic();
+                handleEditProfile();
+              }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="create-outline" size={18} color={colors.icon} />
+              <Text size="base" color={colors.text}>
+                {t('profile.editProfile')}
+              </Text>
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={colors.iconMuted}
+                style={{ marginLeft: 'auto' }}
+              />
+            </TouchableOpacity>
+          </View>
+        )}
 
-        {/* Settings Items */}
-        <View style={styles.settingsGroup}>
-          <SettingsItem 
-            icon="notifications-outline" 
-            title="Notifications" 
-            onPress={() => { Logger.logUserAction('settings_notifications_pressed'); }} 
-          />
-          <SettingsItem 
-            icon="lock-closed-outline" 
-            title="Permissions" 
-            onPress={() => { Logger.logUserAction('settings_permissions_pressed'); }} 
-          />
-          <SettingsItem 
-            icon="card-outline" 
-            title="Subscription" 
-            onPress={() => { Logger.logUserAction('settings_subscription_pressed'); }}
-          />
-          <SettingsItem 
-            icon="wallet-outline" 
-            title="Payments" 
-            onPress={() => { Logger.logUserAction('settings_payments_pressed'); }}
-          />
-          <SettingsItem 
-            icon="help-circle-outline" 
-            title="Help & Assistance" 
-            onPress={() => { Logger.logUserAction('settings_help_pressed'); }}
-          />
-          <SettingsItem 
-            icon="document-text-outline" 
-            title="Terms & Conditions" 
-            onPress={() => { Logger.logUserAction('settings_terms_pressed'); }}
+        {/* Settings Items - Auth required */}
+        {isAuthenticated && (
+          <View style={[styles.settingsGroup, { backgroundColor: colors.background }]}>
+            <SettingsItem
+              icon="notifications-outline"
+              title={t('settings.notifications')}
+              onPress={handleNotificationPreferences}
+            />
+          </View>
+        )}
+
+        {/* Settings Items - Available to all users */}
+        <View style={[styles.settingsGroup, { backgroundColor: colors.background }]}>
+          <SettingsItem
+            icon="shield-checkmark-outline"
+            title={t('settings.permissions')}
+            onPress={handlePermissions}
           />
         </View>
 
         {/* Preferred Language */}
-        <View style={styles.preferenceSection}>
-          <Text style={styles.preferenceSectionTitle}>Preferred language</Text>
-          <View style={styles.preferenceOptions}>
-            <TouchableOpacity
-              style={[
-                styles.preferenceButton,
-                selectedLanguage === 'EN' && styles.preferenceButtonActive,
-              ]}
-              onPress={() => setSelectedLanguage('EN')}
-            >
-              <Text
-                style={[
-                  styles.preferenceButtonText,
-                  selectedLanguage === 'EN' && styles.preferenceButtonTextActive,
-                ]}
+        <View style={[styles.preferenceSection, { backgroundColor: colors.background }]}>
+          <View style={styles.preferenceTitleRow}>
+            <Text size="sm" color={colors.textSecondary}>
+              {t('settings.language')}
+            </Text>
+            {isManuallySet && (
+              <TouchableOpacity
+                onPress={() => {
+                  lightHaptic();
+                  handleResetToSystemLocale();
+                }}
+                disabled={isChangingLocale}
               >
-                EN
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.preferenceButton,
-                selectedLanguage === 'FR' && styles.preferenceButtonActive,
-              ]}
-              onPress={() => setSelectedLanguage('FR')}
-            >
-              <Text
-                style={[
-                  styles.preferenceButtonText,
-                  selectedLanguage === 'FR' && styles.preferenceButtonTextActive,
-                ]}
-              >
-                FR
-              </Text>
-            </TouchableOpacity>
+                <Text size="xs" weight="medium" color={primary[500]}>
+                  {t('settings.languageAuto')}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
+          <Text size="xs" color={colors.textMuted} style={styles.preferenceDescription}>
+            {t('settings.languageDescription')}
+          </Text>
+          <View style={styles.preferenceOptions}>
+            {availableLocales.map(loc => {
+              const config = localeConfigs[loc];
+              const isActive = locale === loc;
+              return (
+                <TouchableOpacity
+                  key={loc}
+                  style={[
+                    styles.preferenceButton,
+                    {
+                      backgroundColor: isActive ? colors.buttonActive : colors.buttonInactive,
+                    },
+                  ]}
+                  onPress={() => handleLanguageChange(loc)}
+                  disabled={isChangingLocale}
+                  activeOpacity={0.7}
+                >
+                  {isChangingLocale && !isActive ? (
+                    <ActivityIndicator size="small" color={colors.buttonActive} />
+                  ) : (
+                    <Text
+                      size="sm"
+                      weight="medium"
+                      color={isActive ? colors.buttonTextActive : colors.buttonTextInactive}
+                    >
+                      {config.nativeName}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          {!isManuallySet && (
+            <Text size="xs" color={colors.textMuted} style={styles.autoDetectedText}>
+              {t('settings.languageAuto')}
+            </Text>
+          )}
         </View>
 
         {/* Appearance */}
-        <View style={styles.preferenceSection}>
-          <Text style={styles.preferenceSectionTitle}>Appearance</Text>
+        <View style={[styles.preferenceSection, { backgroundColor: colors.background }]}>
+          <Text size="sm" color={colors.textSecondary} style={styles.preferenceSectionTitle}>
+            {t('settings.theme')}
+          </Text>
           <View style={styles.preferenceOptions}>
-            <TouchableOpacity
-              style={[
-                styles.preferenceButton,
-                selectedAppearance === 'Light' && styles.preferenceButtonActive,
-              ]}
-              onPress={() => setSelectedAppearance('Light')}
-            >
-              <Text
-                style={[
-                  styles.preferenceButtonText,
-                  selectedAppearance === 'Light' && styles.preferenceButtonTextActive,
-                ]}
-              >
-                Light
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.preferenceButton,
-                selectedAppearance === 'Dark' && styles.preferenceButtonActive,
-              ]}
-              onPress={() => setSelectedAppearance('Dark')}
-            >
-              <Text
-                style={[
-                  styles.preferenceButtonText,
-                  selectedAppearance === 'Dark' && styles.preferenceButtonTextActive,
-                ]}
-              >
-                Dark
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.preferenceButton,
-                selectedAppearance === 'System' && styles.preferenceButtonActive,
-              ]}
-              onPress={() => setSelectedAppearance('System')}
-            >
-              <Text
-                style={[
-                  styles.preferenceButtonText,
-                  selectedAppearance === 'System' && styles.preferenceButtonTextActive,
-                ]}
-              >
-                System
-              </Text>
-            </TouchableOpacity>
+            {(['light', 'dark', 'system'] as const).map(themePref => {
+              const isActive = themePreference === themePref;
+              const labelKey =
+                themePref === 'light'
+                  ? 'settings.lightMode'
+                  : themePref === 'dark'
+                    ? 'settings.darkMode'
+                    : 'settings.systemTheme';
+              return (
+                <TouchableOpacity
+                  key={themePref}
+                  style={[
+                    styles.preferenceButton,
+                    {
+                      backgroundColor: isActive ? colors.buttonActive : colors.buttonInactive,
+                    },
+                  ]}
+                  onPress={() => {
+                    lightHaptic();
+                    setThemePreference(themePref);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    size="sm"
+                    weight="medium"
+                    color={isActive ? colors.buttonTextActive : colors.buttonTextInactive}
+                  >
+                    {t(labelKey)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
         {/* Sign Out & Delete Account */}
-        <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-            <Ionicons name="log-out-outline" size={18} color="#333" />
-            <Text style={styles.signOutText}>Sign Out</Text>
-          </TouchableOpacity>
+        {isAuthenticated && (
+          <View style={[styles.actionButtons, { backgroundColor: colors.background }]}>
+            <TouchableOpacity
+              style={[styles.signOutButton, { backgroundColor: colors.buttonInactive }]}
+              onPress={async () => {
+                warningHaptic();
+                await signOut();
+                // Reset to Main - Home screen shows sign-in prompt when not authenticated
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: 'Main' }],
+                });
+              }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="log-out-outline" size={18} color={colors.icon} />
+              <Text size="base" weight="medium" color={colors.text}>
+                {t('settings.logout')}
+              </Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
-            <Ionicons name="trash-outline" size={18} color="#FF3B30" />
-            <Text style={styles.deleteAccountText}>Delete Account</Text>
-          </TouchableOpacity>
-        </View>
+            {/* <TouchableOpacity
+              style={[styles.deleteAccountButton, { backgroundColor: colors.deleteButtonBg }]}
+              onPress={handleDeleteAccount}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="trash-outline" size={18} color={colors.deleteButtonText} />
+              <Text size="base" weight="medium" color={colors.deleteButtonText}>
+                {t('settings.deleteAccount')}
+              </Text>
+            </TouchableOpacity> */}
+          </View>
+        )}
 
-        <View style={{ height: 40 }} />
+        <View style={styles.bottomSpacer} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -271,171 +390,125 @@ const SettingsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#C8F2EF',
   },
-  header: {
-    flexDirection: 'row',
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 48,
-    paddingBottom: 16,
-    backgroundColor: '#C8F2EF',
-  },
-  backButton: {
-    padding: 0,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
   },
   scrollContent: {
     flex: 1,
-    backgroundColor: '#fff',
+    paddingVertical: spacingPixels[5],
   },
   profileSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 24,
-    backgroundColor: '#fff',
+    paddingHorizontal: spacingPixels[2],
   },
   profileImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#E0E0E0',
+    width: spacingPixels[14],
+    height: spacingPixels[14],
+    borderRadius: radiusPixels.full,
   },
   profileImagePlaceholder: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#E0E0E0',
+    width: spacingPixels[14],
+    height: spacingPixels[14],
+    borderRadius: radiusPixels.full,
+    backgroundColor: neutral[200],
     alignItems: 'center',
     justifyContent: 'center',
   },
   profileInfo: {
-    marginLeft: 16,
+    marginLeft: spacingPixels[4],
     flex: 1,
   },
-  profileName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
   profileEmail: {
-    fontSize: 14,
-    color: '#666',
+    marginTop: spacingPixels[1],
   },
   editProfileButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#fff',
+    paddingHorizontal: spacingPixels[5],
+    paddingVertical: spacingPixels[4],
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-    gap: 8,
-  },
-  editProfileText: {
-    fontSize: 16,
-    color: '#333',
+    gap: spacingPixels[2],
   },
   settingsGroup: {
-    backgroundColor: '#fff',
+    paddingHorizontal: spacingPixels[5],
+    paddingVertical: spacingPixels[5],
+  },
+  profileGroup: {
+    paddingHorizontal: spacingPixels[5],
+    paddingVertical: spacingPixels[5],
   },
   settingsItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#fff',
+    paddingHorizontal: spacingPixels[5],
+    paddingVertical: spacingPixels[4],
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
   },
   settingsItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-  },
-  settingsItemText: {
-    fontSize: 16,
-    color: '#333',
+    gap: spacingPixels[3],
   },
   preferenceSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    backgroundColor: '#fff',
+    paddingHorizontal: spacingPixels[5],
+    paddingVertical: spacingPixels[5],
+  },
+  preferenceTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacingPixels[1],
   },
   preferenceSectionTitle: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 12,
+    marginBottom: spacingPixels[1],
+  },
+  preferenceDescription: {
+    marginBottom: spacingPixels[3],
   },
   preferenceOptions: {
     flexDirection: 'row',
-    gap: 12,
+    gap: spacingPixels[3],
   },
   preferenceButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: '#F0F0F0',
-    minWidth: 80,
+    paddingHorizontal: spacingPixels[5],
+    paddingVertical: spacingPixels[2.5],
+    borderRadius: radiusPixels.full,
+    minWidth: spacingPixels[20],
     alignItems: 'center',
   },
-  preferenceButtonActive: {
-    backgroundColor: '#16A58D',
-  },
-  preferenceButtonText: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-  },
-  preferenceButtonTextActive: {
-    color: '#fff',
-    fontWeight: '600',
+  autoDetectedText: {
+    marginTop: spacingPixels[2],
+    fontStyle: 'italic',
   },
   actionButtons: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    backgroundColor: '#fff',
-    gap: 12,
+    paddingHorizontal: spacingPixels[5],
+    paddingTop: spacingPixels[6],
+    gap: spacingPixels[3],
   },
   signOutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    backgroundColor: '#F0F0F0',
-    borderRadius: 8,
-    gap: 8,
-  },
-  signOutText: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
+    paddingVertical: spacingPixels[3.5],
+    borderRadius: radiusPixels.lg,
+    gap: spacingPixels[2],
   },
   deleteAccountButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    backgroundColor: '#FFF5F5',
-    borderRadius: 8,
-    gap: 8,
+    paddingVertical: spacingPixels[3.5],
+    borderRadius: radiusPixels.lg,
+    gap: spacingPixels[2],
   },
-  deleteAccountText: {
-    fontSize: 16,
-    color: '#FF3B30',
-    fontWeight: '500',
+  bottomSpacer: {
+    height: spacingPixels[10],
   },
 });
 
 export default SettingsScreen;
-
-
-

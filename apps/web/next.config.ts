@@ -6,6 +6,7 @@ const isDev = process.env.NODE_ENV === 'development';
 const nextConfig: NextConfig = {
   // Transpile shared monorepo packages
   transpilePackages: [
+    '@rallia/design-system',
     '@rallia/shared-components',
     '@rallia/shared-constants',
     '@rallia/shared-hooks',

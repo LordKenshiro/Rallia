@@ -1,0 +1,534 @@
+/**
+ * PlayerDirectory Component
+ *
+ * Displays a searchable list of players for the current sport.
+ * Features infinite scrolling, search, filters, and empty states.
+ */
+
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  TextInput,
+  RefreshControl,
+} from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { Text, SkeletonPlayerCard, Skeleton } from '@rallia/shared-components';
+import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
+import { usePlayerSearch, usePlayer } from '@rallia/shared-hooks';
+import type { PlayerSearchResult } from '@rallia/shared-services';
+import { supabase, Logger } from '@rallia/shared-services';
+import PlayerCard from './PlayerCard';
+import { PlayerFiltersBar, type PlayerFilters, DEFAULT_PLAYER_FILTERS } from './PlayerFiltersBar';
+
+interface ThemeColors {
+  background: string;
+  cardBackground: string;
+  text: string;
+  textSecondary: string;
+  textMuted: string;
+  border: string;
+  primary: string;
+  inputBackground: string;
+}
+
+interface PlayerDirectoryProps {
+  sportId: string | undefined;
+  sportName?: string; // 'Tennis' or 'Pickleball'
+  currentUserId: string | undefined;
+  colors: ThemeColors;
+  onPlayerPress: (player: PlayerSearchResult) => void;
+}
+
+const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
+  sportId,
+  sportName,
+  currentUserId,
+  colors,
+  onPlayerPress,
+}) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filters, setFilters] = useState<PlayerFilters>(DEFAULT_PLAYER_FILTERS);
+
+  // Get user's max travel distance preference
+  const { maxTravelDistanceKm } = usePlayer();
+
+  // Check if any filter is active
+  const hasActiveFilters = useMemo(() => {
+    return (
+      filters.favorites ||
+      filters.blocked ||
+      filters.gender !== 'all' ||
+      filters.skillLevel !== 'all' ||
+      filters.availability !== 'all' ||
+      filters.playStyle !== 'all' ||
+      filters.maxDistance !== 'all' ||
+      (filters.sortBy && filters.sortBy !== 'name_asc')
+    );
+  }, [filters]);
+
+  // Convert UI filters to service filters
+  const serviceFilters = useMemo(() => ({
+    favorites: filters.favorites,
+    blocked: filters.blocked,
+    gender: filters.gender,
+    skillLevel: filters.skillLevel,
+    availability: filters.availability,
+    playStyle: filters.playStyle,
+    maxDistance: filters.maxDistance,
+    sortBy: filters.sortBy,
+  }), [filters]);
+
+  // Filter change handler
+  // State for favorite player IDs
+  const [favoritePlayerIds, setFavoritePlayerIds] = useState<string[]>([]);
+  const [favoritesLoading, setFavoritesLoading] = useState(false);
+
+  // State for blocked player IDs
+  const [blockedPlayerIds, setBlockedPlayerIds] = useState<string[]>([]);
+  const [blockedLoading, setBlockedLoading] = useState(false);
+
+  // Function to fetch favorites - can be called on demand
+  const fetchFavorites = useCallback(async () => {
+    if (!currentUserId) return;
+
+    setFavoritesLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('player_favorite')
+        .select('favorite_player_id')
+        .eq('player_id', currentUserId);
+
+      if (error) {
+        Logger.error('Failed to fetch favorites', error);
+        return;
+      }
+
+      const ids = data?.map(item => item.favorite_player_id) || [];
+      setFavoritePlayerIds(ids);
+    } catch (error) {
+      Logger.error('Failed to fetch favorites', error as Error);
+    } finally {
+      setFavoritesLoading(false);
+    }
+  }, [currentUserId]);
+
+  // Function to fetch blocked players - can be called on demand
+  const fetchBlocked = useCallback(async () => {
+    if (!currentUserId) return;
+
+    setBlockedLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('player_block')
+        .select('blocked_player_id')
+        .eq('player_id', currentUserId);
+
+      if (error) {
+        Logger.error('Failed to fetch blocked players', error);
+        return;
+      }
+
+      const ids = data?.map(item => item.blocked_player_id) || [];
+      setBlockedPlayerIds(ids);
+    } catch (error) {
+      Logger.error('Failed to fetch blocked players', error as Error);
+    } finally {
+      setBlockedLoading(false);
+    }
+  }, [currentUserId]);
+
+  // Fetch favorites on mount and subscribe to changes
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    fetchFavorites();
+
+    // Subscribe to real-time changes for favorites
+    const subscription = supabase
+      .channel('player_favorites_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'player_favorite',
+          filter: `player_id=eq.${currentUserId}`,
+        },
+        () => {
+          // Refetch favorites when any change occurs
+          fetchFavorites();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [currentUserId, fetchFavorites]);
+
+  // Fetch blocked players on mount and subscribe to changes
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    fetchBlocked();
+
+    // Subscribe to real-time changes for blocked players
+    const subscription = supabase
+      .channel('player_blocked_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'player_block',
+          filter: `player_id=eq.${currentUserId}`,
+        },
+        () => {
+          // Refetch blocked players when any change occurs
+          fetchBlocked();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [currentUserId, fetchBlocked]);
+
+  // Refetch favorites/blocked when screen gains focus (e.g., returning from PlayerProfile)
+  useFocusEffect(
+    useCallback(() => {
+      // Refetch if the respective filter is active to update the list immediately
+      if (filters.favorites) {
+        fetchFavorites();
+      }
+      if (filters.blocked) {
+        fetchBlocked();
+      }
+    }, [filters.favorites, filters.blocked, fetchFavorites, fetchBlocked])
+  );
+
+  // Filter change handler - refetch when filters are toggled on
+  const handleFiltersChange = useCallback(
+    (newFilters: PlayerFilters) => {
+      // If favorites filter is being turned on, refetch favorites first
+      if (newFilters.favorites && !filters.favorites) {
+        fetchFavorites();
+      }
+      // If blocked filter is being turned on, refetch blocked first
+      if (newFilters.blocked && !filters.blocked) {
+        fetchBlocked();
+      }
+      setFilters(newFilters);
+    },
+    [filters.favorites, filters.blocked, fetchFavorites, fetchBlocked]
+  );
+
+  const handleResetFilters = useCallback(() => {
+    setFilters(DEFAULT_PLAYER_FILTERS);
+  }, []);
+
+  const {
+    players,
+    isLoading,
+    isFetching,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    refetch,
+  } = usePlayerSearch({
+    sportId,
+    currentUserId,
+    searchQuery,
+    filters: serviceFilters,
+    favoritePlayerIds,
+    blockedPlayerIds,
+    enabled: !!sportId && !!currentUserId,
+  });
+
+  // Sort players based on selected sort option
+  const sortedPlayers = useMemo(() => {
+    if (!players || players.length === 0) return players;
+    
+    const sorted = [...players];
+    const sortBy = filters.sortBy || 'name_asc';
+    
+    switch (sortBy) {
+      case 'name_asc':
+        return sorted.sort((a, b) => {
+          const nameA = a.display_name || a.first_name || '';
+          const nameB = b.display_name || b.first_name || '';
+          return nameA.localeCompare(nameB);
+        });
+      case 'name_desc':
+        return sorted.sort((a, b) => {
+          const nameA = a.display_name || a.first_name || '';
+          const nameB = b.display_name || b.first_name || '';
+          return nameB.localeCompare(nameA);
+        });
+      case 'rating_high':
+        return sorted.sort((a, b) => {
+          const ratingA = a.rating?.value || 0;
+          const ratingB = b.rating?.value || 0;
+          return ratingB - ratingA;
+        });
+      case 'rating_low':
+        return sorted.sort((a, b) => {
+          const ratingA = a.rating?.value || 0;
+          const ratingB = b.rating?.value || 0;
+          return ratingA - ratingB;
+        });
+      case 'distance':
+        // Distance not available in current data - fallback to name
+        return sorted.sort((a, b) => {
+          const nameA = a.display_name || a.first_name || '';
+          const nameB = b.display_name || b.first_name || '';
+          return nameA.localeCompare(nameB);
+        });
+      case 'recently_active':
+        // Last active not available in current data - fallback to name
+        return sorted.sort((a, b) => {
+          const nameA = a.display_name || a.first_name || '';
+          const nameB = b.display_name || b.first_name || '';
+          return nameA.localeCompare(nameB);
+        });
+      default:
+        return sorted;
+    }
+  }, [players, filters.sortBy]);
+
+  const handleEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const renderPlayer = useCallback(
+    ({ item }: { item: PlayerSearchResult }) => (
+      <PlayerCard player={item} colors={colors} onPress={onPlayerPress} />
+    ),
+    [colors, onPlayerPress]
+  );
+
+  const renderEmpty = () => {
+    if (isLoading) return null;
+
+    const hasSearchOrFilters = searchQuery || hasActiveFilters;
+
+    return (
+      <View style={styles.emptyContainer}>
+        <Ionicons name="people-outline" size={64} color={colors.textMuted} />
+        <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
+          {hasSearchOrFilters ? 'No players found' : 'No players yet'}
+        </Text>
+        <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
+          {hasSearchOrFilters
+            ? 'Try adjusting your search or filters'
+            : 'Be the first to invite players to your sport'}
+        </Text>
+      </View>
+    );
+  };
+
+  const renderFooter = () => {
+    if (!isFetchingNextPage) return null;
+    return (
+      <View style={styles.footerLoader}>
+        <SkeletonPlayerCard 
+          backgroundColor={colors.inputBackground}
+          highlightColor={colors.border}
+          style={{ paddingHorizontal: spacingPixels[4] }}
+        />
+      </View>
+    );
+  };
+
+  const renderHeader = () => (
+    <View>
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <View style={[styles.searchInputContainer, { backgroundColor: colors.inputBackground }]}>
+          <Ionicons
+            name="search-outline"
+            size={20}
+            color={colors.textMuted}
+            style={styles.searchIcon}
+          />
+          <TextInput
+            style={[styles.searchInput, { color: colors.text }]}
+            placeholder="Search by name or city..."
+            placeholderTextColor={colors.textMuted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <Ionicons
+              name="close-circle"
+              size={20}
+              color={colors.textMuted}
+              onPress={() => setSearchQuery('')}
+              style={styles.clearIcon}
+            />
+          )}
+        </View>
+      </View>
+
+      {/* Filters Bar */}
+      <PlayerFiltersBar
+        filters={filters}
+        sportName={sportName}
+        maxTravelDistance={maxTravelDistanceKm ?? 50}
+        onFiltersChange={handleFiltersChange}
+        onReset={handleResetFilters}
+      />
+    </View>
+  );
+
+  if (!sportId || !currentUserId) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Ionicons name="alert-circle-outline" size={64} color={colors.textMuted} />
+        <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
+          Select a sport
+        </Text>
+        <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
+          Choose a sport from the header to view players
+        </Text>
+      </View>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        {/* Skeleton search bar */}
+        <View style={[styles.searchContainer, { marginBottom: spacingPixels[4] }]}>
+          <Skeleton 
+            width="100%" 
+            height={44} 
+            borderRadius={radiusPixels.lg}
+            backgroundColor={colors.inputBackground}
+            highlightColor={colors.border}
+          />
+        </View>
+        {/* Skeleton filter chips */}
+        <View style={[styles.skeletonFilters, { marginBottom: spacingPixels[4] }]}>
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton 
+              key={i}
+              width={80} 
+              height={32} 
+              borderRadius={16}
+              backgroundColor={colors.inputBackground}
+              highlightColor={colors.border}
+              style={{ marginRight: spacingPixels[2] }}
+            />
+          ))}
+        </View>
+        {/* Skeleton player cards */}
+        {[1, 2, 3, 4, 5].map((i) => (
+          <SkeletonPlayerCard 
+            key={i}
+            backgroundColor={colors.inputBackground}
+            highlightColor={colors.border}
+            style={{ marginBottom: spacingPixels[3], paddingHorizontal: spacingPixels[4] }}
+          />
+        ))}
+      </View>
+    );
+  }
+
+  return (
+    <FlatList
+      data={sortedPlayers}
+      renderItem={renderPlayer}
+      keyExtractor={item => item.id}
+      ListHeaderComponent={renderHeader}
+      ListEmptyComponent={renderEmpty}
+      ListFooterComponent={renderFooter}
+      contentContainerStyle={[
+        styles.listContent,
+        sortedPlayers.length === 0 && styles.emptyListContent,
+      ]}
+      onEndReached={handleEndReached}
+      onEndReachedThreshold={0.5}
+      refreshControl={
+        <RefreshControl
+          refreshing={isFetching && !isFetchingNextPage}
+          onRefresh={refetch}
+          colors={[colors.primary]}
+          tintColor={colors.primary}
+        />
+      }
+      showsVerticalScrollIndicator={false}
+    />
+  );
+};
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    paddingTop: spacingPixels[3],
+  },
+  skeletonFilters: {
+    flexDirection: 'row',
+    paddingHorizontal: spacingPixels[4],
+  },
+  searchContainer: {
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[3],
+    paddingBottom: spacingPixels[3],
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: radiusPixels.lg,
+    paddingHorizontal: spacingPixels[3],
+    height: 44,
+  },
+  searchIcon: {
+    marginRight: spacingPixels[2],
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: fontSizePixels.base,
+    paddingVertical: 0,
+  },
+  clearIcon: {
+    marginLeft: spacingPixels[2],
+  },
+  listContent: {
+    paddingBottom: spacingPixels[5],
+  },
+  emptyListContent: {
+    flexGrow: 1,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[8],
+    paddingTop: spacingPixels[10],
+  },
+  emptyTitle: {
+    marginTop: spacingPixels[4],
+    marginBottom: spacingPixels[2],
+    textAlign: 'center',
+  },
+  emptyDescription: {
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  footerLoader: {
+    alignItems: 'center',
+    paddingVertical: spacingPixels[4],
+  },
+});
+
+export default PlayerDirectory;

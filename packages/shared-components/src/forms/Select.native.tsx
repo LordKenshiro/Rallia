@@ -1,9 +1,9 @@
 /**
  * Select Component (Picker)
- * 
+ *
  * Dropdown selection component with label, error handling, and validation.
  * Uses React Native Picker for native platform integration.
- * 
+ *
  * @example
  * ```tsx
  * <Select
@@ -27,6 +27,7 @@ import {
   Modal,
   FlatList,
   ViewStyle,
+  StyleProp,
 } from 'react-native';
 import { Text } from '../foundation/Text.native';
 import { colors, spacing, typography } from '../theme';
@@ -42,56 +43,56 @@ export interface SelectProps {
    * Select label
    */
   label?: string;
-  
+
   /**
    * Placeholder text when no value selected
    */
   placeholder?: string;
-  
+
   /**
    * Helper text displayed below select
    */
   helperText?: string;
-  
+
   /**
    * Error message - displays in red when present
    */
   error?: string;
-  
+
   /**
    * Whether field is required
    */
   required?: boolean;
-  
+
   /**
    * Whether select is disabled
    */
   disabled?: boolean;
-  
+
   /**
    * Currently selected value
    */
   value: string;
-  
+
   /**
    * Callback when selection changes
    */
   onChange: (value: string) => void;
-  
+
   /**
    * Available options
    */
   options: SelectOption[];
-  
+
   /**
    * Custom container style
    */
-  containerStyle?: ViewStyle;
-  
+  containerStyle?: StyleProp<ViewStyle>;
+
   /**
    * Custom select button style
    */
-  selectStyle?: ViewStyle;
+  selectStyle?: StyleProp<ViewStyle>;
 }
 
 export const Select: React.FC<SelectProps> = ({
@@ -111,7 +112,7 @@ export const Select: React.FC<SelectProps> = ({
   const [isFocused, setIsFocused] = useState(false);
 
   const hasError = !!error;
-  const selectedOption = options.find((opt) => opt.value === value);
+  const selectedOption = options.find(opt => opt.value === value);
   const displayText = selectedOption?.label || placeholder;
 
   // Determine border color based on state
@@ -172,8 +173,8 @@ export const Select: React.FC<SelectProps> = ({
         <Text
           style={[
             styles.selectText,
-            !selectedOption && styles.placeholderText,
-            disabled && styles.disabledText,
+            ...(!selectedOption ? [styles.placeholderText] : []),
+            ...(disabled ? [styles.disabledText] : []),
           ]}
         >
           {displayText}
@@ -195,17 +196,8 @@ export const Select: React.FC<SelectProps> = ({
       </View>
 
       {/* Options Modal */}
-      <Modal
-        visible={isModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={handleClose}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={handleClose}
-        >
+      <Modal visible={isModalVisible} transparent animationType="fade" onRequestClose={handleClose}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={handleClose}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text weight="semibold" size="lg">
@@ -218,7 +210,7 @@ export const Select: React.FC<SelectProps> = ({
 
             <FlatList
               data={options}
-              keyExtractor={(item) => item.value}
+              keyExtractor={item => item.value}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[
@@ -232,8 +224,8 @@ export const Select: React.FC<SelectProps> = ({
                   <Text
                     style={[
                       styles.optionText,
-                      item.value === value && styles.optionTextSelected,
-                      item.disabled && styles.optionTextDisabled,
+                      ...(item.value === value ? [styles.optionTextSelected] : []),
+                      ...(item.disabled ? [styles.optionTextDisabled] : []),
                     ]}
                   >
                     {item.label}

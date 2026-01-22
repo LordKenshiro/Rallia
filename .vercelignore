@@ -1,0 +1,41 @@
+# Dependencies - these get installed during build
+node_modules/
+
+# Mobile app - not needed for web deployment
+apps/mobile/
+
+# Build artifacts
+.next/
+.turbo/
+dist/
+build/
+coverage/
+
+# Expo
+.expo/
+.expo-shared/
+
+# iOS build artifacts
+ios/build/
+ios/Pods/
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Debug logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Test files
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+__tests__/
+

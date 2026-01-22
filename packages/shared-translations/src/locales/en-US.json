@@ -1,0 +1,2252 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Try again",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "goBack": "Go back",
+    "next": "Next",
+    "done": "Done",
+    "continue": "Continue",
+    "skip": "Skip",
+    "yes": "Yes",
+    "no": "No",
+    "ok": "OK",
+    "close": "Close",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "time": {
+      "now": "Now",
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "inMinutes": "In {minutes} min",
+      "inHours": "In {hours}h",
+      "inHoursMinutes": "In {hours}h {minutes}m",
+      "timeSeparator": " • "
+    },
+    "refresh": "Refresh",
+    "submit": "Submit",
+    "send": "Send",
+    "select": "Select",
+    "required": "Required",
+    "optional": "Optional",
+    "showLess": "Show less",
+    "resetToDefaults": "Reset to defaults",
+    "gender": {
+      "label": "Gender",
+      "male": "Male",
+      "female": "Female"
+    },
+    "playingHand": {
+      "label": "Playing Hand",
+      "left": "Left",
+      "right": "Right"
+    },
+    "verified": "Verified",
+    "lastActive": "Last Active"
+  },
+  "auth": {
+    "signIn": "Sign In",
+    "signOut": "Sign Out",
+    "signUp": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot Password?",
+    "resetPassword": "Reset Password",
+    "verificationCode": "Verification Code",
+    "sendCode": "Send Code",
+    "verifyCode": "Verify Code",
+    "resendCode": "Resend Code",
+    "codeSent": "Code sent to {email}",
+    "codeExpired": "This code has expired. Please request a new one.",
+    "invalidCode": "That code isn't correct. Please try again.",
+    "welcomeBack": "Welcome back!",
+    "createAccount": "Create an account to get started",
+    "enterCode": "Enter code",
+    "codeSentTo": "We sent an email verification code to",
+    "termsText": "By continuing, you agree to Rallia's Terms of Use.",
+    "orDivider": "OR",
+    "step": "Step {current} of {total}",
+    "stepNames": {
+      "email": "Email",
+      "verify": "Verify"
+    }
+  },
+  "navigation": {
+    "home": "Home",
+    "matches": "Games",
+    "map": "Map",
+    "community": "Community",
+    "profile": "Profile",
+    "settings": "Settings",
+    "chat": "Chat",
+    "notifications": "Notifications"
+  },
+  "screens": {
+    "profile": "Profile",
+    "playerProfile": "Player Profile",
+    "sportProfile": "Sport Profile",
+    "settings": "Settings",
+    "notifications": "Notifications",
+    "notificationPreferences": "Notification Preferences",
+    "permissions": "Permissions",
+    "ratingProofs": "Rating Proofs",
+    "publicMatches": "Public Games",
+    "playerMatches": "My Games",
+    "group": "Group",
+    "groups": "Groups"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No notifications yet",
+    "emptyDescription": "You'll see game invitations, reminders, and updates here",
+    "unread": "unread",
+    "markAllRead": "Mark all as read",
+    "markAsRead": "Mark as read",
+    "delete": "Delete",
+    "timeAgo": "{time} ago",
+    "signInRequired": "Sign In Required",
+    "signInPrompt": "Please sign in to view your notifications",
+    "time": {
+      "justNow": "Just now",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "thisWeek": "This Week",
+      "earlier": "Earlier"
+    },
+    "types": {
+      "match_invitation": "Game Invitation",
+      "match_join_request": "Join Request",
+      "match_join_accepted": "Request Accepted",
+      "match_join_rejected": "Request Declined",
+      "match_player_joined": "Player Joined",
+      "match_cancelled": "Game Cancelled",
+      "match_updated": "Game Updated",
+      "match_starting_soon": "Game Starting Soon",
+      "match_completed": "Game Completed",
+      "player_kicked": "Removed from Game",
+      "player_left": "Player Left",
+      "new_message": "New Message",
+      "friend_request": "Friend Request",
+      "rating_verified": "Rating Verified",
+      "reminder": "Reminder",
+      "payment": "Payment",
+      "support": "Support",
+      "chat": "Message",
+      "system": "System",
+      "feedback_request": "Feedback Request",
+      "feedback_reminder": "Feedback Reminder",
+      "score_confirmation": "Score Confirmation"
+    },
+    "categories": {
+      "match": "Game Notifications",
+      "social": "Social Notifications",
+      "system": "System Notifications"
+    },
+    "channels": {
+      "email": "Email",
+      "push": "Push",
+      "sms": "SMS"
+    },
+    "preferences": {
+      "title": "Notification Preferences",
+      "description": "Choose how you want to be notified about different events. Turn each option on or off.",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "default": "Default"
+    },
+    "messages": {
+      "match_invitation": {
+        "title": "Game On!",
+        "body": "{playerName} wants to play {sportName} with you on {matchDate}{startTime}"
+      },
+      "match_join_request": {
+        "title": "New Player Request",
+        "body": "{playerName} wants to join your {sportName} game on {matchDate}"
+      },
+      "match_join_accepted": {
+        "title": "You're In!",
+        "body": "Your {sportName} game on {matchDate} at {locationName} is confirmed. See you there!"
+      },
+      "match_join_rejected": {
+        "title": "Request Declined",
+        "body": "Your request to join the {sportName} game wasn't accepted this time. Check out other games nearby!"
+      },
+      "match_player_joined": {
+        "title": "Player Joined!",
+        "body": "{playerName} joined your {sportName} game. {spotsLeft} spot(s) left!"
+      },
+      "match_cancelled": {
+        "title": "Game Cancelled",
+        "body": "The {sportName} game on {matchDate} at {locationName} has been cancelled. We hope to see you on the court soon!"
+      },
+      "match_updated": {
+        "title": "Game Updated",
+        "body": "Your {sportName} game on {matchDate} has new details. Tap to review the changes."
+      },
+      "match_starting_soon": {
+        "title": "Get Ready!",
+        "body": "Your {sportName} game at {locationName} starts {timeUntil}. Time to warm up!"
+      },
+      "match_completed": {
+        "title": "Great Game!",
+        "body": "Your {sportName} game is complete. How did it go? Share your feedback!"
+      },
+      "player_kicked": {
+        "title": "Removed from Game",
+        "body": "You've been removed from the {sportName} game on {matchDate}. Check out other games nearby!"
+      },
+      "player_left": {
+        "title": "Player Left",
+        "body": "{playerName} left your {sportName} game. {spotsLeft} spot(s) now available."
+      },
+      "new_message": {
+        "title": "Message from {senderName}",
+        "body": "{messagePreview}"
+      },
+      "chat": {
+        "title": "New Message",
+        "body": "You have a new message waiting for you"
+      },
+      "friend_request": {
+        "title": "New Connection Request",
+        "body": "{playerName} wants to add you to their network. Check out their profile!"
+      },
+      "rating_verified": {
+        "title": "Rating Verified!",
+        "body": "Congrats! Your {ratingSystemName} rating of {ratingValue} for {sportName} is now verified."
+      },
+      "reminder": {
+        "title": "Upcoming Game",
+        "body": "Don't forget your {sportName} game on {matchDate} at {locationName}"
+      },
+      "payment": {
+        "title": "Payment Update",
+        "body": "Your payment status has been updated. Tap to view details."
+      },
+      "support": {
+        "title": "Message from Rallia",
+        "body": "Our support team has sent you a message. Tap to read."
+      },
+      "system": {
+        "title": "Rallia Update",
+        "body": "We have an update for you. Tap to learn more."
+      },
+      "feedback_request": {
+        "title": "How Was Your Game?",
+        "body": "Rate your {sportName} game with {opponentNames}. Your feedback helps the community!"
+      },
+      "feedback_reminder": {
+        "title": "Don't Forget to Rate Your Game",
+        "body": "Your {sportName} game feedback closes in 24 hours. Rate your experience with {opponentNames}!"
+      }
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "languageDescription": "Choose your preferred language",
+    "languageAuto": "System Default",
+    "notifications": "Notifications",
+    "notificationsDescription": "Choose how you want to be notified about different events. Turn each option on or off.",
+    "privacy": "Privacy",
+    "subscription": "Subscription",
+    "payments": "Payments",
+    "about": "About",
+    "version": "Version",
+    "termsOfService": "Terms of Service",
+    "privacyPolicy": "Privacy Policy",
+    "logout": "Log Out",
+    "deleteAccount": "Delete Account",
+    "theme": "Theme",
+    "darkMode": "Dark Mode",
+    "lightMode": "Light Mode",
+    "systemTheme": "System",
+    "permissions": "Permissions"
+  },
+  "permissions": {
+    "description": "Manage app permissions to enable features like notifications, finding games near you, and calendar sync.",
+    "settingsNote": "If you denied a permission, you'll need to enable it in your device settings.",
+    "types": {
+      "notifications": "Notifications",
+      "location": "Location",
+      "calendar": "Calendar",
+      "photos": "Photos & Media"
+    },
+    "status": {
+      "granted": "Allowed",
+      "denied": "Denied",
+      "undetermined": "Not Set",
+      "loading": "Loading..."
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "editProfile": "Edit Profile",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "displayName": "Display Name",
+    "bio": "Bio",
+    "location": "Location",
+    "phone": "Phone",
+    "birthDate": "Birth Date",
+    "gender": "Gender",
+    "profilePicture": "Profile Picture",
+    "changePhoto": "Change Photo",
+    "removePhoto": "Remove Photo",
+    "sportProfiles": "Sport Profiles",
+    "ratings": "Ratings",
+    "matches": "Games",
+    "reviews": "Reviews",
+    "notSet": "Not set",
+    "sections": {
+      "personalInformation": "MY PERSONAL INFORMATION",
+      "playerInformation": "MY PLAYER INFORMATION",
+      "sports": "MY SPORTS",
+      "availabilities": "MY AVAILABILITIES",
+      "rating": "MY RATING",
+      "preferences": "MY PREFERENCES"
+    },
+    "fields": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "fullName": "Full Name",
+      "email": "Email",
+      "phoneNumber": "Phone Number",
+      "dateOfBirth": "Date of Birth",
+      "playingHand": "Playing Hand",
+      "maxTravelDistance": "Max Travel Distance",
+      "matchDuration": "Game Duration",
+      "matchType": "Game Type",
+      "facility": "Facility",
+      "playingStyle": "Playing Style",
+      "playAttributes": "Play Attributes"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "certified": "Certified",
+      "noBio": "No bio yet",
+      "noSports": "No sports available",
+      "noRating": "No rating yet",
+      "noRatingSubtext": "Set up your rating to start playing"
+    },
+    "loading": {
+      "profile": "Loading profile...",
+      "sportProfile": "Loading {sport} profile..."
+    },
+    "uploading": "Uploading...",
+    "joined": "Joined",
+    "username": "username",
+    "user": "User",
+    "doYouPlay": "Do you play {sport}?",
+    "activateSportMessage": "Activate {sport} to set up your rating and preferences",
+    "rating": {
+      "skillLevel": "Skill Level",
+      "score": "Score",
+      "references": "{count} References",
+      "peerRating": "{count} Peer Rating",
+      "ratingProof": "{count} Rating Proof",
+      "requestReference": "Request reference",
+      "requestPeerRating": "Request peer rating",
+      "manageRatingProofs": "Manage rating proofs"
+    },
+    "genderValues": {
+      "male": "Male",
+      "female": "Female",
+      "other": "Non-binary",
+      "preferNotToSay": "Prefer not to say"
+    },
+    "hand": {
+      "left": "Left",
+      "right": "Right",
+      "both": "Both"
+    },
+    "preferences": {
+      "updateTennis": "Update your tennis preferences",
+      "updatePickleball": "Update your pickleball preferences",
+      "matchDuration": "Game Duration",
+      "matchType": "Game Type",
+      "court": "Court",
+      "playStyle": "Play Style",
+      "selectAllThatApply": "Select all that apply",
+      "selectPlayStyle": "Select your play style",
+      "courtPlaceholder": "e.g., Jeanne-Mance Park",
+      "courtPlaceholderPickleball": "e.g., Parc Jarry",
+      "durations": {
+        "30": "30 min",
+        "60": "1h",
+        "90": "1.5h",
+        "120": "2h"
+      },
+      "matchTypes": {
+        "casual": "Casual",
+        "competitive": "Competitive",
+        "both": "Both"
+      },
+      "playStyles": {
+        "counterpuncher": "Counterpuncher",
+        "aggressive_baseliner": "Aggressive Baseliner",
+        "serve_and_volley": "Serve and Volley",
+        "all_court": "All Court"
+      },
+      "playAttributes": {
+        "serve_speed_and_placement": "Serve Speed & Placement",
+        "net_play": "Net Play",
+        "court_coverage": "Court Coverage",
+        "forehand_power": "Forehand Power",
+        "shot_selection": "Shot Selection",
+        "spin_control": "Spin Control"
+      }
+    }
+  },
+  "onboarding": {
+    "welcome": "Welcome to Rallia",
+    "welcomeSubtitle": "Find your perfect tennis and pickleball playing partners",
+    "getStarted": "Get Started",
+    "personalInfo": "Personal Information",
+    "personalInfoSubtitle": "Tell us a bit about yourself",
+    "sportSelection": "Select Your Sports",
+    "sportSelectionSubtitle": "Which sports do you play?",
+    "tennis": "Tennis",
+    "pickleball": "Pickleball",
+    "skillLevel": "Skill Level",
+    "skillLevelSubtitle": "What's your skill level?",
+    "beginner": "Beginner",
+    "intermediate": "Intermediate",
+    "advanced": "Advanced",
+    "professional": "Professional",
+    "ratingSource": "Rating Source",
+    "selfRated": "Self-Rated",
+    "verified": "Verified",
+    "availability": "Availability",
+    "availabilitySubtitle": "When are you usually available to play?",
+    "preferences": "Preferences",
+    "preferencesSubtitle": "Set your playing preferences",
+    "allSet": "You're all set!",
+    "allSetSubtitle": "Start finding games",
+    "step": "Step {current} of {total}",
+    "stepNames": {
+      "personal": "About You",
+      "sports": "Sports",
+      "tennisRating": "Tennis Rating",
+      "pickleballRating": "Pickleball Rating",
+      "preferences": "Preferences",
+      "availability": "Availability"
+    },
+    "personalInfoStep": {
+      "title": "Tell us about yourself",
+      "firstName": "First Name",
+      "firstNamePlaceholder": "Enter your first name",
+      "lastName": "Last Name",
+      "lastNamePlaceholder": "Enter your last name",
+      "fullName": "Full Name",
+      "fullNamePlaceholder": "Enter your full name",
+      "username": "Username",
+      "usernamePlaceholder": "Choose a username",
+      "usernameHelper": "Max 10 characters, no spaces",
+      "dateOfBirth": "Date of Birth",
+      "gender": "Gender",
+      "genderPlaceholder": "Select your gender",
+      "phoneNumber": "Phone Number",
+      "required": "*"
+    },
+    "sportSelectionStep": {
+      "title": "Which sports would you like to play?",
+      "subtitle": "Select all that apply"
+    },
+    "ratingStep": {
+      "tennisTitle": "Tell us about your game",
+      "pickleballTitle": "Tell us about your game",
+      "ntrpSubtitle": "NTRP Rating",
+      "duprSubtitle": "DUPR Rating"
+    },
+    "preferencesStep": {
+      "title": "Tell us about your preferences",
+      "playingHand": "Preferred Playing Hand",
+      "left": "Left",
+      "right": "Right",
+      "both": "Both",
+      "travelDistance": "Maximum Travel Distance",
+      "matchDuration": "Preferred Game Duration",
+      "matchType": "Preferred Game Type",
+      "casual": "Casual",
+      "competitive": "Competitive",
+      "sameForAll": "Same for all sports"
+    },
+    "availabilityStep": {
+      "title": "Tell us about your schedule",
+      "subtitle": "Select your availabilities",
+      "am": "AM",
+      "pm": "PM",
+      "eve": "EVE"
+    },
+    "success": {
+      "title": "Welcome to Rallia!",
+      "subtitle": "Your account was created successfully.",
+      "getStarted": "Get Started"
+    },
+    "complete": "Complete"
+  },
+  "matches": {
+    "title": "Games",
+    "noMatches": "No games yet",
+    "findMatch": "Find a game",
+    "createMatch": "Create a game",
+    "upcoming": "Upcoming",
+    "past": "Past",
+    "pending": "Pending",
+    "confirmed": "Confirmed",
+    "cancelled": "Cancelled",
+    "completed": "Completed",
+    "date": "Date",
+    "time": "Time",
+    "location": "Location",
+    "players": "Players",
+    "sport": "Sport",
+    "level": "Level",
+    "joinMatch": "Join game",
+    "leaveMatch": "Leave game",
+    "cancelMatch": "Cancel",
+    "matchDetails": "Game details"
+  },
+  "matchActions": {
+    "joinSuccess": "You've joined the game!",
+    "requestSent": "Request sent to host",
+    "leaveSuccess": "You've left the game",
+    "cancelSuccess": "Game cancelled",
+    "leaveConfirmTitle": "Leave this game?",
+    "leaveConfirmMessage": "You'll be removed from this game.",
+    "leaveReputationWarning": "Leaving this game will affect your reputation (-25 points). Other players are counting on you.",
+    "cancelConfirmTitle": "Cancel this game?",
+    "cancelConfirmMessage": "This will cancel the game for everyone.",
+    "cancelWarning": "{count} other player(s) will be notified",
+    "cancelReputationWarning": "Cancelling this game will affect your reputation (-25 points).",
+    "acceptRequest": "Accept",
+    "rejectRequest": "Decline",
+    "acceptSuccess": "Player accepted",
+    "rejectSuccess": "Request declined",
+    "rejectConfirmTitle": "Decline Request?",
+    "rejectConfirmMessage": "This player won't be able to request to join this game again.",
+    "pendingRequests": "Pending Requests",
+    "cancelRequest": "Cancel Request",
+    "cancelRequestSuccess": "Your join request has been cancelled",
+    "cancelRequestConfirmTitle": "Cancel Request?",
+    "cancelRequestConfirmMessage": "Your request to join this game will be withdrawn.",
+    "showMoreRequests": "Show {count} more",
+    "matchFullCannotAccept": "Game full",
+    "requestPending": "Your request to join is pending approval from the host",
+    "waitlistedInfo": "You're on the waitlist. We'll notify you if a spot opens up.",
+    "spotOpenedUp": "A spot opened up! You can join this game now.",
+    "joinWaitlist": "Join Waitlist",
+    "leaveWaitlist": "Leave Waitlist",
+    "waitlistSuccess": "You've been added to the waitlist!",
+    "leaveWaitlistSuccess": "You've left the waitlist",
+    "requesterDetails": "Requester Details",
+    "kickParticipant": "Remove Player",
+    "kickSuccess": "Player has been removed from the game",
+    "kickConfirmTitle": "Remove Player?",
+    "kickConfirmMessage": "This player will be removed from the game and notified.",
+    "genderMismatch": "This game is only open to players of a different gender.",
+    "invitations": "Invitations",
+    "pendingInvitations": "Pending Invitations",
+    "declinedInvitations": "Declined",
+    "cancelInvite": "Cancel",
+    "resendInvite": "Resend",
+    "cancelInviteConfirmTitle": "Cancel Invitation?",
+    "cancelInviteConfirmMessage": "This will revoke the invitation. The player will no longer be able to join through this invite.",
+    "cancelInviteSuccess": "Invitation cancelled",
+    "resendInviteSuccess": "Invitation resent",
+    "showMoreInvitations": "+{count} more invitations",
+    "participantStatus": {
+      "pending": "Pending",
+      "declined": "Declined"
+    }
+  },
+  "ratings": {
+    "title": "Ratings",
+    "currentRating": "Current Rating",
+    "ratingHistory": "Rating History",
+    "addProof": "Add Rating Proof",
+    "verifyRating": "Verify Rating",
+    "proofTypes": {
+      "tournament": "Tournament Result",
+      "league": "League Standing",
+      "certificate": "Certificate",
+      "other": "Other"
+    },
+    "ntrp": "NTRP",
+    "utr": "UTR",
+    "dupr": "DUPR"
+  },
+  "errors": {
+    "networkError": "Connection error. Please check your internet connection.",
+    "serverError": "Something went wrong. Please try again later.",
+    "unauthorized": "You don't have permission to do this.",
+    "notFound": "We couldn't find what you're looking for.",
+    "validation": "Please check your information and try again.",
+    "unknown": "Something unexpected happened. Please try again.",
+    "requestTimeout": "This is taking too long. Please try again.",
+    "permissionsDenied": "Permission denied",
+    "userNotAuthenticated": "Please sign in to continue",
+    "noPrimarySport": "Please set up a sport first.",
+    "mustBeLoggedIn": "Please sign in to create a game."
+  },
+  "chat": {
+    "empty": "No messages yet",
+    "inbox": "Inbox",
+    "search": "Search players",
+    "newGroup": "New group",
+    "noConversations": "No conversations yet",
+    "noConversationsSubtitle": "Join a group or start a conversation with another player",
+    "typeMessage": "Type your message",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "participants": "{{count}} participant",
+    "participants_plural": "{{count}} participants",
+    "agreement": {
+      "welcome": "Welcome to",
+      "description": "This is a group chat - all members of this community will see your messages",
+      "chatRules": "Chat rules",
+      "warning": "Content will be removed and users banned for violations of our community guidelines",
+      "agree": "I agree"
+    },
+    "rules": {
+      "noHarassment": "No harassment, hate speech, sexual language",
+      "noAdvertising": "No advertising or self promotion",
+      "noDisrespect": "No disrespect!"
+    }
+  },
+  "map": {
+    "placeholder": "Map View"
+  },
+  "community": {
+    "placeholder": "Connect with other players"
+  },
+  "match": {
+    "placeholder": "Game Screen - Ready for your implementation",
+    "host": "Host",
+    "format": {
+      "singles": "Singles",
+      "doubles": "Doubles"
+    },
+    "status": {
+      "open": "Open",
+      "full": "Full",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "confirmed": "Confirmed",
+      "inProgress": "In Progress"
+    },
+    "participantStatus": {
+      "pending": "Pending",
+      "requested": "Requested",
+      "joined": "Joined",
+      "declined": "Declined",
+      "refused": "Refused",
+      "left": "Left",
+      "kicked": "Kicked",
+      "waitlisted": "Waitlisted"
+    },
+    "type": {
+      "competitive": "Competitive",
+      "practice": "Practice",
+      "casual": "Casual",
+      "both": "Both"
+    },
+    "visibility": {
+      "public": "Public",
+      "private": "Private"
+    },
+    "cost": {
+      "free": "Free",
+      "perPlayer": "{amount}/player"
+    },
+    "participants": "{count} players",
+    "participantsNeeded": "{count} needed",
+    "joinMode": {
+      "direct": "Direct Join",
+      "request": "On request"
+    },
+    "rating": {
+      "minimum": "{rating}+"
+    },
+    "gender": {
+      "male": "Men",
+      "female": "Women",
+      "any": "Any",
+      "other": "Other",
+      "menOnly": "Men Only",
+      "womenOnly": "Women Only"
+    },
+    "slots": {
+      "full": "Full",
+      "oneLeft": "1 spot left",
+      "left": "{count} spots left"
+    },
+    "invited": "Invited",
+    "pendingRequests": "{count} pending",
+    "courtStatus": {
+      "readyToPlay": "Ready to Play",
+      "courtBooked": "Court Booked"
+    },
+    "cta": {
+      "join": "Join game",
+      "askToJoin": "Request to join",
+      "acceptInvitation": "Accept Invitation",
+      "full": "Full",
+      "view": "View details",
+      "viewResults": "View results",
+      "cancelled": "Cancelled",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "leave": "Leave",
+      "pending": "Pending Approval",
+      "waitlisted": "On Waitlist",
+      "joinWaitlist": "Join Waitlist"
+    }
+  },
+  "matchDetail": {
+    "title": "Game details",
+    "host": "Host",
+    "hostedBy": "Hosted by",
+    "participants": "Players",
+    "openSpots": "Open spots",
+    "court": "Court",
+    "estimatedCost": "Estimated cost",
+    "courtEstimatedCost": "Court estimated cost",
+    "notes": "Notes",
+    "joinNow": "Join game",
+    "requestToJoin": "Request to join",
+    "matchEnded": "This game has ended",
+    "matchCompleted": "This game is completed",
+    "matchClosed": "This game is closed",
+    "provideFeedback": "Provide feedback",
+    "checkIn": "Check in",
+    "checkedIn": "Checked in",
+    "checkInSuccess": "You have successfully checked in!",
+    "checkInFailed": "Check-in Failed",
+    "checkInTooFar": "You need to be within 100 meters of the game location to check in.",
+    "checkInError": "Unable to check in. Please try again.",
+    "checkInLocationError": "Unable to get your location. Please ensure location services are enabled.",
+    "alreadyCheckedIn": "You have already checked in to this game.",
+    "matchCancelled": "This game was cancelled",
+    "matchInProgress": "Game in progress",
+    "matchExpired": "This game has expired",
+    "share": "Share",
+    "inviteFriends": "Share",
+    "shareMessage": "Check out this game on Rallia!",
+    "shareInvite": "Join me for {sport}!",
+    "shareDateTime": "{date} at {time}",
+    "distance": "Distance",
+    "away": "away",
+    "free": "Free",
+    "perPerson": "per person",
+    "locationTBD": "Location TBD",
+    "open": "Open",
+    "competitive": "Competitive",
+    "practice": "Practice",
+    "casual": "Casual",
+    "openChat": "Open Chat"
+  },
+  "matchFeedback": {
+    "title": "Match Feedback",
+    "step": "Step {current} of {total}",
+    "stepNames": {
+      "outcome": "Match Outcome",
+      "feedback": "Feedback"
+    },
+    "matchContext": {
+      "vsPlayer": "vs {name}",
+      "vsPlayers": "vs {names}"
+    },
+    "outcomeStep": {
+      "title": "How did the match go?",
+      "subtitle": "Let us know if the match happened as planned",
+      "matchPlayed": "Match played",
+      "matchPlayedDescription": "The game happened and I can rate my opponent",
+      "matchPlayedDescriptionPlural": "The game happened and I can rate my opponents",
+      "matchCancelled": "Match was cancelled",
+      "matchCancelledDescription": "We mutually agreed not to play",
+      "missingPlayer": "Missing player",
+      "missingPlayerDescription": "My opponent didn't show up",
+      "missingPlayers": "Missing player(s)",
+      "missingPlayersDescription": "One or more players didn't show up",
+      "selectNoShowPlayers": "Select the player(s) who didn't show up",
+      "whyCancelled": "Why was the match cancelled?",
+      "otherReasonPlaceholder": "Please describe why the match was cancelled...",
+      "confirmCancelled": "Confirm Cancellation",
+      "confirmNoShows": "Confirm no-shows",
+      "continue": "Continue"
+    },
+    "cancellationReasons": {
+      "weather": "Weather",
+      "courtUnavailable": "Court unavailable",
+      "emergency": "Emergency",
+      "other": "Other"
+    },
+    "opponentStep": {
+      "rateExperience": "Rate your experience with this player",
+      "showedUp": "Did they show up?",
+      "noShowInfo": "If someone other than the registered player showed up, also select 'No'",
+      "wasLate": "Were they late?",
+      "wasLateDescription": "More than 10 minutes late",
+      "rating": "Rate your experience",
+      "comments": "Comments (optional)",
+      "commentsPlaceholder": "Share any additional feedback...",
+      "reportIssue": "Report an issue",
+      "skip": "Skip",
+      "continue": "Continue",
+      "complete": "Complete"
+    },
+    "report": {
+      "title": "Report {name}",
+      "selectReason": "What happened?",
+      "reasons": {
+        "harassment": "Harassment",
+        "unsportsmanlike": "Unsportsmanlike conduct",
+        "safety": "Safety concern",
+        "misrepresented_level": "Misrepresented skill level",
+        "inappropriate": "Inappropriate behavior"
+      },
+      "detailsLabel": "Additional details (optional)",
+      "detailsPlaceholder": "Describe what happened...",
+      "submit": "Submit Report",
+      "success": "Report submitted"
+    }
+  },
+  "alerts": {
+    "success": "Success",
+    "error": "Error",
+    "info": "Info",
+    "availabilitiesUpdated": "Your availabilities have been updated!",
+    "peerRatingRequestsSent": "Peer rating requests sent to {count} player(s)",
+    "referenceRequestsSent": "Reference requests sent to {count} player(s)",
+    "failedToSendPeerRatingRequests": "Failed to send peer rating requests",
+    "failedToSendReferenceRequests": "Failed to send reference requests",
+    "sportActivated": "{sport} activated successfully!",
+    "sportDeactivated": "{sport} deactivated",
+    "sportAdded": "{sport} added and activated successfully!",
+    "sportNotAdded": "{sport} not added",
+    "preferencesUpdated": "Preferences updated successfully",
+    "cannotDeactivate": "Cannot Deactivate Sport",
+    "mustHaveOneSport": "You must have at least one active sport. Please activate another sport before deactivating this one."
+  },
+  "sportSelector": {
+    "selectSport": "Select a sport",
+    "switchConfirmTitle": "Switch Sport?",
+    "switchConfirmMessage": "You are about to switch sports. Your match feed will update to show games for the selected sport.",
+    "switchConfirmButton": "Switch"
+  },
+  "actions": {
+    "welcome": "Welcome to Rallia",
+    "welcomeSubtitle": "Sign in to start playing",
+    "completeProfile": "Complete Your Profile",
+    "completeProfileSubtitle": "Finish setting up to start playing with others",
+    "continueSetup": "Continue Setup",
+    "createMatch": "Create Game",
+    "createMatchDescription": "Schedule a new game with players",
+    "invitePlayers": "Invite Players",
+    "invitePlayersDescription": "Invite friends to join Rallia",
+    "createShareList": "Create Share List",
+    "createShareListDescription": "Create a list of people outside the app to invite to games",
+    "createNetwork": "Create Network",
+    "createNetworkDescription": "Start a group or community for regular games",
+    "createEvent": "Create Event",
+    "createEventDescription": "Organize a tournament or league"
+  },
+  "matchCreation": {
+    "title": "Create a game",
+    "forSport": "Creating game for {sport}",
+    "step": "Step {current} of {total}",
+    "stepNames": {
+      "where": "Location",
+      "when": "When",
+      "preferences": "Preferences"
+    },
+    "step1Title": "Where?",
+    "step1Description": "Select or enter your playing location",
+    "step2Title": "When?",
+    "step2Description": "Choose when you want to play",
+    "step3Title": "Preferences",
+    "step3Description": "Set match format and preferences",
+    "next": "Next",
+    "back": "Back",
+    "createMatch": "Create game",
+    "creating": "Creating...",
+    "success": "Game created!",
+    "successDescription": "Your game is ready for players to join.",
+    "viewMatch": "View game",
+    "createAnother": "Create another",
+    "editMatch": "Edit game",
+    "saveChanges": "Save Changes",
+    "updateSuccess": "Game updated!",
+    "updateSuccessDescription": "Your game has been updated.",
+    "updateError": "Couldn't update game",
+    "discardEditMessage": "You have unsaved changes. Are you sure you want to discard them?",
+    "resumeDraft": "Resume Draft",
+    "resumeDraftMessage": "You have an unfinished game. Would you like to continue?",
+    "discardDraft": "Discard Draft",
+    "discardChanges": "Discard Changes",
+    "discardChangesMessage": "You have unsaved changes. What would you like to do?",
+    "saveDraft": "Save Draft",
+    "keepEditing": "Keep Editing",
+    "fields": {
+      "matchDate": "Date",
+      "matchDatePlaceholder": "Select date",
+      "startTime": "Start Time",
+      "startTimePlaceholder": "Select time",
+      "timezone": "Timezone",
+      "timezonePlaceholder": "Select timezone",
+      "duration": "Duration",
+      "customDurationUnit": "minutes",
+      "customDurationHint": "Enter a duration between 15 and 480 minutes",
+      "format": "Format",
+      "formatSingles": "Singles",
+      "formatDoubles": "Doubles",
+      "playerExpectation": "Game Type",
+      "playerExpectationCasual": "Casual",
+      "playerExpectationCasualDescription": "Relaxed game focused on fun and practice",
+      "playerExpectationCompetitive": "Competitive",
+      "playerExpectationCompetitiveDescription": "Serious game with scorekeeping",
+      "playerExpectationBoth": "Both",
+      "playerExpectationBothDescription": "Open to either casual or competitive play",
+      "lockedFromBooking": "Date, time and duration locked from your court booking",
+      "locationType": "Location Type",
+      "locationTypeFacility": "Select Facility",
+      "locationTypeFacilityDescription": "Choose from available facilities",
+      "locationTypeCustom": "Custom Location",
+      "locationTypeCustomDescription": "Enter a custom address",
+      "locationTypeTbd": "To Be Determined",
+      "locationTypeTbdDescription": "Decide later with participants",
+      "gettingLocation": "Getting your location...",
+      "searchingFacilities": "Searching facilities...",
+      "locationAccessNeeded": "We need your location to find nearby facilities",
+      "failedToLoadFacilities": "Couldn't load facilities",
+      "noFacilitiesFound": "No facilities found for \"{query}\"",
+      "noFacilitiesAvailable": "No facilities available",
+      "tbdLocationInfo": "You can set the location later after players join. They'll be notified when you update it.",
+      "facility": "Facility",
+      "facilityPlaceholder": "Search facilities...",
+      "preferredFacility": "Favorite",
+      "court": "Court",
+      "courtPlaceholder": "Select court",
+      "locationName": "Location Name",
+      "locationNamePlaceholder": "e.g., Central Park Courts",
+      "locationAddress": "Address",
+      "locationAddressPlaceholder": "Enter address",
+      "searchLocation": "Search Location",
+      "searchLocationPlaceholder": "Search for a place or address...",
+      "searchLocationHint": "Search for parks, courts, or any location",
+      "searchingPlaces": "Searching places...",
+      "noPlacesFound": "No places found. Try a different search.",
+      "failedToSearchPlaces": "Failed to search places. Please try again.",
+      "courtStatus": "Court Status",
+      "courtStatusBooked": "Already Booked",
+      "courtStatusBookedDescription": "Court is already reserved for this game",
+      "courtStatusToBook": "Will Book",
+      "courtStatusToBookDescription": "Court still needs to be reserved",
+      "courtStatusTbd": "To Be Determined",
+      "courtNumber": "Court {number}",
+      "reservationContactTitle": "Book your court",
+      "reservationContactDescription": "Contact the facility to reserve your court, then update the status below.",
+      "callFacility": "Call",
+      "emailFacility": "Email",
+      "visitWebsite": "Website",
+      "isCourtFree": "Free Court",
+      "isCourtFreeYes": "Yes, it's free",
+      "isCourtFreeNo": "No, there's a cost",
+      "costSplitType": "Cost Split",
+      "costSplitEqual": "Split Equally",
+      "costSplitEqualDescription": "Split cost equally among all players",
+      "costSplitCreator": "Creator Pays",
+      "costSplitCreatorDescription": "You cover the full cost",
+      "costSplitCustom": "Custom Split",
+      "estimatedCost": "Estimated Cost",
+      "estimatedCostTotal": "Total Cost",
+      "estimatedCostTotalEqual": "How much does the court cost?",
+      "estimatedCostTotalCreator": "How much will you pay?",
+      "estimatedCostPlaceholder": "Enter amount",
+      "estimatedCostPlaceholderTotal": "Enter total cost",
+      "estimatedCostHelper": "Per person: ~${amount} (estimated for {count} players)",
+      "visibility": "Visibility",
+      "visibilityPublic": "Public",
+      "visibilityPublicDescription": "Anyone can find and join",
+      "visibilityPrivate": "Private",
+      "visibilityPrivateDescription": "Invite only",
+      "joinMode": "Join Mode",
+      "joinModeDirect": "Direct Join",
+      "joinModeDirectDescription": "Players join immediately",
+      "joinModeRequest": "Request to Join",
+      "joinModeRequestDescription": "You approve each player",
+      "opponentPreferences": "Opponent Preferences",
+      "opponentPreferencesDescription": "Optional filters for who can join",
+      "preferredGender": "Preferred Gender",
+      "genderAny": "Any",
+      "genderMale": "Male",
+      "genderFemale": "Female",
+      "minRatingScore": "Minimum Skill Level",
+      "minRatingScoreDescription": "Only players at this level or higher can join",
+      "yourRating": "You",
+      "noMinimum": "No min",
+      "skillLevelAbbr": {
+        "beginner": "Beg",
+        "intermediate": "Int",
+        "advanced": "Adv",
+        "professional": "Pro"
+      },
+      "notes": "Notes",
+      "notesPlaceholder": "Any additional details for players..."
+    },
+    "duration": {
+      "30": "30 min",
+      "60": "1 hour",
+      "90": "1.5 hours",
+      "120": "2 hours",
+      "custom": "Custom"
+    },
+    "validation": {
+      "dateRequired": "Please select a date",
+      "dateFuture": "Please select a future date",
+      "timeRequired": "Please select a start time",
+      "durationRequired": "Please select a duration",
+      "formatRequired": "Please select a format",
+      "locationTypeRequired": "Please select a location type",
+      "facilityRequired": "Please select a facility",
+      "locationNameRequired": "Please enter a location name",
+      "sportRequired": "Please select a sport",
+      "updateBlocked": "Update Not Allowed",
+      "cannotUpdate": "This change is not allowed with current participants.",
+      "genderMismatchTitle": "Gender Preference Conflict",
+      "genderMismatchMessage": "{count} participant(s) don't match the new gender preference. They will remain in the game but may not meet your preference.",
+      "updateAnyway": "Update Anyway",
+      "confirmChangesTitle": "Confirm Changes",
+      "confirmChangesMessage": "You're changing {changes}. {count} participant(s) will be notified about these changes.",
+      "confirmUpdate": "Update Game",
+      "changes": {
+        "dateTime": "date/time",
+        "location": "location",
+        "format": "format",
+        "cost": "cost"
+      },
+      "errors": {
+        "MATCH_NOT_FOUND": "Match not found.",
+        "FORMAT_CHANGE_BLOCKED": "Cannot change from doubles to singles with 2 or more participants. Remove participants first or cancel the game.",
+        "UNKNOWN_ERROR": "An unexpected error occurred. Please try again."
+      }
+    },
+    "accessibility": {
+      "stepIndicator": "Step {current} of {total}: {title}",
+      "nextStep": "Go to next step",
+      "previousStep": "Go to previous step",
+      "closeWizard": "Close game creation wizard",
+      "selectDate": "Select game date",
+      "selectTime": "Select start time",
+      "selectTimezone": "Select timezone for game location"
+    },
+    "booking": {
+      "openReservation": "Open Reservation",
+      "confirmBooking": "Confirm Booking",
+      "didYouBook": "Did you book the court?",
+      "iBookedThisCourt": "I booked this court",
+      "notYet": "Not yet",
+      "courtBooked": "Court booked!",
+      "courtBookedDescription": "The court is marked as booked for this game.",
+      "availableSlots": "Available slots",
+      "noSlotsAvailable": "No upcoming slots available",
+      "loadingSlots": "Loading availability...",
+      "tapToBook": "Tap a slot to book",
+      "externalBooking": "You'll be redirected to the booking site",
+      "bookingConfirmTitle": "Booking Confirmation",
+      "bookingConfirmMessage": "Did you book a court?",
+      "viewMoreSlots": "View more slots",
+      "selectCourt": "Select a Court",
+      "courtAvailable": "court available",
+      "courtsAvailable": "courts available",
+      "courtNumber": "Court {number}"
+    },
+    "invite": {
+      "title": "Invite Players",
+      "description": "Invite players to join your game",
+      "searchPlaceholder": "Search players...",
+      "searching": "Searching players...",
+      "searchError": "Couldn't search players",
+      "noPlayersFound": "No players found",
+      "noPlayersAvailable": "No players available",
+      "selectPlayers": "Select players to invite",
+      "sendInvitations": "Send Invitations ({count})",
+      "skip": "Skip",
+      "invitationsSent": "Invitations sent!",
+      "invitationsSentCount": "Sent {count} invitation(s)"
+    }
+  },
+  "home": {
+    "welcomeBack": "Welcome back! 👋",
+    "yourMatches": "🎾 Your Games",
+    "signInPrompt": "Please sign in to create and access your games",
+    "user": "User",
+    "subtitle": "The best way to find your next tennis or pickleball partner",
+    "soonAndNearby": "Nearby Games",
+    "publicMatches": "Public Games",
+    "viewAll": "View All",
+    "myMatches": "My Games",
+    "myMatchesEmpty": {
+      "title": "No upcoming games",
+      "description": "Create a game or join one to see it here"
+    },
+    "nearbyEmpty": {
+      "title": "No nearby games found",
+      "description": "There are no upcoming games within your {distance} km travel distance.",
+      "guestDescription": "There are no upcoming games nearby.",
+      "suggestion": "Try increasing your maximum travel distance in your profile to see more games.",
+      "updateSettings": "Update Settings"
+    },
+    "location": {
+      "title": "Search Location",
+      "current": "Current Location",
+      "currentDescription": "Use your GPS location",
+      "home": "Home",
+      "homeNotSet": "Set your home location in settings"
+    },
+    "header": {
+      "ctaButton": "Join Waitlist"
+    },
+    "hero": {
+      "badge": "Coming Early 2026",
+      "headline": "Your next game is waiting",
+      "subheadline": "Connect with players at your level, schedule games easily, and never play alone again.",
+      "ctaButton": "Join the Waitlist",
+      "ctaSubtext": "No credit card required • Exclusive early access"
+    },
+    "problems": {
+      "sectionTitle": "The Challenge",
+      "sectionBadge": "The Problem",
+      "scheduling": {
+        "title": "The Scheduling Nightmare",
+        "description": "Hours spent coordinating through WhatsApp and Facebook. Last-minute cancellations. Games that never happen."
+      },
+      "compatibility": {
+        "title": "The Compatibility Crisis",
+        "description": "Skill mismatches ruin the experience. Location conflicts. Different preferences. Finding the right game feels impossible."
+      },
+      "reliability": {
+        "title": "The Reliability Problem",
+        "description": "No-shows without warning. Players who cancel last minute. No way to know who's reliable."
+      },
+      "growth": {
+        "title": "The Growth Barrier",
+        "description": "Can't find enough games to improve. Limited partner options. Skill progression stalls without regular play."
+      }
+    },
+    "howItWorks": {
+      "sectionTitle": "How It Works",
+      "sectionBadge": "Simple Process",
+      "step1": {
+        "title": "Join the Waitlist",
+        "description": "Sign up with your email to secure your spot and get notified when we launch"
+      },
+      "step2": {
+        "title": "Create Your Profile",
+        "description": "Share your skill level, location, and playing preferences"
+      },
+      "step3": {
+        "title": "Get Matched",
+        "description": "We find playing partners that match your profile and availability"
+      },
+      "step4": {
+        "title": "Play & Review",
+        "description": "Schedule games instantly and build your network of reliable players"
+      }
+    },
+    "solutions": {
+      "sectionTitle": "The Solution",
+      "sectionBadge": "How It Works",
+      "matchmaking": {
+        "title": "Smart Matchmaking",
+        "description": "Smart skill assessment and reliability tracking. Get matched with players at your level who are just as committed."
+      },
+      "scheduling": {
+        "title": "Instant Scheduling",
+        "description": "One-click game proposals with calendar sync. Auto-confirmations and live availability. No more endless back-and-forth."
+      },
+      "marketplace": {
+        "title": "Game Marketplace",
+        "description": "Post or browse games by time, location, and skill level. Instant booking with ratings and reviews."
+      },
+      "portfolio": {
+        "title": "Player Network",
+        "description": "Build your network of favorite players. Get suggestions based on your preferences and play history."
+      }
+    },
+    "whyJoinEarly": {
+      "sectionTitle": "Why Join Early?",
+      "sectionBadge": "Early Adopter Benefits",
+      "description": "Be part of the founding community and enjoy exclusive perks that won't be available after launch",
+      "benefits": {
+        "priority": {
+          "title": "Priority Access",
+          "description": "Skip the line and get immediate access when we launch"
+        },
+        "pricing": {
+          "title": "Special Early Benefits",
+          "description": "Enjoy special perks and benefits as an early supporter. Founding members get exclusive advantages"
+        },
+        "influence": {
+          "title": "Shape the Product",
+          "description": "Your feedback directly influences features. Help us build what you need"
+        },
+        "exclusive": {
+          "title": "Exclusive Features",
+          "description": "Get early access to beta features and new releases before anyone else"
+        },
+        "community": {
+          "title": "Founding Community",
+          "description": "Connect with other early adopters and build your network before the crowd arrives"
+        },
+        "support": {
+          "title": "VIP Support",
+          "description": "Direct line to our team. Get priority support and help shape our service standards"
+        }
+      }
+    },
+    "cta": {
+      "headline": "Ready to Transform Your Tennis Experience?",
+      "description": "Be among the first to experience the future of tennis matchmaking. Join our waitlist and get exclusive early access when we launch",
+      "button": "Join the Waitlist"
+    },
+    "socialProof": {
+      "sectionTitle": "What Beta Testers Are Saying",
+      "sectionBadge": "Early Feedback",
+      "testimonials": {
+        "first": {
+          "name": "Sarah M.",
+          "location": "Toronto, ON",
+          "rating": "5",
+          "text": "I tested the beta and the skill matching is incredible. Can't wait for the full launch - this will completely change how I find tennis partners!"
+        },
+        "second": {
+          "name": "Michael R.",
+          "location": "Vancouver, BC",
+          "rating": "5",
+          "text": "Finally, someone is solving the real problem! The interface is clean and the matching algorithm actually understands what players need."
+        },
+        "third": {
+          "name": "Jennifer L.",
+          "location": "Montreal, QC",
+          "rating": "5",
+          "text": "The scheduling feature alone is worth it. As a beta tester, I'm excited to see where this goes. Sign up for the waitlist!"
+        }
+      },
+      "stats": {
+        "players": "2,500+",
+        "playersLabel": "Waitlist Signups",
+        "matches": "500+",
+        "matchesLabel": "Beta Test Games",
+        "rating": "4.9/5",
+        "ratingLabel": "Beta Tester Rating"
+      }
+    },
+    "waitlist": {
+      "sectionTitle": "Join the Waitlist",
+      "sectionBadge": "Early Access",
+      "description": "Be among the first to experience the future of tennis matchmaking. Get exclusive early access and special perks.",
+      "form": {
+        "namePlaceholder": "Your name",
+        "emailPlaceholder": "your.email@example.com",
+        "submitButton": "Get Early Access",
+        "successMessage": "Thanks! We'll be in touch soon.",
+        "nameLabel": "Name",
+        "emailLabel": "Email",
+        "noCard": "No credit card required • Get exclusive perks as an early supporter"
+      }
+    },
+    "faq": {
+      "sectionTitle": "Frequently Asked Questions",
+      "sectionBadge": "FAQ",
+      "questions": {
+        "cost": {
+          "question": "Is Rallia free to use?",
+          "answer": "We're currently finalizing our pricing model. Early supporters will receive special benefits. Join the waitlist to stay updated on our plans."
+        },
+        "sports": {
+          "question": "What sports are supported?",
+          "answer": "Currently, we support tennis and pickleball. We're planning to expand to other racquet sports like squash and badminton based on user demand."
+        },
+        "matching": {
+          "question": "How does the skill matching work?",
+          "answer": "Our system analyzes your skill level, match history, and player feedback to assess your ability. You'll be matched with players at your level for competitive and enjoyable games."
+        },
+        "privacy": {
+          "question": "Is my data private and secure?",
+          "answer": "Absolutely. We use industry-standard encryption and never share your personal information with third parties. You control what information other players can see."
+        },
+        "availability": {
+          "question": "When will Rallia be available?",
+          "answer": "We're currently in beta testing and plan to launch publicly in early 2026. Join our waitlist to get early access and be notified when we launch in your area."
+        },
+        "platforms": {
+          "question": "What platforms is Rallia available on?",
+          "answer": "Rallia will be available as a web app, iOS app, and Android app. You can access your account and schedule games from any device."
+        }
+      }
+    }
+  },
+  "playerMatches": {
+    "title": "My Games",
+    "tabs": {
+      "upcoming": "Upcoming",
+      "past": "Past"
+    },
+    "filters": {
+      "all": "All",
+      "hosting": "Hosting",
+      "confirmed": "Confirmed",
+      "pending": "Pending",
+      "requested": "Requested",
+      "waitlisted": "Waitlisted",
+      "needsPlayers": "Needs Players",
+      "readyToPlay": "Ready",
+      "feedbackNeeded": "Feedback",
+      "played": "Played",
+      "hosted": "Hosted",
+      "asParticipant": "Joined",
+      "expired": "Expired",
+      "cancelled": "Cancelled"
+    },
+    "time": {
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "thisWeek": "This Week",
+      "nextWeek": "Next Week",
+      "later": "Later",
+      "yesterday": "Yesterday",
+      "lastWeek": "Last Week",
+      "earlier": "Earlier"
+    },
+    "emptyUpcoming": {
+      "title": "No upcoming games",
+      "description": "Create a new game or browse public games to get started"
+    },
+    "emptyPast": {
+      "title": "No past games",
+      "description": "Your completed games will appear here"
+    },
+    "emptyFiltered": {
+      "title": "No games found",
+      "description": "No games match the \"{filter}\" filter"
+    }
+  },
+  "publicMatches": {
+    "title": "Public Games",
+    "searchPlaceholder": "Search games, locations, players...",
+    "filters": {
+      "format": {
+        "label": "Format",
+        "all": "All",
+        "singles": "Singles",
+        "doubles": "Doubles"
+      },
+      "matchType": {
+        "label": "Type",
+        "all": "All",
+        "casual": "Casual",
+        "competitive": "Competitive"
+      },
+      "dateRange": {
+        "label": "When",
+        "all": "Any time",
+        "today": "Today",
+        "week": "This week",
+        "weekend": "Weekend"
+      },
+      "timeOfDay": {
+        "label": "Time",
+        "all": "Any",
+        "morning": "Morning",
+        "afternoon": "Afternoon",
+        "evening": "Evening"
+      },
+      "skillLevel": {
+        "label": "Level",
+        "all": "Any",
+        "beginner": "Beginner",
+        "intermediate": "Intermediate",
+        "advanced": "Advanced"
+      },
+      "gender": {
+        "label": "Gender",
+        "all": "Any",
+        "male": "Male",
+        "female": "Female"
+      },
+      "cost": {
+        "label": "Cost",
+        "all": "Any",
+        "free": "Free",
+        "paid": "Paid"
+      },
+      "joinMode": {
+        "label": "Join",
+        "all": "Any",
+        "direct": "Direct",
+        "request": "Request"
+      },
+      "distance": {
+        "label": "Distance",
+        "all": "All"
+      },
+      "duration": {
+        "label": "Duration",
+        "all": "Any",
+        "30": "30 min",
+        "60": "1 hour",
+        "90": "1.5 hours",
+        "120+": "2+ hours"
+      },
+      "courtStatus": {
+        "label": "Court",
+        "all": "Any",
+        "reserved": "Reserved",
+        "to_reserve": "To book"
+      },
+      "specificDate": {
+        "label": "Date",
+        "pick": "Pick date",
+        "clear": "Clear"
+      },
+      "reset": "Reset"
+    },
+    "empty": {
+      "title": "No games found",
+      "description": "Try adjusting your filters or check back later",
+      "noFilters": {
+        "title": "No public games nearby",
+        "description": "Be the first to create a game in your area!"
+      }
+    },
+    "results": {
+      "count": "{count} games",
+      "countSingular": "1 game"
+    }
+  },
+  "winter": {
+    "title": "Winter Indoor Court Crisis - Rallia",
+    "subtitle": "Solving the indoor court shortage for Canadian tennis and pickleball players",
+    "hero": {
+      "badge": "Coming Soon",
+      "headline": "The outdoor season is over. Now what?",
+      "subheadline": "Over 5 million Canadian tennis players and 1.5 million pickleballers are about to be benched for weeks, sidelined by a severe lack of indoor courts.",
+      "ctaButton": "Become a Founding Member",
+      "ctaSubtext": "Premium features FREE at launch • Help shape the app"
+    },
+    "problem": {
+      "sectionBadge": "The Crisis",
+      "sectionTitle": "The Indoor Court Shortage",
+      "coreMessage": "There simply aren't enough indoor courts for everyone who wants to play.",
+      "noCourtNoGame": {
+        "title": "No Court, No Game",
+        "description": "A shortage of indoor facilities is about to sideline 6 million Canadian tennis and pickleball players. While the demand for these sports is exploding, the number of indoor courts has stayed the same."
+      },
+      "bookingCompetition": {
+        "title": "Booking is a Competition",
+        "description": "It shouldn't be a competitive sport just to book a court. Prime time slots are gone in minutes. You're left refreshing pages at midnight, hoping for a cancellation."
+      },
+      "temperatureDrop": {
+        "title": "Benched by the Cold",
+        "description": "Your playing time shouldn't end just because the temperature drops. But without access to indoor facilities, thousands of players will go weeks—or months—without stepping on a court."
+      }
+    },
+    "stats": {
+      "sectionBadge": "The Numbers",
+      "sectionTitle": "The Crisis in Numbers",
+      "affectedPlayers": "6M+",
+      "affectedPlayersLabel": "Players Affected by Court Shortage",
+      "courtDensity": "1:25,000",
+      "courtDensityLabel": "Indoor Court to Player Ratio in Canada",
+      "demandGrowth": "300%",
+      "demandGrowthLabel": "Growth in Tennis & Pickleball Demand Since 2020",
+      "courtGrowth": "<5%",
+      "courtGrowthLabel": "Growth in Indoor Court Availability"
+    },
+    "solution": {
+      "sectionBadge": "The Solution",
+      "sectionTitle": "A Better Way to Share Court Time",
+      "pitch": "We're building a better way to connect and share court time.",
+      "vision": "We're building a community where players help each other get on the court, no matter the season.",
+      "findPartners": {
+        "title": "Find Booked Court Partners",
+        "description": "Connect with players who have already booked a court and need a partner. No court? No problem. They've done the hard part—now you just need to show up and play."
+      },
+      "shareCosts": {
+        "title": "Share the Cost",
+        "description": "Indoor court time is expensive. Share the cost of that premium court with a great match, making winter play affordable for everyone."
+      },
+      "fillCancellations": {
+        "title": "Fill Last-Minute Cancellations",
+        "description": "Get notified when court time opens up. Fill last-minute cancellations so no court time goes to waste. Turn someone's cancellation into your opportunity."
+      },
+      "unlockPotential": {
+        "title": "Maximize Existing Facilities",
+        "description": "Unlock the full potential of existing facilities while championing future construction. Every court should be used to its maximum capacity."
+      }
+    },
+    "foundingMember": {
+      "sectionBadge": "Exclusive Offer",
+      "sectionTitle": "Become a Founding Member",
+      "offer": "Sign up for the waitlist and get premium features FREE at launch.",
+      "survey": "Help us build the perfect app for Canadian players. Join the waitlist and we'll send you a 3-question survey to tell us what you need most.",
+      "ctaButton": "Join the Waitlist",
+      "benefits": "Premium features FREE • Shape the product • Priority access"
+    },
+    "waitlist": {
+      "sectionBadge": "Get Started",
+      "sectionTitle": "Join the Founding Members",
+      "description": "Be part of the solution. Join our waitlist and help us build a community where every player gets on the court, no matter the season.",
+      "form": {
+        "namePlaceholder": "Your name",
+        "emailPlaceholder": "your.email@example.com",
+        "submitButton": "Become a Founding Member",
+        "successMessage": "Welcome to the founding community! Stay posted for future updates.",
+        "nameLabel": "Name",
+        "emailLabel": "Email",
+        "phoneLabel": "Phone (Optional)",
+        "phonePlaceholder": "+1 (555) 123-4567",
+        "noCard": "No credit card required • Premium features FREE at launch"
+      }
+    },
+    "faq": {
+      "sectionBadge": "FAQ",
+      "sectionTitle": "Frequently Asked Questions",
+      "questions": {
+        "whatIsThis": {
+          "question": "How does this solve the indoor court problem?",
+          "answer": "We're helping Canadian tennis and pickleball players deal with the indoor court shortage during winter. We're building tools to help players find partners who have already booked courts, share costs, and fill last-minute cancellations—making the most of existing facilities."
+        },
+        "foundingMember": {
+          "question": "What do Founding Members get?",
+          "answer": "Founding Members get premium features completely free when we launch. You'll also help shape the product through our survey, get priority access to the app, and be part of the community from day one."
+        },
+        "whenLaunch": {
+          "question": "When will this be available?",
+          "answer": "We're launching in early 2026, just in time for the outdoor season. You'll have the full summer to build your network and master the app, so when winter 2026-2027 arrives, you'll be ready to dominate indoor court bookings. Join the waitlist to be notified when we launch."
+        },
+        "bothSports": {
+          "question": "Does this work for both tennis and pickleball?",
+          "answer": "Yes! The indoor court shortage affects both tennis and pickleball players. Our platform is designed to help players of both sports find partners, share costs, and maximize court time."
+        },
+        "howHelp": {
+          "question": "How will this help with the court shortage?",
+          "answer": "While we can't build new courts overnight, we can help make the most of existing facilities. By connecting players who need courts with those who have them booked, sharing costs, and filling cancellations, we ensure every minute of court time is used."
+        }
+      }
+    }
+  },
+  "footer": {
+    "title": "Rallia",
+    "description": "The platform that will connect tennis and pickleball players for better matches, every time.",
+    "quickLinks": "Quick Links",
+    "joinWaitlist": "Join Waitlist",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "rights": "All rights reserved.",
+    "comingSoon": "Coming Early 2026"
+  },
+  "signIn": {
+    "title": "Organization Sign In",
+    "description": "This is the first step to create your organization",
+    "welcomeMessage": "Welcome! Sign in to get started with your organization account",
+    "signInWithGoogle": "Continue with Google",
+    "signInWithMicrosoft": "Continue with Microsoft",
+    "or": "Or continue with email",
+    "emailLabel": "Email",
+    "emailPlaceholder": "your.email@example.com",
+    "sendOtp": "Send Verification Code",
+    "otpLabel": "Verification Code",
+    "otpPlaceholder": "000000",
+    "otpHint": "Enter the 6-digit code sent to your email",
+    "otpSentMessage": "We've sent a verification code to your email. Please check your inbox and enter the 6-digit code below.",
+    "verifyOtp": "Verify Code",
+    "changeEmail": "Use a different email",
+    "loading": "Processing...",
+    "adminTitle": "Admin",
+    "adminDescription": "Sign in to access the administration dashboard",
+    "invalidOtpCode": "Please enter the 6-digit verification code",
+    "failedToSendOtp": "Couldn't send verification code",
+    "failedToVerifyOtp": "Couldn't verify code"
+  },
+  "webOnboarding": {
+    "badge": "Get Started",
+    "pageTitle": "Create Your Organization",
+    "pageDescription": "Set up your organization profile to start managing your facilities and members",
+    "title": "Organization Details",
+    "description": "Fill in the information below to create your organization profile",
+    "basicInfo": "Basic Information",
+    "contactInfo": "Contact Information",
+    "locationInfo": "Location Information",
+    "yourRole": "Your Role",
+    "nameLabel": "Organization Name",
+    "namePlaceholder": "e.g., Toronto Tennis Club",
+    "typeLabel": "Organization Type",
+    "typeClub": "Club",
+    "typeMunicipality": "Municipality",
+    "typeCity": "City",
+    "typeAssociation": "Association",
+    "natureLabel": "Nature",
+    "naturePublic": "Public",
+    "naturePrivate": "Private",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Tell us about your organization...",
+    "emailLabel": "Email",
+    "emailPlaceholder": "contact@organization.com",
+    "phoneLabel": "Phone",
+    "phonePlaceholder": "+1 (555) 123-4567",
+    "websiteLabel": "Website",
+    "websitePlaceholder": "https://www.organization.com",
+    "addressLabel": "Address",
+    "addressPlaceholder": "123 Main Street",
+    "cityLabel": "City",
+    "cityPlaceholder": "Toronto",
+    "countryLabel": "Country",
+    "countryPlaceholder": "Select country",
+    "postalCodeLabel": "Postal Code",
+    "postalCodePlaceholder": "M5H 2N2",
+    "roleLabel": "Your Role in This Organization",
+    "roleOwner": "Owner",
+    "roleAdmin": "Administrator",
+    "roleStaff": "Staff",
+    "roleCoach": "Coach",
+    "rolePlayer": "Player",
+    "roleHint": "Select the role that best describes your position in this organization.",
+    "createButton": "Create Organization",
+    "creating": "Creating...",
+    "cancel": "Cancel"
+  },
+  "dashboard": {
+    "badge": "Dashboard",
+    "title": "Welcome to Your Dashboard",
+    "description": "Manage your organization and view your profile information",
+    "profileTitle": "Your Profile",
+    "profileDescription": "Your personal information and account settings.",
+    "organizationTitle": "Your Organization",
+    "organizationDescription": "Details about your organization.",
+    "email": "Email",
+    "fullName": "Full Name",
+    "displayName": "Display Name",
+    "locale": "Locale",
+    "timezone": "Timezone",
+    "name": "Name",
+    "phone": "Phone",
+    "location": "Location",
+    "website": "Website",
+    "role": "Role",
+    "joinedAt": "Joined"
+  },
+  "app": {
+    "nav": {
+      "dashboard": "Dashboard",
+      "organizations": "Organizations",
+      "facilities": "Facilities",
+      "members": "Members",
+      "settings": "Settings",
+      "theme": "Theme",
+      "signOut": "Sign Out"
+    }
+  },
+  "admin": {
+    "signIn": {
+      "title": "Admin Sign In",
+      "description": "Sign in to access the administration dashboard",
+      "restricted": "Restricted to Rallia employees and authorized administrators",
+      "titleMeta": "Admin Sign In - Rallia",
+      "descriptionMeta": "Sign in to access the Rallia administration dashboard."
+    },
+    "sidebar": {
+      "brand": "Rallia Admin",
+      "dashboard": "Dashboard",
+      "organizations": "Organizations",
+      "users": "Users",
+      "analytics": "Analytics",
+      "settings": "Settings"
+    },
+    "dashboard": {
+      "title": "Admin Dashboard",
+      "description": "Manage organizations, users, and settings",
+      "titleMeta": "Admin Dashboard - Rallia",
+      "descriptionMeta": "Administration dashboard for Rallia employees.",
+      "organizationsCard": {
+        "title": "Organizations",
+        "description": "Manage all organizations"
+      },
+      "usersCard": {
+        "title": "Users",
+        "description": "View and manage user accounts"
+      },
+      "analyticsCard": {
+        "title": "Analytics",
+        "description": "Analytics and insights"
+      }
+    },
+    "organizations": {
+      "title": "Organizations",
+      "description": "Manage all organizations",
+      "titleMeta": "Organizations - Admin - Rallia",
+      "descriptionMeta": "Manage all organizations.",
+      "comingSoon": "Organization management interface coming soon.",
+      "table": {
+        "name": "Name",
+        "email": "Email",
+        "phone": "Phone",
+        "website": "Website",
+        "nature": "Nature",
+        "type": "Type",
+        "city": "City",
+        "country": "Country",
+        "status": "Status",
+        "createdAt": "Created",
+        "noOrganizations": "No organizations found.",
+        "loading": "Loading organizations...",
+        "error": "Couldn't load organizations"
+      },
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "nature": {
+        "public": "Public",
+        "private": "Private"
+      },
+      "pagination": {
+        "showing": "Showing {start} to {end} of {total} organizations",
+        "page": "Page {current} of {total}"
+      },
+      "createButton": "Create Organization",
+      "bulkActions": {
+        "selected": "{count, plural, =0 {No organizations selected} one {# organization selected} other {# organizations selected}}",
+        "delete": "Delete Selected",
+        "confirmTitle": "Delete Organizations",
+        "confirmDescription": "Are you sure you want to permanently delete {count, plural, one {this organization} other {these # organizations}}? This action cannot be undone and will delete all associated facilities, courts, contacts, and images.",
+        "cancel": "Cancel",
+        "confirmDelete": "Delete",
+        "deleting": "Deleting..."
+      },
+      "create": {
+        "title": "Create Organization",
+        "description": "Create a new organization with facilities, sports, contacts, and courts.",
+        "titleMeta": "Create Organization - Admin - Rallia",
+        "descriptionMeta": "Create a new organization with all related entities.",
+        "formTitle": "New Organization",
+        "formDescription": "Fill in the details below to create a new organization.",
+        "sections": {
+          "organization": "Organization Information",
+          "dataProvider": "Data Provider",
+          "facilities": "Facilities",
+          "facility": "Facility",
+          "facilityImages": "Facility Images",
+          "facilityInfo": "Facility Information",
+          "sports": "Sports",
+          "contacts": "Contacts",
+          "contact": "Contact",
+          "courts": "Courts",
+          "courtRow": "Court Row"
+        },
+        "fields": {
+          "orgName": "Organization Name",
+          "orgType": "Organization Type",
+          "selectOrgType": "Select organization type (optional)",
+          "selectType": "Select Type",
+          "orgNature": "Nature",
+          "email": "Email",
+          "phone": "Phone",
+          "website": "Website",
+          "description": "Description",
+          "descriptionPlaceholder": "Enter organization description...",
+          "isActive": "Active",
+          "dataProvider": "Data Provider",
+          "selectDataProvider": "Select Data Provider",
+          "dataProviderHint": "Select a data provider for court availability fetching. Leave empty to use organization default.",
+          "address": "Address",
+          "city": "City",
+          "country": "Country",
+          "postalCode": "Postal Code",
+          "selectCountry": "Select Country",
+          "facilityName": "Facility Name",
+          "facilityNamePlaceholder": "Enter facility name to search...",
+          "facilityType": "Facility Type",
+          "selectFacilityType": "Select Facility Type",
+          "facilityDescriptionPlaceholder": "Enter facility description...",
+          "timezone": "Timezone",
+          "selectTimezone": "Select Timezone",
+          "externalProviderId": "External Provider ID",
+          "externalProviderIdPlaceholder": "External ID from data provider (e.g., siteId)",
+          "latitude": "Latitude",
+          "longitude": "Longitude",
+          "contactType": "Contact Type",
+          "isPrimary": "Primary Contact",
+          "notes": "Notes",
+          "surfaceType": "Surface Type",
+          "selectSurfaceType": "Select Surface Type",
+          "quantity": "Quantity",
+          "sports": "Sports",
+          "options": "Options",
+          "lighting": "Lighting",
+          "indoor": "Indoor",
+          "markAsPrimary": "Mark as primary contact",
+          "selectSportsFirst": "Select sports above first",
+          "membershipRequired": "Membership required to access this facility"
+        },
+        "types": {
+          "club": "Club",
+          "municipality": "Municipality",
+          "city": "City",
+          "association": "Association"
+        },
+        "natures": {
+          "public": "Public",
+          "private": "Private"
+        },
+        "facilityTypes": {
+          "park": "Park",
+          "club": "Club",
+          "community_club": "Community Club",
+          "indoor_center": "Indoor Center",
+          "private": "Private",
+          "other": "Other"
+        },
+        "contactTypes": {
+          "general": "General",
+          "reservation": "Reservation",
+          "maintenance": "Maintenance",
+          "other": "Other"
+        },
+        "surfaceTypes": {
+          "hard": "Hard",
+          "clay": "Clay",
+          "grass": "Grass",
+          "synthetic": "Synthetic",
+          "carpet": "Carpet",
+          "asphalt": "Asphalt",
+          "concrete": "Concrete"
+        },
+        "actions": {
+          "addFacility": "Add Facility",
+          "addContact": "Add Contact",
+          "addCourtRow": "Add Court Row",
+          "uploadImages": "Click to upload images",
+          "create": "Create Organization",
+          "creating": "Creating...",
+          "cancel": "Cancel",
+          "useOrgAddress": "Use organization address",
+          "useOrgContact": "Use organization contact information",
+          "searchPlace": "Search Google Places"
+        },
+        "loading": {
+          "sports": "Loading sports...",
+          "dataProviders": "Loading data providers..."
+        },
+        "hints": {
+          "holdCtrlToSelect": "Hold Ctrl/Cmd to select multiple"
+        },
+        "validation": {
+          "requiredFields": "Please fill in all required fields",
+          "atLeastOneFacility": "At least one facility is required",
+          "facilityNameRequired": "Facility {index} name is required",
+          "facilitySportsRequired": "Facility {index} must have at least one sport selected",
+          "facilityCountryRequired": "Facility {index} country is required"
+        },
+        "error": {
+          "createFailed": "Couldn't create organization"
+        },
+        "success": {
+          "title": "Organization Created Successfully",
+          "description": "The organization has been created successfully. What would you like to do next?",
+          "viewOrganization": "View Organization",
+          "createAnother": "Create Another",
+          "backToList": "Back to List"
+        }
+      },
+      "profile": {
+        "title": "Organization Profile",
+        "description": "View organization details for {slug}",
+        "titleMeta": "Organization Profile - Admin - Rallia",
+        "descriptionMeta": "View organization details",
+        "updateButton": "Update Organization",
+        "deleteButton": "Delete Organization",
+        "deleteConfirm": {
+          "title": "Delete Organization",
+          "description": "Are you sure you want to permanently delete \"{name}\"? This action cannot be undone and will delete all associated facilities, courts, contacts, and images.",
+          "cancel": "Cancel",
+          "confirm": "Delete Organization",
+          "deleting": "Deleting..."
+        },
+        "sections": {
+          "organizationInfo": "Organization Information",
+          "facilities": "Facilities",
+          "facilityImages": "Facility Images",
+          "sports": "Sports",
+          "contacts": "Contacts",
+          "courts": "Courts"
+        },
+        "fields": {
+          "email": "Email",
+          "phone": "Phone",
+          "website": "Website",
+          "address": "Address",
+          "description": "Description",
+          "createdAt": "Created At",
+          "updatedAt": "Updated At"
+        },
+        "status": {
+          "active": "Active",
+          "inactive": "Inactive"
+        },
+        "nature": {
+          "public": "Public",
+          "private": "Private"
+        },
+        "facility": "Facility",
+        "facilities": "Facilities",
+        "noFacilities": "No facilities found for this organization",
+        "primary": "Primary",
+        "court": "Court",
+        "courts": "Courts",
+        "surfaceType": "Surface Type",
+        "lighting": "Lighting",
+        "indoor": "Indoor",
+        "error": "Couldn't load organization"
+      },
+      "update": {
+        "title": "Update Organization",
+        "description": "Update organization details, facilities, and related information.",
+        "titleMeta": "Update Organization - Admin - Rallia",
+        "descriptionMeta": "Update organization details.",
+        "formTitle": "Update Organization",
+        "formDescription": "Update the details below to modify the organization.",
+        "sections": {
+          "organization": "Organization Information",
+          "dataProvider": "Data Provider",
+          "facilities": "Facilities",
+          "facility": "Facility",
+          "facilityImages": "Facility Images",
+          "facilityInfo": "Facility Information",
+          "sports": "Sports",
+          "contacts": "Contacts",
+          "contact": "Contact",
+          "courts": "Courts",
+          "courtRow": "Court Row"
+        },
+        "fields": {
+          "orgName": "Organization Name",
+          "orgType": "Organization Type",
+          "selectOrgType": "Select organization type (optional)",
+          "selectType": "Select Type",
+          "orgNature": "Nature",
+          "email": "Email",
+          "phone": "Phone",
+          "website": "Website",
+          "description": "Description",
+          "descriptionPlaceholder": "Enter organization description...",
+          "isActive": "Active",
+          "dataProvider": "Data Provider",
+          "selectDataProvider": "Select Data Provider",
+          "dataProviderHint": "Select a data provider for court availability fetching. Leave empty to use organization default.",
+          "address": "Address",
+          "city": "City",
+          "country": "Country",
+          "postalCode": "Postal Code",
+          "selectCountry": "Select Country",
+          "facilityName": "Facility Name",
+          "facilityNamePlaceholder": "Enter facility name to search...",
+          "facilityType": "Facility Type",
+          "selectFacilityType": "Select Facility Type",
+          "facilityDescriptionPlaceholder": "Enter facility description...",
+          "timezone": "Timezone",
+          "selectTimezone": "Select Timezone",
+          "externalProviderId": "External Provider ID",
+          "externalProviderIdPlaceholder": "External ID from data provider (e.g., siteId)",
+          "latitude": "Latitude",
+          "longitude": "Longitude",
+          "contactType": "Contact Type",
+          "isPrimary": "Primary Contact",
+          "notes": "Notes",
+          "surfaceType": "Surface Type",
+          "selectSurfaceType": "Select Surface Type",
+          "quantity": "Quantity",
+          "sports": "Sports",
+          "options": "Options",
+          "lighting": "Lighting",
+          "indoor": "Indoor",
+          "markAsPrimary": "Mark as primary contact",
+          "selectSportsFirst": "Select sports above first",
+          "membershipRequired": "Membership required to access this facility"
+        },
+        "types": {
+          "club": "Club",
+          "municipality": "Municipality",
+          "city": "City",
+          "association": "Association"
+        },
+        "natures": {
+          "public": "Public",
+          "private": "Private"
+        },
+        "facilityTypes": {
+          "park": "Park",
+          "club": "Club",
+          "community_club": "Community Club",
+          "indoor_center": "Indoor Center",
+          "private": "Private",
+          "other": "Other"
+        },
+        "contactTypes": {
+          "general": "General",
+          "reservation": "Reservation",
+          "maintenance": "Maintenance",
+          "other": "Other"
+        },
+        "surfaceTypes": {
+          "hard": "Hard",
+          "clay": "Clay",
+          "grass": "Grass",
+          "synthetic": "Synthetic",
+          "carpet": "Carpet",
+          "asphalt": "Asphalt",
+          "concrete": "Concrete"
+        },
+        "actions": {
+          "addFacility": "Add Facility",
+          "addContact": "Add Contact",
+          "addCourtRow": "Add Court Row",
+          "uploadImages": "Click to upload images",
+          "update": "Update Organization",
+          "updating": "Updating...",
+          "cancel": "Cancel",
+          "useOrgAddress": "Use organization address",
+          "useOrgContact": "Use organization contact information",
+          "searchPlace": "Search Google Places"
+        },
+        "loading": {
+          "sports": "Loading sports...",
+          "dataProviders": "Loading data providers..."
+        },
+        "hints": {
+          "holdCtrlToSelect": "Hold Ctrl/Cmd to select multiple"
+        },
+        "validation": {
+          "requiredFields": "Please fill in all required fields",
+          "atLeastOneFacility": "At least one facility is required",
+          "facilityNameRequired": "Facility {index} name is required",
+          "facilitySportsRequired": "Facility {index} must have at least one sport selected",
+          "facilityCountryRequired": "Facility {index} country is required"
+        },
+        "error": {
+          "updateFailed": "Couldn't update organization",
+          "loadFailed": "Couldn't load organization"
+        },
+        "success": {
+          "title": "Organization Updated Successfully",
+          "description": "The organization has been updated successfully. What would you like to do next?",
+          "viewOrganization": "View Organization",
+          "backToList": "Back to List"
+        }
+      }
+    },
+    "users": {
+      "title": "Users",
+      "description": "Manage all users including admins, organization members, and players",
+      "titleMeta": "Users - Admin - Rallia",
+      "descriptionMeta": "Manage all users including admins, organization members, and players.",
+      "comingSoon": "User management interface coming soon.",
+      "tabs": {
+        "admins": "Admins",
+        "organizationMembers": "Organization Members",
+        "players": "Players",
+        "comingSoon": "Coming soon"
+      },
+      "table": {
+        "name": "Name",
+        "email": "Email",
+        "role": "Role",
+        "assignedAt": "Assigned At",
+        "status": "Status",
+        "createdAt": "Created At",
+        "noAdmins": "No admins found.",
+        "error": "Couldn't load admins"
+      },
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "roles": {
+        "super_admin": "Super Admin",
+        "moderator": "Moderator",
+        "support": "Support"
+      },
+      "inviteButton": "Invite User",
+      "invite": {
+        "title": "Invite User",
+        "description": "Send an email invitation to a new user.",
+        "fields": {
+          "email": "Email",
+          "emailPlaceholder": "user@example.com",
+          "role": "Role",
+          "adminRole": "Admin Type"
+        },
+        "roles": {
+          "selectRole": "Select a role",
+          "player": "Player",
+          "admin": "Admin",
+          "orgMember": "Organization Member"
+        },
+        "adminRoles": {
+          "super_admin": "Super Admin",
+          "moderator": "Moderator",
+          "support": "Support"
+        },
+        "actions": {
+          "send": "Send Invitation",
+          "sending": "Sending...",
+          "cancel": "Cancel"
+        },
+        "validation": {
+          "invalidEmail": "Please enter a valid email address.",
+          "adminRoleRequired": "Please select an admin type."
+        },
+        "error": {
+          "sendFailed": "Couldn't send invitation. Please try again."
+        },
+        "success": {
+          "invitationSent": "Invitation sent successfully to {email}!"
+        }
+      }
+    },
+    "analytics": {
+      "title": "Analytics",
+      "description": "Analytics and insights",
+      "titleMeta": "Analytics - Admin - Rallia",
+      "descriptionMeta": "Analytics and insights.",
+      "comingSoon": "Analytics dashboard coming soon."
+    },
+    "settings": {
+      "title": "Settings",
+      "description": "Manage settings and configuration",
+      "titleMeta": "Settings - Admin - Rallia",
+      "descriptionMeta": "Manage settings.",
+      "comingSoon": "Settings interface coming soon."
+    },
+    "errors": {
+      "accessDenied": "Access denied. Admin access required.",
+      "unexpectedError": "Something unexpected happened",
+      "invalidCallback": "Invalid callback parameters"
+    }
+  },
+  "sportSelectionOverlay": {
+    "welcomeBadge": "👋 Welcome to Rallia",
+    "title": "Let's find your game",
+    "subtitle": "Choose the sports you love playing. You can always add more later!",
+    "loading": "Loading sports...",
+    "getStarted": "Let's Go!",
+    "selectAtLeastOne": "Select a sport to continue",
+    "selectionHint": "You will start with {sport}",
+    "tapToSelect": "Tap to add",
+    "tapToRemove": "Tap to remove"
+  },
+  "preOnboarding": {
+    "step": "Step {current} of {total}",
+    "postalCode": {
+      "title": "Where do you play?",
+      "subtitle": "Your postal code helps us find matches and players in your area. No more scrolling through games across the country!",
+      "whyNeeded": "We use this to show you matches you can actually get to",
+      "placeholder": "Enter your postal code",
+      "placeholderCA": "e.g., H2X 1Y4",
+      "placeholderUS": "e.g., 90210",
+      "verifying": "Finding your area...",
+      "verified": "Perfect! We found your area",
+      "continue": "Find Matches Near Me",
+      "benefits": {
+        "title": "With your postal code, you'll:",
+        "item1": "See matches within your travel distance",
+        "item2": "Connect with local players",
+        "item3": "Get notified about games nearby",
+        "findPlayers": {
+          "title": "Find players near you",
+          "description": "Match with players in your area who are at your level"
+        },
+        "discoverCourts": {
+          "title": "Discover local courts",
+          "description": "Find the best courts and clubs nearby"
+        },
+        "joinEvents": {
+          "title": "Never miss a game",
+          "description": "Get notified about matches in your neighborhood"
+        }
+      },
+      "privacy": "We never share your exact address",
+      "errors": {
+        "invalid": "Please enter a valid postal code",
+        "invalidCA": "Please enter a valid Canadian postal code (e.g., H2X 1Y4)",
+        "invalidUS": "Please enter a valid US ZIP code (e.g., 90210)",
+        "notFound": "We couldn't find this postal code. Please check and try again.",
+        "networkError": "Connection error. Please try again."
+      }
+    },
+    "locationPermission": {
+      "title": "Get the best match recommendations",
+      "subtitle": "Enable location to see exactly how far matches are and never miss a game nearby",
+      "whyNeeded": "Your device's GPS gives us precise distances so you know exactly how long it takes to get there",
+      "comparison": {
+        "without": "Without GPS",
+        "withoutExample": "~5 km away",
+        "with": "With GPS",
+        "withExample": "2.3 km • 8 min"
+      },
+      "benefits": {
+        "title": "With precise location, you'll:",
+        "item1": "See exact distances to matches",
+        "item2": "Find the closest available courts",
+        "item3": "Get real-time match alerts when you're nearby",
+        "item4": "Discover players in your neighborhood"
+      },
+      "enable": "Enable Precise Location",
+      "skip": "Maybe Later",
+      "privacyNote": "Your location stays on your device and is only used to calculate distances. We never track or store your movements.",
+      "skipNote": "You can always enable this later in Settings"
+    }
+  },
+  "reputation": {
+    "tiers": {
+      "unknown": "New",
+      "bronze": "Bronze",
+      "silver": "Silver",
+      "gold": "Gold",
+      "platinum": "Platinum"
+    },
+    "labels": {
+      "newPlayer": "New Player",
+      "score": "{score}%",
+      "tierWithScore": "{tier} {score}%"
+    },
+    "tooltips": {
+      "unknown": "This player hasn't completed enough matches yet",
+      "bronze": "Bronze tier player",
+      "silver": "Silver tier player",
+      "gold": "Gold tier player - reliable and trustworthy",
+      "platinum": "Platinum tier player - exceptional reputation"
+    },
+    "profile": {
+      "title": "Reputation",
+      "matchesCompleted": "Matches Completed",
+      "eventsToPublic": "{count} more events until public",
+      "trend": {
+        "improving": "Improving",
+        "stable": "Stable",
+        "declining": "Declining"
+      }
+    }
+  }
+}

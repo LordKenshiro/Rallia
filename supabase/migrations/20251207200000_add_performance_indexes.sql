@@ -60,13 +60,12 @@ CREATE INDEX IF NOT EXISTS idx_sport_name_lower
 -- =====================================================
 -- VERIFICATION_CODES TABLE INDEXES
 -- =====================================================
--- Index for email + code lookups (authentication flow)
-CREATE INDEX IF NOT EXISTS idx_verification_codes_email_code 
-  ON verification_codes (email, code);
-
--- Index for unused codes (common filter)
-CREATE INDEX IF NOT EXISTS idx_verification_codes_unused 
-  ON verification_codes (email, used, expires_at) WHERE used = false;
+-- Note: verification_codes table may not exist in all environments
+-- Skipping these indexes - uncomment if table exists
+-- CREATE INDEX IF NOT EXISTS idx_verification_codes_email_code 
+--   ON verification_codes (email, code);
+-- CREATE INDEX IF NOT EXISTS idx_verification_codes_unused 
+--   ON verification_codes (email, used, expires_at) WHERE used = false;
 
 -- =====================================================
 -- ANALYZE TABLES FOR QUERY OPTIMIZER

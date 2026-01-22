@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "npm install",
+  "installCommand": "npm install && npm rebuild lightningcss",
   "buildCommand": "npm run build --workspace=@rallia/web",
   "outputDirectory": "apps/web/.next",
   "framework": "nextjs"

@@ -1,0 +1,446 @@
+/**
+ * AuthWizard Component
+ *
+ * 2-step authentication wizard with horizontal slide animations,
+ * progress indicator, and full theme/i18n support.
+ *
+ * Step 1: Email entry with social sign-in buttons
+ * Step 2: OTP verification
+ */
+
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, StyleSheet, TouchableOpacity, Dimensions, Keyboard } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Ionicons } from '@expo/vector-icons';
+import { Text } from '@rallia/shared-components';
+import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { lightHaptic } from '@rallia/shared-utils';
+import type { TranslationKey } from '@rallia/shared-translations';
+
+import { useAuthWizard } from '../hooks/useAuthWizard';
+import { useSocialAuth } from '../hooks/useSocialAuth';
+import { EmailStep } from './steps/EmailStep';
+import { OTPVerificationStep } from './steps/OTPVerificationStep';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const SWIPE_THRESHOLD = 50;
+const TOTAL_STEPS = 2;
+
+// =============================================================================
+// TYPES
+// =============================================================================
+
+export interface AuthWizardColors {
+  background: string;
+  cardBackground: string;
+  text: string;
+  textSecondary: string;
+  textMuted: string;
+  border: string;
+  buttonActive: string;
+  buttonInactive: string;
+  buttonTextActive: string;
+  progressActive: string;
+  progressInactive: string;
+  inputBackground: string;
+  inputBorder: string;
+  inputBorderFocused: string;
+  error: string;
+  success: string;
+  divider: string;
+}
+
+interface AuthWizardProps {
+  /** Callback when authentication is successful */
+  onSuccess: (needsOnboarding: boolean) => void;
+  /** Callback to close the entire sheet */
+  onClose: () => void;
+  /** Callback to go back to the actions landing */
+  onBackToLanding: () => void;
+  /** Theme colors */
+  colors: AuthWizardColors;
+  /** Translation function */
+  t: (key: TranslationKey) => string;
+  /** Whether dark mode is enabled */
+  isDark: boolean;
+}
+
+// =============================================================================
+// PROGRESS BAR COMPONENT
+// =============================================================================
+
+interface ProgressBarProps {
+  currentStep: number;
+  totalSteps: number;
+  colors: AuthWizardColors;
+  t: (key: TranslationKey) => string;
+}
+
+const ProgressBar: React.FC<ProgressBarProps> = ({ currentStep, totalSteps, colors, t }) => {
+  const progress = useSharedValue((currentStep / totalSteps) * 100);
+
+  useEffect(() => {
+    progress.value = withTiming((currentStep / totalSteps) * 100, { duration: 300 });
+  }, [currentStep, totalSteps, progress]);
+
+  const animatedProgressStyle = useAnimatedStyle(() => ({
+    width: `${progress.value}%`,
+  }));
+
+  const stepNames = [t('auth.email'), t('auth.verificationCode')];
+  const currentStepName = stepNames[currentStep - 1] || '';
+
+  return (
+    <View style={styles.progressContainer}>
+      <View style={styles.progressHeader}>
+        <Text size="sm" weight="semibold" color={colors.textMuted}>
+          {t('auth.step' as TranslationKey)
+            .replace('{current}', String(currentStep))
+            .replace('{total}', String(totalSteps))}
+        </Text>
+        <Text size="sm" weight="bold" color={colors.progressActive}>
+          {currentStepName}
+        </Text>
+      </View>
+      <View style={[styles.progressBarBg, { backgroundColor: colors.progressInactive }]}>
+        <Animated.View
+          style={[
+            styles.progressBarFill,
+            { backgroundColor: colors.progressActive },
+            animatedProgressStyle,
+          ]}
+        />
+      </View>
+    </View>
+  );
+};
+
+// =============================================================================
+// WIZARD HEADER COMPONENT
+// =============================================================================
+
+interface WizardHeaderProps {
+  currentStep: number;
+  onBack: () => void;
+  onBackToLanding: () => void;
+  onClose: () => void;
+  colors: AuthWizardColors;
+  t: (key: TranslationKey) => string;
+}
+
+const WizardHeader: React.FC<WizardHeaderProps> = ({
+  currentStep,
+  onBack,
+  onBackToLanding,
+  onClose,
+  colors,
+  t,
+}) => {
+  return (
+    <View style={[styles.header, { borderBottomColor: colors.border }]}>
+      <View style={styles.headerLeft}>
+        <TouchableOpacity
+          onPress={() => {
+            Keyboard.dismiss();
+            lightHaptic();
+            if (currentStep === 1) {
+              onBackToLanding();
+            } else {
+              onBack();
+            }
+          }}
+          style={styles.headerButton}
+          accessibilityLabel={t('common.back' as TranslationKey)}
+          accessibilityRole="button"
+        >
+          <Ionicons name="chevron-back" size={24} color={colors.buttonActive} />
+        </TouchableOpacity>
+      </View>
+
+      <Text size="lg" weight="bold" color={colors.text}>
+        {t('auth.signIn')}
+      </Text>
+
+      <View style={styles.headerRight}>
+        <TouchableOpacity
+          onPress={() => {
+            Keyboard.dismiss();
+            lightHaptic();
+            onClose();
+          }}
+          style={styles.headerButton}
+          accessibilityLabel={t('common.close' as TranslationKey)}
+          accessibilityRole="button"
+        >
+          <Ionicons name="close" size={24} color={colors.textMuted} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+// =============================================================================
+// MAIN WIZARD COMPONENT
+// =============================================================================
+
+export const AuthWizard: React.FC<AuthWizardProps> = ({
+  onSuccess,
+  onClose,
+  onBackToLanding,
+  colors,
+  t,
+  isDark,
+}) => {
+  const [currentStep, setCurrentStep] = useState(1);
+
+  const {
+    email,
+    setEmail,
+    code,
+    setCode,
+    isLoading,
+    errorMessage,
+    handleEmailSubmit,
+    handleResendCode,
+    handleVerifyCode,
+    resetState,
+    isEmailValid,
+  } = useAuthWizard();
+
+  // Social auth hook
+  const {
+    isLoading: socialAuthLoading,
+    loadingProvider: socialAuthLoadingProvider,
+    signInWithGoogle,
+    signInWithApple,
+    signInWithFacebook,
+    isAppleSignInAvailable,
+  } = useSocialAuth();
+
+  // Animation values
+  const translateX = useSharedValue(0);
+  const gestureTranslateX = useSharedValue(0);
+
+  // Animate step changes
+  useEffect(() => {
+    translateX.value = withSpring(-((currentStep - 1) * SCREEN_WIDTH), {
+      damping: 80,
+      stiffness: 600,
+      overshootClamping: false,
+    });
+  }, [currentStep, translateX]);
+
+  // Handle social sign-in result
+  const handleSocialAuthResult = useCallback(
+    async (signInFn: () => Promise<{ success: boolean; needsOnboarding: boolean }>) => {
+      Keyboard.dismiss();
+      const result = await signInFn();
+      if (result.success) {
+        onSuccess(result.needsOnboarding);
+      }
+    },
+    [onSuccess]
+  );
+
+  // Social sign-in handlers
+  const handleGoogleSignIn = useCallback(() => {
+    handleSocialAuthResult(signInWithGoogle);
+  }, [handleSocialAuthResult, signInWithGoogle]);
+
+  const handleAppleSignIn = useCallback(() => {
+    handleSocialAuthResult(signInWithApple);
+  }, [handleSocialAuthResult, signInWithApple]);
+
+  const handleFacebookSignIn = useCallback(() => {
+    handleSocialAuthResult(signInWithFacebook);
+  }, [handleSocialAuthResult, signInWithFacebook]);
+
+  // Navigate to next step
+  const goToNextStep = useCallback(async () => {
+    Keyboard.dismiss();
+    if (currentStep === 1) {
+      const success = await handleEmailSubmit();
+      if (success) {
+        lightHaptic();
+        setCurrentStep(2);
+      }
+    } else if (currentStep === 2) {
+      const result = await handleVerifyCode();
+      if (result.success) {
+        onSuccess(result.needsOnboarding);
+      }
+    }
+  }, [currentStep, handleEmailSubmit, handleVerifyCode, onSuccess]);
+
+  // Navigate to previous step
+  const goToPrevStep = useCallback(() => {
+    Keyboard.dismiss();
+    lightHaptic();
+    if (currentStep > 1) {
+      setCurrentStep(prev => prev - 1);
+    }
+  }, [currentStep]);
+
+  // Handle back to landing
+  const handleBackToLanding = useCallback(() => {
+    Keyboard.dismiss();
+    resetState();
+    setCurrentStep(1);
+    onBackToLanding();
+  }, [resetState, onBackToLanding]);
+
+  // Swipe gesture handler - only allow swiping back
+  const panGesture = Gesture.Pan()
+    .onUpdate(e => {
+      // Only allow swiping right (to go back)
+      if (e.translationX > 0 && currentStep > 1) {
+        gestureTranslateX.value = e.translationX;
+      }
+    })
+    .onEnd(e => {
+      if (e.translationX > SWIPE_THRESHOLD && currentStep > 1) {
+        goToPrevStep();
+      }
+      gestureTranslateX.value = withTiming(0);
+    });
+
+  // Animated styles for step container
+  const animatedStepStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value + gestureTranslateX.value }],
+  }));
+
+  return (
+    <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
+      {/* Header */}
+      <WizardHeader
+        currentStep={currentStep}
+        onBack={goToPrevStep}
+        onBackToLanding={handleBackToLanding}
+        onClose={onClose}
+        colors={colors}
+        t={t}
+      />
+
+      {/* Progress bar */}
+      <ProgressBar currentStep={currentStep} totalSteps={TOTAL_STEPS} colors={colors} t={t} />
+
+      {/* Step content with swipe */}
+      <View style={styles.stepsViewport}>
+        <GestureDetector gesture={panGesture}>
+          <Animated.View
+            style={[
+              styles.stepsContainer,
+              { width: SCREEN_WIDTH * TOTAL_STEPS },
+              animatedStepStyle,
+            ]}
+          >
+            {/* Step 1: Email */}
+            <View style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
+              <EmailStep
+                email={email}
+                onEmailChange={setEmail}
+                isEmailValid={isEmailValid}
+                isLoading={isLoading && currentStep === 1}
+                errorMessage={currentStep === 1 ? errorMessage : ''}
+                onContinue={goToNextStep}
+                colors={colors}
+                t={t}
+                isDark={isDark}
+                isActive={currentStep === 1}
+                onGoogleSignIn={handleGoogleSignIn}
+                onAppleSignIn={handleAppleSignIn}
+                onFacebookSignIn={handleFacebookSignIn}
+                socialAuthLoading={socialAuthLoading}
+                socialAuthLoadingProvider={socialAuthLoadingProvider}
+                isAppleSignInAvailable={isAppleSignInAvailable}
+              />
+            </View>
+
+            {/* Step 2: OTP Verification */}
+            <View style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
+              <OTPVerificationStep
+                email={email}
+                code={code}
+                onCodeChange={setCode}
+                isLoading={isLoading && currentStep === 2}
+                errorMessage={currentStep === 2 ? errorMessage : ''}
+                onVerify={goToNextStep}
+                onResendCode={handleResendCode}
+                colors={colors}
+                t={t}
+                isDark={isDark}
+                isActive={currentStep === 2}
+              />
+            </View>
+          </Animated.View>
+        </GestureDetector>
+      </View>
+    </View>
+  );
+};
+
+// =============================================================================
+// STYLES
+// =============================================================================
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
+    borderBottomWidth: 1,
+  },
+  headerLeft: {
+    width: 40,
+  },
+  headerRight: {
+    width: 40,
+    alignItems: 'flex-end',
+  },
+  headerButton: {
+    padding: spacingPixels[1],
+  },
+  progressContainer: {
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacingPixels[2],
+  },
+  progressBarBg: {
+    height: 4,
+    borderRadius: radiusPixels.full,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: radiusPixels.full,
+  },
+  stepsViewport: {
+    flex: 1,
+    overflow: 'hidden',
+  },
+  stepsContainer: {
+    flexDirection: 'row',
+    flex: 1,
+  },
+  stepWrapper: {
+    height: '100%',
+  },
+});
+
+export default AuthWizard;

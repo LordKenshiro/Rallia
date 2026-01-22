@@ -60,7 +60,7 @@ export interface StackProps {
 /**
  * Stack component for laying out children with consistent spacing
  * Supports both vertical (VStack) and horizontal (HStack) layouts
- * 
+ *
  * @example
  * ```tsx
  * // Vertical stack (default)
@@ -69,25 +69,25 @@ export interface StackProps {
  *   <Text>Item 2</Text>
  *   <Text>Item 3</Text>
  * </Stack>
- * 
+ *
  * // Horizontal stack
  * <Stack direction="horizontal" spacing={8}>
  *   <Button>Cancel</Button>
  *   <Button>Submit</Button>
  * </Stack>
- * 
+ *
  * // Centered items
  * <Stack align="center" spacing={12}>
  *   <Icon name="check" />
  *   <Text>Success!</Text>
  * </Stack>
- * 
+ *
  * // Space between items
  * <Stack direction="horizontal" justify="space-between">
  *   <Text>Left</Text>
  *   <Text>Right</Text>
  * </Stack>
- * 
+ *
  * // Wrapping horizontal stack
  * <Stack direction="horizontal" spacing={8} wrap>
  *   <Badge>Tag 1</Badge>
@@ -110,20 +110,20 @@ export const Stack: React.FC<StackProps> = ({
 
   // Map align prop to flexbox alignItems
   const alignItems: ViewStyle['alignItems'] = {
-    start: isHorizontal ? 'flex-start' : 'flex-start',
-    center: 'center',
-    end: isHorizontal ? 'flex-end' : 'flex-end',
-    stretch: 'stretch',
+    start: 'flex-start' as const,
+    center: 'center' as const,
+    end: 'flex-end' as const,
+    stretch: 'stretch' as const,
   }[align];
 
   // Map justify prop to flexbox justifyContent
   const justifyContent: ViewStyle['justifyContent'] = {
-    start: 'flex-start',
-    center: 'center',
-    end: 'flex-end',
-    'space-between': 'space-between',
-    'space-around': 'space-around',
-    'space-evenly': 'space-evenly',
+    start: 'flex-start' as const,
+    center: 'center' as const,
+    end: 'flex-end' as const,
+    'space-between': 'space-between' as const,
+    'space-around': 'space-around' as const,
+    'space-evenly': 'space-evenly' as const,
   }[justify];
 
   // Filter out null/undefined children
@@ -145,7 +145,7 @@ export const Stack: React.FC<StackProps> = ({
     >
       {validChildren.map((child, index) => {
         const isLastChild = index === validChildren.length - 1;
-        
+
         // Don't add spacing after the last child
         if (isLastChild) {
           return <React.Fragment key={index}>{child}</React.Fragment>;
@@ -168,7 +168,7 @@ export const Stack: React.FC<StackProps> = ({
 
 /**
  * VStack is a convenience wrapper for vertical Stack
- * 
+ *
  * @example
  * ```tsx
  * <VStack spacing={16}>
@@ -177,13 +177,13 @@ export const Stack: React.FC<StackProps> = ({
  * </VStack>
  * ```
  */
-export const VStack: React.FC<Omit<StackProps, 'direction'>> = (props) => (
+export const VStack: React.FC<Omit<StackProps, 'direction'>> = props => (
   <Stack {...props} direction="vertical" />
 );
 
 /**
  * HStack is a convenience wrapper for horizontal Stack
- * 
+ *
  * @example
  * ```tsx
  * <HStack spacing={8}>
@@ -192,7 +192,7 @@ export const VStack: React.FC<Omit<StackProps, 'direction'>> = (props) => (
  * </HStack>
  * ```
  */
-export const HStack: React.FC<Omit<StackProps, 'direction'>> = (props) => (
+export const HStack: React.FC<Omit<StackProps, 'direction'>> = props => (
   <Stack {...props} direction="horizontal" />
 );
 

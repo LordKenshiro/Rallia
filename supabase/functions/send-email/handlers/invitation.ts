@@ -23,8 +23,8 @@ export class InvitationHandler {
 
     // Fetch inviter profile to get name
     const { data: inviterProfile, error: inviterError } = await supabase
-      .from('profiles')
-      .select('full_name, display_name')
+      .from('profile')
+      .select('first_name, last_name, display_name')
       .eq('id', record.inviter_id)
       .single();
 
@@ -34,7 +34,11 @@ export class InvitationHandler {
     }
 
     const inviterName =
-      inviterProfile?.full_name || inviterProfile?.display_name || 'a team member';
+      inviterProfile?.display_name ||
+      (inviterProfile?.first_name && inviterProfile?.last_name
+        ? `${inviterProfile.first_name} ${inviterProfile.last_name}`
+        : inviterProfile?.first_name) ||
+      'a team member';
 
     // Construct sign-up URL
     const baseUrl =

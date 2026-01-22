@@ -8,7 +8,8 @@ export type SurfaceType = Enums<'surface_type_enum'> | '';
 export type ContactType = Enums<'facility_contact_type_enum'>;
 
 // Use generated types
-export type Sport = Pick<Tables<'sports'>, 'id' | 'name' | 'slug'>;
+export type Sport = Pick<Tables<'sport'>, 'id' | 'name' | 'slug'>;
+export type DataProvider = Pick<Tables<'data_provider'>, 'id' | 'name' | 'provider_type'>;
 
 // ExistingImage now represents a file from the files table joined via facility_files
 export interface ExistingImage {
@@ -74,6 +75,59 @@ export interface OrganizationData {
   website: string;
   type?: OrganizationType;
   description?: string;
+  dataProviderId?: string | null;
+  isActive?: boolean;
+}
+
+// Initial data from database (before form transformation)
+export interface InitialFacilityData {
+  id: string;
+  name: string;
+  facility_file?: Array<{
+    id: string;
+    file_id: string;
+    display_order?: number | null;
+    is_primary?: boolean | null;
+    files?: {
+      id: string;
+      url: string;
+      thumbnail_url: string | null;
+    } | null;
+  }>;
+  facility_contact?: Array<{
+    id: string;
+    phone: string | null;
+    email: string | null;
+    website: string | null;
+    contact_type: string;
+    is_primary: boolean | null;
+    sport_id: string | null;
+  }>;
+  courts?: Array<{
+    id: string;
+    surface_type: string | null;
+    lighting: boolean | null;
+    indoor: boolean | null;
+    court_sport?: Array<{
+      sport_id: string;
+    }>;
+  }>;
+  facility_sport?: Array<{
+    sport_id: string;
+  }>;
+  facility_type?: string | null;
+  membership_required?: boolean;
+  address?: string | null;
+  city?: string | null;
+  country?: string | null;
+  postal_code?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  description?: string | null;
+  timezone?: string | null;
+  data_provider_id?: string | null;
+  external_provider_id?: string | null;
+  is_active?: boolean;
 }
 
 export interface AdminOrganizationFormProps {
@@ -84,8 +138,10 @@ export interface AdminOrganizationFormProps {
       slug: string;
       postal_code?: string;
       description?: string;
+      data_provider_id?: string | null;
+      is_active?: boolean;
     };
-    facilities: any[];
+    facilities: InitialFacilityData[];
   };
 }
 
@@ -105,6 +161,11 @@ export interface CreateFacility {
   selectedSports: string[];
   contacts: FacilityContact[];
   courtRows: CourtRow[];
+  description: string;
+  timezone: string;
+  dataProviderId: string | null;
+  externalProviderId: string;
+  isActive: boolean;
 }
 
 // Update mode: union image type
@@ -123,6 +184,11 @@ export interface UpdateFacility {
   selectedSports: string[];
   contacts: FacilityContact[];
   courtRows: CourtRow[];
+  description: string;
+  timezone: string;
+  dataProviderId: string | null;
+  externalProviderId: string;
+  isActive: boolean;
 }
 
 export type Facility = CreateFacility | UpdateFacility;

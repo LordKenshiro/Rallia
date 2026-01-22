@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     // Validate slug uniqueness
     const { data: existingOrg } = await supabase
-      .from('organizations')
+      .from('organization')
       .select('id')
       .eq('slug', body.slug)
       .single();
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
       while (slugExists) {
         const { data: check } = await supabase
-          .from('organizations')
+          .from('organization')
           .select('id')
           .eq('slug', newSlug)
           .single();
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
 
     // Create organization
     const { data: organization, error: orgError } = await supabase
-      .from('organizations')
+      .from('organization')
       .insert({
         owner_id: user.id,
         name: body.name,
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create organization member record
-    const { error: memberError } = await supabase.from('organization_members').insert({
+    const { error: memberError } = await supabase.from('organization_member').insert({
       user_id: user.id,
       organization_id: organization.id,
       role: body.role as Role,
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
     if (memberError) {
       console.error('Organization member creation error:', memberError);
       // Try to delete the organization if member creation fails
-      await supabase.from('organizations').delete().eq('id', organization.id);
+      await supabase.from('organization').delete().eq('id', organization.id);
       return NextResponse.json(
         {
           error: memberError.message || 'Failed to create organization membership',

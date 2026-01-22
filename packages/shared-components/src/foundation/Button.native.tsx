@@ -1,21 +1,21 @@
 /**
  * Button Component
- * 
+ *
  * A versatile button component with multiple variants, sizes, and states.
  * Supports loading states, icons, and full-width layout.
- * 
+ *
  * @example
  * ```tsx
  * // Primary button
  * <Button onPress={() => console.log('Pressed')}>
  *   Click Me
  * </Button>
- * 
+ *
  * // Secondary button with icon
  * <Button variant="secondary" leftIcon={<Icon name="check" />}>
  *   Save
  * </Button>
- * 
+ *
  * // Loading state
  * <Button loading>
  *   Submitting...
@@ -32,8 +32,10 @@ import {
   View,
   ViewStyle,
   TextStyle,
+  StyleProp,
 } from 'react-native';
-import { colors, typography, spacing, borderRadius } from '../theme';
+import { typography, spacing, borderRadius } from '../theme';
+import { primary, neutral, lightTheme, darkTheme } from '@rallia/design-system';
 
 export interface ButtonProps {
   /** Button style variant */
@@ -55,11 +57,26 @@ export interface ButtonProps {
   /** Button text/content */
   children: React.ReactNode;
   /** Additional container styles */
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   /** Additional text styles */
-  textStyle?: TextStyle;
+  textStyle?: StyleProp<TextStyle>;
   /** Test ID for testing */
   testID?: string;
+  /** Theme colors - if not provided, uses design system defaults */
+  themeColors?: {
+    primary: string;
+    primaryForeground: string;
+    buttonActive: string;
+    buttonInactive: string;
+    buttonTextActive: string;
+    buttonTextInactive: string;
+    text: string;
+    textMuted: string;
+    border: string;
+    background: string;
+  };
+  /** Whether dark mode is active */
+  isDark?: boolean;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -75,12 +92,29 @@ export const Button: React.FC<ButtonProps> = ({
   style,
   textStyle,
   testID,
+  themeColors,
+  isDark = false,
 }) => {
   const isDisabled = disabled || loading;
 
+  // Use theme colors if provided, otherwise use design system defaults
+  // Note: Using string literals for base colors to avoid runtime import issues
+  const colors = themeColors || {
+    primary: isDark ? primary[500] : primary[600],
+    primaryForeground: '#ffffff', // base.white
+    buttonActive: isDark ? primary[500] : primary[600],
+    buttonInactive: neutral[300],
+    buttonTextActive: '#ffffff', // base.white
+    buttonTextInactive: neutral[500],
+    text: isDark ? lightTheme.foreground : darkTheme.foreground,
+    textMuted: isDark ? lightTheme.mutedForeground : darkTheme.mutedForeground,
+    border: isDark ? darkTheme.border : lightTheme.border, // Fixed: light mode should use lightTheme.border
+    background: isDark ? darkTheme.background : lightTheme.background, // Fixed: light mode should use lightTheme.background
+  };
+
   // Get variant styles
-  const variantStyles = getVariantStyles(variant, isDisabled);
-  
+  const variantStyles = getVariantStyles(variant, isDisabled, colors);
+
   // Get size styles
   const sizeStyles = getSizeStyles(size);
 
@@ -100,17 +134,11 @@ export const Button: React.FC<ButtonProps> = ({
       ]}
     >
       {loading && (
-        <ActivityIndicator
-          size="small"
-          color={variantStyles.spinner}
-          style={styles.spinner}
-        />
+        <ActivityIndicator size="small" color={variantStyles.spinner} style={styles.spinner} />
       )}
-      
-      {!loading && leftIcon && (
-        <View style={styles.leftIcon}>{leftIcon}</View>
-      )}
-      
+
+      {!loading && leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
+
       <Text
         style={[
           styles.text,
@@ -122,40 +150,53 @@ export const Button: React.FC<ButtonProps> = ({
       >
         {children}
       </Text>
-      
-      {!loading && rightIcon && (
-        <View style={styles.rightIcon}>{rightIcon}</View>
-      )}
+
+      {!loading && rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>}
     </TouchableOpacity>
   );
 };
 
 // Variant styles
-const getVariantStyles = (variant: ButtonProps['variant'], disabled: boolean) => {
+const getVariantStyles = (
+  variant: ButtonProps['variant'],
+  disabled: boolean,
+  colors: {
+    primary: string;
+    primaryForeground: string;
+    buttonActive: string;
+    buttonInactive: string;
+    buttonTextActive: string;
+    buttonTextInactive: string;
+    text: string;
+    textMuted: string;
+    border: string;
+    background: string;
+  }
+) => {
   const variants = {
     primary: {
       container: {
-        backgroundColor: disabled ? colors.buttonDisabled : colors.primary,
+        backgroundColor: disabled ? colors.buttonInactive : colors.buttonActive,
       },
       text: {
-        color: colors.white,
+        color: colors.buttonTextActive,
       },
       textDisabled: {
-        color: colors.gray,
+        color: colors.buttonTextInactive,
       },
-      spinner: colors.white,
+      spinner: colors.buttonTextActive,
     },
     secondary: {
       container: {
-        backgroundColor: disabled ? colors.veryLightGray : colors.white,
+        backgroundColor: disabled ? colors.buttonInactive : colors.background,
         borderWidth: 2,
-        borderColor: disabled ? colors.lightGray : colors.primary,
+        borderColor: disabled ? colors.border : colors.primary,
       },
       text: {
         color: colors.primary,
       },
       textDisabled: {
-        color: colors.gray,
+        color: colors.buttonTextInactive,
       },
       spinner: colors.primary,
     },
@@ -163,15 +204,15 @@ const getVariantStyles = (variant: ButtonProps['variant'], disabled: boolean) =>
       container: {
         backgroundColor: 'transparent',
         borderWidth: 1,
-        borderColor: disabled ? colors.lightGray : colors.lightGray,
+        borderColor: colors.border,
       },
       text: {
-        color: colors.dark,
+        color: colors.text,
       },
       textDisabled: {
-        color: colors.gray,
+        color: colors.textMuted,
       },
-      spinner: colors.dark,
+      spinner: colors.text,
     },
     ghost: {
       container: {
@@ -181,7 +222,7 @@ const getVariantStyles = (variant: ButtonProps['variant'], disabled: boolean) =>
         color: colors.primary,
       },
       textDisabled: {
-        color: colors.gray,
+        color: colors.textMuted,
       },
       spinner: colors.primary,
     },
@@ -195,7 +236,7 @@ const getVariantStyles = (variant: ButtonProps['variant'], disabled: boolean) =>
         textDecorationLine: 'underline' as const,
       },
       textDisabled: {
-        color: colors.gray,
+        color: colors.textMuted,
       },
       spinner: colors.primary,
     },

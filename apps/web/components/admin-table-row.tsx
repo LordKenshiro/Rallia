@@ -8,7 +8,8 @@ interface AdminTableRowProps {
     id: string;
     role: 'super_admin' | 'moderator' | 'support';
     assigned_at: string;
-    full_name: string | null;
+    first_name: string | null;
+    last_name: string | null;
     display_name: string | null;
     email: string;
     is_active: boolean;
@@ -30,7 +31,12 @@ export function AdminTableRow({ admin }: AdminTableRowProps) {
     }).format(date);
   };
 
-  const displayName = admin.display_name || admin.full_name || '-';
+  const displayName =
+    admin.display_name ||
+    (admin.first_name && admin.last_name
+      ? `${admin.first_name} ${admin.last_name}`
+      : admin.first_name) ||
+    '-';
 
   return (
     <tr className="border-b hover:bg-muted/50 transition-colors">

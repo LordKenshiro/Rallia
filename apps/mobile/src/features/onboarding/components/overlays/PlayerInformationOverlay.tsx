@@ -5,21 +5,15 @@ import {
   TouchableOpacity,
   Platform,
   Animated,
-  Alert,
   TextInput,
-  ToastAndroid,
   ActivityIndicator,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
-import { 
-  Overlay, 
-  Button, 
-  Heading, 
-  Text 
-} from '@rallia/shared-components';
+import { Overlay, Button, Heading, Text, useToast } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
 import { supabase, Logger } from '@rallia/shared-services';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
+import { useThemeStyles, usePlayer, useProfile } from '../../../../hooks';
 
 interface PlayerInformationOverlayProps {
   visible: boolean;
@@ -37,6 +31,10 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
   onClose,
   initialData,
 }) => {
+  const { colors } = useThemeStyles();
+  const { refetch: refetchPlayer } = usePlayer();
+  const { refetch: refetchProfile } = useProfile();
+  const toast = useToast();
   const [username, setUsername] = useState(initialData?.username || '');
   const [bio, setBio] = useState(initialData?.bio || '');
   const [preferredPlayingHand, setPreferredPlayingHand] = useState<string>(
@@ -66,7 +64,7 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
     if (visible) {
       fadeAnim.setValue(0);
       slideAnim.setValue(50);
-      
+
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -84,16 +82,18 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
 
   const handleSave = async () => {
     if (isSaving) return;
-    
+
     mediumHaptic();
     setIsSaving(true);
-    
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user) {
         setIsSaving(false);
-        Alert.alert('Error', 'User not found');
+        toast.error('User not found');
         return;
       }
 
@@ -110,7 +110,7 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
       if (profileUpdateError) {
         Logger.error('Failed to update profile', profileUpdateError as Error, { userId: user.id });
         setIsSaving(false);
-        Alert.alert('Error', 'Failed to update your information. Please try again.');
+        toast.error('Failed to update your information. Please try again.');
         return;
       }
 
@@ -126,7 +126,7 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
       if (playerUpdateError) {
         Logger.error('Failed to update player', playerUpdateError as Error, { userId: user.id });
         setIsSaving(false);
-        Alert.alert('Error', 'Failed to update your information. Please try again.');
+        toast.error('Failed to update your information. Please try again.');
         return;
       }
 
@@ -136,26 +136,28 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
       });
 
       if (authUpdateError) {
-        Logger.warn('Failed to sync display_name to auth.users', { error: authUpdateError, userId: user.id });
+        Logger.warn('Failed to sync display_name to auth.users', {
+          error: authUpdateError,
+          userId: user.id,
+        });
         // Don't block the save - profile table is already updated
       }
 
+      // Refetch player and profile data to update all consumers
+      await refetchPlayer();
+      await refetchProfile();
+
       // Show success toast
-      if (Platform.OS === 'android') {
-        ToastAndroid.show('Successfully updated Player Information', ToastAndroid.LONG);
-      } else {
-        Alert.alert('Success', 'Successfully updated Player Information');
-      }
+      toast.success('Successfully updated Player Information');
 
       // Close modal automatically after brief delay
       setTimeout(() => {
         onClose();
       }, 500);
-
     } catch (error) {
       Logger.error('Unexpected error updating player information', error as Error);
       setIsSaving(false);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      toast.error('An unexpected error occurred. Please try again.');
     }
   };
 
@@ -173,38 +175,49 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
         ]}
       >
         {/* Title */}
-        <Heading level={2} style={styles.title}>
+        <Heading level={2} style={[styles.title, { color: colors.text }]}>
           Update your player information
         </Heading>
 
         {/* Username Input */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Username</Text>
-          <View style={styles.inputWithIcon}>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>Username</Text>
+          <View
+            style={[
+              styles.inputWithIcon,
+              { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
+            ]}
+          >
             <TextInput
               placeholder="Enter your username"
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.textMuted}
               value={username}
               onChangeText={setUsername}
               maxLength={20}
-              style={styles.inputField}
+              style={[styles.inputField, { color: colors.text }]}
             />
           </View>
         </View>
 
         {/* Bio Input */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Bio</Text>
-          <View style={[styles.inputWithIcon, styles.bioInput]}>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>Bio</Text>
+          <View
+            style={[
+              styles.inputWithIcon,
+              styles.bioInput,
+              { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
+            ]}
+          >
             <TextInput
               placeholder="Tell us about yourself..."
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.textMuted}
               value={bio}
               onChangeText={setBio}
               multiline
               numberOfLines={4}
               maxLength={300}
-              style={[styles.inputField, styles.bioInputField]}
+              style={[styles.inputField, styles.bioInputField, { color: colors.text }]}
               textAlignVertical="top"
             />
           </View>
@@ -212,13 +225,16 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
 
         {/* Preferred Playing Hand */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Preferred Playing Hand</Text>
-          <View style={styles.handButtonsContainer}>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>Preferred Playing Hand</Text>
+          <View style={[styles.handButtonsContainer, { backgroundColor: colors.inputBackground }]}>
             <TouchableOpacity
               style={[
                 styles.handButton,
                 styles.leftButton,
-                preferredPlayingHand === 'left' && styles.handButtonActive,
+                preferredPlayingHand === 'left' && [
+                  styles.handButtonActive,
+                  { backgroundColor: colors.primary },
+                ],
               ]}
               onPress={() => {
                 lightHaptic();
@@ -228,8 +244,12 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
               <Text
                 style={
                   preferredPlayingHand === 'left'
-                    ? [styles.handButtonText, styles.handButtonTextActive]
-                    : styles.handButtonText
+                    ? [
+                        styles.handButtonText,
+                        styles.handButtonTextActive,
+                        { color: colors.primaryForeground },
+                      ]
+                    : [styles.handButtonText, { color: colors.textMuted }]
                 }
               >
                 Left
@@ -240,7 +260,10 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
               style={[
                 styles.handButton,
                 styles.middleButton,
-                preferredPlayingHand === 'right' && styles.handButtonActive,
+                preferredPlayingHand === 'right' && [
+                  styles.handButtonActive,
+                  { backgroundColor: colors.primary },
+                ],
               ]}
               onPress={() => {
                 lightHaptic();
@@ -250,8 +273,12 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
               <Text
                 style={
                   preferredPlayingHand === 'right'
-                    ? [styles.handButtonText, styles.handButtonTextActive]
-                    : styles.handButtonText
+                    ? [
+                        styles.handButtonText,
+                        styles.handButtonTextActive,
+                        { color: colors.primaryForeground },
+                      ]
+                    : [styles.handButtonText, { color: colors.textMuted }]
                 }
               >
                 Right
@@ -262,7 +289,10 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
               style={[
                 styles.handButton,
                 styles.rightButton,
-                preferredPlayingHand === 'both' && styles.handButtonActive,
+                preferredPlayingHand === 'both' && [
+                  styles.handButtonActive,
+                  { backgroundColor: colors.primary },
+                ],
               ]}
               onPress={() => {
                 lightHaptic();
@@ -272,8 +302,12 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
               <Text
                 style={
                   preferredPlayingHand === 'both'
-                    ? [styles.handButtonText, styles.handButtonTextActive]
-                    : styles.handButtonText
+                    ? [
+                        styles.handButtonText,
+                        styles.handButtonTextActive,
+                        { color: colors.primaryForeground },
+                      ]
+                    : [styles.handButtonText, { color: colors.textMuted }]
                 }
               >
                 Both
@@ -284,9 +318,16 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
 
         {/* Maximum Travel Distance */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Maximum Travel Distance</Text>
-          <View style={styles.sliderContainer}>
-            <Text style={styles.sliderValue}>{maximumTravelDistance} km</Text>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>Maximum Travel Distance</Text>
+          <View
+            style={[
+              styles.sliderContainer,
+              { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
+            ]}
+          >
+            <Text style={[styles.sliderValue, { color: colors.text }]}>
+              {maximumTravelDistance} km
+            </Text>
             <Slider
               style={styles.slider}
               minimumValue={1}
@@ -294,9 +335,9 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
               step={1}
               value={maximumTravelDistance}
               onValueChange={setMaximumTravelDistance}
-              minimumTrackTintColor={COLORS.primary}
-              maximumTrackTintColor="#E0E0E0"
-              thumbTintColor={COLORS.primary}
+              minimumTrackTintColor={colors.primary}
+              maximumTrackTintColor={colors.divider}
+              thumbTintColor={colors.primary}
             />
           </View>
         </View>
@@ -308,7 +349,7 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
           disabled={!isFormValid || isSaving}
           style={styles.saveButton}
         >
-          {isSaving ? <ActivityIndicator size="small" color="#fff" /> : 'Save'}
+          {isSaving ? <ActivityIndicator size="small" color={colors.primaryForeground} /> : 'Save'}
         </Button>
       </Animated.View>
     </Overlay>
@@ -323,7 +364,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
     textAlign: 'center',
     marginBottom: 20,
     lineHeight: 28,
@@ -334,16 +374,13 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 8,
   },
   inputWithIcon: {
-    backgroundColor: COLORS.primaryLight,
     borderRadius: 10,
     paddingHorizontal: 20,
     paddingVertical: 15,
     borderWidth: 1,
-    borderColor: COLORS.primaryLight,
   },
   bioInput: {
     minHeight: 100,
@@ -351,7 +388,6 @@ const styles = StyleSheet.create({
   },
   inputField: {
     fontSize: 16,
-    color: '#333',
     padding: 0,
   },
   bioInputField: {
@@ -359,7 +395,6 @@ const styles = StyleSheet.create({
   },
   handButtonsContainer: {
     flexDirection: 'row',
-    backgroundColor: COLORS.primaryLight,
     borderRadius: 10,
     padding: 4,
   },
@@ -381,28 +416,23 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 8,
   },
   handButtonActive: {
-    backgroundColor: COLORS.primary,
+    // backgroundColor applied inline
   },
   handButtonText: {
     fontSize: 16,
-    color: '#666',
     fontWeight: '500',
   },
   handButtonTextActive: {
-    color: '#fff',
     fontWeight: '600',
   },
   sliderContainer: {
-    backgroundColor: COLORS.primaryLight,
     borderRadius: 10,
     padding: 16,
     borderWidth: 1,
-    borderColor: COLORS.primaryLight,
   },
   sliderValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 8,
   },
   slider: {

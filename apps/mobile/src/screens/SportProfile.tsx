@@ -4,17 +4,29 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   Alert,
-  Platform,
-  ToastAndroid,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { Text, Button } from '@rallia/shared-components';
-import { COLORS } from '@rallia/shared-constants';
+import { useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
+import { useAppNavigation } from '../navigation/hooks';
+import type { RootStackParamList } from '../navigation/types';
+import { Text, Button, Skeleton, useToast } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
+import { MATCH_DURATION_ENUM_LABELS } from '@rallia/shared-types';
+import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
+import { useSport } from '../context';
+import {
+  spacingPixels,
+  radiusPixels,
+  fontSizePixels,
+  fontWeightNumeric,
+  primary,
+} from '@rallia/design-system';
+
+const BASE_BLACK = '#000000';
+
 import * as Haptics from 'expo-haptics';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import TennisRatingOverlay from '../features/onboarding/components/overlays/TennisRatingOverlay';
@@ -24,12 +36,7 @@ import ReferenceRequestOverlay from '../features/sport-profile/components/Refere
 import { TennisPreferencesOverlay } from '../features/sport-profile/components/TennisPreferencesOverlay';
 import { PickleballPreferencesOverlay } from '../features/sport-profile/components/PickleballPreferencesOverlay';
 
-type SportProfileRouteProp = RouteProp<{
-  params: {
-    sportId: string;
-    sportName: string;
-  };
-}, 'params'>;
+type SportProfileRouteProp = RouteProp<RootStackParamList, 'SportProfile'>;
 
 interface RatingInfo {
   ratingScoreId: string; // ID of the rating_score record
@@ -57,9 +64,13 @@ interface PlayAttributeValue {
 }
 
 const SportProfile = () => {
-  const navigation = useNavigation();
+  const navigation = useAppNavigation();
   const route = useRoute<SportProfileRouteProp>();
   const { sportId, sportName } = route.params;
+  const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
+  const { refetch: refetchSportContext } = useSport();
+  const toast = useToast();
 
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string>('');
@@ -88,9 +99,11 @@ const SportProfile = () => {
   const fetchSportProfileData = async () => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
-        Alert.alert('Error', 'User not authenticated');
+        Alert.alert(t('alerts.error'), t('errors.userNotAuthenticated'));
         return;
       }
       setUserId(user.id);
@@ -99,41 +112,46 @@ const SportProfile = () => {
       const [playerSportResult, ratingResult] = await Promise.all([
         // Fetch player's sport connection
         withTimeout(
-          (async () => supabase
-            .from('player_sport')
-            .select('id, is_active, preferred_match_duration, preferred_match_type, is_primary')
-            .eq('player_id', user.id)
-            .eq('sport_id', sportId)
-            .maybeSingle())(),
+          (async () =>
+            supabase
+              .from('player_sport')
+              .select('id, is_active, preferred_match_duration, preferred_match_type, is_primary')
+              .eq('player_id', user.id)
+              .eq('sport_id', sportId)
+              .maybeSingle())(),
           15000,
           'Failed to load sport profile - connection timeout'
         ),
-        
+
         // Fetch player's ratings (fetch in parallel, process only if sport is active)
         withTimeout(
-          (async () => supabase
-            .from('player_rating_score')
-            .select(`
+          (async () =>
+            supabase
+              .from('player_rating_score')
+              .select(
+                `
               id,
               rating_score_id,
-              is_verified,
-              verified_at,
-              rating_score (
+              is_certified,
+              certified_at,
+              rating_score!player_rating_scores_rating_score_id_fkey (
                 id,
-                score_value,
-                display_label,
+                value,
+                label,
+                description,
                 skill_level,
-                rating (
-                  rating_type,
-                  display_name,
+                rating_system (
+                  code,
+                  name,
                   description,
                   min_value,
                   max_value,
                   sport_id
                 )
               )
-            `)
-            .eq('player_id', user.id))(),
+            `
+              )
+              .eq('player_id', user.id))(),
           15000,
           'Failed to load ratings - connection timeout'
         ),
@@ -164,49 +182,59 @@ const SportProfile = () => {
         const { data: ratingDataList, error: ratingError } = ratingResult;
 
         if (ratingError && ratingError.code !== 'PGRST116') {
-          Logger.error('Failed to fetch player ratings', ratingError as Error, { playerId: user.id, sportId });
+          Logger.error('Failed to fetch player ratings', ratingError as Error, {
+            playerId: user.id,
+            sportId,
+          });
         }
 
         Logger.debug('ratings_fetched', { count: ratingDataList?.length, sportName, sportId });
 
         // Filter by sport_id in JavaScript since nested filtering doesn't work well
-        const ratingData = ratingDataList?.find(item => {
-          const ratingScore = item.rating_score as {
-            id?: string;
-            rating?: { sport_id?: string };
-          } | null;
-          return ratingScore?.rating?.sport_id === sportId;
-        }) || null;
+        const ratingData =
+          ratingDataList?.find(item => {
+            const ratingScore = item.rating_score as {
+              id?: string;
+              rating_system?: { sport_id?: string };
+            } | null;
+            return ratingScore?.rating_system?.sport_id === sportId;
+          }) || null;
 
         Logger.debug('rating_data_search_complete', { sportName, found: !!ratingData });
 
         if (ratingData) {
           const ratingScore = ratingData.rating_score as {
             id?: string;
-            display_label?: string;
-            score_value?: number;
-            skill_level?: string;
-            rating?: {
-              display_name?: string;
+            label?: string;
+            value?: number;
+            description?: string;
+            skill_level?: string | null;
+            rating_system?: {
+              name?: string;
               min_value?: number;
               max_value?: number;
               description?: string;
             };
           } | null;
-          const rating = ratingScore?.rating;
+          const ratingSystem = ratingScore?.rating_system;
           const newRatingInfo = {
             ratingScoreId: ratingScore?.id || ratingData.rating_score_id || '',
-            ratingTypeName: rating?.display_name || '',
-            displayLabel: ratingScore?.display_label || '',
-            scoreValue: ratingScore?.score_value || 0,
-            skillLevel: ratingScore?.skill_level || '',
-            isVerified: ratingData.is_verified || false,
-            verifiedAt: ratingData.verified_at || null,
-            minValue: rating?.min_value || 0,
-            maxValue: rating?.max_value || 10,
-            description: rating?.description || '',
+            ratingTypeName: ratingSystem?.name || '',
+            displayLabel: ratingScore?.label || '',
+            scoreValue: ratingScore?.value || 0,
+            skillLevel: ratingScore?.skill_level
+              ? ratingScore.skill_level.charAt(0).toUpperCase() + ratingScore.skill_level.slice(1)
+              : '',
+            isVerified: ratingData.is_certified || false,
+            verifiedAt: ratingData.certified_at || null,
+            minValue: ratingSystem?.min_value || 0,
+            maxValue: ratingSystem?.max_value || 10,
+            description: ratingSystem?.description || '',
           };
-          Logger.debug('rating_info_set', { ratingScoreId: newRatingInfo.ratingScoreId, displayLabel: newRatingInfo.displayLabel });
+          Logger.debug('rating_info_set', {
+            ratingScoreId: newRatingInfo.ratingScoreId,
+            displayLabel: newRatingInfo.displayLabel,
+          });
           setRatingInfo(newRatingInfo);
           setPlayerRatingScoreId(ratingData.id || null);
         } else {
@@ -215,10 +243,9 @@ const SportProfile = () => {
           setPlayerRatingScoreId(null);
         }
       }
-
     } catch (error) {
       Logger.error('Failed to fetch sport profile data', error as Error, { sportId, sportName });
-      Alert.alert('Error', getNetworkErrorMessage(error));
+      Alert.alert(t('alerts.error'), getNetworkErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -226,31 +253,36 @@ const SportProfile = () => {
 
   const handleSaveRating = async (ratingScoreId: string) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
-        Alert.alert('Error', 'User not authenticated');
+        Alert.alert(t('alerts.error'), t('errors.userNotAuthenticated'));
         return;
       }
 
       Logger.debug('save_rating_start', { ratingScoreId, sportId, sportName });
 
-      // Step 1: Get ALL player ratings with source_type
+      // Step 1: Get ALL player ratings with source info
       const ratingsResult = await withTimeout(
-        (async () => supabase
-          .from('player_rating_score')
-          .select(`
+        (async () =>
+          supabase
+            .from('player_rating_score')
+            .select(
+              `
             id,
             rating_score_id,
-            source_type,
-            is_verified,
-            rating_score (
+            source,
+            is_certified,
+            rating_score!player_rating_scores_rating_score_id_fkey (
               id,
-              rating (
+              rating_system (
                 sport_id
               )
             )
-          `)
-          .eq('player_id', user.id))(),
+          `
+            )
+            .eq('player_id', user.id))(),
         15000,
         'Failed to fetch ratings - connection timeout'
       );
@@ -265,20 +297,30 @@ const SportProfile = () => {
       Logger.debug('player_ratings_fetched', { count: allPlayerRatings?.length });
 
       // Step 2: Find and DELETE only SELF_REPORTED ratings for this specific sport
-      const ratingsToDelete = allPlayerRatings?.filter(item => {
-        const ratingScoreData = Array.isArray(item.rating_score) ? item.rating_score[0] : item.rating_score;
-        if (!ratingScoreData) return false;
-        
-        const ratingData = Array.isArray(ratingScoreData.rating) ? ratingScoreData.rating[0] : ratingScoreData.rating;
-        const itemSportId = ratingData?.sport_id;
-        const sourceType = item.source_type || 'self_reported'; // Default to self_reported for old data
-        
-        // Only delete self_reported ratings for current sport
-        const shouldDelete = itemSportId === sportId && sourceType === 'self_reported';
-        
-        Logger.debug('rating_delete_check', { ratingId: item.id, sportId: itemSportId, sourceType, shouldDelete });
-        return shouldDelete;
-      }) || [];
+      const ratingsToDelete =
+        allPlayerRatings?.filter(item => {
+          const ratingScoreData = Array.isArray(item.rating_score)
+            ? item.rating_score[0]
+            : item.rating_score;
+          if (!ratingScoreData) return false;
+
+          const ratingSystemData = Array.isArray(ratingScoreData.rating_system)
+            ? ratingScoreData.rating_system[0]
+            : ratingScoreData.rating_system;
+          const itemSportId = ratingSystemData?.sport_id;
+          const source = item.source || 'self_reported'; // Default to self_reported for old data
+
+          // Only delete self_reported ratings for current sport
+          const shouldDelete = itemSportId === sportId && source === 'self_reported';
+
+          Logger.debug('rating_delete_check', {
+            ratingId: item.id,
+            sportId: itemSportId,
+            source,
+            shouldDelete,
+          });
+          return shouldDelete;
+        }) || [];
 
       Logger.debug('ratings_to_delete', { sportId, count: ratingsToDelete.length });
 
@@ -286,39 +328,44 @@ const SportProfile = () => {
       for (const rating of ratingsToDelete) {
         Logger.debug('deleting_rating', { ratingId: rating.id });
         const deleteResult = await withTimeout(
-          (async () => supabase
-            .from('player_rating_score')
-            .delete()
-            .eq('id', rating.id))(),
+          (async () => supabase.from('player_rating_score').delete().eq('id', rating.id))(),
           10000,
           'Failed to delete rating - connection timeout'
         );
 
         if (deleteResult.error) {
-          Logger.error('Failed to delete rating', deleteResult.error as Error, { ratingId: rating.id });
+          Logger.error('Failed to delete rating', deleteResult.error as Error, {
+            ratingId: rating.id,
+          });
           throw deleteResult.error;
         }
         Logger.debug('rating_deleted', { ratingId: rating.id });
       }
 
-      // Step 3: Insert the new self_reported rating
-      Logger.debug('inserting_new_rating', { ratingScoreId, playerId: user.id });
+      // Step 3: Upsert the new self_reported rating (insert or update if exists)
+      Logger.debug('upserting_new_rating', { ratingScoreId, playerId: user.id });
       const insertResult = await withTimeout(
-        (async () => supabase
-          .from('player_rating_score')
-          .insert({
-            player_id: user.id,
-            rating_score_id: ratingScoreId,
-            source_type: 'self_reported', // NEW: Explicitly self-reported
-            is_verified: false,
-            is_primary: true, // NEW: Mark as primary display rating
-          }))(),
+        (async () =>
+          supabase.from('player_rating_score').upsert(
+            {
+              player_id: user.id,
+              rating_score_id: ratingScoreId,
+              source: 'self_reported', // Explicitly self-reported
+              is_certified: false,
+            },
+            {
+              onConflict: 'player_id,rating_score_id',
+            }
+          ))(),
         10000,
         'Failed to save rating - connection timeout'
       );
 
       if (insertResult.error) {
-        Logger.error('Failed to insert new rating', insertResult.error as Error, { ratingScoreId, playerId: user.id });
+        Logger.error('Failed to insert new rating', insertResult.error as Error, {
+          ratingScoreId,
+          playerId: user.id,
+        });
         throw insertResult.error;
       }
 
@@ -340,23 +387,23 @@ const SportProfile = () => {
       Logger.debug('sport_profile_data_refreshed', { sportId });
 
       // Show success message
-      Alert.alert('Success', 'Your rating has been updated!');
+      toast.success(t('alerts.availabilitiesUpdated'));
     } catch (error) {
       Logger.error('Failed to save rating', error as Error, { sportId, ratingScoreId });
-      Alert.alert('Error', getNetworkErrorMessage(error));
+      toast.error(getNetworkErrorMessage(error));
     }
   };
 
   const handleManageProofs = () => {
     if (!playerRatingScoreId || !ratingInfo) {
-      Alert.alert('Error', 'Rating information not available');
+      Alert.alert(t('alerts.error'), t('errors.notFound'));
       return;
     }
-    (navigation as any).navigate('RatingProofs', {
+    navigation.navigate('RatingProofs', {
       playerRatingScoreId: playerRatingScoreId,
       sportName: sportName,
       ratingValue: ratingInfo.scoreValue,
-      isOwnProfile: true
+      isOwnProfile: true,
     });
   };
 
@@ -364,19 +411,52 @@ const SportProfile = () => {
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
-        Alert.alert('Error', 'User not authenticated');
+        Alert.alert(t('alerts.error'), t('errors.userNotAuthenticated'));
         return;
+      }
+
+      // Check if user is trying to deactivate their last active sport
+      if (!newValue && playerSportId) {
+        const { count, error: countError } = await withTimeout(
+          (async () =>
+            supabase
+              .from('player_sport')
+              .select('id', { count: 'exact', head: true })
+              .eq('player_id', user.id)
+              .eq('is_active', true))(),
+          10000,
+          'Failed to check active sports - connection timeout'
+        );
+
+        if (countError) {
+          Logger.error('Failed to count active sports', countError as Error, {
+            playerId: user.id,
+          });
+          throw countError;
+        }
+
+        // If user only has 1 active sport (this one), prevent deactivation
+        if (count !== null && count <= 1) {
+          Alert.alert(
+            t('alerts.cannotDeactivate'),
+            t('alerts.mustHaveOneSport')
+          );
+          return;
+        }
       }
 
       if (playerSportId) {
         // Entry exists: Update is_active field
         const updateResult = await withTimeout(
-          (async () => supabase
-            .from('player_sport')
-            .update({ is_active: newValue })
-            .eq('id', playerSportId))(),
+          (async () =>
+            supabase
+              .from('player_sport')
+              .update({ is_active: newValue })
+              .eq('id', playerSportId))(),
           10000,
           'Failed to update availability - connection timeout'
         );
@@ -386,15 +466,14 @@ const SportProfile = () => {
         setIsActive(newValue);
 
         // Show success message
-        const message = newValue 
-          ? `${sportName} activated successfully!` 
-          : `${sportName} deactivated`;
-        
-        if (Platform.OS === 'android') {
-          ToastAndroid.show(message, ToastAndroid.SHORT);
-        } else {
-          Alert.alert('Success', message);
-        }
+        const message = newValue
+          ? t('alerts.sportActivated', { sport: sportName })
+          : t('alerts.sportDeactivated', { sport: sportName });
+
+        toast.success(message);
+
+        // Refresh SportContext to update userSports across the app
+        refetchSportContext();
 
         // Refresh data if activated
         if (newValue) {
@@ -405,16 +484,17 @@ const SportProfile = () => {
         if (newValue) {
           // User wants to play this sport: Create new entry with is_active = true
           const insertResult = await withTimeout(
-            (async () => supabase
-              .from('player_sport')
-              .insert({
-                player_id: user.id,
-                sport_id: sportId,
-                is_active: true,
-                is_primary: false,
-              })
-              .select('id')
-              .single())(),
+            (async () =>
+              supabase
+                .from('player_sport')
+                .insert({
+                  player_id: user.id,
+                  sport_id: sportId,
+                  is_active: true,
+                  is_primary: false,
+                })
+                .select('id')
+                .single())(),
             10000,
             'Failed to create sport profile - connection timeout'
           );
@@ -426,65 +506,120 @@ const SportProfile = () => {
           setIsActive(true);
 
           // Show success message
-          const message = `${sportName} added and activated successfully!`;
-          if (Platform.OS === 'android') {
-            ToastAndroid.show(message, ToastAndroid.SHORT);
-          } else {
-            Alert.alert('Success', message);
-          }
+          const message = t('alerts.sportAdded', { sport: sportName });
+          toast.success(message);
+
+          // Refresh SportContext to update userSports across the app
+          refetchSportContext();
 
           // Refresh data to load ratings and preferences
           await fetchSportProfileData();
         } else {
           // User doesn't want to play this sport: Don't create entry, just update UI
           setIsActive(false);
-          
+
           // Optional: Show a subtle message
-          if (Platform.OS === 'android') {
-            ToastAndroid.show(`${sportName} not added`, ToastAndroid.SHORT);
-          }
+          toast.info(t('alerts.sportNotAdded', { sport: sportName }));
         }
       }
-
     } catch (error) {
       Logger.error('Failed to toggle sport active status', error as Error, { sportId, sportName });
-      Alert.alert('Error', getNetworkErrorMessage(error));
+      toast.error(getNetworkErrorMessage(error));
     }
   };
 
   const formatMatchDuration = (duration: string | null): string => {
-    if (!duration) return 'Not set';
-    return duration.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+    if (!duration) return t('profile.notSet');
+
+    // Use translation keys for enum values
+    const translationKey = `profile.preferences.durations.${duration}`;
+    const translated = t(translationKey as TranslationKey);
+
+    // If translation exists (not the same as key), use it
+    if (translated !== translationKey) {
+      return translated;
+    }
+
+    // Fallback to shared constant for enum values
+    if (duration in MATCH_DURATION_ENUM_LABELS) {
+      return MATCH_DURATION_ENUM_LABELS[duration as keyof typeof MATCH_DURATION_ENUM_LABELS];
+    }
+
+    // Legacy values (for backward compatibility during migration)
+    const legacyMap: Record<string, string> = {
+      '1h': t('matchCreation.duration.60'),
+      '1.5h': t('matchCreation.duration.90'),
+      '2h': t('matchCreation.duration.120'),
+    };
+
+    return legacyMap[duration] || duration.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   const formatMatchType = (type: string | null): string => {
-    if (!type) return 'Not set';
+    if (!type) return t('profile.notSet');
+
+    // Use translation keys for match types
+    const translationKey = `profile.preferences.matchTypes.${type.toLowerCase()}`;
+    const translated = t(translationKey as TranslationKey);
+
+    // If translation exists (not the same as key), use it
+    if (translated !== translationKey) {
+      return translated;
+    }
+
+    // Fallback: capitalize first letter of each word
     return type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const formatPlayingStyle = (style: string | null): string => {
+    if (!style) return t('profile.notSet');
+
+    // Use translation keys for play styles
+    const translationKey = `profile.preferences.playStyles.${style}`;
+    const translated = t(translationKey as TranslationKey);
+
+    // If translation exists (not the same as key), use it
+    if (translated !== translationKey) {
+      return translated;
+    }
+
+    // Fallback: capitalize first letter of each word
+    return style.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const formatPlayAttribute = (attribute: string): string => {
+    // Use translation keys for play attributes
+    const translationKey = `profile.preferences.playAttributes.${attribute}`;
+    const translated = t(translationKey as TranslationKey);
+
+    // If translation exists (not the same as key), use it
+    if (translated !== translationKey) {
+      return translated;
+    }
+
+    // Fallback: capitalize first letter of each word
+    return attribute.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   const handleSendPeerRatingRequests = async (selectedPlayerIds: string[]) => {
     try {
       // TODO: Implement peer rating request logic
       // This will insert records into peer_rating_request table
-      Logger.logUserAction('send_peer_rating_requests', { count: selectedPlayerIds.length, sportId });
-      
+      Logger.logUserAction('send_peer_rating_requests', {
+        count: selectedPlayerIds.length,
+        sportId,
+      });
+
       // For now, just show a success message
-      if (Platform.OS === 'android') {
-        ToastAndroid.show(
-          `Peer rating requests sent to ${selectedPlayerIds.length} player(s)`,
-          ToastAndroid.SHORT
-        );
-      } else {
-        Alert.alert(
-          'Success',
-          `Peer rating requests sent to ${selectedPlayerIds.length} player(s)`
-        );
-      }
-      
+      toast.success(t('alerts.peerRatingRequestsSent', { count: selectedPlayerIds.length }));
+
       setShowPeerRatingRequestOverlay(false);
     } catch (error) {
-      Logger.error('Failed to send peer rating requests', error as Error, { count: selectedPlayerIds.length, sportId });
-      Alert.alert('Error', 'Failed to send peer rating requests');
+      Logger.error('Failed to send peer rating requests', error as Error, {
+        count: selectedPlayerIds.length,
+        sportId,
+      });
+      toast.error(t('alerts.failedToSendPeerRatingRequests'));
     }
   };
 
@@ -493,24 +628,17 @@ const SportProfile = () => {
       // TODO: Implement reference request logic
       // This will insert records into reference_request table
       Logger.logUserAction('send_reference_requests', { count: selectedPlayerIds.length, sportId });
-      
+
       // For now, just show a success message
-      if (Platform.OS === 'android') {
-        ToastAndroid.show(
-          `Reference requests sent to ${selectedPlayerIds.length} certified player(s)`,
-          ToastAndroid.SHORT
-        );
-      } else {
-        Alert.alert(
-          'Success',
-          `Reference requests sent to ${selectedPlayerIds.length} certified player(s)`
-        );
-      }
-      
+      toast.success(t('alerts.referenceRequestsSent', { count: selectedPlayerIds.length }));
+
       setShowReferenceRequestOverlay(false);
     } catch (error) {
-      Logger.error('Failed to send reference requests', error as Error, { count: selectedPlayerIds.length, sportId });
-      Alert.alert('Error', 'Failed to send reference requests');
+      Logger.error('Failed to send reference requests', error as Error, {
+        count: selectedPlayerIds.length,
+        sportId,
+      });
+      toast.error(t('alerts.failedToSendReferenceRequests'));
     }
   };
 
@@ -523,21 +651,22 @@ const SportProfile = () => {
   }) => {
     try {
       if (!playerSportId) {
-        Alert.alert('Error', 'Player sport profile not found');
+        Alert.alert(t('alerts.error'), t('errors.notFound'));
         return;
       }
 
       const updateResult = await withTimeout(
-        (async () => supabase
-          .from('player_sport')
-          .update({
-            preferred_match_duration: updatedPreferences.matchDuration,
-            preferred_match_type: updatedPreferences.matchType,
-            preferred_court: updatedPreferences.court,
-            preferred_play_style: updatedPreferences.playStyle,
-            preferred_play_attributes: updatedPreferences.playAttributes,
-          })
-          .eq('id', playerSportId))(),
+        (async () =>
+          supabase
+            .from('player_sport')
+            .update({
+              preferred_match_duration: updatedPreferences.matchDuration,
+              preferred_match_type: updatedPreferences.matchType,
+              preferred_court: updatedPreferences.court,
+              preferred_play_style: updatedPreferences.playStyle,
+              preferred_play_attributes: updatedPreferences.playAttributes,
+            })
+            .eq('id', playerSportId))(),
         10000,
         'Failed to save preferences - connection timeout'
       );
@@ -556,66 +685,104 @@ const SportProfile = () => {
       setShowPreferencesOverlay(false);
 
       // Show success message
-      if (Platform.OS === 'android') {
-        ToastAndroid.show('Preferences updated successfully', ToastAndroid.SHORT);
-      } else {
-        Alert.alert('Success', 'Preferences updated successfully');
-      }
+      toast.success(t('alerts.preferencesUpdated'));
 
       // Refresh data
       await fetchSportProfileData();
     } catch (error) {
       Logger.error('Failed to save sport preferences', error as Error, { sportId, playerSportId });
-      Alert.alert('Error', getNetworkErrorMessage(error));
+      toast.error(getNetworkErrorMessage(error));
     }
   };
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading {sportName} profile...</Text>
+          {/* Sport Profile Skeleton */}
+          <View style={[styles.card, { backgroundColor: colors.card }]}>
+            <Skeleton width={180} height={18} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            <View style={{ marginTop: 12, flexDirection: 'row', gap: 12 }}>
+              <Skeleton width={80} height={40} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+              <Skeleton width={80} height={40} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            </View>
+          </View>
+          <View style={[styles.card, { backgroundColor: colors.card, marginTop: 16 }]}>
+            <Skeleton width={120} height={18} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            <Skeleton width="100%" height={60} borderRadius={12} backgroundColor={colors.cardBackground} highlightColor={colors.border} style={{ marginTop: 12 }} />
+          </View>
+          <View style={[styles.card, { backgroundColor: colors.card, marginTop: 16 }]}>
+            <Skeleton width={150} height={18} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            <View style={{ marginTop: 12, gap: 8 }}>
+              <Skeleton width="100%" height={48} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+              <Skeleton width="100%" height={48} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+              <Skeleton width="100%" height={48} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            </View>
+          </View>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Do you play this sport? Toggle */}
-        <View style={styles.card}>
-          <Text style={styles.questionText}>Do you play {sportName}?</Text>
+        <View style={[styles.card, { backgroundColor: colors.card }]}>
+          <Text style={[styles.questionText, { color: colors.text }]}>
+            {t('profile.doYouPlay', { sport: sportName })}
+          </Text>
           <View style={styles.toggleContainer}>
             <TouchableOpacity
               style={[
                 styles.toggleButton,
-                isActive && styles.toggleButtonActive,
+                {
+                  borderColor: colors.border,
+                  backgroundColor: colors.inputBackground,
+                },
+                isActive && [
+                  styles.toggleButtonActive,
+                  { backgroundColor: colors.primary, borderColor: colors.primary },
+                ],
               ]}
               onPress={() => handleToggleActive(true)}
             >
-              <Text style={
-                isActive 
-                  ? [styles.toggleButtonText, styles.toggleButtonTextActive]
-                  : styles.toggleButtonText
-              }>
-                Yes
+              <Text
+                style={[
+                  styles.toggleButtonText,
+                  { color: colors.textMuted },
+                  ...(isActive
+                    ? [styles.toggleButtonTextActive, { color: colors.primaryForeground }]
+                    : []),
+                ]}
+              >
+                {t('common.yes')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
                 styles.toggleButton,
-                !isActive && styles.toggleButtonInactive,
+                {
+                  borderColor: colors.border,
+                  backgroundColor: colors.inputBackground,
+                },
+                !isActive && [
+                  styles.toggleButtonInactive,
+                  { backgroundColor: colors.error, borderColor: colors.error },
+                ],
               ]}
               onPress={() => handleToggleActive(false)}
             >
-              <Text style={
-                !isActive
-                  ? [styles.toggleButtonText, styles.toggleButtonTextActive]
-                  : styles.toggleButtonText
-              }>
-                No
+              <Text
+                style={[
+                  styles.toggleButtonText,
+                  { color: colors.textMuted },
+                  ...(!isActive
+                    ? [styles.toggleButtonTextActive, { color: colors.primaryForeground }]
+                    : []),
+                ]}
+              >
+                {t('common.no')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -624,9 +791,9 @@ const SportProfile = () => {
         {/* Show blank space when not active */}
         {!isActive && (
           <View style={styles.inactiveContainer}>
-            <Ionicons name="information-circle-outline" size={48} color="#ccc" />
-            <Text style={styles.inactiveText}>
-              Activate {sportName} to view and manage your rating and preferences
+            <Ionicons name="information-circle-outline" size={48} color={colors.textMuted} />
+            <Text style={[styles.inactiveText, { color: colors.textMuted }]}>
+              {t('profile.activateSportMessage', { sport: sportName })}
             </Text>
           </View>
         )}
@@ -635,8 +802,10 @@ const SportProfile = () => {
         {isActive && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>MY RATING</Text>
-              <TouchableOpacity 
+              <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+                {t('profile.sections.rating')}
+              </Text>
+              <TouchableOpacity
                 style={styles.editIconButton}
                 onPress={() => {
                   // Determine which overlay to show based on sport name
@@ -647,41 +816,57 @@ const SportProfile = () => {
                   }
                 }}
               >
-                <Ionicons name="create-outline" size={20} color={COLORS.primary} />
+                <Ionicons name="create-outline" size={20} color={colors.primary} />
               </TouchableOpacity>
             </View>
 
-            <View style={styles.card}>
+            <View style={[styles.card, { backgroundColor: colors.card }]}>
               {ratingInfo ? (
                 <>
                   {/* Rating Level Display */}
                   <View style={styles.ratingDisplay}>
-                    <View style={styles.ratingBadgeLarge}>
-                      <Text style={styles.ratingLevelText}>{ratingInfo.displayLabel}</Text>
-                      <Text style={styles.ratingTypeText}>{ratingInfo.ratingTypeName}</Text>
+                    <View
+                      style={[styles.ratingBadgeLarge, { backgroundColor: colors.inputBackground }]}
+                    >
+                      <Text style={[styles.ratingLevelText, { color: colors.text }]}>
+                        {ratingInfo.displayLabel}
+                      </Text>
+                      <Text style={[styles.ratingTypeText, { color: colors.textMuted }]}>
+                        {ratingInfo.ratingTypeName}
+                      </Text>
                     </View>
                     {ratingInfo.isVerified && (
                       <View style={styles.verifiedBadge}>
-                        <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-                        <Text style={styles.verifiedText}>Certified</Text>
+                        <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                        <Text style={[styles.verifiedText, { color: colors.text }]}>
+                          {t('profile.status.certified')}
+                        </Text>
                       </View>
                     )}
                   </View>
 
                   {/* Rating Description */}
                   {ratingInfo.description && (
-                    <Text style={styles.ratingDescription}>{ratingInfo.description}</Text>
+                    <Text style={[styles.ratingDescription, { color: colors.textMuted }]}>
+                      {ratingInfo.description}
+                    </Text>
                   )}
 
                   {/* Rating Details */}
-                  <View style={styles.ratingDetails}>
+                  <View style={[styles.ratingDetails, { borderTopColor: colors.border }]}>
                     <View style={styles.ratingDetailRow}>
-                      <Text style={styles.detailLabel}>Skill Level:</Text>
-                      <Text style={styles.detailValue}>{ratingInfo.skillLevel || 'N/A'}</Text>
+                      <Text style={[styles.detailLabel, { color: colors.textMuted }]}>
+                        {t('profile.rating.skillLevel')}:
+                      </Text>
+                      <Text style={[styles.detailValue, { color: colors.text }]}>
+                        {ratingInfo.skillLevel || 'N/A'}
+                      </Text>
                     </View>
                     <View style={styles.ratingDetailRow}>
-                      <Text style={styles.detailLabel}>Score:</Text>
-                      <Text style={styles.detailValue}>
+                      <Text style={[styles.detailLabel, { color: colors.textMuted }]}>
+                        {t('profile.rating.score')}:
+                      </Text>
+                      <Text style={[styles.detailValue, { color: colors.text }]}>
                         {ratingInfo.scoreValue} / {ratingInfo.maxValue}
                       </Text>
                     </View>
@@ -694,27 +879,66 @@ const SportProfile = () => {
                       size="sm"
                       onPress={() => {}}
                       style={styles.actionButton}
-                      leftIcon={<Ionicons name="people" size={16} color={COLORS.primary} />}
+                      isDark={isDark}
+                      themeColors={{
+                        primary: colors.primary,
+                        primaryForeground: colors.primaryForeground,
+                        buttonActive: colors.buttonActive,
+                        buttonInactive: colors.buttonInactive,
+                        buttonTextActive: colors.buttonTextActive,
+                        buttonTextInactive: colors.buttonTextInactive,
+                        text: colors.text,
+                        textMuted: colors.textMuted,
+                        border: colors.border,
+                        background: colors.background,
+                      }}
+                      leftIcon={<Ionicons name="people" size={16} color={colors.primary} />}
                     >
-                      6 References
+                      {t('profile.rating.references', { count: 6 })}
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onPress={() => {}}
                       style={styles.actionButton}
-                      leftIcon={<Ionicons name="star" size={16} color={COLORS.primary} />}
+                      isDark={isDark}
+                      themeColors={{
+                        primary: colors.primary,
+                        primaryForeground: colors.primaryForeground,
+                        buttonActive: colors.buttonActive,
+                        buttonInactive: colors.buttonInactive,
+                        buttonTextActive: colors.buttonTextActive,
+                        buttonTextInactive: colors.buttonTextInactive,
+                        text: colors.text,
+                        textMuted: colors.textMuted,
+                        border: colors.border,
+                        background: colors.background,
+                      }}
+                      leftIcon={<Ionicons name="star" size={16} color={colors.primary} />}
                     >
-                      2 Peer Rating
+                      {t('profile.rating.peerRating', { count: 2 })}
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onPress={() => {}}
                       style={styles.actionButton}
-                      leftIcon={<Ionicons name="document-text" size={16} color={COLORS.primary} />}
+                      isDark={isDark}
+                      themeColors={{
+                        primary: colors.primary,
+                        primaryForeground: colors.primaryForeground,
+                        buttonActive: colors.buttonActive,
+                        buttonInactive: colors.buttonInactive,
+                        buttonTextActive: colors.buttonTextActive,
+                        buttonTextInactive: colors.buttonTextInactive,
+                        text: colors.text,
+                        textMuted: colors.textMuted,
+                        border: colors.border,
+                        background: colors.background,
+                      }}
+                      leftIcon={<Ionicons name="document-text" size={16} color={colors.primary} />}
                     >
-                      1 Rating Proof
+                      {t('profile.rating.ratingProof', { count: 1 })}
                     </Button>
                   </View>
 
@@ -725,35 +949,43 @@ const SportProfile = () => {
                       size="md"
                       onPress={() => setShowReferenceRequestOverlay(true)}
                       style={[styles.requestButton, styles.coralButton]}
-                      leftIcon={<Ionicons name="add-circle" size={18} color="#fff" />}
+                      leftIcon={
+                        <Ionicons name="add-circle" size={18} color={colors.primaryForeground} />
+                      }
                     >
-                      Request reference
+                      {t('profile.rating.requestReference')}
                     </Button>
                     <Button
                       variant="primary"
                       size="md"
                       onPress={() => setShowPeerRatingRequestOverlay(true)}
                       style={[styles.requestButton, styles.coralButton]}
-                      leftIcon={<Ionicons name="add-circle" size={18} color="#fff" />}
+                      leftIcon={
+                        <Ionicons name="add-circle" size={18} color={colors.primaryForeground} />
+                      }
                     >
-                      Request peer rating
+                      {t('profile.rating.requestPeerRating')}
                     </Button>
                     <Button
                       variant="primary"
                       size="md"
                       onPress={handleManageProofs}
                       style={[styles.requestButton, styles.coralButton]}
-                      leftIcon={<Ionicons name="folder-open" size={18} color="#fff" />}
+                      leftIcon={
+                        <Ionicons name="folder-open" size={18} color={colors.primaryForeground} />
+                      }
                     >
-                      Manage rating proofs
+                      {t('profile.rating.manageRatingProofs')}
                     </Button>
                   </View>
                 </>
               ) : (
                 <View style={styles.noRatingContainer}>
-                  <Text style={styles.noRatingText}>No rating information yet</Text>
-                  <Text style={styles.noRatingSubtext}>
-                    Set up your rating to start playing
+                  <Text style={[styles.noRatingText, { color: colors.text }]}>
+                    {t('profile.status.noRating')}
+                  </Text>
+                  <Text style={[styles.noRatingSubtext, { color: colors.textMuted }]}>
+                    {t('profile.status.noRatingSubtext')}
                   </Text>
                 </View>
               )}
@@ -765,59 +997,79 @@ const SportProfile = () => {
         {isActive && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>MY PREFERENCES</Text>
-              <TouchableOpacity 
+              <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+                {t('profile.sections.preferences')}
+              </Text>
+              <TouchableOpacity
                 style={styles.editIconButton}
                 onPress={() => {
                   Haptics.selectionAsync();
                   setShowPreferencesOverlay(true);
                 }}
               >
-                <Ionicons name="create-outline" size={20} color={COLORS.primary} />
+                <Ionicons name="create-outline" size={20} color={colors.primary} />
               </TouchableOpacity>
             </View>
 
-            <View style={styles.card}>
+            <View style={[styles.card, { backgroundColor: colors.card }]}>
               {/* Match Duration */}
-              <View style={styles.preferenceRow}>
-                <Text style={styles.preferenceLabel}>Match Duration</Text>
-                <Text style={styles.preferenceValue}>
+              <View style={[styles.preferenceRow, { borderBottomColor: colors.border }]}>
+                <Text style={[styles.preferenceLabel, { color: colors.textMuted }]}>
+                  {t('profile.fields.matchDuration')}
+                </Text>
+                <Text style={[styles.preferenceValue, { color: colors.text }]}>
                   {formatMatchDuration(preferences.matchDuration)}
                 </Text>
               </View>
 
               {/* Match Type */}
-              <View style={styles.preferenceRow}>
-                <Text style={styles.preferenceLabel}>Match Type</Text>
-                <Text style={styles.preferenceValue}>
+              <View style={[styles.preferenceRow, { borderBottomColor: colors.border }]}>
+                <Text style={[styles.preferenceLabel, { color: colors.textMuted }]}>
+                  {t('profile.fields.matchType')}
+                </Text>
+                <Text style={[styles.preferenceValue, { color: colors.text }]}>
                   {formatMatchType(preferences.matchType)}
                 </Text>
               </View>
 
               {/* Facility */}
-              <View style={styles.preferenceRow}>
-                <Text style={styles.preferenceLabel}>Facility</Text>
-                <Text style={styles.preferenceValue}>
-                  {preferences.facilityName || 'Not set'}
+              <View style={[styles.preferenceRow, { borderBottomColor: colors.border }]}>
+                <Text style={[styles.preferenceLabel, { color: colors.textMuted }]}>
+                  {t('profile.fields.facility')}
+                </Text>
+                <Text style={[styles.preferenceValue, { color: colors.text }]}>
+                  {preferences.facilityName || t('profile.notSet')}
                 </Text>
               </View>
 
               {/* Playing Style (for Tennis: Server & Volley, etc.) */}
               <View style={styles.preferenceRow}>
-                <Text style={styles.preferenceLabel}>Playing Style</Text>
-                <Text style={styles.preferenceValue}>
-                  {preferences.playingStyle || 'Not set'}
+                <Text style={[styles.preferenceLabel, { color: colors.textMuted }]}>
+                  {t('profile.fields.playingStyle')}
+                </Text>
+                <Text style={[styles.preferenceValue, { color: colors.text }]}>
+                  {formatPlayingStyle(preferences.playingStyle)}
                 </Text>
               </View>
 
               {/* Play Attributes */}
               {playAttributes.length > 0 && (
-                <View style={styles.playAttributesContainer}>
-                  <Text style={styles.playAttributesTitle}>Play Attributes</Text>
+                <View style={[styles.playAttributesContainer, { borderTopColor: colors.border }]}>
+                  <Text style={[styles.playAttributesTitle, { color: colors.textMuted }]}>
+                    {t('profile.fields.playAttributes')}
+                  </Text>
                   <View style={styles.attributeTags}>
                     {playAttributes.map((attr, index) => (
-                      <View key={index} style={styles.attributeTag}>
-                        <Text style={styles.attributeTagText}>{attr.attributeValue}</Text>
+                      <View
+                        key={index}
+                        style={[
+                          styles.attributeTag,
+                          { backgroundColor: isDark ? primary[900] : primary[50] },
+                        ]}
+                      >
+                        <Text style={[styles.attributeTagText, { color: colors.primary }]}>
+                          {formatPlayAttribute(attr.attributeValue)}
+                        </Text>
                       </View>
                     ))}
                   </View>
@@ -868,7 +1120,7 @@ const SportProfile = () => {
       />
 
       {/* Tennis Preferences Overlay */}
-      {sportName === 'Tennis' && (
+      {sportName.toLowerCase() === 'tennis' && (
         <TennisPreferencesOverlay
           visible={showPreferencesOverlay}
           onClose={() => setShowPreferencesOverlay(false)}
@@ -877,14 +1129,19 @@ const SportProfile = () => {
             matchDuration: preferences.matchDuration || undefined,
             matchType: preferences.matchType || undefined,
             court: preferences.facilityName || undefined,
-            playStyle: (preferences.playingStyle as 'counterpuncher' | 'aggressive_baseliner' | 'serve_and_volley' | 'all_court') || undefined,
+            playStyle:
+              (preferences.playingStyle as
+                | 'counterpuncher'
+                | 'aggressive_baseliner'
+                | 'serve_and_volley'
+                | 'all_court') || undefined,
             playAttributes: [],
           }}
         />
       )}
 
       {/* Pickleball Preferences Overlay */}
-      {sportName === 'Pickleball' && (
+      {sportName.toLowerCase() === 'pickleball' && (
         <PickleballPreferencesOverlay
           visible={showPreferencesOverlay}
           onClose={() => setShowPreferencesOverlay(false)}
@@ -893,7 +1150,12 @@ const SportProfile = () => {
             matchDuration: preferences.matchDuration || undefined,
             matchType: preferences.matchType || undefined,
             court: preferences.facilityName || undefined,
-            playStyle: (preferences.playingStyle as 'counterpuncher' | 'aggressive_baseliner' | 'serve_and_volley' | 'all_court') || undefined,
+            playStyle:
+              (preferences.playingStyle as
+                | 'counterpuncher'
+                | 'aggressive_baseliner'
+                | 'serve_and_volley'
+                | 'all_court') || undefined,
             playAttributes: [],
           }}
         />
@@ -905,7 +1167,6 @@ const SportProfile = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
   },
   header: {
     flexDirection: 'row',
@@ -913,9 +1174,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
   },
   backButton: {
     padding: 0,
@@ -924,7 +1183,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
     textAlign: 'center',
   },
   loadingContainer: {
@@ -935,7 +1193,6 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: '#666',
   },
   scrollView: {
     flex: 1,
@@ -944,11 +1201,10 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   card: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: BASE_BLACK,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -957,7 +1213,6 @@ const styles = StyleSheet.create({
   questionText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 12,
     textAlign: 'center',
   },
@@ -971,182 +1226,155 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#E5E5E5',
-    backgroundColor: '#F9F9F9',
     alignItems: 'center',
   },
   toggleButtonActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    // backgroundColor and borderColor applied via inline styles
   },
   toggleButtonInactive: {
-    backgroundColor: '#EF4444',
-    borderColor: '#EF4444',
+    // backgroundColor and borderColor applied via inline styles
   },
   toggleButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#666',
   },
   toggleButtonTextActive: {
-    color: '#fff',
+    // color applied inline
   },
   inactiveContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 48,
-    marginTop: 32,
+    padding: spacingPixels[12],
+    marginTop: spacingPixels[8],
   },
   inactiveText: {
-    fontSize: 16,
-    color: '#999',
+    fontSize: fontSizePixels.base,
     textAlign: 'center',
-    marginTop: 16,
-    lineHeight: 22,
+    marginTop: spacingPixels[4],
+    lineHeight: fontSizePixels.base * 1.375,
   },
   section: {
-    marginBottom: 16,
+    marginBottom: spacingPixels[4],
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacingPixels[3],
   },
   sectionTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#666',
+    fontSize: fontSizePixels.xs,
+    fontWeight: fontWeightNumeric.bold,
     letterSpacing: 1,
   },
   editIconButton: {
-    padding: 4,
+    padding: spacingPixels[1],
   },
   ratingDisplay: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: spacingPixels[4],
   },
   ratingBadgeLarge: {
-    backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingHorizontal: spacingPixels[6],
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.xl,
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: spacingPixels[2],
   },
   ratingLevelText: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: COLORS.primary,
+    fontSize: fontSizePixels['2xl'],
+    fontWeight: fontWeightNumeric.bold,
   },
   ratingTypeText: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
+    fontSize: fontSizePixels.xs,
+    marginTop: spacingPixels[1],
   },
   verifiedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#D1FAE5',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 4,
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[1.5],
+    borderRadius: radiusPixels.full,
+    gap: spacingPixels[1],
   },
   verifiedText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#10B981',
+    fontSize: fontSizePixels.xs,
+    fontWeight: fontWeightNumeric.semibold,
   },
   ratingDescription: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-    marginBottom: 16,
+    fontSize: fontSizePixels.sm,
+    lineHeight: fontSizePixels.sm * 1.43,
+    marginBottom: spacingPixels[4],
     textAlign: 'center',
   },
   ratingDetails: {
     borderTopWidth: 1,
-    borderTopColor: '#E5E5E5',
-    paddingTop: 16,
-    marginBottom: 16,
+    paddingTop: spacingPixels[4],
+    marginBottom: spacingPixels[4],
   },
   ratingDetailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: spacingPixels[2],
   },
   detailLabel: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: fontSizePixels.sm,
   },
   detailValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: fontSizePixels.sm,
+    fontWeight: fontWeightNumeric.semibold,
   },
   actionButtons: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
+    flexDirection: 'column',
+    gap: spacingPixels[2],
+    marginBottom: spacingPixels[4],
   },
   actionButton: {
-    flex: 1,
-    minWidth: '30%',
+    width: '100%',
   },
   requestButtons: {
-    gap: 10,
+    gap: spacingPixels[2.5],
   },
   requestButton: {
     width: '100%',
   },
-  coralButton: {
-    backgroundColor: '#EF6F7B',
-  },
+  coralButton: {},
   noRatingContainer: {
     alignItems: 'center',
-    paddingVertical: 24,
+    paddingVertical: spacingPixels[6],
   },
   noRatingText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 8,
+    fontSize: fontSizePixels.base,
+    fontWeight: fontWeightNumeric.semibold,
+    marginBottom: spacingPixels[2],
   },
   noRatingSubtext: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: fontSizePixels.sm,
   },
   preferenceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: spacingPixels[3],
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
   },
   preferenceLabel: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: fontSizePixels.sm,
   },
   preferenceValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: fontSizePixels.sm,
+    fontWeight: fontWeightNumeric.semibold,
   },
   playAttributesContainer: {
-    marginTop: 16,
-    paddingTop: 16,
+    marginTop: spacingPixels[4],
+    paddingTop: spacingPixels[4],
     borderTopWidth: 1,
-    borderTopColor: '#E5E5E5',
   },
   playAttributesTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 12,
+    fontSize: fontSizePixels.sm,
+    fontWeight: fontWeightNumeric.semibold,
+    marginBottom: spacingPixels[3],
   },
   attributeTags: {
     flexDirection: 'row',
@@ -1154,18 +1382,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   attributeTag: {
-    backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[1.5],
+    borderRadius: radiusPixels.full,
   },
   attributeTagText: {
-    fontSize: 12,
-    color: COLORS.primary,
-    fontWeight: '600',
+    fontSize: fontSizePixels.xs,
+    fontWeight: fontWeightNumeric.semibold,
   },
 });
 
 export default SportProfile;
-
-

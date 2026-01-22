@@ -1,21 +1,38 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Animated, Alert, ActivityIndicator } from 'react-native';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  Animated,
+  Alert,
+  ActivityIndicator,
+  Pressable,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
-import { COLORS } from '@rallia/shared-constants';
-import ProgressIndicator from '../ProgressIndicator';
 import { lightHaptic, mediumHaptic, successHaptic } from '@rallia/shared-utils';
-import { sendVerificationCode, verifyCode, authenticateAfterVerification, ProfileService, Logger } from '@rallia/shared-services';
+import { ProfileService, Logger } from '@rallia/shared-services';
+import { useAuth } from '../../../../hooks';
+import {
+  spacingPixels,
+  radiusPixels,
+  fontSizePixels,
+  fontWeightNumeric,
+  shadowsNative,
+  primary,
+  neutral,
+  base,
+  status,
+} from '@rallia/design-system';
+import { useThemeStyles } from '../../../../hooks';
 
 interface AuthOverlayProps {
   visible: boolean;
   onClose: () => void;
   onAuthSuccess?: () => void;
-  onReturningUser?: () => void; // New callback for users with completed onboarding
-  onShowCalendarOverlay?: () => void;
-  currentStep?: number;
-  totalSteps?: number;
-  mode?: 'signup' | 'login'; // New: distinguish between signup and login flows
+  onReturningUser?: () => void; // Callback for users with completed onboarding
 }
 
 const AuthOverlay: React.FC<AuthOverlayProps> = ({
@@ -23,19 +40,18 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
   onClose,
   onAuthSuccess,
   onReturningUser,
-  onShowCalendarOverlay: _onShowCalendarOverlay,
-  currentStep = 1,
-  totalSteps = 8,
-  mode = 'signup', // Default to signup mode for backward compatibility
 }) => {
+  const { signInWithEmail, verifyOtp } = useAuth();
+  const { colors, isDark } = useThemeStyles();
+
   const [email, setEmail] = useState('');
   const [step, setStep] = useState<'email' | 'code'>('email');
-  const [code, setCode] = useState(['', '', '', '', '', '']);
+  const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Refs for code input fields
-  const codeInputRefs = useRef<(TextInput | null)[]>([]);
+  // Ref for the hidden OTP input
+  const hiddenInputRef = useRef<TextInput>(null);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -65,9 +81,9 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
   }, [visible, fadeAnim, slideAnim]);
 
   // Email validation
-  const isValidEmail = (email: string): boolean => {
+  const isValidEmail = (emailToValidate: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email.trim());
+    return emailRegex.test(emailToValidate.trim());
   };
 
   const isEmailValid = isValidEmail(email);
@@ -96,33 +112,20 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
     setErrorMessage('');
 
     try {
-      // In login mode, check if email exists first
-      if (mode === 'login') {
-        Logger.debug('Login mode: Checking if email exists', { mode: 'login' });
-        
-        const { data: existingProfile, error: profileError } = await ProfileService.getProfileByEmail(email);
-        
-        if (profileError || !existingProfile) {
-          setErrorMessage('No account found with this email. Please sign up instead.');
-          Alert.alert('Account Not Found', 'No account found with this email. Please use the Sign In button to create a new account.');
-          setIsLoading(false);
-          return;
-        }
-        
-        Logger.debug('Email exists, proceeding with login', { emailDomain: email.split('@')[1] });
-      }
-      
-      const result = await sendVerificationCode(email);
-      
+      Logger.debug('Sending OTP via Supabase SDK', { emailDomain: email.split('@')[1] });
+
+      const result = await signInWithEmail(email);
+
       if (result.success) {
-        Logger.info('Verification code sent successfully', { emailDomain: email.split('@')[1] });
+        Logger.info('OTP sent successfully', { emailDomain: email.split('@')[1] });
         setStep('code');
       } else {
-        setErrorMessage(result.error || 'Failed to send verification code');
-        Alert.alert('Error', result.error || 'Failed to send verification code');
+        const errorMsg = result.error?.message || 'Failed to send verification code';
+        setErrorMessage(errorMsg);
+        Alert.alert('Error', errorMsg);
       }
     } catch (error) {
-      Logger.error('Failed to send verification code', error as Error, { email: email.split('@')[1] });
+      Logger.error('Failed to send OTP', error as Error, { emailDomain: email.split('@')[1] });
       setErrorMessage('An unexpected error occurred');
       Alert.alert('Error', 'An unexpected error occurred');
     } finally {
@@ -136,17 +139,18 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
     setErrorMessage('');
 
     try {
-      const result = await sendVerificationCode(email);
-      
+      const result = await signInWithEmail(email);
+
       if (result.success) {
-        Logger.info('Verification code resent successfully', { emailDomain: email.split('@')[1] });
+        Logger.info('OTP resent successfully', { emailDomain: email.split('@')[1] });
         Alert.alert('Success', 'Verification code sent!');
       } else {
-        setErrorMessage(result.error || 'Failed to resend verification code');
-        Alert.alert('Error', result.error || 'Failed to resend verification code');
+        const errorMsg = result.error?.message || 'Failed to resend verification code';
+        setErrorMessage(errorMsg);
+        Alert.alert('Error', errorMsg);
       }
     } catch (error) {
-      Logger.error('Failed to resend verification code', error as Error, { email: email.split('@')[1] });
+      Logger.error('Failed to resend OTP', error as Error, { emailDomain: email.split('@')[1] });
       setErrorMessage('An unexpected error occurred');
       Alert.alert('Error', 'An unexpected error occurred');
     } finally {
@@ -155,9 +159,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
   };
 
   const handleVerifyCode = async () => {
-    const fullCode = code.join('');
-    
-    if (fullCode.length !== 6) {
+    if (code.length !== 6) {
       Alert.alert('Error', 'Please enter all 6 digits');
       return;
     }
@@ -167,62 +169,56 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
     setErrorMessage('');
 
     try {
-      // Step 1: Verify the code against the database
-      Logger.debug('Verifying code', { email: email.split('@')[1], codeLength: fullCode.length });
-      
-      const verifyResult = await verifyCode(email, fullCode);
-      
-      if (!verifyResult.success) {
-        setErrorMessage(verifyResult.error || 'Invalid verification code');
-        Alert.alert('Error', verifyResult.error || 'Invalid verification code');
-        setIsLoading(false);
-        return;
-      }
-
-      Logger.info('Code verified successfully', { email: email.split('@')[1] });
-      
-      // Step 2: Code is verified, now authenticate the user
-      Logger.debug('Authenticating user after code verification', { mode });
-      
-      const authResult = await authenticateAfterVerification(email);
-      
-      if (!authResult.success) {
-        setErrorMessage(authResult.error || 'Authentication failed');
-        Alert.alert('Error', authResult.error || 'Authentication failed');
-        setIsLoading(false);
-        return;
-      }
-
-      Logger.info('User authenticated successfully', { 
-        userId: authResult.userId,
-        isNewUser: authResult.isNewUser,
-        mode 
+      Logger.debug('Verifying OTP via Supabase SDK', {
+        emailDomain: email.split('@')[1],
+        codeLength: code.length,
       });
-      
-      // In login mode, always skip onboarding
-      if (mode === 'login') {
-        Logger.logNavigation('skip_onboarding_login', { mode: 'login', userId: authResult.userId });
-        successHaptic();
-        
-        if (onReturningUser) {
-          onReturningUser();
-        } else {
-          onClose();
-        }
+
+      const result = await verifyOtp(email, code);
+
+      if (!result.success) {
+        const errorMsg = result.error?.message || 'Invalid verification code';
+        setErrorMessage(errorMsg);
+        Alert.alert('Error', errorMsg);
+        setIsLoading(false);
         return;
       }
-      
+
+      Logger.info('OTP verified successfully', { emailDomain: email.split('@')[1] });
+
+      // Session is now created by SDK - get user ID to check onboarding status
+      // The useAuth hook will update session state, we need to check profile
+      // Wait a moment for session to propagate
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Import supabase to get the session
+      const { supabase } = await import('@rallia/shared-services');
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+
+      if (!userId) {
+        Logger.error('No user ID after OTP verification', new Error('Missing userId'));
+        setErrorMessage('Authentication failed - please try again');
+        Alert.alert('Error', 'Authentication failed - please try again');
+        setIsLoading(false);
+        return;
+      }
+
+      Logger.info('User authenticated successfully', { userId });
+
       // Check if this is a returning user (profile exists with completed onboarding)
-      const { data: profile, error: profileError } = await ProfileService.getProfile(authResult.userId!);
-      
+      const { data: profile, error: profileError } = await ProfileService.getProfile(userId);
+
       if (profileError) {
         // PGRST116 means no profile found - this is expected for new users
         const errorCode = (profileError as { code?: string })?.code;
         const isNoRowsError = errorCode === 'PGRST116';
         if (isNoRowsError) {
-          Logger.debug('No profile found - treating as new user', { userId: authResult.userId });
+          Logger.debug('No profile found - treating as new user', { userId });
         } else {
-          Logger.error('Failed to fetch profile', profileError as Error, { userId: authResult.userId });
+          Logger.error('Failed to fetch profile', profileError as Error, { userId });
         }
         // If there's an error fetching profile, treat as new user to be safe
         successHaptic();
@@ -234,12 +230,12 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
 
       // Check if onboarding is already completed
       if (profile && profile.onboarding_completed) {
-        Logger.logNavigation('returning_user_skip_onboarding', { 
-          userId: authResult.userId,
-          onboardingCompleted: true 
+        Logger.logNavigation('returning_user_skip_onboarding', {
+          userId,
+          onboardingCompleted: true,
         });
         successHaptic();
-        
+
         // Close auth overlay and navigate directly to app (skip onboarding)
         if (onReturningUser) {
           onReturningUser();
@@ -248,19 +244,19 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
           onClose();
         }
       } else {
-        Logger.logNavigation('new_user_start_onboarding', { 
-          userId: authResult.userId,
-          onboardingCompleted: false 
+        Logger.logNavigation('new_user_start_onboarding', {
+          userId,
+          onboardingCompleted: false,
         });
         successHaptic();
-        
+
         // Proceed to next step (Personal Information)
         if (onAuthSuccess) {
           onAuthSuccess();
         }
       }
     } catch (error) {
-      Logger.error('Error during user authentication', error as Error, { mode });
+      Logger.error('Error during OTP verification', error as Error);
       setErrorMessage('An unexpected error occurred');
       Alert.alert('Error', 'An unexpected error occurred');
     } finally {
@@ -272,23 +268,47 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
     lightHaptic();
     if (step === 'code') {
       setStep('email');
-      setCode(['', '', '', '', '', '']);
+      setCode('');
     } else {
       onClose();
     }
   };
 
   // Reset to email step when overlay closes
-  React.useEffect(() => {
+  useEffect(() => {
     if (!visible) {
       // Reset after animation completes
       setTimeout(() => {
         setStep('email');
-        setCode(['', '', '', '', '', '']);
+        setCode('');
         setEmail('');
+        setErrorMessage('');
       }, 300);
     }
   }, [visible]);
+
+  // Handler for code input changes - memoized for performance
+  const handleCodeChange = useCallback((text: string) => {
+    // Only accept digits, limit to 6 characters
+    const cleanedCode = text.replace(/[^0-9]/g, '').slice(0, 6);
+    setCode(cleanedCode);
+  }, []);
+
+  // Focus the hidden input when tapping the code boxes
+  const focusHiddenInput = useCallback(() => {
+    hiddenInputRef.current?.focus();
+  }, []);
+
+  // Focus hidden input when step changes to 'code'
+  useEffect(() => {
+    if (step === 'code') {
+      // Small delay to ensure the step animation has started
+      const timer = setTimeout(() => {
+        hiddenInputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
 
   return (
     <Overlay visible={visible} onClose={handleBack}>
@@ -302,55 +322,58 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
         ]}
         collapsable={false}
       >
-        {/* Progress Indicator - Only show in signup mode */}
-        {mode !== 'login' && (
-          <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
-        )}
-
         {step === 'email' ? (
           // Email Entry Step
           <>
             {/* Title */}
-            <Text style={styles.title}>{mode === 'login' ? 'Log In' : 'Sign In'}</Text>
+            <Text style={[styles.title, { color: colors.text }]}>Sign In</Text>
 
             {/* Social Sign In Buttons */}
             <View style={styles.socialButtons}>
               <TouchableOpacity
-                style={styles.socialButton}
+                style={[styles.socialButton, { backgroundColor: colors.buttonActive }]}
                 onPress={handleGoogleSignIn}
                 activeOpacity={0.8}
               >
-                <Ionicons name="logo-google" size={24} color="#fff" />
+                <Ionicons name="logo-google" size={24} color={colors.buttonTextActive} />
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.socialButton}
+                style={[styles.socialButton, { backgroundColor: colors.buttonActive }]}
                 onPress={handleAppleSignIn}
                 activeOpacity={0.8}
               >
-                <Ionicons name="logo-apple" size={24} color="#fff" />
+                <Ionicons name="logo-apple" size={24} color={colors.buttonTextActive} />
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.socialButton}
+                style={[styles.socialButton, { backgroundColor: colors.buttonActive }]}
                 onPress={handleFacebookSignIn}
                 activeOpacity={0.8}
               >
-                <Ionicons name="logo-facebook" size={24} color="#fff" />
+                <Ionicons name="logo-facebook" size={24} color={colors.buttonTextActive} />
               </TouchableOpacity>
             </View>
 
             {/* OR Divider */}
             <View style={styles.dividerContainer}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR</Text>
-              <View style={styles.dividerLine} />
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+              <Text style={[styles.dividerText, { color: colors.textMuted }]}>OR</Text>
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
             </View>
 
             {/* Email Input */}
             <TextInput
-              style={styles.emailInput}
+              style={[
+                styles.emailInput,
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.inputBorder,
+                  color: colors.text,
+                },
+              ]}
               placeholder="Email"
+              placeholderTextColor={colors.textMuted}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -360,23 +383,35 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
 
             {/* Error Message */}
             {errorMessage ? (
-              <Text style={styles.errorText}>{errorMessage}</Text>
+              <Text style={[styles.errorText, { color: colors.error }]}>{errorMessage}</Text>
             ) : null}
 
             {/* Continue Button */}
             <TouchableOpacity
-              style={[styles.continueButton, (!isEmailValid || isLoading) && styles.continueButtonDisabled]}
-              onPress={(isEmailValid && !isLoading) ? handleEmailContinue : undefined}
-              activeOpacity={(isEmailValid && !isLoading) ? 0.8 : 1}
+              style={[
+                styles.continueButton,
+                {
+                  backgroundColor:
+                    isEmailValid && !isLoading ? colors.buttonActive : colors.buttonInactive,
+                },
+                (!isEmailValid || isLoading) && styles.continueButtonDisabled,
+              ]}
+              onPress={isEmailValid && !isLoading ? handleEmailContinue : undefined}
+              activeOpacity={isEmailValid && !isLoading ? 0.8 : 1}
               disabled={!isEmailValid || isLoading}
             >
               {isLoading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={colors.buttonTextActive} />
               ) : (
                 <Text
                   style={[
                     styles.continueButtonText,
-                    (!isEmailValid || isLoading) && styles.continueButtonTextDisabled,
+                    {
+                      color:
+                        isEmailValid && !isLoading
+                          ? colors.buttonTextActive
+                          : colors.buttonTextInactive,
+                    },
                   ]}
                 >
                   Continue
@@ -385,84 +420,90 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
             </TouchableOpacity>
 
             {/* Terms Text */}
-            <Text style={styles.termsText}>By continuing, you agree to Rallia's Terms of Use.</Text>
+            <Text style={[styles.termsText, { color: colors.textMuted }]}>
+              By continuing, you agree to Rallia's Terms of Use.
+            </Text>
           </>
         ) : (
           // Code Verification Step
           <>
             {/* Title */}
-            <Text style={styles.title}>Enter code</Text>
+            <Text style={[styles.title, { color: colors.text }]}>Enter code</Text>
 
             {/* Description */}
-            <Text style={styles.description}>
+            <Text style={[styles.description, { color: colors.textMuted }]}>
               We sent an email verification code to{'\n'}
-              <Text style={styles.emailText}>{email}</Text>
+              <Text style={[styles.emailText, { color: colors.text }]}>{email}</Text>
             </Text>
 
-            {/* Code Input Boxes */}
-            <View style={styles.codeInputContainer}>
-              {code.map((digit, index) => (
-                <TextInput
-                  key={index}
-                  ref={(ref) => { codeInputRefs.current[index] = ref; }}
-                  style={[
-                    styles.codeBox,
-                    digit !== '' && styles.codeBoxFilled,
-                  ]}
-                  value={digit}
-                  onChangeText={(text) => {
-                    // Only accept single digit
-                    const newDigit = text.replace(/[^0-9]/g, '').slice(-1);
-                    const newCode = [...code];
-                    newCode[index] = newDigit;
-                    setCode(newCode);
-                    
-                    // Auto-focus next input if digit entered
-                    if (newDigit && index < 5) {
-                      codeInputRefs.current[index + 1]?.focus();
-                    }
-                  }}
-                  onKeyPress={({ nativeEvent }) => {
-                    // Handle backspace to go to previous input
-                    if (nativeEvent.key === 'Backspace' && !digit && index > 0) {
-                      codeInputRefs.current[index - 1]?.focus();
-                    }
-                  }}
-                  keyboardType="number-pad"
-                  maxLength={1}
-                  selectTextOnFocus
-                  textAlign="center"
-                  autoFocus={index === 0 && step === 'code'}
-                />
-              ))}
-            </View>
+            {/* Hidden TextInput for smooth OTP entry */}
+            <TextInput
+              ref={hiddenInputRef}
+              style={styles.hiddenInput}
+              value={code}
+              onChangeText={handleCodeChange}
+              keyboardType="number-pad"
+              maxLength={6}
+              autoFocus
+              caretHidden
+              autoComplete="one-time-code"
+              textContentType="oneTimeCode"
+            />
+
+            {/* Visual Code Display Boxes */}
+            <Pressable style={styles.codeInputContainer} onPress={focusHiddenInput}>
+              {Array.from({ length: 6 }).map((_, index) => {
+                const digit = code[index] || '';
+                const isFilled = digit !== '';
+                return (
+                  <View
+                    key={index}
+                    style={[
+                      styles.codeBox,
+                      {
+                        backgroundColor: isFilled ? colors.card : colors.inputBackground,
+                        borderColor: isFilled ? colors.primary : colors.inputBorder,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.codeDigit, { color: colors.text }]}>{digit}</Text>
+                  </View>
+                );
+              })}
+            </Pressable>
 
             {/* Resend Code Button */}
             <TouchableOpacity
-              style={styles.resendButton}
+              style={[styles.resendButton, { backgroundColor: colors.inputBackground }]}
               onPress={handleResendCode}
               activeOpacity={0.8}
               disabled={isLoading}
             >
-              <Text style={styles.resendButtonText}>Resend Code</Text>
+              <Text style={[styles.resendButtonText, { color: colors.primary }]}>Resend Code</Text>
             </TouchableOpacity>
 
             {/* Error Message */}
             {errorMessage ? (
-              <Text style={styles.errorText}>{errorMessage}</Text>
+              <Text style={[styles.errorText, { color: colors.error }]}>{errorMessage}</Text>
             ) : null}
 
             {/* Continue Button */}
             <TouchableOpacity
-              style={[styles.continueButton, isLoading && styles.continueButtonDisabled]}
+              style={[
+                styles.continueButton,
+                { backgroundColor: colors.buttonActive },
+                isLoading && styles.continueButtonDisabled,
+              ]}
               onPress={handleVerifyCode}
               activeOpacity={0.8}
               disabled={isLoading}
             >
               {isLoading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={colors.buttonTextActive} />
               ) : (
-                <Text style={styles.continueButtonText}>Continue</Text>
+                <Text style={[styles.continueButtonText, { color: colors.buttonTextActive }]}>
+                  Continue
+                </Text>
               )}
             </TouchableOpacity>
           </>
@@ -475,110 +516,89 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    paddingVertical: 20,
+    paddingVertical: spacingPixels[5],
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: fontSizePixels['2xl'],
+    fontWeight: fontWeightNumeric.bold,
     textAlign: 'center',
-    marginBottom: 30,
+    marginBottom: 30, // 7.5 * 4px base unit
+    // color will be set dynamically
   },
   socialButtons: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 15,
-    marginBottom: 25,
+    gap: 15, // 3.75 * 4px base unit
+    marginBottom: 25, // 6.25 * 4px base unit
   },
   socialButton: {
-    width: 70,
-    height: 50,
-    backgroundColor: COLORS.accent,
-    borderRadius: 10,
+    width: 70, // 17.5 * 4px base unit
+    height: 50, // 12.5 * 4px base unit
+    borderRadius: radiusPixels.DEFAULT,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: COLORS.overlayDark,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadowsNative.md,
+    // backgroundColor will be set dynamically
   },
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 25,
+    marginBottom: 25, // 6.25 * 4px base unit
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#E0E0E0',
+    // backgroundColor will be set dynamically
   },
   dividerText: {
-    marginHorizontal: 15,
-    color: '#999',
-    fontSize: 14,
-    fontWeight: '500',
+    marginHorizontal: 15, // 3.75 * 4px base unit
+    fontSize: fontSizePixels.sm,
+    fontWeight: fontWeightNumeric.medium,
+    // color will be set dynamically
   },
   emailInput: {
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    fontSize: 16,
-    color: '#333',
-    marginBottom: 20,
+    borderRadius: radiusPixels.DEFAULT,
+    paddingHorizontal: spacingPixels[5],
+    paddingVertical: spacingPixels[3.5],
+    fontSize: fontSizePixels.base,
+    marginBottom: spacingPixels[5],
     borderWidth: 1,
-    borderColor: COLORS.primaryLight,
+    // backgroundColor, borderColor, color will be set dynamically
   },
   continueButton: {
-    backgroundColor: COLORS.buttonPrimary,
-    borderRadius: 10,
-    paddingVertical: 16,
+    borderRadius: radiusPixels.DEFAULT,
+    paddingVertical: spacingPixels[4],
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 15,
-    shadowColor: COLORS.overlayDark,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    marginBottom: 15, // 3.75 * 4px base unit
+    ...shadowsNative.md,
+    // backgroundColor will be set dynamically
   },
   continueButtonDisabled: {
-    backgroundColor: '#D3D3D3',
     shadowOpacity: 0,
     elevation: 0,
   },
   continueButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: fontSizePixels.base,
+    fontWeight: fontWeightNumeric.semibold,
   },
-  continueButtonTextDisabled: {
-    color: '#999',
-  },
+  continueButtonTextDisabled: {},
   termsText: {
     textAlign: 'center',
-    color: '#999',
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: fontSizePixels.xs,
+    lineHeight: fontSizePixels.xs * 1.5,
   },
   // Code verification step styles
   description: {
     fontSize: 14,
-    color: '#666',
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 30,
+    // color will be set dynamically
   },
   emailText: {
-    color: '#333',
     fontWeight: '600',
+    // color will be set dynamically
   },
   codeInputContainer: {
     flexDirection: 'row',
@@ -586,49 +606,46 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 25,
   },
+  hiddenInput: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    opacity: 0,
+  },
   codeBox: {
     width: 45,
     height: 55,
-    backgroundColor: COLORS.primaryLight,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: COLORS.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#333',
-  },
-  codeBoxFilled: {
-    borderColor: COLORS.accent,
-    backgroundColor: '#fff',
+    // backgroundColor, borderColor will be set dynamically
   },
   codeDigit: {
     fontSize: 24,
     fontWeight: '600',
-    color: '#333',
+    // color will be set dynamically
   },
   resendButton: {
-    backgroundColor: '#FFE8EA',
     borderRadius: 10,
     paddingVertical: 16,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 15,
+    // backgroundColor will be set dynamically
   },
   resendButtonText: {
-    color: COLORS.accent,
     fontSize: 16,
     fontWeight: '600',
+    // color will be set dynamically
   },
   errorText: {
-    color: COLORS.accent,
     fontSize: 14,
     textAlign: 'center',
     marginBottom: 10,
     marginTop: -5,
+    // color will be set dynamically
   },
 });
 
 export default AuthOverlay;
-

@@ -1,0 +1,514 @@
+/**
+ * PreferencesStep Component
+ *
+ * Preferences step of onboarding - playing hand, travel distance, match duration, match type.
+ * Migrated from PlayerPreferencesOverlay with theme-aware colors.
+ *
+ * When user has multiple sports, shows "Same for all sports" checkbox for match type.
+ * Unchecking reveals individual preference rows for each sport.
+ */
+
+import React, { useState } from 'react';
+import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import Slider from '@react-native-community/slider';
+import { Ionicons } from '@expo/vector-icons';
+import { Text } from '@rallia/shared-components';
+import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { selectionHaptic } from '@rallia/shared-utils';
+import type { TranslationKey } from '@rallia/shared-translations';
+import type { OnboardingFormData } from '../../../hooks/useOnboardingWizard';
+
+interface ThemeColors {
+  background: string;
+  cardBackground: string;
+  text: string;
+  textSecondary: string;
+  textMuted: string;
+  border: string;
+  buttonActive: string;
+  buttonInactive: string;
+  buttonTextActive: string;
+}
+
+interface PreferencesStepProps {
+  formData: OnboardingFormData;
+  onUpdateFormData: (updates: Partial<OnboardingFormData>) => void;
+  hasTennis: boolean;
+  hasPickleball: boolean;
+  colors: ThemeColors;
+  t: (key: TranslationKey) => string;
+  isDark: boolean;
+}
+
+export const PreferencesStep: React.FC<PreferencesStepProps> = ({
+  formData,
+  onUpdateFormData,
+  hasTennis,
+  hasPickleball,
+  colors,
+  t,
+  isDark: _isDark,
+}) => {
+  const hasBothSports = hasTennis && hasPickleball;
+
+  // State for "Same for all sports" checkboxes (only relevant when user has both sports)
+  const [sameMatchTypeForAll, setSameMatchTypeForAll] = useState(true);
+  const [sameMatchDurationForAll, setSameMatchDurationForAll] = useState(true);
+
+  // When "Same for all sports" is toggled ON, sync both sports to the tennis value
+  const handleSameMatchTypeToggle = () => {
+    selectionHaptic();
+    const newValue = !sameMatchTypeForAll;
+    setSameMatchTypeForAll(newValue);
+
+    if (newValue) {
+      // Sync pickleball to tennis value (or use a unified value)
+      onUpdateFormData({ pickleballMatchType: formData.tennisMatchType });
+    }
+  };
+
+  const handleSameMatchDurationToggle = () => {
+    selectionHaptic();
+    const newValue = !sameMatchDurationForAll;
+    setSameMatchDurationForAll(newValue);
+
+    if (newValue) {
+      // Sync pickleball to tennis value
+      onUpdateFormData({ pickleballMatchDuration: formData.tennisMatchDuration });
+    }
+  };
+
+  // Handle unified match type change (when "Same for all sports" is checked)
+  const handleUnifiedMatchTypeChange = (value: 'casual' | 'competitive' | 'both') => {
+    onUpdateFormData({
+      tennisMatchType: value,
+      pickleballMatchType: value,
+    });
+  };
+
+  // Handle unified match duration change (when "Same for all sports" is checked)
+  const handleUnifiedMatchDurationChange = (value: '30' | '60' | '90' | '120') => {
+    onUpdateFormData({
+      tennisMatchDuration: value,
+      pickleballMatchDuration: value,
+      matchDuration: value, // Keep legacy field in sync
+    });
+  };
+
+  const renderOptionButton = (
+    label: string,
+    value: string,
+    currentValue: string,
+    onPress: () => void
+  ) => {
+    const isSelected = value === currentValue;
+    return (
+      <TouchableOpacity
+        style={[
+          styles.optionButton,
+          {
+            backgroundColor: isSelected ? colors.buttonActive : colors.buttonInactive,
+            borderColor: isSelected ? colors.buttonActive : 'transparent',
+          },
+        ]}
+        onPress={() => {
+          selectionHaptic();
+          onPress();
+        }}
+        activeOpacity={0.8}
+      >
+        <Text
+          size="sm"
+          weight="semibold"
+          color={isSelected ? colors.buttonTextActive : colors.textSecondary}
+        >
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+      contentInsetAdjustmentBehavior="automatic"
+    >
+      {/* Title */}
+      <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
+        {t('onboarding.preferencesStep.title' as TranslationKey)}
+      </Text>
+
+      {/* Playing Hand */}
+      <Text size="sm" weight="semibold" color={colors.text} style={styles.sectionLabel}>
+        {t('onboarding.preferencesStep.playingHand' as TranslationKey)}
+      </Text>
+      <View style={styles.buttonGroup}>
+        {renderOptionButton(
+          t('onboarding.preferencesStep.left' as TranslationKey),
+          'left',
+          formData.playingHand,
+          () => onUpdateFormData({ playingHand: 'left' })
+        )}
+        {renderOptionButton(
+          t('onboarding.preferencesStep.right' as TranslationKey),
+          'right',
+          formData.playingHand,
+          () => onUpdateFormData({ playingHand: 'right' })
+        )}
+        {renderOptionButton(
+          t('onboarding.preferencesStep.both' as TranslationKey),
+          'both',
+          formData.playingHand,
+          () => onUpdateFormData({ playingHand: 'both' })
+        )}
+      </View>
+
+      {/* Maximum Travel Distance */}
+      <Text size="sm" weight="semibold" color={colors.text} style={styles.sectionLabel}>
+        {t('onboarding.preferencesStep.travelDistance' as TranslationKey)}
+      </Text>
+      <View style={styles.sliderContainer}>
+        <Text size="lg" weight="bold" color={colors.text} style={styles.sliderValue}>
+          {formData.maxTravelDistance} km
+        </Text>
+        <Slider
+          style={styles.slider}
+          minimumValue={1}
+          maximumValue={50}
+          step={1}
+          value={formData.maxTravelDistance}
+          onValueChange={value => onUpdateFormData({ maxTravelDistance: value })}
+          minimumTrackTintColor={colors.buttonActive}
+          maximumTrackTintColor={colors.buttonInactive}
+          thumbTintColor={colors.buttonActive}
+        />
+      </View>
+
+      {/* Preferred Match Duration Section */}
+      {(hasTennis || hasPickleball) && (
+        <>
+          {/* Section Header */}
+          <View style={styles.sectionHeaderRow}>
+            <Text size="sm" weight="semibold" color={colors.text}>
+              {t('onboarding.preferencesStep.matchDuration' as TranslationKey)}
+            </Text>
+          </View>
+
+          {/* Unified Match Duration (when same for all or only one sport) */}
+          {(sameMatchDurationForAll || !hasBothSports) && (
+            <View style={styles.buttonGroup}>
+              {renderOptionButton(
+                '1h',
+                '60',
+                hasTennis ? formData.tennisMatchDuration : formData.pickleballMatchDuration,
+                () =>
+                  hasBothSports
+                    ? handleUnifiedMatchDurationChange('60')
+                    : onUpdateFormData({
+                        [hasTennis ? 'tennisMatchDuration' : 'pickleballMatchDuration']: '60',
+                        matchDuration: '60', // Keep legacy field in sync
+                      })
+              )}
+              {renderOptionButton(
+                '1.5h',
+                '90',
+                hasTennis ? formData.tennisMatchDuration : formData.pickleballMatchDuration,
+                () =>
+                  hasBothSports
+                    ? handleUnifiedMatchDurationChange('90')
+                    : onUpdateFormData({
+                        [hasTennis ? 'tennisMatchDuration' : 'pickleballMatchDuration']: '90',
+                        matchDuration: '90', // Keep legacy field in sync
+                      })
+              )}
+              {renderOptionButton(
+                '2h',
+                '120',
+                hasTennis ? formData.tennisMatchDuration : formData.pickleballMatchDuration,
+                () =>
+                  hasBothSports
+                    ? handleUnifiedMatchDurationChange('120')
+                    : onUpdateFormData({
+                        [hasTennis ? 'tennisMatchDuration' : 'pickleballMatchDuration']: '120',
+                        matchDuration: '120', // Keep legacy field in sync
+                      })
+              )}
+            </View>
+          )}
+
+          {/* Individual Sport Match Durations (when not same for all) */}
+          {!sameMatchDurationForAll && hasBothSports && (
+            <>
+              {/* Tennis Match Duration */}
+              <Text size="sm" weight="semibold" color={colors.text} style={styles.sportSubLabel}>
+                Tennis
+              </Text>
+              <View style={styles.buttonGroup}>
+                {renderOptionButton('1h', '60', formData.tennisMatchDuration, () =>
+                  onUpdateFormData({ tennisMatchDuration: '60' })
+                )}
+                {renderOptionButton('1.5h', '90', formData.tennisMatchDuration, () =>
+                  onUpdateFormData({ tennisMatchDuration: '90' })
+                )}
+                {renderOptionButton('2h', '120', formData.tennisMatchDuration, () =>
+                  onUpdateFormData({ tennisMatchDuration: '120' })
+                )}
+              </View>
+
+              {/* Pickleball Match Duration */}
+              <Text size="sm" weight="semibold" color={colors.text} style={styles.sportSubLabel}>
+                Pickleball
+              </Text>
+              <View style={styles.buttonGroup}>
+                {renderOptionButton('1h', '60', formData.pickleballMatchDuration, () =>
+                  onUpdateFormData({ pickleballMatchDuration: '60' })
+                )}
+                {renderOptionButton('1.5h', '90', formData.pickleballMatchDuration, () =>
+                  onUpdateFormData({ pickleballMatchDuration: '90' })
+                )}
+                {renderOptionButton('2h', '120', formData.pickleballMatchDuration, () =>
+                  onUpdateFormData({ pickleballMatchDuration: '120' })
+                )}
+              </View>
+            </>
+          )}
+
+          <View style={styles.checkboxRow}>
+            {hasBothSports && (
+              <TouchableOpacity
+                style={styles.checkboxRow}
+                onPress={handleSameMatchDurationToggle}
+                activeOpacity={0.7}
+              >
+                <View
+                  style={[
+                    styles.checkbox,
+                    {
+                      backgroundColor: sameMatchDurationForAll
+                        ? colors.buttonActive
+                        : 'transparent',
+                      borderColor: sameMatchDurationForAll ? colors.buttonActive : colors.textMuted,
+                    },
+                  ]}
+                >
+                  {sameMatchDurationForAll && (
+                    <Ionicons name="checkmark" size={14} color={colors.buttonTextActive} />
+                  )}
+                </View>
+                <Text size="xs" color={colors.textSecondary}>
+                  {t('onboarding.preferencesStep.sameForAll' as TranslationKey)}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </>
+      )}
+
+      {/* Match Type Section */}
+      {(hasTennis || hasPickleball) && (
+        <>
+          {/* Section Header with "Same for all sports" checkbox when both sports selected */}
+          <View style={styles.sectionHeaderRow}>
+            <Text size="sm" weight="semibold" color={colors.text}>
+              {t('onboarding.preferencesStep.matchType' as TranslationKey)}
+            </Text>
+          </View>
+
+          {/* Unified Match Type (when same for all or only one sport) */}
+          {(sameMatchTypeForAll || !hasBothSports) && (
+            <View style={styles.buttonGroup}>
+              {renderOptionButton(
+                t('onboarding.preferencesStep.casual' as TranslationKey),
+                'casual',
+                hasTennis ? formData.tennisMatchType : formData.pickleballMatchType,
+                () =>
+                  hasBothSports
+                    ? handleUnifiedMatchTypeChange('casual')
+                    : onUpdateFormData({
+                        [hasTennis ? 'tennisMatchType' : 'pickleballMatchType']: 'casual',
+                      })
+              )}
+              {renderOptionButton(
+                t('onboarding.preferencesStep.competitive' as TranslationKey),
+                'competitive',
+                hasTennis ? formData.tennisMatchType : formData.pickleballMatchType,
+                () =>
+                  hasBothSports
+                    ? handleUnifiedMatchTypeChange('competitive')
+                    : onUpdateFormData({
+                        [hasTennis ? 'tennisMatchType' : 'pickleballMatchType']: 'competitive',
+                      })
+              )}
+              {renderOptionButton(
+                t('onboarding.preferencesStep.both' as TranslationKey),
+                'both',
+                hasTennis ? formData.tennisMatchType : formData.pickleballMatchType,
+                () =>
+                  hasBothSports
+                    ? handleUnifiedMatchTypeChange('both')
+                    : onUpdateFormData({
+                        [hasTennis ? 'tennisMatchType' : 'pickleballMatchType']: 'both',
+                      })
+              )}
+            </View>
+          )}
+
+          {/* Individual Sport Match Types (when not same for all) */}
+          {!sameMatchTypeForAll && hasBothSports && (
+            <>
+              {/* Tennis Match Type */}
+              <Text size="sm" weight="semibold" color={colors.text} style={styles.sportSubLabel}>
+                Tennis
+              </Text>
+              <View style={styles.buttonGroup}>
+                {renderOptionButton(
+                  t('onboarding.preferencesStep.casual' as TranslationKey),
+                  'casual',
+                  formData.tennisMatchType,
+                  () => onUpdateFormData({ tennisMatchType: 'casual' })
+                )}
+                {renderOptionButton(
+                  t('onboarding.preferencesStep.competitive' as TranslationKey),
+                  'competitive',
+                  formData.tennisMatchType,
+                  () => onUpdateFormData({ tennisMatchType: 'competitive' })
+                )}
+                {renderOptionButton(
+                  t('onboarding.preferencesStep.both' as TranslationKey),
+                  'both',
+                  formData.tennisMatchType,
+                  () => onUpdateFormData({ tennisMatchType: 'both' })
+                )}
+              </View>
+
+              {/* Pickleball Match Type */}
+              <Text size="sm" weight="semibold" color={colors.text} style={styles.sportSubLabel}>
+                Pickleball
+              </Text>
+              <View style={styles.buttonGroup}>
+                {renderOptionButton(
+                  t('onboarding.preferencesStep.casual' as TranslationKey),
+                  'casual',
+                  formData.pickleballMatchType,
+                  () => onUpdateFormData({ pickleballMatchType: 'casual' })
+                )}
+                {renderOptionButton(
+                  t('onboarding.preferencesStep.competitive' as TranslationKey),
+                  'competitive',
+                  formData.pickleballMatchType,
+                  () => onUpdateFormData({ pickleballMatchType: 'competitive' })
+                )}
+                {renderOptionButton(
+                  t('onboarding.preferencesStep.both' as TranslationKey),
+                  'both',
+                  formData.pickleballMatchType,
+                  () => onUpdateFormData({ pickleballMatchType: 'both' })
+                )}
+              </View>
+            </>
+          )}
+
+          <View style={styles.checkboxRow}>
+            {hasBothSports && (
+              <TouchableOpacity
+                style={styles.checkboxRow}
+                onPress={handleSameMatchTypeToggle}
+                activeOpacity={0.7}
+              >
+                <View
+                  style={[
+                    styles.checkbox,
+                    {
+                      backgroundColor: sameMatchTypeForAll ? colors.buttonActive : 'transparent',
+                      borderColor: sameMatchTypeForAll ? colors.buttonActive : colors.textMuted,
+                    },
+                  ]}
+                >
+                  {sameMatchTypeForAll && (
+                    <Ionicons name="checkmark" size={14} color={colors.buttonTextActive} />
+                  )}
+                </View>
+                <Text size="xs" color={colors.textSecondary}>
+                  {t('onboarding.preferencesStep.sameForAll' as TranslationKey)}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </>
+      )}
+    </ScrollView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[4],
+    paddingBottom: spacingPixels[8],
+    flexGrow: 1,
+  },
+  title: {
+    textAlign: 'center',
+    marginBottom: spacingPixels[6],
+    lineHeight: 28,
+  },
+  sectionLabel: {
+    marginBottom: spacingPixels[3],
+    marginTop: spacingPixels[4],
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacingPixels[3],
+    marginTop: spacingPixels[4],
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    marginTop: spacingPixels[1],
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sportSubLabel: {
+    marginTop: spacingPixels[3],
+    marginBottom: spacingPixels[2],
+  },
+  buttonGroup: {
+    flexDirection: 'row',
+    gap: spacingPixels[2],
+  },
+  optionButton: {
+    flex: 1,
+    borderRadius: radiusPixels.lg,
+    paddingVertical: spacingPixels[3],
+    alignItems: 'center',
+    borderWidth: 2,
+  },
+  sliderContainer: {
+    marginBottom: spacingPixels[2],
+  },
+  sliderValue: {
+    marginBottom: spacingPixels[2],
+  },
+  slider: {
+    width: '100%',
+    height: 40,
+  },
+});
+
+export default PreferencesStep;

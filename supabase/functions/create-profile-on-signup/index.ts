@@ -14,7 +14,7 @@ interface WebhookPayload {
   schema: string;
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async req => {
   try {
     // Get the webhook payload
     const payload: WebhookPayload = await req.json();
@@ -33,14 +33,12 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Create profile for the new user
-    const { error } = await supabase
-      .from('profile')
-      .insert({
-        id: payload.record.id,
-        email: payload.record.email,
-        created_at: payload.record.created_at,
-        updated_at: new Date().toISOString(),
-      });
+    const { error } = await supabase.from('profile').insert({
+      id: payload.record.id,
+      email: payload.record.email,
+      created_at: payload.record.created_at,
+      updated_at: new Date().toISOString(),
+    });
 
     if (error) {
       // If profile already exists, that's fine
@@ -56,17 +54,14 @@ Deno.serve(async (req) => {
     }
 
     console.log(`Created profile for user ${payload.record.id}`);
-    return new Response(
-      JSON.stringify({ message: 'Profile created successfully' }),
-      {
-        headers: { 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    );
+    return new Response(JSON.stringify({ message: 'Profile created successfully' }), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 200,
+    });
   } catch (error) {
     console.error('Error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       {
         headers: { 'Content-Type': 'application/json' },
         status: 500,

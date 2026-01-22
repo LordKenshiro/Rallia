@@ -1,12 +1,251 @@
+/**
+ * IMPORTANT: Initialize Supabase with AsyncStorage FIRST
+ * This must be the first import that touches @rallia/shared-services
+ * to ensure the supabase client is properly configured before any hooks use it.
+ */
+import './src/lib/supabase';
+
+import { useEffect, useState, useCallback, type PropsWithChildren } from 'react';
+import { Linking } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { StatusBar } from 'expo-status-bar';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AppNavigator from './src/navigation/AppNavigator';
-import { ErrorBoundary } from '@rallia/shared-components';
+import { navigationRef } from './src/navigation';
+import { ActionsBottomSheet } from './src/components/ActionsBottomSheet';
+import { MatchDetailSheet } from './src/components/MatchDetailSheet';
+import { PlayerInviteSheet } from './src/components/PlayerInviteSheet';
+import { FeedbackSheet } from './src/components/FeedbackSheet';
+import { SplashOverlay } from './src/components/SplashOverlay';
+import {
+  ThemeProvider,
+  useTheme,
+  ProfileProvider,
+  PlayerProvider,
+  useNotificationRealtime,
+  usePendingFeedbackCheck,
+} from '@rallia/shared-hooks';
+import { ErrorBoundary, ToastProvider, NetworkProvider } from '@rallia/shared-components';
 import { Logger } from './src/services/logger';
-import { OverlayProvider } from './src/context';
+import {
+  AuthProvider,
+  useAuth,
+  OverlayProvider,
+  LocaleProvider,
+  useLocale,
+  ActionsSheetProvider,
+  SportProvider,
+  MatchDetailSheetProvider,
+  PlayerInviteSheetProvider,
+  FeedbackSheetProvider,
+  useFeedbackSheet,
+  DeepLinkProvider,
+  useDeepLink,
+  useOverlay,
+  UserLocationProvider,
+  useUserHomeLocation,
+  LocationModeProvider,
+} from './src/context';
+import { usePushNotifications } from './src/hooks';
 
-// IMPORTANT: Initialize Supabase with AsyncStorage before any other code runs
-import './src/lib/supabase';
+// Import NativeWind global styles
+import './global.css';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Data stays fresh for 2 minutes - prevents unnecessary refetches
+      staleTime: 1000 * 60 * 2,
+      // Don't refetch on window focus by default (use pull-to-refresh instead)
+      refetchOnWindowFocus: false,
+      // Don't refetch on mount if data is fresh
+      refetchOnMount: 'always',
+      // Keep unused data in cache for 5 minutes
+      gcTime: 1000 * 60 * 5,
+      // Retry failed requests once
+      retry: 1,
+    },
+  },
+});
+
+/**
+ * Parse match ID from deep link URL.
+ * Supports:
+ * - rallia://match/[id]
+ * - https://rallia.app/match/[id]
+ */
+function parseMatchIdFromUrl(url: string): string | null {
+  try {
+    // Handle custom scheme: rallia://match/[id]
+    const customSchemeMatch = url.match(/^rallia:\/\/match\/([a-zA-Z0-9-]+)/);
+    if (customSchemeMatch) {
+      return customSchemeMatch[1];
+    }
+
+    // Handle universal link: https://rallia.app/match/[id]
+    const universalLinkMatch = url.match(/^https?:\/\/rallia\.app\/match\/([a-zA-Z0-9-]+)/);
+    if (universalLinkMatch) {
+      return universalLinkMatch[1];
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * AuthenticatedProviders - Wraps providers that need userId from auth context.
+ * This component sits inside AuthProvider and passes userId to ProfileProvider and PlayerProvider.
+ */
+function AuthenticatedProviders({ children }: PropsWithChildren) {
+  const { user } = useAuth();
+  const { syncLocaleToDatabase, isReady: isLocaleReady } = useLocale();
+  const { setPendingMatchId } = useDeepLink();
+  const { isSplashComplete } = useOverlay();
+  const userId = user?.id;
+
+  // Handle incoming deep link URL
+  const handleDeepLink = useCallback(
+    (url: string | null) => {
+      if (!url) return;
+      const matchId = parseMatchIdFromUrl(url);
+      if (matchId) {
+        Logger.logNavigation('deep_link_received', { url, matchId });
+        setPendingMatchId(matchId);
+      }
+    },
+    [setPendingMatchId]
+  );
+
+  // Listen for deep links (both cold start and while app is running)
+  useEffect(() => {
+    // Handle URL that opened the app (cold start)
+    Linking.getInitialURL().then(handleDeepLink);
+
+    // Handle URLs while app is running
+    const subscription = Linking.addEventListener('url', event => {
+      handleDeepLink(event.url);
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [handleDeepLink]);
+
+  // Register push notifications when user is authenticated
+  // This will save the Expo push token to the player table
+  // Pass the deep link handler for match notifications
+  // Wait for splash to complete before handling cold start notifications
+  usePushNotifications(userId, true, {
+    onMatchNotificationTapped: setPendingMatchId,
+    isSplashComplete,
+  });
+
+  // Subscribe to realtime notification updates
+  // This keeps the notification badge in sync with the database
+  useNotificationRealtime(userId);
+
+  // Sync locale to database when user logs in or locale becomes ready
+  // This ensures server-side notifications use the correct locale
+  useEffect(() => {
+    if (userId && isLocaleReady) {
+      syncLocaleToDatabase(userId);
+    }
+  }, [userId, isLocaleReady, syncLocaleToDatabase]);
+
+  return (
+    <UserLocationProvider>
+      <LocationModeProvider>
+        <HomeLocationSync userId={userId} />
+        <ProfileProvider userId={userId}>
+          <PlayerProvider userId={userId}>
+            <SportProvider userId={userId}>{children}</SportProvider>
+          </PlayerProvider>
+        </ProfileProvider>
+      </LocationModeProvider>
+    </UserLocationProvider>
+  );
+}
+
+/**
+ * HomeLocationSync - Syncs home location to database when user is authenticated.
+ * Must be inside UserLocationProvider.
+ */
+function HomeLocationSync({ userId }: { userId: string | undefined }) {
+  const { hasHomeLocation, syncToDatabase } = useUserHomeLocation();
+  const [hasSynced, setHasSynced] = useState(false);
+
+  // Sync home location to database when user is first authenticated
+  useEffect(() => {
+    if (userId && hasHomeLocation && !hasSynced) {
+      syncToDatabase(userId).then(success => {
+        if (success) {
+          setHasSynced(true);
+        }
+      });
+    }
+  }, [userId, hasHomeLocation, hasSynced, syncToDatabase]);
+
+  return null;
+}
+
+/**
+ * PendingFeedbackHandler - Opens FeedbackSheet for pending feedback on app launch.
+ * Checks for matches in the 48h feedback window where user hasn't completed feedback.
+ */
+function PendingFeedbackHandler() {
+  const { user } = useAuth();
+  const { isSplashComplete, isSportSelectionComplete } = useOverlay();
+  const { openSheet } = useFeedbackSheet();
+
+  // Check for pending feedback when splash and sport selection are complete
+  usePendingFeedbackCheck({
+    userId: user?.id,
+    enabled: isSplashComplete && isSportSelectionComplete && !!user?.id,
+    onMatchFound: data => {
+      Logger.logNavigation('pending_feedback_found', {
+        matchId: data.matchId,
+        opponentsCount: data.opponents.length,
+      });
+      // Small delay to ensure the UI is ready
+      setTimeout(() => {
+        openSheet(data.matchId, data.reviewerId, data.participantId, data.opponents);
+      }, 500);
+    },
+  });
+
+  return null;
+}
+
+function AppContent() {
+  const { theme } = useTheme();
+  const { setSplashComplete } = useOverlay();
+
+  return (
+    <>
+      <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
+      <NavigationContainer ref={navigationRef}>
+        <AppNavigator />
+      </NavigationContainer>
+      {/* Actions Bottom Sheet - renders above navigation */}
+      <ActionsBottomSheet />
+      {/* Match Detail Bottom Sheet - shows when match card is pressed */}
+      <MatchDetailSheet />
+      {/* Player Invite Bottom Sheet - shows when host invites players */}
+      <PlayerInviteSheet />
+      {/* Feedback Bottom Sheet - shows when providing post-match feedback */}
+      <FeedbackSheet />
+      {/* Pending Feedback Handler - auto-opens FeedbackSheet on app launch if needed */}
+      <PendingFeedbackHandler />
+      {/* Splash overlay - renders on top of everything */}
+      <SplashOverlay onAnimationComplete={() => setSplashComplete(true)} />
+    </>
+  );
+}
 
 export default function App() {
   const handleError = (error: Error, errorInfo: React.ErrorInfo) => {
@@ -17,14 +256,40 @@ export default function App() {
   };
 
   return (
-    <ErrorBoundary onError={handleError}>
-      <SafeAreaProvider>
-        <OverlayProvider>
-          <NavigationContainer>
-            <AppNavigator />
-          </NavigationContainer>
-        </OverlayProvider>
-      </SafeAreaProvider>
-    </ErrorBoundary>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ErrorBoundary onError={handleError}>
+        <SafeAreaProvider>
+          <QueryClientProvider client={queryClient}>
+            <LocaleProvider>
+              <ThemeProvider>
+                <NetworkProvider>
+                  <ToastProvider>
+                    <DeepLinkProvider>
+                      <OverlayProvider>
+                        <AuthProvider>
+                          <AuthenticatedProviders>
+                            <ActionsSheetProvider>
+                              <MatchDetailSheetProvider>
+                                <PlayerInviteSheetProvider>
+                                  <FeedbackSheetProvider>
+                                    <BottomSheetModalProvider>
+                                      <AppContent />
+                                    </BottomSheetModalProvider>
+                                  </FeedbackSheetProvider>
+                                </PlayerInviteSheetProvider>
+                              </MatchDetailSheetProvider>
+                            </ActionsSheetProvider>
+                          </AuthenticatedProviders>
+                        </AuthProvider>
+                      </OverlayProvider>
+                    </DeepLinkProvider>       
+                  </ToastProvider>
+                </NetworkProvider>
+              </ThemeProvider>
+            </LocaleProvider>
+          </QueryClientProvider>
+        </SafeAreaProvider>
+      </ErrorBoundary>
+    </GestureHandlerRootView>
   );
 }

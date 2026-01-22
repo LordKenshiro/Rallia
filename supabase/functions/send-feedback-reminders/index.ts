@@ -1,0 +1,535 @@
+/**
+ * send-feedback-reminders Edge Function
+ *
+ * Automated feedback notification system that:
+ * 1. Sends initial feedback requests 1 hour after match end
+ * 2. Sends reminder notifications 24 hours after match end (for those who haven't completed feedback)
+ *
+ * Triggered hourly by cron-job.org
+ *
+ * ## Cron Job Configuration (cron-job.org)
+ *
+ * 1. Create a new cron job with the following settings:
+ *    - URL: https://<project-ref>.supabase.co/functions/v1/send-feedback-reminders
+ *    - Method: POST
+ *    - Schedule: `0 * * * *` (every hour at minute 0)
+ *
+ * 2. Add the following request headers:
+ *    - Content-Type: application/json
+ *    - x-cron-secret: <your-cron-secret>
+ *
+ * 3. Environment variables required (set in Supabase Dashboard):
+ *    - SUPABASE_URL: Your Supabase project URL
+ *    - SUPABASE_SERVICE_ROLE_KEY: Service role key for admin access
+ *    - CRON_SECRET: Secret to authenticate cron requests
+ *
+ * ## Response Format
+ *
+ * Success (200):
+ * {
+ *   "success": true,
+ *   "initialNotificationsSent": 5,
+ *   "reminderNotificationsSent": 3,
+ *   "totalNotificationsSent": 8,
+ *   "errors": [],
+ *   "duration_ms": 1234
+ * }
+ *
+ * Error (500):
+ * {
+ *   "success": false,
+ *   "error": "Error message",
+ *   "duration_ms": 100
+ * }
+ */
+
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+// =============================================================================
+// TYPES
+// =============================================================================
+
+interface ParticipantForNotification {
+  participant_id: string;
+  player_id: string;
+  match_id: string;
+  match_date: string;
+  start_time: string;
+  end_time: string | null;
+  sport_name: string;
+  format: string;
+  timezone: string;
+}
+
+interface OpponentInfo {
+  player_id: string;
+  first_name: string | null;
+  display_name: string | null;
+}
+
+interface NotificationInput {
+  user_id: string;
+  type: string;
+  target_id: string;
+  title: string;
+  body: string;
+  payload: Record<string, unknown>;
+  priority: string;
+}
+
+interface ProcessingResult {
+  initialNotificationsSent: number;
+  reminderNotificationsSent: number;
+  errors: string[];
+}
+
+// =============================================================================
+// CONFIGURATION
+// =============================================================================
+
+// Time windows for notifications (in hours)
+const INITIAL_NOTIFICATION_HOURS = 1;
+const REMINDER_NOTIFICATION_HOURS = 24;
+
+// Buffer window in minutes (to ensure we don't miss matches between cron runs)
+const BUFFER_MINUTES = 5;
+
+// Batch size for processing
+const BATCH_SIZE = 100;
+
+// =============================================================================
+// SUPABASE CLIENT
+// =============================================================================
+
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const cronSecret = Deno.env.get('CRON_SECRET');
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+/**
+ * Format opponent names for notification body
+ * Singles: "John"
+ * Doubles: "John, Jane, and Mike"
+ */
+function formatOpponentNames(names: string[], locale: string = 'en-US'): string {
+  if (names.length === 0) return 'your opponents';
+  if (names.length === 1) return names[0];
+
+  // For 2+ names: "John, Jane, and Mike" or "John et Jane" for French
+  const lastIndex = names.length - 1;
+  const allButLast = names.slice(0, lastIndex).join(', ');
+  const conjunction = locale.startsWith('fr') ? ' et ' : ' and ';
+  return `${allButLast}${conjunction}${names[lastIndex]}`;
+}
+
+/**
+ * Get display name for an opponent
+ */
+function getOpponentDisplayName(opponent: OpponentInfo): string {
+  return opponent.display_name || opponent.first_name || 'Player';
+}
+
+/**
+ * Format date for notification payload
+ */
+function formatMatchDate(matchDate: string): string {
+  const date = new Date(matchDate);
+  return date.toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+/**
+ * Get user's preferred locale
+ */
+async function getUserLocale(supabase: SupabaseClient, userId: string): Promise<string> {
+  const { data } = await supabase
+    .from('profile')
+    .select('preferred_locale')
+    .eq('id', userId)
+    .single();
+
+  return data?.preferred_locale || 'en-US';
+}
+
+/**
+ * Get opponents for a participant in a match
+ */
+async function getOpponentsForParticipant(
+  matchId: string,
+  playerId: string
+): Promise<OpponentInfo[]> {
+  const { data, error } = await supabase.rpc('get_opponents_for_notification', {
+    p_match_id: matchId,
+    p_player_id: playerId,
+  });
+
+  if (error) {
+    console.error(`Failed to get opponents for match ${matchId}:`, error);
+    return [];
+  }
+
+  return (data || []) as OpponentInfo[];
+}
+
+/**
+ * Build notification input for a participant
+ */
+async function buildNotificationInput(
+  participant: ParticipantForNotification,
+  notificationType: 'feedback_request' | 'feedback_reminder'
+): Promise<NotificationInput | null> {
+  // Get opponents
+  const opponents = await getOpponentsForParticipant(participant.match_id, participant.player_id);
+
+  if (opponents.length === 0) {
+    console.warn(`No opponents found for participant ${participant.participant_id}`);
+    return null;
+  }
+
+  // Get user's locale for formatting
+  const locale = await getUserLocale(supabase, participant.player_id);
+
+  // Format opponent names
+  const opponentNames = opponents.map(getOpponentDisplayName);
+  const formattedOpponentNames = formatOpponentNames(opponentNames, locale);
+
+  // Format sport name (lowercase)
+  const sportName = participant.sport_name.toLowerCase();
+
+  // Build title and body based on notification type
+  let title: string;
+  let body: string;
+
+  if (notificationType === 'feedback_request') {
+    title = 'How Was Your Game?';
+    body = `Rate your ${sportName} game with ${formattedOpponentNames}. Your feedback helps the community!`;
+  } else {
+    title = "Don't Forget to Rate Your Game";
+    body = `Your ${sportName} game feedback closes in 24 hours. Rate your experience with ${formattedOpponentNames}!`;
+  }
+
+  // French translations if needed
+  if (locale.startsWith('fr')) {
+    if (notificationType === 'feedback_request') {
+      title = 'Comment était votre partie?';
+      body = `Évaluez votre partie de ${sportName} avec ${formattedOpponentNames}. Vos commentaires aident la communauté!`;
+    } else {
+      title = "N'oubliez pas d'évaluer votre partie";
+      body = `Les commentaires pour votre partie de ${sportName} ferment dans 24 heures. Partagez votre expérience avec ${formattedOpponentNames}!`;
+    }
+  }
+
+  return {
+    user_id: participant.player_id,
+    type: notificationType,
+    target_id: participant.match_id,
+    title,
+    body,
+    payload: {
+      matchId: participant.match_id,
+      sportName,
+      opponentNames: formattedOpponentNames,
+      matchDate: formatMatchDate(participant.match_date),
+      format: participant.format,
+    },
+    priority: 'normal',
+  };
+}
+
+/**
+ * Get participants needing initial feedback notification
+ */
+async function getParticipantsForInitialNotification(): Promise<ParticipantForNotification[]> {
+  const now = new Date();
+
+  // Window: 1 hour ago +/- buffer
+  const cutoffEnd = new Date(
+    now.getTime() - (INITIAL_NOTIFICATION_HOURS * 60 - BUFFER_MINUTES) * 60 * 1000
+  );
+  const cutoffStart = new Date(
+    now.getTime() - (INITIAL_NOTIFICATION_HOURS * 60 + BUFFER_MINUTES) * 60 * 1000
+  );
+
+  const { data, error } = await supabase.rpc('get_participants_for_initial_feedback_notification', {
+    p_cutoff_start: cutoffStart.toISOString(),
+    p_cutoff_end: cutoffEnd.toISOString(),
+  });
+
+  if (error) {
+    console.error('Failed to get participants for initial notification:', error);
+    throw new Error(`Failed to query participants: ${error.message}`);
+  }
+
+  return (data || []) as ParticipantForNotification[];
+}
+
+/**
+ * Get participants needing feedback reminder
+ */
+async function getParticipantsForReminder(): Promise<ParticipantForNotification[]> {
+  const now = new Date();
+
+  // Window: 24 hours ago +/- buffer
+  const cutoffEnd = new Date(
+    now.getTime() - (REMINDER_NOTIFICATION_HOURS * 60 - BUFFER_MINUTES) * 60 * 1000
+  );
+  const cutoffStart = new Date(
+    now.getTime() - (REMINDER_NOTIFICATION_HOURS * 60 + BUFFER_MINUTES) * 60 * 1000
+  );
+
+  const { data, error } = await supabase.rpc('get_participants_for_feedback_reminder', {
+    p_cutoff_start: cutoffStart.toISOString(),
+    p_cutoff_end: cutoffEnd.toISOString(),
+  });
+
+  if (error) {
+    console.error('Failed to get participants for reminder:', error);
+    throw new Error(`Failed to query participants: ${error.message}`);
+  }
+
+  return (data || []) as ParticipantForNotification[];
+}
+
+/**
+ * Send notifications in batch
+ */
+async function sendNotificationsBatch(notifications: NotificationInput[]): Promise<void> {
+  if (notifications.length === 0) return;
+
+  const { error } = await supabase.rpc('insert_notifications', {
+    p_notifications: notifications,
+  });
+
+  if (error) {
+    console.error('Failed to insert notifications:', error);
+    throw new Error(`Failed to insert notifications: ${error.message}`);
+  }
+}
+
+/**
+ * Mark initial notifications as sent
+ */
+async function markInitialNotificationsSent(participantIds: string[]): Promise<void> {
+  if (participantIds.length === 0) return;
+
+  const { error } = await supabase.rpc('mark_initial_feedback_notifications_sent', {
+    p_participant_ids: participantIds,
+  });
+
+  if (error) {
+    console.error('Failed to mark initial notifications sent:', error);
+    // Don't throw - notifications were sent, just tracking failed
+  }
+}
+
+/**
+ * Mark reminder notifications as sent
+ */
+async function markRemindersSent(participantIds: string[]): Promise<void> {
+  if (participantIds.length === 0) return;
+
+  const { error } = await supabase.rpc('mark_feedback_reminders_sent', {
+    p_participant_ids: participantIds,
+  });
+
+  if (error) {
+    console.error('Failed to mark reminders sent:', error);
+    // Don't throw - notifications were sent, just tracking failed
+  }
+}
+
+/**
+ * Process initial feedback notifications
+ */
+async function processInitialNotifications(): Promise<{ sent: number; errors: string[] }> {
+  const participants = await getParticipantsForInitialNotification();
+  console.log(`Found ${participants.length} participants for initial notification`);
+
+  if (participants.length === 0) {
+    return { sent: 0, errors: [] };
+  }
+
+  const notifications: NotificationInput[] = [];
+  const participantIds: string[] = [];
+  const errors: string[] = [];
+
+  // Build notifications in batches
+  for (let i = 0; i < participants.length; i += BATCH_SIZE) {
+    const batch = participants.slice(i, i + BATCH_SIZE);
+
+    for (const participant of batch) {
+      try {
+        const notification = await buildNotificationInput(participant, 'feedback_request');
+        if (notification) {
+          notifications.push(notification);
+          participantIds.push(participant.participant_id);
+        }
+      } catch (error) {
+        const errorMsg = `Failed to build notification for participant ${participant.participant_id}: ${error}`;
+        console.error(errorMsg);
+        errors.push(errorMsg);
+      }
+    }
+  }
+
+  // Send all notifications
+  if (notifications.length > 0) {
+    try {
+      await sendNotificationsBatch(notifications);
+      await markInitialNotificationsSent(participantIds);
+      console.log(`Sent ${notifications.length} initial feedback notifications`);
+    } catch (error) {
+      const errorMsg = `Failed to send initial notifications batch: ${error}`;
+      console.error(errorMsg);
+      errors.push(errorMsg);
+      return { sent: 0, errors };
+    }
+  }
+
+  return { sent: notifications.length, errors };
+}
+
+/**
+ * Process reminder notifications
+ */
+async function processReminderNotifications(): Promise<{ sent: number; errors: string[] }> {
+  const participants = await getParticipantsForReminder();
+  console.log(`Found ${participants.length} participants for reminder notification`);
+
+  if (participants.length === 0) {
+    return { sent: 0, errors: [] };
+  }
+
+  const notifications: NotificationInput[] = [];
+  const participantIds: string[] = [];
+  const errors: string[] = [];
+
+  // Build notifications in batches
+  for (let i = 0; i < participants.length; i += BATCH_SIZE) {
+    const batch = participants.slice(i, i + BATCH_SIZE);
+
+    for (const participant of batch) {
+      try {
+        const notification = await buildNotificationInput(participant, 'feedback_reminder');
+        if (notification) {
+          notifications.push(notification);
+          participantIds.push(participant.participant_id);
+        }
+      } catch (error) {
+        const errorMsg = `Failed to build reminder for participant ${participant.participant_id}: ${error}`;
+        console.error(errorMsg);
+        errors.push(errorMsg);
+      }
+    }
+  }
+
+  // Send all notifications
+  if (notifications.length > 0) {
+    try {
+      await sendNotificationsBatch(notifications);
+      await markRemindersSent(participantIds);
+      console.log(`Sent ${notifications.length} feedback reminder notifications`);
+    } catch (error) {
+      const errorMsg = `Failed to send reminder notifications batch: ${error}`;
+      console.error(errorMsg);
+      errors.push(errorMsg);
+      return { sent: 0, errors };
+    }
+  }
+
+  return { sent: notifications.length, errors };
+}
+
+// =============================================================================
+// MAIN HANDLER
+// =============================================================================
+
+Deno.serve(async req => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-cron-secret',
+      },
+    });
+  }
+
+  // Verify cron secret
+  const providedSecret = req.headers.get('x-cron-secret');
+  if (!cronSecret) {
+    console.error('CRON_SECRET environment variable not set');
+    return new Response(JSON.stringify({ error: 'Server configuration error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  if (providedSecret !== cronSecret) {
+    console.warn('Invalid cron secret provided');
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  console.log('Starting feedback reminder job...');
+  const startTime = Date.now();
+
+  try {
+    // Process both notification types in parallel
+    const [initialResult, reminderResult] = await Promise.all([
+      processInitialNotifications(),
+      processReminderNotifications(),
+    ]);
+
+    const result: ProcessingResult = {
+      initialNotificationsSent: initialResult.sent,
+      reminderNotificationsSent: reminderResult.sent,
+      errors: [...initialResult.errors, ...reminderResult.errors],
+    };
+
+    const summary = {
+      success: true,
+      ...result,
+      totalNotificationsSent: result.initialNotificationsSent + result.reminderNotificationsSent,
+      duration_ms: Date.now() - startTime,
+    };
+
+    console.log(
+      `Feedback reminder job complete: ${result.initialNotificationsSent} initial, ${result.reminderNotificationsSent} reminders`
+    );
+
+    // Return error status if there were errors but some succeeded
+    const httpStatus = result.errors.length > 0 && summary.totalNotificationsSent === 0 ? 500 : 200;
+
+    return new Response(JSON.stringify(summary), {
+      status: httpStatus,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('Feedback reminder job failed:', error);
+
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        duration_ms: Date.now() - startTime,
+      }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  }
+});

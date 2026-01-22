@@ -11,14 +11,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
-import { 
-  PreferencesInfo, 
-  PlayStyle, 
-  PlayAttribute,
-  PLAY_STYLE_LABELS,
-  PLAY_ATTRIBUTE_LABELS,
-} from '@rallia/shared-types';
+import { PreferencesInfo, PlayStyleEnum, PlayAttributeEnum } from '@rallia/shared-types';
 import { selectionHaptic, mediumHaptic } from '../../../utils/haptics';
+import { useThemeStyles } from '../../../hooks';
+import { useTranslation } from '../../../hooks';
 
 interface PickleballPreferencesOverlayProps {
   visible: boolean;
@@ -27,16 +23,21 @@ interface PickleballPreferencesOverlayProps {
   initialPreferences?: PreferencesInfo;
 }
 
-const MATCH_DURATIONS = ['1h', '1.5h', '2h'];
-const MATCH_TYPES = ['Casual', 'Competitive', 'Both'];
+const PLAY_STYLE_VALUES: PlayStyleEnum[] = [
+  'counterpuncher',
+  'aggressive_baseliner',
+  'serve_and_volley',
+  'all_court',
+];
 
-const PLAY_STYLES: { value: PlayStyle; label: string }[] = Object.entries(PLAY_STYLE_LABELS).map(
-  ([value, label]) => ({ value: value as PlayStyle, label })
-);
-
-const PLAY_ATTRIBUTES: { value: PlayAttribute; label: string }[] = Object.entries(PLAY_ATTRIBUTE_LABELS).map(
-  ([value, label]) => ({ value: value as PlayAttribute, label })
-);
+const PLAY_ATTRIBUTE_VALUES: PlayAttributeEnum[] = [
+  'serve_speed_and_placement',
+  'net_play',
+  'court_coverage',
+  'forehand_power',
+  'shot_selection',
+  'spin_control',
+];
 
 export const PickleballPreferencesOverlay: React.FC<PickleballPreferencesOverlayProps> = ({
   visible,
@@ -44,17 +45,42 @@ export const PickleballPreferencesOverlay: React.FC<PickleballPreferencesOverlay
   onSave,
   initialPreferences = {},
 }) => {
+  const { colors } = useThemeStyles();
+  const { t } = useTranslation();
+
+  const MATCH_DURATIONS: Array<{ value: '30' | '60' | '90' | '120'; label: string }> = [
+    { value: '30', label: t('profile.preferences.durations.30') },
+    { value: '60', label: t('profile.preferences.durations.60') },
+    { value: '90', label: t('profile.preferences.durations.90') },
+    { value: '120', label: t('profile.preferences.durations.120') },
+  ];
+
+  const MATCH_TYPES = [
+    { value: 'casual', label: t('profile.preferences.matchTypes.casual') },
+    { value: 'competitive', label: t('profile.preferences.matchTypes.competitive') },
+    { value: 'both', label: t('profile.preferences.matchTypes.both') },
+  ];
+
+  const PLAY_STYLES: { value: PlayStyleEnum; label: string }[] = PLAY_STYLE_VALUES.map(value => ({
+    value,
+    label: t(`profile.preferences.playStyles.${value}`),
+  }));
+
+  const PLAY_ATTRIBUTES: { value: PlayAttributeEnum; label: string }[] = PLAY_ATTRIBUTE_VALUES.map(
+    value => ({
+      value,
+      label: t(`profile.preferences.playAttributes.${value}`),
+    })
+  );
   const [matchDuration, setMatchDuration] = useState<string | undefined>(
     initialPreferences.matchDuration
   );
-  const [matchType, setMatchType] = useState<string | undefined>(
-    initialPreferences.matchType
-  );
+  const [matchType, setMatchType] = useState<string | undefined>(initialPreferences.matchType);
   const [court, setCourt] = useState<string>(initialPreferences.court || '');
-  const [playStyle, setPlayStyle] = useState<PlayStyle | undefined>(
+  const [playStyle, setPlayStyle] = useState<PlayStyleEnum | undefined>(
     initialPreferences.playStyle
   );
-  const [playAttributes, setPlayAttributes] = useState<PlayAttribute[]>(
+  const [playAttributes, setPlayAttributes] = useState<PlayAttributeEnum[]>(
     initialPreferences.playAttributes || []
   );
   const [showPlayStyleDropdown, setShowPlayStyleDropdown] = useState(false);
@@ -66,7 +92,7 @@ export const PickleballPreferencesOverlay: React.FC<PickleballPreferencesOverlay
     if (visible) {
       fadeAnim.setValue(0);
       slideAnim.setValue(50);
-      
+
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -82,16 +108,14 @@ export const PickleballPreferencesOverlay: React.FC<PickleballPreferencesOverlay
     }
   }, [visible, fadeAnim, slideAnim]);
 
-  const handleTogglePlayAttribute = (attribute: PlayAttribute) => {
+  const handleTogglePlayAttribute = (attribute: PlayAttributeEnum) => {
     selectionHaptic();
-    setPlayAttributes((prev) =>
-      prev.includes(attribute)
-        ? prev.filter((a) => a !== attribute)
-        : [...prev, attribute]
+    setPlayAttributes(prev =>
+      prev.includes(attribute) ? prev.filter(a => a !== attribute) : [...prev, attribute]
     );
   };
 
-  const handleSelectPlayStyle = (style: PlayStyle) => {
+  const handleSelectPlayStyle = (style: PlayStyleEnum) => {
     selectionHaptic();
     setPlayStyle(style);
     setShowPlayStyleDropdown(false);
@@ -118,46 +142,59 @@ export const PickleballPreferencesOverlay: React.FC<PickleballPreferencesOverlay
           {
             opacity: fadeAnim,
             transform: [{ translateY: slideAnim }],
+            backgroundColor: colors.card,
           },
         ]}
       >
         {/* Header with back and close buttons */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={onClose} activeOpacity={0.7}>
-            <Text style={styles.backButtonText}>←</Text>
+            <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.closeButton} onPress={onClose} activeOpacity={0.7}>
-            <Ionicons name="close" size={24} color="#333" />
+            <Ionicons name="close" size={24} color={colors.text} />
           </TouchableOpacity>
         </View>
 
         {/* Title */}
-        <Text style={styles.title}>Update your pickleball preferences</Text>
+        <Text style={[styles.title, { color: colors.text }]}>
+          {t('profile.preferences.updatePickleball')}
+        </Text>
 
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           {/* Match Duration */}
           <View style={styles.section}>
-            <Text style={styles.label}>Match Duration</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              {t('profile.preferences.matchDuration')}
+            </Text>
             <View style={styles.chipsContainer}>
-              {MATCH_DURATIONS.map((duration) => (
+              {MATCH_DURATIONS.map(duration => (
                 <TouchableOpacity
-                  key={duration}
+                  key={duration.value}
                   style={[
                     styles.chip,
-                    matchDuration === duration && styles.chipSelected,
+                    { backgroundColor: colors.inputBackground },
+                    matchDuration === duration.value && [
+                      styles.chipSelected,
+                      { backgroundColor: colors.primary },
+                    ],
                   ]}
                   onPress={() => {
                     selectionHaptic();
-                    setMatchDuration(duration);
+                    setMatchDuration(duration.value);
                   }}
                 >
                   <Text
                     style={[
                       styles.chipText,
-                      matchDuration === duration && styles.chipTextSelected,
+                      { color: colors.textMuted },
+                      matchDuration === duration.value && [
+                        styles.chipTextSelected,
+                        { color: colors.primaryForeground },
+                      ],
                     ]}
                   >
-                    {duration}
+                    {duration.label}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -166,27 +203,37 @@ export const PickleballPreferencesOverlay: React.FC<PickleballPreferencesOverlay
 
           {/* Match Type */}
           <View style={styles.section}>
-            <Text style={styles.label}>Match Type</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              {t('profile.preferences.matchType')}
+            </Text>
             <View style={styles.chipsContainer}>
-              {MATCH_TYPES.map((type) => (
+              {MATCH_TYPES.map(type => (
                 <TouchableOpacity
-                  key={type}
+                  key={type.value}
                   style={[
                     styles.chip,
-                    matchType === type && styles.chipSelected,
+                    { backgroundColor: colors.inputBackground },
+                    matchType === type.value && [
+                      styles.chipSelected,
+                      { backgroundColor: colors.primary },
+                    ],
                   ]}
                   onPress={() => {
                     selectionHaptic();
-                    setMatchType(type);
+                    setMatchType(type.value);
                   }}
                 >
                   <Text
                     style={[
                       styles.chipText,
-                      matchType === type && styles.chipTextSelected,
+                      { color: colors.textMuted },
+                      matchType === type.value && [
+                        styles.chipTextSelected,
+                        { color: colors.primaryForeground },
+                      ],
                     ]}
                   >
-                    {type}
+                    {type.label}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -195,19 +242,26 @@ export const PickleballPreferencesOverlay: React.FC<PickleballPreferencesOverlay
 
           {/* Court */}
           <View style={styles.section}>
-            <Text style={styles.label}>Court</Text>
-            <View style={styles.inputContainer}>
+            <Text style={[styles.label, { color: colors.text }]}>
+              {t('profile.preferences.court')}
+            </Text>
+            <View
+              style={[
+                styles.inputContainer,
+                { backgroundColor: colors.inputBackground, borderColor: colors.border },
+              ]}
+            >
               <TextInput
-                style={styles.input}
-                placeholder="e.g., Parc Jarry"
-                placeholderTextColor={COLORS.gray}
+                style={[styles.input, { color: colors.text }]}
+                placeholder={t('profile.preferences.courtPlaceholderPickleball')}
+                placeholderTextColor={colors.textMuted}
                 value={court}
                 onChangeText={setCourt}
               />
               <Ionicons
                 name="chevron-down"
                 size={20}
-                color={COLORS.gray}
+                color={colors.textMuted}
                 style={styles.inputIcon}
               />
             </View>
@@ -215,9 +269,14 @@ export const PickleballPreferencesOverlay: React.FC<PickleballPreferencesOverlay
 
           {/* Play Style */}
           <View style={styles.section}>
-            <Text style={styles.label}>Play Style</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              {t('profile.preferences.playStyle')}
+            </Text>
             <TouchableOpacity
-              style={styles.inputContainer}
+              style={[
+                styles.inputContainer,
+                { backgroundColor: colors.inputBackground, borderColor: colors.border },
+              ]}
               onPress={() => {
                 selectionHaptic();
                 setShowPlayStyleDropdown(!showPlayStyleDropdown);
@@ -226,48 +285,56 @@ export const PickleballPreferencesOverlay: React.FC<PickleballPreferencesOverlay
               <Text
                 style={[
                   styles.input,
-                  !playStyle && styles.placeholder,
                   styles.dropdownText,
+                  { color: playStyle ? colors.text : colors.textMuted },
                 ]}
               >
                 {playStyle
-                  ? PLAY_STYLES.find((s) => s.value === playStyle)?.label
-                  : 'Select your play style'}
+                  ? PLAY_STYLES.find(s => s.value === playStyle)?.label
+                  : t('profile.preferences.selectPlayStyle')}
               </Text>
               <Ionicons
                 name={showPlayStyleDropdown ? 'chevron-up' : 'chevron-down'}
                 size={20}
-                color={COLORS.gray}
+                color={colors.textMuted}
                 style={styles.inputIcon}
               />
             </TouchableOpacity>
 
             {showPlayStyleDropdown && (
-              <View style={styles.dropdown}>
-                {PLAY_STYLES.map((style) => (
+              <View
+                style={[
+                  styles.dropdown,
+                  { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                ]}
+              >
+                {PLAY_STYLES.map(style => (
                   <TouchableOpacity
                     key={style.value}
                     style={[
                       styles.dropdownItem,
-                      playStyle === style.value && styles.dropdownItemSelected,
+                      { borderBottomColor: colors.border },
+                      playStyle === style.value && [
+                        styles.dropdownItemSelected,
+                        { backgroundColor: colors.card },
+                      ],
                     ]}
                     onPress={() => handleSelectPlayStyle(style.value)}
                   >
                     <Text
                       style={[
                         styles.dropdownItemText,
-                        playStyle === style.value &&
+                        { color: colors.text },
+                        playStyle === style.value && [
                           styles.dropdownItemTextSelected,
+                          { color: colors.primary, fontWeight: '600' },
+                        ],
                       ]}
                     >
                       {style.label}
                     </Text>
                     {playStyle === style.value && (
-                      <Ionicons
-                        name="checkmark"
-                        size={20}
-                        color={COLORS.primary}
-                      />
+                      <Ionicons name="checkmark" size={20} color={colors.primary} />
                     )}
                   </TouchableOpacity>
                 ))}
@@ -277,24 +344,34 @@ export const PickleballPreferencesOverlay: React.FC<PickleballPreferencesOverlay
 
           {/* Play Attributes */}
           <View style={styles.section}>
-            <Text style={styles.label}>Play Attributes</Text>
-            <Text style={styles.sublabel}>Select all that apply</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              {t('profile.fields.playAttributes')}
+            </Text>
+            <Text style={[styles.sublabel, { color: colors.textMuted }]}>
+              {t('profile.preferences.selectAllThatApply')}
+            </Text>
             <View style={styles.chipsContainer}>
-              {PLAY_ATTRIBUTES.map((attribute) => (
+              {PLAY_ATTRIBUTES.map(attribute => (
                 <TouchableOpacity
                   key={attribute.value}
                   style={[
                     styles.attributeChip,
-                    playAttributes.includes(attribute.value) &&
+                    { backgroundColor: colors.inputBackground },
+                    playAttributes.includes(attribute.value) && [
                       styles.attributeChipSelected,
+                      { backgroundColor: colors.primary },
+                    ],
                   ]}
                   onPress={() => handleTogglePlayAttribute(attribute.value)}
                 >
                   <Text
                     style={[
                       styles.chipText,
-                      playAttributes.includes(attribute.value) &&
+                      { color: colors.textMuted },
+                      playAttributes.includes(attribute.value) && [
                         styles.chipTextSelected,
+                        { color: colors.primaryForeground },
+                      ],
                     ]}
                   >
                     {attribute.label}
@@ -307,13 +384,23 @@ export const PickleballPreferencesOverlay: React.FC<PickleballPreferencesOverlay
 
         {/* Save Button */}
         <TouchableOpacity
-          style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
+          style={[
+            styles.saveButton,
+            { backgroundColor: colors.primary },
+            !canSave && [styles.saveButtonDisabled, { backgroundColor: colors.buttonInactive }],
+          ]}
           onPress={handleSave}
           disabled={!canSave}
           activeOpacity={0.8}
         >
-          <Text style={[styles.saveButtonText, !canSave && styles.saveButtonTextDisabled]}>
-            Save
+          <Text
+            style={[
+              styles.saveButtonText,
+              { color: colors.primaryForeground },
+              !canSave && [styles.saveButtonTextDisabled, { color: colors.textMuted }],
+            ]}
+          >
+            {t('common.save')}
           </Text>
         </TouchableOpacity>
       </Animated.View>
@@ -339,7 +426,6 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 28,
-    color: '#333',
     fontWeight: '300',
   },
   closeButton: {
@@ -352,7 +438,6 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
     marginBottom: 24,
-    color: '#000',
     textAlign: 'center',
   },
   scrollView: {
@@ -364,12 +449,10 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.dark,
     marginBottom: 12,
   },
   sublabel: {
     fontSize: 14,
-    color: COLORS.gray,
     marginBottom: 12,
     marginTop: -8,
   },
@@ -381,7 +464,6 @@ const styles = StyleSheet.create({
   },
   chip: {
     flex: 1,
-    backgroundColor: COLORS.primaryLight,
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: 'center',
@@ -389,59 +471,51 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   chipSelected: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    // backgroundColor and borderColor applied inline
   },
   attributeChip: {
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: '#E8F5F3',
     borderWidth: 0,
     marginBottom: 8,
     marginRight: 8,
   },
   attributeChipSelected: {
-    backgroundColor: '#2C7A6B',
+    // backgroundColor applied inline
   },
   chipText: {
     fontSize: 15,
-    color: '#333',
     fontWeight: '400',
   },
   chipTextSelected: {
-    color: '#FFFFFF',
+    // color applied inline
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.veryLightGray,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: COLORS.lightGray,
     paddingHorizontal: 12,
   },
   input: {
     flex: 1,
     paddingVertical: 12,
     fontSize: 16,
-    color: COLORS.dark,
   },
   dropdownText: {
     paddingVertical: 14,
   },
   placeholder: {
-    color: COLORS.gray,
+    // color applied inline
   },
   inputIcon: {
     marginLeft: 8,
   },
   dropdown: {
     marginTop: 8,
-    backgroundColor: COLORS.veryLightGray,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: COLORS.lightGray,
     overflow: 'hidden',
   },
   dropdownItem: {
@@ -451,21 +525,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.lightGray,
   },
   dropdownItemSelected: {
-    backgroundColor: COLORS.backgroundLight,
+    // backgroundColor applied inline
   },
   dropdownItemText: {
     fontSize: 16,
-    color: COLORS.dark,
   },
   dropdownItemTextSelected: {
-    fontWeight: '600',
-    color: COLORS.primary,
+    // fontWeight and color applied inline
   },
   saveButton: {
-    backgroundColor: '#F5A5A5',
     borderRadius: 12,
     paddingVertical: 16,
     justifyContent: 'center',
@@ -473,15 +543,13 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   saveButtonDisabled: {
-    backgroundColor: '#D3D3D3',
     opacity: 0.5,
   },
   saveButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
   saveButtonTextDisabled: {
-    color: '#999',
+    // color applied inline
   },
 });

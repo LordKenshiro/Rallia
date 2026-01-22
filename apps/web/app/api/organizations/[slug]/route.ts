@@ -8,7 +8,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     // Fetch organization with all related data
     const { data: organization, error: orgError } = await supabase
-      .from('organizations')
+      .from('organization')
       .select(
         `
         id,
@@ -30,7 +30,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         updated_at,
         profiles:owner_id (
           id,
-          full_name,
+          first_name,
+          last_name,
           display_name,
           email
         )
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     // Fetch facilities with all related data
     const { data: facilities, error: facilitiesError } = await supabase
-      .from('facilities')
+      .from('facility')
       .select(
         `
         id,
@@ -63,7 +64,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         is_active,
         created_at,
         updated_at,
-        facility_images (
+        facility_image (
           id,
           storage_key,
           url,
@@ -75,7 +76,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           mime_type,
           uploaded_at
         ),
-        facility_contacts (
+        facility_contact (
           id,
           phone,
           email,
@@ -86,9 +87,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           attributes,
           sport_id
         ),
-        facility_sports (
+        facility_sport (
           sport_id,
-          sports (
+          sport (
             id,
             name,
             slug
@@ -107,51 +108,53 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     // Fetch courts for each facility
     const facilityIds = facilities?.map(f => f.id) || [];
-    let courts: any[] = [];
 
-    if (facilityIds.length > 0) {
-      const { data: courtsData, error: courtsError } = await supabase
-        .from('courts')
-        .select(
-          `
-          id,
-          facility_id,
-          surface_type,
-          lighting,
-          indoor,
-          name,
-          court_number,
-          lines_marked_for_multiple_sports,
-          availability_status,
-          attributes,
-          notes,
-          is_active,
-          created_at,
-          updated_at,
-          court_sports (
-            sport_id,
-            sports (
-              id,
-              name,
-              slug
+    const { data: courtsData, error: courtsError } =
+      facilityIds.length > 0
+        ? await supabase
+            .from('court')
+            .select(
+              `
+            id,
+            facility_id,
+            surface_type,
+            lighting,
+            indoor,
+            name,
+            court_number,
+            lines_marked_for_multiple_sports,
+            availability_status,
+            attributes,
+            notes,
+            is_active,
+            created_at,
+            updated_at,
+            court_sport (
+              sport_id,
+              sport (
+                id,
+                name,
+                slug
+              )
             )
-          )
-        `
-        )
-        .in('facility_id', facilityIds)
-        .eq('is_active', true)
-        .order('court_number', { ascending: true });
+          `
+            )
+            .in('facility_id', facilityIds)
+            .eq('is_active', true)
+            .order('court_number', { ascending: true })
+        : { data: null, error: null };
 
-      if (courtsError) {
-        console.error('Error fetching courts:', courtsError);
-      } else {
-        courts = courtsData || [];
-      }
+    if (courtsError) {
+      console.error('Error fetching courts:', courtsError);
     }
+
+    const courts = courtsData ?? [];
 
     // Organize courts by facility
     const facilitiesWithCourts = facilities?.map(facility => {
-      const facilityCourts = courts.filter(court => court.facility_id === facility.id);
+      const facilityCourts = courts.filter(
+        (court: (typeof courts)[number]) => court.facility_id === facility.id
+      );
       return {
         ...facility,
         courts: facilityCourts,

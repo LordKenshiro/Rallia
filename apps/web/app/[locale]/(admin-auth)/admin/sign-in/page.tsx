@@ -37,7 +37,7 @@ export default async function AdminSignInPage({
   let invitationEmail: string | undefined;
   if (token) {
     const { data: invitation } = await supabase
-      .from('invitations')
+      .from('invitation')
       .select('email')
       .eq('token', token)
       .single();

@@ -288,27 +288,6 @@ CREATE TABLE "play_attributes" (
   "updated_at" timestamptz DEFAULT (now())
 );
 
-CREATE TABLE "player_sport_profiles" (
-  "id" uuid PRIMARY KEY DEFAULT (gen_random_uuid()),
-  "player_id" uuid NOT NULL,
-  "sport_id" uuid NOT NULL,
-  "preferred_match_duration" match_duration_enum NOT NULL,
-  "preferred_match_type" match_type_enum NOT NULL,
-  "play_style_id" uuid,
-  "preferred_facility_id" uuid,
-  "preferred_court_surface" surface_type_enum,
-  "is_active" boolean NOT NULL DEFAULT true,
-  "created_at" timestamptz NOT NULL DEFAULT (now()),
-  "updated_at" timestamptz NOT NULL DEFAULT (now())
-);
-
-CREATE TABLE "player_play_attributes" (
-  "id" uuid PRIMARY KEY DEFAULT (gen_random_uuid()),
-  "player_sport_profile_id" uuid NOT NULL,
-  "play_attribute_id" uuid NOT NULL,
-  "created_at" timestamptz DEFAULT (now())
-);
-
 CREATE TABLE "rating_systems" (
   "id" uuid PRIMARY KEY DEFAULT (gen_random_uuid()),
   "sport_id" uuid NOT NULL,
@@ -558,14 +537,6 @@ CREATE UNIQUE INDEX ON "play_styles" ("sport_id", "name");
 
 CREATE UNIQUE INDEX ON "play_attributes" ("sport_id", "name");
 
-CREATE INDEX "idx_player_sport_profiles_player_id" ON "player_sport_profiles" ("player_id");
-
-CREATE INDEX "idx_player_sport_profiles_sport_id" ON "player_sport_profiles" ("sport_id");
-
-CREATE UNIQUE INDEX "uq_player_sport_profiles_player_sport" ON "player_sport_profiles" ("player_id", "sport_id");
-
-CREATE UNIQUE INDEX ON "player_play_attributes" ("player_sport_profile_id", "play_attribute_id");
-
 CREATE INDEX "idx_rating_system_code" ON "rating_systems" ("code");
 
 CREATE UNIQUE INDEX "uq_rating_score_system_value" ON "rating_scores" ("rating_system_id", "value");
@@ -703,24 +674,6 @@ COMMENT ON COLUMN "play_styles"."name" IS 'e.g. Banger, Dinker, ';
 COMMENT ON COLUMN "play_attributes"."sport_id" IS 'Optional restriction to a sport';
 
 COMMENT ON COLUMN "play_attributes"."category" IS 'Optional grouping, e.g., Physical, Mental, Tactical';
-
-COMMENT ON TABLE "player_sport_profiles" IS 'Links players to the sports they play and stores sport-specific preferences.';
-
-COMMENT ON COLUMN "player_sport_profiles"."id" IS 'Primary key';
-
-COMMENT ON COLUMN "player_sport_profiles"."player_id" IS 'Foreign key referencing player';
-
-COMMENT ON COLUMN "player_sport_profiles"."sport_id" IS 'Foreign key referencing sport';
-
-COMMENT ON COLUMN "player_sport_profiles"."preferred_match_duration" IS 'Preferred match duration for this sport';
-
-COMMENT ON COLUMN "player_sport_profiles"."preferred_match_type" IS 'Preferred match type for this sport (e.g., practice, match, both)';
-
-COMMENT ON COLUMN "player_sport_profiles"."play_style_id" IS 'Foreign key referencing play style';
-
-COMMENT ON COLUMN "player_sport_profiles"."created_at" IS 'Record creation timestamp';
-
-COMMENT ON COLUMN "player_sport_profiles"."updated_at" IS 'Last update timestamp';
 
 COMMENT ON TABLE "rating_systems" IS 'Defines rating/level scales and configuration per sport.';
 
@@ -873,18 +826,6 @@ ALTER TABLE "player_availabilities" ADD FOREIGN KEY ("player_id") REFERENCES "pl
 ALTER TABLE "play_styles" ADD FOREIGN KEY ("sport_id") REFERENCES "sports" ("id") ON DELETE CASCADE;
 
 ALTER TABLE "play_attributes" ADD FOREIGN KEY ("sport_id") REFERENCES "sports" ("id") ON DELETE SET NULL;
-
-ALTER TABLE "player_sport_profiles" ADD FOREIGN KEY ("player_id") REFERENCES "players" ("id") ON DELETE CASCADE;
-
-ALTER TABLE "player_sport_profiles" ADD FOREIGN KEY ("sport_id") REFERENCES "sports" ("id") ON DELETE RESTRICT;
-
-ALTER TABLE "player_sport_profiles" ADD FOREIGN KEY ("play_style_id") REFERENCES "play_styles" ("id") ON DELETE SET NULL;
-
-ALTER TABLE "player_sport_profiles" ADD FOREIGN KEY ("preferred_facility_id") REFERENCES "facilities" ("id") ON DELETE SET NULL;
-
-ALTER TABLE "player_play_attributes" ADD FOREIGN KEY ("player_sport_profile_id") REFERENCES "player_sport_profiles" ("id") ON DELETE CASCADE;
-
-ALTER TABLE "player_play_attributes" ADD FOREIGN KEY ("play_attribute_id") REFERENCES "play_attributes" ("id") ON DELETE CASCADE;
 
 ALTER TABLE "rating_systems" ADD FOREIGN KEY ("sport_id") REFERENCES "sports" ("id") ON DELETE RESTRICT;
 

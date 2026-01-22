@@ -1,0 +1,117 @@
+/**
+ * Storage Utilities
+ *
+ * Utilities for working with Supabase Storage URLs.
+ * Handles normalization of URLs to ensure they work across different environments.
+ */
+
+/**
+ * Get the Supabase URL from environment variables
+ * Works in both React Native (Expo) and Next.js environments
+ */
+function getSupabaseUrl(): string {
+  // Try Expo env var first, then Next.js
+  if (typeof process !== 'undefined' && process.env) {
+    return process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  }
+  return '';
+}
+
+/**
+ * Construct a public URL for a storage file
+ * Uses the current environment's Supabase URL
+ *
+ * @param bucket - Storage bucket name
+ * @param filePath - Path to the file within the bucket
+ * @returns Full public URL for the file
+ *
+ * @example
+ * ```ts
+ * const url = getStoragePublicUrl('profile-pictures', 'user-123/avatar.jpg');
+ * // Returns: https://xxx.supabase.co/storage/v1/object/public/profile-pictures/user-123/avatar.jpg
+ * ```
+ */
+export function getStoragePublicUrl(bucket: string, filePath: string): string {
+  const supabaseUrl = getSupabaseUrl();
+  return `${supabaseUrl}/storage/v1/object/public/${bucket}/${filePath}`;
+}
+
+/**
+ * Extract the file path from a Supabase storage URL
+ *
+ * @param url - Full storage URL
+ * @param bucket - Storage bucket name
+ * @returns File path within the bucket, or null if URL format is invalid
+ *
+ * @example
+ * ```ts
+ * const path = extractStorageFilePath(
+ *   'https://xxx.supabase.co/storage/v1/object/public/profile-pictures/user-123/avatar.jpg',
+ *   'profile-pictures'
+ * );
+ * // Returns: 'user-123/avatar.jpg'
+ * ```
+ */
+export function extractStorageFilePath(url: string, bucket: string): string | null {
+  const bucketPath = `/storage/v1/object/public/${bucket}/`;
+  const pathIndex = url.indexOf(bucketPath);
+
+  if (pathIndex === -1) {
+    return null;
+  }
+
+  return url.substring(pathIndex + bucketPath.length);
+}
+
+/**
+ * Normalize a storage URL to use the current environment's Supabase URL
+ *
+ * This is important because when running locally, URLs might be saved with
+ * a local IP address (e.g., http://192.168.1.157:54321) that won't work
+ * when the device is on a different network or when switching to production.
+ *
+ * This function extracts the file path from the stored URL and reconstructs
+ * it using the current environment's Supabase URL.
+ *
+ * @param storedUrl - The URL stored in the database (may have old/different base URL)
+ * @param bucket - Storage bucket name (default: 'profile-pictures')
+ * @returns URL with the current environment's Supabase base URL, or null if input is null/undefined
+ *
+ * @example
+ * ```ts
+ * // URL saved locally with local IP
+ * const localUrl = 'http://192.168.1.157:54321/storage/v1/object/public/profile-pictures/user-123/avatar.jpg';
+ *
+ * // In production, normalizes to production URL
+ * const normalizedUrl = normalizeStorageUrl(localUrl);
+ * // Returns: https://xxx.supabase.co/storage/v1/object/public/profile-pictures/user-123/avatar.jpg
+ * ```
+ */
+export function normalizeStorageUrl(
+  storedUrl: string | null | undefined,
+  bucket: string = 'profile-pictures'
+): string | null {
+  if (!storedUrl) return null;
+
+  // Extract the file path from the stored URL
+  const filePath = extractStorageFilePath(storedUrl, bucket);
+
+  if (!filePath) {
+    // URL doesn't match expected format, return as-is
+    // This handles cases like external URLs or already-correct URLs
+    return storedUrl;
+  }
+
+  return getStoragePublicUrl(bucket, filePath);
+}
+
+/**
+ * Get the normalized profile picture URL for a user
+ * Convenience function that normalizes URLs specifically for profile pictures
+ *
+ * @param profilePictureUrl - The URL stored in the profile table
+ * @returns Normalized URL or null
+ */
+export function getProfilePictureUrl(profilePictureUrl: string | null | undefined): string | null {
+  return normalizeStorageUrl(profilePictureUrl, 'profile-pictures');
+}

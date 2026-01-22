@@ -16,7 +16,7 @@ export async function generateMetadata({
 
   try {
     const { data: organization } = await supabase
-      .from('organizations')
+      .from('organization')
       .select('name')
       .eq('slug', slug)
       .single();
@@ -46,12 +46,94 @@ export default async function AdminOrganizationEditPage({
   const t = await getTranslations('admin.organizations.update');
   const supabase = await createClient();
 
-  let organizationData: any = null;
+  type OrganizationWithFacilities = {
+    id: string;
+    slug: string;
+    name: string;
+    nature: string;
+    type: string | null;
+    email: string | null;
+    phone: string | null;
+    address: string | null;
+    city: string | null;
+    country: string | null;
+    postal_code: string | null;
+    website: string | null;
+    description: string | null;
+    data_provider_id: string | null;
+    is_active: boolean;
+    facilities?: Array<{
+      id: string;
+      name: string;
+      slug: string;
+      address: string | null;
+      city: string | null;
+      country: string | null;
+      postal_code: string | null;
+      latitude: number | null;
+      longitude: number | null;
+      description: string | null;
+      timezone: string | null;
+      data_provider_id: string | null;
+      external_provider_id: string | null;
+      facility_type: string | null;
+      membership_required: boolean;
+      is_active: boolean;
+      facility_file: Array<{
+        id: string;
+        file_id: string;
+        display_order: number | null;
+        is_primary: boolean | null;
+        file: {
+          id: string;
+          url: string;
+          thumbnail_url: string | null;
+        } | null;
+      }>;
+      facility_contact: Array<{
+        id: string;
+        phone: string | null;
+        email: string | null;
+        website: string | null;
+        is_primary: boolean | null;
+        contact_type: string;
+        sport_id: string | null;
+      }>;
+      facility_sport: Array<{
+        sport_id: string;
+        sport: {
+          id: string;
+          name: string;
+          slug: string;
+        };
+      }>;
+      courts: Array<{
+        id: string;
+        facility_id: string;
+        surface_type: string | null;
+        lighting: boolean | null;
+        indoor: boolean | null;
+        name: string | null;
+        court_number: number | null;
+        availability_status: string | null;
+        court_sport: Array<{
+          sport_id: string;
+          sport: {
+            id: string;
+            name: string;
+            slug: string;
+          };
+        }>;
+      }>;
+    }>;
+  };
+
+  let organizationData: OrganizationWithFacilities | null = null;
 
   try {
     // Fetch organization
     const { data: orgData, error: orgError } = await supabase
-      .from('organizations')
+      .from('organization')
       .select(
         `
         id,
@@ -66,7 +148,9 @@ export default async function AdminOrganizationEditPage({
         country,
         postal_code,
         website,
-        description
+        description,
+        data_provider_id,
+        is_active
       `
       )
       .eq('slug', slug)
@@ -78,7 +162,7 @@ export default async function AdminOrganizationEditPage({
 
     // Fetch facilities with all related data
     const { data: facilities, error: facilitiesError } = await supabase
-      .from('facilities')
+      .from('facility')
       .select(
         `
         id,
@@ -90,18 +174,25 @@ export default async function AdminOrganizationEditPage({
         postal_code,
         latitude,
         longitude,
-        facility_files (
+        description,
+        timezone,
+        data_provider_id,
+        external_provider_id,
+        facility_type,
+        membership_required,
+        is_active,
+        facility_file (
           id,
           file_id,
           display_order,
           is_primary,
-          files (
+          file (
             id,
             url,
             thumbnail_url
           )
         ),
-        facility_contacts (
+        facility_contact (
           id,
           phone,
           email,
@@ -110,9 +201,9 @@ export default async function AdminOrganizationEditPage({
           contact_type,
           sport_id
         ),
-        facility_sports (
+        facility_sport (
           sport_id,
-          sports (
+          sport (
             id,
             name,
             slug
@@ -130,11 +221,29 @@ export default async function AdminOrganizationEditPage({
 
     // Fetch courts
     const facilityIds = facilities?.map(f => f.id) || [];
-    let courts: any[] = [];
+    type CourtData = {
+      id: string;
+      facility_id: string;
+      surface_type: string | null;
+      lighting: boolean | null;
+      indoor: boolean | null;
+      name: string | null;
+      court_number: number | null;
+      availability_status: string | null;
+      court_sport: Array<{
+        sport_id: string;
+        sport: {
+          id: string;
+          name: string;
+          slug: string;
+        };
+      }>;
+    };
+    let courts: CourtData[] = [];
 
     if (facilityIds.length > 0) {
       const { data: courtsData, error: courtsError } = await supabase
-        .from('courts')
+        .from('court')
         .select(
           `
           id,
@@ -145,9 +254,9 @@ export default async function AdminOrganizationEditPage({
           name,
           court_number,
           availability_status,
-          court_sports (
+          court_sport (
             sport_id,
-            sports (
+            sport (
               id,
               name,
               slug
@@ -198,22 +307,58 @@ export default async function AdminOrganizationEditPage({
     notFound();
   }
 
-  // Transform the data to match the form component's expected structure
+  // Map to InitialFacilityData format (preserving DB structure for the hook to transform)
   const facilities =
-    organizationData.facilities?.map((facility: any) => ({
+    organizationData.facilities?.map(facility => ({
       id: facility.id,
       name: facility.name,
-      slug: facility.slug,
-      address: facility.address || '',
-      city: facility.city || '',
-      country: facility.country || '',
-      postal_code: facility.postal_code || '',
-      latitude: facility.latitude?.toString() || '',
-      longitude: facility.longitude?.toString() || '',
-      facility_files: facility.facility_files || [],
-      facility_contacts: facility.facility_contacts || [],
-      facility_sports: facility.facility_sports || [],
-      courts: facility.courts || [],
+      address: facility.address,
+      city: facility.city,
+      country: facility.country,
+      postal_code: facility.postal_code,
+      latitude: facility.latitude,
+      longitude: facility.longitude,
+      description: facility.description,
+      timezone: facility.timezone,
+      data_provider_id: facility.data_provider_id,
+      external_provider_id: facility.external_provider_id,
+      facility_type: facility.facility_type,
+      membership_required: facility.membership_required || false,
+      is_active: facility.is_active ?? true,
+      facility_file: facility.facility_file?.map(ff => ({
+        id: ff.id,
+        file_id: ff.file_id,
+        display_order: ff.display_order,
+        is_primary: ff.is_primary,
+        files: ff.file
+          ? {
+              id: ff.file.id,
+              url: ff.file.url,
+              thumbnail_url: ff.file.thumbnail_url,
+            }
+          : null,
+      })),
+      facility_contact: facility.facility_contact?.map(fc => ({
+        id: fc.id,
+        phone: fc.phone,
+        email: fc.email,
+        website: fc.website,
+        contact_type: fc.contact_type,
+        is_primary: fc.is_primary,
+        sport_id: fc.sport_id,
+      })),
+      facility_sport: facility.facility_sport?.map(fs => ({
+        sport_id: fs.sport_id,
+      })),
+      courts: facility.courts?.map(court => ({
+        id: court.id,
+        surface_type: court.surface_type,
+        lighting: court.lighting,
+        indoor: court.indoor,
+        court_sport: court.court_sport?.map(cs => ({
+          sport_id: cs.sport_id,
+        })),
+      })),
     })) || [];
 
   const initialData = {
@@ -221,17 +366,25 @@ export default async function AdminOrganizationEditPage({
       id: organizationData.id,
       slug: organizationData.slug,
       name: organizationData.name,
-      nature: organizationData.nature,
-      type: organizationData.type,
-      email: organizationData.email,
+      nature: organizationData.nature as 'public' | 'private',
+      type: (organizationData.type ?? undefined) as
+        | 'club'
+        | 'municipality'
+        | 'city'
+        | 'association'
+        | ''
+        | undefined,
+      email: organizationData.email || '',
       phone: organizationData.phone || '',
       address: organizationData.address || '',
       city: organizationData.city || '',
-      country: organizationData.country || '',
+      country: (organizationData.country || '') as 'Canada' | 'United States' | '',
       postalCode: organizationData.postal_code || '',
       postal_code: organizationData.postal_code || '',
       website: organizationData.website || '',
       description: organizationData.description || '',
+      data_provider_id: organizationData.data_provider_id || null,
+      is_active: organizationData.is_active ?? true,
     },
     facilities,
   };

@@ -1,0 +1,1767 @@
+/**
+ * GroupDetail Screen
+ * Shows group details with tabs: Home, Leaderboard, Activity
+ */
+
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import {
+  View,
+  TouchableOpacity,
+  StyleSheet,
+  RefreshControl,
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
+import Svg, { Circle } from 'react-native-svg';
+
+import { Text } from '@rallia/shared-components';
+import { useThemeStyles, useAuth } from '../hooks';
+import {
+  useGroupWithMembers,
+  useGroupStats,
+  useGroupActivity,
+  useIsGroupModerator,
+  useLeaveGroup,
+  useDeleteGroup,
+  useGroupMatches,
+  useMostRecentGroupMatch,
+  useGroupLeaderboard,
+  type GroupActivity as GroupActivityType,
+} from '@rallia/shared-hooks';
+import type { RootStackParamList } from '../navigation/types';
+import { primary } from '@rallia/design-system';
+import {
+  EditGroupModal,
+  AddMemberModal,
+  MemberListModal,
+  GroupOptionsModal,
+  InviteLinkModal,
+  RecentGamesModal,
+} from '../features/groups';
+import {
+  AddScoreIntroModal,
+  MatchTypeModal,
+  AddScoreModal,
+  PendingScoresSection,
+  type MatchType,
+} from '../features/matches';
+
+const HEADER_HEIGHT = 140;
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type GroupDetailRouteProp = RouteProp<RootStackParamList, 'GroupDetail'>;
+
+type TabKey = 'home' | 'leaderboard' | 'activity';
+
+const TABS: { key: TabKey; label: string }[] = [
+  { key: 'home', label: 'Home' },
+  { key: 'leaderboard', label: 'Leaderboard' },
+  { key: 'activity', label: 'Activity' },
+];
+
+export default function GroupDetailScreen() {
+  const navigation = useNavigation<NavigationProp>();
+  const route = useRoute<GroupDetailRouteProp>();
+  const { groupId } = route.params;
+
+  const { colors, isDark } = useThemeStyles();
+  const { session } = useAuth();
+  const playerId = session?.user?.id;
+
+  const [activeTab, setActiveTab] = useState<TabKey>('home');
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [showMemberListModal, setShowMemberListModal] = useState(false);
+  const [showOptionsModal, setShowOptionsModal] = useState(false);
+  const [showInviteLinkModal, setShowInviteLinkModal] = useState(false);
+  const [showRecentGamesModal, setShowRecentGamesModal] = useState(false);
+  const [leaderboardPeriod, setLeaderboardPeriod] = useState<30 | 90 | 180 | 0>(30);
+  // Add Score flow state
+  const [showAddScoreIntro, setShowAddScoreIntro] = useState(false);
+  const [showMatchTypeModal, setShowMatchTypeModal] = useState(false);
+  const [showAddScoreModal, setShowAddScoreModal] = useState(false);
+  const [selectedMatchType, setSelectedMatchType] = useState<MatchType>('single');
+  const [hasSeenAddScoreIntro, setHasSeenAddScoreIntro] = useState<boolean | null>(null);
+
+  // Storage key for "never show intro again"
+  const ADD_SCORE_INTRO_KEY = 'rallia_add_score_intro_dismissed';
+
+  // Check if user has dismissed the intro before
+  useEffect(() => {
+    const checkIntroDismissed = async () => {
+      try {
+        const dismissed = await AsyncStorage.getItem(ADD_SCORE_INTRO_KEY);
+        setHasSeenAddScoreIntro(dismissed === 'true');
+      } catch (error) {
+        console.error('Error reading intro preference:', error);
+        setHasSeenAddScoreIntro(false);
+      }
+    };
+    checkIntroDismissed();
+  }, []);
+
+  const { data: group, isLoading, refetch } = useGroupWithMembers(groupId);
+  const { data: stats } = useGroupStats(groupId);
+  const { data: activities } = useGroupActivity(groupId, 50);
+  const { data: isModerator } = useIsGroupModerator(groupId, playerId);
+  const { data: recentMatch } = useMostRecentGroupMatch(groupId);
+  const { data: allMatches } = useGroupMatches(groupId, 180, 100);
+  const { data: leaderboard } = useGroupLeaderboard(groupId, leaderboardPeriod === 0 ? 3650 : leaderboardPeriod);
+
+  const leaveGroupMutation = useLeaveGroup();
+  const deleteGroupMutation = useDeleteGroup();
+
+  const handleOpenChat = useCallback(() => {
+    if (group?.conversation_id) {
+      navigation.navigate('Chat', { 
+        conversationId: group.conversation_id,
+        title: group.name,
+      });
+    }
+  }, [group, navigation]);
+
+  const handleAddGame = useCallback(() => {
+    // Check if user has seen the intro before
+    if (hasSeenAddScoreIntro === false) {
+      // First time - show the intro
+      setShowAddScoreIntro(true);
+    } else {
+      // User has dismissed intro before - go directly to match type
+      setShowMatchTypeModal(true);
+    }
+  }, [hasSeenAddScoreIntro]);
+
+  const handleAddScoreIntroComplete = useCallback(() => {
+    setShowAddScoreIntro(false);
+    setShowMatchTypeModal(true);
+  }, []);
+
+  const handleMatchTypeSelect = useCallback((type: MatchType) => {
+    setSelectedMatchType(type);
+    setShowMatchTypeModal(false);
+    setShowAddScoreModal(true);
+  }, []);
+
+  const handleAddScoreSuccess = useCallback((_matchId: string) => {
+    setShowAddScoreModal(false);
+    refetch(); // Refresh group data including leaderboard
+  }, [refetch]);
+
+  const handleLeaveGroup = useCallback(() => {
+    Alert.alert('Leave Group', 'Are you sure you want to leave this group?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Leave',
+        style: 'destructive',
+        onPress: async () => {
+          if (!playerId) return;
+          try {
+            await leaveGroupMutation.mutateAsync({ groupId, playerId });
+            navigation.goBack();
+          } catch (error) {
+            Alert.alert('Error', error instanceof Error ? error.message : 'Failed to leave group');
+          }
+        },
+      },
+    ]);
+  }, [groupId, playerId, leaveGroupMutation, navigation]);
+
+  const handleDeleteGroup = useCallback(() => {
+    Alert.alert(
+      'Delete Group',
+      'Are you sure you want to delete this group? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (!playerId) return;
+            try {
+              await deleteGroupMutation.mutateAsync({ groupId, playerId });
+              navigation.goBack();
+            } catch (error) {
+              Alert.alert(
+                'Error',
+                error instanceof Error ? error.message : 'Failed to delete group'
+              );
+            }
+          },
+        },
+      ]
+    );
+  }, [groupId, playerId, deleteGroupMutation, navigation]);
+
+  const handleShowOptions = useCallback(() => {
+    setShowOptionsModal(true);
+  }, []);
+
+  // Build options for the menu modal
+  const menuOptions = useMemo(() => {
+    const isCreator = group?.created_by === playerId;
+    const options: {
+      id: string;
+      label: string;
+      icon: keyof typeof Ionicons.glyphMap;
+      onPress: () => void;
+      destructive?: boolean;
+    }[] = [];
+
+    // Share invite link - available to all members
+    options.push({
+      id: 'invite',
+      label: 'Share Invite Link',
+      icon: 'link-outline',
+      onPress: () => setShowInviteLinkModal(true),
+    });
+
+    if (isModerator) {
+      options.push({
+        id: 'edit',
+        label: 'Edit Group',
+        icon: 'create-outline',
+        onPress: () => setShowEditModal(true),
+      });
+    }
+
+    options.push({
+      id: 'leave',
+      label: 'Leave Group',
+      icon: 'exit-outline',
+      onPress: handleLeaveGroup,
+      destructive: true,
+    });
+
+    if (isCreator) {
+      options.push({
+        id: 'delete',
+        label: 'Delete Group',
+        icon: 'trash-outline',
+        onPress: handleDeleteGroup,
+        destructive: true,
+      });
+    }
+
+    return options;
+  }, [group, playerId, isModerator, handleLeaveGroup, handleDeleteGroup]);
+
+  // Format activity time
+  const formatActivityTime = useCallback((dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }, []);
+
+  // Group activities by day
+  const groupedActivities = useMemo(() => {
+    if (!activities) return [];
+
+    const groups: { title: string; data: GroupActivityType[] }[] = [];
+    let currentDay = '';
+
+    for (const activity of activities) {
+      const date = new Date(activity.created_at);
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      let dayLabel: string;
+      if (date.toDateString() === today.toDateString()) {
+        dayLabel = 'Today';
+      } else if (date.toDateString() === yesterday.toDateString()) {
+        dayLabel = 'Yesterday';
+      } else {
+        dayLabel = date.toLocaleDateString('en-US', {
+          weekday: 'long',
+          month: 'short',
+          day: 'numeric',
+        });
+      }
+
+      if (dayLabel !== currentDay) {
+        groups.push({ title: dayLabel, data: [] });
+        currentDay = dayLabel;
+      }
+
+      groups[groups.length - 1].data.push(activity);
+    }
+
+    return groups;
+  }, [activities]);
+
+  // Get activity message
+  const getActivityMessage = useCallback((activity: GroupActivityType) => {
+    const actorName = activity.actor?.profile?.first_name || 'Someone';
+
+    switch (activity.activity_type) {
+      case 'member_joined':
+        // Show "Added by [name]" if someone else added them
+        if (activity.added_by_name) {
+          return `${actorName} was added by ${activity.added_by_name}`;
+        }
+        return `${actorName} joined the group`;
+      case 'member_left':
+        return `${actorName} left the group`;
+      case 'member_promoted':
+        return `${actorName} promoted a member to moderator`;
+      case 'member_demoted':
+        return `${actorName} demoted a moderator to member`;
+      case 'game_created':
+        return `${actorName} created a new game`;
+      case 'message_sent':
+        return `${actorName} sent a message`;
+      case 'group_updated':
+        return `${actorName} updated the group`;
+      default:
+        return `${actorName} performed an action`;
+    }
+  }, []);
+
+  const renderTabContent = () => {
+    // Calculate activity ring segments
+    const membersCount = stats?.newMembersLast7Days || 0;
+    const gamesCount = stats?.gamesCreatedLast7Days || 0;
+    const messagesCount = stats?.messagesLast7Days || 0;
+    const totalActivities = membersCount + gamesCount + messagesCount;
+
+    // SVG circle properties
+    const size = 100;
+    const strokeWidth = 8;
+    const radius = (size - strokeWidth) / 2;
+    const circumference = 2 * Math.PI * radius;
+
+    // Calculate stroke dash offsets for each segment
+    const membersPercent = totalActivities > 0 ? membersCount / totalActivities : 0;
+    const gamesPercent = totalActivities > 0 ? gamesCount / totalActivities : 0;
+    const messagesPercent = totalActivities > 0 ? messagesCount / totalActivities : 0;
+
+    const membersLength = circumference * membersPercent;
+    const gamesLength = circumference * gamesPercent;
+    const messagesLength = circumference * messagesPercent;
+
+    // Starting rotation for each segment (members starts at top, -90deg)
+    const membersRotation = -90;
+    const gamesRotation = membersRotation + membersPercent * 360;
+    const messagesRotation = gamesRotation + gamesPercent * 360;
+
+    switch (activeTab) {
+      case 'home':
+        return (
+          <View style={styles.tabContent}>
+            {/* Pending Score Confirmations */}
+            {playerId && (
+              <PendingScoresSection
+                playerId={playerId}
+                groupId={groupId}
+                title="Scores to Confirm"
+              />
+            )}
+
+            {/* Stats Card */}
+            <View
+              style={[
+                styles.statsCard,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+            >
+              <Text weight="semibold" size="base" style={{ color: colors.text, marginBottom: 16 }}>
+                Last 7 days activities
+              </Text>
+              <View style={styles.statsRow}>
+                <View style={styles.statCircle}>
+                  {/* Donut Chart */}
+                  <View style={styles.donutContainer}>
+                    <Svg width={size} height={size}>
+                      {/* Background circle */}
+                      <Circle
+                        cx={size / 2}
+                        cy={size / 2}
+                        r={radius}
+                        stroke={colors.border}
+                        strokeWidth={strokeWidth}
+                        fill="transparent"
+                      />
+                      {/* Members segment (cyan/blue) */}
+                      {membersCount > 0 && (
+                        <Circle
+                          cx={size / 2}
+                          cy={size / 2}
+                          r={radius}
+                          stroke="#5AC8FA"
+                          strokeWidth={strokeWidth}
+                          fill="transparent"
+                          strokeDasharray={`${membersLength} ${circumference - membersLength}`}
+                          strokeDashoffset={0}
+                          strokeLinecap="round"
+                          rotation={membersRotation}
+                          origin={`${size / 2}, ${size / 2}`}
+                        />
+                      )}
+                      {/* Games segment (orange) */}
+                      {gamesCount > 0 && (
+                        <Circle
+                          cx={size / 2}
+                          cy={size / 2}
+                          r={radius}
+                          stroke="#FF9500"
+                          strokeWidth={strokeWidth}
+                          fill="transparent"
+                          strokeDasharray={`${gamesLength} ${circumference - gamesLength}`}
+                          strokeDashoffset={0}
+                          strokeLinecap="round"
+                          rotation={gamesRotation}
+                          origin={`${size / 2}, ${size / 2}`}
+                        />
+                      )}
+                      {/* Messages segment (gray/dark) */}
+                      {messagesCount > 0 && (
+                        <Circle
+                          cx={size / 2}
+                          cy={size / 2}
+                          r={radius}
+                          stroke={isDark ? '#8E8E93' : '#636366'}
+                          strokeWidth={strokeWidth}
+                          fill="transparent"
+                          strokeDasharray={`${messagesLength} ${circumference - messagesLength}`}
+                          strokeDashoffset={0}
+                          strokeLinecap="round"
+                          rotation={messagesRotation}
+                          origin={`${size / 2}, ${size / 2}`}
+                        />
+                      )}
+                    </Svg>
+                    {/* Center text */}
+                    <View style={styles.donutCenter}>
+                      <Text weight="bold" size="xl" style={{ color: colors.text }}>
+                        {totalActivities}
+                      </Text>
+                      <Text size="xs" style={{ color: colors.textSecondary }}>
+                        ACTIVITIES
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+                <View style={styles.statsList}>
+                  <View style={styles.statItem}>
+                    <Ionicons name="people" size={20} color="#5AC8FA" />
+                    <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
+                      {membersCount} new members
+                    </Text>
+                  </View>
+                  <View style={styles.statItem}>
+                    <Ionicons name="tennisball" size={20} color="#FF9500" />
+                    <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
+                      {gamesCount} game{gamesCount !== 1 ? 's' : ''} created
+                    </Text>
+                  </View>
+                  <View style={styles.statItem}>
+                    <Ionicons
+                      name="chatbubble-ellipses"
+                      size={20}
+                      color={isDark ? '#8E8E93' : '#C7C7CC'}
+                    />
+                    <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
+                      {messagesCount} new messages in{'\n'}community chat
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            {/* About Section */}
+            {group?.description && (
+              <View
+                style={[
+                  styles.aboutCard,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                ]}
+              >
+                <View style={styles.aboutHeader}>
+                  <Ionicons name="information-circle-outline" size={24} color={colors.primary} />
+                  <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
+                    About
+                  </Text>
+                </View>
+                <Text style={{ color: colors.textSecondary, lineHeight: 22, marginTop: 8 }}>
+                  {group.description}
+                </Text>
+              </View>
+            )}
+
+            {/* Leaderboard Preview */}
+            <View
+              style={[
+                styles.leaderboardPreview,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+            >
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionTitle}>
+                  <Ionicons name="trophy" size={20} color={colors.primary} />
+                  <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
+                    Leaderboard
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => setActiveTab('leaderboard')}>
+                  <Text size="sm" style={{ color: colors.primary }}>
+                    View all
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              {/* Show top 3 from leaderboard preview or empty state */}
+              {leaderboard && leaderboard.length > 0 ? (
+                <View style={styles.leaderboardPreviewList}>
+                  {leaderboard.slice(0, 3).map((entry, index) => (
+                    <View key={entry.player_id} style={styles.leaderboardPreviewItem}>
+                      <Text weight="semibold" style={{ color: colors.textMuted, width: 20 }}>
+                        {index + 1}.
+                      </Text>
+                      <View style={[styles.smallAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+                        {entry.player?.profile?.profile_picture_url ? (
+                          <Image
+                            source={{ uri: entry.player.profile.profile_picture_url }}
+                            style={styles.avatarImage}
+                          />
+                        ) : (
+                          <Ionicons name="person" size={14} color={colors.textMuted} />
+                        )}
+                      </View>
+                      <Text size="sm" style={{ color: colors.text, flex: 1, marginLeft: 8 }}>
+                        {entry.player?.profile?.first_name || 'Player'}
+                      </Text>
+                      <Text size="sm" weight="semibold" style={{ color: colors.primary }}>
+                        {entry.games_played}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text size="sm" style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}>
+                  No games played yet
+                </Text>
+              )}
+            </View>
+          </View>
+        );
+
+      case 'leaderboard': {
+        const periodOptions = [
+          { value: 30, label: '30 days' },
+          { value: 90, label: '90 days' },
+          { value: 180, label: '180 days' },
+          { value: 0, label: 'All time' },
+        ];
+        
+        return (
+          <View style={styles.tabContent}>
+            {/* Recent Games Section */}
+            <View style={[styles.recentGamesCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionTitle}>
+                  <Ionicons name="time" size={20} color={colors.textSecondary} />
+                  <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
+                    Recent games
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => setShowRecentGamesModal(true)}>
+                  <Text size="sm" style={{ color: colors.primary }}>
+                    View all
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Most Recent Match Card */}
+              {recentMatch?.match ? (
+                <TouchableOpacity 
+                  style={[styles.matchCard, { backgroundColor: isDark ? '#1C1C1E' : '#F8F8F8', borderColor: colors.border }]}
+                  onPress={() => {
+                    navigation.navigate('PlayedMatchDetail', { match: recentMatch });
+                  }}
+                  activeOpacity={0.7}
+                >
+                  {/* Match Header */}
+                  <View style={styles.matchHeader}>
+                    <View style={styles.matchInfo}>
+                      <Ionicons 
+                        name={recentMatch.match.sport?.name?.toLowerCase() === 'tennis' ? 'tennisball' : 'american-football'} 
+                        size={16} 
+                        color={colors.primary} 
+                      />
+                      <Text size="sm" style={{ color: colors.textSecondary, marginLeft: 6 }}>
+                        {recentMatch.match.sport?.name || 'Sport'} · {new Date(recentMatch.match.match_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </Text>
+                    </View>
+                    <View style={[
+                      styles.matchBadge, 
+                      { backgroundColor: recentMatch.match.player_expectation === 'competitive' ? '#E8F5E9' : '#FFF3E0' }
+                    ]}>
+                      <Ionicons 
+                        name={recentMatch.match.player_expectation === 'competitive' ? 'trophy' : 'fitness'} 
+                        size={12} 
+                        color={recentMatch.match.player_expectation === 'competitive' ? '#2E7D32' : '#EF6C00'} 
+                      />
+                      <Text size="xs" weight="semibold" style={{ 
+                        color: recentMatch.match.player_expectation === 'competitive' ? '#2E7D32' : '#EF6C00',
+                        marginLeft: 4,
+                      }}>
+                        {recentMatch.match.player_expectation === 'competitive' ? 'Competitive' : 'Practice'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Players - Team-based layout */}
+                  <View style={styles.matchPlayersContainer}>
+                    {/* Team 1 Card */}
+                    {(() => {
+                      const team1Players = recentMatch.match.participants.filter(p => p.team_number === 1);
+                      const isWinner = recentMatch.match?.result?.winning_team === 1;
+                      const isDoubles = team1Players.length > 1;
+                      
+                      return (
+                        <View style={[
+                          styles.teamCard,
+                          isWinner && styles.winnerTeamCard,
+                          isWinner && { borderColor: '#F59E0B' },
+                        ]}>
+                          {isWinner && (
+                            <View style={styles.teamWinnerBadge}>
+                              <Ionicons name="trophy" size={12} color="#F59E0B" />
+                            </View>
+                          )}
+                          
+                          {/* Team Avatars - overlapping for doubles, tappable to view profile */}
+                          <View style={styles.teamAvatarsContainer}>
+                            {team1Players.map((participant, index) => (
+                              <TouchableOpacity 
+                                key={participant.id} 
+                                style={[
+                                  styles.teamPlayerAvatar, 
+                                  { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
+                                  index > 0 && styles.teamAvatarOverlap,
+                                ]}
+                                onPress={() => participant.player_id && navigation.navigate('PlayerProfile', { playerId: participant.player_id })}
+                                activeOpacity={0.7}
+                              >
+                                {participant.player?.profile?.profile_picture_url ? (
+                                  <Image
+                                    source={{ uri: participant.player.profile.profile_picture_url }}
+                                    style={styles.teamAvatarImage}
+                                  />
+                                ) : (
+                                  <Ionicons name="person" size={20} color={colors.textMuted} />
+                                )}
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                          
+                          {/* Team Names */}
+                          <Text 
+                            size="xs" 
+                            weight={isWinner ? 'semibold' : 'regular'} 
+                            style={{ color: colors.text, marginTop: 6, textAlign: 'center' }}
+                            numberOfLines={2}
+                          >
+                            {team1Players.map(p => p.player?.profile?.first_name || 'Player').join(', ')}
+                          </Text>
+                          
+                          {/* Team Score - same for all team members */}
+                          {recentMatch.match?.result && (
+                            <Text 
+                              size="sm" 
+                              weight="bold" 
+                              style={{ 
+                                color: isWinner ? '#F59E0B' : colors.textMuted,
+                                marginTop: 4,
+                              }}
+                            >
+                              {recentMatch.match.result.sets && recentMatch.match.result.sets.length > 0
+                                ? recentMatch.match.result.sets
+                                    .sort((a, b) => a.set_number - b.set_number)
+                                    .map(set => set.team1_score)
+                                    .join('  ')
+                                : recentMatch.match.result.team1_score ?? '-'}
+                            </Text>
+                          )}
+                        </View>
+                      );
+                    })()}
+
+                    {/* VS */}
+                    <Text weight="semibold" style={{ color: colors.textMuted, marginHorizontal: 12 }}>vs</Text>
+
+                    {/* Team 2 Card */}
+                    {(() => {
+                      const team2Players = recentMatch.match.participants.filter(p => p.team_number === 2);
+                      const isWinner = recentMatch.match?.result?.winning_team === 2;
+                      const isDoubles = team2Players.length > 1;
+                      
+                      return (
+                        <View style={[
+                          styles.teamCard,
+                          isWinner && styles.winnerTeamCard,
+                          isWinner && { borderColor: '#F59E0B' },
+                        ]}>
+                          {isWinner && (
+                            <View style={styles.teamWinnerBadge}>
+                              <Ionicons name="trophy" size={12} color="#F59E0B" />
+                            </View>
+                          )}
+                          
+                          {/* Team Avatars - overlapping for doubles, tappable to view profile */}
+                          <View style={styles.teamAvatarsContainer}>
+                            {team2Players.map((participant, index) => (
+                              <TouchableOpacity 
+                                key={participant.id} 
+                                style={[
+                                  styles.teamPlayerAvatar, 
+                                  { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
+                                  index > 0 && styles.teamAvatarOverlap,
+                                ]}
+                                onPress={() => participant.player_id && navigation.navigate('PlayerProfile', { playerId: participant.player_id })}
+                                activeOpacity={0.7}
+                              >
+                                {participant.player?.profile?.profile_picture_url ? (
+                                  <Image
+                                    source={{ uri: participant.player.profile.profile_picture_url }}
+                                    style={styles.teamAvatarImage}
+                                  />
+                                ) : (
+                                  <Ionicons name="person" size={20} color={colors.textMuted} />
+                                )}
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                          
+                          {/* Team Names */}
+                          <Text 
+                            size="xs" 
+                            weight={isWinner ? 'semibold' : 'regular'} 
+                            style={{ color: colors.text, marginTop: 6, textAlign: 'center' }}
+                            numberOfLines={2}
+                          >
+                            {team2Players.map(p => p.player?.profile?.first_name || 'Player').join(', ')}
+                          </Text>
+                          
+                          {/* Team Score - same for all team members */}
+                          {recentMatch.match?.result && (
+                            <Text 
+                              size="sm" 
+                              weight="bold" 
+                              style={{ 
+                                color: isWinner ? '#F59E0B' : colors.textMuted,
+                                marginTop: 4,
+                              }}
+                            >
+                              {recentMatch.match.result.sets && recentMatch.match.result.sets.length > 0
+                                ? recentMatch.match.result.sets
+                                    .sort((a, b) => a.set_number - b.set_number)
+                                    .map(set => set.team2_score)
+                                    .join('  ')
+                                : recentMatch.match.result.team2_score ?? '-'}
+                            </Text>
+                          )}
+                        </View>
+                      );
+                    })()}
+                  </View>
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.emptyMatch}>
+                  <Ionicons name="tennisball-outline" size={32} color={colors.textMuted} />
+                  <Text size="sm" style={{ color: colors.textSecondary, marginTop: 8 }}>
+                    No recent games
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Leaderboard Section */}
+            <View style={[styles.leaderboardCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionTitle}>
+                  <Ionicons name="podium" size={20} color={colors.textSecondary} />
+                  <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
+                    Leaderboard
+                  </Text>
+                  <TouchableOpacity style={styles.infoButton}>
+                    <Ionicons name="information-circle-outline" size={18} color={colors.textMuted} />
+                  </TouchableOpacity>
+                </View>
+                
+                {/* Period Filter Dropdown */}
+                <TouchableOpacity 
+                  style={[styles.periodFilter, { backgroundColor: isDark ? '#2C2C2E' : '#F0F0F0' }]}
+                  onPress={() => {
+                    const nextIndex = (periodOptions.findIndex(o => o.value === leaderboardPeriod) + 1) % periodOptions.length;
+                    setLeaderboardPeriod(periodOptions[nextIndex].value as 30 | 90 | 180 | 0);
+                  }}
+                >
+                  <Text size="sm" style={{ color: colors.text }}>
+                    {periodOptions.find(o => o.value === leaderboardPeriod)?.label}
+                  </Text>
+                  <Ionicons name="chevron-down" size={16} color={colors.textMuted} style={{ marginLeft: 4 }} />
+                </TouchableOpacity>
+              </View>
+
+              {leaderboard && leaderboard.length > 0 ? (
+                <>
+                  {/* Podium for top 3 */}
+                  {leaderboard.length >= 3 && (
+                    <View style={styles.podiumContainer}>
+                      {/* 2nd Place */}
+                      <View style={styles.podiumItem}>
+                        <View style={[styles.podiumAvatar, styles.podiumAvatar2nd, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+                          {leaderboard[1].player?.profile?.profile_picture_url ? (
+                            <Image
+                              source={{ uri: leaderboard[1].player.profile.profile_picture_url }}
+                              style={styles.avatarImage}
+                            />
+                          ) : (
+                            <Ionicons name="person" size={28} color={colors.textMuted} />
+                          )}
+                          <View style={[styles.rankBadge, { backgroundColor: '#C0C0C0' }]}>
+                            <Text size="xs" weight="bold" style={{ color: '#FFF' }}>2</Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      {/* 1st Place */}
+                      <View style={styles.podiumItem}>
+                        <View style={[styles.podiumAvatar, styles.podiumAvatar1st, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+                          {leaderboard[0].player?.profile?.profile_picture_url ? (
+                            <Image
+                              source={{ uri: leaderboard[0].player.profile.profile_picture_url }}
+                              style={styles.avatarImage}
+                            />
+                          ) : (
+                            <Ionicons name="person" size={32} color={colors.textMuted} />
+                          )}
+                          <View style={[styles.rankBadge, styles.rankBadge1st, { backgroundColor: '#FFD700' }]}>
+                            <Ionicons name="trophy" size={14} color="#FFF" />
+                          </View>
+                        </View>
+                      </View>
+
+                      {/* 3rd Place */}
+                      <View style={styles.podiumItem}>
+                        <View style={[styles.podiumAvatar, styles.podiumAvatar3rd, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+                          {leaderboard[2].player?.profile?.profile_picture_url ? (
+                            <Image
+                              source={{ uri: leaderboard[2].player.profile.profile_picture_url }}
+                              style={styles.avatarImage}
+                            />
+                          ) : (
+                            <Ionicons name="person" size={24} color={colors.textMuted} />
+                          )}
+                          <View style={[styles.rankBadge, { backgroundColor: '#CD7F32' }]}>
+                            <Text size="xs" weight="bold" style={{ color: '#FFF' }}>3</Text>
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Stats Header */}
+                  <View style={styles.leaderboardHeader}>
+                    <Text size="xs" style={{ color: colors.textMuted, flex: 1 }}>Players</Text>
+                    <Text size="xs" style={{ color: colors.textMuted, width: 80, textAlign: 'center' }}>Games played</Text>
+                  </View>
+
+                  {/* Leaderboard List */}
+                  {leaderboard.map((entry, index) => (
+                    <View key={entry.player_id} style={[styles.leaderboardRow, { borderBottomColor: colors.border }]}>
+                      <View style={styles.leaderboardRank}>
+                        {index < 3 ? (
+                          <View style={[
+                            styles.topRankBadge, 
+                            { backgroundColor: index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : '#CD7F32' }
+                          ]}>
+                            <Text size="xs" weight="bold" style={{ color: '#FFF' }}>{index + 1}</Text>
+                          </View>
+                        ) : (
+                          <Text style={{ color: colors.textMuted }}>{index + 1}</Text>
+                        )}
+                      </View>
+                      <View style={[styles.leaderboardAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+                        {entry.player?.profile?.profile_picture_url ? (
+                          <Image
+                            source={{ uri: entry.player.profile.profile_picture_url }}
+                            style={styles.avatarImage}
+                          />
+                        ) : (
+                          <Ionicons name="person" size={18} color={colors.textMuted} />
+                        )}
+                      </View>
+                      <Text size="sm" style={{ color: colors.text, flex: 1, marginLeft: 12 }}>
+                        {entry.player?.profile?.display_name || entry.player?.profile?.first_name || 'Player'}
+                      </Text>
+                      <Text size="sm" weight="semibold" style={{ color: colors.text, width: 80, textAlign: 'center' }}>
+                        {entry.games_played}
+                      </Text>
+                    </View>
+                  ))}
+                </>
+              ) : (
+                <View style={styles.emptyLeaderboard}>
+                  <Ionicons name="trophy-outline" size={48} color={colors.textMuted} />
+                  <Text style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}>
+                    Play games with group members to appear on the leaderboard
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        );
+      }
+
+      case 'activity':
+        return (
+          <View style={styles.tabContent}>
+            {groupedActivities.length === 0 ? (
+              <View
+                style={[
+                  styles.emptyActivity,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                ]}
+              >
+                <Ionicons name="time-outline" size={48} color={colors.textMuted} />
+                <Text style={{ color: colors.textSecondary, marginTop: 12 }}>
+                  No recent activity
+                </Text>
+              </View>
+            ) : (
+              groupedActivities.map((section, sectionIndex) => (
+                <View key={sectionIndex} style={styles.activitySection}>
+                  <Text
+                    weight="semibold"
+                    size="sm"
+                    style={[styles.activityDayHeader, { color: colors.textSecondary }]}
+                  >
+                    {section.title}
+                  </Text>
+                  {section.data.map(activity => (
+                    <View
+                      key={activity.id}
+                      style={[
+                        styles.activityItem,
+                        { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.activityAvatar,
+                          { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
+                        ]}
+                      >
+                        {activity.actor?.profile?.profile_picture_url ? (
+                          <Image
+                            source={{ uri: activity.actor.profile.profile_picture_url }}
+                            style={styles.avatarImage}
+                          />
+                        ) : (
+                          <Ionicons name="person" size={20} color={colors.textMuted} />
+                        )}
+                      </View>
+                      <View style={styles.activityContent}>
+                        <Text size="sm" style={{ color: colors.text }}>
+                          {getActivityMessage(activity)}
+                        </Text>
+                        <Text size="xs" style={{ color: colors.textMuted }}>
+                          {formatActivityTime(activity.created_at)}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              ))
+            )}
+          </View>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['top']}
+      >
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!group) {
+    return (
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['top']}
+      >
+        <View style={styles.errorContainer}>
+          <Ionicons name="warning-outline" size={64} color={colors.textMuted} />
+          <Text style={{ color: colors.textSecondary, marginTop: 16 }}>Group not found</Text>
+          <TouchableOpacity
+            style={[styles.backButton, { backgroundColor: colors.primary }]}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={{ color: '#FFFFFF' }}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={false} onRefresh={refetch} tintColor={colors.primary} />
+        }
+      >
+        {/* Header Section - with cover image or default icon */}
+        {group.cover_image_url ? (
+          <Image
+            source={{ uri: group.cover_image_url }}
+            style={styles.coverImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <View
+            style={[
+              styles.headerSection,
+              { backgroundColor: isDark ? primary[900] : primary[100] },
+            ]}
+          >
+            <View style={[styles.headerIcon, { backgroundColor: colors.cardBackground }]}>
+              <Ionicons name="people" size={48} color={colors.primary} />
+            </View>
+          </View>
+        )}
+
+        {/* Group Info Card */}
+        <View
+          style={[
+            styles.infoCard,
+            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+          ]}
+        >
+          <Text weight="bold" size="xl" style={{ color: colors.text }}>
+            {group.name}
+          </Text>
+
+          {/* Members Row */}
+          <TouchableOpacity style={styles.membersRow} onPress={() => setShowMemberListModal(true)}>
+            <Text size="sm" style={{ color: colors.textSecondary }}>
+              {group.member_count} members
+            </Text>
+            <View style={styles.memberAvatars}>
+              {group.members.slice(0, 5).map((member, index) => (
+                <View
+                  key={member.id}
+                  style={[
+                    styles.memberAvatar,
+                    {
+                      backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA',
+                      marginLeft: index > 0 ? -8 : 0,
+                      zIndex: 5 - index,
+                    },
+                  ]}
+                >
+                  {member.player?.profile?.profile_picture_url ? (
+                    <Image
+                      source={{ uri: member.player.profile.profile_picture_url }}
+                      style={styles.memberAvatarImage}
+                    />
+                  ) : (
+                    <Text size="xs" weight="semibold" style={{ color: colors.text }}>
+                      {member.player?.profile?.first_name?.charAt(0) || '?'}
+                    </Text>
+                  )}
+                </View>
+              ))}
+              {group.member_count > 5 && (
+                <View
+                  style={[styles.memberAvatar, { backgroundColor: colors.primary, marginLeft: -8 }]}
+                >
+                  <Text size="xs" weight="semibold" style={{ color: '#FFFFFF' }}>
+                    +{group.member_count - 5}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </TouchableOpacity>
+
+          {/* Action Buttons Row */}
+          <View style={styles.actionButtonsRow}>
+            {group.member_count < group.max_members && (
+              <TouchableOpacity
+                style={[styles.addMemberButton, { borderColor: colors.primary, flex: 1 }]}
+                onPress={() => setShowAddMemberModal(true)}
+              >
+                <Ionicons name="person-add" size={18} color={colors.primary} />
+                <Text weight="semibold" style={{ color: colors.primary, marginLeft: 8 }}>
+                  Add Member
+                </Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={[styles.menuButton, { borderColor: colors.border }]}
+              onPress={handleShowOptions}
+            >
+              <Ionicons name="ellipsis-horizontal" size={20} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Tab Bar */}
+        <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
+          {TABS.map(tab => (
+            <TouchableOpacity
+              key={tab.key}
+              style={[
+                styles.tab,
+                activeTab === tab.key && {
+                  borderBottomColor: colors.primary,
+                  borderBottomWidth: 2,
+                },
+              ]}
+              onPress={() => setActiveTab(tab.key)}
+            >
+              <Text
+                weight={activeTab === tab.key ? 'semibold' : 'regular'}
+                style={{ color: activeTab === tab.key ? colors.primary : colors.textSecondary }}
+              >
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Tab Content */}
+        {renderTabContent()}
+
+        {/* Bottom spacing for chat button */}
+        <View style={{ height: 80 }} />
+      </ScrollView>
+
+      {/* Bottom Action Button - changes based on active tab */}
+      {activeTab === 'leaderboard' ? (
+        <TouchableOpacity
+          style={[styles.chatButton, { backgroundColor: colors.primary }]}
+          onPress={handleAddGame}
+        >
+          <Ionicons name="add-circle" size={20} color="#FFFFFF" />
+          <Text weight="semibold" style={styles.chatButtonText}>
+            Add a played game
+          </Text>
+        </TouchableOpacity>
+      ) : activeTab === 'home' ? (
+        <TouchableOpacity
+          style={[styles.chatButton, { backgroundColor: colors.primary }]}
+          onPress={handleOpenChat}
+        >
+          <Ionicons name="chatbubbles" size={20} color="#FFFFFF" />
+          <Text weight="semibold" style={styles.chatButtonText}>
+            Chat with members
+          </Text>
+        </TouchableOpacity>
+      ) : null}
+
+      {/* Modals */}
+      <EditGroupModal
+        visible={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        group={group}
+        onSuccess={() => {
+          setShowEditModal(false);
+          refetch();
+        }}
+      />
+
+      <AddMemberModal
+        visible={showAddMemberModal}
+        onClose={() => setShowAddMemberModal(false)}
+        groupId={groupId}
+        currentMemberIds={group.members.map(m => m.player_id)}
+        onSuccess={() => {
+          setShowAddMemberModal(false);
+          refetch();
+        }}
+      />
+
+      <MemberListModal
+        visible={showMemberListModal}
+        onClose={() => setShowMemberListModal(false)}
+        group={group}
+        currentUserId={playerId || ''}
+        isModerator={isModerator || false}
+        onMemberRemoved={() => refetch()}
+        onPlayerPress={(playerId) => {
+          setShowMemberListModal(false);
+          navigation.navigate('PlayerProfile', { playerId });
+        }}
+      />
+
+      <GroupOptionsModal
+        visible={showOptionsModal}
+        onClose={() => setShowOptionsModal(false)}
+        options={menuOptions}
+        title="Group Options"
+      />
+
+      {group && (
+        <InviteLinkModal
+          visible={showInviteLinkModal}
+          onClose={() => setShowInviteLinkModal(false)}
+          groupId={groupId}
+          groupName={group.name}
+          currentUserId={playerId || ''}
+          isModerator={isModerator || false}
+        />
+      )}
+
+      <RecentGamesModal
+        visible={showRecentGamesModal}
+        onClose={() => setShowRecentGamesModal(false)}
+        matches={allMatches || []}
+        onMatchPress={(match) => {
+          setShowRecentGamesModal(false);
+          navigation.navigate('PlayedMatchDetail', { match });
+        }}
+        onPlayerPress={(playerId) => {
+          setShowRecentGamesModal(false);
+          navigation.navigate('PlayerProfile', { playerId });
+        }}
+      />
+
+      {/* Add Score Flow Modals */}
+      <AddScoreIntroModal
+        visible={showAddScoreIntro}
+        onClose={() => setShowAddScoreIntro(false)}
+        onAddScore={handleAddScoreIntroComplete}
+        onNeverShowAgain={async () => {
+          try {
+            await AsyncStorage.setItem(ADD_SCORE_INTRO_KEY, 'true');
+            setHasSeenAddScoreIntro(true);
+          } catch (error) {
+            console.error('Error saving intro preference:', error);
+          }
+          handleAddScoreIntroComplete();
+        }}
+      />
+
+      <MatchTypeModal
+        visible={showMatchTypeModal}
+        onClose={() => setShowMatchTypeModal(false)}
+        onSelect={handleMatchTypeSelect}
+      />
+
+      <AddScoreModal
+        visible={showAddScoreModal}
+        onClose={() => setShowAddScoreModal(false)}
+        onSuccess={handleAddScoreSuccess}
+        matchType={selectedMatchType}
+        networkId={groupId}
+      />
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  backButton: {
+    marginTop: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  coverImage: {
+    width: '100%',
+    height: HEADER_HEIGHT,
+  },
+  headerSection: {
+    height: HEADER_HEIGHT,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  navBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  navButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scrollContent: {
+    paddingBottom: 20,
+  },
+  infoCard: {
+    marginHorizontal: 16,
+    marginTop: -40,
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  membersRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+  },
+  memberAvatars: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  memberAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  memberAvatarImage: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+  },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+    gap: 12,
+  },
+  addMemberButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  menuButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tabBar: {
+    flexDirection: 'row',
+    marginTop: 24,
+    marginHorizontal: 16,
+    borderBottomWidth: 1,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  tabContent: {
+    padding: 16,
+    gap: 16,
+  },
+  statsCard: {
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statCircle: {
+    marginRight: 24,
+  },
+  donutContainer: {
+    width: 100,
+    height: 100,
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  donutCenter: {
+    position: 'absolute',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statsList: {
+    flex: 1,
+    gap: 16,
+  },
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  aboutCard: {
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  aboutHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  leaderboardPreview: {
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  sectionTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  leaderboardCard: {
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  emptyLeaderboard: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  activitySection: {
+    marginBottom: 8,
+  },
+  activityDayHeader: {
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  activityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  activityAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  activityContent: {
+    flex: 1,
+  },
+  emptyActivity: {
+    padding: 40,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  chatButton: {
+    position: 'absolute',
+    bottom: 24,
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  chatButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+  },
+  // Leaderboard Preview List
+  leaderboardPreviewList: {
+    marginTop: 12,
+  },
+  leaderboardPreviewItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  smallAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  // Recent Games Card
+  recentGamesCard: {
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  // Match Card Styles
+  matchCard: {
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  matchHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  matchInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  matchBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  matchPlayersContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    paddingHorizontal: 8,
+  },
+  teamContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  // New Team Card styles for Recent Games (groups players per team)
+  teamCard: {
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    minWidth: 90,
+    maxWidth: 120,
+  },
+  winnerTeamCard: {
+    borderWidth: 2,
+  },
+  teamAvatarsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  teamPlayerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  teamAvatarOverlap: {
+    marginLeft: -12,
+  },
+  teamAvatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  teamWinnerBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#FFF',
+    borderRadius: 10,
+    padding: 2,
+  },
+  // Original player card styles (kept for backward compatibility)
+  playerCard: {
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  winnerCard: {
+    borderWidth: 2,
+  },
+  playerAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  winnerBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#FFF',
+    borderRadius: 10,
+    padding: 2,
+  },
+  scoresRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  emptyMatch: {
+    alignItems: 'center',
+    paddingVertical: 24,
+  },
+  // Leaderboard Section Styles
+  infoButton: {
+    marginLeft: 8,
+  },
+  periodFilter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  // Podium Styles
+  podiumContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    marginVertical: 24,
+  },
+  podiumItem: {
+    alignItems: 'center',
+    marginHorizontal: 8,
+  },
+  podiumAvatar: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 35,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  podiumAvatar1st: {
+    width: 70,
+    height: 70,
+  },
+  podiumAvatar2nd: {
+    width: 56,
+    height: 56,
+    marginBottom: 12,
+    borderRadius: 28,
+  },
+  podiumAvatar3rd: {
+    width: 48,
+    height: 48,
+    marginBottom: 20,
+    borderRadius: 24,
+  },
+  rankBadge: {
+    position: 'absolute',
+    bottom: -4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rankBadge1st: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    bottom: -6,
+  },
+  // Leaderboard List Styles
+  leaderboardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  leaderboardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+  },
+  leaderboardRank: {
+    width: 32,
+    alignItems: 'center',
+  },
+  topRankBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  leaderboardAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+});

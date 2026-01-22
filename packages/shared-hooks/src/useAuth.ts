@@ -54,47 +54,82 @@ export const useAuth = (options?: UseAuthOptions) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session and validate it
-    const initializeSession = async () => {
+    let isSubscribed = true;
+
+    /**
+     * Fetch and validate the initial session
+     * Following Supabase's recommended pattern from the docs:
+     * https://supabase.com/docs/guides/auth/quickstarts/with-expo-react-native-social-auth
+     */
+    const fetchSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session) {
+        const {
+          data: { session: initialSession },
+          error,
+        } = await supabase.auth.getSession();
+
+        if (error) {
+          console.error('Error fetching session:', error);
+        }
+
+        if (initialSession && isSubscribed) {
           // Validate session by checking if user still exists in database
-          const { data: { user }, error } = await supabase.auth.getUser();
-          
-          if (error || !user) {
+          const {
+            data: { user },
+            error: userError,
+          } = await supabase.auth.getUser();
+
+          if (userError || !user) {
             // Session exists but user was deleted - clear the invalid session
-            console.warn('⚠️ Invalid session detected (user deleted from database). Clearing session...');
-            await supabase.auth.signOut();
-            setSession(null);
+            console.warn(
+              '⚠️ Invalid session detected (user deleted from database). Clearing session...'
+            );
+            try {
+              await supabase.auth.signOut();
+            } catch {
+              // Ignore signOut errors
+            }
+            if (isSubscribed) {
+              setSession(null);
+            }
           } else {
             // Valid session
-            setSession(session);
+            if (isSubscribed) {
+              setSession(initialSession);
+            }
           }
-        } else {
+        } else if (isSubscribed) {
           setSession(null);
         }
       } catch (error) {
         console.error('Error initializing session:', error);
-        // Clear session on error
-        await supabase.auth.signOut();
-        setSession(null);
+        if (isSubscribed) {
+          setSession(null);
+        }
       } finally {
-        setLoading(false);
+        if (isSubscribed) {
+          setLoading(false);
+        }
       }
     };
 
-    initializeSession();
+    // Fetch initial session
+    fetchSession();
 
-    // Listen for auth changes
+    // Subscribe to auth state changes for subsequent updates
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      console.log('Auth state change:', _event);
+      // Update session on any auth state change
+      // The subscription handles sign-in, sign-out, token refresh, etc.
+      setSession(newSession);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isSubscribed = false;
+      subscription.unsubscribe();
+    };
   }, [supabase]);
 
   /**

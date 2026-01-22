@@ -1,0 +1,267 @@
+/**
+ * OTPVerificationStep Component
+ *
+ * Second step of the AuthWizard - 6-digit OTP code verification.
+ * Migrated from AuthOverlay with theme-aware colors and i18n support.
+ */
+
+import React, { useRef, useEffect, useCallback } from 'react';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  ActivityIndicator,
+  ScrollView,
+  Pressable,
+} from 'react-native';
+import { Text } from '@rallia/shared-components';
+import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import type { TranslationKey } from '@rallia/shared-translations';
+
+interface ThemeColors {
+  background: string;
+  cardBackground: string;
+  text: string;
+  textSecondary: string;
+  textMuted: string;
+  border: string;
+  buttonActive: string;
+  buttonInactive: string;
+  buttonTextActive: string;
+  inputBackground: string;
+  inputBorder: string;
+  inputBorderFocused: string;
+  error: string;
+  success: string;
+  divider: string;
+}
+
+interface OTPVerificationStepProps {
+  email: string;
+  code: string;
+  onCodeChange: (code: string) => void;
+  isLoading: boolean;
+  errorMessage: string;
+  onVerify: () => void;
+  onResendCode: () => void;
+  colors: ThemeColors;
+  t: (key: TranslationKey) => string;
+  isDark: boolean;
+  /** Whether this step is currently active/visible */
+  isActive?: boolean;
+}
+
+export const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
+  email,
+  code,
+  onCodeChange,
+  isLoading,
+  errorMessage,
+  onVerify,
+  onResendCode,
+  colors,
+  t,
+  isDark,
+  isActive = true,
+}) => {
+  const hiddenInputRef = useRef<TextInput>(null);
+
+  // Focus hidden input when step becomes active
+  useEffect(() => {
+    if (isActive && hiddenInputRef.current) {
+      // Small delay to ensure the step animation has started
+      const timer = setTimeout(() => {
+        hiddenInputRef.current?.focus();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isActive]);
+
+  // Handler for code input changes - memoized for performance
+  const handleCodeChange = useCallback(
+    (text: string) => {
+      // Only accept digits, limit to 6 characters
+      const cleanedCode = text.replace(/[^0-9]/g, '').slice(0, 6);
+      onCodeChange(cleanedCode);
+    },
+    [onCodeChange]
+  );
+
+  // Focus the hidden input when tapping the code boxes
+  const focusHiddenInput = useCallback(() => {
+    hiddenInputRef.current?.focus();
+  }, []);
+
+  const isCodeComplete = code.length === 6;
+  const canVerify = isCodeComplete && !isLoading;
+
+  return (
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
+      {/* Title */}
+      <Text size="2xl" weight="bold" color={colors.text} style={styles.title}>
+        {t('auth.verificationCode')}
+      </Text>
+
+      {/* Description */}
+      <Text size="base" color={colors.textSecondary} style={styles.description}>
+        We sent an email verification code to{'\n'}
+        <Text size="base" weight="semibold" color={colors.text}>
+          {email}
+        </Text>
+      </Text>
+
+      {/* Hidden TextInput for smooth OTP entry */}
+      <TextInput
+        ref={hiddenInputRef}
+        style={styles.hiddenInput}
+        value={code}
+        onChangeText={handleCodeChange}
+        keyboardType="number-pad"
+        maxLength={6}
+        caretHidden
+        autoComplete="one-time-code"
+        textContentType="oneTimeCode"
+        editable={isActive}
+      />
+
+      {/* Visual Code Display Boxes */}
+      <Pressable style={styles.codeInputContainer} onPress={focusHiddenInput}>
+        {Array.from({ length: 6 }).map((_, index) => {
+          const digit = code[index] || '';
+          const isFilled = digit !== '';
+          return (
+            <View
+              key={index}
+              style={[
+                styles.codeBox,
+                {
+                  backgroundColor: isFilled ? colors.cardBackground : colors.inputBackground,
+                  borderColor: isFilled ? colors.buttonActive : colors.inputBorder,
+                },
+              ]}
+            >
+              <Text size="xl" weight="semibold" color={colors.text}>
+                {digit}
+              </Text>
+            </View>
+          );
+        })}
+      </Pressable>
+
+      {/* Resend Code Button */}
+      <TouchableOpacity
+        style={[
+          styles.resendButton,
+          { backgroundColor: isDark ? colors.buttonInactive : `${colors.buttonActive}15` },
+        ]}
+        onPress={onResendCode}
+        activeOpacity={0.8}
+        disabled={isLoading}
+      >
+        <Text size="base" weight="semibold" color={colors.buttonActive}>
+          {t('auth.resendCode')}
+        </Text>
+      </TouchableOpacity>
+
+      {/* Error Message */}
+      {errorMessage ? (
+        <Text size="sm" color={colors.error} style={styles.errorText}>
+          {errorMessage}
+        </Text>
+      ) : null}
+
+      {/* Continue Button */}
+      <TouchableOpacity
+        style={[
+          styles.continueButton,
+          { backgroundColor: canVerify ? colors.buttonActive : colors.buttonInactive },
+        ]}
+        onPress={canVerify ? onVerify : undefined}
+        activeOpacity={canVerify ? 0.8 : 1}
+        disabled={!canVerify}
+      >
+        {isLoading ? (
+          <ActivityIndicator color={colors.buttonTextActive} />
+        ) : (
+          <Text
+            size="lg"
+            weight="semibold"
+            color={canVerify ? colors.buttonTextActive : colors.textMuted}
+          >
+            {t('common.continue')}
+          </Text>
+        )}
+      </TouchableOpacity>
+    </ScrollView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[4],
+    paddingBottom: spacingPixels[8],
+  },
+  title: {
+    textAlign: 'center',
+    marginBottom: spacingPixels[4],
+  },
+  description: {
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: spacingPixels[6],
+  },
+  hiddenInput: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    opacity: 0,
+  },
+  codeInputContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacingPixels[2],
+    marginBottom: spacingPixels[6],
+  },
+  codeBox: {
+    width: 45,
+    height: 55,
+    borderRadius: radiusPixels.md,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  resendButton: {
+    borderRadius: radiusPixels.lg,
+    paddingVertical: spacingPixels[4],
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacingPixels[4],
+  },
+  errorText: {
+    textAlign: 'center',
+    marginBottom: spacingPixels[2],
+  },
+  continueButton: {
+    borderRadius: radiusPixels.lg,
+    paddingVertical: spacingPixels[4],
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+});
+
+export default OTPVerificationStep;

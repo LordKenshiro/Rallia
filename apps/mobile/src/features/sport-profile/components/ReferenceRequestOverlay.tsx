@@ -14,6 +14,7 @@ import { Overlay, Text } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
 import { supabase, Logger } from '@rallia/shared-services';
 import { selectionHaptic, mediumHaptic } from '../../../utils/haptics';
+import { useThemeStyles } from '../../../hooks';
 
 interface ReferenceRequestOverlayProps {
   visible: boolean;
@@ -25,7 +26,8 @@ interface ReferenceRequestOverlayProps {
 
 interface Player {
   id: string;
-  full_name: string;
+  first_name: string;
+  last_name: string;
   display_name: string | null;
   profile_picture_url: string | null;
   rating: string | null;
@@ -39,6 +41,7 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
   sportId,
   onSendRequests,
 }) => {
+  const { colors } = useThemeStyles();
   const [players, setPlayers] = useState<Player[]>([]);
   const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
   const [selectedPlayers, setSelectedPlayers] = useState<Set<string>>(new Set());
@@ -64,8 +67,9 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
     } else {
       const query = searchQuery.toLowerCase();
       const filtered = players.filter(
-        (player) =>
-          player.full_name.toLowerCase().includes(query) ||
+        player =>
+          player.first_name.toLowerCase().includes(query) ||
+          player.last_name.toLowerCase().includes(query) ||
           player.display_name?.toLowerCase().includes(query)
       );
       setFilteredPlayers(filtered);
@@ -77,7 +81,7 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
     if (visible) {
       fadeAnim.setValue(0);
       slideAnim.setValue(50);
-      
+
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -98,35 +102,37 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
       setLoading(true);
 
       // Step 1: Find all players with CERTIFIED ratings for this sport
-      // (api_verified, peer_verified, admin_verified - NOT self_reported)
       const { data: certifiedRatings, error: ratingsError } = await supabase
         .from('player_rating_score')
-        .select(`
+        .select(
+          `
           player_id,
-          is_primary,
-          source_type,
-          rating_score (
+          source,
+          is_certified,
+          rating_score!player_rating_scores_rating_score_id_fkey (
             id,
-            display_label,
-            rating (
+            label,
+            rating_system (
               sport_id
             )
           )
-        `)
-        .eq('is_verified', true)
-        .neq('source_type', 'self_reported')
+        `
+        )
+        .eq('is_certified', true)
+        .neq('source', 'self_reported')
         .neq('player_id', currentUserId); // Exclude current user
 
       if (ratingsError) throw ratingsError;
 
       // Filter by sport and get unique player IDs
-      const sportCertifiedRatings = certifiedRatings?.filter((rating: {
-        rating_score: Array<{ rating: Array<{ sport_id: string }> }>;
-      }) => {
-        const ratingScoreArray = rating.rating_score;
-        const ratingArray = ratingScoreArray?.[0]?.rating;
-        return ratingArray?.[0]?.sport_id === sportId;
-      }) || [];
+      const sportCertifiedRatings =
+        certifiedRatings?.filter(
+          (rating: { rating_score: Array<{ rating_system: Array<{ sport_id: string }> }> }) => {
+            const ratingScoreArray = rating.rating_score;
+            const ratingSystemArray = ratingScoreArray?.[0]?.rating_system;
+            return ratingSystemArray?.[0]?.sport_id === sportId;
+          }
+        ) || [];
 
       const uniquePlayerIds = [
         ...new Set(sportCertifiedRatings.map((r: { player_id: string }) => r.player_id)),
@@ -142,47 +148,53 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
       // Step 2: Fetch player profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profile')
-        .select('id, full_name, display_name, profile_picture_url')
+        .select('id, first_name, last_name, display_name, profile_picture_url')
         .in('id', uniquePlayerIds);
 
       if (profilesError) throw profilesError;
 
-      // Step 3: Map ratings by player_id (get primary rating)
+      // Step 3: Map ratings by player_id (get certified rating)
       const ratingsMap = new Map<string, { display_label: string; isCertified: boolean }>();
-      sportCertifiedRatings.forEach((rating: {
-        player_id: string;
-        is_primary: boolean;
-        source_type: string;
-        rating_score: unknown;
-      }) => {
-        const ratingScore = rating.rating_score as { display_label?: string };
-        const isCertified = rating.source_type !== 'self_reported';
-        
-        if (rating.is_primary || !ratingsMap.has(rating.player_id)) {
-          ratingsMap.set(rating.player_id, {
-            display_label: ratingScore?.display_label || '',
-            isCertified,
-          });
+      sportCertifiedRatings.forEach(
+        (rating: {
+          player_id: string;
+          source: string;
+          is_certified: boolean;
+          rating_score: unknown;
+        }) => {
+          const ratingScore = rating.rating_score as { label?: string };
+          const isCertified = rating.is_certified;
+
+          if (!ratingsMap.has(rating.player_id)) {
+            ratingsMap.set(rating.player_id, {
+              display_label: ratingScore?.label || '',
+              isCertified,
+            });
+          }
         }
-      });
+      );
 
       // Step 4: Combine profiles with ratings
-      const playersWithRatings: Player[] = (profiles || []).map((profile: {
-        id: string;
-        full_name: string;
-        display_name: string | null;
-        profile_picture_url: string | null;
-      }) => {
-        const ratingInfo = ratingsMap.get(profile.id);
-        return {
-          id: profile.id,
-          full_name: profile.full_name,
-          display_name: profile.display_name,
-          profile_picture_url: profile.profile_picture_url,
-          rating: ratingInfo?.display_label || null,
-          isCertified: ratingInfo?.isCertified || false,
-        };
-      });
+      const playersWithRatings: Player[] = (profiles || []).map(
+        (profile: {
+          id: string;
+          first_name: string;
+          last_name: string;
+          display_name: string | null;
+          profile_picture_url: string | null;
+        }) => {
+          const ratingInfo = ratingsMap.get(profile.id);
+          return {
+            id: profile.id,
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            display_name: profile.display_name,
+            profile_picture_url: profile.profile_picture_url,
+            rating: ratingInfo?.display_label || null,
+            isCertified: ratingInfo?.isCertified || false,
+          };
+        }
+      );
 
       setPlayers(playersWithRatings);
       setFilteredPlayers(playersWithRatings);
@@ -195,7 +207,7 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
 
   const togglePlayerSelection = (playerId: string) => {
     selectionHaptic();
-    setSelectedPlayers((prev) => {
+    setSelectedPlayers(prev => {
       const newSet = new Set(prev);
       if (newSet.has(playerId)) {
         newSet.delete(playerId);
@@ -208,7 +220,7 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
 
   const handleSendRequests = async () => {
     if (selectedPlayers.size === 0) return;
-    
+
     mediumHaptic();
     setSending(true);
     try {
@@ -216,7 +228,10 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
       setSelectedPlayers(new Set());
       setSearchQuery('');
     } catch (error) {
-      Logger.error('Failed to send reference requests', error as Error, { count: selectedPlayers.size, sportId });
+      Logger.error('Failed to send reference requests', error as Error, {
+        count: selectedPlayers.size,
+        sportId,
+      });
     } finally {
       setSending(false);
     }
@@ -224,45 +239,57 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
 
   const renderPlayerCard = (player: Player) => {
     const isSelected = selectedPlayers.has(player.id);
-    
+
     return (
       <TouchableOpacity
         key={player.id}
-        style={[styles.playerCard, isSelected && styles.playerCardSelected]}
+        style={[
+          styles.playerCard,
+          { backgroundColor: colors.inputBackground },
+          isSelected && [
+            styles.playerCardSelected,
+            { borderColor: colors.primary, backgroundColor: colors.inputBackground },
+          ],
+        ]}
         onPress={() => togglePlayerSelection(player.id)}
         activeOpacity={0.8}
       >
         {/* Avatar */}
         <View style={styles.avatarContainer}>
           {player.profile_picture_url ? (
-            <Image
-              source={{ uri: player.profile_picture_url }}
-              style={styles.avatar}
-            />
+            <Image source={{ uri: player.profile_picture_url }} style={styles.avatar} />
           ) : (
-            <View style={[styles.avatar, styles.avatarPlaceholder]}>
-              <Ionicons name="person" size={24} color="#999" />
+            <View
+              style={[styles.avatar, styles.avatarPlaceholder, { backgroundColor: colors.divider }]}
+            >
+              <Ionicons name="person" size={24} color={colors.textMuted} />
             </View>
           )}
           {isSelected && (
-            <View style={styles.checkmarkContainer}>
-              <Ionicons name="checkmark-circle" size={24} color={COLORS.primary} />
+            <View style={[styles.checkmarkContainer, { backgroundColor: colors.card }]}>
+              <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
             </View>
           )}
         </View>
 
         {/* Player Info */}
         <View style={styles.playerInfo}>
-          <Text style={styles.playerName}>{player.full_name}</Text>
+          <Text style={[styles.playerName, { color: colors.text }]}>
+            {player.first_name} {player.last_name}
+          </Text>
           {player.display_name && (
-            <Text style={styles.playerUsername}>@{player.display_name}</Text>
+            <Text style={[styles.playerUsername, { color: colors.textMuted }]}>
+              @{player.display_name}
+            </Text>
           )}
         </View>
 
         {/* Rating Badge */}
         {player.rating && (
-          <View style={styles.ratingBadge}>
-            <Text style={styles.ratingText}>{player.rating}</Text>
+          <View style={[styles.ratingBadge, { backgroundColor: colors.primary }]}>
+            <Text style={[styles.ratingText, { color: colors.primaryForeground }]}>
+              {player.rating}
+            </Text>
           </View>
         )}
       </TouchableOpacity>
@@ -287,53 +314,49 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
         ]}
       >
         {/* Title */}
-        <Text style={styles.title}>Request references for your current rating</Text>
-        <Text style={styles.subtitle}>
-          Request references allow you to certify your rating by asking other higher-rated or certified players to confirm your declared rating
+        <Text style={[styles.title, { color: colors.text }]}>
+          Request references for your current rating
+        </Text>
+        <Text style={[styles.subtitle, { color: colors.textMuted }]}>
+          Request references allow you to certify your rating by asking other higher-rated or
+          certified players to confirm your declared rating
         </Text>
 
         {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons
-            name="search"
-            size={20}
-            color="#999"
-            style={styles.searchIcon}
-          />
+        <View style={[styles.searchContainer, { backgroundColor: colors.inputBackground }]}>
+          <Ionicons name="search" size={20} color={colors.textMuted} style={styles.searchIcon} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: colors.text }]}
             placeholder="Search players..."
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
             autoCapitalize="none"
             autoCorrect={false}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity
-              onPress={() => setSearchQuery('')}
-              style={styles.clearButton}
-            >
-              <Ionicons name="close-circle" size={20} color="#999" />
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+              <Ionicons name="close-circle" size={20} color={colors.textMuted} />
             </TouchableOpacity>
           )}
         </View>
 
         {/* Players List */}
-        <ScrollView
-          style={styles.playersList}
-          showsVerticalScrollIndicator={false}
-        >
+        <ScrollView style={styles.playersList} showsVerticalScrollIndicator={false}>
           {loading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={COLORS.primary} />
-              <Text style={styles.loadingText}>Loading certified players...</Text>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={[styles.loadingText, { color: colors.textMuted }]}>
+                Loading certified players...
+              </Text>
             </View>
           ) : filteredPlayers.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="people-outline" size={64} color="#CCC" />
-              <Text style={styles.emptyText}>No certified players found</Text>
-              <Text style={styles.emptySubtext}>
+              <Ionicons name="people-outline" size={64} color={colors.textMuted} />
+              <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+                No certified players found
+              </Text>
+              <Text style={[styles.emptySubtext, { color: colors.textMuted }]}>
                 {players.length === 0
                   ? 'No players with certified ratings for this sport yet'
                   : 'Try a different search term'}
@@ -341,7 +364,7 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
             </View>
           ) : (
             <View style={styles.playersGrid}>
-              {filteredPlayers.map((player) => renderPlayerCard(player))}
+              {filteredPlayers.map(player => renderPlayerCard(player))}
             </View>
           )}
         </ScrollView>
@@ -350,16 +373,20 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
         <TouchableOpacity
           style={[
             styles.sendButton,
-            (selectedPlayers.size === 0 || sending) && styles.sendButtonDisabled,
+            { backgroundColor: colors.primary },
+            (selectedPlayers.size === 0 || sending) && [
+              styles.sendButtonDisabled,
+              { backgroundColor: colors.buttonInactive },
+            ],
           ]}
           onPress={handleSendRequests}
           disabled={selectedPlayers.size === 0 || sending}
           activeOpacity={0.8}
         >
           {sending ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.primaryForeground} />
           ) : (
-            <Text style={styles.sendButtonText}>
+            <Text style={[styles.sendButtonText, { color: colors.primaryForeground }]}>
               Send Requests{selectedPlayers.size > 0 ? ` (${selectedPlayers.size})` : ''}
             </Text>
           )}
@@ -377,13 +404,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
-    color: '#666',
     textAlign: 'center',
     marginBottom: 20,
     paddingHorizontal: 20,
@@ -392,7 +417,6 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
     borderRadius: 12,
     paddingHorizontal: 12,
     marginBottom: 16,
@@ -404,7 +428,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#333',
   },
   clearButton: {
     padding: 4,
@@ -419,7 +442,6 @@ const styles = StyleSheet.create({
   playerCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
@@ -427,8 +449,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   playerCardSelected: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primaryLight || '#E0F9F7',
+    // borderColor and backgroundColor applied inline
   },
   avatarContainer: {
     position: 'relative',
@@ -440,7 +461,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
   },
   avatarPlaceholder: {
-    backgroundColor: '#E5E5E5',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -448,7 +468,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: -4,
     right: -4,
-    backgroundColor: '#fff',
     borderRadius: 12,
   },
   playerInfo: {
@@ -457,26 +476,21 @@ const styles = StyleSheet.create({
   playerName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 2,
   },
   playerUsername: {
     fontSize: 13,
-    color: '#666',
   },
   ratingBadge: {
-    backgroundColor: COLORS.primary,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
   },
   ratingText: {
-    color: '#fff',
     fontSize: 14,
     fontWeight: '600',
   },
   sendButton: {
-    backgroundColor: '#E57373',
     borderRadius: 12,
     paddingVertical: 16,
     flexDirection: 'row',
@@ -492,12 +506,10 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   sendButtonDisabled: {
-    backgroundColor: '#D3D3D3',
     shadowOpacity: 0,
     elevation: 0,
   },
   sendButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -510,7 +522,6 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: '#666',
   },
   emptyContainer: {
     flex: 1,
@@ -521,13 +532,11 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#999',
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#999',
     textAlign: 'center',
     paddingHorizontal: 40,
   },

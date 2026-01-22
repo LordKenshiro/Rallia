@@ -10,12 +10,18 @@
     "type-check": "tsc --noEmit"
   },
   "peerDependencies": {
-    "react": "*"
+    "react": "*",
+    "@tanstack/react-query": "^5.62.0",
+    "react-native": "*",
+    "@react-native-async-storage/async-storage": "*"
   },
   "dependencies": {
-    "@rallia/shared-services": "*"
+    "@rallia/shared-services": "*",
+    "@rallia/shared-types": "*",
+    "@rallia/design-system": "*"
   },
   "devDependencies": {
-    "typescript": "^5.9.2"
+    "@tanstack/react-query": "^5.62.0",
+    "typescript": "^5.9.3"
   }
 }

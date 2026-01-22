@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
 
     // Insert data into waitlist_signups table
     const { data, error } = await supabase
-      .from('waitlist_signups')
+      .from('waitlist_signup')
       .insert({
         name: body.name,
         email: body.email,

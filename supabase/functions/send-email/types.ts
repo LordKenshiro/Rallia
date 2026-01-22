@@ -30,20 +30,20 @@ export interface InvitationRecord {
   email: string | null;
   phone: string | null;
   token: string;
-  source: InviteSource;
+  source?: InviteSource | null;
   inviter_id: string;
-  invited_user_id: string | null;
+  invited_user_id?: string | null;
   role: AppRole;
-  admin_role: AdminRole | null;
-  status: InviteStatus;
+  admin_role?: AdminRole | null;
+  status?: InviteStatus;
   expires_at: string;
-  accepted_at: string | null;
-  revoked_at: string | null;
-  revoked_by: string | null;
-  revoke_reason: string | null;
-  metadata: Record<string, unknown> | null;
-  created_at: string;
-  updated_at: string;
+  accepted_at?: string | null;
+  revoked_at?: string | null;
+  revoked_by?: string | null;
+  revoke_reason?: string | null;
+  metadata?: Record<string, unknown> | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Raw database record from Supabase trigger (what we receive)

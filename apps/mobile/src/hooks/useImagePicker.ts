@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Platform, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Logger } from '@rallia/shared-services';
+import { useTranslation } from './useTranslation';
 
 export interface ImagePickerResult {
   uri: string | null;
@@ -14,6 +15,7 @@ export interface ImagePickerResult {
  */
 export const useImagePicker = () => {
   const [image, setImage] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   const requestPermissions = async () => {
     const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
@@ -79,23 +81,19 @@ export const useImagePicker = () => {
     const permissions = await requestPermissions();
 
     if (!permissions.camera && !permissions.library) {
-      Alert.alert(
-        'Permission Required',
-        'Please grant camera and photo library permissions to upload a profile picture.',
-        [{ text: 'OK' }]
-      );
-      return { uri: null, error: 'Permissions denied' };
+      Alert.alert(t('alerts.error'), t('errors.permissionsDenied'), [{ text: t('common.ok') }]);
+      return { uri: null, error: t('errors.permissionsDenied') };
     }
 
     // Show options dialog
     return new Promise<ImagePickerResult>(resolve => {
-      Alert.alert('Select Profile Picture', 'Choose an option', [
+      Alert.alert(t('profile.profilePicture'), t('common.select'), [
         {
-          text: 'Take Photo',
+          text: t('profile.changePhoto'),
           onPress: async () => {
             if (!permissions.camera) {
-              Alert.alert('Permission Required', 'Camera permission is required to take a photo.');
-              resolve({ uri: null, error: 'Camera permission denied' });
+              Alert.alert(t('alerts.error'), t('errors.permissionsDenied'));
+              resolve({ uri: null, error: t('errors.permissionsDenied') });
               return;
             }
             const result = await pickImageFromCamera();
@@ -103,14 +101,11 @@ export const useImagePicker = () => {
           },
         },
         {
-          text: 'Choose from Gallery',
+          text: t('common.select'),
           onPress: async () => {
             if (!permissions.library) {
-              Alert.alert(
-                'Permission Required',
-                'Photo library permission is required to choose a photo.'
-              );
-              resolve({ uri: null, error: 'Library permission denied' });
+              Alert.alert(t('alerts.error'), t('errors.permissionsDenied'));
+              resolve({ uri: null, error: t('errors.permissionsDenied') });
               return;
             }
             const result = await pickImageFromGallery();
@@ -118,7 +113,7 @@ export const useImagePicker = () => {
           },
         },
         {
-          text: 'Cancel',
+          text: t('common.cancel'),
           style: 'cancel',
           onPress: () => resolve({ uri: null }),
         },

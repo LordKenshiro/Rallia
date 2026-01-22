@@ -83,3 +83,5 @@ Pods/
 logs
 *.log
 .vercel
+
+.cursor/plans

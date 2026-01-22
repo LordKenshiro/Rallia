@@ -1,402 +1,534 @@
-import React from 'react';
-import { View, TouchableOpacity } from 'react-native';
+/**
+ * App Navigator - Main navigation structure
+ *
+ * Architecture:
+ * - Root Stack: Contains Main (tabs) and all shared screens
+ * - Bottom Tabs: Home, Courts, Actions (opens sheet), Community, Chat
+ * - Each tab has a minimal stack with only tab-specific screens
+ * - Shared screens (UserProfile, Settings, etc.) are in Root Stack for full-screen experience
+ *
+ * Note: Splash animation is handled by SplashOverlay component in App.tsx
+ */
+
+import React, { useEffect } from 'react';
+import { View, TouchableOpacity, StyleProp, ViewStyle, GestureResponderEvent } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { lightHaptic } from '@rallia/shared-utils';
 import {
   ProfilePictureButton,
   NotificationButton,
   SettingsButton,
   SportSelector,
 } from '@rallia/shared-components';
-import { useOverlay } from '../context';
-import { useAuth } from '../hooks';
-import Landing from '../screens/Landing';
+import { useUnreadNotificationCount, useProfile } from '@rallia/shared-hooks';
+import { useActionsSheet, useSport, useOverlay } from '../context';
+import { useAuth, useThemeStyles, useTranslation } from '../hooks';
+import { useTheme } from '@rallia/shared-hooks';
+import { useAppNavigation } from './hooks';
+import { spacingPixels, fontSizePixels, fontWeightNumeric } from '@rallia/design-system';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+// Screens
 import Home from '../screens/Home';
 import Map from '../screens/Map';
 import Match from '../screens/Match';
 import Community from '../screens/Community';
 import Chat from '../screens/Chat';
+import ChatConversation from '../screens/ChatConversation';
+import ArchivedChats from '../screens/ArchivedChats';
 import SettingsScreen from '../screens/SettingsScreen';
 import UserProfile from '../screens/UserProfile';
 import SportProfile from '../screens/SportProfile';
 import RatingProofs from '../screens/RatingProofs';
-import RalliaLogo from '../../assets/images/light mode logo.svg';
+import Notifications from '../screens/Notifications';
+import NotificationPreferencesScreen from '../screens/NotificationPreferencesScreen';
+import PermissionsScreen from '../screens/PermissionsScreen';
+import PlayerProfile from '../screens/PlayerProfile';
+import SharedLists from '../screens/SharedLists';
+import SharedListDetail from '../screens/SharedListDetail';
+import Groups from '../screens/Groups';
+import GroupDetail from '../screens/GroupDetail';
+import PreOnboardingScreen from '../screens/PreOnboarding';
+import GroupChatInfo from '../screens/GroupChatInfo';
+import PlayedMatchDetail from '../screens/PlayedMatchDetail';
 
-const Tab = createBottomTabNavigator();
-const Stack = createNativeStackNavigator();
+// Components
+import { ThemeLogo } from '../components/ThemeLogo';
 
-// Profile screens that can be accessed from any tab
-// These are defined as reusable screen options
-const profileScreenOptions = {
+// Types
+import type {
+  RootStackParamList,
+  BottomTabParamList,
+  HomeStackParamList,
+  CourtsStackParamList,
+  CommunityStackParamList,
+  ChatStackParamList,
+} from './types';
+import PublicMatches from '../features/matches/screens/PublicMatches';
+import PlayerMatches from '../features/matches/screens/PlayerMatches';
+
+// =============================================================================
+// TYPED NAVIGATORS
+// =============================================================================
+
+const RootStack = createNativeStackNavigator<RootStackParamList>();
+const Tab = createBottomTabNavigator<BottomTabParamList>();
+const HomeStackNavigator = createNativeStackNavigator<HomeStackParamList>();
+const CourtsStackNavigator = createNativeStackNavigator<CourtsStackParamList>();
+const CommunityStackNavigator = createNativeStackNavigator<CommunityStackParamList>();
+const ChatStackNavigator = createNativeStackNavigator<ChatStackParamList>();
+
+// =============================================================================
+// SHARED HEADER COMPONENTS
+// =============================================================================
+
+/**
+ * Notification button with badge showing unread count
+ */
+function NotificationButtonWithBadge({ color }: { color?: string }) {
+  const navigation = useAppNavigation();
+  const { session } = useAuth();
+  const { data: unreadCount } = useUnreadNotificationCount(session?.user?.id);
+  const { colors } = useThemeStyles();
+
+  return (
+    <NotificationButton
+      onPress={() => navigation.navigate('Notifications')}
+      unreadCount={unreadCount ?? 0}
+      color={color ?? colors.headerForeground}
+      badgeColor={colors.error}
+      badgeTextColor={colors.primaryForeground}
+    />
+  );
+}
+
+/**
+ * Sport selector with context integration
+ * Uses useSport hook to get/set selected sport and useTheme for dark mode
+ * Shows for:
+ * - Signed-out users (guests) browsing public matches
+ * - Signed-in users who have completed onboarding
+ */
+function SportSelectorWithContext() {
+  const { selectedSport, userSports, setSelectedSport } = useSport();
+  const { theme } = useTheme();
+  const { session } = useAuth();
+  const { contentMode } = useActionsSheet();
+  const { refetch } = useProfile();
+  const { t } = useTranslation();
+  const isDark = theme === 'dark';
+
+  // Determine if user is a guest (not signed in)
+  // const isGuest = !session?.user;
+
+  // Refetch profile when auth state changes (e.g., user first authenticates)
+  useEffect(() => {
+    if (session?.user) {
+      refetch();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.id, refetch]);
+
+  // Refetch profile when actions sheet mode changes from 'onboarding' to 'actions'
+  // This indicates onboarding was completed and the profile needs to be refreshed
+  const prevContentModeRef = React.useRef<typeof contentMode>(contentMode);
+  useEffect(() => {
+    if (prevContentModeRef.current === 'onboarding' && contentMode === 'actions' && session?.user) {
+      // Onboarding was just completed, refetch profile to get updated onboarding_completed status
+      refetch();
+    }
+    prevContentModeRef.current = contentMode;
+  }, [contentMode, session?.user, refetch]);
+
+  // For signed-in users, only show if onboarding is completed
+  // For guests, always allow (they browse all public matches)
+  // if (!isGuest && !profile?.onboarding_completed) {
+  //   return null;
+  // }
+
+  // Don't show sport selector if user has only one or no sports
+  if (!userSports || userSports.length <= 1) {
+    return null;
+  }
+
+  return (
+    <SportSelector
+      selectedSport={selectedSport}
+      userSports={userSports}
+      onSelectSport={setSelectedSport}
+      isDark={isDark}
+      confirmBeforeSwitch
+      t={t as (key: string) => string}
+    />
+  );
+}
+
+// =============================================================================
+// SCREEN OPTIONS
+// =============================================================================
+
+/**
+ * Common header style for shared screens (UserProfile, Settings, etc.)
+ * Note: Colors are applied dynamically via inline styles in screen options
+ */
+const getSharedScreenOptions = (colors: ReturnType<typeof useThemeStyles>['colors']) => ({
   headerShown: true,
-  headerStyle: { backgroundColor: '#C8F2EF' },
-  headerTintColor: '#333',
+  headerStyle: { backgroundColor: colors.headerBackground },
+  headerTintColor: colors.headerForeground,
   headerTitleStyle: {
-    fontSize: 18,
-    fontWeight: '600' as const,
+    fontSize: fontSizePixels.lg,
+    fontWeight: String(fontWeightNumeric.semibold) as '600',
+    color: colors.headerForeground,
   },
   headerTitleAlign: 'center' as const,
-};
-
-// Common header options for main tab screens
-const getMainScreenOptions = () => ({
-  headerShown: true,
-  headerStyle: { backgroundColor: '#C8F2EF' },
-  headerTitleStyle: { fontSize: 18, fontWeight: '600' as const },
-  headerLeft: () => (
-    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      <ProfilePictureButton />
-      <RalliaLogo width={100} height={30} />
-    </View>
-  ),
-  headerTitle: () => <SportSelector />,
-  headerRight: () => (
-    <View style={{ flexDirection: 'row', gap: 8, marginRight: 8 }}>
-      <NotificationButton />
-      <SettingsButton />
-    </View>
-  ),
 });
 
-// Create stack navigators for each tab so they can all navigate to Profile screens
-function HomeStack() {
-  return (
-    <Stack.Navigator>
-      <Stack.Screen name="HomeScreen" component={Home} options={getMainScreenOptions()} />
-      <Stack.Screen 
-        name="UserProfile" 
-        component={UserProfile}
-        options={({ navigation }) => ({
-          ...profileScreenOptions,
-          headerTitle: 'Profile',
-          headerLeft: () => (
-            <Ionicons 
-              name="chevron-back" 
-              size={28} 
-              color="#333" 
-              onPress={() => navigation.goBack()}
-              style={{ marginLeft: 8 }}
-            />
-          ),
-          headerRight: () => (
-            <View style={{ flexDirection: 'row', gap: 8, marginRight: 8 }}>
-              <NotificationButton />
-              <SettingsButton />
-            </View>
-          ),
-        })}
-      />
-      <Stack.Screen 
-        name="SportProfile" 
-        component={SportProfile}
-        options={({ route }) => ({
-          ...profileScreenOptions,
-          headerTitle: (route.params as any)?.sportName || 'Sport Profile',
-        })}
-      />
-      <Stack.Screen name="RatingProofs" component={RatingProofs} options={{ headerShown: false }} />
-      <Stack.Screen 
-        name="Settings" 
-        component={SettingsScreen}
-        options={({ navigation }) => ({
-          ...profileScreenOptions,
-          headerTitle: 'Settings',
-          headerLeft: () => (
-            <Ionicons 
-              name="chevron-back" 
-              size={28} 
-              color="#333" 
-              onPress={() => navigation.goBack()}
-              style={{ marginLeft: 8 }}
-            />
-          ),
-        })}
-      />
-    </Stack.Navigator>
-  );
-}
-
-function MapStack() {
-  return (
-    <Stack.Navigator>
-      <Stack.Screen name="MapScreen" component={Map} options={getMainScreenOptions()} />
-      <Stack.Screen 
-        name="UserProfile" 
-        component={UserProfile}
-        options={({ navigation }) => ({
-          ...profileScreenOptions,
-          headerTitle: 'Profile',
-          headerLeft: () => (
-            <Ionicons 
-              name="chevron-back" 
-              size={28} 
-              color="#333" 
-              onPress={() => navigation.goBack()}
-              style={{ marginLeft: 8 }}
-            />
-          ),
-          headerRight: () => (
-            <View style={{ flexDirection: 'row', gap: 8, marginRight: 8 }}>
-              <NotificationButton />
-              <SettingsButton />
-            </View>
-          ),
-        })}
-      />
-      <Stack.Screen 
-        name="SportProfile" 
-        component={SportProfile}
-        options={({ route }) => ({
-          ...profileScreenOptions,
-          headerTitle: (route.params as any)?.sportName || 'Sport Profile',
-        })}
-      />
-      <Stack.Screen name="RatingProofs" component={RatingProofs} options={{ headerShown: false }} />
-      <Stack.Screen 
-        name="Settings" 
-        component={SettingsScreen}
-        options={({ navigation }) => ({
-          ...profileScreenOptions,
-          headerTitle: 'Settings',
-          headerLeft: () => (
-            <Ionicons 
-              name="chevron-back" 
-              size={28} 
-              color="#333" 
-              onPress={() => navigation.goBack()}
-              style={{ marginLeft: 8 }}
-            />
-          ),
-        })}
-      />
-    </Stack.Navigator>
-  );
-}
-
-function MatchStack() {
-  return (
-    <Stack.Navigator>
-      <Stack.Screen name="MatchScreen" component={Match} options={getMainScreenOptions()} />
-      <Stack.Screen 
-        name="UserProfile" 
-        component={UserProfile}
-        options={({ navigation }) => ({
-          ...profileScreenOptions,
-          headerTitle: 'Profile',
-          headerLeft: () => (
-            <Ionicons 
-              name="chevron-back" 
-              size={28} 
-              color="#333" 
-              onPress={() => navigation.goBack()}
-              style={{ marginLeft: 8 }}
-            />
-          ),
-          headerRight: () => (
-            <View style={{ flexDirection: 'row', gap: 8, marginRight: 8 }}>
-              <NotificationButton />
-              <SettingsButton />
-            </View>
-          ),
-        })}
-      />
-      <Stack.Screen 
-        name="SportProfile" 
-        component={SportProfile}
-        options={({ route }) => ({
-          ...profileScreenOptions,
-          headerTitle: (route.params as any)?.sportName || 'Sport Profile',
-        })}
-      />
-      <Stack.Screen name="RatingProofs" component={RatingProofs} options={{ headerShown: false }} />
-      <Stack.Screen 
-        name="Settings" 
-        component={SettingsScreen}
-        options={({ navigation }) => ({
-          ...profileScreenOptions,
-          headerTitle: 'Settings',
-          headerLeft: () => (
-            <Ionicons 
-              name="chevron-back" 
-              size={28} 
-              color="#333" 
-              onPress={() => navigation.goBack()}
-              style={{ marginLeft: 8 }}
-            />
-          ),
-        })}
-      />
-    </Stack.Navigator>
-  );
-}
-
-function CommunityStack() {
-  return (
-    <Stack.Navigator>
-      <Stack.Screen name="CommunityScreen" component={Community} options={getMainScreenOptions()} />
-      <Stack.Screen 
-        name="UserProfile" 
-        component={UserProfile}
-        options={({ navigation }) => ({
-          ...profileScreenOptions,
-          headerTitle: 'Profile',
-          headerLeft: () => (
-            <Ionicons 
-              name="chevron-back" 
-              size={28} 
-              color="#333" 
-              onPress={() => navigation.goBack()}
-              style={{ marginLeft: 8 }}
-            />
-          ),
-          headerRight: () => (
-            <View style={{ flexDirection: 'row', gap: 8, marginRight: 8 }}>
-              <NotificationButton />
-              <SettingsButton />
-            </View>
-          ),
-        })}
-      />
-      <Stack.Screen 
-        name="SportProfile" 
-        component={SportProfile}
-        options={({ route }) => ({
-          ...profileScreenOptions,
-          headerTitle: (route.params as any)?.sportName || 'Sport Profile',
-        })}
-      />
-      <Stack.Screen name="RatingProofs" component={RatingProofs} options={{ headerShown: false }} />
-      <Stack.Screen 
-        name="Settings" 
-        component={SettingsScreen}
-        options={({ navigation }) => ({
-          ...profileScreenOptions,
-          headerTitle: 'Settings',
-          headerLeft: () => (
-            <Ionicons 
-              name="chevron-back" 
-              size={28} 
-              color="#333" 
-              onPress={() => navigation.goBack()}
-              style={{ marginLeft: 8 }}
-            />
-          ),
-        })}
-      />
-    </Stack.Navigator>
-  );
-}
-
-function ChatStack() {
-  return (
-    <Stack.Navigator>
-      <Stack.Screen name="ChatScreen" component={Chat} options={getMainScreenOptions()} />
-      <Stack.Screen 
-        name="UserProfile" 
-        component={UserProfile}
-        options={({ navigation }) => ({
-          ...profileScreenOptions,
-          headerTitle: 'Profile',
-          headerLeft: () => (
-            <Ionicons 
-              name="chevron-back" 
-              size={28} 
-              color="#333" 
-              onPress={() => navigation.goBack()}
-              style={{ marginLeft: 8 }}
-            />
-          ),
-          headerRight: () => (
-            <View style={{ flexDirection: 'row', gap: 8, marginRight: 8 }}>
-              <NotificationButton />
-              <SettingsButton />
-            </View>
-          ),
-        })}
-      />
-      <Stack.Screen 
-        name="SportProfile" 
-        component={SportProfile}
-        options={({ route }) => ({
-          ...profileScreenOptions,
-          headerTitle: (route.params as any)?.sportName || 'Sport Profile',
-        })}
-      />
-      <Stack.Screen name="RatingProofs" component={RatingProofs} options={{ headerShown: false }} />
-      <Stack.Screen 
-        name="Settings" 
-        component={SettingsScreen}
-        options={({ navigation }) => ({
-          ...profileScreenOptions,
-          headerTitle: 'Settings',
-          headerLeft: () => (
-            <Ionicons 
-              name="chevron-back" 
-              size={28} 
-              color="#333" 
-              onPress={() => navigation.goBack()}
-              style={{ marginLeft: 8 }}
-            />
-          ),
-        })}
-      />
-    </Stack.Navigator>
-  );
-}
-
-// Custom center tab button component that handles auth/onboarding state
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function CenterTabButton({ children, onPress }: { children: React.ReactNode; onPress?: (e: any) => void }) {
+/**
+ * Profile picture button with auth-aware behavior
+ * - If authenticated: navigates to UserProfile
+ * - If not authenticated: opens auth sheet
+ */
+function ProfilePictureButtonWithAuth() {
+  const navigation = useAppNavigation();
   const { session } = useAuth();
-  const { startOnboarding, resumeOnboarding, needsOnboarding } = useOverlay();
+  const { openSheet } = useActionsSheet();
 
   const handlePress = () => {
-    // Not authenticated -> Start signup flow
-    if (!session?.user) {
-      startOnboarding();
-      return;
+    if (session?.user) {
+      // Authenticated: navigate to profile
+      navigation.navigate('UserProfile', {});
+    } else {
+      // Not authenticated: open auth sheet
+      openSheet();
     }
+  };
 
-    // Authenticated but onboarding not complete -> Resume onboarding
-    if (needsOnboarding) {
-      resumeOnboarding();
-      return;
-    }
+  const { isDark } = useThemeStyles();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <ProfilePictureButton onPress={handlePress} isDark={isDark} />
+      <ThemeLogo width={100} height={30} />
+    </View>
+  );
+}
 
-    // Fully onboarded -> Navigate to Match screen normally
+/**
+ * Header right component with notification and settings buttons
+ */
+function HeaderRightButtons() {
+  const { colors } = useThemeStyles();
+  return (
+    <View style={{ flexDirection: 'row', gap: spacingPixels[2], marginRight: spacingPixels[2] }}>
+      <NotificationButtonWithBadge color={colors.headerForeground} />
+      <SettingsButton color={colors.headerForeground} />
+    </View>
+  );
+}
+
+/**
+ * Header options for main tab screens (Home, Courts, Community, Chat)
+ */
+function useMainScreenOptions() {
+  const { colors } = useThemeStyles();
+  return {
+    headerShown: true,
+    headerStyle: {
+      backgroundColor: colors.headerBackground,
+    },
+    headerTitleStyle: {
+      fontSize: fontSizePixels.lg,
+      fontWeight: String(fontWeightNumeric.semibold) as '600',
+      color: colors.headerForeground,
+    },
+    headerLeft: () => <ProfilePictureButtonWithAuth />,
+    headerTitle: () => <SportSelectorWithContext />,
+    headerRight: () => <HeaderRightButtons />,
+  };
+}
+
+// =============================================================================
+// TAB STACKS - Minimal, tab-specific screens only
+// =============================================================================
+
+/**
+ * Map icon button for header right
+ */
+function MapIconButton() {
+  const navigation = useAppNavigation();
+  const { colors } = useThemeStyles();
+
+  return (
+    <TouchableOpacity
+      onPress={() => navigation.navigate('Map')}
+      style={{ marginRight: spacingPixels[2] }}
+      activeOpacity={0.7}
+    >
+      <Ionicons name="map" size={24} color={colors.headerForeground} />
+    </TouchableOpacity>
+  );
+}
+
+/**
+ * Header options for PublicMatches screen
+ */
+function usePublicMatchesScreenOptions() {
+  const { colors } = useThemeStyles();
+  const { t } = useTranslation();
+  const sharedOptions = getSharedScreenOptions(colors);
+
+  return ({
+    navigation,
+  }: {
+    navigation: NativeStackNavigationProp<HomeStackParamList, 'PublicMatches'>;
+  }) => ({
+    ...sharedOptions,
+    headerTitle: t('screens.publicMatches'),
+    headerLeft: () => <ThemedBackButton navigation={navigation} />,
+    headerRight: () => <MapIconButton />,
+  });
+}
+
+/**
+ * Header options for PlayerMatches screen
+ */
+function usePlayerMatchesScreenOptions() {
+  const { colors } = useThemeStyles();
+  const { t } = useTranslation();
+  const sharedOptions = getSharedScreenOptions(colors);
+
+  return ({
+    navigation,
+  }: {
+    navigation: NativeStackNavigationProp<HomeStackParamList, 'PlayerMatches'>;
+  }) => ({
+    ...sharedOptions,
+    headerTitle: t('screens.playerMatches'),
+    headerLeft: () => <ThemedBackButton navigation={navigation} />,
+  });
+}
+
+// Shared screen options for fast animations across all stacks
+const fastAnimationOptions = {
+  animation: 'slide_from_right' as const,
+  animationDuration: 200,
+  gestureEnabled: true,
+};
+
+/**
+ * Home Stack - Match discovery and player's own matches
+ */
+function HomeStack() {
+  const mainScreenOptions = useMainScreenOptions();
+  const publicMatchesOptions = usePublicMatchesScreenOptions();
+  const playerMatchesOptions = usePlayerMatchesScreenOptions();
+  return (
+    <HomeStackNavigator.Navigator id="HomeStack" screenOptions={fastAnimationOptions}>
+      <HomeStackNavigator.Screen name="HomeScreen" component={Home} options={mainScreenOptions} />
+      <HomeStackNavigator.Screen
+        name="PublicMatches"
+        component={PublicMatches}
+        options={publicMatchesOptions}
+      />
+      <HomeStackNavigator.Screen
+        name="PlayerMatches"
+        component={PlayerMatches}
+        options={playerMatchesOptions}
+      />
+    </HomeStackNavigator.Navigator>
+  );
+}
+
+/**
+ * Courts Stack - Facility discovery
+ * Note: Currently uses Map component as placeholder for FacilitiesDirectory
+ */
+function CourtsStack() {
+  const mainScreenOptions = useMainScreenOptions();
+  return (
+    <CourtsStackNavigator.Navigator id="CourtsStack" screenOptions={fastAnimationOptions}>
+      <CourtsStackNavigator.Screen
+        name="FacilitiesDirectory"
+        component={Match} // Placeholder - will be FacilitiesDirectory
+        options={mainScreenOptions}
+      />
+      {/* Future screens: FacilityDetail */}
+    </CourtsStackNavigator.Navigator>
+  );
+}
+
+/**
+ * Community Stack - Social features
+ */
+function CommunityStack() {
+  const mainScreenOptions = useMainScreenOptions();
+  return (
+    <CommunityStackNavigator.Navigator id="CommunityStack" screenOptions={fastAnimationOptions}>
+      <CommunityStackNavigator.Screen
+        name="PlayerDirectory"
+        component={Community}
+        options={mainScreenOptions}
+      />
+      <CommunityStackNavigator.Screen
+        name="ShareLists"
+        component={SharedLists}
+        options={{
+          title: 'Shared Lists',
+          headerBackTitle: 'Back',
+        }}
+      />
+      <CommunityStackNavigator.Screen
+        name="SharedListDetail"
+        component={SharedListDetail}
+        options={{
+          title: 'List',
+          headerBackTitle: 'Back',
+        }}
+      />
+      <CommunityStackNavigator.Screen
+        name="Groups"
+        component={Groups}
+        options={{
+          title: 'Groups',
+          headerBackTitle: 'Back',
+        }}
+      />
+      {/* Future screens: Communities, Tournaments, Leagues, etc. */}
+    </CommunityStackNavigator.Navigator>
+  );
+}
+
+/**
+ * Chat Stack - Messaging
+ */
+function ChatStack() {
+  const mainScreenOptions = useMainScreenOptions();
+  return (
+    <ChatStackNavigator.Navigator id="ChatStack" screenOptions={fastAnimationOptions}>
+      <ChatStackNavigator.Screen
+        name="Conversations"
+        component={Chat}
+        options={mainScreenOptions}
+      />
+      <ChatStackNavigator.Screen
+        name="ChatScreen"
+        component={ChatConversation}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <ChatStackNavigator.Screen
+        name="ArchivedChats"
+        component={ArchivedChats}
+        options={{
+          headerShown: false,
+        }}
+      />
+    </ChatStackNavigator.Navigator>
+  );
+}
+
+// =============================================================================
+// TAB BUTTON WITH HAPTICS
+// =============================================================================
+
+/**
+ * Wrapper component for tab bar buttons that adds haptic feedback
+ */
+function TabButtonWithHaptic(props: {
+  children: React.ReactNode;
+  onPress?: (e: GestureResponderEvent) => void;
+  [key: string]: unknown;
+}) {
+  const { children, onPress, ...otherProps } = props;
+
+  const handlePress = (e: GestureResponderEvent) => {
+    lightHaptic();
     if (onPress) {
-      onPress(null);
+      onPress(e);
     }
   };
 
   return (
+    <TouchableOpacity onPress={handlePress} {...otherProps}>
+      {children}
+    </TouchableOpacity>
+  );
+}
+
+// =============================================================================
+// CENTER TAB BUTTON - Opens Actions Bottom Sheet
+// =============================================================================
+
+/**
+ * Custom center tab button that opens the Actions bottom sheet
+ * instead of navigating to a screen
+ */
+function CenterTabButton({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
+  // These are passed by React Navigation but we intentionally ignore them
+  onPress?: (e: GestureResponderEvent) => void;
+  onLongPress?: ((e: GestureResponderEvent) => void) | null;
+  accessibilityRole?: string;
+  accessibilityState?: { selected?: boolean };
+  testID?: string;
+}) {
+  const { openSheet } = useActionsSheet();
+
+  return (
     <TouchableOpacity
-      onPress={handlePress}
-      style={{
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
+      onPress={() => {
+        lightHaptic();
+        openSheet();
       }}
+      style={[
+        {
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        style,
+      ]}
     >
       {children}
     </TouchableOpacity>
   );
 }
 
+/**
+ * Dummy component for Actions tab - never rendered since we intercept the tap
+ */
+function ActionsPlaceholder() {
+  return null;
+}
+
+// =============================================================================
+// BOTTOM TABS
+// =============================================================================
+
 function BottomTabs() {
+  const { colors } = useThemeStyles();
   return (
     <Tab.Navigator
+      id="BottomTabs"
       screenOptions={{
-        headerShown: false, // Headers are now in each Stack
-        tabBarActiveTintColor: '#00B8A9',
-        tabBarInactiveTintColor: '#8E8E93',
+        headerShown: false,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
         tabBarShowLabel: false,
         tabBarStyle: {
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 8,
+          backgroundColor: colors.card,
+          borderTopColor: colors.border,
+          height: spacingPixels[20],
+          paddingBottom: spacingPixels[2],
+          paddingTop: spacingPixels[2],
         },
+        tabBarButton: props => <TabButtonWithHaptic {...props} />,
       }}
     >
       <Tab.Screen
@@ -407,18 +539,27 @@ function BottomTabs() {
         }}
       />
       <Tab.Screen
-        name="Map"
-        component={MapStack}
+        name="Courts"
+        component={CourtsStack}
         options={{
-          tabBarIcon: ({ color, size }) => <Ionicons name="location" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Ionicons name="tennisball" size={size} color={color} />,
         }}
       />
       <Tab.Screen
-        name="Match"
-        component={MatchStack}
+        name="Actions"
+        component={ActionsPlaceholder}
         options={{
-          tabBarIcon: ({ color, size }) => <Ionicons name="add-circle" size={size} color={color} />,
-          tabBarButton: (props) => <CenterTabButton {...props} />,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="add-circle" size={size * 1.2} color={color} />
+          ),
+          tabBarButton: props => <CenterTabButton {...props} />,
+        }}
+        listeners={{
+          tabPress: e => {
+            // Prevent default navigation to the Actions tab
+            e.preventDefault();
+            // The actual sheet opening is handled by CenterTabButton
+          },
         }}
       />
       <Tab.Screen
@@ -441,14 +582,197 @@ function BottomTabs() {
   );
 }
 
-export default function AppNavigator() {
-  // Landing screen first, then bottom tabs
-  // Each tab is a Stack Navigator that can navigate to Profile screens
-  // This keeps bottom tabs visible on ALL screens including Profile/Settings/RatingProofs
+// =============================================================================
+// ROOT NAVIGATOR
+// =============================================================================
+
+/**
+ * Back button component with theme-aware colors
+ * Uses TouchableOpacity for proper touch handling and immediate response
+ */
+function ThemedBackButton({
+  navigation,
+  icon = 'chevron-back',
+}: {
+  navigation: { goBack: () => void };
+  icon?: string;
+}) {
+  const { colors } = useThemeStyles();
   return (
-    <Stack.Navigator initialRouteName="Landing">
-      <Stack.Screen name="Landing" component={Landing} options={{ headerShown: false }} />
-      <Stack.Screen name="Main" component={BottomTabs} options={{ headerShown: false }} />
-    </Stack.Navigator>
+    <TouchableOpacity
+      onPress={() => {
+        lightHaptic();
+        navigation.goBack();
+      }}
+      activeOpacity={0.6}
+      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+      style={{ marginLeft: spacingPixels[2], padding: spacingPixels[1] }}
+    >
+      <Ionicons
+        name={icon as keyof typeof Ionicons.glyphMap}
+        size={28}
+        color={colors.headerForeground}
+      />
+    </TouchableOpacity>
+  );
+}
+
+/**
+ * Main App Navigator
+ *
+ * Structure:
+ * - PreOnboarding: First-time wizard (sports, postal code, location permission) for new users
+ * - Main: Bottom tabs with minimal stacks (shown after pre-onboarding complete)
+ * - Shared screens: UserProfile, SportProfile, Settings, Notifications, Map, RatingProofs
+ *   These are full-screen (tabs hidden) and accessible from anywhere
+ */
+export default function AppNavigator() {
+  const { colors } = useThemeStyles();
+  const { t } = useTranslation();
+  const { isSportSelectionComplete } = useOverlay();
+  const sharedOptions = getSharedScreenOptions(colors);
+
+  return (
+    <RootStack.Navigator
+      id="RootStack"
+      initialRouteName={isSportSelectionComplete ? 'Main' : 'PreOnboarding'}
+      screenOptions={fastAnimationOptions}
+    >
+      {/* First-time pre-onboarding wizard - shown before Main for new users */}
+      {!isSportSelectionComplete && (
+        <RootStack.Screen
+          name="PreOnboarding"
+          component={PreOnboardingScreen}
+          options={{ headerShown: false, animation: 'fade' }}
+        />
+      )}
+
+      {/* Main app entry - only rendered after sport selection is complete */}
+      <RootStack.Screen name="Main" component={BottomTabs} options={{ headerShown: false }} />
+
+      {/* Shared screens - full screen, tabs hidden */}
+      <RootStack.Screen
+        name="UserProfile"
+        component={UserProfile}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('screens.profile'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="PlayerProfile"
+        component={PlayerProfile}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('screens.playerProfile'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="SportProfile"
+        component={SportProfile}
+        options={({ route, navigation }) => ({
+          ...sharedOptions,
+          headerTitle: route.params?.sportName || t('screens.sportProfile'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('screens.settings'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="Notifications"
+        component={Notifications}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('screens.notifications'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="NotificationPreferences"
+        component={NotificationPreferencesScreen}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('screens.notificationPreferences'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="Permissions"
+        component={PermissionsScreen}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('screens.permissions'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="Map"
+        component={Map}
+        options={{
+          headerShown: false,
+          presentation: 'fullScreenModal' as const,
+        }}
+      />
+
+      <RootStack.Screen
+        name="RatingProofs"
+        component={RatingProofs}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('screens.ratingProofs'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="GroupDetail"
+        component={GroupDetail}
+        options={({ route, navigation }) => ({
+          ...sharedOptions,
+          headerTitle: route.params?.groupName || t('screens.group'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="GroupChatInfo"
+        component={GroupChatInfo}
+        options={{
+          headerShown: false,
+        }}
+      />
+
+      <RootStack.Screen
+        name="PlayedMatchDetail"
+        component={PlayedMatchDetail}
+        options={{
+          headerShown: false,
+        }}
+      />
+
+      <RootStack.Screen
+        name="Chat"
+        component={ChatConversation}
+        options={{
+          headerShown: false,
+        }}
+      />
+    </RootStack.Navigator>
   );
 }

@@ -1,6 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { OrganizationDeleteButton } from '@/components/organization-delete-button';
 import { Separator } from '@/components/ui/separator';
 import { Link } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/server';
@@ -21,45 +22,49 @@ function capitalize(str: string | null | undefined): string {
 }
 
 // Type aliases for relations - matching the actual query structure
-// FacilityFile now represents facility_files joined with files
-type FacilityFile = {
+// FacilityFileJoin represents facility_file joined with file
+type FacilityFileJoin = {
   id: string;
   display_order: number | null;
   is_primary: boolean | null;
-  files: {
+  file: {
     id: string;
     url: string;
     thumbnail_url: string | null;
   } | null;
 };
 type FacilityContact = Pick<
-  Tables<'facility_contacts'>,
+  Tables<'facility_contact'>,
   'id' | 'phone' | 'email' | 'website' | 'contact_type' | 'is_primary'
 >;
-type Sport = Pick<Tables<'sports'>, 'id' | 'name' | 'slug'>;
-type Court = Pick<
-  Tables<'courts'>,
-  'id' | 'surface_type' | 'lighting' | 'indoor' | 'name' | 'court_number' | 'availability_status'
-> & {
-  court_sports: Array<{
+type Sport = Pick<Tables<'sport'>, 'id' | 'name' | 'slug'>;
+type Court = {
+  id: string;
+  surface_type: string | null;
+  lighting: boolean | null;
+  indoor: boolean | null;
+  name: string | null;
+  court_number: number | null;
+  availability_status: string | null;
+  court_sport: Array<{
     sport_id: string;
-    sports: Sport;
+    sport: Sport;
   }>;
 };
 type Facility = Pick<
-  Tables<'facilities'>,
+  Tables<'facility'>,
   'id' | 'name' | 'slug' | 'address' | 'city' | 'country' | 'postal_code' | 'latitude' | 'longitude'
 > & {
-  facility_files: FacilityFile[];
-  facility_contacts: FacilityContact[];
-  facility_sports: Array<{
+  facility_file: FacilityFileJoin[];
+  facility_contact: FacilityContact[];
+  facility_sport: Array<{
     sport_id: string;
-    sports: Sport;
+    sport: Sport;
   }>;
   courts: Court[];
 };
 type Organization = Pick<
-  Tables<'organizations'>,
+  Tables<'organization'>,
   | 'id'
   | 'name'
   | 'nature'
@@ -90,7 +95,7 @@ export async function generateMetadata({
 
   try {
     const { data: organization } = await supabase
-      .from('organizations')
+      .from('organization')
       .select('name, description')
       .eq('slug', slug)
       .single();
@@ -125,7 +130,7 @@ export default async function OrganizationProfilePage({
   try {
     // Fetch organization
     const { data: orgData, error: orgError } = await supabase
-      .from('organizations')
+      .from('organization')
       .select(
         `
         id,
@@ -154,7 +159,7 @@ export default async function OrganizationProfilePage({
 
     // Fetch facilities with all related data
     const { data: facilities, error: facilitiesError } = await supabase
-      .from('facilities')
+      .from('facility')
       .select(
         `
         id,
@@ -166,17 +171,17 @@ export default async function OrganizationProfilePage({
         postal_code,
         latitude,
         longitude,
-        facility_files (
+        facility_file (
           id,
           display_order,
           is_primary,
-          files (
+          file (
             id,
             url,
             thumbnail_url
           )
         ),
-        facility_contacts (
+        facility_contact (
           id,
           phone,
           email,
@@ -184,9 +189,9 @@ export default async function OrganizationProfilePage({
           is_primary,
           contact_type
         ),
-        facility_sports (
+        facility_sport (
           sport_id,
-          sports (
+          sport (
             id,
             name,
             slug
@@ -204,11 +209,29 @@ export default async function OrganizationProfilePage({
 
     // Fetch courts
     const facilityIds = facilities?.map(f => f.id) || [];
-    let courts: any[] = [];
+    type CourtData = {
+      id: string;
+      facility_id: string;
+      surface_type: string | null;
+      lighting: boolean | null;
+      indoor: boolean | null;
+      name: string | null;
+      court_number: number | null;
+      availability_status: string | null;
+      court_sport: Array<{
+        sport_id: string;
+        sport: {
+          id: string;
+          name: string;
+          slug: string;
+        };
+      }>;
+    };
+    let courts: CourtData[] = [];
 
     if (facilityIds.length > 0) {
       const { data: courtsData, error: courtsError } = await supabase
-        .from('courts')
+        .from('court')
         .select(
           `
           id,
@@ -219,9 +242,9 @@ export default async function OrganizationProfilePage({
           name,
           court_number,
           availability_status,
-          court_sports (
+          court_sport (
             sport_id,
-            sports (
+            sport (
               id,
               name,
               slug
@@ -288,12 +311,15 @@ export default async function OrganizationProfilePage({
           <h1 className="text-3xl font-bold">{organization.name}</h1>
           <p className="text-muted-foreground mt-2 mb-0">{t('description', { slug })}</p>
         </div>
-        <Link href={`/admin/organizations/${slug}/edit`}>
-          <Button>
-            <Edit className="h-4 w-4 mr-2" />
-            {t('updateButton')}
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href={`/admin/organizations/${slug}/edit`}>
+            <Button>
+              <Edit className="h-4 w-4 mr-2" />
+              {t('updateButton')}
+            </Button>
+          </Link>
+          <OrganizationDeleteButton organizationSlug={slug} organizationName={organization.name} />
+        </div>
       </div>
 
       {/* Organization Info */}
@@ -479,11 +505,11 @@ export default async function OrganizationProfilePage({
                       )}
                     </div>
                   </div>
-                  {facility.facility_sports && facility.facility_sports.length > 0 && (
+                  {facility.facility_sport && facility.facility_sport.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 justify-end max-w-[200px]">
-                      {facility.facility_sports.map(fs => (
+                      {facility.facility_sport.map(fs => (
                         <Badge key={fs.sport_id} variant="default" className="text-xs">
-                          {capitalize(fs.sports.name)}
+                          {capitalize(fs.sport.name)}
                         </Badge>
                       ))}
                     </div>
@@ -492,14 +518,14 @@ export default async function OrganizationProfilePage({
               </CardHeader>
               <CardContent className="pt-6 space-y-6">
                 {/* Facility Images */}
-                {facility.facility_files && facility.facility_files.length > 0 && (
+                {facility.facility_file && facility.facility_file.length > 0 && (
                   <div className="space-y-3">
                     <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                       {t('sections.facilityImages')}
                     </h4>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      {facility.facility_files
-                        .filter(ff => ff.files) // Filter out entries without files
+                      {facility.facility_file
+                        .filter(ff => ff.file) // Filter out entries without file
                         .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
                         .map(facilityFile => (
                           <div
@@ -509,7 +535,7 @@ export default async function OrganizationProfilePage({
                             } shadow-sm hover:shadow-md transition-shadow`}
                           >
                             <Image
-                              src={facilityFile.files!.thumbnail_url || facilityFile.files!.url}
+                              src={facilityFile.file!.thumbnail_url || facilityFile.file!.url}
                               alt={facility.name}
                               fill
                               className="object-cover"
@@ -528,13 +554,13 @@ export default async function OrganizationProfilePage({
                 )}
 
                 {/* Contacts */}
-                {facility.facility_contacts && facility.facility_contacts.length > 0 && (
+                {facility.facility_contact && facility.facility_contact.length > 0 && (
                   <div className="space-y-3">
                     <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                       {t('sections.contacts')}
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {facility.facility_contacts.map(contact => (
+                      {facility.facility_contact.map(contact => (
                         <div
                           key={contact.id}
                           className={`p-4 rounded-lg border-2 space-y-3 ${
@@ -654,11 +680,11 @@ export default async function OrganizationProfilePage({
                             )}
                           </div>
 
-                          {court.court_sports && court.court_sports.length > 0 && (
+                          {court.court_sport && court.court_sport.length > 0 && (
                             <div className="flex flex-wrap gap-1.5 pt-2 border-t">
-                              {court.court_sports.map(cs => (
+                              {court.court_sport.map(cs => (
                                 <Badge key={cs.sport_id} variant="secondary" className="text-xs">
-                                  {capitalize(cs.sports.name)}
+                                  {capitalize(cs.sport.name)}
                                 </Badge>
                               ))}
                             </div>

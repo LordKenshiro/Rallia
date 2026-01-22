@@ -1,15 +1,23 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '@rallia/shared-components';
-import RalliaLogo from '../../assets/images/light mode logo.svg';
+import { useThemeStyles, useTranslation } from '../hooks';
+import { spacingPixels, fontSizePixels } from '@rallia/design-system';
+import RalliaLogo from '../../assets/images/logo-dark.svg';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const Match = () => {
+  const { colors } = useThemeStyles();
+  const { t } = useTranslation();
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.content}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
         <View style={styles.placeholderContainer}>
-          <Text style={styles.placeholderText}>Match Screen - Ready for your implementation</Text>
+          <Text style={[styles.placeholderText, { color: colors.textMuted }]}>
+            {t('match.placeholder')}
+          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -19,20 +27,21 @@ const Match = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   content: {
     flex: 1,
-    padding: 16,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   placeholderContainer: {
-    padding: 40,
+    minHeight: SCREEN_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
+    padding: spacingPixels[10],
   },
   placeholderText: {
-    fontSize: 16,
-    color: '#999',
+    fontSize: fontSizePixels.base,
     textAlign: 'center',
   },
 });

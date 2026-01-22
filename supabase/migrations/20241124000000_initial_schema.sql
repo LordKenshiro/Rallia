@@ -13,7 +13,6 @@ CREATE TYPE account_status AS ENUM ('active', 'suspended', 'deleted', 'pending_v
 CREATE TYPE playing_hand AS ENUM ('left', 'right', 'both');
 
 -- Match and Booking Enums
-CREATE TYPE match_status AS ENUM ('scheduled', 'in_progress', 'completed', 'cancelled', 'no_show');
 CREATE TYPE match_type AS ENUM ('casual', 'competitive', 'both');
 CREATE TYPE match_duration AS ENUM ('1h', '1.5h', '2h');
 CREATE TYPE booking_status AS ENUM ('pending', 'confirmed', 'cancelled', 'completed');
@@ -317,7 +316,6 @@ CREATE TABLE match (
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
     match_type match_type NOT NULL,
-    status match_status DEFAULT 'scheduled',
     location_name TEXT,
     location_address TEXT,
     notes TEXT,
@@ -512,7 +510,6 @@ CREATE INDEX idx_player_availability_day_time ON player_availability(day_of_week
 -- Match indexes
 CREATE INDEX idx_match_sport_id ON match(sport_id);
 CREATE INDEX idx_match_date ON match(match_date);
-CREATE INDEX idx_match_status ON match(status);
 CREATE INDEX idx_match_created_by ON match(created_by);
 CREATE INDEX idx_match_participant_match_id ON match_participant(match_id);
 CREATE INDEX idx_match_participant_player_id ON match_participant(player_id);
@@ -709,9 +706,9 @@ CREATE TRIGGER update_match_updated_at BEFORE UPDATE ON match
 -- ============================================
 
 -- Insert initial sports
-INSERT INTO sport (id, name, display_name, description, is_active) VALUES
-    ('550e8400-e29b-41d4-a716-446655440001', 'tennis', 'Tennis', 'Traditional tennis sport', true),
-    ('550e8400-e29b-41d4-a716-446655440002', 'pickleball', 'Pickleball', 'Fast-paced paddle sport', true);
+INSERT INTO sport (id, name, display_name, description, icon_url, is_active) VALUES
+    ('550e8400-e29b-41d4-a716-446655440001', 'tennis', 'Tennis', 'Traditional tennis sport', 'images/tennis.jpg', true),
+    ('550e8400-e29b-41d4-a716-446655440002', 'pickleball', 'Pickleball', 'Fast-paced paddle sport', 'images/pickleball.jpg', true);
 
 -- Insert rating types for Tennis
 INSERT INTO rating (id, sport_id, rating_type, display_name, description, min_value, max_value, is_active) VALUES

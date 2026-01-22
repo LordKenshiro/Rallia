@@ -1,6 +1,6 @@
 /**
  * Tests for usePlayerSports hook
- * 
+ *
  * Tests cover:
  * - Initial loading state
  * - Successful player sports fetch
@@ -17,10 +17,7 @@ import { supabase } from '@rallia/shared-services';
 jest.mock('@rallia/shared-services');
 
 describe('usePlayerSports', () => {
-  const mockUser = {
-    id: 'player-123',
-    email: 'test@example.com',
-  };
+  const mockPlayerId = 'player-123';
 
   const mockPlayerSports = [
     {
@@ -56,33 +53,40 @@ describe('usePlayerSports', () => {
   });
 
   describe('Initial State', () => {
-    it('should start with loading true and empty array', () => {
-      (supabase.auth.getUser as jest.Mock).mockResolvedValue({
-        data: { user: mockUser },
-      });
-
+    it('should start with loading true and empty array when playerId provided', () => {
       (supabase.from as jest.Mock).mockReturnValue({
         select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockImplementation(() => 
-            new Promise(resolve => setTimeout(() => resolve({ data: mockPlayerSports }), 100))
-          ),
+          eq: jest
+            .fn()
+            .mockImplementation(
+              () =>
+                new Promise(resolve => setTimeout(() => resolve({ data: mockPlayerSports }), 100))
+            ),
         }),
       });
 
-      const { result } = renderHook(() => usePlayerSports());
+      const { result } = renderHook(() => usePlayerSports(mockPlayerId));
 
       expect(result.current.loading).toBe(true);
       expect(result.current.playerSports).toEqual([]);
       expect(result.current.error).toBeNull();
     });
+
+    it('should return empty array and not loading when playerId is undefined', async () => {
+      const { result } = renderHook(() => usePlayerSports(undefined));
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.playerSports).toEqual([]);
+      expect(result.current.error).toBeNull();
+      expect(supabase.from).not.toHaveBeenCalled();
+    });
   });
 
   describe('Successful Player Sports Fetch', () => {
-    it('should fetch player sports for authenticated user', async () => {
-      (supabase.auth.getUser as jest.Mock).mockResolvedValue({
-        data: { user: mockUser },
-      });
-
+    it('should fetch player sports for provided player ID', async () => {
       (supabase.from as jest.Mock).mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockResolvedValue({
@@ -92,7 +96,7 @@ describe('usePlayerSports', () => {
         }),
       });
 
-      const { result } = renderHook(() => usePlayerSports());
+      const { result } = renderHook(() => usePlayerSports(mockPlayerId));
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -100,41 +104,9 @@ describe('usePlayerSports', () => {
 
       expect(result.current.playerSports).toEqual(mockPlayerSports);
       expect(result.current.error).toBeNull();
-      expect(supabase.auth.getUser).toHaveBeenCalledTimes(1);
-    });
-
-    it('should fetch player sports for specific player ID', async () => {
-      const targetPlayerId = 'player-456';
-
-      (supabase.auth.getUser as jest.Mock).mockResolvedValue({
-        data: { user: mockUser },
-      });
-
-      (supabase.from as jest.Mock).mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({
-            data: mockPlayerSports.map(ps => ({ ...ps, player_id: targetPlayerId })),
-            error: null,
-          }),
-        }),
-      });
-
-      const { result } = renderHook(() => usePlayerSports(targetPlayerId));
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      expect(result.current.playerSports[0].player_id).toBe(targetPlayerId);
-      // Hook calls getUser but uses provided playerId for fetch
-      expect(supabase.auth.getUser).toHaveBeenCalled();
     });
 
     it('should include nested sport data', async () => {
-      (supabase.auth.getUser as jest.Mock).mockResolvedValue({
-        data: { user: mockUser },
-      });
-
       (supabase.from as jest.Mock).mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockResolvedValue({
@@ -144,13 +116,13 @@ describe('usePlayerSports', () => {
         }),
       });
 
-      const { result } = renderHook(() => usePlayerSports());
+      const { result } = renderHook(() => usePlayerSports(mockPlayerId));
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
       });
 
-      result.current.playerSports.forEach((ps: any) => {
+      result.current.playerSports.forEach(ps => {
         expect(ps.sport).toBeDefined();
         expect(ps.sport).toHaveProperty('id');
         expect(ps.sport).toHaveProperty('name');
@@ -161,10 +133,6 @@ describe('usePlayerSports', () => {
 
   describe('Nested Sport Data Handling', () => {
     it('should handle sport as object', async () => {
-      (supabase.auth.getUser as jest.Mock).mockResolvedValue({
-        data: { user: mockUser },
-      });
-
       const dataWithObjectSport = mockPlayerSports.map(ps => ({
         ...ps,
         sport: ps.sport, // Sport as object
@@ -179,7 +147,7 @@ describe('usePlayerSports', () => {
         }),
       });
 
-      const { result } = renderHook(() => usePlayerSports());
+      const { result } = renderHook(() => usePlayerSports(mockPlayerId));
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -190,10 +158,6 @@ describe('usePlayerSports', () => {
     });
 
     it('should handle sport as array (single element)', async () => {
-      (supabase.auth.getUser as jest.Mock).mockResolvedValue({
-        data: { user: mockUser },
-      });
-
       const dataWithArraySport = mockPlayerSports.map(ps => ({
         ...ps,
         sport: [ps.sport], // Sport as array
@@ -208,7 +172,7 @@ describe('usePlayerSports', () => {
         }),
       });
 
-      const { result } = renderHook(() => usePlayerSports());
+      const { result } = renderHook(() => usePlayerSports(mockPlayerId));
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -221,26 +185,7 @@ describe('usePlayerSports', () => {
   });
 
   describe('Error Handling', () => {
-    it('should handle auth error gracefully', async () => {
-      (supabase.auth.getUser as jest.Mock).mockResolvedValue({
-        data: { user: null },
-      });
-
-      const { result } = renderHook(() => usePlayerSports());
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      expect(result.current.playerSports).toEqual([]);
-      expect(result.current.error).toBeNull();
-    });
-
     it('should handle player sports fetch error', async () => {
-      (supabase.auth.getUser as jest.Mock).mockResolvedValue({
-        data: { user: mockUser },
-      });
-
       const mockError = {
         message: 'Failed to fetch player sports',
         code: '500',
@@ -255,7 +200,7 @@ describe('usePlayerSports', () => {
         }),
       });
 
-      const { result } = renderHook(() => usePlayerSports());
+      const { result } = renderHook(() => usePlayerSports(mockPlayerId));
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -266,27 +211,7 @@ describe('usePlayerSports', () => {
       expect(result.current.error?.message).toBe('Failed to fetch player sports');
     });
 
-    it('should handle unexpected errors', async () => {
-      (supabase.auth.getUser as jest.Mock).mockRejectedValue(
-        new Error('Network error')
-      );
-
-      const { result } = renderHook(() => usePlayerSports());
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      expect(result.current.playerSports).toEqual([]);
-      expect(result.current.error).toBeInstanceOf(Error);
-      expect(result.current.error?.message).toBe('Network error');
-    });
-
     it('should handle null data gracefully', async () => {
-      (supabase.auth.getUser as jest.Mock).mockResolvedValue({
-        data: { user: mockUser },
-      });
-
       (supabase.from as jest.Mock).mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockResolvedValue({
@@ -296,7 +221,7 @@ describe('usePlayerSports', () => {
         }),
       });
 
-      const { result } = renderHook(() => usePlayerSports());
+      const { result } = renderHook(() => usePlayerSports(mockPlayerId));
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -309,10 +234,6 @@ describe('usePlayerSports', () => {
 
   describe('Refetch Functionality', () => {
     it('should allow manual refetch', async () => {
-      (supabase.auth.getUser as jest.Mock).mockResolvedValue({
-        data: { user: mockUser },
-      });
-
       (supabase.from as jest.Mock).mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockResolvedValue({
@@ -322,7 +243,7 @@ describe('usePlayerSports', () => {
         }),
       });
 
-      const { result } = renderHook(() => usePlayerSports());
+      const { result } = renderHook(() => usePlayerSports(mockPlayerId));
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -347,10 +268,6 @@ describe('usePlayerSports', () => {
           is_active: true,
         },
       };
-
-      (supabase.auth.getUser as jest.Mock).mockResolvedValue({
-        data: { user: mockUser },
-      });
 
       (supabase.from as jest.Mock).mockReturnValue({
         select: jest.fn().mockReturnValue({
@@ -383,10 +300,9 @@ describe('usePlayerSports', () => {
         }),
       });
 
-      const { result, rerender } = renderHook(
-        ({ playerId }) => usePlayerSports(playerId),
-        { initialProps: { playerId: 'player-123' } }
-      );
+      const { result, rerender } = renderHook(({ playerId }) => usePlayerSports(playerId), {
+        initialProps: { playerId: 'player-123' },
+      });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -404,14 +320,38 @@ describe('usePlayerSports', () => {
       // Should have fetched for new player
       expect(supabase.from).toHaveBeenCalledTimes(2);
     });
+
+    it('should clear data when playerId becomes undefined', async () => {
+      (supabase.from as jest.Mock).mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({
+            data: mockPlayerSports,
+            error: null,
+          }),
+        }),
+      });
+
+      const { result, rerender } = renderHook(({ playerId }) => usePlayerSports(playerId), {
+        initialProps: { playerId: 'player-123' as string | undefined },
+      });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.playerSports).toHaveLength(2);
+
+      // Clear playerId (user signed out)
+      rerender({ playerId: undefined });
+
+      await waitFor(() => {
+        expect(result.current.playerSports).toEqual([]);
+      });
+    });
   });
 
   describe('Data Validation', () => {
     it('should handle player with no sports', async () => {
-      (supabase.auth.getUser as jest.Mock).mockResolvedValue({
-        data: { user: mockUser },
-      });
-
       (supabase.from as jest.Mock).mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockResolvedValue({
@@ -421,7 +361,7 @@ describe('usePlayerSports', () => {
         }),
       });
 
-      const { result } = renderHook(() => usePlayerSports());
+      const { result } = renderHook(() => usePlayerSports(mockPlayerId));
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -432,10 +372,6 @@ describe('usePlayerSports', () => {
     });
 
     it('should preserve all player sport fields', async () => {
-      (supabase.auth.getUser as jest.Mock).mockResolvedValue({
-        data: { user: mockUser },
-      });
-
       (supabase.from as jest.Mock).mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockResolvedValue({
@@ -445,13 +381,13 @@ describe('usePlayerSports', () => {
         }),
       });
 
-      const { result } = renderHook(() => usePlayerSports());
+      const { result } = renderHook(() => usePlayerSports(mockPlayerId));
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
       });
 
-      result.current.playerSports.forEach((ps: any) => {
+      result.current.playerSports.forEach(ps => {
         expect(ps).toHaveProperty('player_id');
         expect(ps).toHaveProperty('sport_id');
         expect(ps).toHaveProperty('is_primary');

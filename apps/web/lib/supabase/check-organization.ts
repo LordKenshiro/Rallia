@@ -9,7 +9,7 @@ export async function hasOrganizationMembership(userId: string): Promise<boolean
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from('organization_members')
+    .from('organization_member')
     .select('id')
     .eq('user_id', userId)
     .is('left_at', null) // Only count active memberships

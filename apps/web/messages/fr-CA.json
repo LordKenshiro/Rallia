@@ -6,7 +6,7 @@
     },
     "hero": {
       "badge": "🚀 Disponible début 2026",
-      "headline": "Ton prochain match t'attend.",
+      "headline": "Ta prochaine partie t'attend.",
       "subheadline": "Connecte-toi avec des joueurs compatibles, planifie tes parties sans effort, et ne joue plus jamais seul.",
       "ctaButton": "Rejoindre la liste d'attente",
       "ctaSubtext": "✓ Aucune carte requise  •  ✓ Accès anticipé exclusif"
@@ -20,7 +20,7 @@
       },
       "compatibility": {
         "title": "La crise de compatibilité",
-        "description": "Les différences de niveau gâchent l'expérience. Conflits de localisation. Préférences de surface incompatibles. Trouver le bon match semble impossible."
+        "description": "Les différences de niveau gâchent l'expérience. Conflits de localisation. Préférences de surface incompatibles. Trouver la bonne partie semble impossible."
       },
       "reliability": {
         "title": "Le problème de fiabilité",
@@ -48,7 +48,7 @@
       },
       "step4": {
         "title": "Jouer et évaluer",
-        "description": "Planifiez des matchs instantanément et construisez votre réseau fiable."
+        "description": "Planifiez des parties instantanément et construisez votre réseau fiable."
       }
     },
     "solutions": {
@@ -60,11 +60,11 @@
       },
       "scheduling": {
         "title": "Planification instantanée",
-        "description": "Propositions de match en un clic avec synchronisation intelligente du calendrier. Confirmations automatiques et disponibilité en direct."
+        "description": "Propositions de partie en un clic avec synchronisation intelligente du calendrier. Confirmations automatiques et disponibilité en direct."
       },
       "marketplace": {
         "title": "Marché de parties",
-        "description": "Publiez ou parcourez des matchs par heure, lieu et niveau. Réservation instantanée avec évaluations et avis intégrés."
+        "description": "Publiez ou parcourez des parties par heure, lieu et niveau. Réservation instantanée avec évaluations et avis intégrés."
       },
       "portfolio": {
         "title": "Réseau de joueurs",
@@ -134,7 +134,7 @@
         "players": "2 500+",
         "playersLabel": "Inscriptions liste",
         "matches": "500+",
-        "matchesLabel": "Matchs test bêta",
+        "matchesLabel": "Parties test bêta",
         "rating": "4.9/5",
         "ratingLabel": "Note testeurs bêta"
       }
@@ -167,7 +167,7 @@
         },
         "matching": {
           "question": "Comment fonctionne le jumelage par niveau?",
-          "answer": "Notre système analyse votre niveau auto-déclaré, l'historique de vos matchs et les commentaires des joueurs pour évaluer précisément votre capacité. Vous serez jumelé avec des joueurs de votre niveau pour des parties compétitives et agréables."
+          "answer": "Notre système analyse votre niveau auto-déclaré, l'historique de vos parties et les commentaires des joueurs pour évaluer précisément votre capacité. Vous serez jumelé avec des joueurs de votre niveau pour des parties compétitives et agréables."
         },
         "privacy": {
           "question": "Mes données sont-elles privées et sécurisées?",
@@ -179,7 +179,7 @@
         },
         "platforms": {
           "question": "Sur quelles plateformes Rallia est-il disponible?",
-          "answer": "Rallia sera disponible comme application web, application iOS et application Android. Vous pourrez accéder à votre compte et planifier des matchs depuis n'importe quel appareil."
+          "answer": "Rallia sera disponible comme application web, application iOS et application Android. Vous pourrez accéder à votre compte et planifier des parties depuis n'importe quel appareil."
         }
       }
     }
@@ -298,7 +298,7 @@
   },
   "footer": {
     "title": "Rallia",
-    "description": "La plateforme qui connectera les joueurs de tennis et de pickleball pour de meilleurs matchs, à chaque fois.",
+    "description": "La plateforme qui connectera les joueurs de tennis et de pickleball pour de meilleures parties, à chaque fois.",
     "quickLinks": "Liens rapides",
     "joinWaitlist": "Rejoindre la liste",
     "privacy": "Politique de confidentialité",
@@ -475,6 +475,15 @@
         "page": "Page {current} sur {total}"
       },
       "createButton": "Créer une organisation",
+      "bulkActions": {
+        "selected": "{count, plural, =0 {Aucune organisation sélectionnée} one {# organisation sélectionnée} other {# organisations sélectionnées}}",
+        "delete": "Supprimer la sélection",
+        "confirmTitle": "Supprimer les organisations",
+        "confirmDescription": "Êtes-vous sûr de vouloir supprimer définitivement {count, plural, one {cette organisation} other {ces # organisations}}? Cette action est irréversible et supprimera toutes les installations, terrains, contacts et images associés.",
+        "cancel": "Annuler",
+        "confirmDelete": "Supprimer",
+        "deleting": "Suppression..."
+      },
       "create": {
         "title": "Créer une organisation",
         "description": "Créez une nouvelle organisation avec des installations, sports, contacts et terrains.",
@@ -484,6 +493,7 @@
         "formDescription": "Remplissez les détails ci-dessous pour créer une nouvelle organisation.",
         "sections": {
           "organization": "Informations de l'organisation",
+          "dataProvider": "Fournisseur de données",
           "facilities": "Installations",
           "facility": "Installation",
           "facilityImages": "Images de l'installation",
@@ -498,11 +508,17 @@
           "orgName": "Nom de l'organisation",
           "orgType": "Type d'organisation",
           "selectOrgType": "Sélectionner le type d'organisation (optionnel)",
+          "selectType": "Sélectionner le type",
           "orgNature": "Nature",
           "email": "Courriel",
           "phone": "Téléphone",
           "website": "Site web",
           "description": "Description",
+          "descriptionPlaceholder": "Entrez la description de l'organisation...",
+          "isActive": "Actif",
+          "dataProvider": "Fournisseur de données",
+          "selectDataProvider": "Sélectionner un fournisseur de données",
+          "dataProviderHint": "Sélectionnez un fournisseur de données pour la récupération de disponibilité des terrains. Laissez vide pour utiliser la valeur par défaut de l'organisation.",
           "address": "Adresse",
           "city": "Ville",
           "country": "Pays",
@@ -512,6 +528,11 @@
           "facilityNamePlaceholder": "Entrez le nom pour rechercher...",
           "facilityType": "Type d'installation",
           "selectFacilityType": "Sélectionner le type d'installation",
+          "facilityDescriptionPlaceholder": "Entrez la description de l'installation...",
+          "timezone": "Fuseau horaire",
+          "selectTimezone": "Sélectionner le fuseau horaire",
+          "externalProviderId": "ID du fournisseur externe",
+          "externalProviderIdPlaceholder": "ID externe du fournisseur de données (ex. siteId)",
           "latitude": "Latitude",
           "longitude": "Longitude",
           "contactType": "Type de contact",
@@ -574,7 +595,8 @@
           "searchPlace": "Rechercher sur Google Places"
         },
         "loading": {
-          "sports": "Chargement des sports..."
+          "sports": "Chargement des sports...",
+          "dataProviders": "Chargement des fournisseurs de données..."
         },
         "hints": {
           "holdCtrlToSelect": "Maintenez Ctrl/Cmd pour sélectionner plusieurs"
@@ -603,6 +625,14 @@
         "titleMeta": "Profil de l'organisation - Admin - Rallia",
         "descriptionMeta": "Voir les détails de l'organisation",
         "updateButton": "Mettre à jour l'organisation",
+        "deleteButton": "Supprimer l'organisation",
+        "deleteConfirm": {
+          "title": "Supprimer l'organisation",
+          "description": "Êtes-vous sûr de vouloir supprimer définitivement \"{name}\"? Cette action est irréversible et supprimera toutes les installations, terrains, contacts et images associés.",
+          "cancel": "Annuler",
+          "confirm": "Supprimer l'organisation",
+          "deleting": "Suppression..."
+        },
         "sections": {
           "organizationInfo": "Informations de l'organisation",
           "facilities": "Installations",
@@ -648,6 +678,7 @@
         "formDescription": "Mettez à jour les détails ci-dessous pour modifier l'organisation.",
         "sections": {
           "organization": "Informations de l'organisation",
+          "dataProvider": "Fournisseur de données",
           "facilities": "Installations",
           "facility": "Installation",
           "facilityImages": "Images de l'installation",
@@ -662,11 +693,17 @@
           "orgName": "Nom de l'organisation",
           "orgType": "Type d'organisation",
           "selectOrgType": "Sélectionner le type d'organisation (optionnel)",
+          "selectType": "Sélectionner le type",
           "orgNature": "Nature",
           "email": "Courriel",
           "phone": "Téléphone",
           "website": "Site web",
           "description": "Description",
+          "descriptionPlaceholder": "Entrez la description de l'organisation...",
+          "isActive": "Actif",
+          "dataProvider": "Fournisseur de données",
+          "selectDataProvider": "Sélectionner un fournisseur de données",
+          "dataProviderHint": "Sélectionnez un fournisseur de données pour la récupération de disponibilité des terrains. Laissez vide pour utiliser la valeur par défaut de l'organisation.",
           "address": "Adresse",
           "city": "Ville",
           "country": "Pays",
@@ -676,6 +713,11 @@
           "facilityNamePlaceholder": "Entrez le nom pour rechercher...",
           "facilityType": "Type d'installation",
           "selectFacilityType": "Sélectionner le type d'installation",
+          "facilityDescriptionPlaceholder": "Entrez la description de l'installation...",
+          "timezone": "Fuseau horaire",
+          "selectTimezone": "Sélectionner le fuseau horaire",
+          "externalProviderId": "ID du fournisseur externe",
+          "externalProviderIdPlaceholder": "ID externe du fournisseur de données (ex. siteId)",
           "latitude": "Latitude",
           "longitude": "Longitude",
           "contactType": "Type de contact",
@@ -738,7 +780,8 @@
           "searchPlace": "Rechercher sur Google Places"
         },
         "loading": {
-          "sports": "Chargement des sports..."
+          "sports": "Chargement des sports...",
+          "dataProviders": "Chargement des fournisseurs de données..."
         },
         "hints": {
           "holdCtrlToSelect": "Maintenez Ctrl/Cmd pour sélectionner plusieurs"

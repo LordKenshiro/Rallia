@@ -7,10 +7,10 @@ export const ANIMATION_DELAYS = {
   OVERLAY_TRANSITION: 800, // Time to wait for overlay to close before showing next
   OVERLAY_RESET: 300, // Time to wait before resetting overlay state
 
-  // Landing screen
-  SPLASH_DURATION: 3000, // How long splash screen shows
-  SPLASH_FADE_OUT: 600, // Fade out animation duration
-  SPLASH_FADE_IN: 1000, // Fade in animation duration
+  // Splash screen
+  SPLASH_DURATION: 2000, // How long splash screen shows (reduced for snappier feel)
+  SPLASH_FADE_OUT: 400, // Fade out animation duration
+  SPLASH_FADE_IN: 300, // Fade in animation duration
 
   // General
   SHORT_DELAY: 300,

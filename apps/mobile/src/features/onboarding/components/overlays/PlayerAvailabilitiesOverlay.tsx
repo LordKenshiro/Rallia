@@ -1,11 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Alert, ActivityIndicator } from 'react-native';
-import { Overlay } from '@rallia/shared-components';
-import { COLORS } from '@rallia/shared-constants';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Animated,
+  ActivityIndicator,
+} from 'react-native';
+import { Overlay, useToast } from '@rallia/shared-components';
 import { OnboardingService, Logger } from '@rallia/shared-services';
-import type { DayOfWeek as DBDayOfWeek, TimePeriod, OnboardingAvailability } from '@rallia/shared-types';
+import type { DayEnum, PeriodEnum, OnboardingAvailability } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
+import { useThemeStyles } from '../../../../hooks';
 
 interface PlayerAvailabilitiesOverlayProps {
   visible: boolean;
@@ -36,25 +44,27 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
   onClose,
   onBack,
   onContinue,
-  selectedSportIds,
+  selectedSportIds: _selectedSportIds,
   currentStep = 1,
   totalSteps = 8,
   mode = 'onboarding',
   initialData,
   onSave,
 }) => {
+  const { colors } = useThemeStyles();
+  const toast = useToast();
   const days: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const timeSlots: TimeSlot[] = ['AM', 'PM', 'EVE'];
 
-  // Default availabilities for onboarding mode
+  // Default availabilities for onboarding mode (all unselected)
   const defaultAvailabilities: WeeklyAvailability = {
-    Mon: { AM: true, PM: false, EVE: false },
+    Mon: { AM: false, PM: false, EVE: false },
     Tue: { AM: false, PM: false, EVE: false },
-    Wed: { AM: false, PM: true, EVE: false },
-    Thu: { AM: false, PM: true, EVE: false },
-    Fri: { AM: false, PM: true, EVE: false },
-    Sat: { AM: true, PM: false, EVE: false },
-    Sun: { AM: false, PM: false, EVE: true },
+    Wed: { AM: false, PM: false, EVE: false },
+    Thu: { AM: false, PM: false, EVE: false },
+    Fri: { AM: false, PM: false, EVE: false },
+    Sat: { AM: false, PM: false, EVE: false },
+    Sun: { AM: false, PM: false, EVE: false },
   };
 
   // Initialize availabilities: use initialData for edit mode, defaults for onboarding
@@ -101,92 +111,82 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
 
   const handleContinue = async () => {
     mediumHaptic();
-    
+
     // Prevent double-tap
     if (isSaving) return;
-    
+
     // Edit mode: use the onSave callback
     if (mode === 'edit' && onSave) {
       onSave(availabilities);
       return;
     }
-    
+
     // Onboarding mode: save to database
     if (onContinue) {
       setIsSaving(true);
       try {
         // Map UI data to database format
-        const dayMap: Record<DayOfWeek, DBDayOfWeek> = {
-          'Mon': 'monday',
-          'Tue': 'tuesday',
-          'Wed': 'wednesday',
-          'Thu': 'thursday',
-          'Fri': 'friday',
-          'Sat': 'saturday',
-          'Sun': 'sunday',
+        const dayMap: Record<DayOfWeek, DayEnum> = {
+          Mon: 'monday',
+          Tue: 'tuesday',
+          Wed: 'wednesday',
+          Thu: 'thursday',
+          Fri: 'friday',
+          Sat: 'saturday',
+          Sun: 'sunday',
         };
-        
-        const timeSlotMap: Record<TimeSlot, TimePeriod> = {
-          'AM': 'morning',
-          'PM': 'afternoon',
-          'EVE': 'evening',
+
+        const timeSlotMap: Record<TimeSlot, PeriodEnum> = {
+          AM: 'morning',
+          PM: 'afternoon',
+          EVE: 'evening',
         };
-        
+
         // Convert availability grid to database format
-        // Create entries for EACH selected sport
+        // Create one entry per day/period combination (not per sport)
         const availabilityData: OnboardingAvailability[] = [];
-        
-        days.forEach((day) => {
-          timeSlots.forEach((slot) => {
+
+        days.forEach(day => {
+          timeSlots.forEach(slot => {
             if (availabilities[day][slot]) {
-              // Create one entry per selected sport
-              selectedSportIds?.forEach((sportId) => {
-                availabilityData.push({
-                  sport_id: sportId,
-                  day_of_week: dayMap[day],
-                  time_period: timeSlotMap[slot],
-                  is_active: true,
-                });
+              availabilityData.push({
+                day: dayMap[day],
+                period: timeSlotMap[slot],
+                is_active: true,
               });
             }
           });
         });
-        
+
         // Save availability to database
         const { error } = await OnboardingService.saveAvailability(availabilityData);
-        
+
         if (error) {
           Logger.error('Failed to save player availability', error as Error, { availabilityData });
           setIsSaving(false);
-          Alert.alert(
-            'Error',
-            'Failed to save your availability. Please try again.',
-            [{ text: 'OK' }]
-          );
+          toast.error('Failed to save your availability. Please try again.');
           return;
         }
-        
+
         Logger.debug('player_availabilities_saved', { availabilityData });
-        
+
         // Mark onboarding as completed
         const { error: completeError } = await OnboardingService.completeOnboarding();
-        
+
         if (completeError) {
           Logger.warn('Failed to mark onboarding as completed', { error: completeError });
           // Don't block the flow if this fails - just log it
         } else {
-          Logger.info('onboarding_completed', { message: 'Onboarding marked as completed in profile' });
+          Logger.info('onboarding_completed', {
+            message: 'Onboarding marked as completed in profile',
+          });
         }
-        
+
         onContinue(availabilities);
       } catch (error) {
         Logger.error('Unexpected error saving availability', error as Error);
         setIsSaving(false);
-        Alert.alert(
-          'Error',
-          'An unexpected error occurred. Please try again.',
-          [{ text: 'OK' }]
-        );
+        toast.error('An unexpected error occurred. Please try again.');
       }
     }
   };
@@ -222,18 +222,18 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
             onPress={onBack || onClose}
             activeOpacity={0.7}
           >
-            <Text style={styles.backButtonText}>←</Text>
+            <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
           </TouchableOpacity>
         )}
 
         {/* Close Button */}
         <TouchableOpacity style={styles.closeButton} onPress={onClose} activeOpacity={0.7}>
-          <Text style={styles.closeButtonText}>✕</Text>
+          <Text style={[styles.closeButtonText, { color: colors.text }]}>✕</Text>
         </TouchableOpacity>
 
         {/* Title */}
-        <Text style={styles.title}>Tell us about your{"\n"}schedule</Text>
-        <Text style={styles.subtitle}>Select your availabilities</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Tell us about your{'\n'}schedule</Text>
+        <Text style={[styles.subtitle, { color: colors.text }]}>Select your availabilities</Text>
 
         {/* Scrollable Content Area */}
         <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -244,7 +244,7 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
               <View style={styles.dayCell} />
               {timeSlots.map(slot => (
                 <View key={slot} style={styles.headerCell}>
-                  <Text style={styles.headerText}>{slot}</Text>
+                  <Text style={[styles.headerText, { color: colors.textMuted }]}>{slot}</Text>
                 </View>
               ))}
             </View>
@@ -253,14 +253,18 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
             {days.map(day => (
               <View key={day} style={styles.row}>
                 <View style={styles.dayCell}>
-                  <Text style={styles.dayText}>{day}</Text>
+                  <Text style={[styles.dayText, { color: colors.text }]}>{day}</Text>
                 </View>
                 {timeSlots.map(slot => (
                   <TouchableOpacity
                     key={`${day}-${slot}`}
                     style={[
                       styles.timeSlotCell,
-                      availabilities[day][slot] && styles.timeSlotCellSelected,
+                      { backgroundColor: colors.inputBackground },
+                      availabilities[day][slot] && [
+                        styles.timeSlotCellSelected,
+                        { backgroundColor: colors.primary, borderColor: colors.primary },
+                      ],
                     ]}
                     onPress={() => toggleAvailability(day, slot)}
                     activeOpacity={0.8}
@@ -268,7 +272,11 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
                     <Text
                       style={[
                         styles.timeSlotText,
-                        availabilities[day][slot] && styles.timeSlotTextSelected,
+                        {
+                          color: availabilities[day][slot]
+                            ? colors.primaryForeground
+                            : colors.textMuted,
+                        },
                       ]}
                     >
                       {slot}
@@ -282,15 +290,19 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
 
         {/* Complete/Save Button - Fixed at bottom */}
         <TouchableOpacity
-          style={[styles.completeButton, isSaving && styles.completeButtonDisabled]}
+          style={[
+            styles.completeButton,
+            { backgroundColor: colors.primary },
+            isSaving && [styles.completeButtonDisabled, { backgroundColor: colors.buttonInactive }],
+          ]}
           onPress={handleContinue}
           activeOpacity={0.8}
           disabled={isSaving}
         >
           {isSaving ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <ActivityIndicator size="small" color={colors.primaryForeground} />
           ) : (
-            <Text style={styles.completeButtonText}>
+            <Text style={[styles.completeButtonText, { color: colors.primaryForeground }]}>
               {mode === 'edit' ? 'Save' : 'Complete'}
             </Text>
           )}
@@ -318,7 +330,6 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 24,
-    color: '#333',
   },
   closeButton: {
     position: 'absolute',
@@ -329,20 +340,17 @@ const styles = StyleSheet.create({
   },
   closeButtonText: {
     fontSize: 20,
-    color: '#333',
     fontWeight: '300',
   },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
     textAlign: 'center',
     marginBottom: 8,
     lineHeight: 28,
   },
   subtitle: {
     fontSize: 14,
-    color: '#666',
     textAlign: 'center',
     marginBottom: 30,
   },
@@ -360,7 +368,6 @@ const styles = StyleSheet.create({
   },
   dayText: {
     fontSize: 14,
-    color: '#333',
     fontWeight: '500',
   },
   headerCell: {
@@ -370,12 +377,10 @@ const styles = StyleSheet.create({
   },
   headerText: {
     fontSize: 12,
-    color: '#666',
     fontWeight: '600',
   },
   timeSlotCell: {
     flex: 1,
-    backgroundColor: COLORS.veryLightGray,
     borderRadius: 8,
     paddingVertical: 12,
     marginHorizontal: 4,
@@ -385,25 +390,22 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   timeSlotCellSelected: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    // backgroundColor and borderColor applied inline
   },
   timeSlotText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#666',
   },
   timeSlotTextSelected: {
-    color: '#fff',
+    // color applied inline
   },
   completeButton: {
-    backgroundColor: COLORS.accent,
     borderRadius: 10,
     paddingVertical: 16,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 10,
-    shadowColor: '#000',
+    shadowColor: 'rgba(0, 0, 0, 0.2)',
     shadowOffset: {
       width: 0,
       height: 2,
@@ -413,12 +415,10 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   completeButtonDisabled: {
-    backgroundColor: '#999',
     shadowOpacity: 0,
     elevation: 0,
   },
   completeButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },

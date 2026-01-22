@@ -67,35 +67,35 @@ export interface BadgeProps {
 
 /**
  * Badge component for displaying status indicators, tags, or labels
- * 
+ *
  * @example
  * ```tsx
  * // Basic badge
  * <Badge>New</Badge>
- * 
+ *
  * // Status badges
  * <Badge variant="success">Active</Badge>
  * <Badge variant="warning">Pending</Badge>
  * <Badge variant="error">Cancelled</Badge>
- * 
+ *
  * // Sizes
  * <Badge size="sm">Small</Badge>
  * <Badge size="md">Medium</Badge>
  * <Badge size="lg">Large</Badge>
- * 
+ *
  * // Outline style
  * <Badge variant="primary" outline>Outlined</Badge>
- * 
+ *
  * // With icon
  * <Badge variant="success" icon={<Text>✓</Text>}>
  *   Verified
  * </Badge>
- * 
+ *
  * // Custom colors
  * <Badge backgroundColor="#9C27B0" textColor="#fff">
  *   Custom
  * </Badge>
- * 
+ *
  * // Match status example
  * <HStack spacing={8}>
  *   <Badge variant="info">Tennis</Badge>
@@ -161,7 +161,7 @@ export const Badge: React.FC<BadgeProps> = ({
     },
     md: {
       paddingHorizontal: spacing[3], // 12px
-      paddingVertical: spacing[1.5], // 6px
+      paddingVertical: 6, // 6px (1.5 * 4px base unit)
       fontSize: 14,
     },
     lg: {

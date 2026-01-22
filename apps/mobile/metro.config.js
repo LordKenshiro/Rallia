@@ -1,4 +1,5 @@
 const { getDefaultConfig } = require('expo/metro-config');
+const { withNativeWind } = require('nativewind/metro');
 const path = require('path');
 
 const projectRoot = __dirname;
@@ -16,6 +17,7 @@ config.resolver = {
   ...config.resolver,
   assetExts: config.resolver.assetExts.filter(ext => ext !== 'svg'),
   sourceExts: [...config.resolver.sourceExts, 'svg'],
+  // Monorepo: look for modules in both local and root node_modules
   nodeModulesPaths: [
     path.resolve(projectRoot, 'node_modules'),
     path.resolve(workspaceRoot, 'node_modules'),
@@ -28,4 +30,5 @@ config.resolver = {
 // Watch workspace packages
 config.watchFolders = [workspaceRoot];
 
-module.exports = config;
+// Apply NativeWind
+module.exports = withNativeWind(config);

@@ -6,17 +6,17 @@ import {
   TouchableOpacity,
   ScrollView,
   Animated,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
-import { Overlay } from '@rallia/shared-components';
-import { COLORS } from '@rallia/shared-constants';
+import { Overlay, useToast } from '@rallia/shared-components';
 import { OnboardingService, SportService, Logger } from '@rallia/shared-services';
 import type { OnboardingPlayerPreferences } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
+import { useThemeStyles } from '../../../../hooks';
+import { primary, neutral } from '@rallia/design-system';
 
 interface PlayerPreferencesOverlayProps {
   visible: boolean;
@@ -31,9 +31,9 @@ interface PlayerPreferencesOverlayProps {
 interface PlayerPreferences {
   playingHand: 'left' | 'right' | 'both';
   maxTravelDistance: number;
-  matchDuration: '1h' | '1.5h' | '2h';
-  tennisMatchDuration?: '1h' | '1.5h' | '2h';
-  pickleballMatchDuration?: '1h' | '1.5h' | '2h';
+  matchDuration: '30' | '60' | '90' | '120';
+  tennisMatchDuration?: '30' | '60' | '90' | '120';
+  pickleballMatchDuration?: '30' | '60' | '90' | '120';
   sameForAllSports: boolean;
   tennisMatchType?: 'casual' | 'competitive' | 'both';
   pickleballMatchType?: 'casual' | 'competitive' | 'both';
@@ -48,13 +48,15 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
   currentStep = 1,
   totalSteps = 8,
 }) => {
+  const { colors, isDark } = useThemeStyles();
+  const toast = useToast();
   const [playingHand, setPlayingHand] = useState<'left' | 'right' | 'both'>('right');
   const [maxTravelDistance, setMaxTravelDistance] = useState<number>(6);
-  const [matchDuration, setMatchDuration] = useState<'1h' | '1.5h' | '2h'>('1.5h');
-  const [tennisMatchDuration, setTennisMatchDuration] = useState<'1h' | '1.5h' | '2h'>('1.5h');
-  const [pickleballMatchDuration, setPickleballMatchDuration] = useState<'1h' | '1.5h' | '2h'>(
-    '1.5h'
-  );
+  const [matchDuration, setMatchDuration] = useState<'30' | '60' | '90' | '120'>('90');
+  const [tennisMatchDuration, setTennisMatchDuration] = useState<'30' | '60' | '90' | '120'>('90');
+  const [pickleballMatchDuration, setPickleballMatchDuration] = useState<
+    '30' | '60' | '90' | '120'
+  >('90');
   const [sameDurationForAllSports, setSameDurationForAllSports] = useState(true);
   const [sameMatchTypeForAllSports, setSameMatchTypeForAllSports] = useState(true);
   const [tennisMatchType, setTennisMatchType] = useState<'casual' | 'competitive' | 'both'>(
@@ -95,7 +97,7 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
 
   const handleContinue = async () => {
     if (isSaving) return;
-    
+
     if (onContinue) {
       mediumHaptic();
       setIsSaving(true);
@@ -148,9 +150,7 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
         if (error) {
           Logger.error('Failed to save player preferences', error as Error, { preferencesData });
           setIsSaving(false);
-          Alert.alert('Error', 'Failed to save your preferences. Please try again.', [
-            { text: 'OK' },
-          ]);
+          toast.error('Failed to save your preferences. Please try again.');
           return;
         }
 
@@ -175,7 +175,7 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
       } catch (error) {
         Logger.error('Unexpected error saving preferences', error as Error);
         setIsSaving(false);
-        Alert.alert('Error', 'An unexpected error occurred. Please try again.', [{ text: 'OK' }]);
+        toast.error('An unexpected error occurred. Please try again.');
       }
     }
   };
@@ -211,14 +211,18 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
               onPress={onBack || onClose}
               activeOpacity={0.7}
             >
-              <Text style={styles.backButtonText}>←</Text>
+              <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
             </TouchableOpacity>
 
             {/* Title */}
-            <Text style={styles.title}>Tell us about your{'\n'}preferences</Text>
+            <Text style={[styles.title, { color: colors.text }]}>
+              Tell us about your{'\n'}preferences
+            </Text>
 
             {/* Playing Hand */}
-            <Text style={styles.sectionLabel}>Preferred Playing Hand</Text>
+            <Text style={[styles.sectionLabel, { color: colors.text }]}>
+              Preferred Playing Hand
+            </Text>
             <View style={styles.buttonGroup}>
               <TouchableOpacity
                 style={[styles.optionButton, playingHand === 'left' && styles.optionButtonSelected]}
@@ -277,9 +281,13 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
             </View>
 
             {/* Maximum Travel Distance */}
-            <Text style={styles.sectionLabel}>Maximum Travel Distance</Text>
+            <Text style={[styles.sectionLabel, { color: colors.text }]}>
+              Maximum Travel Distance
+            </Text>
             <View style={styles.sliderContainer}>
-              <Text style={styles.sliderValue}>{maxTravelDistance} km</Text>
+              <Text style={[styles.sliderValue, { color: colors.text }]}>
+                {maxTravelDistance} km
+              </Text>
               <Slider
                 style={styles.slider}
                 minimumValue={1}
@@ -287,14 +295,16 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
                 step={1}
                 value={maxTravelDistance}
                 onValueChange={setMaxTravelDistance}
-                minimumTrackTintColor={COLORS.primary}
-                maximumTrackTintColor="#E0E0E0"
-                thumbTintColor={COLORS.primary}
+                minimumTrackTintColor={colors.primary}
+                maximumTrackTintColor={colors.inputBorder}
+                thumbTintColor={colors.primary}
               />
             </View>
 
             {/* Preferred Match Duration */}
-            <Text style={styles.sectionLabel}>Preferred Match Duration</Text>
+            <Text style={[styles.sectionLabel, { color: colors.text }]}>
+              Preferred Match Duration
+            </Text>
 
             {/* Show unified buttons when sameDurationForAllSports is true OR only one sport selected */}
             {(sameDurationForAllSports || !(hasTennis && hasPickleball)) && (
@@ -302,20 +312,26 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
                 <TouchableOpacity
                   style={[
                     styles.optionButton,
-                    matchDuration === '1h' && styles.optionButtonSelected,
+                    {
+                      backgroundColor:
+                        matchDuration === '60' ? colors.primary : colors.inputBackground,
+                      borderColor: matchDuration === '60' ? colors.primary : 'transparent',
+                    },
                   ]}
                   onPress={() => {
                     selectionHaptic();
-                    setMatchDuration('1h');
-                    setTennisMatchDuration('1h');
-                    setPickleballMatchDuration('1h');
+                    setMatchDuration('60');
+                    setTennisMatchDuration('60');
+                    setPickleballMatchDuration('60');
                   }}
                   activeOpacity={0.8}
                 >
                   <Text
                     style={[
                       styles.optionButtonText,
-                      matchDuration === '1h' && styles.optionButtonTextSelected,
+                      {
+                        color: matchDuration === '60' ? colors.primaryForeground : colors.textMuted,
+                      },
                     ]}
                   >
                     1h
@@ -324,20 +340,26 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
                 <TouchableOpacity
                   style={[
                     styles.optionButton,
-                    matchDuration === '1.5h' && styles.optionButtonSelected,
+                    {
+                      backgroundColor:
+                        matchDuration === '90' ? colors.primary : colors.inputBackground,
+                      borderColor: matchDuration === '90' ? colors.primary : 'transparent',
+                    },
                   ]}
                   onPress={() => {
                     selectionHaptic();
-                    setMatchDuration('1.5h');
-                    setTennisMatchDuration('1.5h');
-                    setPickleballMatchDuration('1.5h');
+                    setMatchDuration('90');
+                    setTennisMatchDuration('90');
+                    setPickleballMatchDuration('90');
                   }}
                   activeOpacity={0.8}
                 >
                   <Text
                     style={[
                       styles.optionButtonText,
-                      matchDuration === '1.5h' && styles.optionButtonTextSelected,
+                      {
+                        color: matchDuration === '90' ? colors.primaryForeground : colors.textMuted,
+                      },
                     ]}
                   >
                     1.5h
@@ -346,20 +368,27 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
                 <TouchableOpacity
                   style={[
                     styles.optionButton,
-                    matchDuration === '2h' && styles.optionButtonSelected,
+                    {
+                      backgroundColor:
+                        matchDuration === '120' ? colors.primary : colors.inputBackground,
+                      borderColor: matchDuration === '120' ? colors.primary : 'transparent',
+                    },
                   ]}
                   onPress={() => {
                     selectionHaptic();
-                    setMatchDuration('2h');
-                    setTennisMatchDuration('2h');
-                    setPickleballMatchDuration('2h');
+                    setMatchDuration('120');
+                    setTennisMatchDuration('120');
+                    setPickleballMatchDuration('120');
                   }}
                   activeOpacity={0.8}
                 >
                   <Text
                     style={[
                       styles.optionButtonText,
-                      matchDuration === '2h' && styles.optionButtonTextSelected,
+                      {
+                        color:
+                          matchDuration === '120' ? colors.primaryForeground : colors.textMuted,
+                      },
                     ]}
                   >
                     2h
@@ -372,23 +401,32 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
             {!sameDurationForAllSports && hasTennis && hasPickleball && (
               <>
                 {/* Tennis Duration */}
-                <Text style={styles.sportSubLabel}>Tennis</Text>
+                <Text style={[styles.sportSubLabel, { color: colors.textMuted }]}>Tennis</Text>
                 <View style={styles.buttonGroup}>
                   <TouchableOpacity
                     style={[
                       styles.optionButton,
-                      tennisMatchDuration === '1h' && styles.optionButtonSelected,
+                      {
+                        backgroundColor:
+                          tennisMatchDuration === '60' ? colors.primary : colors.inputBackground,
+                        borderColor: tennisMatchDuration === '60' ? colors.primary : 'transparent',
+                      },
                     ]}
                     onPress={() => {
                       selectionHaptic();
-                      setTennisMatchDuration('1h');
+                      setTennisMatchDuration('60');
                     }}
                     activeOpacity={0.8}
                   >
                     <Text
                       style={[
                         styles.optionButtonText,
-                        tennisMatchDuration === '1h' && styles.optionButtonTextSelected,
+                        {
+                          color:
+                            tennisMatchDuration === '60'
+                              ? colors.primaryForeground
+                              : colors.textMuted,
+                        },
                       ]}
                     >
                       1h
@@ -397,18 +435,27 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
                   <TouchableOpacity
                     style={[
                       styles.optionButton,
-                      tennisMatchDuration === '1.5h' && styles.optionButtonSelected,
+                      {
+                        backgroundColor:
+                          tennisMatchDuration === '90' ? colors.primary : colors.inputBackground,
+                        borderColor: tennisMatchDuration === '90' ? colors.primary : 'transparent',
+                      },
                     ]}
                     onPress={() => {
                       selectionHaptic();
-                      setTennisMatchDuration('1.5h');
+                      setTennisMatchDuration('90');
                     }}
                     activeOpacity={0.8}
                   >
                     <Text
                       style={[
                         styles.optionButtonText,
-                        tennisMatchDuration === '1.5h' && styles.optionButtonTextSelected,
+                        {
+                          color:
+                            tennisMatchDuration === '90'
+                              ? colors.primaryForeground
+                              : colors.textMuted,
+                        },
                       ]}
                     >
                       1.5h
@@ -417,18 +464,27 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
                   <TouchableOpacity
                     style={[
                       styles.optionButton,
-                      tennisMatchDuration === '2h' && styles.optionButtonSelected,
+                      {
+                        backgroundColor:
+                          tennisMatchDuration === '120' ? colors.primary : colors.inputBackground,
+                        borderColor: tennisMatchDuration === '120' ? colors.primary : 'transparent',
+                      },
                     ]}
                     onPress={() => {
                       selectionHaptic();
-                      setTennisMatchDuration('2h');
+                      setTennisMatchDuration('120');
                     }}
                     activeOpacity={0.8}
                   >
                     <Text
                       style={[
                         styles.optionButtonText,
-                        tennisMatchDuration === '2h' && styles.optionButtonTextSelected,
+                        {
+                          color:
+                            tennisMatchDuration === '120'
+                              ? colors.primaryForeground
+                              : colors.textMuted,
+                        },
                       ]}
                     >
                       2h
@@ -437,23 +493,23 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
                 </View>
 
                 {/* Pickleball Duration */}
-                <Text style={styles.sportSubLabel}>Pickleball</Text>
+                <Text style={[styles.sportSubLabel, { color: colors.textMuted }]}>Pickleball</Text>
                 <View style={styles.buttonGroup}>
                   <TouchableOpacity
                     style={[
                       styles.optionButton,
-                      pickleballMatchDuration === '1h' && styles.optionButtonSelected,
+                      pickleballMatchDuration === '60' && styles.optionButtonSelected,
                     ]}
                     onPress={() => {
                       selectionHaptic();
-                      setPickleballMatchDuration('1h');
+                      setPickleballMatchDuration('60');
                     }}
                     activeOpacity={0.8}
                   >
                     <Text
                       style={[
                         styles.optionButtonText,
-                        pickleballMatchDuration === '1h' && styles.optionButtonTextSelected,
+                        pickleballMatchDuration === '60' && styles.optionButtonTextSelected,
                       ]}
                     >
                       1h
@@ -462,18 +518,18 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
                   <TouchableOpacity
                     style={[
                       styles.optionButton,
-                      pickleballMatchDuration === '1.5h' && styles.optionButtonSelected,
+                      pickleballMatchDuration === '90' && styles.optionButtonSelected,
                     ]}
                     onPress={() => {
                       selectionHaptic();
-                      setPickleballMatchDuration('1.5h');
+                      setPickleballMatchDuration('90');
                     }}
                     activeOpacity={0.8}
                   >
                     <Text
                       style={[
                         styles.optionButtonText,
-                        pickleballMatchDuration === '1.5h' && styles.optionButtonTextSelected,
+                        pickleballMatchDuration === '90' && styles.optionButtonTextSelected,
                       ]}
                     >
                       1.5h
@@ -482,18 +538,18 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
                   <TouchableOpacity
                     style={[
                       styles.optionButton,
-                      pickleballMatchDuration === '2h' && styles.optionButtonSelected,
+                      pickleballMatchDuration === '120' && styles.optionButtonSelected,
                     ]}
                     onPress={() => {
                       selectionHaptic();
-                      setPickleballMatchDuration('2h');
+                      setPickleballMatchDuration('120');
                     }}
                     activeOpacity={0.8}
                   >
                     <Text
                       style={[
                         styles.optionButtonText,
-                        pickleballMatchDuration === '2h' && styles.optionButtonTextSelected,
+                        pickleballMatchDuration === '120' && styles.optionButtonTextSelected,
                       ]}
                     >
                       2h
@@ -513,25 +569,39 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
                 }}
                 activeOpacity={0.8}
               >
-                <View style={[styles.checkbox, sameDurationForAllSports && styles.checkboxChecked]}>
-                  {sameDurationForAllSports && <Ionicons name="checkmark" size={16} color="#fff" />}
+                <View
+                  style={[
+                    styles.checkbox,
+                    {
+                      borderColor: colors.primary,
+                      backgroundColor: sameDurationForAllSports ? colors.primary : 'transparent',
+                    },
+                  ]}
+                >
+                  {sameDurationForAllSports && (
+                    <Ionicons name="checkmark" size={16} color={colors.primaryForeground} />
+                  )}
                 </View>
                 <Text style={styles.checkboxLabel}>Same for all sports</Text>
               </TouchableOpacity>
             )}
 
             {/* Preferred Match Type */}
-            <Text style={styles.sectionLabel}>Preferred Match Type</Text>
+            <Text style={[styles.sectionLabel, { color: colors.text }]}>Preferred Match Type</Text>
 
             {/* Tennis Match Type */}
             {hasTennis && (
               <>
-                <Text style={styles.sportSubLabel}>Tennis</Text>
+                <Text style={[styles.sportSubLabel, { color: colors.textMuted }]}>Tennis</Text>
                 <View style={styles.buttonGroup}>
                   <TouchableOpacity
                     style={[
                       styles.optionButton,
-                      tennisMatchType === 'casual' && styles.optionButtonSelected,
+                      {
+                        backgroundColor:
+                          tennisMatchType === 'casual' ? colors.primary : colors.inputBackground,
+                        borderColor: tennisMatchType === 'casual' ? colors.primary : 'transparent',
+                      },
                     ]}
                     onPress={() => {
                       selectionHaptic();
@@ -542,7 +612,12 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
                     <Text
                       style={[
                         styles.optionButtonText,
-                        tennisMatchType === 'casual' && styles.optionButtonTextSelected,
+                        {
+                          color:
+                            tennisMatchType === 'casual'
+                              ? colors.primaryForeground
+                              : colors.textMuted,
+                        },
                       ]}
                     >
                       Casual
@@ -551,7 +626,14 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
                   <TouchableOpacity
                     style={[
                       styles.optionButton,
-                      tennisMatchType === 'competitive' && styles.optionButtonSelected,
+                      {
+                        backgroundColor:
+                          tennisMatchType === 'competitive'
+                            ? colors.primary
+                            : colors.inputBackground,
+                        borderColor:
+                          tennisMatchType === 'competitive' ? colors.primary : 'transparent',
+                      },
                     ]}
                     onPress={() => {
                       selectionHaptic();
@@ -562,7 +644,12 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
                     <Text
                       style={[
                         styles.optionButtonText,
-                        tennisMatchType === 'competitive' && styles.optionButtonTextSelected,
+                        {
+                          color:
+                            tennisMatchType === 'competitive'
+                              ? colors.primaryForeground
+                              : colors.textMuted,
+                        },
                       ]}
                     >
                       Competitive
@@ -571,7 +658,11 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
                   <TouchableOpacity
                     style={[
                       styles.optionButton,
-                      tennisMatchType === 'both' && styles.optionButtonSelected,
+                      {
+                        backgroundColor:
+                          tennisMatchType === 'both' ? colors.primary : colors.inputBackground,
+                        borderColor: tennisMatchType === 'both' ? colors.primary : 'transparent',
+                      },
                     ]}
                     onPress={() => {
                       selectionHaptic();
@@ -582,7 +673,12 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
                     <Text
                       style={[
                         styles.optionButtonText,
-                        tennisMatchType === 'both' && styles.optionButtonTextSelected,
+                        {
+                          color:
+                            tennisMatchType === 'both'
+                              ? colors.primaryForeground
+                              : colors.textMuted,
+                        },
                       ]}
                     >
                       Both
@@ -595,12 +691,19 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
             {/* Pickleball Match Type - only show if not "same for all sports" or if only pickleball selected */}
             {hasPickleball && (!sameMatchTypeForAllSports || !hasTennis) && (
               <>
-                <Text style={styles.sportSubLabel}>Pickleball</Text>
+                <Text style={[styles.sportSubLabel, { color: colors.textMuted }]}>Pickleball</Text>
                 <View style={styles.buttonGroup}>
                   <TouchableOpacity
                     style={[
                       styles.optionButton,
-                      pickleballMatchType === 'casual' && styles.optionButtonSelected,
+                      {
+                        backgroundColor:
+                          pickleballMatchType === 'casual'
+                            ? colors.primary
+                            : colors.inputBackground,
+                        borderColor:
+                          pickleballMatchType === 'casual' ? colors.primary : 'transparent',
+                      },
                     ]}
                     onPress={() => {
                       selectionHaptic();
@@ -611,7 +714,12 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
                     <Text
                       style={[
                         styles.optionButtonText,
-                        pickleballMatchType === 'casual' && styles.optionButtonTextSelected,
+                        {
+                          color:
+                            pickleballMatchType === 'casual'
+                              ? colors.primaryForeground
+                              : colors.textMuted,
+                        },
                       ]}
                     >
                       Casual
@@ -620,7 +728,14 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
                   <TouchableOpacity
                     style={[
                       styles.optionButton,
-                      pickleballMatchType === 'competitive' && styles.optionButtonSelected,
+                      {
+                        backgroundColor:
+                          pickleballMatchType === 'competitive'
+                            ? colors.primary
+                            : colors.inputBackground,
+                        borderColor:
+                          pickleballMatchType === 'competitive' ? colors.primary : 'transparent',
+                      },
                     ]}
                     onPress={() => {
                       selectionHaptic();
@@ -631,7 +746,12 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
                     <Text
                       style={[
                         styles.optionButtonText,
-                        pickleballMatchType === 'competitive' && styles.optionButtonTextSelected,
+                        {
+                          color:
+                            pickleballMatchType === 'competitive'
+                              ? colors.primaryForeground
+                              : colors.textMuted,
+                        },
                       ]}
                     >
                       Competitive
@@ -640,7 +760,12 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
                   <TouchableOpacity
                     style={[
                       styles.optionButton,
-                      pickleballMatchType === 'both' && styles.optionButtonSelected,
+                      {
+                        backgroundColor:
+                          pickleballMatchType === 'both' ? colors.primary : colors.inputBackground,
+                        borderColor:
+                          pickleballMatchType === 'both' ? colors.primary : 'transparent',
+                      },
                     ]}
                     onPress={() => {
                       selectionHaptic();
@@ -651,7 +776,12 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
                     <Text
                       style={[
                         styles.optionButtonText,
-                        pickleballMatchType === 'both' && styles.optionButtonTextSelected,
+                        {
+                          color:
+                            pickleballMatchType === 'both'
+                              ? colors.primaryForeground
+                              : colors.textMuted,
+                        },
                       ]}
                     >
                       Both
@@ -672,10 +802,16 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
                 activeOpacity={0.8}
               >
                 <View
-                  style={[styles.checkbox, sameMatchTypeForAllSports && styles.checkboxChecked]}
+                  style={[
+                    styles.checkbox,
+                    {
+                      borderColor: colors.primary,
+                      backgroundColor: sameMatchTypeForAllSports ? colors.primary : 'transparent',
+                    },
+                  ]}
                 >
                   {sameMatchTypeForAllSports && (
-                    <Ionicons name="checkmark" size={16} color="#fff" />
+                    <Ionicons name="checkmark" size={16} color={colors.primaryForeground} />
                   )}
                 </View>
                 <Text style={styles.checkboxLabel}>Same for all sports</Text>
@@ -686,15 +822,24 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
 
         {/* Continue Button - Fixed at bottom */}
         <TouchableOpacity
-          style={[styles.continueButton, isSaving && styles.continueButtonDisabled]}
+          style={[
+            styles.continueButton,
+            {
+              backgroundColor: isSaving ? colors.buttonInactive : colors.primary,
+              shadowColor: 'rgba(0, 0, 0, 0.2)',
+            },
+            isSaving && styles.continueButtonDisabled,
+          ]}
           onPress={handleContinue}
           activeOpacity={0.8}
           disabled={isSaving}
         >
           {isSaving ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <ActivityIndicator size="small" color={colors.primaryForeground} />
           ) : (
-            <Text style={styles.continueButtonText}>Continue</Text>
+            <Text style={[styles.continueButtonText, { color: colors.primaryForeground }]}>
+              Continue
+            </Text>
           )}
         </TouchableOpacity>
       </View>
@@ -727,29 +872,29 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 24,
-    color: '#333',
+    // color will be set dynamically
   },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
     textAlign: 'center',
     marginBottom: 25,
     lineHeight: 28,
+    // color will be set dynamically
   },
   sectionLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 12,
     marginTop: 20,
+    // color will be set dynamically
   },
   sportSubLabel: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#666',
     marginBottom: 10,
     marginTop: 10,
+    // color will be set dynamically
   },
   buttonGroup: {
     flexDirection: 'row',
@@ -758,24 +903,22 @@ const styles = StyleSheet.create({
   },
   optionButton: {
     flex: 1,
-    backgroundColor: COLORS.primaryLight,
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: 'transparent',
+    // backgroundColor and borderColor will be set dynamically
   },
   optionButtonSelected: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    // Styles applied dynamically
   },
   optionButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    // color will be set dynamically
   },
   optionButtonTextSelected: {
-    color: '#fff',
+    // color will be set dynamically
   },
   sliderContainer: {
     marginBottom: 10,
@@ -783,8 +926,8 @@ const styles = StyleSheet.create({
   sliderValue: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 8,
+    // color will be set dynamically
   },
   slider: {
     width: '100%',
@@ -801,20 +944,19 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: COLORS.primary,
     marginRight: 10,
     justifyContent: 'center',
     alignItems: 'center',
+    // borderColor and backgroundColor will be set dynamically
   },
   checkboxChecked: {
-    backgroundColor: COLORS.primary,
+    // Styles applied dynamically
   },
   checkboxLabel: {
     fontSize: 14,
-    color: '#333',
+    // color will be set dynamically
   },
   continueButton: {
-    backgroundColor: COLORS.accent,
     borderRadius: 10,
     paddingVertical: 16,
     justifyContent: 'center',
@@ -822,7 +964,6 @@ const styles = StyleSheet.create({
     marginTop: 15,
     marginHorizontal: 20,
     marginBottom: 20,
-    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
@@ -830,16 +971,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
+    // backgroundColor and shadowColor will be set dynamically
   },
   continueButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+    // color will be set dynamically
   },
   continueButtonDisabled: {
-    backgroundColor: '#999',
     shadowOpacity: 0,
     elevation: 0,
+    // backgroundColor will be set dynamically
   },
 });
 
