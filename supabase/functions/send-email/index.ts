@@ -5,6 +5,7 @@ import type { EmailRequest, EmailResponse } from './types.ts';
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 const FROM_EMAIL = Deno.env.get('FROM_EMAIL');
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 if (!RESEND_API_KEY) {
   throw new Error('RESEND_API_KEY environment variable is required');
@@ -14,6 +15,36 @@ if (!FROM_EMAIL) {
 }
 
 Deno.serve(async req => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, x-service-key',
+      },
+    });
+  }
+
+  // Verify service role key authentication
+  const serviceKey = req.headers.get('x-service-key');
+
+  if (!serviceKey) {
+    return new Response(JSON.stringify({ success: false, error: 'Missing x-service-key header' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  if (serviceKey !== supabaseServiceKey) {
+    console.warn('Invalid service role key provided');
+    return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
     // Parse and validate request body
     const body = await req.json();

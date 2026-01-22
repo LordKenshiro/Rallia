@@ -8,7 +8,7 @@
  * 4. Creates reputation events based on aggregated feedback
  * 5. Marks matches as closed
  *
- * Triggered hourly by cron-job.org
+ * Triggered hourly by pg_cron
  */
 
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -94,7 +94,6 @@ let reputationConfigCache: Map<string, number> | null = null;
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const cronSecret = Deno.env.get('CRON_SECRET');
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -526,23 +525,24 @@ Deno.serve(async req => {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-cron-secret',
+        'Access-Control-Allow-Headers': 'Content-Type, x-service-key',
       },
     });
   }
 
-  // Verify cron secret
-  const providedSecret = req.headers.get('x-cron-secret');
-  if (!cronSecret) {
-    console.error('CRON_SECRET environment variable not set');
-    return new Response(JSON.stringify({ error: 'Server configuration error' }), {
-      status: 500,
+  // Verify service role key authentication
+  // Note: Use x-service-key header because Kong strips Authorization header values
+  const serviceKey = req.headers.get('x-service-key');
+
+  if (!serviceKey) {
+    return new Response(JSON.stringify({ error: 'Missing x-service-key header' }), {
+      status: 401,
       headers: { 'Content-Type': 'application/json' },
     });
   }
 
-  if (providedSecret !== cronSecret) {
-    console.warn('Invalid cron secret provided');
+  if (serviceKey !== supabaseServiceKey) {
+    console.warn('Invalid service role key provided');
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },

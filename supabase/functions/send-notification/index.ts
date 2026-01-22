@@ -280,19 +280,37 @@ async function handleNotification(notification: NotificationRecord): Promise<voi
 
 // Main Deno server
 Deno.serve(async req => {
-  try {
-    // Handle CORS preflight
-    if (req.method === 'OPTIONS') {
-      return new Response(null, {
-        status: 204,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        },
-      });
-    }
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, x-service-key',
+      },
+    });
+  }
 
+  // Verify service role key authentication (via pg_net trigger)
+  const serviceKey = req.headers.get('x-service-key');
+
+  if (!serviceKey) {
+    return new Response(JSON.stringify({ success: false, error: 'Missing x-service-key header' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  if (serviceKey !== supabaseServiceKey) {
+    console.warn('Invalid service role key provided');
+    return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  try {
     // Parse request body
     const body = await req.json();
 
