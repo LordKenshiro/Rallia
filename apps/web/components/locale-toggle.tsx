@@ -37,7 +37,7 @@ export default function LocaleToggle() {
   };
 
   return (
-    <div className="flex gap-3">
+    <div className="locale-toggle flex gap-3">
       {locales.map(loc => (
         <Button
           key={loc.code}

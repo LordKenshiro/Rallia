@@ -268,7 +268,72 @@
     "darkMode": "Dark Mode",
     "lightMode": "Light Mode",
     "systemTheme": "System",
-    "permissions": "Permissions"
+    "permissions": "Permissions",
+    "nav": {
+      "general": "General",
+      "payments": "Payments",
+      "policies": "Policies",
+      "members": "Members"
+    },
+    "general": {
+      "title": "General Settings",
+      "description": "Manage your organization settings.",
+      "comingSoon": "General settings configuration coming soon."
+    },
+    "orgPayments": {
+      "title": "Payment Settings",
+      "description": "Connect and manage your Stripe account to receive payments for court bookings.",
+      "noOrganization": "You need to be part of an organization to manage payment settings.",
+      "notConnected": {
+        "title": "Connect Your Stripe Account",
+        "description": "Connect a Stripe account to accept payments for court bookings. You'll be able to receive payments directly to your bank account."
+      },
+      "onboardingIncomplete": {
+        "title": "Complete Your Stripe Setup",
+        "description": "Your Stripe account setup is incomplete. Please continue the onboarding process to start accepting payments."
+      },
+      "connected": {
+        "title": "Stripe Connected",
+        "description": "Your Stripe account is connected and ready to accept payments."
+      },
+      "status": {
+        "chargesEnabled": "Accept Payments",
+        "payoutsEnabled": "Receive Payouts",
+        "enabled": "Enabled",
+        "disabled": "Disabled"
+      },
+      "accountInfo": {
+        "title": "Account Details",
+        "accountId": "Account ID",
+        "accountType": "Account Type",
+        "currency": "Currency"
+      },
+      "connectButton": "Connect Stripe",
+      "connecting": "Connecting...",
+      "continueOnboarding": "Continue Setup",
+      "continuing": "Loading...",
+      "openDashboard": "Open Stripe Dashboard",
+      "ownerOnly": "Only organization owners can connect Stripe accounts.",
+      "successMessage": "Stripe account connected successfully!",
+      "helpText": "Stripe is used to securely process payments. Funds will be deposited directly to your bank account.",
+      "errors": {
+        "missing_organization": "Organization not found.",
+        "not_authorized": "You are not authorized to manage this organization's payment settings.",
+        "no_account": "No Stripe account found. Please start the connection process again.",
+        "callback_failed": "An error occurred during the connection process. Please try again.",
+        "unknown": "An unknown error occurred."
+      }
+    },
+    "policies": {
+      "title": "Cancellation Policies",
+      "description": "Configure your cancellation and refund policies.",
+      "comingSoon": "Cancellation policy configuration coming soon."
+    },
+    "members": {
+      "title": "Members",
+      "description": "Manage your organization members and their roles.",
+      "comingSoon": "Member management coming soon."
+    }
   },
   "permissions": {
     "description": "Manage app permissions to enable features like notifications, finding games near you, and calendar sync.",
@@ -1690,13 +1755,351 @@
     "location": "Location",
     "website": "Website",
     "role": "Role",
-    "joinedAt": "Joined"
+    "joinedAt": "Joined",
+    "quickActions": {
+      "newBooking": "New Booking",
+      "facilities": "Facilities",
+      "facilitiesDesc": "Manage your courts",
+      "availability": "Availability",
+      "availabilityDesc": "View calendar",
+      "bookings": "Bookings",
+      "bookingsDesc": "Manage reservations",
+      "settings": "Settings",
+      "settingsDesc": "Configure options"
+    },
+    "kpi": {
+      "todaysBookings": "Today's Bookings",
+      "todaysBookingsDesc": "scheduled for today",
+      "weekRevenue": "This Week",
+      "weekRevenueDesc": "in revenue",
+      "utilization": "Utilization",
+      "utilizationDesc": "court usage rate",
+      "pendingActions": "Pending",
+      "pendingActionsDesc": "actions needed"
+    },
+    "todaySchedule": {
+      "title": "Today's Schedule",
+      "noBookings": "No bookings scheduled for today",
+      "viewAll": "View All Bookings",
+      "guest": "Guest"
+    },
+    "recentActivity": {
+      "title": "Recent Activity",
+      "noActivity": "No recent activity",
+      "bookingCreated": "New booking created",
+      "bookingCancelled": "Booking cancelled",
+      "bookingCompleted": "Booking completed"
+    }
+  },
+  "facilities": {
+    "title": "Facilities",
+    "description": "Manage your organization's facilities and courts.",
+    "emptyState": {
+      "title": "No Facilities Yet",
+      "description": "Add your first facility to start managing courts and bookings.",
+      "addButton": "Add Facility"
+    },
+    "addFacility": "Add Facility",
+    "table": {
+      "name": "Name",
+      "address": "Address",
+      "courts": "Courts",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "detail": {
+      "title": "Facility Details",
+      "info": "Information",
+      "address": "Address",
+      "city": "City",
+      "country": "Country",
+      "postalCode": "Postal Code",
+      "timezone": "Timezone",
+      "description": "Description",
+      "membershipRequired": "Membership Required",
+      "editButton": "Edit Facility",
+      "courtsSection": "Courts",
+      "manageCourts": "Manage Courts",
+      "viewAllCourts": "View All Courts",
+      "stats": {
+        "totalCourts": "Total Courts",
+        "activeCourts": "Active Courts",
+        "activeBookings": "Active Bookings"
+      }
+    },
+    "edit": {
+      "title": "Edit Facility",
+      "nameLabel": "Facility Name",
+      "namePlaceholder": "Enter facility name",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Enter facility description",
+      "addressLabel": "Address",
+      "addressPlaceholder": "Enter street address",
+      "cityLabel": "City",
+      "cityPlaceholder": "Enter city",
+      "postalCodeLabel": "Postal Code",
+      "postalCodePlaceholder": "Enter postal code",
+      "timezoneLabel": "Timezone",
+      "timezonePlaceholder": "Select timezone",
+      "membershipRequiredLabel": "Membership Required",
+      "membershipRequiredHint": "Require membership to book courts at this facility",
+      "saveButton": "Save Changes",
+      "saving": "Saving...",
+      "cancelButton": "Cancel",
+      "success": "Facility updated successfully",
+      "error": "Failed to update facility"
+    },
+    "new": {
+      "subtitle": "Add a new facility to your organization.",
+      "cardTitle": "Facility Information",
+      "cardDescription": "Enter the details of your new facility below.",
+      "createButton": "Create Facility",
+      "creating": "Creating...",
+      "success": "Facility created successfully",
+      "error": "Failed to create facility. Please try again.",
+      "backToFacilities": "Back to Facilities",
+      "notAuthenticated": "Not authenticated",
+      "noOrganization": "No organization found"
+    }
+  },
+  "courts": {
+    "title": "Courts",
+    "description": "Manage courts at this facility.",
+    "addCourt": "Add Court",
+    "emptyState": {
+      "title": "No Courts Yet",
+      "description": "Add courts to this facility to enable bookings.",
+      "addButton": "Add Court"
+    },
+    "table": {
+      "name": "Name",
+      "number": "Court #",
+      "surface": "Surface",
+      "type": "Type",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "surface": {
+      "hard": "Hard",
+      "clay": "Clay",
+      "grass": "Grass",
+      "synthetic": "Synthetic",
+      "carpet": "Carpet",
+      "concrete": "Concrete",
+      "asphalt": "Asphalt"
+    },
+    "type": {
+      "indoor": "Indoor",
+      "outdoor": "Outdoor"
+    },
+    "status": {
+      "available": "Available",
+      "maintenance": "Maintenance",
+      "closed": "Closed",
+      "reserved": "Reserved",
+      "unavailable": "Unavailable"
+    },
+    "detail": {
+      "title": "Court Details",
+      "info": "Information",
+      "surface": "Surface Type",
+      "lighting": "Lighting",
+      "indoor": "Indoor/Outdoor",
+      "multiSport": "Multi-Sport Lines",
+      "notes": "Notes",
+      "useFacilityDefaults": "Uses Facility Defaults",
+      "customAvailability": "Custom Availability",
+      "availabilityNote": "This court uses the facility's default availability settings.",
+      "customAvailabilityNote": "This court has custom availability settings.",
+      "manageAvailability": "Manage Availability",
+      "editButton": "Edit Court"
+    },
+    "add": {
+      "title": "Add Court",
+      "description": "Add a new court to this facility.",
+      "cancel": "Cancel",
+      "nameLabel": "Court Name",
+      "namePlaceholder": "e.g., Court 1, Main Court",
+      "numberLabel": "Court Number",
+      "numberPlaceholder": "Enter court number",
+      "surfaceLabel": "Surface Type",
+      "surfacePlaceholder": "Select surface type",
+      "indoorLabel": "Indoor Court",
+      "indoorHint": "Is this an indoor court?",
+      "lightingLabel": "Has Lighting",
+      "lightingHint": "Does this court have lighting for night play?",
+      "multiSportLabel": "Multi-Sport Lines",
+      "multiSportHint": "Are there lines marked for multiple sports?",
+      "notesLabel": "Notes",
+      "notesPlaceholder": "Additional notes about this court",
+      "addButton": "Add Court",
+      "adding": "Adding...",
+      "success": "Court added successfully",
+      "error": "Failed to add court"
+    },
+    "edit": {
+      "title": "Edit Court",
+      "saveButton": "Save Changes",
+      "saving": "Saving...",
+      "success": "Court updated successfully",
+      "error": "Failed to update court"
+    },
+    "statusChange": {
+      "success": "Court status updated",
+      "error": "Failed to update court status"
+    }
+  },
+  "availability": {
+    "title": "Availability",
+    "description": "Manage when your courts are available for booking.",
+    "facilityTemplate": {
+      "title": "Facility Default Schedule",
+      "description": "Set the default operating hours for all courts at this facility. Individual courts can override these settings.",
+      "subtitle": "These hours apply to all courts unless a court has custom settings.",
+      "slotDuration": "Slot Duration",
+      "slotDurationHint": "How long is each bookable time slot?",
+      "defaultPrice": "Default Price",
+      "defaultPriceHint": "Price per booking slot",
+      "saveButton": "Save Schedule",
+      "saving": "Saving...",
+      "success": "Schedule saved successfully",
+      "error": "Failed to save schedule"
+    },
+    "courtOverride": {
+      "title": "Court Availability",
+      "useFacilityDefaults": "Use Facility Defaults",
+      "useFacilityDefaultsHint": "When enabled, this court uses the facility's default schedule",
+      "customSchedule": "Custom Schedule",
+      "customScheduleDescription": "This court has a custom schedule that overrides the facility defaults.",
+      "enableCustom": "Set Custom Hours",
+      "disableCustom": "Use Facility Defaults Instead",
+      "noOverrides": "No custom schedule set. This court uses the facility defaults."
+    },
+    "weeklySchedule": {
+      "title": "Weekly Schedule",
+      "day": "Day",
+      "hours": "Hours",
+      "closed": "Closed",
+      "open": "Open",
+      "openTime": "Open",
+      "closeTime": "Close",
+      "allDay": "All Day",
+      "addTimeSlot": "Add Time Slot",
+      "removeTimeSlot": "Remove"
+    },
+    "days": {
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday",
+      "sunday": "Sunday"
+    },
+    "durations": {
+      "30": "30 minutes",
+      "60": "1 hour",
+      "90": "1.5 hours",
+      "120": "2 hours"
+    },
+    "calendar": {
+      "title": "Availability Calendar",
+      "description": "View computed availability for all courts.",
+      "selectFacility": "Select Facility",
+      "allCourts": "All Courts",
+      "today": "Today",
+      "thisWeek": "This Week",
+      "previousWeek": "Previous Week",
+      "nextWeek": "Next Week",
+      "legend": {
+        "available": "Available",
+        "booked": "Booked",
+        "blocked": "Blocked",
+        "maintenance": "Maintenance"
+      },
+      "noSlots": "No slots configured for this day",
+      "clickToBook": "Click to create booking",
+      "clickToView": "Click to view booking"
+    }
+  },
+  "blocks": {
+    "title": "Availability Blocks",
+    "description": "Block specific times when courts are not available.",
+    "emptyState": {
+      "title": "No Blocks",
+      "description": "Create blocks for maintenance, holidays, or special events.",
+      "addButton": "Add Block"
+    },
+    "addBlock": "Add Block",
+    "facilityWide": "All Courts",
+    "courtSpecific": "Specific Court",
+    "list": {
+      "date": "Date",
+      "time": "Time",
+      "court": "Court",
+      "reason": "Reason",
+      "type": "Type",
+      "actions": "Actions",
+      "allCourts": "All Courts",
+      "allDay": "All Day"
+    },
+    "types": {
+      "manual": "Manual Block",
+      "maintenance": "Maintenance",
+      "holiday": "Holiday",
+      "weather": "Weather",
+      "private_event": "Private Event"
+    },
+    "form": {
+      "title": "Create Block",
+      "editTitle": "Edit Block",
+      "courtLabel": "Court",
+      "courtPlaceholder": "Select court (or all courts)",
+      "allCourtsOption": "All courts at this facility",
+      "dateLabel": "Date",
+      "datePlaceholder": "Select date",
+      "dateRangeLabel": "Date Range",
+      "startDateLabel": "Start Date",
+      "endDateLabel": "End Date",
+      "allDayLabel": "All Day",
+      "allDayHint": "Block the entire day",
+      "startTimeLabel": "Start Time",
+      "endTimeLabel": "End Time",
+      "typeLabel": "Block Type",
+      "typePlaceholder": "Select type",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "Optional reason for the block",
+      "createButton": "Create Block",
+      "creating": "Creating...",
+      "updateButton": "Update Block",
+      "updating": "Updating...",
+      "deleteButton": "Delete Block",
+      "deleting": "Deleting...",
+      "cancelButton": "Cancel",
+      "success": "Block created successfully",
+      "updateSuccess": "Block updated successfully",
+      "deleteSuccess": "Block deleted successfully",
+      "error": "Failed to create block",
+      "updateError": "Failed to update block",
+      "deleteError": "Failed to delete block"
+    },
+    "confirmDelete": {
+      "title": "Delete Block",
+      "description": "Are you sure you want to delete this block? This action cannot be undone.",
+      "confirm": "Delete",
+      "cancel": "Cancel"
+    }
   },
   "app": {
     "nav": {
       "dashboard": "Dashboard",
       "organizations": "Organizations",
       "facilities": "Facilities",
+      "availability": "Availability",
       "members": "Members",
       "settings": "Settings",
       "theme": "Theme",

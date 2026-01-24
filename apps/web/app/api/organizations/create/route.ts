@@ -5,7 +5,6 @@ import { NextRequest, NextResponse } from 'next/server';
 type OrganizationNature = Enums<'organization_nature_enum'>;
 type OrganizationType = Enums<'organization_type_enum'> | null;
 type Country = Enums<'country_enum'> | null;
-type Role = Enums<'role_enum'>;
 
 export async function POST(request: NextRequest) {
   try {
@@ -95,10 +94,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Create organization member record
+    // Role should be 'owner' for organization creator
     const { error: memberError } = await supabase.from('organization_member').insert({
       user_id: user.id,
       organization_id: organization.id,
-      role: body.role as Role,
+      role: 'owner' as const,
     });
 
     if (memberError) {

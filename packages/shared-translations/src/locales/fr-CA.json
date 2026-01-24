@@ -268,7 +268,72 @@
     "darkMode": "Mode sombre",
     "lightMode": "Mode clair",
     "systemTheme": "Système",
-    "permissions": "Permissions"
+    "permissions": "Permissions",
+    "nav": {
+      "general": "Général",
+      "payments": "Paiements",
+      "policies": "Politiques",
+      "members": "Membres"
+    },
+    "general": {
+      "title": "Paramètres généraux",
+      "description": "Gérez les paramètres de votre organisation.",
+      "comingSoon": "Configuration des paramètres généraux à venir."
+    },
+    "orgPayments": {
+      "title": "Paramètres de paiement",
+      "description": "Connectez et gérez votre compte Stripe pour recevoir les paiements des réservations de terrains.",
+      "noOrganization": "Vous devez faire partie d'une organisation pour gérer les paramètres de paiement.",
+      "notConnected": {
+        "title": "Connectez votre compte Stripe",
+        "description": "Connectez un compte Stripe pour accepter les paiements des réservations de terrains. Vous pourrez recevoir les paiements directement sur votre compte bancaire."
+      },
+      "onboardingIncomplete": {
+        "title": "Complétez votre configuration Stripe",
+        "description": "La configuration de votre compte Stripe est incomplète. Veuillez continuer le processus d'intégration pour commencer à accepter les paiements."
+      },
+      "connected": {
+        "title": "Stripe connecté",
+        "description": "Votre compte Stripe est connecté et prêt à accepter les paiements."
+      },
+      "status": {
+        "chargesEnabled": "Accepter les paiements",
+        "payoutsEnabled": "Recevoir les versements",
+        "enabled": "Activé",
+        "disabled": "Désactivé"
+      },
+      "accountInfo": {
+        "title": "Détails du compte",
+        "accountId": "ID du compte",
+        "accountType": "Type de compte",
+        "currency": "Devise"
+      },
+      "connectButton": "Connecter Stripe",
+      "connecting": "Connexion...",
+      "continueOnboarding": "Continuer la configuration",
+      "continuing": "Chargement...",
+      "openDashboard": "Ouvrir le tableau de bord Stripe",
+      "ownerOnly": "Seuls les propriétaires d'organisation peuvent connecter des comptes Stripe.",
+      "successMessage": "Compte Stripe connecté avec succès!",
+      "helpText": "Stripe est utilisé pour traiter les paiements de manière sécurisée. Les fonds seront déposés directement sur votre compte bancaire.",
+      "errors": {
+        "missing_organization": "Organisation non trouvée.",
+        "not_authorized": "Vous n'êtes pas autorisé à gérer les paramètres de paiement de cette organisation.",
+        "no_account": "Aucun compte Stripe trouvé. Veuillez recommencer le processus de connexion.",
+        "callback_failed": "Une erreur s'est produite pendant le processus de connexion. Veuillez réessayer.",
+        "unknown": "Une erreur inconnue s'est produite."
+      }
+    },
+    "policies": {
+      "title": "Politiques d'annulation",
+      "description": "Configurez vos politiques d'annulation et de remboursement.",
+      "comingSoon": "Configuration des politiques d'annulation à venir."
+    },
+    "members": {
+      "title": "Membres",
+      "description": "Gérez les membres de votre organisation et leurs rôles.",
+      "comingSoon": "Gestion des membres à venir."
+    }
   },
   "permissions": {
     "description": "Gérez les permissions de l'application pour activer les notifications, la recherche de parties près de chez vous et la synchronisation du calendrier.",
@@ -1690,13 +1755,351 @@
     "location": "Localisation",
     "website": "Site web",
     "role": "Rôle",
-    "joinedAt": "Rejoint le"
+    "joinedAt": "Rejoint le",
+    "quickActions": {
+      "newBooking": "Nouvelle réservation",
+      "facilities": "Installations",
+      "facilitiesDesc": "Gérer vos terrains",
+      "availability": "Disponibilité",
+      "availabilityDesc": "Voir le calendrier",
+      "bookings": "Réservations",
+      "bookingsDesc": "Gérer les réservations",
+      "settings": "Paramètres",
+      "settingsDesc": "Configurer les options"
+    },
+    "kpi": {
+      "todaysBookings": "Réservations du jour",
+      "todaysBookingsDesc": "prévues aujourd'hui",
+      "weekRevenue": "Cette semaine",
+      "weekRevenueDesc": "en revenus",
+      "utilization": "Utilisation",
+      "utilizationDesc": "taux d'occupation",
+      "pendingActions": "En attente",
+      "pendingActionsDesc": "actions requises"
+    },
+    "todaySchedule": {
+      "title": "Horaire du jour",
+      "noBookings": "Aucune réservation prévue aujourd'hui",
+      "viewAll": "Voir toutes les réservations",
+      "guest": "Invité"
+    },
+    "recentActivity": {
+      "title": "Activité récente",
+      "noActivity": "Aucune activité récente",
+      "bookingCreated": "Nouvelle réservation créée",
+      "bookingCancelled": "Réservation annulée",
+      "bookingCompleted": "Réservation complétée"
+    }
+  },
+  "facilities": {
+    "title": "Installations",
+    "description": "Gérez les installations et terrains de votre organisation.",
+    "emptyState": {
+      "title": "Aucune installation",
+      "description": "Ajoutez votre première installation pour commencer à gérer les terrains et les réservations.",
+      "addButton": "Ajouter une installation"
+    },
+    "addFacility": "Ajouter une installation",
+    "table": {
+      "name": "Nom",
+      "address": "Adresse",
+      "courts": "Terrains",
+      "status": "Statut",
+      "actions": "Actions"
+    },
+    "status": {
+      "active": "Actif",
+      "inactive": "Inactif"
+    },
+    "detail": {
+      "title": "Détails de l'installation",
+      "info": "Informations",
+      "address": "Adresse",
+      "city": "Ville",
+      "country": "Pays",
+      "postalCode": "Code postal",
+      "timezone": "Fuseau horaire",
+      "description": "Description",
+      "membershipRequired": "Adhésion requise",
+      "editButton": "Modifier l'installation",
+      "courtsSection": "Terrains",
+      "manageCourts": "Gérer les terrains",
+      "viewAllCourts": "Voir tous les terrains",
+      "stats": {
+        "totalCourts": "Total des terrains",
+        "activeCourts": "Terrains actifs",
+        "activeBookings": "Réservations actives"
+      }
+    },
+    "edit": {
+      "title": "Modifier l'installation",
+      "nameLabel": "Nom de l'installation",
+      "namePlaceholder": "Entrez le nom de l'installation",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Entrez la description de l'installation",
+      "addressLabel": "Adresse",
+      "addressPlaceholder": "Entrez l'adresse",
+      "cityLabel": "Ville",
+      "cityPlaceholder": "Entrez la ville",
+      "postalCodeLabel": "Code postal",
+      "postalCodePlaceholder": "Entrez le code postal",
+      "timezoneLabel": "Fuseau horaire",
+      "timezonePlaceholder": "Sélectionnez le fuseau horaire",
+      "membershipRequiredLabel": "Adhésion requise",
+      "membershipRequiredHint": "Exiger une adhésion pour réserver des terrains dans cette installation",
+      "saveButton": "Enregistrer les modifications",
+      "saving": "Enregistrement...",
+      "cancelButton": "Annuler",
+      "success": "Installation mise à jour avec succès",
+      "error": "Échec de la mise à jour de l'installation"
+    },
+    "new": {
+      "subtitle": "Ajoutez une nouvelle installation à votre organisation.",
+      "cardTitle": "Informations sur l'installation",
+      "cardDescription": "Entrez les détails de votre nouvelle installation ci-dessous.",
+      "createButton": "Créer l'installation",
+      "creating": "Création en cours...",
+      "success": "Installation créée avec succès",
+      "error": "Échec de la création de l'installation. Veuillez réessayer.",
+      "backToFacilities": "Retour aux installations",
+      "notAuthenticated": "Non authentifié",
+      "noOrganization": "Aucune organisation trouvée"
+    }
+  },
+  "courts": {
+    "title": "Terrains",
+    "description": "Gérez les terrains de cette installation.",
+    "addCourt": "Ajouter un terrain",
+    "emptyState": {
+      "title": "Aucun terrain",
+      "description": "Ajoutez des terrains à cette installation pour activer les réservations.",
+      "addButton": "Ajouter un terrain"
+    },
+    "table": {
+      "name": "Nom",
+      "number": "Terrain #",
+      "surface": "Surface",
+      "type": "Type",
+      "status": "Statut",
+      "actions": "Actions"
+    },
+    "surface": {
+      "hard": "Dur",
+      "clay": "Terre battue",
+      "grass": "Gazon",
+      "synthetic": "Synthétique",
+      "carpet": "Moquette",
+      "concrete": "Béton",
+      "asphalt": "Asphalte"
+    },
+    "type": {
+      "indoor": "Intérieur",
+      "outdoor": "Extérieur"
+    },
+    "status": {
+      "available": "Disponible",
+      "maintenance": "Maintenance",
+      "closed": "Fermé",
+      "reserved": "Réservé",
+      "unavailable": "Indisponible"
+    },
+    "detail": {
+      "title": "Détails du terrain",
+      "info": "Informations",
+      "surface": "Type de surface",
+      "lighting": "Éclairage",
+      "indoor": "Intérieur/Extérieur",
+      "multiSport": "Lignes multi-sports",
+      "notes": "Notes",
+      "useFacilityDefaults": "Utilise les paramètres par défaut",
+      "customAvailability": "Disponibilité personnalisée",
+      "availabilityNote": "Ce terrain utilise les paramètres de disponibilité par défaut de l'installation.",
+      "customAvailabilityNote": "Ce terrain a des paramètres de disponibilité personnalisés.",
+      "manageAvailability": "Gérer la disponibilité",
+      "editButton": "Modifier le terrain"
+    },
+    "add": {
+      "title": "Ajouter un terrain",
+      "description": "Ajouter un nouveau terrain à cette installation.",
+      "cancel": "Annuler",
+      "nameLabel": "Nom du terrain",
+      "namePlaceholder": "ex., Terrain 1, Terrain principal",
+      "numberLabel": "Numéro du terrain",
+      "numberPlaceholder": "Entrez le numéro du terrain",
+      "surfaceLabel": "Type de surface",
+      "surfacePlaceholder": "Sélectionnez le type de surface",
+      "indoorLabel": "Terrain intérieur",
+      "indoorHint": "Est-ce un terrain intérieur?",
+      "lightingLabel": "Éclairage",
+      "lightingHint": "Ce terrain a-t-il un éclairage pour jouer la nuit?",
+      "multiSportLabel": "Lignes multi-sports",
+      "multiSportHint": "Y a-t-il des lignes marquées pour plusieurs sports?",
+      "notesLabel": "Notes",
+      "notesPlaceholder": "Notes supplémentaires sur ce terrain",
+      "addButton": "Ajouter le terrain",
+      "adding": "Ajout...",
+      "success": "Terrain ajouté avec succès",
+      "error": "Échec de l'ajout du terrain"
+    },
+    "edit": {
+      "title": "Modifier le terrain",
+      "saveButton": "Enregistrer les modifications",
+      "saving": "Enregistrement...",
+      "success": "Terrain mis à jour avec succès",
+      "error": "Échec de la mise à jour du terrain"
+    },
+    "statusChange": {
+      "success": "Statut du terrain mis à jour",
+      "error": "Échec de la mise à jour du statut du terrain"
+    }
+  },
+  "availability": {
+    "title": "Disponibilité",
+    "description": "Gérez les heures de disponibilité de vos terrains.",
+    "facilityTemplate": {
+      "title": "Horaire par défaut de l'installation",
+      "description": "Définissez les heures d'ouverture par défaut pour tous les terrains de cette installation. Les terrains individuels peuvent remplacer ces paramètres.",
+      "subtitle": "Ces heures s'appliquent à tous les terrains sauf si un terrain a des paramètres personnalisés.",
+      "slotDuration": "Durée du créneau",
+      "slotDurationHint": "Quelle est la durée de chaque créneau réservable?",
+      "defaultPrice": "Prix par défaut",
+      "defaultPriceHint": "Prix par créneau de réservation",
+      "saveButton": "Enregistrer l'horaire",
+      "saving": "Enregistrement...",
+      "success": "Horaire enregistré avec succès",
+      "error": "Échec de l'enregistrement de l'horaire"
+    },
+    "courtOverride": {
+      "title": "Disponibilité du terrain",
+      "useFacilityDefaults": "Utiliser les paramètres de l'installation",
+      "useFacilityDefaultsHint": "Lorsqu'activé, ce terrain utilise l'horaire par défaut de l'installation",
+      "customSchedule": "Horaire personnalisé",
+      "customScheduleDescription": "Ce terrain a un horaire personnalisé qui remplace les paramètres de l'installation.",
+      "enableCustom": "Définir des heures personnalisées",
+      "disableCustom": "Utiliser les paramètres de l'installation",
+      "noOverrides": "Aucun horaire personnalisé défini. Ce terrain utilise les paramètres de l'installation."
+    },
+    "weeklySchedule": {
+      "title": "Horaire hebdomadaire",
+      "day": "Jour",
+      "hours": "Heures",
+      "closed": "Fermé",
+      "open": "Ouvert",
+      "openTime": "Ouverture",
+      "closeTime": "Fermeture",
+      "allDay": "Toute la journée",
+      "addTimeSlot": "Ajouter un créneau",
+      "removeTimeSlot": "Supprimer"
+    },
+    "days": {
+      "monday": "Lundi",
+      "tuesday": "Mardi",
+      "wednesday": "Mercredi",
+      "thursday": "Jeudi",
+      "friday": "Vendredi",
+      "saturday": "Samedi",
+      "sunday": "Dimanche"
+    },
+    "durations": {
+      "30": "30 minutes",
+      "60": "1 heure",
+      "90": "1h30",
+      "120": "2 heures"
+    },
+    "calendar": {
+      "title": "Calendrier de disponibilité",
+      "description": "Affichez la disponibilité calculée pour tous les terrains.",
+      "selectFacility": "Sélectionner l'installation",
+      "allCourts": "Tous les terrains",
+      "today": "Aujourd'hui",
+      "thisWeek": "Cette semaine",
+      "previousWeek": "Semaine précédente",
+      "nextWeek": "Semaine suivante",
+      "legend": {
+        "available": "Disponible",
+        "booked": "Réservé",
+        "blocked": "Bloqué",
+        "maintenance": "Maintenance"
+      },
+      "noSlots": "Aucun créneau configuré pour ce jour",
+      "clickToBook": "Cliquez pour créer une réservation",
+      "clickToView": "Cliquez pour voir la réservation"
+    }
+  },
+  "blocks": {
+    "title": "Blocages de disponibilité",
+    "description": "Bloquez des créneaux horaires spécifiques lorsque les terrains ne sont pas disponibles.",
+    "emptyState": {
+      "title": "Aucun blocage",
+      "description": "Créez des blocages pour la maintenance, les jours fériés ou les événements spéciaux.",
+      "addButton": "Ajouter un blocage"
+    },
+    "addBlock": "Ajouter un blocage",
+    "facilityWide": "Tous les terrains",
+    "courtSpecific": "Terrain spécifique",
+    "list": {
+      "date": "Date",
+      "time": "Heure",
+      "court": "Terrain",
+      "reason": "Raison",
+      "type": "Type",
+      "actions": "Actions",
+      "allCourts": "Tous les terrains",
+      "allDay": "Toute la journée"
+    },
+    "types": {
+      "manual": "Blocage manuel",
+      "maintenance": "Maintenance",
+      "holiday": "Jour férié",
+      "weather": "Météo",
+      "private_event": "Événement privé"
+    },
+    "form": {
+      "title": "Créer un blocage",
+      "editTitle": "Modifier le blocage",
+      "courtLabel": "Terrain",
+      "courtPlaceholder": "Sélectionnez un terrain (ou tous les terrains)",
+      "allCourtsOption": "Tous les terrains de cette installation",
+      "dateLabel": "Date",
+      "datePlaceholder": "Sélectionnez une date",
+      "dateRangeLabel": "Plage de dates",
+      "startDateLabel": "Date de début",
+      "endDateLabel": "Date de fin",
+      "allDayLabel": "Toute la journée",
+      "allDayHint": "Bloquer la journée entière",
+      "startTimeLabel": "Heure de début",
+      "endTimeLabel": "Heure de fin",
+      "typeLabel": "Type de blocage",
+      "typePlaceholder": "Sélectionnez le type",
+      "reasonLabel": "Raison",
+      "reasonPlaceholder": "Raison optionnelle du blocage",
+      "createButton": "Créer le blocage",
+      "creating": "Création...",
+      "updateButton": "Mettre à jour le blocage",
+      "updating": "Mise à jour...",
+      "deleteButton": "Supprimer le blocage",
+      "deleting": "Suppression...",
+      "cancelButton": "Annuler",
+      "success": "Blocage créé avec succès",
+      "updateSuccess": "Blocage mis à jour avec succès",
+      "deleteSuccess": "Blocage supprimé avec succès",
+      "error": "Échec de la création du blocage",
+      "updateError": "Échec de la mise à jour du blocage",
+      "deleteError": "Échec de la suppression du blocage"
+    },
+    "confirmDelete": {
+      "title": "Supprimer le blocage",
+      "description": "Êtes-vous sûr de vouloir supprimer ce blocage? Cette action est irréversible.",
+      "confirm": "Supprimer",
+      "cancel": "Annuler"
+    }
   },
   "app": {
     "nav": {
       "dashboard": "Tableau de bord",
       "organizations": "Organisations",
       "facilities": "Sites de jeu",
+      "availability": "Disponibilité",
       "members": "Membres",
       "settings": "Paramètres",
       "theme": "Thème",

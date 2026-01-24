@@ -22,6 +22,8 @@ export * from './match-share';
 export * from './groups';
 export * from './chat';
 export * from './reports';
+export * from './stripe';
+export * from './bookings';
 
 // Export default DatabaseService
 export { default } from './database';

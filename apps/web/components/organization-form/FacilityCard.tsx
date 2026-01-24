@@ -84,7 +84,8 @@ export function FacilityCard({ facility, facilityIndex }: FacilityCardProps) {
 
         // Auto-fill fields from parsed Google Places result
         if (data.parsed) {
-          const { name, address, city, country, postalCode, latitude, longitude } = data.parsed;
+          const { name, address, city, country, postalCode, latitude, longitude, timezone } =
+            data.parsed;
           handleFacilityChange(facility.id, 'name', name);
           handleFacilityChange(facility.id, 'address', address);
           handleFacilityChange(facility.id, 'city', city);
@@ -92,6 +93,7 @@ export function FacilityCard({ facility, facilityIndex }: FacilityCardProps) {
           handleFacilityChange(facility.id, 'postalCode', postalCode);
           handleFacilityChange(facility.id, 'latitude', String(latitude));
           handleFacilityChange(facility.id, 'longitude', String(longitude));
+          if (timezone) handleFacilityChange(facility.id, 'timezone', timezone);
         }
       }
     } catch (error) {

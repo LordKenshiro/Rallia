@@ -44,8 +44,15 @@ export function AdminSignInForm({
     setLoadingProvider(provider);
     setErrorMessage(null);
 
+    // Build callback URL with redirect and invitation token if present
+    const callbackUrl = new URL('/api/auth/callback', window.location.origin);
+    callbackUrl.searchParams.set('redirect', 'admin');
+    if (token) {
+      callbackUrl.searchParams.set('invitation_token', token);
+    }
+
     const result = await signInWithProvider(provider, {
-      redirectTo: `${window.location.origin}/api/auth/callback?redirect=admin`,
+      redirectTo: callbackUrl.toString(),
     });
 
     if (!result.success) {
@@ -63,8 +70,15 @@ export function AdminSignInForm({
       // Send OTP
       setAuthState('loading');
 
+      // Build callback URL with redirect and invitation token if present
+      const callbackUrl = new URL('/api/auth/callback', window.location.origin);
+      callbackUrl.searchParams.set('redirect', 'admin');
+      if (token) {
+        callbackUrl.searchParams.set('invitation_token', token);
+      }
+
       const result = await signInWithEmail(email, {
-        emailRedirectTo: `${window.location.origin}/api/auth/callback?redirect=admin`,
+        emailRedirectTo: callbackUrl.toString(),
       });
 
       if (!result.success) {

@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
 
       // Extract address parts from components
       const getComponent = (types: string[]) => {
-        const component = addressComponents.find((c: any) =>
+        const component = addressComponents.find((c: { types?: string[]; longText?: string }) =>
           types.some((type: string) => c.types?.includes(type))
         );
         return component?.longText || '';
@@ -56,6 +56,29 @@ export async function POST(request: NextRequest) {
         getComponent(['sublocality_level_1']);
       const country = getComponent(['country']);
       const postalCode = getComponent(['postal_code']);
+      const latitude = place.location?.latitude || null;
+      const longitude = place.location?.longitude || null;
+
+      // Fetch timezone using Google Time Zone API if we have coordinates
+      let timezone: string | null = null;
+      if (latitude && longitude) {
+        try {
+          const timestamp = Math.floor(Date.now() / 1000);
+          const timezoneResponse = await fetch(
+            `https://maps.googleapis.com/maps/api/timezone/json?location=${latitude},${longitude}&timestamp=${timestamp}&key=${apiKey}`
+          );
+
+          if (timezoneResponse.ok) {
+            const timezoneData = await timezoneResponse.json();
+            if (timezoneData.status === 'OK' && timezoneData.timeZoneId) {
+              timezone = timezoneData.timeZoneId;
+            }
+          }
+        } catch (tzError) {
+          console.error('Timezone API error:', tzError);
+          // Continue without timezone - not critical
+        }
+      }
 
       return NextResponse.json({
         places: data.places,
@@ -66,8 +89,9 @@ export async function POST(request: NextRequest) {
           city,
           country,
           postalCode,
-          latitude: place.location?.latitude || null,
-          longitude: place.location?.longitude || null,
+          latitude,
+          longitude,
+          timezone,
         },
       });
     }
