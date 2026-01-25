@@ -19,7 +19,7 @@ import { useAuth, useThemeStyles, useTranslation, useUserLocation } from '../../
 import type { TranslationKey } from '@rallia/shared-translations';
 import { useMatchDetailSheet, useSport } from '../../../context';
 import { Logger } from '@rallia/shared-services';
-import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
+import { spacingPixels } from '@rallia/design-system';
 import { SearchBar, MatchFiltersBar } from '../components';
 
 // =============================================================================
@@ -73,6 +73,7 @@ export default function PublicMatches() {
   const isDark = theme === 'dark';
 
   // Get user location and preferences
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { location: _realLocation } = useUserLocation();
   const { player, loading: playerLoading } = usePlayer();
   const { selectedSport, isLoading: sportLoading } = useSport();

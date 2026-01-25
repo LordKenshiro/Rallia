@@ -14,7 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary, neutral } from '@rallia/design-system';
 import type { ConversationPreview } from '@rallia/shared-services';
 
@@ -65,7 +65,7 @@ function formatLastSeen(dateString: string | null | undefined): string {
 }
 
 // Get conversation display info
-function getConversationInfo(conversation: ConversationPreview): {
+function getConversationInfo(conversation: ConversationPreview, t: (key: string) => string): {
   name: string;
   avatar: string | null;
   iconName: keyof typeof Ionicons.glyphMap;
@@ -88,7 +88,7 @@ function getConversationInfo(conversation: ConversationPreview): {
 
   // Group or other conversation types
   return {
-    name: conversation.title || 'Group Chat',
+    name: conversation.title || t('chat.conversation.groupChat' as any),
     avatar: conversation.cover_image_url || null,
     iconName: conversation.conversation_type === 'announcement' ? 'megaphone' : 'people',
     isOnline: false,
@@ -103,7 +103,8 @@ function ConversationItemComponent({
   isBlocked = false,
 }: ConversationItemProps) {
   const { colors, isDark } = useThemeStyles();
-  const { name, avatar, iconName, isOnline, lastSeen } = getConversationInfo(conversation);
+  const { t } = useTranslation();
+  const { name, avatar, iconName, isOnline, lastSeen } = getConversationInfo(conversation, t);
   const hasUnread = conversation.unread_count > 0;
   const isPinned = conversation.is_pinned ?? false;
   const isMuted = conversation.is_muted ?? false;
@@ -114,7 +115,7 @@ function ConversationItemComponent({
   
   if (isBlocked && conversation.conversation_type === 'direct') {
     // Show blocked message for direct chats where user has blocked the other person
-    previewText = 'You blocked this user';
+    previewText = t('chat.conversation.blockedUser' as any);
     isBlockedPreview = true;
   } else if (conversation.last_message_content) {
     if (conversation.conversation_type !== 'direct' && conversation.last_message_sender_name) {
@@ -208,7 +209,7 @@ function ConversationItemComponent({
             ]}
             numberOfLines={1}
           >
-            {previewText || (isOnline ? 'Online' : lastSeen ? `Last seen ${formatLastSeen(lastSeen)}` : 'No messages yet')}
+            {previewText || (isOnline ? t('chat.conversation.online' as any) : lastSeen ? t('chat.conversation.lastSeen' as any, { time: formatLastSeen(lastSeen) }) : t('chat.conversation.noMessages' as any))}
           </Text>
 
           {/* Unread badge */}

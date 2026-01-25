@@ -167,24 +167,76 @@ export function useMessages(conversationId: string | undefined, pageSize = 50) {
 }
 
 /**
- * Send a message
+ * Send a message with optimistic updates
  */
 export function useSendMessage() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (input: SendMessageInput) => sendMessage(input),
-    onSuccess: (newMessage, variables) => {
-      // Optimistically update messages list
+    // True optimistic update - add message immediately before API call
+    onMutate: async (variables) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({
+        queryKey: chatKeys.messages(variables.conversation_id),
+      });
+
+      // Snapshot the previous value
+      const previousMessages = queryClient.getQueryData(
+        chatKeys.messages(variables.conversation_id)
+      );
+
+      // Optimistically add the new message
       queryClient.setQueryData(
         chatKeys.messages(variables.conversation_id),
         (oldData: { pages: MessageWithSender[][]; pageParams: number[] } | undefined) => {
-          if (!oldData) return oldData;
-          
-          // Add new message to the first page (messages are ordered desc)
-          const newPages = [...oldData.pages];
-          newPages[0] = [newMessage as MessageWithSender, ...newPages[0]];
-          
+          // If no existing data or no pages, don't modify - let the real data come through
+          if (!oldData || !oldData.pages || oldData.pages.length === 0) {
+            return oldData;
+          }
+
+          // Create optimistic message
+          const optimisticMessage: MessageWithSender = {
+            id: `temp-${Date.now()}`,
+            conversation_id: variables.conversation_id,
+            sender_id: variables.sender_id,
+            content: variables.content,
+            status: 'sent',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            read_by: [],
+            sender: null,
+          };
+
+          // Safely create new pages array with the optimistic message prepended to first page
+          const newPages = oldData.pages.map((page, index) => 
+            index === 0 ? [optimisticMessage, ...page] : page
+          );
+
+          return {
+            ...oldData,
+            pages: newPages,
+          };
+        }
+      );
+
+      return { previousMessages };
+    },
+    onSuccess: (newMessage, variables) => {
+      // Replace optimistic message with real one
+      queryClient.setQueryData(
+        chatKeys.messages(variables.conversation_id),
+        (oldData: { pages: MessageWithSender[][]; pageParams: number[] } | undefined) => {
+          if (!oldData || !oldData.pages) return oldData;
+
+          const newPages = oldData.pages.map((page) =>
+            page.map((msg) =>
+              msg.id.startsWith('temp-') && msg.content === variables.content
+                ? (newMessage as MessageWithSender)
+                : msg
+            )
+          );
+
           return {
             ...oldData,
             pages: newPages,
@@ -196,6 +248,15 @@ export function useSendMessage() {
       queryClient.invalidateQueries({
         queryKey: chatKeys.conversations(),
       });
+    },
+    onError: (_err, variables, context) => {
+      // Rollback on error
+      if (context?.previousMessages) {
+        queryClient.setQueryData(
+          chatKeys.messages(variables.conversation_id),
+          context.previousMessages
+        );
+      }
     },
   });
 }

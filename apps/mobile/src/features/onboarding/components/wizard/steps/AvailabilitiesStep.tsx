@@ -5,7 +5,7 @@
  * Migrated from PlayerAvailabilitiesOverlay with theme-aware colors.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
@@ -46,6 +46,17 @@ export const AvailabilitiesStep: React.FC<AvailabilitiesStepProps> = ({
   t,
   isDark: _isDark,
 }) => {
+  // Calculate total selections for display
+  const totalSelections = useMemo(() => {
+    return Object.values(formData.availabilities).reduce(
+      (count, day) => count + Object.values(day).filter(Boolean).length,
+      0
+    );
+  }, [formData.availabilities]);
+
+  const MIN_SELECTIONS = 5;
+  const hasMinimum = totalSelections >= MIN_SELECTIONS;
+
   const toggleAvailability = (day: DayOfWeek, slot: TimeSlot) => {
     selectionHaptic();
     const currentAvailabilities = formData.availabilities;
@@ -78,6 +89,19 @@ export const AvailabilitiesStep: React.FC<AvailabilitiesStepProps> = ({
       <Text size="base" color={colors.textSecondary} style={styles.subtitle}>
         {t('onboarding.availabilityStep.subtitle' as TranslationKey)}
       </Text>
+
+      {/* Selection Counter */}
+      <View style={styles.counterContainer}>
+        <Text 
+          size="sm" 
+          weight="semibold" 
+          color={hasMinimum ? colors.buttonActive : colors.textMuted}
+        >
+          {t('onboarding.availabilityStep.minimumSelected' as TranslationKey)
+            .replace('{count}', String(totalSelections))
+            .replace('{minimum}', String(MIN_SELECTIONS))}
+        </Text>
+      </View>
 
       {/* Availability Grid */}
       <View style={styles.gridContainer}>
@@ -158,7 +182,11 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     textAlign: 'center',
-    marginBottom: spacingPixels[6],
+    marginBottom: spacingPixels[3],
+  },
+  counterContainer: {
+    alignItems: 'center',
+    marginBottom: spacingPixels[4],
   },
   gridContainer: {
     marginBottom: spacingPixels[6],

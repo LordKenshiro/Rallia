@@ -5,19 +5,22 @@
  * Features infinite scrolling, search, filters, and empty states.
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
   FlatList,
   TextInput,
   RefreshControl,
+  TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, SkeletonPlayerCard, Skeleton } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
 import { usePlayerSearch, usePlayer } from '@rallia/shared-hooks';
+import { useTranslation } from '../../../hooks';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import { supabase, Logger } from '@rallia/shared-services';
 import PlayerCard from './PlayerCard';
@@ -53,8 +56,36 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
   colors,
   onPlayerPress,
 }) => {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<PlayerFilters>(DEFAULT_PLAYER_FILTERS);
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Handle search with debounce indicator
+  const handleSearchChange = useCallback((text: string) => {
+    setSearchQuery(text);
+    setIsTyping(true);
+    
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    
+    // Set new timeout - matches the 300ms debounce in usePlayerSearch
+    typingTimeoutRef.current = setTimeout(() => {
+      setIsTyping(false);
+    }, 350);
+  }, []);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Get user's max travel distance preference
   const { maxTravelDistanceKm } = usePlayer();
@@ -88,11 +119,11 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
   // Filter change handler
   // State for favorite player IDs
   const [favoritePlayerIds, setFavoritePlayerIds] = useState<string[]>([]);
-  const [favoritesLoading, setFavoritesLoading] = useState(false);
+  const [, setFavoritesLoading] = useState(false);
 
   // State for blocked player IDs
   const [blockedPlayerIds, setBlockedPlayerIds] = useState<string[]>([]);
-  const [blockedLoading, setBlockedLoading] = useState(false);
+  const [, setBlockedLoading] = useState(false);
 
   // Function to fetch favorites - can be called on demand
   const fetchFavorites = useCallback(async () => {
@@ -240,6 +271,7 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     hasNextPage,
     fetchNextPage,
     refetch,
+    error,
   } = usePlayerSearch({
     sportId,
     currentUserId,
@@ -323,12 +355,12 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
       <View style={styles.emptyContainer}>
         <Ionicons name="people-outline" size={64} color={colors.textMuted} />
         <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
-          {hasSearchOrFilters ? 'No players found' : 'No players yet'}
+          {hasSearchOrFilters ? t('playerDirectory.noPlayersFound') : t('playerDirectory.noPlayersYet')}
         </Text>
         <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
           {hasSearchOrFilters
-            ? 'Try adjusting your search or filters'
-            : 'Be the first to invite players to your sport'}
+            ? t('playerDirectory.adjustSearch')
+            : t('playerDirectory.beFirstToInvite')}
         </Text>
       </View>
     );
@@ -355,20 +387,31 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
           <Ionicons name="search-outline" size={20} color={colors.textMuted} style={styles.searchIcon} />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Search by name or city..."
+            placeholder={t('playerDirectory.searchPlaceholder')}
             placeholderTextColor={colors.textMuted}
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={handleSearchChange}
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="search"
           />
-          {searchQuery.length > 0 && (
+          {/* Debounce/Loading indicator */}
+          {(isTyping || (isFetching && searchQuery.length > 0)) && (
+            <ActivityIndicator 
+              size="small" 
+              color={colors.primary} 
+              style={styles.searchLoader}
+            />
+          )}
+          {searchQuery.length > 0 && !isTyping && !isFetching && (
             <Ionicons
               name="close-circle"
               size={20}
               color={colors.textMuted}
-              onPress={() => setSearchQuery('')}
+              onPress={() => {
+                setSearchQuery('');
+                setIsTyping(false);
+              }}
               style={styles.clearIcon}
             />
           )}
@@ -391,10 +434,10 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
       <View style={styles.emptyContainer}>
         <Ionicons name="alert-circle-outline" size={64} color={colors.textMuted} />
         <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
-          Select a sport
+          {t('playerDirectory.selectSport')}
         </Text>
         <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-          Choose a sport from the header to view players
+          {t('playerDirectory.chooseSport')}
         </Text>
       </View>
     );
@@ -440,6 +483,29 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     );
   }
 
+  // Error state with retry button
+  if (error && !players.length) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Ionicons name="cloud-offline-outline" size={64} color={colors.textMuted} />
+        <Text size="lg" weight="semibold" color={colors.text} style={styles.emptyTitle}>
+          {t('playerDirectory.failedToLoad')}
+        </Text>
+        <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
+          {error?.message || t('playerDirectory.checkConnection')}
+        </Text>
+        <TouchableOpacity 
+          style={[styles.retryButton, { backgroundColor: colors.primary }]}
+          onPress={() => refetch()}
+        >
+          <Text size="sm" weight="semibold" color="#FFFFFF">
+            {t('common.retry')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <FlatList
       data={sortedPlayers}
@@ -463,6 +529,12 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
         />
       }
       showsVerticalScrollIndicator={false}
+      // Performance optimizations
+      removeClippedSubviews={true}
+      maxToRenderPerBatch={10}
+      windowSize={10}
+      initialNumToRender={10}
+      getItemLayout={undefined}
     />
   );
 };
@@ -499,6 +571,9 @@ const styles = StyleSheet.create({
   clearIcon: {
     marginLeft: spacingPixels[2],
   },
+  searchLoader: {
+    marginLeft: spacingPixels[2],
+  },
   listContent: {
     paddingBottom: spacingPixels[5],
   },
@@ -520,6 +595,12 @@ const styles = StyleSheet.create({
   emptyDescription: {
     textAlign: 'center',
     lineHeight: 20,
+  },
+  retryButton: {
+    marginTop: spacingPixels[4],
+    paddingHorizontal: spacingPixels[6],
+    paddingVertical: spacingPixels[3],
+    borderRadius: radiusPixels.md,
   },
   footerLoader: {
     alignItems: 'center',

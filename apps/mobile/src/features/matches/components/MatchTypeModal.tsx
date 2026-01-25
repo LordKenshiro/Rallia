@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation, type TranslationKey } from '../../../hooks';
 
 export type MatchType = 'single' | 'double';
 
@@ -30,10 +30,11 @@ export function MatchTypeModal({
   onSelect,
 }: MatchTypeModalProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
 
-  const options: { type: MatchType; label: string; icon: string }[] = [
-    { type: 'single', label: 'Single', icon: 'person' },
-    { type: 'double', label: 'Double', icon: 'people' },
+  const options: { type: MatchType; labelKey: string; icon: string }[] = [
+    { type: 'single', labelKey: 'match.format.singles', icon: 'person' },
+    { type: 'double', labelKey: 'match.format.doubles', icon: 'people' },
   ];
 
   return (
@@ -50,7 +51,7 @@ export function MatchTypeModal({
 
           {/* Title */}
           <Text weight="semibold" size="lg" style={[styles.title, { color: colors.text }]}>
-            Pick match type
+            {t('match.pickMatchType' as TranslationKey)}
           </Text>
 
           {/* Options */}
@@ -79,7 +80,7 @@ export function MatchTypeModal({
                   />
                 </View>
                 <Text weight="medium" size="base" style={{ color: colors.text, marginLeft: 16 }}>
-                  {option.label}
+                  {t(option.labelKey as TranslationKey)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -91,7 +92,7 @@ export function MatchTypeModal({
             onPress={onClose}
           >
             <Text weight="medium" size="base" style={{ color: colors.textSecondary }}>
-              Cancel
+              {t('common.cancel')}
             </Text>
           </TouchableOpacity>
         </View>

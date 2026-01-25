@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import {
   useGroupInviteCode,
   useResetGroupInviteCode,
@@ -32,6 +32,7 @@ interface InviteLinkModalProps {
   groupName: string;
   currentUserId: string;
   isModerator: boolean;
+  type?: 'group' | 'community';
 }
 
 export function InviteLinkModal({
@@ -41,10 +42,16 @@ export function InviteLinkModal({
   groupName,
   currentUserId,
   isModerator,
+  type = 'group',
 }: InviteLinkModalProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
+  
+  // Use proper terminology based on type
+  const typeLabel = type === 'community' ? t('groups.community' as any) : t('groups.group' as any);
+  const typeLabelCapitalized = type === 'community' ? t('groups.communityCapital' as any) : t('groups.groupCapital' as any);
 
   const { data: inviteCode, isLoading, refetch } = useGroupInviteCode(groupId);
   const resetInviteCodeMutation = useResetGroupInviteCode();
@@ -64,45 +71,45 @@ export function InviteLinkModal({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      Alert.alert('Error', 'Failed to copy link');
+      Alert.alert(t('common.error' as any), t('groups.failedToCopyLink' as any));
     }
-  }, [inviteLink]);
+  }, [inviteLink, t]);
 
   const handleCopyCode = useCallback(async () => {
     if (!inviteCode) return;
     
     try {
       await Clipboard.setStringAsync(inviteCode);
-      Alert.alert('Copied!', 'Invite code copied to clipboard');
+      Alert.alert(t('common.copied' as any), t('groups.inviteCodeCopied' as any));
     } catch (error) {
-      Alert.alert('Error', 'Failed to copy code');
+      Alert.alert(t('common.error' as any), t('groups.failedToCopyCode' as any));
     }
-  }, [inviteCode]);
+  }, [inviteCode, t]);
 
   const handleShare = useCallback(async () => {
     if (!inviteLink) return;
 
     try {
       await Share.share({
-        message: `Join my group "${groupName}" on Rallia!\n\nUse code: ${inviteCode}\n\nOr click this link: ${inviteLink}`,
-        title: `Join ${groupName} on Rallia`,
+        message: t('groups.shareInviteMessage' as any, { typeLabel, groupName, inviteCode, inviteLink }),
+        title: t('groups.shareInviteTitle' as any, { groupName }),
       });
     } catch (error) {
       // User cancelled or error
       if (error instanceof Error && error.message !== 'User did not share') {
-        Alert.alert('Error', 'Failed to share invite');
+        Alert.alert(t('common.error' as any), t('groups.failedToShare' as any));
       }
     }
-  }, [inviteLink, inviteCode, groupName]);
+  }, [inviteLink, inviteCode, groupName, typeLabel, t]);
 
   const handleResetCode = useCallback(() => {
     Alert.alert(
-      'Reset Invite Code',
-      'This will invalidate the current invite link. Anyone with the old link won\'t be able to join. Continue?',
+      t('groups.resetInviteCode' as any),
+      t('groups.resetInviteCodeWarning' as any),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel' as any), style: 'cancel' },
         {
-          text: 'Reset',
+          text: t('common.reset' as any),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -111,15 +118,15 @@ export function InviteLinkModal({
                 moderatorId: currentUserId,
               });
               refetch();
-              Alert.alert('Success', 'Invite code has been reset');
+              Alert.alert(t('common.success' as any), t('groups.inviteCodeReset' as any));
             } catch (error) {
-              Alert.alert('Error', error instanceof Error ? error.message : 'Failed to reset code');
+              Alert.alert(t('common.error' as any), error instanceof Error ? error.message : t('groups.failedToResetCode' as any));
             }
           },
         },
       ]
     );
-  }, [groupId, currentUserId, resetInviteCodeMutation, refetch]);
+  }, [groupId, currentUserId, resetInviteCodeMutation, refetch, t]);
 
   return (
     <Modal
@@ -139,7 +146,7 @@ export function InviteLinkModal({
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
             <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-              Invite to Group
+              {t('groups.inviteTo' as any, { type: typeLabelCapitalized })}
             </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={colors.text} />
@@ -151,14 +158,14 @@ export function InviteLinkModal({
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={colors.primary} />
                 <Text style={{ color: colors.textSecondary, marginTop: 12 }}>
-                  Generating invite link...
+                  {t('groups.generatingInviteLink' as any)}
                 </Text>
               </View>
             ) : (
               <>
                 {/* Description */}
                 <Text style={{ color: colors.textSecondary, textAlign: 'center', marginBottom: 24 }}>
-                  Share this link or code with anyone you want to invite to the group.
+                  {t('groups.shareInviteDescription' as any, { typeLabel })}
                 </Text>
 
                 {/* Toggle between Code and QR */}
@@ -176,7 +183,7 @@ export function InviteLinkModal({
                       weight="medium" 
                       style={{ color: !showQRCode ? '#FFFFFF' : colors.textSecondary }}
                     >
-                      Code
+                      {t('groups.code' as any)}
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -192,7 +199,7 @@ export function InviteLinkModal({
                       weight="medium" 
                       style={{ color: showQRCode ? '#FFFFFF' : colors.textSecondary }}
                     >
-                      QR Code
+                      {t('groups.qrCode' as any)}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -206,14 +213,14 @@ export function InviteLinkModal({
                       resizeMode="contain"
                     />
                     <Text size="xs" style={{ color: colors.textMuted, marginTop: 8 }}>
-                      Scan to join the group
+                      {t('groups.scanToJoin' as any, { typeLabel })}
                     </Text>
                   </View>
                 ) : (
                   /* Invite Code Display */
                   <View style={[styles.codeContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
                     <Text size="xs" style={{ color: colors.textMuted, marginBottom: 4 }}>
-                      INVITE CODE
+                      {t('groups.inviteCode' as any)}
                     </Text>
                     <TouchableOpacity onPress={handleCopyCode} activeOpacity={0.7}>
                       <Text weight="bold" size="xl" style={{ color: colors.primary, letterSpacing: 4 }}>
@@ -248,7 +255,7 @@ export function InviteLinkModal({
                   >
                     <Ionicons name="share-outline" size={20} color="#FFFFFF" />
                     <Text weight="semibold" style={{ color: '#FFFFFF', marginLeft: 8 }}>
-                      Share Invite
+                      {t('groups.shareInvite' as any)}
                     </Text>
                   </TouchableOpacity>
 
@@ -260,7 +267,7 @@ export function InviteLinkModal({
                     >
                       <Ionicons name="refresh-outline" size={18} color={colors.textSecondary} />
                       <Text size="sm" style={{ color: colors.textSecondary, marginLeft: 6 }}>
-                        Reset Code
+                        {t('groups.resetCode' as any)}
                       </Text>
                     </TouchableOpacity>
                   )}
@@ -270,7 +277,7 @@ export function InviteLinkModal({
                 <View style={styles.infoSection}>
                   <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />
                   <Text size="xs" style={{ color: colors.textMuted, marginLeft: 6, flex: 1 }}>
-                    Anyone with this code or link can join the group directly.
+                    {t('groups.inviteLinkInfo' as any)}
                   </Text>
                 </View>
               </>

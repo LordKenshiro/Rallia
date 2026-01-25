@@ -4,16 +4,18 @@
  * Grid card layout with cover images
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   FlatList,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   StyleSheet,
   RefreshControl,
   Alert,
   Image,
   Dimensions,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,7 +24,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Text, Skeleton } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useAuth } from '../hooks';
+import { useThemeStyles, useAuth, useTranslation } from '../hooks';
 import { usePlayerGroups, useCreateGroup, usePlayerGroupsRealtime, type Group } from '@rallia/shared-hooks';
 import type { RootStackParamList } from '../navigation/types';
 import { CreateGroupModal, QRScannerModal } from '../features/groups';
@@ -34,77 +36,59 @@ const CARD_WIDTH = (SCREEN_WIDTH - CARD_PADDING * 2 - CARD_GAP) / 2;
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-export default function GroupsScreen() {
-  const navigation = useNavigation<NavigationProp>();
-  const { colors, isDark } = useThemeStyles();
-  const { session } = useAuth();
-  const playerId = session?.user?.id;
+interface ThemeColors {
+  background: string;
+  cardBackground: string;
+  text: string;
+  textSecondary: string;
+  textMuted: string;
+  border: string;
+  primary: string;
+}
 
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showScannerModal, setShowScannerModal] = useState(false);
+// Extracted GroupCard component with press animation
+const GroupCard: React.FC<{
+  item: Group;
+  index: number;
+  colors: ThemeColors;
+  isDark: boolean;
+  onPress: (group: Group) => void;
+}> = ({ item, index, colors, isDark, onPress }) => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const { t } = useTranslation();
+  const hasBooking = false; // TODO: Add booking feature indicator
 
-  const {
-    data: groups,
-    isLoading,
-    isRefetching,
-    refetch,
-  } = usePlayerGroups(playerId);
+  const handlePressIn = useCallback(() => {
+    Animated.timing(scaleAnim, {
+      toValue: 0.97,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+  }, [scaleAnim]);
 
-  // Subscribe to real-time updates for player's groups
-  usePlayerGroupsRealtime(playerId);
+  const handlePressOut = useCallback(() => {
+    Animated.timing(scaleAnim, {
+      toValue: 1,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+  }, [scaleAnim]);
 
-  const createGroupMutation = useCreateGroup();
-
-  const handleCreateGroup = useCallback(async (name: string, description?: string, coverImageUrl?: string) => {
-    if (!playerId) return;
-
-    try {
-      const newGroup = await createGroupMutation.mutateAsync({
-        playerId,
-        input: { name, description, cover_image_url: coverImageUrl },
-      });
-      setShowCreateModal(false);
-      // Navigate to the new group
-      navigation.navigate('GroupDetail', { groupId: newGroup.id });
-    } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create group');
-    }
-  }, [playerId, createGroupMutation, navigation]);
-
-  const handleGroupJoined = useCallback((groupId: string, groupName: string) => {
-    // Refetch groups list and navigate to the joined group
-    refetch();
-    Alert.alert(
-      'Welcome!',
-      `You've successfully joined "${groupName}"`,
-      [
-        {
-          text: 'View Group',
-          onPress: () => navigation.navigate('GroupDetail', { groupId }),
-        },
-      ]
-    );
-  }, [refetch, navigation]);
-
-  const handleGroupPress = useCallback((group: Group) => {
-    lightHaptic();
-    navigation.navigate('GroupDetail', { groupId: group.id });
-  }, [navigation]);
-
-  const renderGroupItem = useCallback(({ item, index }: { item: Group; index: number }) => {
-    const hasBooking = false; // TODO: Add booking feature indicator
-    
-    return (
-      <TouchableOpacity
+  return (
+    <TouchableWithoutFeedback
+      onPress={() => onPress(item)}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+    >
+      <Animated.View
         style={[
           styles.groupCard,
           { 
             backgroundColor: colors.cardBackground,
             marginRight: index % 2 === 0 ? CARD_GAP : 0,
+            transform: [{ scale: scaleAnim }],
           }
         ]}
-        onPress={() => handleGroupPress(item)}
-        activeOpacity={0.85}
       >
         {/* Cover Image */}
         <View style={styles.imageContainer}>
@@ -147,14 +131,85 @@ export default function GroupsScreen() {
               <Ionicons name="checkmark-circle" size={16} color="#34C759" />
             </View>
             <View style={styles.memberCount}>
-              <Ionicons name="heart-outline" size={14} color={colors.textMuted} />
+              <Ionicons name="people-outline" size={14} color={colors.textMuted} />
               <Text size="xs" style={{ color: colors.textMuted, marginLeft: 4 }}>
-                {item.member_count} members
+                {t('common.memberCount', { count: item.member_count })}
               </Text>
             </View>
           </View>
         </View>
-      </TouchableOpacity>
+      </Animated.View>
+    </TouchableWithoutFeedback>
+  );
+};
+
+export default function GroupsScreen() {
+  const navigation = useNavigation<NavigationProp>();
+  const { colors, isDark } = useThemeStyles();
+  const { session } = useAuth();
+  const { t } = useTranslation();
+  const playerId = session?.user?.id;
+
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showScannerModal, setShowScannerModal] = useState(false);
+
+  const {
+    data: groups,
+    isLoading,
+    isRefetching,
+    refetch,
+  } = usePlayerGroups(playerId);
+
+  // Subscribe to real-time updates for player's groups
+  usePlayerGroupsRealtime(playerId);
+
+  const createGroupMutation = useCreateGroup();
+
+  const handleCreateGroup = useCallback(async (name: string, description?: string, coverImageUrl?: string) => {
+    if (!playerId) return;
+
+    try {
+      const newGroup = await createGroupMutation.mutateAsync({
+        playerId,
+        input: { name, description, cover_image_url: coverImageUrl },
+      });
+      setShowCreateModal(false);
+      // Navigate to the new group
+      navigation.navigate('GroupDetail', { groupId: newGroup.id });
+    } catch (error) {
+      Alert.alert(t('common.error'), error instanceof Error ? error.message : t('groups.errors.failedToCreate'));
+    }
+  }, [playerId, createGroupMutation, navigation, t]);
+
+  const handleGroupJoined = useCallback((groupId: string, groupName: string) => {
+    // Refetch groups list and navigate to the joined group
+    refetch();
+    Alert.alert(
+      t('groups.welcome.title'),
+      t('groups.welcome.joinedMessage', { groupName }),
+      [
+        {
+          text: t('groups.viewGroup'),
+          onPress: () => navigation.navigate('GroupDetail', { groupId }),
+        },
+      ]
+    );
+  }, [refetch, navigation, t]);
+
+  const handleGroupPress = useCallback((group: Group) => {
+    lightHaptic();
+    navigation.navigate('GroupDetail', { groupId: group.id });
+  }, [navigation]);
+
+  const renderGroupItem = useCallback(({ item, index }: { item: Group; index: number }) => {
+    return (
+      <GroupCard
+        item={item}
+        index={index}
+        colors={colors}
+        isDark={isDark}
+        onPress={handleGroupPress}
+      />
     );
   }, [colors, isDark, handleGroupPress]);
 
@@ -162,10 +217,10 @@ export default function GroupsScreen() {
     <View style={styles.emptyState}>
       <Ionicons name="people-outline" size={64} color={colors.textMuted} />
       <Text weight="semibold" size="lg" style={[styles.emptyTitle, { color: colors.text }]}>
-        No Groups Yet
+        {t('groups.empty.title')}
       </Text>
       <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-        Create a group or scan a QR code to join one
+        {t('groups.empty.subtitle')}
       </Text>
       <View style={styles.emptyButtons}>
         <TouchableOpacity
@@ -174,7 +229,7 @@ export default function GroupsScreen() {
         >
           <Ionicons name="add" size={20} color="#FFFFFF" />
           <Text weight="semibold" style={styles.createButtonText}>
-            Create Group
+            {t('groups.empty.createButton')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -183,12 +238,12 @@ export default function GroupsScreen() {
         >
           <Ionicons name="qr-code-outline" size={20} color={colors.primary} />
           <Text weight="semibold" style={[styles.scanButtonText, { color: colors.primary }]}>
-            Scan QR Code
+            {t('groups.empty.scanButton')}
           </Text>
         </TouchableOpacity>
       </View>
     </View>
-  ), [colors]);
+  ), [colors, t]);
 
   if (isLoading) {
     return (
@@ -274,6 +329,11 @@ export default function GroupsScreen() {
           />
         }
         showsVerticalScrollIndicator={false}
+        // Performance optimizations
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={8}
+        windowSize={8}
+        initialNumToRender={6}
       />
 
       {/* FABs - Scan QR and Create Group */}

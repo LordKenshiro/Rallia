@@ -15,7 +15,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Overlay, Select, Button, Heading, Text, PhoneInput } from '@rallia/shared-components';
-import { useImagePicker, useThemeStyles } from '../../../../hooks';
+import { useImagePicker, useThemeStyles, useTranslation } from '../../../../hooks';
+import type { TranslationKey } from '@rallia/shared-translations';
 import { COLORS } from '@rallia/shared-constants';
 import {
   validateFullName,
@@ -59,6 +60,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
   initialData,
 }) => {
   const { colors } = useThemeStyles();
+  const { t } = useTranslation();
   const [firstName, setFirstName] = useState(initialData?.firstName || '');
   const [lastName, setLastName] = useState(initialData?.lastName || '');
   const [username, setUsername] = useState(initialData?.username || '');
@@ -186,14 +188,14 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
     mediumHaptic();
 
     if (!dateOfBirth) {
-      Alert.alert('Error', 'Please select your date of birth');
+      Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.selectDateOfBirth' as TranslationKey));
       return;
     }
 
     try {
       // Gender is now stored as the enum value (e.g., 'male', 'female')
       if (!gender) {
-        Alert.alert('Error', 'Please select a valid gender option');
+        Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.selectGender' as TranslationKey));
         return;
       }
 
@@ -216,18 +218,18 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
           Logger.error('Failed to upload profile picture', uploadError as Error);
           setIsSaving(false);
           Alert.alert(
-            'Upload Error',
-            'Failed to upload profile picture. Continue without updating picture?',
+            t('onboarding.validation.uploadError' as TranslationKey),
+            t('onboarding.validation.failedToUploadPicture' as TranslationKey),
             [
               {
-                text: 'Cancel',
+                text: t('common.cancel' as TranslationKey),
                 style: 'cancel',
                 onPress: () => {
                   return;
                 },
               },
               {
-                text: 'Continue',
+                text: t('common.continue' as TranslationKey),
                 onPress: () => {
                   uploadedImageUrl = null;
                 },
@@ -248,7 +250,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
 
         if (!user) {
           setIsSaving(false);
-          Alert.alert('Error', 'User not found');
+          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.playerNotFound' as TranslationKey));
           return;
         }
 
@@ -282,7 +284,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         if (updateError) {
           Logger.error('Failed to update profile', updateError as Error, { userId: user.id });
           setIsSaving(false);
-          Alert.alert('Error', 'Failed to update your information. Please try again.');
+          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.failedToUpdateProfile' as TranslationKey));
           return;
         }
 
@@ -315,10 +317,10 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
 
         // Show success toast
         if (Platform.OS === 'android') {
-          ToastAndroid.show('Successfully updated Personal Information', ToastAndroid.LONG);
+          ToastAndroid.show(t('onboarding.successMessages.personalInfoUpdated' as TranslationKey), ToastAndroid.LONG);
         } else {
           // For iOS, use a brief Alert that auto-dismisses via timeout
-          Alert.alert('Success', 'Successfully updated Personal Information');
+          Alert.alert(t('alerts.success' as TranslationKey), t('onboarding.successMessages.personalInfoUpdated' as TranslationKey));
         }
 
         // Close modal automatically after brief delay
@@ -341,8 +343,8 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
           Logger.error('Failed to save personal info during onboarding', error as Error, {
             hasProfileImage: !!uploadedImageUrl,
           });
-          Alert.alert('Error', 'Failed to save your information. Please try again.', [
-            { text: 'OK' },
+          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.failedToSaveInfo' as TranslationKey), [
+            { text: t('common.ok' as TranslationKey) },
           ]);
           return;
         }
@@ -380,7 +382,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
       }
     } catch (error) {
       Logger.error('Unexpected error saving personal info', error as Error, { mode });
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.', [{ text: 'OK' }]);
+      Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.unexpectedError' as TranslationKey), [{ text: t('common.ok' as TranslationKey) }]);
     }
   };
 

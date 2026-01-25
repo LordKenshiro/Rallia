@@ -14,7 +14,7 @@ import { OnboardingService, Logger } from '@rallia/shared-services';
 import type { DayEnum, PeriodEnum, OnboardingAvailability } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles } from '../../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../../hooks';
 
 interface PlayerAvailabilitiesOverlayProps {
   visible: boolean;
@@ -53,6 +53,7 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
   onSave,
 }) => {
   const { colors } = useThemeStyles();
+  const { t } = useTranslation();
   const days: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const timeSlots: TimeSlot[] = ['AM', 'PM', 'EVE'];
 
@@ -164,8 +165,8 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
         if (error) {
           Logger.error('Failed to save player availability', error as Error, { availabilityData });
           setIsSaving(false);
-          Alert.alert('Error', 'Failed to save your availability. Please try again.', [
-            { text: 'OK' },
+          Alert.alert(t('alerts.error'), t('onboarding.overlay.failedToSaveAvailability'), [
+            { text: t('alerts.ok') },
           ]);
           return;
         }
@@ -188,7 +189,7 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
       } catch (error) {
         Logger.error('Unexpected error saving availability', error as Error);
         setIsSaving(false);
-        Alert.alert('Error', 'An unexpected error occurred. Please try again.', [{ text: 'OK' }]);
+        Alert.alert(t('alerts.error'), t('onboarding.overlay.unexpectedError'), [{ text: t('alerts.ok') }]);
       }
     }
   };

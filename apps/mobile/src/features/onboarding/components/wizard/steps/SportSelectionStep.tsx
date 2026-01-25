@@ -73,7 +73,7 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
 
       if (error) {
         Logger.error('Failed to fetch sports', error as Error);
-        Alert.alert('Error', 'Failed to load sports. Please try again.');
+        Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.failedToLoadSports' as TranslationKey));
         setSports([
           {
             id: 'tennis-fallback',
@@ -139,7 +139,7 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
     selectionHaptic();
 
     if (!playerId) {
-      Alert.alert('Error', 'Player not found. Please try again.');
+      Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.playerNotFound' as TranslationKey));
       return;
     }
 
@@ -186,7 +186,7 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
           selectedSportNames: [...formData.selectedSportNames, sport.name],
         });
       }
-      Alert.alert('Error', 'Failed to update sport selection. Please try again.');
+      Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.failedToUpdateSportSelection' as TranslationKey));
     }
   };
 

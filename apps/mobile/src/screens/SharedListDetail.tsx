@@ -7,9 +7,10 @@
  * - Add contacts from phone book
  * - Add contacts manually
  * - Edit/Delete contacts
+ * - Search contacts
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -18,6 +19,7 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -25,7 +27,7 @@ import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
 import { primary, neutral } from '@rallia/design-system';
 import {
   useSharedContacts,
@@ -33,7 +35,7 @@ import {
   useSharedContactsRealtime,
   type SharedContact,
 } from '@rallia/shared-hooks';
-import { useThemeStyles } from '../hooks';
+import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
 import type { CommunityStackParamList } from '../navigation/types';
 import { AddContactModal, ContactCard, ImportContactsModal } from '../features/shared-lists';
 
@@ -48,16 +50,30 @@ const SharedListDetail: React.FC = () => {
   const route = useRoute<RouteProp<RouteParams, 'SharedListDetail'>>();
   const navigation = useNavigation<NativeStackNavigationProp<CommunityStackParamList>>();
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const { listId, listName } = route.params;
 
   // State
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [editingContact, setEditingContact] = useState<SharedContact | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Queries and mutations
   const { data: contacts = [], isLoading, isRefetching, refetch } = useSharedContacts(listId);
   const deleteContactMutation = useDeleteSharedContact();
+
+  // Filter contacts based on search query
+  const filteredContacts = useMemo(() => {
+    if (!searchQuery.trim()) return contacts;
+    const query = searchQuery.toLowerCase().trim();
+    return contacts.filter((contact) => {
+      const name = contact.name?.toLowerCase() || '';
+      const phone = contact.phone_number?.toLowerCase() || '';
+      const email = contact.email?.toLowerCase() || '';
+      return name.includes(query) || phone.includes(query) || email.includes(query);
+    });
+  }, [contacts, searchQuery]);
 
   // Subscribe to real-time updates for this list's contacts
   useSharedContactsRealtime(listId);
@@ -94,25 +110,25 @@ const SharedListDetail: React.FC = () => {
   // Delete contact
   const handleDeleteContact = useCallback((contact: SharedContact) => {
     Alert.alert(
-      'Delete Contact',
-      `Are you sure you want to remove "${contact.name}" from this list?`,
+      t('sharedLists.deleteContact' as TranslationKey),
+      t('sharedLists.deleteContactConfirm' as TranslationKey, { name: contact.name }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               await deleteContactMutation.mutateAsync({ contactId: contact.id, listId });
             } catch (error) {
               console.error('Failed to delete contact:', error);
-              Alert.alert('Error', 'Failed to delete the contact. Please try again.');
+              Alert.alert(t('common.error'), t('sharedLists.failedToDeleteContact' as TranslationKey));
             }
           },
         },
       ]
     );
-  }, [deleteContactMutation, listId]);
+  }, [deleteContactMutation, listId, t]);
 
   // Modal close handlers
   const handleAddModalClose = useCallback(() => {
@@ -148,10 +164,10 @@ const SharedListDetail: React.FC = () => {
       <View style={styles.emptyContainer}>
         <Ionicons name="person-add-outline" size={64} color={colors.textMuted} />
         <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
-          No Contacts Yet
+          {t('sharedLists.emptyState.noContacts' as TranslationKey)}
         </Text>
         <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-          Add contacts to this list to easily invite them to your matches
+          {t('sharedLists.emptyState.addContacts' as TranslationKey)}
         </Text>
 
         <View style={styles.emptyButtons}>
@@ -162,7 +178,7 @@ const SharedListDetail: React.FC = () => {
           >
             <Ionicons name="phone-portrait-outline" size={20} color="#fff" />
             <Text size="sm" weight="semibold" color="#fff">
-              Import from Phone
+              {t('sharedLists.importFromPhone' as TranslationKey)}
             </Text>
           </TouchableOpacity>
 
@@ -177,7 +193,7 @@ const SharedListDetail: React.FC = () => {
           >
             <Ionicons name="add" size={20} color={colors.text} />
             <Text size="sm" weight="semibold" color={colors.text}>
-              Add Manually
+              {t('sharedLists.addManually' as TranslationKey)}
             </Text>
           </TouchableOpacity>
         </View>
@@ -198,39 +214,62 @@ const SharedListDetail: React.FC = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom']}>
-      {/* Header with Add Buttons */}
+      {/* Header with Search and Add Buttons */}
       {contacts.length > 0 && (
         <View style={styles.header}>
-          <Text size="sm" color={colors.textSecondary}>
-            {contacts.length} {contacts.length === 1 ? 'contact' : 'contacts'}
-          </Text>
-          <View style={styles.headerButtons}>
-            <TouchableOpacity
-              style={[styles.headerButton, { backgroundColor: isDark ? neutral[700] : neutral[100] }]}
-              onPress={handleImportFromPhoneBook}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="phone-portrait-outline" size={18} color={colors.text} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.headerButton, { backgroundColor: primary[500] }]}
-              onPress={handleAddManually}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="add" size={20} color="#fff" />
-            </TouchableOpacity>
+          {/* Search Bar */}
+          <View style={[styles.searchContainer, { backgroundColor: colors.inputBackground }]}>
+            <Ionicons name="search-outline" size={18} color={colors.textMuted} />
+            <TextInput
+              style={[styles.searchInput, { color: colors.text }]}
+              placeholder={t('sharedLists.searchContacts' as TranslationKey)}
+              placeholderTextColor={colors.textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          {/* Count and Buttons Row */}
+          <View style={styles.headerRow}>
+            <Text size="sm" color={colors.textSecondary}>
+              {t('sharedLists.contactCount' as TranslationKey, { count: filteredContacts.length })}
+              {searchQuery && contacts.length !== filteredContacts.length && ` (${t('sharedLists.ofTotal' as TranslationKey, { total: contacts.length })})`}
+            </Text>
+            <View style={styles.headerButtons}>
+              <TouchableOpacity
+                style={[styles.headerButton, { backgroundColor: isDark ? neutral[700] : neutral[100] }]}
+                onPress={handleImportFromPhoneBook}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="phone-portrait-outline" size={18} color={colors.text} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.headerButton, { backgroundColor: primary[500] }]}
+                onPress={handleAddManually}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="add" size={20} color="#fff" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       )}
 
       {/* Contacts List */}
       <FlatList
-        data={contacts}
+        data={filteredContacts}
         keyExtractor={item => item.id}
         renderItem={renderContactItem}
         contentContainerStyle={[
           styles.listContent,
-          contacts.length === 0 && styles.emptyListContent,
+          filteredContacts.length === 0 && styles.emptyListContent,
         ]}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={renderEmpty}
@@ -276,11 +315,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   header: {
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
+    gap: spacingPixels[3],
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: radiusPixels.lg,
+    paddingHorizontal: spacingPixels[3],
+    height: 40,
+    gap: spacingPixels[2],
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: fontSizePixels.sm,
+    paddingVertical: 0,
+  },
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
   },
   headerButtons: {
     flexDirection: 'row',

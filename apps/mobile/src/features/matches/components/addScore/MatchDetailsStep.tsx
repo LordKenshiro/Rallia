@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../../hooks';
+import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
 import { primary } from '@rallia/design-system';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useAddScore } from './AddScoreContext';
@@ -26,6 +26,7 @@ interface MatchDetailsStepProps {
 
 export function MatchDetailsStep({ onContinue }: MatchDetailsStepProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const { formData, updateFormData } = useAddScore();
 
   const [matchDate, setMatchDate] = useState<Date>(formData.matchDate || new Date());
@@ -55,7 +56,7 @@ export function MatchDetailsStep({ onContinue }: MatchDetailsStepProps) {
   }, [matchDate, location, sport, updateFormData, onContinue]);
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(undefined, {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -67,16 +68,16 @@ export function MatchDetailsStep({ onContinue }: MatchDetailsStepProps) {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Title */}
       <Text weight="bold" size="xl" style={[styles.title, { color: colors.text }]}>
-        Match details
+        {t('addScore.matchDetails.title' as TranslationKey)}
       </Text>
       <Text size="sm" style={[styles.subtitle, { color: colors.textSecondary }]}>
-        When and where did you play?
+        {t('addScore.matchDetails.whenAndWhere' as TranslationKey)}
       </Text>
 
       {/* Date picker */}
       <View style={styles.section}>
         <Text weight="semibold" style={[styles.sectionLabel, { color: colors.text }]}>
-          Date played
+          {t('addScore.matchDetails.datePlayed' as TranslationKey)}
         </Text>
         <TouchableOpacity
           style={[styles.dateButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
@@ -104,14 +105,14 @@ export function MatchDetailsStep({ onContinue }: MatchDetailsStepProps) {
       {/* Location (optional) */}
       <View style={styles.section}>
         <Text weight="semibold" style={[styles.sectionLabel, { color: colors.text }]}>
-          Location
-          <Text size="sm" style={{ color: colors.textMuted }}> (optional)</Text>
+          {t('addScore.matchDetails.location' as TranslationKey)}
+          <Text size="sm" style={{ color: colors.textMuted }}> {t('addScore.matchDetails.locationOptional' as TranslationKey)}</Text>
         </Text>
         <View style={[styles.inputContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
           <Ionicons name="location" size={20} color={colors.textMuted} />
           <TextInput
             style={[styles.input, { color: colors.text }]}
-            placeholder="Enter location"
+            placeholder={t('addScore.matchDetails.enterLocation' as TranslationKey)}
             placeholderTextColor={colors.textMuted}
             value={location}
             onChangeText={setLocation}
@@ -122,7 +123,7 @@ export function MatchDetailsStep({ onContinue }: MatchDetailsStepProps) {
       {/* Sport selection */}
       <View style={styles.section}>
         <Text weight="semibold" style={[styles.sectionLabel, { color: colors.text }]}>
-          Sport
+          {t('addScore.matchDetails.sport' as TranslationKey)}
         </Text>
         <View style={styles.sportOptions}>
           {sports.map((sportOption) => {

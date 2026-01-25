@@ -22,7 +22,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Text, Skeleton, SkeletonAvatar } from '@rallia/shared-components';
-import { supabase, Logger } from '@rallia/shared-services';
+import { supabase, Logger, isPlayerOnline } from '@rallia/shared-services';
 import { useGetOrCreateDirectConversation } from '@rallia/shared-hooks';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
@@ -36,7 +36,6 @@ import {
   radiusPixels,
   fontSizePixels,
   fontWeightNumeric,
-  primary,
   neutral,
   status,
 } from '@rallia/design-system';
@@ -86,7 +85,7 @@ const PlayerProfile = () => {
   const route = useRoute<PlayerProfileRouteProp>();
   const navigation = useNavigation<NavigationProp>();
   const { playerId, sportId } = route.params;
-  const { colors, isDark } = useThemeStyles();
+  const { colors } = useThemeStyles();
   const { t, locale } = useTranslation();
   const getOrCreateDirectConversation = useGetOrCreateDirectConversation();
 
@@ -103,10 +102,13 @@ const PlayerProfile = () => {
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockLoading, setBlockLoading] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
+  const [isOnline, setIsOnline] = useState(false);
 
   // Fetch player data on mount
   useEffect(() => {
     fetchPlayerProfileData();
+    // Fetch online status
+    isPlayerOnline(playerId).then(setIsOnline);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playerId]);
 
@@ -706,15 +708,27 @@ const PlayerProfile = () => {
             )}
           </TouchableOpacity>
 
-          <View style={[styles.profilePicContainer, { borderColor: colors.primary }]}>
-            {profile?.profile_picture_url ? (
-              <Image
-                source={{ uri: getProfilePictureUrl(profile.profile_picture_url) || '' }}
-                style={styles.profileImage}
-              />
-            ) : (
-              <Ionicons name="person" size={40} color={colors.primary} />
-            )}
+          <View style={styles.avatarWrapper}>
+            <View style={[styles.profilePicContainer, { borderColor: colors.primary }]}>
+              {profile?.profile_picture_url ? (
+                <Image
+                  source={{ uri: getProfilePictureUrl(profile.profile_picture_url) || '' }}
+                  style={styles.profileImage}
+                />
+              ) : (
+                <Ionicons name="person" size={40} color={colors.primary} />
+              )}
+            </View>
+            {/* Online Status Indicator */}
+            <View 
+              style={[
+                styles.onlineIndicator, 
+                { 
+                  backgroundColor: isOnline ? '#22C55E' : neutral[400],
+                  borderColor: colors.card,
+                }
+              ]} 
+            />
           </View>
 
           <Text style={[styles.profileName, { color: colors.text }]}>{displayName}</Text>
@@ -1069,6 +1083,10 @@ const styles = StyleSheet.create({
     padding: spacingPixels[2],
     zIndex: 1,
   },
+  avatarWrapper: {
+    position: 'relative',
+    marginBottom: spacingPixels[3],
+  },
   profilePicContainer: {
     width: 100,
     height: 100,
@@ -1077,7 +1095,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-    marginBottom: spacingPixels[3],
+  },
+  onlineIndicator: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 3,
   },
   profileImage: {
     width: '100%',

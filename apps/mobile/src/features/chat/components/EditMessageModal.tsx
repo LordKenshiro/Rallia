@@ -17,7 +17,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary, neutral } from '@rallia/design-system';
 import type { MessageWithSender } from '@rallia/shared-services';
 
@@ -37,6 +37,7 @@ function EditMessageModalComponent({
   isSaving = false,
 }: EditMessageModalProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const [editedContent, setEditedContent] = useState('');
 
   // Reset content when modal opens with a new message
@@ -80,7 +81,7 @@ function EditMessageModalComponent({
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={colors.text} />
             </TouchableOpacity>
-            <Text style={[styles.title, { color: colors.text }]}>Edit Message</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{t('chat.editMessage' as any)}</Text>
             <TouchableOpacity 
               onPress={handleSave} 
               style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
@@ -90,14 +91,14 @@ function EditMessageModalComponent({
                 styles.saveButtonText, 
                 { color: canSave ? primary[500] : colors.textMuted }
               ]}>
-                {isSaving ? 'Saving...' : 'Save'}
+                {isSaving ? t('common.saving' as any) : t('common.save' as any)}
               </Text>
             </TouchableOpacity>
           </View>
 
           {/* Original message preview */}
           <View style={[styles.originalContainer, { backgroundColor: isDark ? neutral[800] : neutral[100] }]}>
-            <Text style={[styles.originalLabel, { color: colors.textMuted }]}>Original:</Text>
+            <Text style={[styles.originalLabel, { color: colors.textMuted }]}>{t('chat.original' as any)}:</Text>
             <Text style={[styles.originalText, { color: colors.textMuted }]} numberOfLines={2}>
               {message.content}
             </Text>
@@ -116,7 +117,7 @@ function EditMessageModalComponent({
               ]}
               value={editedContent}
               onChangeText={setEditedContent}
-              placeholder="Edit your message..."
+              placeholder={t('chat.editYourMessage' as any)}
               placeholderTextColor={colors.textMuted}
               multiline
               maxLength={2000}

@@ -48,6 +48,7 @@ const Home = () => {
   const appNavigation = useAppNavigation();
 
   // Get user's current location and player preferences for nearby matches
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { location: _realLocation } = useUserLocation();
   const { player, maxTravelDistanceKm, loading: playerLoading } = usePlayer();
   const { selectedSport, isLoading: sportLoading } = useSport();
@@ -198,6 +199,7 @@ const Home = () => {
   }, [isFetchingNextPage, colors.card, isDark]);
 
   // Render empty state with helpful message about travel distance
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const renderEmptyComponent = useCallback(
     () => (
       <View style={styles.emptyContainer}>
@@ -237,6 +239,7 @@ const Home = () => {
         )}
       </View>
     ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [colors.card, colors.text, colors.textMuted, t, maxTravelDistanceKm, session, appNavigation]
   );
 
@@ -349,6 +352,7 @@ const Home = () => {
         )}
       </View>
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     session,
     colors.text,

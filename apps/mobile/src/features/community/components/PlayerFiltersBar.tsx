@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { Text } from '@rallia/shared-components';
 import { useTheme } from '@rallia/shared-hooks';
-import { useThemeStyles } from '../../../hooks';
+import { useTranslation } from '../../../hooks';
 import {
   spacingPixels,
   radiusPixels,
@@ -83,36 +83,36 @@ const DUPR_OPTIONS: DuprFilter[] = ['all', '2.0', '2.5', '3.0', '3.5', '4.0', '4
 const DISTANCE_OPTIONS: DistanceFilter[] = ['all', 5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
 const SORT_OPTIONS: SortOption[] = ['name_asc', 'name_desc', 'rating_high', 'rating_low', 'distance', 'recently_active'];
 
-// Labels
-
-const SORT_LABELS: Record<SortOption, string> = {
-  name_asc: 'Name (A-Z)',
-  name_desc: 'Name (Z-A)',
-  rating_high: 'Rating (High to Low)',
-  rating_low: 'Rating (Low to High)',
-  distance: 'Distance (Nearest)',
-  recently_active: 'Recently Active',
-};
-const GENDER_LABELS: Record<GenderFilter, string> = {
-  all: 'All',
-  male: 'Men',
-  female: 'Women',
-  other: 'Other',
+// Label key mappings for translation
+const SORT_LABEL_KEYS: Record<SortOption, string> = {
+  name_asc: 'playerDirectory.filters.sortNameAsc',
+  name_desc: 'playerDirectory.filters.sortNameDesc',
+  rating_high: 'playerDirectory.filters.sortRatingHigh',
+  rating_low: 'playerDirectory.filters.sortRatingLow',
+  distance: 'playerDirectory.filters.sortDistanceNearest',
+  recently_active: 'playerDirectory.filters.sortRecentlyActive',
 };
 
-const AVAILABILITY_LABELS: Record<AvailabilityFilter, string> = {
-  all: 'All',
-  morning: 'Morning',
-  afternoon: 'Afternoon',
-  evening: 'Evening',
+const GENDER_LABEL_KEYS: Record<GenderFilter, string> = {
+  all: 'playerDirectory.filters.genderAll',
+  male: 'playerDirectory.filters.genderMen',
+  female: 'playerDirectory.filters.genderWomen',
+  other: 'playerDirectory.filters.genderOther',
 };
 
-const PLAY_STYLE_LABELS: Record<PlayStyleFilter, string> = {
-  all: 'All',
-  counterpuncher: 'Counterpuncher',
-  aggressive_baseliner: 'Aggressive',
-  serve_and_volley: 'Serve & Volley',
-  all_court: 'All Court',
+const AVAILABILITY_LABEL_KEYS: Record<AvailabilityFilter, string> = {
+  all: 'playerDirectory.filters.availabilityAll',
+  morning: 'playerDirectory.filters.availabilityMorning',
+  afternoon: 'playerDirectory.filters.availabilityAfternoon',
+  evening: 'playerDirectory.filters.availabilityEvening',
+};
+
+const PLAY_STYLE_LABEL_KEYS: Record<PlayStyleFilter, string> = {
+  all: 'playerDirectory.filters.playStyleAll',
+  counterpuncher: 'playerDirectory.filters.playStyleCounterpuncher',
+  aggressive_baseliner: 'playerDirectory.filters.playStyleAggressive',
+  serve_and_volley: 'playerDirectory.filters.playStyleServeAndVolley',
+  all_court: 'playerDirectory.filters.playStyleAllCourt',
 };
 
 // =============================================================================
@@ -361,12 +361,11 @@ interface PlayerFiltersBarProps {
 export function PlayerFiltersBar({
   filters,
   sportName = 'Tennis',
-  maxTravelDistance = 50,
   onFiltersChange,
   onReset,
 }: PlayerFiltersBarProps) {
   const { theme } = useTheme();
-  const { colors } = useThemeStyles();
+  const { t } = useTranslation();
   const isDark = theme === 'dark';
 
   // Dropdown visibility states
@@ -442,21 +441,21 @@ export function PlayerFiltersBar({
     onReset?.();
   }, [onReset]);
 
-  // Label getters
-  const getGenderLabel = (v: GenderFilter) => GENDER_LABELS[v];
-  const getSkillLabel = (v: string) => v === 'all' ? 'All' : `${v}+`;
-  const getDistanceLabel = (v: DistanceFilter) => v === 'all' ? 'All' : `${v} km`;
-  const getAvailabilityLabel = (v: AvailabilityFilter) => AVAILABILITY_LABELS[v];
-  const getStyleLabel = (v: PlayStyleFilter) => PLAY_STYLE_LABELS[v];
-  const getSortLabel = (v: SortOption) => SORT_LABELS[v];
+  // Label getters using translations
+  const getGenderLabel = useCallback((v: GenderFilter) => t(GENDER_LABEL_KEYS[v] as any), [t]);
+  const getSkillLabel = useCallback((v: string) => v === 'all' ? t('playerDirectory.filters.genderAll' as any) : `${v}+`, [t]);
+  const getDistanceLabel = useCallback((v: DistanceFilter) => v === 'all' ? t('playerDirectory.filters.distanceAll' as any) : `${v} km`, [t]);
+  const getAvailabilityLabel = useCallback((v: AvailabilityFilter) => t(AVAILABILITY_LABEL_KEYS[v] as any), [t]);
+  const getStyleLabel = useCallback((v: PlayStyleFilter) => t(PLAY_STYLE_LABEL_KEYS[v] as any), [t]);
+  const getSortLabel = useCallback((v: SortOption) => t(SORT_LABEL_KEYS[v] as any), [t]);
 
   // Display values for chips
-  const genderDisplay = filters.gender === 'all' ? 'Gender' : GENDER_LABELS[filters.gender];
+  const genderDisplay = filters.gender === 'all' ? t('playerDirectory.filters.gender' as any) : t(GENDER_LABEL_KEYS[filters.gender] as any);
   const skillDisplay = filters.skillLevel === 'all' ? skillLabel : `${filters.skillLevel}+`;
-  const distanceDisplay = filters.maxDistance === 'all' ? 'Distance' : `${filters.maxDistance} km`;
-  const availabilityDisplay = filters.availability === 'all' ? 'Time' : AVAILABILITY_LABELS[filters.availability];
-  const styleDisplay = filters.playStyle === 'all' ? 'Style' : PLAY_STYLE_LABELS[filters.playStyle];
-  const sortDisplay = SORT_LABELS[filters.sortBy || 'name_asc'];
+  const distanceDisplay = filters.maxDistance === 'all' ? t('playerDirectory.filters.distance' as any) : `${filters.maxDistance} km`;
+  const availabilityDisplay = filters.availability === 'all' ? t('playerDirectory.filters.availability' as any) : t(AVAILABILITY_LABEL_KEYS[filters.availability] as any);
+  const styleDisplay = filters.playStyle === 'all' ? t('playerDirectory.filters.playStyle' as any) : t(PLAY_STYLE_LABEL_KEYS[filters.playStyle] as any);
+  const sortDisplay = t(SORT_LABEL_KEYS[filters.sortBy || 'name_asc'] as any);
 
   return (
     <View style={styles.container}>
@@ -467,8 +466,8 @@ export function PlayerFiltersBar({
       >
         {/* Favorites Toggle */}
         <FilterChip
-          label="Favorites"
-          value={filters.favorites ? 'Favorites' : 'Favorites'}
+          label={t('playerDirectory.filters.favorites' as any)}
+          value={t('playerDirectory.filters.favorites' as any)}
           isActive={filters.favorites}
           onPress={handleFavoritesToggle}
           isDark={isDark}
@@ -476,20 +475,9 @@ export function PlayerFiltersBar({
           icon={filters.favorites ? 'heart' : 'heart-outline'}
         />
 
-        {/* Blocked Toggle */}
-        <FilterChip
-          label="Blocked"
-          value={filters.blocked ? 'Blocked' : 'Blocked'}
-          isActive={filters.blocked}
-          onPress={handleBlockedToggle}
-          isDark={isDark}
-          hasDropdown={false}
-          icon={filters.blocked ? 'ban' : 'ban-outline'}
-        />
-
         {/* Gender Filter */}
         <FilterChip
-          label="Gender"
+          label={t('playerDirectory.filters.gender' as any)}
           value={genderDisplay}
           isActive={filters.gender !== 'all'}
           onPress={() => setShowGenderDropdown(true)}
@@ -507,7 +495,7 @@ export function PlayerFiltersBar({
 
         {/* Distance Filter */}
         <FilterChip
-          label="Distance"
+          label={t('playerDirectory.filters.distance' as any)}
           value={distanceDisplay}
           isActive={filters.maxDistance !== 'all'}
           onPress={() => setShowDistanceDropdown(true)}
@@ -516,7 +504,7 @@ export function PlayerFiltersBar({
 
         {/* Availability Filter */}
         <FilterChip
-          label="Time"
+          label={t('playerDirectory.filters.availability' as any)}
           value={availabilityDisplay}
           isActive={filters.availability !== 'all'}
           onPress={() => setShowAvailabilityDropdown(true)}
@@ -530,16 +518,27 @@ export function PlayerFiltersBar({
 
         {/* Play Style Filter */}
         <FilterChip
-          label="Style"
+          label={t('playerDirectory.filters.playStyle' as any)}
           value={styleDisplay}
           isActive={filters.playStyle !== 'all'}
           onPress={() => setShowStyleDropdown(true)}
           isDark={isDark}
         />
 
+        {/* Blocked Toggle */}
+        <FilterChip
+          label={t('playerDirectory.filters.blocked' as any)}
+          value={t('playerDirectory.filters.blocked' as any)}
+          isActive={filters.blocked}
+          onPress={handleBlockedToggle}
+          isDark={isDark}
+          hasDropdown={false}
+          icon={filters.blocked ? 'ban' : 'ban-outline'}
+        />
+
         {/* Sort Option */}
         <FilterChip
-          label="Sort"
+          label={t('playerDirectory.filters.sortBy' as any)}
           value={sortDisplay}
           isActive={filters.sortBy !== 'name_asc'}
           onPress={() => setShowSortDropdown(true)}
@@ -566,7 +565,7 @@ export function PlayerFiltersBar({
               color={isDark ? secondary[400] : secondary[600]}
             />
             <Text size="xs" weight="semibold" color={isDark ? secondary[400] : secondary[600]}>
-              Reset
+              {t('playerDirectory.filters.reset' as any)}
             </Text>
           </TouchableOpacity>
         )}
@@ -575,7 +574,7 @@ export function PlayerFiltersBar({
       {/* Dropdown Modals */}
       <FilterDropdown
         visible={showGenderDropdown}
-        title="Select Gender"
+        title={t('playerDirectory.filters.selectGender' as any)}
         options={GENDER_OPTIONS}
         selectedValue={filters.gender}
         onSelect={handleGenderChange}
@@ -586,7 +585,7 @@ export function PlayerFiltersBar({
 
       <FilterDropdown
         visible={showSkillDropdown}
-        title={`Select ${skillLabel} Level`}
+        title={t('playerDirectory.filters.selectSkillLevel' as any)}
         options={skillOptions as (NtrpFilter | DuprFilter)[]}
         selectedValue={filters.skillLevel}
         onSelect={handleSkillChange}
@@ -597,7 +596,7 @@ export function PlayerFiltersBar({
 
       <FilterDropdown
         visible={showDistanceDropdown}
-        title="Select Max Distance"
+        title={t('playerDirectory.filters.selectMaxDistance' as any)}
         options={availableDistanceOptions}
         selectedValue={filters.maxDistance}
         onSelect={handleDistanceChange}
@@ -608,7 +607,7 @@ export function PlayerFiltersBar({
 
       <FilterDropdown
         visible={showAvailabilityDropdown}
-        title="Select Availability"
+        title={t('playerDirectory.filters.selectAvailability' as any)}
         options={AVAILABILITY_OPTIONS}
         selectedValue={filters.availability}
         onSelect={handleAvailabilityChange}
@@ -619,7 +618,7 @@ export function PlayerFiltersBar({
 
       <FilterDropdown
         visible={showStyleDropdown}
-        title="Select Play Style"
+        title={t('playerDirectory.filters.selectPlayStyle' as any)}
         options={PLAY_STYLE_OPTIONS}
         selectedValue={filters.playStyle}
         onSelect={handleStyleChange}
@@ -630,7 +629,7 @@ export function PlayerFiltersBar({
 
       <FilterDropdown
         visible={showSortDropdown}
-        title="Sort Players By"
+        title={t('playerDirectory.filters.sortPlayersBy' as any)}
         options={SORT_OPTIONS}
         selectedValue={filters.sortBy || 'name_asc'}
         onSelect={handleSortChange}

@@ -33,9 +33,10 @@ export const useTimerCleanup = () => {
 
   // Cleanup all timers on unmount
   useEffect(() => {
+    const currentTimers = timers.current;
     return () => {
-      timers.current.forEach(timerId => clearTimeout(timerId));
-      timers.current.clear();
+      currentTimers.forEach(timerId => clearTimeout(timerId));
+      currentTimers.clear();
     };
   }, []);
 

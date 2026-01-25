@@ -19,14 +19,14 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../../hooks';
+import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
 import { AddScoreProvider, useAddScore } from './AddScoreContext';
 import { FindOpponentStep } from './FindOpponentStep';
 import { MatchDetailsStep } from './MatchDetailsStep';
 import { MatchExpectationStep } from './MatchExpectationStep';
 import { CreateTeamsStep } from './CreateTeamsStep';
 import { WinnerScoresStep } from './WinnerScoresStep';
-import type { MatchType, AddScoreStep } from './types';
+import type { MatchType } from './types';
 import { useCreatePlayedMatch, type CreatePlayedMatchInput } from '@rallia/shared-hooks';
 import { getSportIdByName } from '@rallia/shared-services';
 import { useAuth } from '../../../../context/AuthContext';
@@ -48,6 +48,7 @@ function AddScoreContent({
 }) {
   const { colors } = useThemeStyles();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const {
     currentStep,
     currentStepIndex,
@@ -61,13 +62,37 @@ function AddScoreContent({
   const createPlayedMatchMutation = useCreatePlayedMatch();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Check if there are unsaved changes (any progress beyond initial state)
+  const hasUnsavedChanges = useCallback(() => {
+    // Has data if any opponents selected, or any scores filled
+    return (formData.opponents && formData.opponents.length > 0) ||
+           (formData.sets && formData.sets.some(s => s.team1Score !== null || s.team2Score !== null)) ||
+           currentStepIndex > 0;
+  }, [formData.opponents, formData.sets, currentStepIndex]);
+
+  // Handle close with discard confirmation
+  const handleClose = useCallback(() => {
+    if (hasUnsavedChanges()) {
+      Alert.alert(
+        t('addScore.discardChanges' as TranslationKey),
+        t('addScore.discardChangesMessage' as TranslationKey),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('common.discard' as TranslationKey), style: 'destructive', onPress: onClose },
+        ]
+      );
+    } else {
+      onClose();
+    }
+  }, [hasUnsavedChanges, onClose, t]);
+
   const handleBack = useCallback(() => {
     if (canGoBack) {
       goToPreviousStep();
     } else {
-      onClose();
+      handleClose();
     }
-  }, [canGoBack, goToPreviousStep, onClose]);
+  }, [canGoBack, goToPreviousStep, handleClose]);
 
   // winnerId and sets are passed directly to avoid React state async issues
   const handleSubmit = useCallback(async (
@@ -75,7 +100,7 @@ function AddScoreContent({
     sets: Array<{ team1Score: number | null; team2Score: number | null }>
   ) => {
     if (!user?.id) {
-      Alert.alert('Error', 'You must be logged in to submit a score.');
+      Alert.alert(t('common.error'), t('errors.mustBeLoggedIn'));
       return;
     }
 
@@ -86,7 +111,7 @@ function AddScoreContent({
       const sportId = await getSportIdByName(sportName);
       
       if (!sportId) {
-        Alert.alert('Error', `Could not find sport: ${sportName}`);
+        Alert.alert(t('common.error'), t('addScore.sportNotFound' as TranslationKey, { sport: sportName }));
         setIsSubmitting(false);
         return;
       }
@@ -134,11 +159,11 @@ function AddScoreContent({
       const result = await createPlayedMatchMutation.mutateAsync(matchInput);
 
       Alert.alert(
-        'Score Submitted!',
-        'Your score has been submitted. Your opponent has 24 hours to confirm.',
+        t('addScore.scoreSubmitted' as TranslationKey),
+        t('addScore.scoreSubmittedMessage' as TranslationKey),
         [
           {
-            text: 'OK',
+            text: t('common.ok'),
             onPress: () => {
               onSuccess?.(result.matchId);
               onClose();
@@ -148,11 +173,11 @@ function AddScoreContent({
       );
     } catch (error) {
       console.error('Error submitting score:', error);
-      Alert.alert('Error', 'Failed to submit score. Please try again.');
+      Alert.alert(t('common.error'), t('addScore.failedToSubmit' as TranslationKey));
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, user, onSuccess, onClose, createPlayedMatchMutation]);
+  }, [formData, user, onSuccess, onClose, createPlayedMatchMutation, t]);
 
   const renderStep = () => {
     switch (currentStep) {
@@ -171,13 +196,7 @@ function AddScoreContent({
     }
   };
 
-  const stepTitles: Record<AddScoreStep, string> = {
-    'find-opponent': 'Add Score',
-    'match-details': 'Add Score',
-    'match-expectation': 'Add Score',
-    'create-teams': 'Add Score',
-    'winner-scores': 'Add Score',
-  };
+  const stepTitle = t('addScore.title' as TranslationKey);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -196,12 +215,12 @@ function AddScoreContent({
         </TouchableOpacity>
 
         <Text weight="semibold" size="base" style={{ color: colors.text }}>
-          {stepTitles[currentStep]}
+          {stepTitle}
         </Text>
 
         <TouchableOpacity
           style={styles.headerButton}
-          onPress={onClose}
+          onPress={handleClose}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <Ionicons name="close" size={24} color={colors.text} />

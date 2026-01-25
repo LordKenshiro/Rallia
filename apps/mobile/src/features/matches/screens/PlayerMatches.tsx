@@ -22,8 +22,6 @@ import type { TranslationKey } from '@rallia/shared-translations';
 import { useMatchDetailSheet } from '../../../context';
 import { Logger } from '@rallia/shared-services';
 import {
-  lightTheme,
-  darkTheme,
   spacingPixels,
   radiusPixels,
   primary,
@@ -165,7 +163,6 @@ export default function PlayerMatches() {
   const [activeTab, setActiveTab] = useState<TimeFilter>('upcoming');
 
   // Theme colors
-  const themeColors = isDark ? darkTheme : lightTheme;
   const tabColors = useMemo(
     () => ({
       activeBackground: isDark ? primary[600] : primary[500],
@@ -180,7 +177,6 @@ export default function PlayerMatches() {
   const {
     matches,
     isLoading,
-    isFetching,
     isRefetching,
     isFetchingNextPage,
     hasNextPage,

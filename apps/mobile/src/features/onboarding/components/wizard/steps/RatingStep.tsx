@@ -109,7 +109,6 @@ export const RatingStep: React.FC<RatingStepProps> = ({
   onContinue: _onContinue,
   colors,
   t,
-  isDark,
 }) => {
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -140,7 +139,7 @@ export const RatingStep: React.FC<RatingStepProps> = ({
             sport,
             system: ratingSystem,
           });
-          Alert.alert('Error', 'Failed to load ratings. Please try again.');
+          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.failedToLoadRatings' as TranslationKey));
           return;
         }
 
@@ -155,7 +154,7 @@ export const RatingStep: React.FC<RatingStepProps> = ({
         setRatings(transformedRatings);
       } catch (error) {
         Logger.error(`Unexpected error loading ${sport} ratings`, error as Error);
-        Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+        Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.unexpectedError' as TranslationKey));
       } finally {
         setIsLoading(false);
       }

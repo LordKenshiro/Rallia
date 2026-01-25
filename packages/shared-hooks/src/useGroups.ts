@@ -393,7 +393,17 @@ export function usePostMatchToGroup() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: groupKeys.matches(variables.groupId) });
       queryClient.invalidateQueries({ queryKey: groupKeys.recentMatch(variables.groupId) });
-      queryClient.invalidateQueries({ queryKey: groupKeys.leaderboard(variables.groupId) });
+      // Use predicate to invalidate all leaderboard queries for this group (regardless of daysBack)
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey;
+          return Array.isArray(key) && 
+            key[0] === 'groups' && 
+            key[1] === 'detail' && 
+            key[2] === variables.groupId && 
+            key[3] === 'leaderboard';
+        }
+      });
       queryClient.invalidateQueries({ queryKey: groupKeys.activity(variables.groupId) });
     },
   });
@@ -411,7 +421,17 @@ export function useRemoveMatchFromGroup() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: groupKeys.matches(variables.groupId) });
       queryClient.invalidateQueries({ queryKey: groupKeys.recentMatch(variables.groupId) });
-      queryClient.invalidateQueries({ queryKey: groupKeys.leaderboard(variables.groupId) });
+      // Use predicate to invalidate all leaderboard queries for this group (regardless of daysBack)
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey;
+          return Array.isArray(key) && 
+            key[0] === 'groups' && 
+            key[1] === 'detail' && 
+            key[2] === variables.groupId && 
+            key[3] === 'leaderboard';
+        }
+      });
     },
   });
 }
@@ -428,7 +448,17 @@ export function useCreatePlayedMatch() {
       if (variables.networkId) {
         queryClient.invalidateQueries({ queryKey: groupKeys.matches(variables.networkId) });
         queryClient.invalidateQueries({ queryKey: groupKeys.recentMatch(variables.networkId) });
-        queryClient.invalidateQueries({ queryKey: groupKeys.leaderboard(variables.networkId) });
+        // Use predicate to invalidate all leaderboard queries for this network (regardless of daysBack)
+        queryClient.invalidateQueries({ 
+          predicate: (query) => {
+            const key = query.queryKey;
+            return Array.isArray(key) && 
+              key[0] === 'groups' && 
+              key[1] === 'detail' && 
+              key[2] === variables.networkId && 
+              key[3] === 'leaderboard';
+          }
+        });
         queryClient.invalidateQueries({ queryKey: groupKeys.activity(variables.networkId) });
         queryClient.invalidateQueries({ queryKey: groupKeys.stats(variables.networkId) });
       }

@@ -10,6 +10,7 @@ import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { primary, neutral, status } from '@rallia/design-system';
 import type { SharedContactList } from '@rallia/shared-services';
+import { useTranslation, type TranslationKey } from '../../../hooks';
 
 interface ThemeColors {
   background: string;
@@ -38,6 +39,8 @@ const SharedListCard: React.FC<SharedListCardProps> = ({
   onEdit,
   onDelete,
 }) => {
+  const { t } = useTranslation();
+  
   return (
     <TouchableOpacity
       style={[styles.container, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
@@ -60,7 +63,10 @@ const SharedListCard: React.FC<SharedListCardProps> = ({
           </Text>
         ) : null}
         <Text size="xs" color={colors.textMuted} style={styles.contactCount}>
-          {list.contact_count} {list.contact_count === 1 ? 'contact' : 'contacts'}
+          {list.contact_count === 1 
+            ? t('sharedLists.contacts.contactCountSingular' as TranslationKey, { count: list.contact_count })
+            : t('sharedLists.contacts.contactCount' as TranslationKey, { count: list.contact_count })
+          }
         </Text>
       </View>
 

@@ -17,7 +17,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text, SkeletonConversation } from '@rallia/shared-components';
-import { useThemeStyles, useAuth } from '../hooks';
+import { useThemeStyles, useAuth, useTranslation, type TranslationKey } from '../hooks';
 import { spacingPixels, fontSizePixels, primary } from '@rallia/design-system';
 import {
   usePlayerConversations,
@@ -36,6 +36,7 @@ const ArchivedChats = () => {
   const { colors } = useThemeStyles();
   const navigation = useNavigation<NavigationProp>();
   const { session } = useAuth();
+  const { t } = useTranslation();
   const playerId = session?.user?.id;
 
   // State for conversation actions sheet
@@ -135,14 +136,14 @@ const ArchivedChats = () => {
       <View style={styles.emptyContainer}>
         <Ionicons name="archive-outline" size={64} color={colors.textMuted} />
         <Text style={[styles.emptyTitle, { color: colors.text }]}>
-          No archived chats
+          {t('chat.archivedChats.noArchivedChats' as TranslationKey)}
         </Text>
         <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
-          Chats you archive will appear here
+          {t('chat.archivedChats.chatsAppearHere' as TranslationKey)}
         </Text>
       </View>
     );
-  }, [isLoading, colors]);
+  }, [isLoading, colors, t]);
 
   const renderSeparator = useCallback(
     () => <View style={[styles.separator, { backgroundColor: colors.border }]} />,
@@ -162,7 +163,7 @@ const ArchivedChats = () => {
         >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Archived</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('chat.archivedChats.title' as TranslationKey)}</Text>
         <View style={styles.headerSpacer} />
       </View>
 

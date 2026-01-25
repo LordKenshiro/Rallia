@@ -8,7 +8,7 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary } from '@rallia/design-system';
 
 interface ReplyBannerProps {
@@ -19,6 +19,7 @@ interface ReplyBannerProps {
 
 function ReplyBannerComponent({ senderName, messageContent, onCancel }: ReplyBannerProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
 
   return (
     <View 
@@ -34,7 +35,7 @@ function ReplyBannerComponent({ senderName, messageContent, onCancel }: ReplyBan
         <View style={styles.header}>
           <Ionicons name="arrow-undo" size={14} color={primary[500]} />
           <Text style={[styles.label, { color: primary[500] }]}>
-            Replying to {senderName}
+            {t('chat.input.replyingTo' as any, { name: senderName })}
           </Text>
         </View>
         <Text 

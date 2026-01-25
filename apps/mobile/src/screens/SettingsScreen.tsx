@@ -103,12 +103,6 @@ const SettingsScreen: React.FC = () => {
     }
   };
 
-  const handleDeleteAccount = () => {
-    warningHaptic();
-    // TODO: Implement delete account functionality
-    Logger.logUserAction('delete_account_pressed');
-  };
-
   const handleEditProfile = () => {
     navigation.navigate('UserProfile', {});
   };

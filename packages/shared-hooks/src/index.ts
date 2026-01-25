@@ -33,6 +33,7 @@ export * from './usePlacesAutocomplete';
 export * from './usePlayerSearch';
 export * from './useInviteToMatch';
 export * from './useGroups';
+export * from './useCommunities';
 export * from './useChat';
 export * from './useBlockedStatus';
 export * from './useFavoriteStatus';

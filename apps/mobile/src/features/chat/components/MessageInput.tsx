@@ -9,14 +9,11 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Keyboard,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary, neutral } from '@rallia/design-system';
 import type { MessageWithSender } from '@rallia/shared-services';
 
@@ -38,6 +35,7 @@ function MessageInputComponent({
   onTypingChange,
 }: MessageInputProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const [message, setMessage] = useState('');
   const inputRef = useRef<TextInput>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -128,7 +126,7 @@ function MessageInputComponent({
           <View style={[styles.replyIndicator, { backgroundColor: primary[500] }]} />
           <View style={styles.replyContent}>
             <Text style={[styles.replySenderName, { color: primary[500] }]}>
-              Replying to {replySenderName}
+              {t('chat.input.replyingTo' as any, { name: replySenderName })}
             </Text>
             <Text 
               style={[styles.replyPreview, { color: colors.textMuted }]} 

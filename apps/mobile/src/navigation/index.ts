@@ -3,7 +3,7 @@
  */
 
 import { createNavigationContainerRef } from '@react-navigation/native';
-import type { RootStackParamList, HomeStackParamList } from './types';
+import type { RootStackParamList, HomeStackParamList, CommunityStackParamList } from './types';
 
 // Navigation ref for use outside NavigationContainer (e.g., ActionsBottomSheet)
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
@@ -20,6 +20,24 @@ export function navigateFromOutside<T extends keyof HomeStackParamList>(
     // Navigate to the Home tab first, then to the nested screen
     navigationRef.navigate('Main', {
       screen: 'Home',
+      params: {
+        screen,
+        params,
+      },
+    });
+  }
+}
+
+/**
+ * Navigate to a Community stack screen from outside the NavigationContainer.
+ */
+export function navigateToCommunityScreen<T extends keyof CommunityStackParamList>(
+  screen: T,
+  params?: CommunityStackParamList[T]
+) {
+  if (navigationRef.isReady()) {
+    navigationRef.navigate('Main', {
+      screen: 'Community',
       params: {
         screen,
         params,

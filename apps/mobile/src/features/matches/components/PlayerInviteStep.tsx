@@ -280,7 +280,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
   const { invitePlayers, isInviting } = useInviteToMatch({
     matchId,
     hostId,
-    onSuccess: result => {
+    onSuccess: _result => {
       successHaptic();
       onComplete();
     },

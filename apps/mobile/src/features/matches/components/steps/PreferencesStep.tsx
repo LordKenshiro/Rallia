@@ -252,7 +252,6 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
   const {
     watch,
     setValue,
-    formState: { errors },
   } = form;
 
   const format = watch('format');

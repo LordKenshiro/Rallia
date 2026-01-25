@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 
 interface OptionItem {
   id: string;
@@ -48,6 +48,7 @@ export function MemberOptionsModal({
   onAvatarPress,
 }: MemberOptionsModalProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
 
   if (!member) return null;
 
@@ -92,14 +93,14 @@ export function MemberOptionsModal({
                     {member.role === 'moderator' && (
                       <View style={[styles.badge, { backgroundColor: isDark ? '#FF9500' : '#FFF3E0' }]}>
                         <Text size="xs" style={{ color: isDark ? '#FFFFFF' : '#FF9500' }}>
-                          Moderator
+                          {t('groups.moderator' as any)}
                         </Text>
                       </View>
                     )}
                     {member.isCreator && (
                       <View style={[styles.badge, { backgroundColor: isDark ? colors.primary : '#E8F5E9' }]}>
                         <Text size="xs" style={{ color: isDark ? '#FFFFFF' : colors.primary }}>
-                          Creator
+                          {t('groups.creator' as any)}
                         </Text>
                       </View>
                     )}
@@ -167,7 +168,7 @@ export function MemberOptionsModal({
                 activeOpacity={0.7}
               >
                 <Text weight="semibold" size="base" style={{ color: colors.primary }}>
-                  Cancel
+                  {t('common.cancel' as any)}
                 </Text>
               </TouchableOpacity>
             </View>

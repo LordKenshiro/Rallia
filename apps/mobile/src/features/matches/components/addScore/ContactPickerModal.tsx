@@ -20,7 +20,7 @@ import {
 import * as Contacts from 'expo-contacts';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../../hooks';
+import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
 import type { SelectedPlayer } from './types';
 
 interface DeviceContact {
@@ -47,6 +47,7 @@ export function ContactPickerModal({
   excludeIds = [],
 }: ContactPickerModalProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const [contacts, setContacts] = useState<DeviceContact[]>([]);
   const [filteredContacts, setFilteredContacts] = useState<DeviceContact[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -94,11 +95,14 @@ export function ContactPickerModal({
       setFilteredContacts(transformedContacts);
     } catch (error) {
       console.error('Failed to load contacts:', error);
-      Alert.alert('Error', 'Failed to load contacts. Please try again.');
+      Alert.alert(
+        t('addScore.contactPicker.error' as TranslationKey), 
+        t('addScore.contactPicker.errorMessage' as TranslationKey)
+      );
     } finally {
       setIsLoading(false);
     }
-  }, [excludeIds]);
+  }, [excludeIds, t]);
 
   // Load contacts when modal opens
   useEffect(() => {
@@ -173,7 +177,7 @@ export function ContactPickerModal({
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Loading contacts...
+            {t('addScore.contactPicker.loading' as TranslationKey)}
           </Text>
         </View>
       );
@@ -184,13 +188,13 @@ export function ContactPickerModal({
         <View style={styles.centerContainer}>
           <Ionicons name="lock-closed-outline" size={64} color={colors.textMuted} />
           <Text weight="semibold" style={[styles.permissionTitle, { color: colors.text }]}>
-            Access Required
+            {t('addScore.contactPicker.accessRequired' as TranslationKey)}
           </Text>
           <Text style={[styles.permissionText, { color: colors.textSecondary }]}>
-            To add players from your contacts, please allow access to your contacts.
+            {t('addScore.contactPicker.accessRequiredMessage' as TranslationKey)}
           </Text>
           <Button variant="primary" onPress={openSettings} style={styles.settingsButton}>
-            Open Settings
+            {t('addScore.contactPicker.openSettings' as TranslationKey)}
           </Button>
         </View>
       );
@@ -201,7 +205,9 @@ export function ContactPickerModal({
         <View style={styles.centerContainer}>
           <Ionicons name="people-outline" size={64} color={colors.textMuted} />
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            {searchQuery ? 'No contacts match your search' : 'No contacts found'}
+            {searchQuery 
+              ? t('addScore.contactPicker.noContactsMatch' as TranslationKey) 
+              : t('addScore.contactPicker.noContactsFound' as TranslationKey)}
           </Text>
         </View>
       );
@@ -235,7 +241,7 @@ export function ContactPickerModal({
             <Ionicons name="close" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-            Select Contact
+            {t('addScore.contactPicker.title' as TranslationKey)}
           </Text>
           <View style={{ width: 24 }} />
         </View>
@@ -246,7 +252,7 @@ export function ContactPickerModal({
             <Ionicons name="search" size={20} color={colors.textMuted} />
             <TextInput
               style={[styles.searchInput, { color: colors.text }]}
-              placeholder="Search contacts..."
+              placeholder={t('addScore.contactPicker.searchPlaceholder' as TranslationKey)}
               placeholderTextColor={colors.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}

@@ -56,7 +56,6 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
   onComplete,
   colors,
   t,
-  isDark,
   selectedSports,
   onSelectInitialSport,
 }) => {

@@ -27,7 +27,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
 import { Text, Button } from '@rallia/shared-components';
-import { useThemeStyles, useAuth } from '../../../hooks';
+import { useThemeStyles, useAuth, useTranslation } from '../../../hooks';
 import { uploadImage } from '../../../services/imageUpload';
 import { primary, spacingPixels, fontSizePixels } from '@rallia/design-system';
 import { supabase } from '../../../lib/supabase';
@@ -54,6 +54,7 @@ export function CreateGroupChatModal({
   onSuccess,
 }: CreateGroupChatModalProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const { session } = useAuth();
   const currentUserId = session?.user?.id;
 
@@ -182,7 +183,7 @@ export function CreateGroupChatModal({
 
   const handleContinueToDetails = useCallback(() => {
     if (selectedMembers.length === 0) {
-      Alert.alert('Select Members', 'Please select at least one member for the group.');
+      Alert.alert(t('chat.selectMembers' as any), t('chat.pleaseSelectMember' as any));
       return;
     }
     setStep('group-details');
@@ -197,7 +198,7 @@ export function CreateGroupChatModal({
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Please allow access to your photos to add a group image.');
+        Alert.alert(t('common.permissionRequired' as any), t('chat.photoAccessRequired' as any));
         return;
       }
 
@@ -213,9 +214,9 @@ export function CreateGroupChatModal({
       }
     } catch (err) {
       console.error('Error picking image:', err);
-      Alert.alert('Error', 'Failed to pick image');
+      Alert.alert(t('common.error' as any), t('chat.failedToPickImage' as any));
     }
-  }, []);
+  }, [t]);
 
   const handleRemoveImage = useCallback(() => {
     setGroupImage(null);
@@ -224,17 +225,17 @@ export function CreateGroupChatModal({
   // Create group chat (simple group conversation without network)
   const handleCreateGroup = useCallback(async () => {
     if (!groupName.trim()) {
-      setError('Group name is required');
+      setError(t('chat.groupNameRequired' as any));
       return;
     }
 
     if (groupName.trim().length < 2) {
-      setError('Group name must be at least 2 characters');
+      setError(t('chat.groupNameTooShort' as any));
       return;
     }
 
     if (!currentUserId) {
-      Alert.alert('Error', 'You must be logged in to create a group.');
+      Alert.alert(t('common.error' as any), t('chat.mustBeLoggedIn' as any));
       return;
     }
 
@@ -288,7 +289,7 @@ export function CreateGroupChatModal({
       onSuccess?.(conversation.id);
     } catch (err) {
       console.error('Error creating group:', err);
-      Alert.alert('Error', 'Failed to create group chat. Please try again.');
+      Alert.alert(t('common.error' as any), t('chat.failedToCreateGroup' as any));
     } finally {
       setIsCreating(false);
     }
@@ -373,7 +374,7 @@ export function CreateGroupChatModal({
     <View style={styles.stepContainer}>
       {/* Title */}
       <Text weight="bold" size="xl" style={[styles.stepTitle, { color: colors.text }]}>
-        Select Members
+        {t('chat.selectMembers' as any)}
       </Text>
 
       {/* Search input */}
@@ -386,7 +387,7 @@ export function CreateGroupChatModal({
         <Ionicons name="search" size={20} color={colors.textMuted} />
         <TextInput
           style={[styles.searchInput, { color: colors.text }]}
-          placeholder="Search players"
+          placeholder={t('chat.searchPlayers' as any)}
           placeholderTextColor={colors.textMuted}
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -407,13 +408,13 @@ export function CreateGroupChatModal({
       {isLoadingPlayers ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={primary[500]} />
-          <Text style={{ color: colors.textMuted, marginTop: 12 }}>Loading players...</Text>
+          <Text style={{ color: colors.textMuted, marginTop: 12 }}>{t('chat.loadingPlayers' as any)}</Text>
         </View>
       ) : filteredPlayers.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="people-outline" size={48} color={colors.textMuted} />
           <Text style={{ color: colors.textMuted, marginTop: 12, textAlign: 'center' }}>
-            {searchQuery ? `No players found matching "${searchQuery}"` : 'No players available'}
+            {searchQuery ? t('chat.noPlayersFoundMatching' as any, { query: searchQuery }) : t('chat.noPlayersAvailable' as any)}
           </Text>
         </View>
       ) : (
@@ -434,7 +435,7 @@ export function CreateGroupChatModal({
           disabled={selectedMembers.length === 0}
           style={[selectedMembers.length === 0 && styles.disabledButton]}
         >
-          Continue ({selectedMembers.length} selected)
+          {t('chat.continueSelected' as any, { count: selectedMembers.length })}
         </Button>
       </View>
     </View>
@@ -449,7 +450,7 @@ export function CreateGroupChatModal({
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text weight="bold" size="xl" style={{ color: colors.text }}>
-          Group Details
+          {t('chat.groupDetails' as any)}
         </Text>
       </View>
 
@@ -483,7 +484,7 @@ export function CreateGroupChatModal({
               <Ionicons name="camera" size={24} color={primary[500]} />
             </View>
             <Text size="sm" style={{ color: colors.textMuted, marginTop: 8 }}>
-              Add Photo
+              {t('chat.addPhoto' as any)}
             </Text>
           </TouchableOpacity>
         )}
@@ -492,7 +493,7 @@ export function CreateGroupChatModal({
       {/* Group Name Input */}
       <View style={styles.inputSection}>
         <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
-          Group Name *
+          {t('chat.groupName' as any)} *
         </Text>
         <TextInput
           style={[
@@ -503,7 +504,7 @@ export function CreateGroupChatModal({
               borderColor: error ? '#EF4444' : colors.border,
             },
           ]}
-          placeholder="Enter group name"
+          placeholder={t('chat.enterGroupName' as any)}
           placeholderTextColor={colors.textMuted}
           value={groupName}
           onChangeText={(text) => {
@@ -522,7 +523,7 @@ export function CreateGroupChatModal({
       {/* Members preview */}
       <View style={styles.membersPreview}>
         <Text size="sm" weight="medium" style={{ color: colors.text, marginBottom: 8 }}>
-          Members ({selectedMembers.length + 1})
+          {t('chat.members' as any)} ({selectedMembers.length + 1})
         </Text>
         <View style={styles.memberAvatars}>
           {/* Current user */}
@@ -563,7 +564,7 @@ export function CreateGroupChatModal({
           {isCreating ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
-            'Create Group'
+            t('chat.createGroup' as any)
           )}
         </Button>
       </View>
@@ -580,7 +581,7 @@ export function CreateGroupChatModal({
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
             <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-              New Group
+              {t('chat.newGroup' as any)}
             </Text>
             <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={colors.text} />

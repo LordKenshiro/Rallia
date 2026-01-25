@@ -87,10 +87,12 @@ export {
 export {
   subscribeToMessages,
   subscribeToConversations,
+  subscribeToReactions,
   unsubscribeFromChannel,
   subscribeToTypingIndicators,
   sendTypingIndicator,
   unsubscribeFromTypingIndicators,
+  type MessageEventCallback,
 } from './realtimeService';
 
 // ============================================================================

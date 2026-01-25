@@ -19,8 +19,7 @@ import { useThemeStyles } from '../../../hooks';
 import { spacingPixels } from '@rallia/design-system';
 import { COMMON_REACTIONS } from '@rallia/shared-services';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const PICKER_WIDTH = 320; // Approximate picker width
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const PICKER_HEIGHT = 60; // Approximate picker height
 
 interface EmojiReactionPickerProps {

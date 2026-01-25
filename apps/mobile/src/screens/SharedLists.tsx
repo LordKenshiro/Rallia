@@ -33,7 +33,7 @@ import {
   useSharedListsRealtime,
   type SharedContactList,
 } from '@rallia/shared-hooks';
-import { useThemeStyles, useAuth } from '../hooks';
+import { useThemeStyles, useAuth, useTranslation, type TranslationKey } from '../hooks';
 import type { CommunityStackParamList } from '../navigation/types';
 import { CreateListModal, SharedListCard, ShareMatchModal } from '../features/shared-lists';
 
@@ -43,6 +43,7 @@ const SharedLists: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
+  const { t } = useTranslation();
   const playerId = session?.user?.id;
 
   // State
@@ -90,25 +91,25 @@ const SharedLists: React.FC = () => {
   // Delete list handler
   const handleDeleteList = useCallback((list: SharedContactList) => {
     Alert.alert(
-      'Delete List',
-      `Are you sure you want to delete "${list.name}"? This will also delete all contacts in this list.`,
+      t('sharedLists.deleteList'),
+      t('sharedLists.deleteListConfirm' as TranslationKey, { name: list.name }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               await deleteListMutation.mutateAsync(list.id);
             } catch (error) {
               console.error('Failed to delete list:', error);
-              Alert.alert('Error', 'Failed to delete the list. Please try again.');
+              Alert.alert(t('common.error'), t('sharedLists.errors.failedToDelete' as TranslationKey));
             }
           },
         },
       ]
     );
-  }, [deleteListMutation]);
+  }, [deleteListMutation, t]);
 
   // View list details handler
   const handleViewList = useCallback((list: SharedContactList) => {
@@ -145,10 +146,10 @@ const SharedLists: React.FC = () => {
       <View style={styles.emptyContainer}>
         <Ionicons name="list-outline" size={64} color={colors.textMuted} />
         <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
-          No Shared Lists Yet
+          {t('sharedLists.noLists')}
         </Text>
         <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-          Create a list to easily invite friends and contacts to your matches
+          {t('sharedLists.noListsDescription')}
         </Text>
         <TouchableOpacity
           style={[styles.emptyButton, { backgroundColor: primary[500] }]}
@@ -157,7 +158,7 @@ const SharedLists: React.FC = () => {
         >
           <Ionicons name="add" size={20} color="#fff" />
           <Text size="sm" weight="semibold" color="#fff">
-            Create Your First List
+            {t('sharedLists.createFirstList')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -221,10 +222,10 @@ const SharedLists: React.FC = () => {
         </View>
         <View style={styles.shareMatchContent}>
           <Text weight="semibold" style={{ color: colors.text }}>
-            Share a Match
+            {t('sharedLists.shareMatch.title' as TranslationKey)}
           </Text>
           <Text size="sm" style={{ color: colors.textSecondary }}>
-            Invite contacts to your upcoming games
+            {t('sharedLists.shareMatch.subtitle' as TranslationKey)}
           </Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
@@ -233,7 +234,7 @@ const SharedLists: React.FC = () => {
       {/* Section Header */}
       <View style={styles.sectionHeader}>
         <Text weight="semibold" style={{ color: colors.text }}>
-          Your Contact Lists
+          {t('sharedLists.yourLists' as TranslationKey)}
         </Text>
         {lists.length > 0 && (
           <TouchableOpacity
@@ -243,7 +244,7 @@ const SharedLists: React.FC = () => {
           >
             <Ionicons name="add" size={18} color="#fff" />
             <Text size="sm" weight="semibold" color="#fff">
-              New List
+              {t('sharedLists.newList')}
             </Text>
           </TouchableOpacity>
         )}
@@ -256,7 +257,7 @@ const SharedLists: React.FC = () => {
             <Ionicons name="search-outline" size={20} color={colors.textMuted} style={styles.searchIcon} />
             <TextInput
               style={[styles.searchInput, { color: colors.text }]}
-              placeholder="Search lists..."
+              placeholder={t('sharedLists.searchLists')}
               placeholderTextColor={colors.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}

@@ -17,7 +17,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 
-import { useThemeStyles, useAuth, useProfile } from '../hooks';
+import { useThemeStyles, useAuth, useProfile, useTranslation, type TranslationKey } from '../hooks';
 import {
   useConversation,
   useMessages,
@@ -76,9 +76,10 @@ export default function ChatConversationScreen() {
   const { session } = useAuth();
   const { profile } = useProfile();
   const toast = useToast();
+  const { t } = useTranslation();
   const playerId = session?.user?.id;
   // Get player name for typing indicator - use type assertion since DB types may not include first_name directly
-  const playerName = (profile as { first_name?: string } | null)?.first_name || 'User';
+  const playerName = (profile as { first_name?: string } | null)?.first_name || t('common.user' as TranslationKey);
   const insets = useSafeAreaInsets();
 
   const [reactions, setReactions] = useState<Map<string, ReactionSummary[]>>(new Map());
@@ -144,7 +145,6 @@ export default function ChatConversationScreen() {
     hasNextPage,
     isFetchingNextPage,
     refetch: refetchMessages,
-    isRefetching,
   } = useMessages(conversationId);
 
   // Flatten pages into a single array
@@ -205,7 +205,13 @@ export default function ChatConversationScreen() {
     if (messages.length === 0 || !playerId) return;
     
     try {
-      const messageIds = messages.map((m) => m.id);
+      // Filter out temp IDs from optimistic messages (they start with "temp-")
+      const messageIds = messages
+        .map((m) => m.id)
+        .filter((id) => !id.startsWith('temp-'));
+      
+      if (messageIds.length === 0) return;
+      
       const reactionsMap = await getMessagesReactions(messageIds, playerId);
       setReactions(reactionsMap);
     } catch (error) {
@@ -233,8 +239,8 @@ export default function ChatConversationScreen() {
       }
     }
     
-    return 'Chat';
-  }, [routeTitle, conversation, playerId]);
+    return t('chat.title' as TranslationKey);
+  }, [routeTitle, conversation, playerId, t]);
 
   const headerSubtitle = useMemo(() => {
     if (!conversation) return undefined;
@@ -287,16 +293,16 @@ export default function ChatConversationScreen() {
 
   // Get the other user's name for the blocked modal
   const otherUserName = useMemo(() => {
-    if (!isDirectChat || !conversation?.participants || !playerId) return 'this user';
+    if (!isDirectChat || !conversation?.participants || !playerId) return t('chat.thisUser' as TranslationKey);
     const otherParticipant = conversation.participants.find(
       (p) => p.player_id !== playerId
     );
     if (otherParticipant?.player?.profile) {
       const { first_name, last_name } = otherParticipant.player.profile;
-      return last_name ? `${first_name} ${last_name}` : (first_name || 'this user');
+      return last_name ? `${first_name} ${last_name}` : (first_name || t('chat.thisUser' as TranslationKey));
     }
-    return 'this user';
-  }, [isDirectChat, conversation, playerId]);
+    return t('chat.thisUser' as TranslationKey);
+  }, [isDirectChat, conversation, playerId, t]);
 
   // Block status for direct chats
   const {
@@ -378,38 +384,38 @@ export default function ChatConversationScreen() {
 
   const handleReport = useCallback(() => {
     if (!isDirectChat || !otherUserId) {
-      Alert.alert('Cannot Report', 'You can only report users in direct conversations');
+      Alert.alert(t('chat.alerts.cannotReport' as TranslationKey), t('chat.alerts.cannotReportMessage' as TranslationKey));
       return;
     }
     setShowReportModal(true);
-  }, [isDirectChat, otherUserId]);
+  }, [isDirectChat, otherUserId, t]);
 
   const handleClearChat = useCallback(() => {
     if (!playerId) return;
     
     Alert.alert(
-      'Clear Your Messages',
-      'This will delete all messages you sent in this conversation. This action cannot be undone.',
+      t('chat.alerts.clearYourMessages' as TranslationKey),
+      t('chat.alerts.clearYourMessagesConfirm' as TranslationKey),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Clear',
+          text: t('chat.alerts.clear' as TranslationKey),
           style: 'destructive',
           onPress: async () => {
             try {
               const { clearChatForUser } = await import('@rallia/shared-services');
               const deletedCount = await clearChatForUser(conversationId, playerId);
               refetchMessages();
-              toast.success(`${deletedCount} message${deletedCount !== 1 ? 's' : ''} deleted`);
+              toast.success(t('chat.alerts.messagesDeleted' as TranslationKey, { count: deletedCount }));
             } catch (error) {
               console.error('Failed to clear chat:', error);
-              toast.error('Failed to clear messages. Please try again.');
+              toast.error(t('chat.alerts.failedToClear' as TranslationKey));
             }
           },
         },
       ]
     );
-  }, [conversationId, playerId, refetchMessages, toast]);
+  }, [conversationId, playerId, refetchMessages, toast, t]);
 
   const handleCloseSearch = useCallback(() => {
     setShowSearchBar(false);
@@ -555,10 +561,6 @@ export default function ChatConversationScreen() {
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const handleRefresh = useCallback(() => {
-    refetchMessages();
-  }, [refetchMessages]);
-
   const isLoading = isLoadingConversation || isLoadingMessages;
 
   if (isLoading && messages.length === 0) {
@@ -660,8 +662,6 @@ export default function ChatConversationScreen() {
         onLoadMore={handleLoadMore}
         isLoadingMore={isFetchingNextPage}
         hasMore={hasNextPage || false}
-        onRefresh={handleRefresh}
-        isRefreshing={isRefetching}
         reactions={reactions}
         onReplyToMessage={handleReplyToMessage}
         onLongPressMessage={handleLongPressMessage}

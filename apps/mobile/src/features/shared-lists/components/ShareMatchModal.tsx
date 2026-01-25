@@ -27,6 +27,7 @@ import {
   type ShareChannel,
 } from '@rallia/shared-services';
 import { usePlayerMatches } from '@rallia/shared-hooks';
+import { useTranslation, type TranslationKey } from '../../../hooks';
 
 // Local interface to ensure TypeScript recognizes match properties
 // (workaround for TS language server cache issues with extended types)
@@ -76,6 +77,7 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
   onClose,
 }) => {
   const toast = useToast();
+  const { t } = useTranslation();
   
   // State
   const [step, setStep] = useState<Step>('select-match');
@@ -218,7 +220,7 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
         // Use native share
         await Share.share({
           message: result.shareMessage,
-          title: 'Share Game',
+          title: t('sharedLists.share.shareGame' as TranslationKey),
         });
       } else if (channel === 'sms') {
         // Open SMS with pre-filled message
@@ -245,18 +247,18 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
           .map(c => c.email)
           .join(',');
         if (emails) {
-          const subject = encodeURIComponent('Game Invitation');
+          const subject = encodeURIComponent(t('sharedLists.share.gameInvitation' as TranslationKey));
           const body = encodeURIComponent(result.shareMessage);
           const mailUrl = `mailto:${emails}?subject=${subject}&body=${body}`;
           await Linking.openURL(mailUrl);
         }
       }
 
-      toast.success(`Invitation shared with ${selectedContacts.length} contact(s)!`);
+      toast.success(t('sharedLists.share.invitationShared' as TranslationKey, { count: selectedContacts.length }));
       onClose();
     } catch (error) {
       console.error('Failed to share:', error);
-      toast.error('Failed to share the match. Please try again.');
+      toast.error(t('sharedLists.share.failedToShare' as TranslationKey));
     } finally {
       setIsSharing(false);
     }
@@ -326,7 +328,10 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
               {item.name}
             </Text>
             <Text size="sm" style={{ color: colors.textSecondary }}>
-              {item.contact_count} contact{item.contact_count !== 1 ? 's' : ''}
+              {item.contact_count === 1 
+                ? t('sharedLists.contacts.contactCountSingular' as TranslationKey, { count: item.contact_count })
+                : t('sharedLists.contacts.contactCount' as TranslationKey, { count: item.contact_count })
+              }
             </Text>
           </View>
           <Ionicons
@@ -342,7 +347,7 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
               <ActivityIndicator size="small" color={colors.primary} style={styles.loader} />
             ) : contacts.length === 0 ? (
               <Text size="sm" style={[styles.emptyText, { color: colors.textMuted }]}>
-                No contacts in this list
+                {t('sharedLists.contacts.noContactsInList' as TranslationKey)}
               </Text>
             ) : (
               <>
@@ -356,7 +361,7 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
                     color={allSelected ? colors.primary : colors.textSecondary}
                   />
                   <Text size="sm" style={{ color: colors.text, marginLeft: spacingPixels[2] }}>
-                    Select All
+                    {t('common.selectAll' as TranslationKey)}
                   </Text>
                 </TouchableOpacity>
                 {contacts.map(contact => {
@@ -410,7 +415,7 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
         return (
           <View style={styles.stepContent}>
             <Text weight="semibold" size="lg" style={{ color: colors.text, marginBottom: spacingPixels[3] }}>
-              Select a Match to Share
+              {t('sharedLists.share.selectMatch' as TranslationKey)}
             </Text>
             {isLoadingMatches ? (
               <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
@@ -418,10 +423,10 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
               <View style={styles.emptyState}>
                 <Ionicons name="calendar-outline" size={48} color={colors.textMuted} />
                 <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                  No Upcoming Matches
+                  {t('sharedLists.share.noUpcomingMatches' as TranslationKey)}
                 </Text>
                 <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                  Create a match first to share it with your contacts
+                  {t('sharedLists.share.createMatchFirst' as TranslationKey)}
                 </Text>
               </View>
             ) : (
@@ -440,12 +445,12 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
         return (
           <View style={styles.stepContent}>
             <Text weight="semibold" size="lg" style={{ color: colors.text, marginBottom: spacingPixels[3] }}>
-              Select Contacts to Share With
+              {t('sharedLists.share.selectContacts' as TranslationKey)}
             </Text>
             {selectedContacts.length > 0 && (
               <View style={[styles.selectedBadge, { backgroundColor: isDark ? primary[900] : primary[50] }]}>
                 <Text size="sm" style={{ color: colors.primary }}>
-                  {selectedContacts.length} contact{selectedContacts.length !== 1 ? 's' : ''} selected
+                  {t('sharedLists.share.contactsSelected' as TranslationKey, { count: selectedContacts.length })}
                 </Text>
               </View>
             )}
@@ -455,10 +460,10 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
               <View style={styles.emptyState}>
                 <Ionicons name="people-outline" size={48} color={colors.textMuted} />
                 <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                  No Shared Lists
+                  {t('sharedLists.share.noSharedLists' as TranslationKey)}
                 </Text>
                 <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                  Create a shared list first to add contacts
+                  {t('sharedLists.share.createListFirst' as TranslationKey)}
                 </Text>
               </View>
             ) : (
@@ -477,7 +482,7 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
         return (
           <View style={styles.stepContent}>
             <Text weight="semibold" size="lg" style={{ color: colors.text, marginBottom: spacingPixels[3] }}>
-              How do you want to share?
+              {t('sharedLists.share.howToShare' as TranslationKey)}
             </Text>
             
             {/* Match summary */}
@@ -486,7 +491,7 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
                 <Ionicons name="calendar" size={20} color={colors.primary} />
                 <View style={styles.summaryInfo}>
                   <Text weight="semibold" style={{ color: colors.text }}>
-                    {selectedMatch.sport?.name || 'Game'}
+                    {selectedMatch.sport?.name || t('common.game' as TranslationKey)}
                   </Text>
                   <Text size="sm" style={{ color: colors.textSecondary }}>
                     {new Date(selectedMatch.match_date).toLocaleDateString('en-US', {
@@ -504,11 +509,11 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
               <Ionicons name="people" size={20} color={colors.primary} />
               <View style={styles.summaryInfo}>
                 <Text weight="semibold" style={{ color: colors.text }}>
-                  {selectedContacts.length} Recipient{selectedContacts.length !== 1 ? 's' : ''}
+                  {t('sharedLists.share.recipients' as TranslationKey, { count: selectedContacts.length })}
                 </Text>
                 <Text size="sm" style={{ color: colors.textSecondary }} numberOfLines={1}>
                   {selectedContacts.slice(0, 3).map(c => c.name).join(', ')}
-                  {selectedContacts.length > 3 ? ` +${selectedContacts.length - 3} more` : ''}
+                  {selectedContacts.length > 3 ? ` +${t('common.more' as TranslationKey, { count: selectedContacts.length - 3 })}` : ''}
                 </Text>
               </View>
             </View>
@@ -521,7 +526,7 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
                 disabled={isSharing}
               >
                 <Ionicons name="share-outline" size={24} color={colors.primary} />
-                <Text style={{ color: colors.text, marginTop: spacingPixels[1] }}>Share</Text>
+                <Text style={{ color: colors.text, marginTop: spacingPixels[1] }}>{t('common.share' as TranslationKey)}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -606,7 +611,7 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
             />
           </TouchableOpacity>
           <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-            Share Match
+            {t('sharedLists.share.shareMatch' as TranslationKey)}
           </Text>
           <View style={{ width: 24 }} />
         </View>
@@ -635,7 +640,7 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
               disabled={!canProceed()}
             >
               <Text weight="semibold" style={{ color: canProceed() ? '#fff' : colors.textMuted }}>
-                {step === 'select-match' ? 'Select Contacts' : 'Continue'}
+                {step === 'select-match' ? t('sharedLists.share.selectContactsButton' as TranslationKey) : t('common.continue' as TranslationKey)}
               </Text>
               <Ionicons
                 name="arrow-forward"

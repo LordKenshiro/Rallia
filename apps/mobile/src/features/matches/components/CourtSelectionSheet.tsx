@@ -98,7 +98,6 @@ export const CourtSelectionSheet: React.FC<CourtSelectionSheetProps> = ({
   onCancel,
   colors,
   t,
-  isDark,
 }) => {
   const handleSelect = (court: CourtOption) => {
     successHaptic();

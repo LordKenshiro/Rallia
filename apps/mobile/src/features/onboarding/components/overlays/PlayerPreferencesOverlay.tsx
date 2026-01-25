@@ -16,8 +16,7 @@ import { OnboardingService, SportService, Logger } from '@rallia/shared-services
 import type { OnboardingPlayerPreferences } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles } from '../../../../hooks';
-import { primary, neutral } from '@rallia/design-system';
+import { useThemeStyles, useTranslation } from '../../../../hooks';
 
 interface PlayerPreferencesOverlayProps {
   visible: boolean;
@@ -49,7 +48,8 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
   currentStep = 1,
   totalSteps = 8,
 }) => {
-  const { colors, isDark } = useThemeStyles();
+  const { colors } = useThemeStyles();
+  const { t } = useTranslation();
   const [playingHand, setPlayingHand] = useState<'left' | 'right' | 'both'>('right');
   const [maxTravelDistance, setMaxTravelDistance] = useState<number>(6);
   const [matchDuration, setMatchDuration] = useState<'30' | '60' | '90' | '120'>('90');
@@ -150,8 +150,8 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
         if (error) {
           Logger.error('Failed to save player preferences', error as Error, { preferencesData });
           setIsSaving(false);
-          Alert.alert('Error', 'Failed to save your preferences. Please try again.', [
-            { text: 'OK' },
+          Alert.alert(t('alerts.error'), t('onboarding.overlay.failedToSavePreferences'), [
+            { text: t('alerts.ok') },
           ]);
           return;
         }
@@ -177,7 +177,7 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
       } catch (error) {
         Logger.error('Unexpected error saving preferences', error as Error);
         setIsSaving(false);
-        Alert.alert('Error', 'An unexpected error occurred. Please try again.', [{ text: 'OK' }]);
+        Alert.alert(t('alerts.error'), t('onboarding.overlay.unexpectedError'), [{ text: t('alerts.ok') }]);
       }
     }
   };

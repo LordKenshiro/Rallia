@@ -15,7 +15,8 @@ import { Overlay, Button, Heading, Text } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
 import { supabase, Logger } from '@rallia/shared-services';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, usePlayer, useProfile } from '../../../../hooks';
+import { useThemeStyles, usePlayer, useProfile, useTranslation } from '../../../../hooks';
+import type { TranslationKey } from '@rallia/shared-translations';
 
 interface PlayerInformationOverlayProps {
   visible: boolean;
@@ -34,6 +35,7 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
   initialData,
 }) => {
   const { colors } = useThemeStyles();
+  const { t } = useTranslation();
   const { refetch: refetchPlayer } = usePlayer();
   const { refetch: refetchProfile } = useProfile();
   const [username, setUsername] = useState(initialData?.username || '');
@@ -94,7 +96,7 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
 
       if (!user) {
         setIsSaving(false);
-        Alert.alert('Error', 'User not found');
+        Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.playerNotFound' as TranslationKey));
         return;
       }
 
@@ -111,7 +113,7 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
       if (profileUpdateError) {
         Logger.error('Failed to update profile', profileUpdateError as Error, { userId: user.id });
         setIsSaving(false);
-        Alert.alert('Error', 'Failed to update your information. Please try again.');
+        Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.failedToUpdateProfile' as TranslationKey));
         return;
       }
 
@@ -127,7 +129,7 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
       if (playerUpdateError) {
         Logger.error('Failed to update player', playerUpdateError as Error, { userId: user.id });
         setIsSaving(false);
-        Alert.alert('Error', 'Failed to update your information. Please try again.');
+        Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.failedToUpdateProfile' as TranslationKey));
         return;
       }
 
@@ -150,9 +152,9 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
 
       // Show success toast
       if (Platform.OS === 'android') {
-        ToastAndroid.show('Successfully updated Player Information', ToastAndroid.LONG);
+        ToastAndroid.show(t('onboarding.successMessages.playerInfoUpdated' as TranslationKey), ToastAndroid.LONG);
       } else {
-        Alert.alert('Success', 'Successfully updated Player Information');
+        Alert.alert(t('alerts.success' as TranslationKey), t('onboarding.successMessages.playerInfoUpdated' as TranslationKey));
       }
 
       // Close modal automatically after brief delay
@@ -162,7 +164,7 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
     } catch (error) {
       Logger.error('Unexpected error updating player information', error as Error);
       setIsSaving(false);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.unexpectedError' as TranslationKey));
     }
   };
 

@@ -16,8 +16,9 @@ import DatabaseService, { OnboardingService, SportService, Logger } from '@ralli
 import type { OnboardingRating } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles } from '../../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../../hooks';
 import { primary } from '@rallia/design-system';
+import type { TranslationKey } from '@rallia/shared-translations';
 
 interface TennisRatingOverlayProps {
   visible: boolean;
@@ -100,7 +101,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
             sport: 'tennis',
             system: 'ntrp',
           });
-          Alert.alert('Error', 'Failed to load ratings. Please try again.');
+          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.failedToLoadRatings' as TranslationKey));
           return;
         }
 
@@ -116,7 +117,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
         setRatings(transformedRatings);
       } catch (error) {
         Logger.error('Unexpected error loading tennis ratings', error as Error);
-        Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+        Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.unexpectedError' as TranslationKey));
       } finally {
         setIsLoading(false);
       }
@@ -184,7 +185,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
         if (sportError || !tennisSport) {
           Logger.error('Failed to fetch tennis sport', sportError as Error);
           setIsSaving(false);
-          Alert.alert('Error', 'Failed to save your rating. Please try again.', [{ text: 'OK' }]);
+          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.failedToSaveRating' as TranslationKey), [{ text: t('common.ok' as TranslationKey) }]);
           return;
         }
 
@@ -193,7 +194,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
 
         if (!selectedRatingData) {
           setIsSaving(false);
-          Alert.alert('Error', 'Invalid rating selected');
+          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.invalidRating' as TranslationKey));
           return;
         }
 
@@ -211,7 +212,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
         if (error) {
           Logger.error('Failed to save tennis rating', error as Error, { ratingData });
           setIsSaving(false);
-          Alert.alert('Error', 'Failed to save your rating. Please try again.', [{ text: 'OK' }]);
+          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.failedToSaveRating' as TranslationKey), [{ text: t('common.ok' as TranslationKey) }]);
           return;
         }
 
@@ -220,7 +221,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
       } catch (error) {
         Logger.error('Unexpected error saving tennis rating', error as Error);
         setIsSaving(false);
-        Alert.alert('Error', 'An unexpected error occurred. Please try again.', [{ text: 'OK' }]);
+        Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.unexpectedError' as TranslationKey), [{ text: t('common.ok' as TranslationKey) }]);
       }
     }
   };

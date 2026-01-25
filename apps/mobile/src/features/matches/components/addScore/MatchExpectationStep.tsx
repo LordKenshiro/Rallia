@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../../hooks';
+import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
 import { primary } from '@rallia/design-system';
 import { useAddScore } from './AddScoreContext';
 import type { MatchExpectation } from './types';
@@ -23,6 +23,7 @@ interface MatchExpectationStepProps {
 
 export function MatchExpectationStep({ onContinue }: MatchExpectationStepProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const { formData, updateFormData } = useAddScore();
 
   const [expectation, setExpectation] = useState<MatchExpectation>(
@@ -37,14 +38,14 @@ export function MatchExpectationStep({ onContinue }: MatchExpectationStepProps) 
   }[] = [
     {
       value: 'friendly',
-      label: 'Friendly',
-      description: 'Fun without scores',
+      label: t('addScore.matchExpectation.friendly' as TranslationKey),
+      description: t('addScore.matchExpectation.friendlyDescription' as TranslationKey),
       icon: 'happy',
     },
     {
       value: 'competitive',
-      label: 'Competitive',
-      description: 'Score matters',
+      label: t('addScore.matchExpectation.competitive' as TranslationKey),
+      description: t('addScore.matchExpectation.competitiveDescription' as TranslationKey),
       icon: 'trophy',
     },
   ];
@@ -58,10 +59,10 @@ export function MatchExpectationStep({ onContinue }: MatchExpectationStepProps) 
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Title */}
       <Text weight="bold" size="xl" style={[styles.title, { color: colors.text }]}>
-        Pick a match type
+        {t('addScore.matchExpectation.title' as TranslationKey)}
       </Text>
       <Text size="sm" style={[styles.subtitle, { color: colors.textSecondary }]}>
-        Have you played this match
+        {t('addScore.matchExpectation.subtitle' as TranslationKey)}
       </Text>
 
       {/* Options */}
@@ -121,7 +122,7 @@ export function MatchExpectationStep({ onContinue }: MatchExpectationStepProps) 
       {/* Continue button */}
       <View style={styles.bottomButton}>
         <Button variant="primary" onPress={handleContinue}>
-          Continue
+          {t('addScore.matchExpectation.continue' as TranslationKey)}
         </Button>
       </View>
     </View>

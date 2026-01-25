@@ -16,7 +16,7 @@ import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary, neutral, status } from '@rallia/design-system';
 import type { MessageWithSender } from '@rallia/shared-services';
 import { EmojiReactionPicker } from './EmojiReactionPicker';
@@ -55,6 +55,7 @@ function MessageActionsSheetComponent({
   messageY,
 }: MessageActionsSheetProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   const handleCopy = useCallback(async () => {
@@ -105,32 +106,32 @@ function MessageActionsSheetComponent({
   const actions: ActionItem[] = [
     {
       id: 'react',
-      label: 'Add Reaction',
+      label: t('chat.messageActions.addReaction' as any),
       icon: 'happy-outline',
       onPress: handleShowEmojiPicker,
     },
     {
       id: 'reply',
-      label: 'Reply',
+      label: t('chat.messageActions.reply' as any),
       icon: 'arrow-undo',
       onPress: handleReply,
     },
     {
       id: 'copy',
-      label: 'Copy',
+      label: t('chat.messageActions.copy' as any),
       icon: 'copy',
       onPress: handleCopy,
     },
     {
       id: 'edit',
-      label: 'Edit',
+      label: t('chat.messageActions.edit' as any),
       icon: 'pencil',
       onPress: handleEdit,
       ownOnly: true,
     },
     {
       id: 'delete',
-      label: 'Delete',
+      label: t('chat.messageActions.delete' as any),
       icon: 'trash',
       onPress: handleDelete,
       destructive: true,
@@ -206,7 +207,7 @@ function MessageActionsSheetComponent({
               activeOpacity={0.7}
             >
               <Text style={[styles.cancelText, { color: colors.text }]}>
-                Cancel
+                {t('common.cancel' as any)}
               </Text>
             </TouchableOpacity>
           </Pressable>

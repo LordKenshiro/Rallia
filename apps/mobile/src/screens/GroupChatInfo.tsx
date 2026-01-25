@@ -32,6 +32,8 @@ import {
   useGroupChatInfo,
   useGroupMemberManagement,
   useGroupEditActions,
+  useTranslation,
+  type TranslationKey,
 } from '../hooks';
 import type { RootStackParamList } from '../navigation/types';
 import { spacingPixels, fontSizePixels, primary, status, neutral } from '@rallia/design-system';
@@ -61,6 +63,7 @@ export default function GroupChatInfoScreen() {
 
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
+  const { t } = useTranslation();
   const playerId = session?.user?.id;
 
   // Network info state (needed for useGroupEditActions callback)
@@ -295,7 +298,7 @@ export default function GroupChatInfoScreen() {
             </TouchableOpacity>
           )}
           <Text style={[styles.memberCount, { color: colors.textMuted }]}>
-            Group · {memberCount} member{memberCount !== 1 ? 's' : ''}
+            {t('groupChat.groupMemberCount' as TranslationKey, { count: memberCount })}
           </Text>
         </View>
 
@@ -308,7 +311,7 @@ export default function GroupChatInfoScreen() {
               </View>
               <View style={styles.sectionContent}>
                 <Text style={[styles.sectionLabel, { color: colors.text }]}>
-                  {networkInfo.description || 'Add group description'}
+                  {networkInfo.description || t('groupChat.addGroupDescription' as TranslationKey)}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
@@ -324,7 +327,7 @@ export default function GroupChatInfoScreen() {
               <Ionicons name="person-add" size={20} color={primary[500]} />
             </View>
             <View style={styles.sectionContent}>
-              <Text style={[styles.sectionLabel, { color: colors.text }]}>Add members</Text>
+              <Text style={[styles.sectionLabel, { color: colors.text }]}>{t('groupChat.addMembers' as TranslationKey)}</Text>
             </View>
           </TouchableOpacity>
 
@@ -337,7 +340,7 @@ export default function GroupChatInfoScreen() {
               <Ionicons name="qr-code" size={20} color={primary[500]} />
             </View>
             <View style={styles.sectionContent}>
-              <Text style={[styles.sectionLabel, { color: colors.text }]}>Invite via link or QR code</Text>
+              <Text style={[styles.sectionLabel, { color: colors.text }]}>{t('groupChat.inviteViaLinkOrQR' as TranslationKey)}</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -345,7 +348,7 @@ export default function GroupChatInfoScreen() {
         {/* Members List Header */}
         <View style={styles.membersHeader}>
           <Text style={[styles.membersHeaderText, { color: colors.textMuted }]}>
-            {memberCount} member{memberCount !== 1 ? 's' : ''}
+            {t('common.memberCount', { count: memberCount })}
           </Text>
           <TouchableOpacity>
             <Ionicons name="search" size={20} color={colors.textMuted} />

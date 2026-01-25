@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import { supabase } from '../../../lib/supabase';
 import { spacingPixels, fontSizePixels, primary, neutral } from '@rallia/design-system';
 
@@ -46,6 +46,7 @@ export function AddMembersToGroupModal({
   currentUserId,
 }: AddMembersToGroupModalProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [allPlayers, setAllPlayers] = useState<PlayerItem[]>([]);
@@ -220,9 +221,9 @@ export function AddMembersToGroupModal({
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <TouchableOpacity style={styles.headerButton} onPress={handleClose}>
-            <Text style={[styles.headerButtonText, { color: colors.text }]}>Cancel</Text>
+            <Text style={[styles.headerButtonText, { color: colors.text }]}>{t('common.cancel' as any)}</Text>
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Add Members</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('chat.addMembers' as any)}</Text>
           <TouchableOpacity
             style={styles.headerButton}
             onPress={handleDone}
@@ -234,7 +235,7 @@ export function AddMembersToGroupModal({
                 { color: selectedIds.length > 0 ? primary[500] : colors.textMuted },
               ]}
             >
-              Add ({selectedIds.length})
+              {t('chat.addCount' as any, { count: selectedIds.length })}
             </Text>
           </TouchableOpacity>
         </View>
@@ -244,7 +245,7 @@ export function AddMembersToGroupModal({
           <Ionicons name="search" size={20} color={colors.textMuted} />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Search players..."
+            placeholder={t('chat.searchPlayers' as any)}
             placeholderTextColor={colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -266,7 +267,7 @@ export function AddMembersToGroupModal({
           <View style={styles.emptyContainer}>
             <Ionicons name="people-outline" size={48} color={colors.textMuted} />
             <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-              {searchQuery ? 'No players found' : 'No more players to add'}
+              {searchQuery ? t('chat.noPlayersFound' as any) : t('chat.noMorePlayersToAdd' as any)}
             </Text>
           </View>
         ) : (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -28,7 +28,6 @@ import {
   fontSizePixels,
   fontWeightNumeric,
   primary,
-  neutral,
   shadowsNative,
 } from '@rallia/design-system';
 
@@ -64,7 +63,7 @@ type WeeklyAvailability = Record<DayOfWeek, DayAvailability>;
 
 const UserProfile = () => {
   const navigation = useAppNavigation();
-  const { colors, shadows, isDark } = useThemeStyles();
+  const { colors, isDark } = useThemeStyles();
   const { t, locale } = useTranslation();
   const toast = useToast();
   const [loading, setLoading] = useState(true);
@@ -107,6 +106,7 @@ const UserProfile = () => {
     });
 
     return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigation]);
 
   // Upload profile picture when a new image is selected

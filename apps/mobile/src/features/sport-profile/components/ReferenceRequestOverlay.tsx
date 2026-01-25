@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay, Text } from '@rallia/shared-components';
-import { COLORS } from '@rallia/shared-constants';
 import { supabase, Logger } from '@rallia/shared-services';
 import { selectionHaptic, mediumHaptic } from '../../../utils/haptics';
 import { useThemeStyles } from '../../../hooks';

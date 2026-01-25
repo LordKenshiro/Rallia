@@ -2,15 +2,17 @@
  * PlayerCard Component
  *
  * Displays a player's basic info in a card format for the Player Directory.
- * Shows profile picture, name, city, and sport-specific rating.
+ * Shows profile picture, name, city, sport-specific rating, and online status.
+ * Includes press animation for tactile feedback.
  */
 
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { View, StyleSheet, Image, Animated, TouchableWithoutFeedback } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
 import type { PlayerSearchResult } from '@rallia/shared-services';
+import { isPlayerOnline } from '@rallia/shared-services';
 
 interface ThemeColors {
   background: string;
@@ -30,52 +32,93 @@ interface PlayerCardProps {
 
 const PlayerCard: React.FC<PlayerCardProps> = ({ player, colors, onPress }) => {
   const displayName = player.display_name || `${player.first_name} ${player.last_name || ''}`.trim();
+  const [isOnline, setIsOnline] = useState(false);
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  // Check online status
+  useEffect(() => {
+    if (player.id) {
+      isPlayerOnline(player.id).then(setIsOnline);
+    }
+  }, [player.id]);
+
+  // Press animation handlers
+  const handlePressIn = useCallback(() => {
+    Animated.timing(scaleAnim, {
+      toValue: 0.97,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+  }, [scaleAnim]);
+
+  const handlePressOut = useCallback(() => {
+    Animated.timing(scaleAnim, {
+      toValue: 1,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+  }, [scaleAnim]);
 
   return (
-    <TouchableOpacity
-      style={[styles.container, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+    <TouchableWithoutFeedback
       onPress={() => onPress(player)}
-      activeOpacity={0.7}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
     >
-      {/* Profile Picture */}
-      <View style={styles.avatarContainer}>
-        {player.profile_picture_url ? (
-          <Image source={{ uri: player.profile_picture_url }} style={styles.avatar} />
-        ) : (
-          <View style={[styles.avatarPlaceholder, { backgroundColor: colors.border }]}>
-            <Ionicons name="person" size={24} color={colors.textMuted} />
-          </View>
-        )}
-      </View>
+      <Animated.View
+        style={[
+          styles.container,
+          { backgroundColor: colors.cardBackground, borderColor: colors.border },
+          { transform: [{ scale: scaleAnim }] },
+        ]}
+      >
+        {/* Profile Picture with Online Indicator */}
+        <View style={styles.avatarContainer}>
+          {player.profile_picture_url ? (
+            <Image source={{ uri: player.profile_picture_url }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatarPlaceholder, { backgroundColor: colors.border }]}>
+              <Ionicons name="person" size={24} color={colors.textMuted} />
+            </View>
+          )}
+          {/* Online Status Indicator */}
+          <View
+            style={[
+              styles.onlineIndicator,
+              { backgroundColor: isOnline ? '#22C55E' : neutral[400] },
+            ]}
+          />
+        </View>
 
-      {/* Player Info */}
-      <View style={styles.infoContainer}>
-        <Text size="base" weight="semibold" color={colors.text} numberOfLines={1}>
-          {displayName}
-        </Text>
-        
-        {player.city && (
-          <View style={styles.locationRow}>
-            <Ionicons name="location-outline" size={14} color={colors.textMuted} />
-            <Text size="sm" color={colors.textMuted} style={styles.locationText} numberOfLines={1}>
-              {player.city}
-            </Text>
-          </View>
-        )}
+        {/* Player Info */}
+        <View style={styles.infoContainer}>
+          <Text size="base" weight="semibold" color={colors.text} numberOfLines={1}>
+            {displayName}
+          </Text>
+          
+          {player.city && (
+            <View style={styles.locationRow}>
+              <Ionicons name="location-outline" size={14} color={colors.textMuted} />
+              <Text size="sm" color={colors.textMuted} style={styles.locationText} numberOfLines={1}>
+                {player.city}
+              </Text>
+            </View>
+          )}
 
-        {player.rating && (
-          <View style={styles.ratingRow}>
-            <Ionicons name="star" size={14} color={colors.primary} />
-            <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.ratingText}>
-              {player.rating.label}
-            </Text>
-          </View>
-        )}
-      </View>
+          {player.rating && (
+            <View style={styles.ratingRow}>
+              <Ionicons name="star" size={14} color={colors.primary} />
+              <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.ratingText}>
+                {player.rating.label}
+              </Text>
+            </View>
+          )}
+        </View>
 
-      {/* Chevron */}
-      <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-    </TouchableOpacity>
+        {/* Chevron */}
+        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+      </Animated.View>
+    </TouchableWithoutFeedback>
   );
 };
 
@@ -91,6 +134,7 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     marginRight: spacingPixels[3],
+    position: 'relative',
   },
   avatar: {
     width: 48,
@@ -103,6 +147,16 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  onlineIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   infoContainer: {
     flex: 1,

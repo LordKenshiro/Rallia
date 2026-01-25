@@ -323,7 +323,6 @@ export const MatchDetailSheet: React.FC = () => {
     isKicking,
     isCancellingInvite,
     isResendingInvite,
-    joinResult,
   } = useMatchActions(selectedMatch?.id, {
     onJoinSuccess: result => {
       successHaptic();
@@ -1482,7 +1481,7 @@ export const MatchDetailSheet: React.FC = () => {
             </Text>
           </View>
           <View style={styles.participantsRow}>
-            {participantAvatars.map((p, index) => (
+            {participantAvatars.map((p, _index) => (
               <View key={p.key} style={styles.participantWithLabel}>
                 <View style={styles.participantAvatarWithAction}>
                   <TouchableOpacity

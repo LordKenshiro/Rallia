@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 
 interface OptionItem {
   id: string;
@@ -37,6 +37,7 @@ export function GroupOptionsModal({
   title = 'Group Options',
 }: GroupOptionsModalProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
 
   return (
     <Modal
@@ -52,7 +53,7 @@ export function GroupOptionsModal({
               {/* Header */}
               <View style={[styles.header, { borderBottomColor: colors.border }]}>
                 <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-                  {title}
+                  {title === 'Group Options' ? t('groups.groupOptions' as any) : title}
                 </Text>
                 <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                   <Ionicons name="close" size={24} color={colors.text} />
@@ -116,7 +117,7 @@ export function GroupOptionsModal({
                 activeOpacity={0.7}
               >
                 <Text weight="semibold" size="base" style={{ color: colors.primary }}>
-                  Cancel
+                  {t('common.cancel' as any)}
                 </Text>
               </TouchableOpacity>
             </View>

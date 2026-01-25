@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
-import { COLORS } from '@rallia/shared-constants';
 import { PreferencesInfo, PlayStyleEnum, PlayAttributeEnum } from '@rallia/shared-types';
 import { selectionHaptic, mediumHaptic } from '../../../utils/haptics';
 import { useThemeStyles } from '../../../hooks';

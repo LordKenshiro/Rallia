@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Text, useToast } from '@rallia/shared-components';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useAuth } from '../../../hooks';
+import { useThemeStyles, useAuth, useTranslation } from '../../../hooks';
 import { useDebounce, useAddGroupMember } from '@rallia/shared-hooks';
 import { supabase } from '@rallia/shared-services';
 
@@ -50,6 +50,7 @@ export function AddMemberModal({
   const { session } = useAuth();
   const playerId = session?.user?.id;
   const toast = useToast();
+  const { t } = useTranslation();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestedPlayers, setSuggestedPlayers] = useState<PlayerProfile[]>([]);
@@ -177,12 +178,12 @@ export function AddMemberModal({
         playerIdToAdd: memberPlayerId,
       });
       successHaptic();
-      toast.success('Member added to the group');
+      toast.success(t('groups.memberAddedToGroup' as any));
       onSuccess();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to add member');
+      toast.error(error instanceof Error ? error.message : t('groups.failedToAddMember' as any));
     }
-  }, [groupId, playerId, addMemberMutation, onSuccess, toast]);
+  }, [groupId, playerId, addMemberMutation, onSuccess, toast, t]);
 
   const renderPlayerItem = useCallback(({ item }: { item: PlayerProfile }) => (
     <View style={[styles.playerItem, { borderBottomColor: colors.border }]}>
@@ -238,7 +239,7 @@ export function AddMemberModal({
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
             <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-              Add Member
+              {t('groups.addMember' as any)}
             </Text>
             <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={colors.text} />
@@ -251,7 +252,7 @@ export function AddMemberModal({
               <Ionicons name="search" size={20} color={colors.textMuted} />
               <TextInput
                 style={[styles.searchTextInput, { color: colors.text }]}
-                placeholder="Search players..."
+                placeholder={t('groups.searchPlayers' as any)}
                 placeholderTextColor={colors.textMuted}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -275,14 +276,14 @@ export function AddMemberModal({
               <View style={styles.emptyState}>
                 <Ionicons name="person-outline" size={48} color={colors.textMuted} />
                 <Text style={{ color: colors.textSecondary, marginTop: 12 }}>
-                  {searchQuery.length >= 2 ? 'No players found' : 'No players available'}
+                  {searchQuery.length >= 2 ? t('groups.noPlayersFound' as any) : t('groups.noPlayersAvailable' as any)}
                 </Text>
               </View>
             ) : (
               <>
                 {searchQuery.length < 2 && (
                   <Text size="sm" style={{ color: colors.textSecondary, paddingHorizontal: 16, paddingVertical: 8 }}>
-                    Suggested Players
+                    {t('groups.suggestedPlayers' as any)}
                   </Text>
                 )}
                 <FlatList

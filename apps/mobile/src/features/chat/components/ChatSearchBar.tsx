@@ -15,7 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary, neutral } from '@rallia/design-system';
 import { useSearchMessages } from '@rallia/shared-hooks';
 
@@ -52,6 +52,7 @@ function ChatSearchBarComponent({
   onNavigateToMatch,
 }: ChatSearchBarProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
   const debouncedQuery = useDebounce(query, 300);
@@ -119,7 +120,7 @@ function ChatSearchBarComponent({
           <Ionicons name="search" size={18} color={colors.textMuted} style={styles.searchIcon} />
           <TextInput
             style={[styles.input, { color: colors.text }]}
-            placeholder="Search in chat..."
+            placeholder={t('chat.searchInChat.placeholder' as any)}
             placeholderTextColor={colors.textMuted}
             value={query}
             onChangeText={setQuery}
@@ -166,7 +167,7 @@ function ChatSearchBarComponent({
               </>
             ) : (
               <Text style={[styles.noMatchText, { color: colors.textMuted }]}>
-                No matches
+                {t('chat.searchInChat.noMatches' as any)}
               </Text>
             )}
           </View>

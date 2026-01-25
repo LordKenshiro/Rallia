@@ -21,9 +21,7 @@ import {
   radiusPixels,
   fontSizePixels,
   fontWeightNumeric,
-  shadowsNative,
   primary,
-  status,
 } from '@rallia/design-system';
 
 const BASE_BLACK = '#000000';
@@ -68,7 +66,7 @@ const SportProfile = () => {
   const navigation = useAppNavigation();
   const route = useRoute<SportProfileRouteProp>();
   const { sportId, sportName } = route.params;
-  const { colors, shadows, isDark } = useThemeStyles();
+  const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
   const toast = useToast();
 

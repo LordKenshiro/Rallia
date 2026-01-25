@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
+import { useTranslation } from '../../../hooks';
 import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
 import { neutral } from '@rallia/design-system';
 import {
@@ -54,6 +55,7 @@ const AddContactModal: React.FC<AddContactModalProps> = ({
   isDark,
   onClose,
 }) => {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -85,18 +87,18 @@ const AddContactModal: React.FC<AddContactModalProps> = ({
     const trimmedEmail = email.trim();
 
     if (!trimmedName) {
-      Alert.alert('Error', 'Please enter a name');
+      Alert.alert(t('alerts.error'), t('sharedLists.contacts.nameRequired' as any));
       return false;
     }
 
     if (!trimmedPhone && !trimmedEmail) {
-      Alert.alert('Error', 'Please enter at least a phone number or email address');
+      Alert.alert(t('alerts.error'), t('sharedLists.contacts.phoneOrEmailRequired' as any));
       return false;
     }
 
     // Basic email validation
     if (trimmedEmail && !trimmedEmail.includes('@')) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      Alert.alert(t('alerts.error'), t('sharedLists.contacts.invalidEmail' as any));
       return false;
     }
 
@@ -129,7 +131,7 @@ const AddContactModal: React.FC<AddContactModalProps> = ({
       onClose(true);
     } catch (error) {
       console.error('Failed to save contact:', error);
-      Alert.alert('Error', `Failed to ${isEditing ? 'update' : 'add'} the contact. Please try again.`);
+      Alert.alert(t('alerts.error'), isEditing ? t('sharedLists.contacts.failedToUpdate' as any) : t('sharedLists.errors.failedToAddContact' as any));
     } finally {
       setIsSubmitting(false);
     }
@@ -152,11 +154,11 @@ const AddContactModal: React.FC<AddContactModalProps> = ({
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={() => onClose()} disabled={isSubmitting}>
             <Text size="base" color={colors.primary}>
-              Cancel
+              {t('common.cancel')}
             </Text>
           </TouchableOpacity>
           <Text size="lg" weight="semibold" color={colors.text}>
-            {isEditing ? 'Edit Contact' : 'Add Contact'}
+            {isEditing ? t('sharedLists.contacts.editContact' as any) : t('sharedLists.contacts.addContact' as any)}
           </Text>
           <TouchableOpacity onPress={handleSubmit} disabled={isSubmitting || !canSubmit}>
             {isSubmitting ? (
@@ -167,7 +169,7 @@ const AddContactModal: React.FC<AddContactModalProps> = ({
                 weight="semibold"
                 color={canSubmit ? colors.primary : colors.textMuted}
               >
-                {isEditing ? 'Save' : 'Add'}
+                {isEditing ? t('common.save') : t('sharedLists.contacts.add' as any)}
               </Text>
             )}
           </TouchableOpacity>
@@ -178,7 +180,7 @@ const AddContactModal: React.FC<AddContactModalProps> = ({
           {/* Name Input */}
           <View style={styles.inputGroup}>
             <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.label}>
-              Name *
+              {t('sharedLists.contacts.contactName')} *
             </Text>
             <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
               <Ionicons name="person-outline" size={20} color={colors.textMuted} style={styles.inputIcon} />
@@ -186,7 +188,7 @@ const AddContactModal: React.FC<AddContactModalProps> = ({
                 style={[styles.input, { color: colors.text }]}
                 value={name}
                 onChangeText={setName}
-                placeholder="Full name"
+                placeholder={t('sharedLists.contacts.contactNamePlaceholder')}
                 placeholderTextColor={colors.textMuted}
                 autoFocus
                 maxLength={150}
@@ -198,7 +200,7 @@ const AddContactModal: React.FC<AddContactModalProps> = ({
           {/* Phone Input */}
           <View style={styles.inputGroup}>
             <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.label}>
-              Phone Number
+              {t('sharedLists.contacts.contactPhone')}
             </Text>
             <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
               <Ionicons name="call-outline" size={20} color={colors.textMuted} style={styles.inputIcon} />
@@ -206,7 +208,7 @@ const AddContactModal: React.FC<AddContactModalProps> = ({
                 style={[styles.input, { color: colors.text }]}
                 value={phone}
                 onChangeText={setPhone}
-                placeholder="+1 234 567 8900"
+                placeholder={t('sharedLists.contacts.contactPhonePlaceholder')}
                 placeholderTextColor={colors.textMuted}
                 keyboardType="phone-pad"
                 maxLength={30}
@@ -218,7 +220,7 @@ const AddContactModal: React.FC<AddContactModalProps> = ({
           {/* Email Input */}
           <View style={styles.inputGroup}>
             <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.label}>
-              Email Address
+              {t('sharedLists.contacts.contactEmail')}
             </Text>
             <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
               <Ionicons name="mail-outline" size={20} color={colors.textMuted} style={styles.inputIcon} />
@@ -226,7 +228,7 @@ const AddContactModal: React.FC<AddContactModalProps> = ({
                 style={[styles.input, { color: colors.text }]}
                 value={email}
                 onChangeText={setEmail}
-                placeholder="email@example.com"
+                placeholder={t('sharedLists.contacts.contactEmailPlaceholder')}
                 placeholderTextColor={colors.textMuted}
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -239,14 +241,14 @@ const AddContactModal: React.FC<AddContactModalProps> = ({
           {/* Notes Input */}
           <View style={styles.inputGroup}>
             <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.label}>
-              Notes (optional)
+              {t('sharedLists.contacts.notes' as any)}
             </Text>
             <View style={[styles.inputContainer, styles.notesContainer, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
               <TextInput
                 style={[styles.input, styles.notesInput, { color: colors.text }]}
                 value={notes}
                 onChangeText={setNotes}
-                placeholder="Add a note about this contact..."
+                placeholder={t('sharedLists.contacts.notesPlaceholder' as any)}
                 placeholderTextColor={colors.textMuted}
                 multiline
                 numberOfLines={3}
@@ -261,7 +263,7 @@ const AddContactModal: React.FC<AddContactModalProps> = ({
           <View style={[styles.hint, { backgroundColor: isDark ? neutral[800] : neutral[100] }]}>
             <Ionicons name="information-circle-outline" size={20} color={colors.textSecondary} />
             <Text size="sm" color={colors.textSecondary} style={styles.hintText}>
-              At least one contact method (phone or email) is required.
+              {t('sharedLists.contacts.contactMethodRequired' as any)}
             </Text>
           </View>
         </ScrollView>

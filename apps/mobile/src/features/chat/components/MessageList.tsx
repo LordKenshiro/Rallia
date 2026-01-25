@@ -1,17 +1,21 @@
 /**
  * MessageList Component
  * Displays messages in a chat with date separators and infinite scroll
- * Supports search highlighting and navigation
+ * Supports search highlighting, navigation, and scroll-to-bottom button
  */
 
-import React, { useCallback, useMemo, memo, useRef, useImperativeHandle, forwardRef } from 'react';
+import React, { useCallback, useMemo, memo, useRef, useImperativeHandle, forwardRef, useState } from 'react';
 import {
   View,
   FlatList,
   StyleSheet,
   ActivityIndicator,
-  RefreshControl,
+  TouchableOpacity,
+  Animated,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
 import { useThemeStyles } from '../../../hooks';
@@ -21,6 +25,7 @@ import { MessageBubble } from './MessageBubble';
 
 export interface MessageListRef {
   scrollToMessage: (messageId: string) => void;
+  scrollToBottom: () => void;
 }
 
 interface MessageListProps {
@@ -30,8 +35,6 @@ interface MessageListProps {
   onLoadMore: () => void;
   isLoadingMore: boolean;
   hasMore: boolean;
-  onRefresh?: () => void;
-  isRefreshing?: boolean;
   reactions?: Map<string, ReactionSummary[]>;
   onReplyToMessage?: (message: MessageWithSender) => void;
   onLongPressMessage?: (message: MessageWithSender, pageY?: number) => void;
@@ -39,6 +42,9 @@ interface MessageListProps {
   highlightedMessageIds?: string[];
   currentHighlightedId?: string;
 }
+
+// Threshold for showing scroll-to-bottom button (in pixels)
+const SCROLL_THRESHOLD = 200;
 
 // Helper to format date for separators
 function formatDateSeparator(date: Date): string {
@@ -88,14 +94,12 @@ function shouldShowSenderInfo(
 }
 
 function MessageListComponent({
-  messages,
+  messages = [],
   currentUserId,
   onReact,
   onLoadMore,
   isLoadingMore,
   hasMore,
-  onRefresh,
-  isRefreshing = false,
   reactions = new Map(),
   onReplyToMessage,
   onLongPressMessage,
@@ -105,6 +109,8 @@ function MessageListComponent({
 }: MessageListProps, ref: React.Ref<MessageListRef>) {
   const { colors } = useThemeStyles();
   const flatListRef = useRef<FlatList>(null);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const scrollButtonOpacity = useRef(new Animated.Value(0)).current;
 
   // Create a set for O(1) lookup of highlighted IDs
   const highlightedSet = useMemo(() => new Set(highlightedMessageIds), [highlightedMessageIds]);
@@ -120,6 +126,11 @@ function MessageListComponent({
       id: string;
       showSenderInfo?: boolean;
     }> = [];
+
+    // Guard against undefined messages
+    if (!messages || messages.length === 0) {
+      return result;
+    }
 
     // Messages are in descending order (newest first)
     // In inverted list: first item (newest) appears at bottom, last item (oldest) at top
@@ -158,7 +169,33 @@ function MessageListComponent({
     return result;
   }, [messages, currentUserId]);
 
-  // Expose scrollToMessage method to parent
+  // Handle scroll to track if user scrolled up
+  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    // In an inverted list, contentOffset.y increases as you scroll UP (away from bottom)
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const shouldShow = offsetY > SCROLL_THRESHOLD;
+    
+    if (shouldShow !== showScrollButton) {
+      setShowScrollButton(shouldShow);
+      Animated.timing(scrollButtonOpacity, {
+        toValue: shouldShow ? 1 : 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [showScrollButton, scrollButtonOpacity]);
+
+  // Scroll to bottom (index 0 in inverted list)
+  const scrollToBottom = useCallback(() => {
+    if (flatListRef.current && processedMessages.length > 0) {
+      flatListRef.current.scrollToIndex({
+        index: 0,
+        animated: true,
+      });
+    }
+  }, [processedMessages.length]);
+
+  // Expose scrollToMessage and scrollToBottom methods to parent
   useImperativeHandle(ref, () => ({
     scrollToMessage: (messageId: string) => {
       // Find the index of the message in processedMessages
@@ -173,7 +210,8 @@ function MessageListComponent({
         });
       }
     },
-  }), [processedMessages]);
+    scrollToBottom,
+  }), [processedMessages, scrollToBottom]);
 
   const handleReact = useCallback(
     (messageId: string) => (emoji: string) => {
@@ -258,32 +296,47 @@ function MessageListComponent({
   }, [processedMessages.length]);
 
   return (
-    <FlatList
-      ref={flatListRef}
-      data={processedMessages}
-      renderItem={renderItem}
-      keyExtractor={keyExtractor}
-      inverted
-      contentContainerStyle={styles.listContent}
-      onEndReached={handleEndReached}
-      onEndReachedThreshold={0.2}
-      ListFooterComponent={renderFooter}
-      refreshControl={
-        onRefresh ? (
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={onRefresh}
-            colors={[colors.primary]}
-            tintColor={colors.primary}
-          />
-        ) : undefined
-      }
-      showsVerticalScrollIndicator={false}
-      initialNumToRender={20}
-      maxToRenderPerBatch={10}
-      windowSize={10}
-      onScrollToIndexFailed={handleScrollToIndexFailed}
-    />
+    <View style={styles.container}>
+      <FlatList
+        ref={flatListRef}
+        data={processedMessages}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        inverted
+        contentContainerStyle={styles.listContent}
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.2}
+        ListFooterComponent={renderFooter}
+        // Note: RefreshControl is intentionally not used here because:
+        // 1. The list is inverted, which reverses the pull gesture direction
+        // 2. New messages arrive via real-time subscriptions automatically
+        // 3. Older messages are loaded via onEndReached when scrolling up
+        showsVerticalScrollIndicator={false}
+        initialNumToRender={20}
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        onScrollToIndexFailed={handleScrollToIndexFailed}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      />
+      
+      {/* Scroll to Bottom Button */}
+      <Animated.View
+        style={[
+          styles.scrollButtonContainer,
+          { opacity: scrollButtonOpacity },
+        ]}
+        pointerEvents={showScrollButton ? 'auto' : 'none'}
+      >
+        <TouchableOpacity
+          style={[styles.scrollButton, { backgroundColor: colors.cardBackground }]}
+          onPress={scrollToBottom}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="chevron-down" size={24} color={colors.primary} />
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
   );
 }
 
@@ -294,6 +347,9 @@ export const MessageList = memo(forwardRef(MessageListComponent)) as React.MemoE
 const styles = StyleSheet.create({
   listContent: {
     paddingVertical: spacingPixels[4],
+  },
+  container: {
+    flex: 1,
   },
   dateSeparatorContainer: {
     flexDirection: 'row',
@@ -314,5 +370,22 @@ const styles = StyleSheet.create({
   loadingFooter: {
     paddingVertical: spacingPixels[4],
     alignItems: 'center',
+  },
+  scrollButtonContainer: {
+    position: 'absolute',
+    bottom: 16,
+    right: 16,
+  },
+  scrollButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
 });

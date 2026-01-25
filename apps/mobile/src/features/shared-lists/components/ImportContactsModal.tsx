@@ -19,6 +19,7 @@ import * as Contacts from 'expo-contacts';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
 import { selectionHaptic, lightHaptic } from '@rallia/shared-utils';
+import { useTranslation } from '../../../hooks';
 import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
 import { primary, neutral } from '@rallia/design-system';
 import { bulkCreateSharedContacts, type SharedContact } from '@rallia/shared-services';
@@ -60,6 +61,7 @@ const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
   onClose,
 }) => {
   const toast = useToast();
+  const { t } = useTranslation();
   const [contacts, setContacts] = useState<DeviceContact[]>([]);
   const [filteredContacts, setFilteredContacts] = useState<DeviceContact[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -128,7 +130,7 @@ const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
       setFilteredContacts(transformedContacts);
     } catch (error) {
       console.error('Failed to load contacts:', error);
-      Alert.alert('Error', 'Failed to load contacts. Please try again.');
+      Alert.alert(t('alerts.error'), t('sharedLists.import.failedToLoadContacts' as any));
     } finally {
       setIsLoading(false);
     }
@@ -191,7 +193,7 @@ const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
   const handleImport = async () => {
     const selectedContacts = contacts.filter(c => c.selected);
     if (selectedContacts.length === 0) {
-      toast.warning('Please select at least one contact to import.');
+      toast.warning(t('sharedLists.import.selectAtLeastOne' as any));
       return;
     }
 
@@ -209,12 +211,12 @@ const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
       });
 
       toast.success(
-        `${selectedContacts.length} ${selectedContacts.length === 1 ? 'contact' : 'contacts'} imported successfully.`
+        t('sharedLists.import.importSuccess' as any).replace('{count}', String(selectedContacts.length))
       );
       onClose(true);
     } catch (error) {
       console.error('Failed to import contacts:', error);
-      toast.error('Failed to import contacts. Please try again.');
+      toast.error(t('sharedLists.import.failedToImport' as any));
     } finally {
       setIsImporting(false);
     }
@@ -254,10 +256,10 @@ const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
     <View style={styles.centerContainer}>
       <Ionicons name="lock-closed-outline" size={64} color={colors.textMuted} />
       <Text size="lg" weight="semibold" color={colors.text} style={styles.centerTitle}>
-        Contacts Access Required
+        {t('sharedLists.import.contactsAccessRequired' as any)}
       </Text>
       <Text size="sm" color={colors.textSecondary} style={styles.centerDescription}>
-        To import contacts from your phone, please grant access to your contacts in Settings.
+        {t('sharedLists.import.grantAccessMessage' as any)}
       </Text>
       <TouchableOpacity
         style={[styles.settingsButton, { backgroundColor: primary[500] }]}
@@ -266,7 +268,7 @@ const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
       >
         <Ionicons name="settings-outline" size={20} color="#fff" />
         <Text size="sm" weight="semibold" color="#fff">
-          Open Settings
+          {t('common.openSettings')}
         </Text>
       </TouchableOpacity>
     </View>
@@ -280,12 +282,12 @@ const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
       <View style={styles.centerContainer}>
         <Ionicons name="people-outline" size={64} color={colors.textMuted} />
         <Text size="lg" weight="semibold" color={colors.text} style={styles.centerTitle}>
-          {searchQuery ? 'No Results' : 'No Contacts Available'}
+          {searchQuery ? t('sharedLists.import.noResults' as any) : t('sharedLists.import.noContactsAvailable' as any)}
         </Text>
         <Text size="sm" color={colors.textSecondary} style={styles.centerDescription}>
           {searchQuery
-            ? 'Try a different search term'
-            : 'All your contacts are already in this list, or your contacts are empty.'}
+            ? t('sharedLists.import.tryDifferentSearch' as any)
+            : t('sharedLists.import.allContactsInList' as any)}
         </Text>
       </View>
     );
@@ -303,11 +305,11 @@ const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={() => onClose()} disabled={isImporting}>
             <Text size="base" color={colors.primary}>
-              Cancel
+              {t('common.cancel')}
             </Text>
           </TouchableOpacity>
           <Text size="lg" weight="semibold" color={colors.text}>
-            Import Contacts
+            {t('sharedLists.contacts.importFromPhone')}
           </Text>
           <TouchableOpacity onPress={handleImport} disabled={isImporting || selectedCount === 0}>
             {isImporting ? (
@@ -318,7 +320,7 @@ const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
                 weight="semibold"
                 color={selectedCount > 0 ? colors.primary : colors.textMuted}
               >
-                Import{selectedCount > 0 ? ` (${selectedCount})` : ''}
+                {t('sharedLists.import.import' as any)}{selectedCount > 0 ? ` (${selectedCount})` : ''}
               </Text>
             )}
           </TouchableOpacity>
@@ -329,7 +331,7 @@ const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text size="sm" color={colors.textSecondary} style={styles.loadingText}>
-              Loading contacts...
+              {t('sharedLists.import.loadingContacts' as any)}
             </Text>
           </View>
         ) : permissionStatus !== 'granted' ? (
@@ -349,7 +351,7 @@ const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
                   style={[styles.searchTextInput, { color: colors.text }]}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
-                  placeholder="Search contacts..."
+                  placeholder={t('sharedLists.import.searchContacts' as any)}
                   placeholderTextColor={colors.textMuted}
                   autoCapitalize="none"
                 />
@@ -379,7 +381,7 @@ const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
                   )}
                 </View>
                 <Text size="sm" weight="medium" color={colors.text}>
-                  Select All ({filteredContacts.length})
+                  {t('sharedLists.import.selectAll' as any)} ({filteredContacts.length})
                 </Text>
               </TouchableOpacity>
             )}

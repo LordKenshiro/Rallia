@@ -16,7 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import type { GroupMatch } from '@rallia/shared-hooks';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -37,18 +37,19 @@ export function RecentGamesModal({
   onPlayerPress,
 }: RecentGamesModalProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
 
   const formatMatchDate = useCallback((dateStr: string) => {
     const date = new Date(dateStr);
     const now = new Date();
     const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
     
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays === 0) return t('common.today' as any);
+    if (diffDays === 1) return t('common.yesterday' as any);
+    if (diffDays < 7) return t('groups.recentGames.daysAgo' as any, { count: diffDays });
     
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  }, []);
+  }, [t]);
 
   const renderMatchCard = useCallback((groupMatch: GroupMatch) => {
     const { match } = groupMatch;
@@ -92,7 +93,7 @@ export function RecentGamesModal({
               color: isCompetitive ? '#2E7D32' : '#EF6C00',
               marginLeft: 4,
             }}>
-              {isCompetitive ? 'Competitive' : 'Practice'}
+              {isCompetitive ? t('groups.recentGames.competitive' as any) : t('groups.recentGames.practice' as any)}
             </Text>
           </View>
         </View>
@@ -143,7 +144,7 @@ export function RecentGamesModal({
               style={styles.teamNames}
               numberOfLines={1}
             >
-              {team1Players.map(p => p.player?.profile?.first_name || 'Player').join(' & ')}
+              {team1Players.map(p => p.player?.profile?.first_name || t('groups.recentGames.player' as any)).join(' & ')}
             </Text>
             {/* Set scores under team - show individual set game scores */}
             {match.result && (
@@ -212,7 +213,7 @@ export function RecentGamesModal({
               style={styles.teamNames}
               numberOfLines={1}
             >
-              {team2Players.map(p => p.player?.profile?.first_name || 'Player').join(' & ')}
+              {team2Players.map(p => p.player?.profile?.first_name || t('groups.recentGames.player' as any)).join(' & ')}
             </Text>
             {/* Set scores under team - show individual set game scores */}
             {match.result && (
@@ -236,7 +237,7 @@ export function RecentGamesModal({
         </View>
       </TouchableOpacity>
     );
-  }, [colors, isDark, formatMatchDate, onMatchPress, onPlayerPress]);
+  }, [colors, isDark, formatMatchDate, onMatchPress, onPlayerPress, t]);
 
   const content = useMemo(() => {
     if (matches.length === 0) {
@@ -244,14 +245,14 @@ export function RecentGamesModal({
         <View style={styles.emptyState}>
           <Ionicons name="tennisball-outline" size={48} color={colors.textMuted} />
           <Text style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}>
-            No games played in the last 180 days
+            {t('groups.recentGames.noGames' as any)}
           </Text>
         </View>
       );
     }
 
     return matches.map(renderMatchCard);
-  }, [matches, renderMatchCard, colors]);
+  }, [matches, renderMatchCard, colors, t]);
 
   return (
     <Modal
@@ -270,7 +271,7 @@ export function RecentGamesModal({
           {/* Header */}
           <View style={styles.header}>
             <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-              Recent Games
+              {t('groups.recentGames.title' as any)}
             </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={colors.text} />

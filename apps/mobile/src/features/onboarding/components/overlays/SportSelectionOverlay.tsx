@@ -14,7 +14,7 @@ import { Sport } from '@rallia/shared-types';
 import DatabaseService, { Logger } from '@rallia/shared-services';
 import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles } from '../../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../../hooks';
 
 interface SportSelectionOverlayProps {
   visible: boolean;
@@ -34,6 +34,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
   totalSteps = 8,
 }) => {
   const { colors } = useThemeStyles();
+  const { t } = useTranslation();
   const [selectedSportIds, setSelectedSportIds] = useState<string[]>([]); // Store IDs for database operations
   const [sports, setSports] = useState<Sport[]>([]);
   const [isLoadingSports, setIsLoadingSports] = useState(true);
@@ -69,7 +70,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
 
       if (error) {
         Logger.error('Failed to fetch sports', error as Error);
-        Alert.alert('Error', 'Failed to load sports. Please try again.');
+        Alert.alert(t('alerts.error'), t('onboarding.overlay.failedToLoadSports'));
         // Fallback to hardcoded sports if fetch fails
         setSports([
           {
@@ -153,7 +154,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
     selectionHaptic();
 
     if (!playerId) {
-      Alert.alert('Error', 'Player not found. Please try again.');
+      Alert.alert(t('alerts.error'), t('onboarding.overlay.playerNotFound'));
       return;
     }
 
@@ -189,7 +190,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
           return [...prev, sportId];
         }
       });
-      Alert.alert('Error', 'Failed to update sport selection. Please try again.');
+      Alert.alert(t('alerts.error'), t('onboarding.overlay.failedToUpdateSportSelection'));
     }
   };
 

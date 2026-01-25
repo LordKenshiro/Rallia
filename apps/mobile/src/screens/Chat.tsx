@@ -22,7 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Text, SkeletonConversation } from '@rallia/shared-components';
 import { lightHaptic, selectionHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useAuth } from '../hooks';
+import { useThemeStyles, useAuth, useTranslation } from '../hooks';
 import { spacingPixels, fontSizePixels, primary, neutral } from '@rallia/design-system';
 import {
   usePlayerConversations,
@@ -41,16 +41,17 @@ type NavigationProp = NativeStackNavigationProp<ChatStackParamList>;
 
 type TabKey = 'direct' | 'groups' | 'matches';
 
-const TABS: { key: TabKey; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { key: 'direct', label: 'Direct', icon: 'chatbubble-outline' },
-  { key: 'groups', label: 'Groups', icon: 'people-outline' },
-  { key: 'matches', label: 'Matches', icon: 'tennisball-outline' },
+const TAB_CONFIGS: { key: TabKey; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'direct', icon: 'chatbubble-outline' },
+  { key: 'groups', icon: 'people-outline' },
+  { key: 'matches', icon: 'tennisball-outline' },
 ];
 
 const Chat = () => {
   const { colors, isDark } = useThemeStyles();
   const navigation = useNavigation<NavigationProp>();
   const { session } = useAuth();
+  const { t } = useTranslation();
   const playerId = session?.user?.id;
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<TabKey>('direct');
@@ -261,10 +262,10 @@ const Chat = () => {
         <View style={styles.emptyContainer}>
           <Ionicons name="search-outline" size={64} color={colors.textMuted} />
           <Text style={[styles.emptyTitle, { color: colors.text }]}>
-            No results found
+            {t('common.noResultsFound')}
           </Text>
           <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
-            Try a different search term
+            {t('common.tryDifferentSearch')}
           </Text>
         </View>
       );
@@ -274,18 +275,18 @@ const Chat = () => {
     const emptyMessages = {
       direct: {
         icon: 'chatbubble-outline' as keyof typeof Ionicons.glyphMap,
-        title: 'No direct messages yet',
-        subtitle: 'Start a conversation with another player',
+        title: t('chat.empty.direct.title'),
+        subtitle: t('chat.empty.direct.subtitle'),
       },
       groups: {
         icon: 'people-outline' as keyof typeof Ionicons.glyphMap,
-        title: 'No group chats yet',
-        subtitle: 'Join a group or community to start chatting',
+        title: t('chat.empty.groups.title'),
+        subtitle: t('chat.empty.groups.subtitle'),
       },
       matches: {
         icon: 'tennisball-outline' as keyof typeof Ionicons.glyphMap,
-        title: 'No match chats yet',
-        subtitle: 'Join a match to start chatting with opponents',
+        title: t('chat.empty.matches.title'),
+        subtitle: t('chat.empty.matches.subtitle'),
       },
     };
     
@@ -302,7 +303,7 @@ const Chat = () => {
         </Text>
       </View>
     );
-  }, [isLoading, colors, searchQuery, activeTab]);
+  }, [isLoading, colors, searchQuery, activeTab, t]);
 
   const renderSeparator = useCallback(
     () => <View style={[styles.separator, { backgroundColor: colors.border }]} />,
@@ -326,7 +327,7 @@ const Chat = () => {
           </View>
           <View style={styles.archivedContent}>
             <Text style={[styles.archivedText, { color: colors.text }]}>
-              Archived
+              {t('chat.archived')}
             </Text>
           </View>
           <View style={styles.archivedBadge}>
@@ -339,7 +340,7 @@ const Chat = () => {
         <View style={[styles.separator, { backgroundColor: colors.border }]} />
       </>
     );
-  }, [searchQuery, archivedCount, colors, isDark, handleArchivedPress]);
+  }, [searchQuery, archivedCount, colors, isDark, handleArchivedPress, t]);
 
   return (
     <SafeAreaView
@@ -348,7 +349,7 @@ const Chat = () => {
     >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Inbox</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('chat.inbox')}</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.headerButton}>
             <Ionicons name="create-outline" size={24} color={colors.text} />
@@ -367,7 +368,7 @@ const Chat = () => {
           <Ionicons name="search" size={20} color={colors.textMuted} />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Search conversations"
+            placeholder={t('chat.searchConversations')}
             placeholderTextColor={colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -382,16 +383,17 @@ const Chat = () => {
         </View>
         <TouchableOpacity style={styles.newGroupButton} onPress={handleNewGroupPress}>
           <Text style={[styles.newGroupText, { color: primary[500] }]}>
-            New group
+            {t('chat.newGroup')}
           </Text>
         </TouchableOpacity>
       </View>
 
       {/* Tab Bar */}
       <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
-        {TABS.map((tab) => {
+        {TAB_CONFIGS.map((tab) => {
           const isActive = activeTab === tab.key;
           const count = tabCounts[tab.key];
+          const label = t(`chat.tabs.${tab.key}`);
           return (
             <TouchableOpacity
               key={tab.key}
@@ -421,7 +423,7 @@ const Chat = () => {
                   },
                 ]}
               >
-                {tab.label}
+                {label}
               </Text>
               {count > 0 && (
                 <View

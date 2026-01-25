@@ -3,7 +3,7 @@
  * Bottom sheet for conversation actions (pin, mute, archive, delete)
  */
 
-import React, { memo, useCallback } from 'react';
+import React, { memo } from 'react';
 import {
   View,
   StyleSheet,
@@ -14,7 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary, neutral, status } from '@rallia/design-system';
 import type { ConversationPreview } from '@rallia/shared-services';
 
@@ -38,6 +38,7 @@ function ConversationActionsSheetComponent({
   onLeave,
 }: ConversationActionsSheetProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
 
   if (!conversation) return null;
 
@@ -50,7 +51,7 @@ function ConversationActionsSheetComponent({
   const conversationName = 
     conversation.conversation_type === 'direct' && conversation.other_participant
       ? `${conversation.other_participant.first_name}${conversation.other_participant.last_name ? ' ' + conversation.other_participant.last_name : ''}`
-      : conversation.title || 'Conversation';
+      : conversation.title || t('chat.actions.conversation' as any);
 
   type ActionItem = {
     id: string;
@@ -64,7 +65,7 @@ function ConversationActionsSheetComponent({
   const actions: ActionItem[] = [
     {
       id: 'pin',
-      label: isPinned ? 'Unpin' : 'Pin',
+      label: isPinned ? t('chat.actions.unpin' as any) : t('chat.actions.pin' as any),
       icon: isPinned ? 'pin-outline' : 'pin',
       onPress: () => {
         onTogglePin();
@@ -73,7 +74,7 @@ function ConversationActionsSheetComponent({
     },
     {
       id: 'mute',
-      label: isMuted ? 'Unmute' : 'Mute',
+      label: isMuted ? t('chat.actions.unmute' as any) : t('chat.actions.mute' as any),
       icon: isMuted ? 'notifications' : 'notifications-off',
       onPress: () => {
         onToggleMute();
@@ -82,7 +83,7 @@ function ConversationActionsSheetComponent({
     },
     {
       id: 'archive',
-      label: isArchived ? 'Unarchive' : 'Archive',
+      label: isArchived ? t('chat.actions.unarchive' as any) : t('chat.actions.archive' as any),
       icon: isArchived ? 'archive-outline' : 'archive',
       onPress: () => {
         onToggleArchive();
@@ -91,7 +92,7 @@ function ConversationActionsSheetComponent({
     },
     {
       id: 'leave',
-      label: 'Leave Group',
+      label: t('chat.actions.leaveGroup' as any),
       icon: 'exit',
       onPress: () => {
         onLeave?.();
@@ -166,7 +167,7 @@ function ConversationActionsSheetComponent({
             activeOpacity={0.7}
           >
             <Text style={[styles.cancelText, { color: colors.text }]}>
-              Cancel
+              {t('common.cancel' as any)}
             </Text>
           </TouchableOpacity>
         </Pressable>

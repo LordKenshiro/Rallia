@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../../hooks';
+import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
 import { useAddScore } from './AddScoreContext';
 import { ContactPickerModal } from './ContactPickerModal';
 import type { SelectedPlayer } from './types';
@@ -28,6 +28,7 @@ interface FindOpponentStepProps {
 
 export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const { formData, updateFormData, matchType } = useAddScore();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -198,11 +199,11 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Title */}
       <Text weight="bold" size="xl" style={[styles.title, { color: colors.text }]}>
-        {matchType === 'double' ? 'Find your opponents' : 'Find your opponent'}
+        {matchType === 'double' ? t('addScore.findOpponent.titleDouble' as TranslationKey) : t('addScore.findOpponent.title' as TranslationKey)}
       </Text>
       {matchType === 'double' && (
         <Text size="sm" style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Select 3 players (you + 3 others = 4 players for doubles)
+          {t('addScore.findOpponent.subtitle' as TranslationKey)}
         </Text>
       )}
 
@@ -211,7 +212,7 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
         <Ionicons name="search" size={20} color={colors.textMuted} />
         <TextInput
           style={[styles.searchInput, { color: colors.text }]}
-          placeholder="Search players"
+          placeholder={t('addScore.findOpponent.searchPlaceholder' as TranslationKey)}
           placeholderTextColor={colors.textMuted}
           value={searchQuery}
           onChangeText={handleSearch}
@@ -265,10 +266,10 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
           </View>
           <View style={styles.contactsTextContainer}>
             <Text weight="medium" style={{ color: colors.primary }}>
-              Add player
+              {t('addScore.findOpponent.addPlayer' as TranslationKey)}
             </Text>
             <Text size="sm" style={{ color: colors.textSecondary }}>
-              From Phone Contacts
+              {t('addScore.findOpponent.fromPhoneContacts' as TranslationKey)}
             </Text>
           </View>
         </TouchableOpacity>
@@ -285,19 +286,19 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
             <Ionicons name="search" size={64} color={colors.textMuted} />
           </View>
           <Text style={{ color: colors.textSecondary, textAlign: 'center' }}>
-            Type the name of the player to find them on Rallia
+            {t('addScore.findOpponent.searchHint' as TranslationKey)}
           </Text>
         </View>
       ) : searchResults.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={{ color: colors.textSecondary, textAlign: 'center' }}>
-            No players found matching "{searchQuery}"
+            {t('addScore.findOpponent.noPlayersFound' as TranslationKey, { query: searchQuery })}
           </Text>
         </View>
       ) : (
         <View style={{ flex: 1 }}>
           <Text size="xs" weight="medium" style={[styles.sectionHeader, { color: colors.textMuted }]}>
-            PLAYERS
+            {t('addScore.findOpponent.players' as TranslationKey)}
           </Text>
           <FlatList
             data={searchResults}

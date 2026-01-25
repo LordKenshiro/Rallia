@@ -149,8 +149,12 @@ export async function getGroupWithMembers(groupId: string): Promise<GroupWithMem
 
 /**
  * Get all groups for a player (groups they are a member of)
+ * Only returns networks with type 'player_group', not communities
  */
 export async function getPlayerGroups(playerId: string): Promise<Group[]> {
+  // First get the player_group type ID
+  const typeId = await getPlayerGroupTypeId();
+
   const { data, error } = await supabase
     .from('network_member')
     .select(`
@@ -166,9 +170,14 @@ export async function getPlayerGroups(playerId: string): Promise<Group[]> {
     throw new Error(error.message);
   }
 
-  // Extract networks from the join - use explicit type cast due to Supabase relation inference
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const groups = (data || []).map((d: any) => d.network).filter(Boolean) as Group[];
+  // Extract networks from the join and filter to only player_group type
+  // The raw database row includes network_type_id which we filter on
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const groups = (data || [])
+    .map((d: any) => d.network)
+    .filter((network: any) => network && network.network_type_id === typeId) as Group[];
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+  
   return groups;
 }
 

@@ -37,7 +37,6 @@ import type {
 } from '@rallia/shared-types';
 import type { TranslationKey, TranslationOptions } from '../../../../hooks/useTranslation';
 import { useUserLocation } from '../../../../hooks/useUserLocation';
-import { supabase } from '../../../../lib/supabase';
 import { BookingConfirmationSheet } from '../BookingConfirmationSheet';
 import { CourtSelectionSheet } from '../CourtSelectionSheet';
 
@@ -812,7 +811,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   });
 
   // Preferred facility hook - fetch the player's preferred facility
-  const { preferredFacility, isLoading: preferredFacilityLoading } = usePreferredFacility({
+  const { preferredFacility } = usePreferredFacility({
     preferredFacilityId,
     sportId,
     latitude: location?.latitude,
@@ -848,7 +847,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   });
 
   // State for fetching place details
-  const [isFetchingPlaceDetails, setIsFetchingPlaceDetails] = useState(false);
+  const [, setIsFetchingPlaceDetails] = useState(false);
 
   // Handle facility selection
   const handleSelectFacility = useCallback(
@@ -1037,6 +1036,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
     }
 
     return null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     isLoadingFacilities,
     locationLoading,

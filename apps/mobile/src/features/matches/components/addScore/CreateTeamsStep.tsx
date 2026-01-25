@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../../hooks';
+import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
 import { primary } from '@rallia/design-system';
 import { useAddScore } from './AddScoreContext';
 import type { SelectedPlayer } from './types';
@@ -26,6 +26,7 @@ interface CreateTeamsStepProps {
 
 export function CreateTeamsStep({ onContinue }: CreateTeamsStepProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const { formData, updateFormData } = useAddScore();
   const opponents = formData.opponents || [];
 
@@ -98,10 +99,10 @@ export function CreateTeamsStep({ onContinue }: CreateTeamsStepProps) {
     >
       {/* Title */}
       <Text weight="bold" size="xl" style={[styles.title, { color: colors.text }]}>
-        Create teams
+        {t('addScore.createTeams.title' as TranslationKey)}
       </Text>
       <Text size="sm" style={[styles.subtitle, { color: colors.textSecondary }]}>
-        Pick a player as your partner
+        {t('addScore.createTeams.pickPartner' as TranslationKey)}
       </Text>
 
       {/* Player list */}
@@ -113,13 +114,13 @@ export function CreateTeamsStep({ onContinue }: CreateTeamsStepProps) {
       {selectedPartner && (
         <View style={styles.teamPreview}>
           <Text weight="semibold" style={[styles.previewTitle, { color: colors.text }]}>
-            Teams Preview
+            {t('addScore.createTeams.teamsPreview' as TranslationKey)}
           </Text>
 
           {/* Your Team */}
           <View style={[styles.teamCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
             <Text size="sm" weight="medium" style={[styles.teamLabel, { color: colors.primary }]}>
-              Your Team
+              {t('addScore.createTeams.yourTeam' as TranslationKey)}
             </Text>
             <View style={styles.teamAvatars}>
               <View style={[styles.previewAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
@@ -136,14 +137,14 @@ export function CreateTeamsStep({ onContinue }: CreateTeamsStepProps) {
               </View>
             </View>
             <Text size="sm" style={{ color: colors.textSecondary }}>
-              You & {selectedPartner.firstName}
+              {t('addScore.createTeams.youAnd' as TranslationKey, { name: selectedPartner.firstName })}
             </Text>
           </View>
 
           {/* Opponent Team */}
           <View style={[styles.teamCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
             <Text size="sm" weight="medium" style={[styles.teamLabel, { color: colors.textSecondary }]}>
-              Opponents
+              {t('addScore.createTeams.opponents' as TranslationKey)}
             </Text>
             <View style={styles.teamAvatars}>
               {opponents

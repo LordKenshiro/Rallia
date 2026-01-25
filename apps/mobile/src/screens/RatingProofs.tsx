@@ -21,10 +21,8 @@ import {
   spacingPixels,
   radiusPixels,
   fontSizePixels,
-  fontWeightNumeric,
   shadowsNative,
   status,
-  primary,
 } from '@rallia/design-system';
 
 type RatingProofsRouteProp = RouteProp<{ RatingProofs: RatingProofsScreenParams }, 'RatingProofs'>;
@@ -32,8 +30,8 @@ type RatingProofsRouteProp = RouteProp<{ RatingProofs: RatingProofsScreenParams 
 const RatingProofs: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute<RatingProofsRouteProp>();
-  const { playerRatingScoreId, sportName: _sportName, ratingValue, isOwnProfile } = route.params;
-  const { colors, shadows } = useThemeStyles();
+  const { playerRatingScoreId, ratingValue, isOwnProfile } = route.params;
+  const { colors } = useThemeStyles();
   const { locale } = useTranslation();
   const toast = useToast();
 

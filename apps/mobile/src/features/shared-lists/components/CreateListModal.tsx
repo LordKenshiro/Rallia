@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
+import { useTranslation } from '../../../hooks';
 import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
 import { neutral } from '@rallia/design-system';
 import {
@@ -51,6 +52,7 @@ const CreateListModal: React.FC<CreateListModalProps> = ({
   isDark,
   onClose,
 }) => {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,10 +72,35 @@ const CreateListModal: React.FC<CreateListModalProps> = ({
     }
   }, [visible, editingList]);
 
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = () => {
+    if (isEditing && editingList) {
+      return name.trim() !== editingList.name || 
+             description.trim() !== (editingList.description || '');
+    }
+    return name.trim() !== '' || description.trim() !== '';
+  };
+
+  // Handle close with discard confirmation
+  const handleClose = () => {
+    if (hasUnsavedChanges()) {
+      Alert.alert(
+        t('sharedLists.discardChanges' as any),
+        t('sharedLists.discardChangesMessage' as any),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('sharedLists.discard' as any), style: 'destructive', onPress: () => onClose() },
+        ]
+      );
+    } else {
+      onClose();
+    }
+  };
+
   const handleSubmit = async () => {
     const trimmedName = name.trim();
     if (!trimmedName) {
-      Alert.alert('Error', 'Please enter a list name');
+      Alert.alert(t('alerts.error'), t('sharedLists.errors.nameRequired' as any));
       return;
     }
 
@@ -94,7 +121,7 @@ const CreateListModal: React.FC<CreateListModalProps> = ({
       onClose(true);
     } catch (error) {
       console.error('Failed to save list:', error);
-      Alert.alert('Error', `Failed to ${isEditing ? 'update' : 'create'} the list. Please try again.`);
+      Alert.alert(t('alerts.error'), isEditing ? t('sharedLists.errors.failedToUpdate' as any) : t('sharedLists.errors.failedToCreate' as any));
     } finally {
       setIsSubmitting(false);
     }
@@ -105,7 +132,7 @@ const CreateListModal: React.FC<CreateListModalProps> = ({
       visible={visible}
       animationType="slide"
       presentationStyle="pageSheet"
-      onRequestClose={() => onClose()}
+      onRequestClose={handleClose}
     >
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.background }]}
@@ -113,13 +140,13 @@ const CreateListModal: React.FC<CreateListModalProps> = ({
       >
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => onClose()} disabled={isSubmitting}>
+          <TouchableOpacity onPress={handleClose} disabled={isSubmitting}>
             <Text size="base" color={colors.primary}>
-              Cancel
+              {t('common.cancel')}
             </Text>
           </TouchableOpacity>
           <Text size="lg" weight="semibold" color={colors.text}>
-            {isEditing ? 'Edit List' : 'New List'}
+            {isEditing ? t('sharedLists.editList') : t('sharedLists.newList' as any)}
           </Text>
           <TouchableOpacity onPress={handleSubmit} disabled={isSubmitting || !name.trim()}>
             {isSubmitting ? (
@@ -130,7 +157,7 @@ const CreateListModal: React.FC<CreateListModalProps> = ({
                 weight="semibold"
                 color={name.trim() ? colors.primary : colors.textMuted}
               >
-                {isEditing ? 'Save' : 'Create'}
+                {isEditing ? t('common.save') : t('sharedLists.createList')}
               </Text>
             )}
           </TouchableOpacity>
@@ -140,9 +167,14 @@ const CreateListModal: React.FC<CreateListModalProps> = ({
         <View style={styles.form}>
           {/* Name Input */}
           <View style={styles.inputGroup}>
-            <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.label}>
-              List Name *
-            </Text>
+            <View style={styles.labelRow}>
+              <Text size="sm" weight="medium" color={colors.textSecondary}>
+                {t('sharedLists.listName')} *
+              </Text>
+              <Text size="xs" color={colors.textMuted}>
+                {name.length}/100
+              </Text>
+            </View>
             <TextInput
               style={[
                 styles.input,
@@ -154,7 +186,7 @@ const CreateListModal: React.FC<CreateListModalProps> = ({
               ]}
               value={name}
               onChangeText={setName}
-              placeholder="e.g., Tennis Buddies"
+              placeholder={t('sharedLists.listNamePlaceholder')}
               placeholderTextColor={colors.textMuted}
               autoFocus
               maxLength={100}
@@ -164,9 +196,14 @@ const CreateListModal: React.FC<CreateListModalProps> = ({
 
           {/* Description Input */}
           <View style={styles.inputGroup}>
-            <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.label}>
-              Description (optional)
-            </Text>
+            <View style={styles.labelRow}>
+              <Text size="sm" weight="medium" color={colors.textSecondary}>
+                {t('sharedLists.listDescription')}
+              </Text>
+              <Text size="xs" color={colors.textMuted}>
+                {description.length}/500
+              </Text>
+            </View>
             <TextInput
               style={[
                 styles.input,
@@ -179,7 +216,7 @@ const CreateListModal: React.FC<CreateListModalProps> = ({
               ]}
               value={description}
               onChangeText={setDescription}
-              placeholder="Add a description for this list..."
+              placeholder={t('sharedLists.listDescriptionPlaceholder')}
               placeholderTextColor={colors.textMuted}
               multiline
               numberOfLines={3}
@@ -193,7 +230,7 @@ const CreateListModal: React.FC<CreateListModalProps> = ({
           <View style={[styles.hint, { backgroundColor: isDark ? neutral[800] : neutral[100] }]}>
             <Ionicons name="information-circle-outline" size={20} color={colors.textSecondary} />
             <Text size="sm" color={colors.textSecondary} style={styles.hintText}>
-              After creating your list, you can add contacts from your phone or enter them manually.
+              {t('sharedLists.createListHint' as any)}
             </Text>
           </View>
         </View>
@@ -219,6 +256,12 @@ const styles = StyleSheet.create({
   },
   inputGroup: {
     marginBottom: spacingPixels[4],
+  },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacingPixels[2],
   },
   label: {
     marginBottom: spacingPixels[2],

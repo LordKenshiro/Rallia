@@ -24,7 +24,7 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { Text } from '@rallia/shared-components';
 import { lightHaptic, selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useAuth } from '../hooks';
+import { useThemeStyles, useAuth, useTranslation, type TranslationKey } from '../hooks';
 import {
   useGroupWithMembers,
   useGroupStats,
@@ -64,11 +64,7 @@ type GroupDetailRouteProp = RouteProp<RootStackParamList, 'GroupDetail'>;
 
 type TabKey = 'home' | 'leaderboard' | 'activity';
 
-const TABS: { key: TabKey; label: string }[] = [
-  { key: 'home', label: 'Home' },
-  { key: 'leaderboard', label: 'Leaderboard' },
-  { key: 'activity', label: 'Activity' },
-];
+const TAB_KEYS: TabKey[] = ['home', 'leaderboard', 'activity'];
 
 export default function GroupDetailScreen() {
   const navigation = useNavigation<NavigationProp>();
@@ -77,6 +73,7 @@ export default function GroupDetailScreen() {
 
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
+  const { t } = useTranslation();
   const playerId = session?.user?.id;
 
   const [activeTab, setActiveTab] = useState<TabKey>('home');
@@ -168,12 +165,12 @@ export default function GroupDetailScreen() {
 
   const handleLeaveGroup = useCallback(() => {
     Alert.alert(
-      'Leave Group',
-      'Are you sure you want to leave this group?',
+      t('groups.leaveGroup'),
+      t('groups.confirmations.leave'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Leave',
+          text: t('common.leave'),
           style: 'destructive',
           onPress: async () => {
             if (!playerId) return;
@@ -181,22 +178,22 @@ export default function GroupDetailScreen() {
               await leaveGroupMutation.mutateAsync({ groupId, playerId });
               navigation.goBack();
             } catch (error) {
-              Alert.alert('Error', error instanceof Error ? error.message : 'Failed to leave group');
+              Alert.alert(t('common.error'), error instanceof Error ? error.message : t('groups.errors.failedToLeave' as TranslationKey));
             }
           },
         },
       ]
     );
-  }, [groupId, playerId, leaveGroupMutation, navigation]);
+  }, [groupId, playerId, leaveGroupMutation, navigation, t]);
 
   const handleDeleteGroup = useCallback(() => {
     Alert.alert(
-      'Delete Group',
-      'Are you sure you want to delete this group? This action cannot be undone.',
+      t('groups.deleteGroup'),
+      t('groups.confirmations.delete'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             if (!playerId) return;
@@ -204,13 +201,13 @@ export default function GroupDetailScreen() {
               await deleteGroupMutation.mutateAsync({ groupId, playerId });
               navigation.goBack();
             } catch (error) {
-              Alert.alert('Error', error instanceof Error ? error.message : 'Failed to delete group');
+              Alert.alert(t('common.error'), error instanceof Error ? error.message : t('groups.errors.failedToDelete' as TranslationKey));
             }
           },
         },
       ]
     );
-  }, [groupId, playerId, deleteGroupMutation, navigation]);
+  }, [groupId, playerId, deleteGroupMutation, navigation, t]);
 
   const handleShowOptions = useCallback(() => {
     setShowOptionsModal(true);
@@ -224,7 +221,7 @@ export default function GroupDetailScreen() {
     // Share invite link - available to all members
     options.push({
       id: 'invite',
-      label: 'Share Invite Link',
+      label: t('groups.options.shareInviteLink' as TranslationKey),
       icon: 'link-outline',
       onPress: () => setShowInviteLinkModal(true),
     });
@@ -232,7 +229,7 @@ export default function GroupDetailScreen() {
     if (isModerator) {
       options.push({
         id: 'edit',
-        label: 'Edit Group',
+        label: t('groups.options.editGroup' as TranslationKey),
         icon: 'create-outline',
         onPress: () => setShowEditModal(true),
       });
@@ -240,7 +237,7 @@ export default function GroupDetailScreen() {
 
     options.push({
       id: 'leave',
-      label: 'Leave Group',
+      label: t('groups.options.leaveGroup' as TranslationKey),
       icon: 'exit-outline',
       onPress: handleLeaveGroup,
       destructive: true,
@@ -249,7 +246,7 @@ export default function GroupDetailScreen() {
     if (isCreator) {
       options.push({
         id: 'delete',
-        label: 'Delete Group',
+        label: t('groups.options.deleteGroup' as TranslationKey),
         icon: 'trash-outline',
         onPress: handleDeleteGroup,
         destructive: true,
@@ -257,7 +254,7 @@ export default function GroupDetailScreen() {
     }
 
     return options;
-  }, [group, playerId, isModerator, handleLeaveGroup, handleDeleteGroup]);
+  }, [group, playerId, isModerator, handleLeaveGroup, handleDeleteGroup, t]);
 
   // Format activity time
   const formatActivityTime = useCallback((dateStr: string) => {
@@ -268,11 +265,11 @@ export default function GroupDetailScreen() {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  }, []);
+    if (diffMins < 60) return t('groups.time.minutesAgo' as TranslationKey, { count: diffMins });
+    if (diffHours < 24) return t('groups.time.hoursAgo' as TranslationKey, { count: diffHours });
+    if (diffDays < 7) return t('groups.time.daysAgo' as TranslationKey, { count: diffDays });
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }, [t]);
 
   // Group activities by day
   const groupedActivities = useMemo(() => {
@@ -289,11 +286,11 @@ export default function GroupDetailScreen() {
       
       let dayLabel: string;
       if (date.toDateString() === today.toDateString()) {
-        dayLabel = 'Today';
+        dayLabel = t('groups.activityMessages.today' as TranslationKey);
       } else if (date.toDateString() === yesterday.toDateString()) {
-        dayLabel = 'Yesterday';
+        dayLabel = t('groups.activityMessages.yesterday' as TranslationKey);
       } else {
-        dayLabel = date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        dayLabel = date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
       }
       
       if (dayLabel !== currentDay) {
@@ -305,35 +302,35 @@ export default function GroupDetailScreen() {
     }
     
     return groups;
-  }, [activities]);
+  }, [activities, t]);
 
   // Get activity message
   const getActivityMessage = useCallback((activity: GroupActivityType) => {
-    const actorName = activity.actor?.profile?.first_name || 'Someone';
+    const actorName = activity.actor?.profile?.first_name || t('groups.activityMessages.someone' as TranslationKey);
     
     switch (activity.activity_type) {
       case 'member_joined':
         // Show "Added by [name]" if someone else added them
         if (activity.added_by_name) {
-          return `${actorName} was added by ${activity.added_by_name}`;
+          return t('groups.activityMessages.wasAddedBy' as TranslationKey, { actorName, addedByName: activity.added_by_name });
         }
-        return `${actorName} joined the group`;
+        return t('groups.activityMessages.joinedTheGroup' as TranslationKey, { actorName });
       case 'member_left':
-        return `${actorName} left the group`;
+        return t('groups.activityMessages.leftTheGroup' as TranslationKey, { actorName });
       case 'member_promoted':
-        return `${actorName} promoted a member to moderator`;
+        return t('groups.activityMessages.promotedMember' as TranslationKey, { actorName });
       case 'member_demoted':
-        return `${actorName} demoted a moderator to member`;
+        return t('groups.activityMessages.demotedMember' as TranslationKey, { actorName });
       case 'game_created':
-        return `${actorName} created a new game`;
+        return t('groups.activityMessages.createdGame' as TranslationKey, { actorName });
       case 'message_sent':
-        return `${actorName} sent a message`;
+        return t('groups.activityMessages.sentMessage' as TranslationKey, { actorName });
       case 'group_updated':
-        return `${actorName} updated the group`;
+        return t('groups.activityMessages.updatedGroup' as TranslationKey, { actorName });
       default:
-        return `${actorName} performed an action`;
+        return t('groups.activityMessages.performedAction' as TranslationKey, { actorName });
     }
-  }, []);
+  }, [t]);
 
   const renderTabContent = () => {
     // Calculate activity ring segments
@@ -371,14 +368,14 @@ export default function GroupDetailScreen() {
               <PendingScoresSection
                 playerId={playerId}
                 groupId={groupId}
-                title="Scores to Confirm"
+                title={t('groups.detail.scoresToConfirm' as TranslationKey)}
               />
             )}
 
             {/* Stats Card */}
             <View style={[styles.statsCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
               <Text weight="semibold" size="base" style={{ color: colors.text, marginBottom: 16 }}>
-                Last 7 days activities
+                {t('groups.detail.last7DaysActivities' as TranslationKey)}
               </Text>
               <View style={styles.statsRow}>
                 <View style={styles.statCircle}>
@@ -448,7 +445,7 @@ export default function GroupDetailScreen() {
                       <Text weight="bold" size="xl" style={{ color: colors.text }}>
                         {totalActivities}
                       </Text>
-                      <Text size="xs" style={{ color: colors.textSecondary }}>ACTIVITIES</Text>
+                      <Text size="xs" style={{ color: colors.textSecondary }}>{t('groups.activity.activities' as TranslationKey)}</Text>
                     </View>
                   </View>
                 </View>
@@ -456,19 +453,19 @@ export default function GroupDetailScreen() {
                   <View style={styles.statItem}>
                     <Ionicons name="people" size={20} color="#5AC8FA" />
                     <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
-                      {membersCount} new members
+                      {t('groups.activity.newMembers' as TranslationKey, { count: membersCount })}
                     </Text>
                   </View>
                   <View style={styles.statItem}>
                     <Ionicons name="tennisball" size={20} color="#FF9500" />
                     <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
-                      {gamesCount} game{gamesCount !== 1 ? 's' : ''} created
+                      {t('groups.activity.gamesCreated' as TranslationKey, { count: gamesCount })}
                     </Text>
                   </View>
                   <View style={styles.statItem}>
                     <Ionicons name="chatbubble-ellipses" size={20} color={isDark ? '#8E8E93' : '#C7C7CC'} />
                     <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
-                      {messagesCount} new messages in{'\n'}community chat
+                      {t('groups.activity.newMessages' as TranslationKey, { count: messagesCount })}
                     </Text>
                   </View>
                 </View>
@@ -481,7 +478,7 @@ export default function GroupDetailScreen() {
                 <View style={styles.aboutHeader}>
                   <Ionicons name="information-circle-outline" size={24} color={colors.primary} />
                   <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
-                    About
+                    {t('groups.home.about' as TranslationKey)}
                   </Text>
                 </View>
                 <Text style={{ color: colors.textSecondary, lineHeight: 22, marginTop: 8 }}>
@@ -496,12 +493,12 @@ export default function GroupDetailScreen() {
                 <View style={styles.sectionTitle}>
                   <Ionicons name="trophy" size={20} color={colors.primary} />
                   <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
-                    Leaderboard
+                    {t('groups.leaderboard.title')}
                   </Text>
                 </View>
                 <TouchableOpacity onPress={() => setActiveTab('leaderboard')}>
                   <Text size="sm" style={{ color: colors.primary }}>
-                    View all
+                    {t('groups.home.viewAll' as TranslationKey)}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -524,7 +521,7 @@ export default function GroupDetailScreen() {
                         )}
                       </View>
                       <Text size="sm" style={{ color: colors.text, flex: 1, marginLeft: 8 }}>
-                        {entry.player?.profile?.first_name || 'Player'}
+                        {entry.player?.profile?.first_name || t('groups.recentGames.player' as TranslationKey)}
                       </Text>
                       <Text size="sm" weight="semibold" style={{ color: colors.primary }}>
                         {entry.games_played}
@@ -534,7 +531,7 @@ export default function GroupDetailScreen() {
                 </View>
               ) : (
                 <Text size="sm" style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}>
-                  No games played yet
+                  {t('groups.detail.noGamesPlayedYet' as TranslationKey)}
                 </Text>
               )}
             </View>
@@ -543,10 +540,10 @@ export default function GroupDetailScreen() {
 
       case 'leaderboard': {
         const periodOptions = [
-          { value: 30, label: '30 days' },
-          { value: 90, label: '90 days' },
-          { value: 180, label: '180 days' },
-          { value: 0, label: 'All time' },
+          { value: 30, label: t('groups.leaderboardPeriod.30days' as TranslationKey) },
+          { value: 90, label: t('groups.leaderboardPeriod.90days' as TranslationKey) },
+          { value: 180, label: t('groups.leaderboardPeriod.180days' as TranslationKey) },
+          { value: 0, label: t('groups.leaderboardPeriod.allTime' as TranslationKey) },
         ];
         
         return (
@@ -557,12 +554,12 @@ export default function GroupDetailScreen() {
                 <View style={styles.sectionTitle}>
                   <Ionicons name="time" size={20} color={colors.textSecondary} />
                   <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
-                    Recent games
+                    {t('groups.recentGames.title' as TranslationKey)}
                   </Text>
                 </View>
                 <TouchableOpacity onPress={() => setShowRecentGamesModal(true)}>
                   <Text size="sm" style={{ color: colors.primary }}>
-                    View all
+                    {t('groups.recentGames.viewAll' as TranslationKey)}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -585,7 +582,7 @@ export default function GroupDetailScreen() {
                         color={colors.primary} 
                       />
                       <Text size="sm" style={{ color: colors.textSecondary, marginLeft: 6 }}>
-                        {recentMatch.match.sport?.name || 'Sport'} · {new Date(recentMatch.match.match_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        {recentMatch.match.sport?.name || t('common.game' as TranslationKey)} · {new Date(recentMatch.match.match_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                       </Text>
                     </View>
                     <View style={[
@@ -601,7 +598,7 @@ export default function GroupDetailScreen() {
                         color: recentMatch.match.player_expectation === 'competitive' ? '#2E7D32' : '#EF6C00',
                         marginLeft: 4,
                       }}>
-                        {recentMatch.match.player_expectation === 'competitive' ? 'Competitive' : 'Practice'}
+                        {recentMatch.match.player_expectation === 'competitive' ? t('groups.recentGames.competitive' as TranslationKey) : t('groups.recentGames.practice' as TranslationKey)}
                       </Text>
                     </View>
                   </View>
@@ -657,7 +654,7 @@ export default function GroupDetailScreen() {
                             style={{ color: colors.text, marginTop: 6, textAlign: 'center' }}
                             numberOfLines={2}
                           >
-                            {team1Players.map(p => p.player?.profile?.first_name || 'Player').join(', ')}
+                            {team1Players.map(p => p.player?.profile?.first_name || t('groups.recentGames.player' as TranslationKey)).join(', ')}
                           </Text>
                           
                           {/* Team Score - same for all team members */}
@@ -734,7 +731,7 @@ export default function GroupDetailScreen() {
                             style={{ color: colors.text, marginTop: 6, textAlign: 'center' }}
                             numberOfLines={2}
                           >
-                            {team2Players.map(p => p.player?.profile?.first_name || 'Player').join(', ')}
+                            {team2Players.map(p => p.player?.profile?.first_name || t('groups.recentGames.player' as TranslationKey)).join(', ')}
                           </Text>
                           
                           {/* Team Score - same for all team members */}
@@ -764,7 +761,7 @@ export default function GroupDetailScreen() {
                 <View style={styles.emptyMatch}>
                   <Ionicons name="tennisball-outline" size={32} color={colors.textMuted} />
                   <Text size="sm" style={{ color: colors.textSecondary, marginTop: 8 }}>
-                    No recent games
+                    {t('groups.recentGames.noGames' as TranslationKey)}
                   </Text>
                 </View>
               )}
@@ -776,7 +773,7 @@ export default function GroupDetailScreen() {
                 <View style={styles.sectionTitle}>
                   <Ionicons name="podium" size={20} color={colors.textSecondary} />
                   <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
-                    Leaderboard
+                    {t('groups.leaderboard.title')}
                   </Text>
                   <TouchableOpacity style={styles.infoButton}>
                     <Ionicons name="information-circle-outline" size={18} color={colors.textMuted} />
@@ -858,8 +855,8 @@ export default function GroupDetailScreen() {
 
                   {/* Stats Header */}
                   <View style={styles.leaderboardHeader}>
-                    <Text size="xs" style={{ color: colors.textMuted, flex: 1 }}>Players</Text>
-                    <Text size="xs" style={{ color: colors.textMuted, width: 80, textAlign: 'center' }}>Games played</Text>
+                    <Text size="xs" style={{ color: colors.textMuted, flex: 1 }}>{t('groups.leaderboard.players' as TranslationKey)}</Text>
+                    <Text size="xs" style={{ color: colors.textMuted, width: 80, textAlign: 'center' }}>{t('groups.leaderboard.gamesPlayed' as TranslationKey)}</Text>
                   </View>
 
                   {/* Leaderboard List */}
@@ -888,7 +885,7 @@ export default function GroupDetailScreen() {
                         )}
                       </View>
                       <Text size="sm" style={{ color: colors.text, flex: 1, marginLeft: 12 }}>
-                        {entry.player?.profile?.display_name || entry.player?.profile?.first_name || 'Player'}
+                        {entry.player?.profile?.display_name || entry.player?.profile?.first_name || t('groups.recentGames.player' as TranslationKey)}
                       </Text>
                       <Text size="sm" weight="semibold" style={{ color: colors.text, width: 80, textAlign: 'center' }}>
                         {entry.games_played}
@@ -900,7 +897,7 @@ export default function GroupDetailScreen() {
                 <View style={styles.emptyLeaderboard}>
                   <Ionicons name="trophy-outline" size={48} color={colors.textMuted} />
                   <Text style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}>
-                    Play games with group members to appear on the leaderboard
+                    {t('groups.detail.playGamesToAppear' as TranslationKey)}
                   </Text>
                 </View>
               )}
@@ -916,7 +913,7 @@ export default function GroupDetailScreen() {
               <View style={[styles.emptyActivity, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                 <Ionicons name="time-outline" size={48} color={colors.textMuted} />
                 <Text style={{ color: colors.textSecondary, marginTop: 12 }}>
-                  No recent activity
+                  {t('groups.detail.noRecentActivity' as TranslationKey)}
                 </Text>
               </View>
             ) : (
@@ -926,9 +923,16 @@ export default function GroupDetailScreen() {
                     {section.title}
                   </Text>
                   {section.data.map((activity) => (
-                    <View
+                    <TouchableOpacity
                       key={activity.id}
                       style={[styles.activityItem, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+                      onPress={() => {
+                        // Navigate to player profile if actor exists
+                        if (activity.actor?.id) {
+                          navigation.navigate('PlayerProfile', { playerId: activity.actor.id });
+                        }
+                      }}
+                      activeOpacity={0.7}
                     >
                       <View style={[styles.activityAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
                         {activity.actor?.profile?.profile_picture_url ? (
@@ -948,7 +952,8 @@ export default function GroupDetailScreen() {
                           {formatActivityTime(activity.created_at)}
                         </Text>
                       </View>
-                    </View>
+                      <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                    </TouchableOpacity>
                   ))}
                 </View>
               ))
@@ -977,13 +982,13 @@ export default function GroupDetailScreen() {
         <View style={styles.errorContainer}>
           <Ionicons name="warning-outline" size={64} color={colors.textMuted} />
           <Text style={{ color: colors.textSecondary, marginTop: 16 }}>
-            Group not found
+            {t('groups.notFound' as TranslationKey)}
           </Text>
           <TouchableOpacity
             style={[styles.backButton, { backgroundColor: colors.primary }]}
             onPress={() => navigation.goBack()}
           >
-            <Text style={{ color: '#FFFFFF' }}>Go Back</Text>
+            <Text style={{ color: '#FFFFFF' }}>{t('common.goBack')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -1029,7 +1034,7 @@ export default function GroupDetailScreen() {
             onPress={() => setShowMemberListModal(true)}
           >
             <Text size="sm" style={{ color: colors.textSecondary }}>
-              {group.member_count} members
+              {t('common.memberCount', { count: group.member_count })}
             </Text>
             <View style={styles.memberAvatars}>
               {group.members.slice(0, 5).map((member, index) => (
@@ -1075,7 +1080,7 @@ export default function GroupDetailScreen() {
               >
                 <Ionicons name="person-add" size={18} color={colors.primary} />
                 <Text weight="semibold" style={{ color: colors.primary, marginLeft: 8 }}>
-                  Add Member
+                  {t('groups.detail.addMember' as TranslationKey)}
                 </Text>
               </TouchableOpacity>
             )}
@@ -1090,20 +1095,20 @@ export default function GroupDetailScreen() {
 
         {/* Tab Bar */}
         <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
-          {TABS.map((tab) => (
+          {TAB_KEYS.map((tabKey) => (
             <TouchableOpacity
-              key={tab.key}
+              key={tabKey}
               style={[
                 styles.tab,
-                activeTab === tab.key && { borderBottomColor: colors.primary, borderBottomWidth: 2 },
+                activeTab === tabKey && { borderBottomColor: colors.primary, borderBottomWidth: 2 },
               ]}
-              onPress={() => setActiveTab(tab.key)}
+              onPress={() => setActiveTab(tabKey)}
             >
               <Text
-                weight={activeTab === tab.key ? 'semibold' : 'regular'}
-                style={{ color: activeTab === tab.key ? colors.primary : colors.textSecondary }}
+                weight={activeTab === tabKey ? 'semibold' : 'regular'}
+                style={{ color: activeTab === tabKey ? colors.primary : colors.textSecondary }}
               >
-                {tab.label}
+                {t(`groups.tabs.${tabKey}` as TranslationKey)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -1124,7 +1129,7 @@ export default function GroupDetailScreen() {
         >
           <Ionicons name="add-circle" size={20} color="#FFFFFF" />
           <Text weight="semibold" style={styles.chatButtonText}>
-            Add a played game
+            {t('community.leaderboard.addPlayedGame')}
           </Text>
         </TouchableOpacity>
       ) : activeTab === 'home' ? (
@@ -1134,7 +1139,7 @@ export default function GroupDetailScreen() {
         >
           <Ionicons name="chatbubbles" size={20} color="#FFFFFF" />
           <Text weight="semibold" style={styles.chatButtonText}>
-            Chat with members
+            {t('groups.chatWithMembers' as TranslationKey)}
           </Text>
         </TouchableOpacity>
       ) : null}

@@ -14,7 +14,7 @@
  * 7. Success (final)
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -266,7 +266,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     updateFormData,
     goToNextStep,
     goToPrevStep,
-    canGoBack,
     isLastStep,
     resetWizard,
     hasTennis,
@@ -352,6 +351,21 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     [setSelectedSport]
   );
 
+  // Calculate total availability selections for validation
+  const totalAvailabilitySelections = useMemo(() => {
+    return Object.values(formData.availabilities).reduce(
+      (count, day) => count + Object.values(day).filter(Boolean).length,
+      0
+    );
+  }, [formData.availabilities]);
+
+  // Check if button should be disabled based on current step
+  const isButtonDisabled = useMemo(() => {
+    if (isSaving) return true;
+    if (currentStepId === 'availabilities' && totalAvailabilitySelections < 5) return true;
+    return false;
+  }, [isSaving, currentStepId, totalAvailabilitySelections]);
+
   // Animation values
   const translateX = useSharedValue(0);
 
@@ -380,7 +394,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           !formData.gender ||
           !formData.phoneNumber.trim()
         ) {
-          Alert.alert('Error', 'Please fill in all required fields');
+          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.fillRequiredFields' as TranslationKey));
           warningHaptic();
           return false;
         }
@@ -425,7 +439,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
           if (error) {
             Logger.error('Failed to save personal info', error as Error);
-            Alert.alert('Error', 'Failed to save your information. Please try again.');
+            Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.failedToSaveInfo' as TranslationKey));
             setIsSaving(false);
             return false;
           }
@@ -434,14 +448,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           return true;
         } catch (error) {
           Logger.error('Unexpected error saving personal info', error as Error);
-          Alert.alert('Error', 'An unexpected error occurred.');
+          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.unexpectedError' as TranslationKey));
           setIsSaving(false);
           return false;
         }
 
       case 'sports':
         if (formData.selectedSportIds.length === 0) {
-          Alert.alert('Error', 'Please select at least one sport');
+          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.selectAtLeastOneSport' as TranslationKey));
           warningHaptic();
           return false;
         }
@@ -450,7 +464,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
       case 'tennis-rating':
         if (!formData.tennisRatingId) {
-          Alert.alert('Error', 'Please select your tennis rating');
+          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.selectTennisRating' as TranslationKey));
           warningHaptic();
           return false;
         }
@@ -460,7 +474,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           // Get current user ID for the rating
           const tennisUserId = await DatabaseService.Auth.getCurrentUserId();
           if (!tennisUserId) {
-            Alert.alert('Error', 'User not authenticated');
+            Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.userNotAuthenticated' as TranslationKey));
             setIsSaving(false);
             return false;
           }
@@ -474,7 +488,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
           if (tennisRatingError) {
             Logger.error('Failed to save tennis rating', tennisRatingError as Error);
-            Alert.alert('Error', 'Failed to save your tennis rating. Please try again.');
+            Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.failedToSaveRating' as TranslationKey));
             setIsSaving(false);
             return false;
           }
@@ -483,14 +497,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           return true;
         } catch (error) {
           Logger.error('Unexpected error saving tennis rating', error as Error);
-          Alert.alert('Error', 'An unexpected error occurred.');
+          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.unexpectedError' as TranslationKey));
           setIsSaving(false);
           return false;
         }
 
       case 'pickleball-rating':
         if (!formData.pickleballRatingId) {
-          Alert.alert('Error', 'Please select your pickleball rating');
+          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.selectPickleballRating' as TranslationKey));
           warningHaptic();
           return false;
         }
@@ -500,7 +514,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           // Get current user ID for the rating
           const pickleballUserId = await DatabaseService.Auth.getCurrentUserId();
           if (!pickleballUserId) {
-            Alert.alert('Error', 'User not authenticated');
+            Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.userNotAuthenticated' as TranslationKey));
             setIsSaving(false);
             return false;
           }
@@ -514,7 +528,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
           if (pickleballRatingError) {
             Logger.error('Failed to save pickleball rating', pickleballRatingError as Error);
-            Alert.alert('Error', 'Failed to save your pickleball rating. Please try again.');
+            Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.failedToSaveRating' as TranslationKey));
             setIsSaving(false);
             return false;
           }
@@ -523,7 +537,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           return true;
         } catch (error) {
           Logger.error('Unexpected error saving pickleball rating', error as Error);
-          Alert.alert('Error', 'An unexpected error occurred.');
+          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.unexpectedError' as TranslationKey));
           setIsSaving(false);
           return false;
         }
@@ -575,7 +589,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
           if (error) {
             Logger.error('Failed to save preferences', error as Error);
-            Alert.alert('Error', 'Failed to save your preferences. Please try again.');
+            Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.failedToSavePreferences' as TranslationKey));
             setIsSaving(false);
             return false;
           }
@@ -584,7 +598,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           return true;
         } catch (error) {
           Logger.error('Unexpected error saving preferences', error as Error);
-          Alert.alert('Error', 'An unexpected error occurred.');
+          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.unexpectedError' as TranslationKey));
           setIsSaving(false);
           return false;
         }
@@ -626,7 +640,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
           if (error) {
             Logger.error('Failed to save availability', error as Error);
-            Alert.alert('Error', 'Failed to save your availability. Please try again.');
+            Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.failedToSaveAvailability' as TranslationKey));
             setIsSaving(false);
             return false;
           }
@@ -651,7 +665,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           return true;
         } catch (error) {
           Logger.error('Unexpected error saving availability', error as Error);
-          Alert.alert('Error', 'An unexpected error occurred.');
+          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.unexpectedError' as TranslationKey));
           setIsSaving(false);
           return false;
         }
@@ -659,6 +673,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       default:
         return true;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     currentStepId,
     formData,
@@ -854,9 +869,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
         {!isLastStep ? (
           <TouchableOpacity
-            style={[styles.nextButton, { backgroundColor: colors.buttonActive }]}
+            style={[
+              styles.nextButton,
+              { backgroundColor: isButtonDisabled ? colors.buttonInactive : colors.buttonActive },
+            ]}
             onPress={handleNext}
-            disabled={isSaving}
+            disabled={isButtonDisabled}
             accessibilityLabel={t('common.next' as TranslationKey)}
             accessibilityRole="button"
           >
@@ -864,10 +882,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               <ActivityIndicator color={colors.buttonTextActive} />
             ) : (
               <>
-                <Text size="lg" weight="semibold" color={colors.buttonTextActive}>
+                <Text size="lg" weight="semibold" color={isButtonDisabled ? colors.textMuted : colors.buttonTextActive}>
                   {t('common.next' as TranslationKey)}
                 </Text>
-                <Ionicons name="arrow-forward" size={20} color={colors.buttonTextActive} />
+                <Ionicons name="arrow-forward" size={20} color={isButtonDisabled ? colors.textMuted : colors.buttonTextActive} />
               </>
             )}
           </TouchableOpacity>
@@ -875,11 +893,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           <TouchableOpacity
             style={[
               styles.nextButton,
-              { backgroundColor: colors.buttonActive },
-              isSaving && styles.buttonDisabled,
+              { backgroundColor: isButtonDisabled ? colors.buttonInactive : colors.buttonActive },
             ]}
             onPress={handleNext}
-            disabled={isSaving}
+            disabled={isButtonDisabled}
             accessibilityLabel={t('onboarding.complete' as TranslationKey)}
             accessibilityRole="button"
           >
@@ -887,10 +904,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               <ActivityIndicator color={colors.buttonTextActive} />
             ) : (
               <>
-                <Text size="lg" weight="semibold" color={colors.buttonTextActive}>
+                <Text size="lg" weight="semibold" color={isButtonDisabled ? colors.textMuted : colors.buttonTextActive}>
                   {t('onboarding.complete' as TranslationKey)}
                 </Text>
-                <Ionicons name="checkmark" size={20} color={colors.buttonTextActive} />
+                <Ionicons name="checkmark" size={20} color={isButtonDisabled ? colors.textMuted : colors.buttonTextActive} />
               </>
             )}
           </TouchableOpacity>

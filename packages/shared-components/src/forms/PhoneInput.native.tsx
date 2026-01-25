@@ -225,15 +225,37 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
     );
   }, [searchQuery]);
 
+  // Format phone number for display as XXX-XXX-XXXX
+  const formatPhoneForDisplay = useCallback((digits: string): string => {
+    if (!digits) return '';
+    
+    // Remove any non-digits
+    const cleaned = digits.replace(/\D/g, '');
+    
+    // Format based on length
+    if (cleaned.length <= 3) {
+      return cleaned;
+    } else if (cleaned.length <= 6) {
+      return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
+    } else {
+      return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`;
+    }
+  }, []);
+
+  // Get the display value (formatted)
+  const displayValue = useMemo(() => formatPhoneForDisplay(localNumber), [localNumber, formatPhoneForDisplay]);
+
   // Handle local number change
   const handleLocalNumberChange = useCallback(
     (text: string) => {
-      // Only allow digits
+      // Only allow digits - remove formatting characters
       const cleaned = text.replace(/\D/g, '');
-      setLocalNumber(cleaned);
+      // Limit to 10 digits for North American numbers
+      const limited = cleaned.slice(0, 10);
+      setLocalNumber(limited);
 
-      const fullNumber = formatFullPhoneNumber(selectedCountry.dialCode, cleaned);
-      onChangePhone(fullNumber, selectedCountry.code, cleaned);
+      const fullNumber = formatFullPhoneNumber(selectedCountry.dialCode, limited);
+      onChangePhone(fullNumber, selectedCountry.code, limited);
     },
     [selectedCountry, onChangePhone]
   );
@@ -351,12 +373,12 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
               { color: mergedColors.text },
               inputStyle,
             ]}
-            value={localNumber}
+            value={displayValue}
             onChangeText={handleLocalNumberChange}
             placeholder={placeholder}
             placeholderTextColor={mergedColors.textMuted}
             keyboardType="phone-pad"
-            maxLength={maxLength}
+            maxLength={12} // XXX-XXX-XXXX = 12 characters with dashes
             editable={!disabled}
             onFocus={onFocus}
             onBlur={onBlur}
@@ -368,12 +390,12 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
               { color: mergedColors.text },
               inputStyle,
             ]}
-            value={localNumber}
+            value={displayValue}
             onChangeText={handleLocalNumberChange}
             placeholder={placeholder}
             placeholderTextColor={mergedColors.textMuted}
             keyboardType="phone-pad"
-            maxLength={maxLength}
+            maxLength={12} // XXX-XXX-XXXX = 12 characters with dashes
             editable={!disabled}
             onFocus={onFocus}
             onBlur={onBlur}
@@ -392,7 +414,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
         )}
         {showCharCount && (
           <Text style={[styles.charCount, { color: mergedColors.textSecondary }]}>
-            {localNumber.length}/{maxLength}
+            {localNumber.length}/10
           </Text>
         )}
       </View>

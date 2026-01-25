@@ -15,7 +15,7 @@
 
 import * as React from 'react';
 import { useCallback, useMemo, useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions, Keyboard } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Dimensions, Keyboard, Modal, Alert } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -45,7 +45,7 @@ import { getMatchWithDetails } from '@rallia/shared-services';
 import { MatchCreationWizard } from '../features/matches';
 import { AuthWizard } from '../features/auth';
 import { OnboardingWizard } from '../features/onboarding/components/wizard';
-import { navigateFromOutside } from '../navigation';
+import { navigateFromOutside, navigateToCommunityScreen } from '../navigation';
 
 // =============================================================================
 // TYPES
@@ -123,24 +123,39 @@ interface ActionsContentProps {
 }
 
 const ActionsContent: React.FC<ActionsContentProps> = ({ onClose, onCreateMatch, colors, t }) => {
+  const [showNetworkModal, setShowNetworkModal] = useState(false);
+
   const handleInvitePlayers = () => {
     // TODO: Navigate to invite players flow
     onClose();
   };
 
   const handleCreateShareList = () => {
-    // TODO: Navigate to create share list flow
     onClose();
+    navigateToCommunityScreen('ShareLists');
   };
 
   const handleCreateNetwork = () => {
-    // TODO: Navigate to create network flow (combines groups and communities)
+    lightHaptic();
+    setShowNetworkModal(true);
+  };
+
+  const handleSelectGroup = () => {
+    setShowNetworkModal(false);
     onClose();
+    navigateToCommunityScreen('Groups');
+  };
+
+  const handleSelectCommunity = () => {
+    setShowNetworkModal(false);
+    onClose();
+    navigateToCommunityScreen('Communities');
   };
 
   const handleCreateEvent = () => {
     // TODO: Navigate to create event flow (combines tournaments and leagues)
     onClose();
+    Alert.alert('Create Event', 'This feature is coming soon!');
   };
 
   return (
@@ -186,6 +201,73 @@ const ActionsContent: React.FC<ActionsContentProps> = ({ onClose, onCreateMatch,
           colors={colors}
         />
       </View>
+
+      {/* Network Type Selection Modal */}
+      <Modal
+        visible={showNetworkModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowNetworkModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowNetworkModal(false)}
+        >
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <Text size="lg" weight="bold" color={colors.text} style={styles.modalTitle}>
+              {t('actions.selectNetworkType')}
+            </Text>
+            <Text size="sm" color={colors.textMuted} style={styles.modalSubtitle}>
+              {t('actions.selectNetworkTypeDescription')}
+            </Text>
+
+            <View style={styles.modalOptions}>
+              <TouchableOpacity
+                style={[styles.modalOption, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+                onPress={handleSelectGroup}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.modalOptionIcon, { backgroundColor: primary[100] }]}>
+                  <Ionicons name="people" size={28} color={primary[600]} />
+                </View>
+                <Text size="base" weight="semibold" color={colors.text}>
+                  {t('actions.group')}
+                </Text>
+                <Text size="xs" color={colors.textMuted} style={styles.modalOptionDescription}>
+                  {t('actions.groupDescription')}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalOption, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+                onPress={handleSelectCommunity}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.modalOptionIcon, { backgroundColor: primary[100] }]}>
+                  <Ionicons name="globe" size={28} color={primary[600]} />
+                </View>
+                <Text size="base" weight="semibold" color={colors.text}>
+                  {t('actions.community')}
+                </Text>
+                <Text size="xs" color={colors.textMuted} style={styles.modalOptionDescription}>
+                  {t('actions.communityDescription')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.modalCancelButton, { borderColor: colors.border }]}
+              onPress={() => setShowNetworkModal(false)}
+              activeOpacity={0.7}
+            >
+              <Text size="base" weight="medium" color={colors.textMuted}>
+                {t('common.cancel')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
@@ -571,6 +653,60 @@ const styles = StyleSheet.create({
   },
   actionDescription: {
     marginTop: spacingPixels[0.5],
+  },
+  // Network Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacingPixels[6],
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: radiusPixels.xl,
+    padding: spacingPixels[6],
+    alignItems: 'center',
+  },
+  modalTitle: {
+    marginBottom: spacingPixels[2],
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    marginBottom: spacingPixels[6],
+    textAlign: 'center',
+  },
+  modalOptions: {
+    flexDirection: 'row',
+    gap: spacingPixels[3],
+    marginBottom: spacingPixels[4],
+  },
+  modalOption: {
+    flex: 1,
+    alignItems: 'center',
+    padding: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+  },
+  modalOptionIcon: {
+    width: spacingPixels[14],
+    height: spacingPixels[14],
+    borderRadius: radiusPixels.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacingPixels[3],
+  },
+  modalOptionDescription: {
+    marginTop: spacingPixels[1],
+    textAlign: 'center',
+  },
+  modalCancelButton: {
+    width: '100%',
+    paddingVertical: spacingPixels[3],
+    alignItems: 'center',
+    borderTopWidth: 1,
+    marginTop: spacingPixels[2],
   },
 });
 

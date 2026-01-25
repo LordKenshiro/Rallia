@@ -18,7 +18,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary, status } from '@rallia/design-system';
 import type { MessageWithSender, ReactionSummary } from '@rallia/shared-services';
 
@@ -54,6 +54,7 @@ function MessageBubbleComponent({
   isCurrentHighlight = false,
 }: MessageBubbleProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   
   // Animation values for swipe-to-reply
   const translateX = useRef(new Animated.Value(0)).current;
@@ -195,7 +196,7 @@ function MessageBubbleComponent({
             { color: isOwnMessage ? 'rgba(255,255,255,0.7)' : colors.textMuted },
           ]}
         >
-          This message was deleted
+          {t('chat.message.deleted' as any)}
         </Text>
       );
     }
@@ -341,7 +342,7 @@ function MessageBubbleComponent({
                       { color: isOwnMessage ? 'rgba(255,255,255,0.6)' : colors.textMuted },
                     ]}
                   >
-                    edited
+                    {t('chat.message.edited' as any)}
                   </Text>
                 )}
                 <Text

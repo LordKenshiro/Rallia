@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary, status } from '@rallia/design-system';
 
 interface ChatHeaderProps {
@@ -75,6 +75,7 @@ function ChatHeaderComponent({
   onClearChat,
 }: ChatHeaderProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [showMenu, setShowMenu] = useState(false);
 
@@ -95,33 +96,33 @@ function ChatHeaderComponent({
   const menuItems: MenuItem[] = [
     {
       id: 'search',
-      label: 'Search',
+      label: t('chat.menu.search' as any),
       icon: 'search',
       onPress: () => handleMenuItemPress(() => onSearchPress?.()),
     },
     {
       id: 'mute',
-      label: isMuted ? 'Unmute notifications' : 'Mute notifications',
+      label: isMuted ? t('chat.menu.unmuteNotifications' as any) : t('chat.menu.muteNotifications' as any),
       icon: isMuted ? 'notifications' : 'notifications-off',
       onPress: () => handleMenuItemPress(() => onToggleMute?.()),
     },
     {
       id: 'favorite',
-      label: isFavorite ? 'Remove from favorites' : 'Add to favorites',
+      label: isFavorite ? t('chat.menu.removeFromFavorites' as any) : t('chat.menu.addToFavorites' as any),
       icon: isFavorite ? 'heart-dislike' : 'heart',
       onPress: () => handleMenuItemPress(() => onToggleFavorite?.()),
       directOnly: true,
     },
     {
       id: 'block',
-      label: isBlocked ? 'Unblock' : 'Block',
+      label: isBlocked ? t('chat.menu.unblock' as any) : t('chat.menu.block' as any),
       icon: isBlocked ? 'person-add' : 'ban',
       onPress: () => handleMenuItemPress(() => onToggleBlock?.()),
       directOnly: true,
     },
     {
       id: 'report',
-      label: 'Report',
+      label: t('chat.menu.report' as any),
       icon: 'flag',
       onPress: () => handleMenuItemPress(() => onReport?.()),
       destructive: true,
@@ -129,7 +130,7 @@ function ChatHeaderComponent({
     },
     {
       id: 'clear',
-      label: 'Clear chat',
+      label: t('chat.menu.clearChat' as any),
       icon: 'trash-outline',
       onPress: () => handleMenuItemPress(() => onClearChat?.()),
       destructive: true,

@@ -17,7 +17,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text, useToast } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import {
   useRemoveGroupMember,
   usePromoteMember,
@@ -96,6 +96,7 @@ export function MemberListModal({
 }: MemberListModalProps) {
   const { colors, isDark } = useThemeStyles();
   const toast = useToast();
+  const { t } = useTranslation();
 
   const [selectedMember, setSelectedMember] = useState<GroupMember | null>(null);
   const [showMemberOptions, setShowMemberOptions] = useState(false);
@@ -144,7 +145,7 @@ export function MemberListModal({
       if (!memberIsModerator) {
         options.push({
           id: 'promote',
-          label: 'Promote to Moderator',
+          label: t('groups.promoteToModerator' as any),
           icon: 'arrow-up-circle-outline',
           onPress: async () => {
             try {
@@ -153,17 +154,17 @@ export function MemberListModal({
                 moderatorId: currentUserId,
                 playerIdToPromote: selectedMember.player_id,
               });
-              toast.success('Member promoted to moderator');
+              toast.success(t('groups.memberPromoted' as any));
               onMemberRemoved();
             } catch (error) {
-              toast.error(error instanceof Error ? error.message : 'Failed to promote member');
+              toast.error(error instanceof Error ? error.message : t('groups.failedToPromote' as any));
             }
           },
         });
       } else {
         options.push({
           id: 'demote',
-          label: 'Demote to Member',
+          label: t('groups.demoteToMember' as any),
           icon: 'arrow-down-circle-outline',
           onPress: async () => {
             try {
@@ -172,10 +173,10 @@ export function MemberListModal({
                 moderatorId: currentUserId,
                 playerIdToDemote: selectedMember.player_id,
               });
-              toast.success('Moderator demoted to member');
+              toast.success(t('groups.moderatorDemoted' as any));
               onMemberRemoved();
             } catch (error) {
-              toast.error(error instanceof Error ? error.message : 'Failed to demote member');
+              toast.error(error instanceof Error ? error.message : t('groups.failedToDemote' as any));
             }
           },
         });
@@ -183,17 +184,17 @@ export function MemberListModal({
 
       options.push({
         id: 'remove',
-        label: 'Remove from Group',
+        label: t('groups.removeFromGroup' as any),
         icon: 'person-remove-outline',
         destructive: true,
         onPress: () => {
           Alert.alert(
-            'Remove Member',
-            `Are you sure you want to remove ${selectedMember.player?.profile?.first_name || 'this member'} from the group?`,
+            t('groups.removeMember' as any),
+            t('groups.removeMemberConfirm' as any, { name: selectedMember.player?.profile?.first_name || t('groups.thisMember' as any) }),
             [
-              { text: 'Cancel', style: 'cancel' },
+              { text: t('common.cancel' as any), style: 'cancel' },
               {
-                text: 'Remove',
+                text: t('common.remove' as any),
                 style: 'destructive',
                 onPress: async () => {
                   try {
@@ -202,10 +203,10 @@ export function MemberListModal({
                       moderatorId: currentUserId,
                       playerIdToRemove: selectedMember.player_id,
                     });
-                    toast.success('Member removed from group');
+                    toast.success(t('groups.memberRemoved' as any));
                     onMemberRemoved();
                   } catch (error) {
-                    toast.error(error instanceof Error ? error.message : 'Failed to remove member');
+                    toast.error(error instanceof Error ? error.message : t('groups.failedToRemoveMember' as any));
                   }
                 },
               },
@@ -226,6 +227,7 @@ export function MemberListModal({
     demoteMemberMutation,
     onMemberRemoved,
     toast,
+    t,
   ]);
 
   // Get member info for the options modal
@@ -282,7 +284,7 @@ export function MemberListModal({
             </Text>
             {isSelf && (
               <Text size="xs" style={{ color: colors.textSecondary, marginLeft: 6 }}>
-                (You)
+                ({t('common.you' as any)})
               </Text>
             )}
           </View>
@@ -294,14 +296,14 @@ export function MemberListModal({
             {item.role === 'moderator' && (
               <View style={[styles.badge, { backgroundColor: isDark ? '#FF9500' : '#FFF3E0' }]}>
                 <Text size="xs" style={{ color: isDark ? '#FFFFFF' : '#FF9500' }}>
-                  Moderator
+                  {t('groups.moderator' as any)}
                 </Text>
               </View>
             )}
             {isCreator && (
               <View style={[styles.badge, { backgroundColor: isDark ? colors.primary : '#E8F5E9' }]}>
                 <Text size="xs" style={{ color: isDark ? '#FFFFFF' : colors.primary }}>
-                  Creator
+                  {t('groups.creator' as any)}
                 </Text>
               </View>
             )}
@@ -334,7 +336,7 @@ export function MemberListModal({
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: colors.border }]}>
               <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-                Members ({group.member_count})
+                {t('groups.members' as any)} ({group.member_count})
               </Text>
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                 <Ionicons name="close" size={24} color={colors.text} />
@@ -348,7 +350,7 @@ export function MemberListModal({
                   <Ionicons name="search-outline" size={18} color={colors.textMuted} style={styles.searchIcon} />
                   <TextInput
                     style={[styles.searchInput, { color: colors.text }]}
-                    placeholder="Search members..."
+                    placeholder={t('groups.searchMembers' as any)}
                     placeholderTextColor={colors.textMuted}
                     value={searchQuery}
                     onChangeText={setSearchQuery}

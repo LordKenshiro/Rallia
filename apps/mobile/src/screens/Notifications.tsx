@@ -308,7 +308,7 @@ const Notifications: React.FC = () => {
         locale={locale}
       />
     ),
-    [handleNotificationPress, markAsRead, deleteNotification, isDark, t, locale]
+    [handleNotificationPress, deleteNotification, isDark, t, locale]
   );
 
   const renderSectionHeader = useCallback(
