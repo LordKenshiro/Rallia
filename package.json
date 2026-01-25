@@ -49,7 +49,7 @@
     "reinstall": "npm run clean && npm install",
     "// reinstall": "Clean install - useful for fixing dependency issues",
     "// ----- Database -----": "",
-    "db:generate-types": "supabase gen types typescript --project-id bvfszzxkrsbojwpfromf > packages/shared-types/src/supabase.ts",
+    "db:generate-types": "supabase gen types typescript --project-id ncewkeoohdkpbcovbppd > packages/shared-types/src/supabase.ts",
     "// db:generate-types": "Generate TypeScript types from remote Supabase schema (set SUPABASE_PROJECT_ID env var)",
     "db:generate-types:staging": "supabase gen types typescript --project-id ahbaeewecdeguxtxtvhr > packages/shared-types/src/supabase.ts",
     "// db:generate-types:staging": "Generate TypeScript types from staging Supabase schema",

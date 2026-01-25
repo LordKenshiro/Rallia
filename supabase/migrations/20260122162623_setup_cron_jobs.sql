@@ -9,7 +9,7 @@
 -- - supabase_functions_url: Base URL for Edge Functions
 --   - Local: http://host.docker.internal:54321
 --   - Staging: https://ahbaeewecdeguxtxtvhr.supabase.co
---   - Production: https://bvfszzxkrsbojwpfromf.supabase.co
+--   - Production: https://ncewkeoohdkpbcovbppd.supabase.co
 -- - service_role_key: Service role key for authentication
 -- ============================================================================
 
