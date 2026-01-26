@@ -515,44 +515,74 @@ export default function AvailabilityCalendarPage() {
           }
         }
 
-        // Fetch bookings for this court and date with player info
-        const { data: bookings } = (await supabase
+        // Fetch bookings for this court and date
+        const { data: bookings } = await supabase
           .from('booking')
-          .select(
-            `
-            id, 
-            start_time, 
-            end_time,
-            player:player_id (
-              first_name,
-              last_name,
-              email
-            ),
-            guest_name,
-            guest_email
-          `
-          )
+          .select('id, start_time, end_time, player_id, notes')
           .eq('court_id', court.id)
           .eq('booking_date', dateStr)
-          .not('status', 'eq', 'cancelled')) as {
-          data: Array<{
-            id: string;
-            start_time: string;
-            end_time: string;
-            player: { first_name: string; last_name: string; email: string } | null;
-            guest_name: string | null;
-            guest_email: string | null;
-          }> | null;
-          error: unknown;
+          .not('status', 'eq', 'cancelled');
+
+        // Fetch profiles for all bookings with player_id in a single query
+        const playerIds =
+          bookings
+            ?.filter(b => b.player_id)
+            .map(b => b.player_id)
+            .filter((id): id is string => id !== null) || [];
+
+        const profilesMap: Map<string, { first_name: string; last_name: string; email: string }> =
+          new Map();
+        if (playerIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profile')
+            .select('id, first_name, last_name, email')
+            .in('id', playerIds);
+
+          if (profiles) {
+            profiles.forEach(profile => {
+              profilesMap.set(profile.id, {
+                first_name: profile.first_name || '',
+                last_name: profile.last_name || '',
+                email: profile.email || '',
+              });
+            });
+          }
+        }
+
+        // Helper function to parse guest info from notes
+        const parseGuestInfo = (notes: string | null) => {
+          if (!notes) return { name: null, email: null };
+
+          const guestMatch = notes.match(/Guest:\s*([^|]+)/);
+          const emailMatch = notes.match(/Email:\s*([^|]+)/);
+
+          return {
+            name: guestMatch ? guestMatch[1].trim() : null,
+            email: emailMatch ? emailMatch[1].trim() : null,
+          };
         };
 
         if (bookings) {
           for (const booking of bookings) {
-            const playerName =
-              booking.player?.first_name && booking.player?.last_name
-                ? `${booking.player.first_name} ${booking.player.last_name}`
-                : booking.guest_name || undefined;
-            const playerEmail = booking.player?.email || booking.guest_email || undefined;
+            const profile = booking.player_id ? profilesMap.get(booking.player_id) : null;
+
+            // For player bookings, use profile info; for guest bookings, parse from notes
+            let playerName: string | undefined;
+            let playerEmail: string | undefined;
+
+            if (profile) {
+              // Player booking
+              playerName =
+                profile.first_name && profile.last_name
+                  ? `${profile.first_name} ${profile.last_name}`
+                  : undefined;
+              playerEmail = profile.email || undefined;
+            } else if (!booking.player_id && booking.notes) {
+              // Guest booking - parse from notes
+              const guestInfo = parseGuestInfo(booking.notes);
+              playerName = guestInfo.name || undefined;
+              playerEmail = guestInfo.email || undefined;
+            }
 
             allSlots.push({
               court_id: court.id,
