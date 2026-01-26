@@ -737,7 +737,7 @@ export function useTypingIndicators(
   playerName: string | undefined
 ) {
   const [typingUsers, setTypingUsers] = useState<TypingIndicator[]>([]);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     // Early return for invalid state - cleanup function handles clearing

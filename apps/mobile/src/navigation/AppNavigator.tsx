@@ -365,6 +365,10 @@ function CourtsStack() {
  */
 function CommunityStack() {
   const mainScreenOptions = useMainScreenOptions();
+  const { colors } = useThemeStyles();
+  const { t } = useTranslation();
+  const sharedOptions = getSharedScreenOptions(colors);
+
   return (
     <CommunityStackNavigator.Navigator id="CommunityStack" screenOptions={fastAnimationOptions}>
       <CommunityStackNavigator.Screen
@@ -375,34 +379,38 @@ function CommunityStack() {
       <CommunityStackNavigator.Screen
         name="ShareLists"
         component={SharedLists}
-        options={{
-          title: 'Shared Lists',
-          headerBackTitle: 'Back',
-        }}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('community.shareLists') || 'Shared Lists',
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
       />
       <CommunityStackNavigator.Screen
         name="SharedListDetail"
         component={SharedListDetail}
-        options={{
-          title: 'List',
-          headerBackTitle: 'Back',
-        }}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('sharedLists.title') || 'List',
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
       />
       <CommunityStackNavigator.Screen
         name="Groups"
         component={Groups}
-        options={{
-          title: 'Groups',
-          headerBackTitle: 'Back',
-        }}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('community.groups') || 'Groups',
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
       />
       <CommunityStackNavigator.Screen
         name="Communities"
         component={Communities}
-        options={{
-          title: 'Communities',
-          headerBackTitle: 'Back',
-        }}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('community.communities') || 'Communities',
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
       />
     </CommunityStackNavigator.Navigator>
   );

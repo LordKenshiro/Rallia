@@ -63,7 +63,7 @@ const getDuprSkillLabelKey = (scoreValue: number): string => {
  * Maps DUPR score value to a description translation key
  */
 const getDuprDescriptionKey = (scoreValue: number): string => {
-  return `onboarding.ratingStep.duprDescriptions.${scoreValue.toFixed(1)}`;
+  return `onboarding.ratingStep.duprDescriptions.${scoreValue.toFixed(1).replace('.', '_')}`;
 };
 
 const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({

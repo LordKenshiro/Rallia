@@ -276,30 +276,263 @@
       "feedback_reminder": {
         "title": "N'oubliez pas d'évaluer votre partie",
         "body": "Les commentaires pour votre partie de {sportName} ferment dans 24 heures. Partagez votre expérience avec {opponentNames}!"
+      },
+      "score_confirmation": {
+        "title": "Confirmer le score de la partie",
+        "body": "Veuillez confirmer le score final de votre partie de {sportName} du {matchDate}."
       }
     }
   },
   "settings": {
-    "title": "Paramètres",
-    "language": "Langue",
-    "languageDescription": "Choisissez votre langue préférée",
-    "languageAuto": "Par défaut du système",
+    "nav": {
+      "general": "Général",
+      "generalDesc": "Paramètres de base",
+      "payments": "Paiements",
+      "paymentsDesc": "Stripe et facturation",
+      "policies": "Politiques",
+      "policiesDesc": "Règles d'annulation",
+      "members": "Membres",
+      "membersDesc": "Accès équipe",
+      "pricing": "Tarification",
+      "pricingDesc": "Gestion des tarifs"
+    },
     "notifications": "Notifications",
     "notificationsDescription": "Choisissez comment vous souhaitez être notifié pour différents événements. Activez ou désactivez chaque option.",
-    "privacy": "Confidentialité",
-    "subscription": "Abonnement",
-    "payments": "Paiements",
-    "about": "À propos",
-    "version": "Version",
-    "termsOfService": "Conditions d'utilisation",
-    "privacyPolicy": "Politique de confidentialité",
-    "logout": "Déconnexion",
-    "deleteAccount": "Supprimer le compte",
-    "theme": "Thème",
-    "darkMode": "Mode sombre",
-    "lightMode": "Mode clair",
+    "permissions": "Autorisations",
+    "language": "Langue",
+    "languageAuto": "Auto",
+    "languageDescription": "Choisissez votre langue préférée pour l'application",
+    "theme": "Apparence",
+    "lightMode": "Clair",
+    "darkMode": "Sombre",
     "systemTheme": "Système",
-    "permissions": "Permissions"
+    "logout": "Se déconnecter",
+    "deleteAccount": "Supprimer le compte",
+    "general": {
+      "title": "Paramètres généraux",
+      "description": "Gérez les paramètres de votre organisation.",
+      "notAuthenticated": "Vous devez être connecté pour accéder aux paramètres.",
+      "noOrganization": "Vous devez être membre d'une organisation pour accéder aux paramètres.",
+      "fetchError": "Échec du chargement des paramètres.",
+      "saveError": "Échec de l'enregistrement des paramètres.",
+      "saving": "Enregistrement...",
+      "save": "Enregistrer les modifications",
+      "saveSuccess": "Paramètres enregistrés avec succès!",
+      "orgInfo": {
+        "title": "Informations de l'organisation",
+        "description": "Informations de base sur votre organisation.",
+        "name": "Nom de l'organisation",
+        "email": "Courriel de contact",
+        "phone": "Numéro de téléphone",
+        "website": "Site web"
+      },
+      "booking": {
+        "title": "Paramètres de réservation",
+        "description": "Configurez comment les joueurs peuvent réserver des terrains.",
+        "slotDuration": "Durée par défaut du créneau",
+        "slotDurationHint": "Durée par défaut des réservations de terrain.",
+        "minutes": "minutes",
+        "minNotice": "Préavis minimum de réservation",
+        "minNoticeHint": "Combien de temps à l'avance une réservation doit être faite.",
+        "hours": "heures",
+        "hour": "heure",
+        "maxAdvance": "Réservation anticipée maximale",
+        "maxAdvanceHint": "Jusqu'à combien de temps à l'avance les joueurs peuvent réserver.",
+        "days": "jours",
+        "allowSameDay": "Autoriser les réservations le jour même",
+        "allowSameDayHint": "Permettre aux joueurs de réserver des terrains le jour même."
+      }
+    },
+    "orgPayments": {
+      "title": "Paramètres de paiement",
+      "description": "Connectez et gérez votre compte Stripe pour recevoir les paiements des réservations de terrains.",
+      "noOrganization": "Vous devez faire partie d'une organisation pour gérer les paramètres de paiement.",
+      "notConnected": {
+        "title": "Connectez votre compte Stripe",
+        "description": "Connectez un compte Stripe pour accepter les paiements des réservations de terrains. Vous pourrez recevoir les paiements directement sur votre compte bancaire."
+      },
+      "onboardingIncomplete": {
+        "title": "Complétez votre configuration Stripe",
+        "description": "La configuration de votre compte Stripe est incomplète. Veuillez continuer le processus d'intégration pour commencer à accepter les paiements."
+      },
+      "connected": {
+        "title": "Stripe connecté",
+        "description": "Votre compte Stripe est connecté et prêt à accepter les paiements."
+      },
+      "status": {
+        "chargesEnabled": "Accepter les paiements",
+        "payoutsEnabled": "Recevoir les versements",
+        "enabled": "Activé",
+        "disabled": "Désactivé"
+      },
+      "accountInfo": {
+        "title": "Détails du compte",
+        "accountId": "ID du compte",
+        "accountType": "Type de compte",
+        "currency": "Devise"
+      },
+      "connectButton": "Connecter Stripe",
+      "connecting": "Connexion...",
+      "continueOnboarding": "Continuer la configuration",
+      "continuing": "Chargement...",
+      "openDashboard": "Ouvrir le tableau de bord Stripe",
+      "ownerOnly": "Seuls les propriétaires d'organisation peuvent connecter des comptes Stripe.",
+      "successMessage": "Compte Stripe connecté avec succès!",
+      "helpText": "Stripe est utilisé pour traiter les paiements de manière sécurisée. Les fonds seront déposés directement sur votre compte bancaire.",
+      "errors": {
+        "missing_organization": "Organisation non trouvée.",
+        "not_authorized": "Vous n'êtes pas autorisé à gérer les paramètres de paiement de cette organisation.",
+        "no_account": "Aucun compte Stripe trouvé. Veuillez recommencer le processus de connexion.",
+        "callback_failed": "Une erreur s'est produite pendant le processus de connexion. Veuillez réessayer.",
+        "unknown": "Une erreur inconnue s'est produite."
+      }
+    },
+    "policies": {
+      "title": "Politiques d'annulation",
+      "description": "Configurez vos politiques d'annulation et de remboursement.",
+      "notAuthenticated": "Vous devez être connecté pour accéder aux politiques.",
+      "noOrganization": "Vous devez être membre d'une organisation pour accéder aux politiques.",
+      "fetchError": "Échec du chargement de la politique d'annulation.",
+      "saveError": "Échec de l'enregistrement de la politique d'annulation.",
+      "saving": "Enregistrement...",
+      "save": "Enregistrer la politique",
+      "saveSuccess": "Politique d'annulation enregistrée avec succès!",
+      "cancellation": {
+        "title": "Périodes de remboursement",
+        "description": "Définissez quand les joueurs peuvent annuler et recevoir des remboursements.",
+        "freePeriod": "Période de remboursement complet",
+        "freePeriodDescription": "Les annulations effectuées avant ce délai reçoivent un remboursement complet.",
+        "partialPeriod": "Période de remboursement partiel",
+        "partialPeriodDescription": "Les annulations effectuées pendant cette période reçoivent un remboursement partiel.",
+        "noRefundPeriod": "Période sans remboursement",
+        "noRefundPeriodDescription": "Les annulations effectuées après ce délai ne reçoivent aucun remboursement.",
+        "hoursBeforeBooking": "heures avant la réservation",
+        "percentRefund": "% de remboursement"
+      },
+      "preview": {
+        "title": "Aperçu de la politique",
+        "description": "Voici comment votre politique d'annulation apparaîtra aux joueurs.",
+        "text": "Les annulations effectuées plus de {freeHours} heures avant votre réservation reçoivent un remboursement complet. Les annulations effectuées entre {partialHours} et {freeHours} heures avant reçoivent un remboursement de {partialPercent}%. Les annulations effectuées moins de {noRefundHours} heures avant ne reçoivent aucun remboursement."
+      }
+    },
+    "members": {
+      "title": "Membres",
+      "description": "Gérez les membres de votre organisation et leurs rôles.",
+      "notAuthenticated": "Vous devez être connecté pour gérer les membres.",
+      "noOrganization": "Vous devez être membre d'une organisation pour gérer les membres.",
+      "fetchError": "Échec du chargement des membres.",
+      "removeError": "Échec de la suppression du membre.",
+      "roleChangeError": "Échec du changement de rôle du membre.",
+      "list": {
+        "title": "Membres de l'organisation",
+        "description": "{count} membres dans votre organisation",
+        "member": "Membre",
+        "role": "Rôle",
+        "joined": "Rejoint",
+        "unknownUser": "Utilisateur inconnu"
+      },
+      "roles": {
+        "owner": "Propriétaire",
+        "admin": "Administrateur",
+        "manager": "Gestionnaire",
+        "staff": "Personnel",
+        "member": "Membre"
+      },
+      "actions": {
+        "changeRole": "Changer le rôle",
+        "remove": "Supprimer le membre"
+      },
+      "remove": {
+        "title": "Supprimer le membre",
+        "description": "Êtes-vous sûr de vouloir supprimer {name} de votre organisation? Cette personne perdra l'accès à toutes les ressources de l'organisation.",
+        "cancel": "Annuler",
+        "confirm": "Supprimer le membre"
+      },
+      "changeRole": {
+        "title": "Changer le rôle",
+        "description": "Changer le rôle de {name}.",
+        "cancel": "Annuler",
+        "confirm": "Enregistrer les modifications"
+      },
+      "invite": {
+        "button": "Inviter un membre",
+        "title": "Inviter un nouveau membre",
+        "description": "Envoyez une invitation par courriel pour ajouter un nouveau membre à votre organisation.",
+        "emailLabel": "Adresse courriel",
+        "emailPlaceholder": "Entrez l'adresse courriel",
+        "roleLabel": "Rôle",
+        "roleHint": "Le rôle détermine les permissions que le membre aura.",
+        "cancel": "Annuler",
+        "send": "Envoyer l'invitation",
+        "sending": "Envoi...",
+        "success": "Invitation envoyée à {email}!",
+        "error": "Échec de l'envoi de l'invitation. Veuillez réessayer."
+      },
+      "pending": {
+        "title": "Invitations en attente",
+        "description": "{count} invitation(s) en attente",
+        "invitedAs": "Invité en tant que {role}",
+        "expires": "Expire le {date}",
+        "pending": "En attente",
+        "expired": "Expirée"
+      }
+    },
+    "pricing": {
+      "title": "Règles de tarification",
+      "description": "Configurez la tarification pour différentes heures, jours et terrains.",
+      "notAuthenticated": "Vous devez être connecté pour gérer la tarification.",
+      "noOrganization": "Vous devez être membre d'une organisation pour gérer la tarification.",
+      "fetchError": "Échec du chargement des règles de tarification.",
+      "saveError": "Échec de l'enregistrement de la règle de tarification.",
+      "deleteError": "Échec de la suppression de la règle de tarification.",
+      "addRule": "Ajouter une règle de tarification",
+      "editRule": "Modifier la règle de tarification",
+      "noRules": "Aucune règle de tarification configurée. Ajoutez votre première règle pour personnaliser la tarification.",
+      "addFirstRule": "Ajouter une première règle",
+      "allFacilities": "Toutes les installations",
+      "allDays": "Tous les jours",
+      "weekdays": "Jours de semaine",
+      "weekends": "Fins de semaine",
+      "ruleFormDescription": "Définissez une tarification personnalisée pour des heures, jours ou terrains spécifiques.",
+      "rules": {
+        "title": "Règles de tarification actives",
+        "description": "Les règles de priorité supérieure prévalent lorsque plusieurs règles s'appliquent.",
+        "name": "Nom",
+        "scope": "Portée",
+        "schedule": "Horaire",
+        "price": "Prix",
+        "status": "Actif"
+      },
+      "actions": {
+        "edit": "Modifier",
+        "delete": "Supprimer"
+      },
+      "form": {
+        "name": "Nom de la règle",
+        "namePlaceholder": "ex. Heures de pointe, Spécial fin de semaine",
+        "facility": "Installation",
+        "court": "Terrain",
+        "allFacilities": "Toutes les installations",
+        "allCourts": "Tous les terrains",
+        "days": "Jours de la semaine",
+        "startTime": "Heure de début",
+        "endTime": "Heure de fin",
+        "price": "Prix par créneau",
+        "priority": "Priorité",
+        "priorityHint": "Les règles de priorité supérieure remplacent les inférieures.",
+        "validFrom": "Valide à partir de",
+        "validUntil": "Valide jusqu'à",
+        "cancel": "Annuler",
+        "save": "Enregistrer les modifications",
+        "create": "Créer la règle"
+      },
+      "delete": {
+        "title": "Supprimer la règle de tarification",
+        "description": "Êtes-vous sûr de vouloir supprimer la règle de tarification « {name} »? Cette action ne peut pas être annulée.",
+        "cancel": "Annuler",
+        "confirm": "Supprimer la règle"
+      }
+    }
   },
   "permissions": {
     "description": "Gérez les permissions de l'application pour activer les notifications, la recherche de parties près de chez vous et la synchronisation du calendrier.",
@@ -514,30 +747,30 @@
         "professional": "Professionnel"
       },
       "ntrpDescriptions": {
-        "1.5": "Vous commencez tout juste à jouer au tennis.",
-        "2.0": "Vous avez une expérience limitée et travaillez principalement à mettre la balle en jeu.",
-        "2.5": "Vous apprenez à juger où va la balle et pouvez maintenir un court échange.",
-        "3.0": "Vous pouvez placer vos coups avec un succès modéré et maintenir un échange à un rythme lent.",
-        "3.5": "Vous avez atteint une meilleure fiabilité de coup avec contrôle directionnel.",
-        "4.0": "Vous avez des coups fiables et pouvez gérer le rythme et l'effet.",
-        "4.5": "Vous avez une bonne anticipation et avez fréquemment un coup exceptionnel.",
-        "5.0": "Vous avez une bonne anticipation et avez fréquemment un coup ou attribut exceptionnel.",
-        "5.5": "Vous pouvez varier les stratégies et styles de jeu en situation compétitive.",
-        "6.0": "Vous avez eu une formation intensive pour la compétition de tournois nationaux.",
-        "1.0": "Vous êtes nouveau au tennis et apprenez les bases."
+        "1_5": "Vous commencez tout juste à jouer au tennis.",
+        "2_0": "Vous avez une expérience limitée et travaillez principalement à mettre la balle en jeu.",
+        "2_5": "Vous apprenez à juger où va la balle et pouvez maintenir un court échange.",
+        "3_0": "Vous pouvez placer vos coups avec un succès modéré et maintenir un échange à un rythme lent.",
+        "3_5": "Vous avez atteint une meilleure fiabilité de coup avec contrôle directionnel.",
+        "4_0": "Vous avez des coups fiables et pouvez gérer le rythme et l'effet.",
+        "4_5": "Vous avez une bonne anticipation et avez fréquemment un coup exceptionnel.",
+        "5_0": "Vous avez une bonne anticipation et avez fréquemment un coup ou attribut exceptionnel.",
+        "5_5": "Vous pouvez varier les stratégies et styles de jeu en situation compétitive.",
+        "6_0": "Vous avez eu une formation intensive pour la compétition de tournois nationaux.",
+        "1_0": "Vous êtes nouveau au tennis et apprenez les bases."
       },
       "duprDescriptions": {
-        "1.0": "Vous commencez tout juste à jouer au pickleball.",
-        "2.0": "Vous avez une expérience limitée et travaillez principalement à mettre la balle en jeu.",
-        "2.5": "Vous apprenez à juger où va la balle et pouvez maintenir un court échange.",
-        "3.0": "Vous pouvez placer vos coups avec un succès modéré et maintenir un échange à un rythme lent.",
-        "3.5": "Vous avez atteint une meilleure fiabilité de coup avec contrôle directionnel.",
-        "4.0": "Vous avez des coups fiables et pouvez gérer le rythme et l'effet.",
-        "4.5": "Vous avez une bonne anticipation et avez fréquemment un coup exceptionnel.",
-        "5.0": "Vous avez une bonne anticipation et avez fréquemment un coup ou attribut exceptionnel.",
-        "5.5": "Vous pouvez varier les stratégies et styles de jeu en situation compétitive.",
-        "6.0": "Vous avez eu une formation intensive pour la compétition de tournois nationaux.",
-        "1.5": "Vous êtes nouveau au pickleball et apprenez les bases."
+        "1_0": "Vous commencez tout juste à jouer au pickleball.",
+        "2_0": "Vous avez une expérience limitée et travaillez principalement à mettre la balle en jeu.",
+        "2_5": "Vous apprenez à juger où va la balle et pouvez maintenir un court échange.",
+        "3_0": "Vous pouvez placer vos coups avec un succès modéré et maintenir un échange à un rythme lent.",
+        "3_5": "Vous avez atteint une meilleure fiabilité de coup avec contrôle directionnel.",
+        "4_0": "Vous avez des coups fiables et pouvez gérer le rythme et l'effet.",
+        "4_5": "Vous avez une bonne anticipation et avez fréquemment un coup exceptionnel.",
+        "5_0": "Vous avez une bonne anticipation et avez fréquemment un coup ou attribut exceptionnel.",
+        "5_5": "Vous pouvez varier les stratégies et styles de jeu en situation compétitive.",
+        "6_0": "Vous avez eu une formation intensive pour la compétition de tournois nationaux.",
+        "1_5": "Vous êtes nouveau au pickleball et apprenez les bases."
       }
     },
     "preferencesStep": {
@@ -655,6 +888,53 @@
       "unexpectedError": "Une erreur inattendue s'est produite.",
       "failedToSaveRating": "Échec de l'enregistrement de votre classement. Veuillez réessayer.",
       "invalidRatingSelected": "Classement sélectionné invalide"
+    },
+    "createOrganization": {
+      "badge": "Commencer",
+      "pageTitle": "Créer votre organisation",
+      "pageDescription": "Configurez le profil de votre organisation pour commencer à gérer vos installations et membres.",
+      "title": "Détails de l'organisation",
+      "description": "Remplissez les informations ci-dessous pour créer le profil de votre organisation.",
+      "basicInfo": "Informations de base",
+      "contactInfo": "Informations de contact",
+      "locationInfo": "Informations de localisation",
+      "yourRole": "Votre rôle",
+      "nameLabel": "Nom de l'organisation",
+      "namePlaceholder": "ex. Club de tennis de Toronto",
+      "typeLabel": "Type d'organisation",
+      "typeClub": "Club",
+      "typeMunicipality": "Municipalité",
+      "typeCity": "Ville",
+      "typeAssociation": "Association",
+      "natureLabel": "Nature",
+      "naturePublic": "Publique",
+      "naturePrivate": "Privée",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Parlez-nous de votre organisation...",
+      "emailLabel": "Courriel",
+      "emailPlaceholder": "contact@organisation.com",
+      "phoneLabel": "Téléphone",
+      "phonePlaceholder": "+1 (555) 123-4567",
+      "websiteLabel": "Site web",
+      "websitePlaceholder": "https://www.organisation.com",
+      "addressLabel": "Adresse",
+      "addressPlaceholder": "123 rue Principale",
+      "cityLabel": "Ville",
+      "cityPlaceholder": "Toronto",
+      "countryLabel": "Pays",
+      "countryPlaceholder": "Sélectionner le pays",
+      "postalCodeLabel": "Code postal",
+      "postalCodePlaceholder": "M5H 2N2",
+      "roleLabel": "Votre rôle dans cette organisation",
+      "roleOwner": "Propriétaire",
+      "roleAdmin": "Administrateur",
+      "roleStaff": "Personnel",
+      "roleCoach": "Entraîneur",
+      "rolePlayer": "Joueur",
+      "roleHint": "Sélectionnez le rôle qui décrit le mieux votre position dans cette organisation.",
+      "createButton": "Créer l'organisation",
+      "creating": "Création...",
+      "cancel": "Annuler"
     }
   },
   "matches": {
@@ -777,6 +1057,8 @@
       }
     },
     "inbox": "Boîte de réception",
+    "signInRequired": "Connectez-vous pour voir vos messages",
+    "signInPrompt": "Connectez-vous pour voir vos conversations et vous connecter avec d'autres joueurs.",
     "search": "Rechercher des joueurs",
     "searchConversations": "Rechercher des conversations",
     "newGroup": "Nouveau groupe",
@@ -2180,7 +2462,7 @@
     },
     "hero": {
       "badge": "Disponible début 2026",
-      "headline": "Ta prochaine partie t'attend",
+      "headline": "Ta prochaine partie t'attend.",
       "subheadline": "Connecte-toi avec des joueurs de ton niveau, planifie tes parties facilement, et ne joue plus jamais seul.",
       "ctaButton": "Rejoindre la liste d'attente",
       "ctaSubtext": "Aucune carte requise • Accès anticipé exclusif"
@@ -2341,7 +2623,7 @@
         },
         "matching": {
           "question": "Comment fonctionne le jumelage par niveau?",
-          "answer": "Notre système analyse votre niveau auto-déclaré, l'historique de vos matchs et les commentaires des joueurs pour évaluer précisément votre capacité. Vous serez jumelé avec des joueurs de votre niveau pour des parties compétitives et agréables."
+          "answer": "Notre système analyse votre niveau auto-déclaré, l'historique de vos parties et les commentaires des joueurs pour évaluer précisément votre capacité. Vous serez jumelé avec des joueurs de votre niveau pour des parties compétitives et agréables."
         },
         "privacy": {
           "question": "Mes données sont-elles privées et sécurisées?",
@@ -2353,7 +2635,7 @@
         },
         "platforms": {
           "question": "Sur quelles plateformes Rallia est-il disponible?",
-          "answer": "Rallia sera disponible comme application web, application iOS et application Android. Vous pourrez accéder à votre compte et planifier des matchs depuis n'importe quel appareil."
+          "answer": "Rallia sera disponible comme application web, application iOS et application Android. Vous pourrez accéder à votre compte et planifier des parties depuis n'importe quel appareil."
         }
       }
     }
@@ -2463,11 +2745,11 @@
         "all": "Tout"
       },
       "duration": {
+        "label": "Durée",
+        "all": "Toutes",
         "30": "30 min",
         "60": "1 heure",
         "90": "1,5 heures",
-        "label": "Durée",
-        "all": "Toutes",
         "120+": "2+ heures"
       },
       "courtStatus": {
@@ -2689,34 +2971,457 @@
     "cancel": "Annuler"
   },
   "dashboard": {
-    "badge": "Tableau de bord",
-    "title": "Bienvenue sur votre tableau de bord",
-    "description": "Gérez votre organisation et consultez les informations de votre profil.",
+    "title": "Tableau de bord",
+    "description": "Description",
+    "quickActions": {
+      "facilities": "Installations",
+      "facilitiesDesc": "Gérez vos sites",
+      "availability": "Disponibilité",
+      "availabilityDesc": "Voir l'horaire",
+      "bookings": "Réservations",
+      "bookingsDesc": "Gérer les réservations",
+      "settings": "Paramètres",
+      "settingsDesc": "Configurer les options",
+      "newBooking": "Nouvelle réservation"
+    },
+    "kpi": {
+      "todaysBookings": "Réservations du jour",
+      "todaysBookingsDesc": "prévues aujourd'hui",
+      "weekRevenue": "Cette semaine",
+      "weekRevenueDesc": "en revenus",
+      "utilization": "Utilisation",
+      "utilizationDesc": "taux d'occupation",
+      "pendingActions": "En attente",
+      "pendingActionsDesc": "actions requises"
+    },
+    "todaySchedule": {
+      "title": "Horaire du jour",
+      "noBookings": "Aucune réservation prévue aujourd'hui",
+      "viewAll": "Voir toutes les réservations",
+      "guest": "Invité"
+    },
+    "recentActivity": {
+      "title": "Activité récente",
+      "noActivity": "Aucune activité récente",
+      "bookingCreated": "Nouvelle réservation créée",
+      "bookingCancelled": "Réservation annulée",
+      "bookingCompleted": "Réservation complétée"
+    },
     "profileTitle": "Votre profil",
-    "profileDescription": "Vos informations personnelles et paramètres de compte.",
-    "organizationTitle": "Votre organisation",
-    "organizationDescription": "Détails sur votre organisation.",
+    "profileDescription": "Vos informations de compte",
+    "organizationTitle": "Organisation",
+    "organizationDescription": "Détails de votre organisation",
     "email": "Courriel",
+    "phone": "Téléphone",
     "fullName": "Nom complet",
     "displayName": "Nom d'affichage",
-    "locale": "Paramètres régionaux",
-    "timezone": "Fuseau horaire",
-    "name": "Nom",
-    "phone": "Téléphone",
-    "location": "Localisation",
+    "location": "Emplacement",
     "website": "Site web",
-    "role": "Rôle",
-    "joinedAt": "Rejoint le"
+    "joinedAt": "Membre depuis"
+  },
+  "facilities": {
+    "title": "Installations",
+    "description": "Gérez les installations et terrains de votre organisation.",
+    "emptyState": {
+      "title": "Aucune installation",
+      "description": "Ajoutez votre première installation pour commencer à gérer les terrains et les réservations.",
+      "addButton": "Ajouter une installation"
+    },
+    "addFacility": "Ajouter une installation",
+    "search": {
+      "placeholder": "Rechercher des installations...",
+      "noResults": "Aucune installation trouvée",
+      "noResultsDescription": "Aucune installation ne correspond à votre recherche ou vos filtres. Essayez d'ajuster vos critères.",
+      "clearFilters": "Effacer les filtres",
+      "results": "Affichage de {count} sur {total} installations"
+    },
+    "filter": {
+      "all": "Tous les statuts",
+      "active": "Actifs seulement",
+      "inactive": "Inactifs seulement"
+    },
+    "sort": {
+      "nameAsc": "Nom (A-Z)",
+      "nameDesc": "Nom (Z-A)",
+      "courtsDesc": "Plus de terrains",
+      "courtsAsc": "Moins de terrains"
+    },
+    "courtStatus": {
+      "available": "Disponible",
+      "maintenance": "Maintenance",
+      "closed": "Fermé",
+      "reserved": "Réservé",
+      "noCourts": "Aucun terrain ajouté",
+      "court": "Terrain",
+      "courts": "Terrains"
+    },
+    "quickActions": {
+      "availability": "Gérer la disponibilité",
+      "edit": "Modifier l'installation",
+      "courts": "Gérer les terrains"
+    },
+    "table": {
+      "name": "Nom",
+      "address": "Adresse",
+      "courts": "Terrains",
+      "status": "Statut",
+      "actions": "Actions"
+    },
+    "status": {
+      "active": "Actif",
+      "inactive": "Inactif"
+    },
+    "detail": {
+      "title": "Détails de l'installation",
+      "info": "Informations",
+      "address": "Adresse",
+      "city": "Ville",
+      "country": "Pays",
+      "postalCode": "Code postal",
+      "timezone": "Fuseau horaire",
+      "description": "Description",
+      "membershipRequired": "Adhésion requise",
+      "editButton": "Modifier l'installation",
+      "courtsSection": "Terrains",
+      "manageCourts": "Gérer les terrains",
+      "viewAllCourts": "Voir tous les terrains",
+      "stats": {
+        "totalCourts": "Total des terrains",
+        "activeCourts": "Terrains actifs",
+        "activeBookings": "Réservations actives"
+      }
+    },
+    "edit": {
+      "title": "Modifier l'installation",
+      "subtitle": "Mettez à jour les détails de votre installation.",
+      "nameLabel": "Nom de l'installation",
+      "namePlaceholder": "Entrez le nom de l'installation",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Entrez la description de l'installation",
+      "addressLabel": "Adresse",
+      "addressPlaceholder": "Entrez l'adresse",
+      "cityLabel": "Ville",
+      "cityPlaceholder": "Entrez la ville",
+      "postalCodeLabel": "Code postal",
+      "postalCodePlaceholder": "Entrez le code postal",
+      "countryLabel": "Pays",
+      "selectCountry": "Sélectionner le pays",
+      "timezoneLabel": "Fuseau horaire",
+      "selectTimezone": "Sélectionner le fuseau horaire",
+      "timezonePlaceholder": "ex. America/Toronto",
+      "latitudeLabel": "Latitude",
+      "latitudePlaceholder": "ex. 45.5017",
+      "longitudeLabel": "Longitude",
+      "longitudePlaceholder": "ex. -73.5673",
+      "membershipRequiredLabel": "Adhésion requise",
+      "membershipRequiredHint": "Exiger une adhésion pour réserver des terrains dans cette installation",
+      "searchPlace": "Rechercher sur Google Places",
+      "searchPlaceHint": "Entrez au moins 3 caractères et cliquez sur le bouton de recherche pour remplir automatiquement les champs d'adresse.",
+      "saveButton": "Enregistrer les modifications",
+      "saving": "Enregistrement...",
+      "cancelButton": "Annuler",
+      "error": "Échec de la mise à jour de l'installation",
+      "success": "Installation mise à jour avec succès"
+    },
+    "new": {
+      "subtitle": "Ajoutez une nouvelle installation à votre organisation.",
+      "cardTitle": "Informations sur l'installation",
+      "cardDescription": "Entrez les détails de votre nouvelle installation ci-dessous.",
+      "createButton": "Créer l'installation",
+      "creating": "Création en cours...",
+      "success": "Installation créée avec succès",
+      "error": "Échec de la création de l'installation. Veuillez réessayer.",
+      "backToFacilities": "Retour aux installations",
+      "notAuthenticated": "Non authentifié",
+      "noOrganization": "Aucune organisation trouvée"
+    }
+  },
+  "courts": {
+    "title": "Terrains",
+    "description": "Gérez les terrains de cette installation.",
+    "addCourt": "Ajouter un terrain",
+    "emptyState": {
+      "title": "Aucun terrain",
+      "description": "Ajoutez des terrains à cette installation pour activer les réservations.",
+      "addButton": "Ajouter un terrain"
+    },
+    "table": {
+      "name": "Nom",
+      "number": "Terrain #",
+      "surface": "Surface",
+      "type": "Type",
+      "status": "Statut",
+      "actions": "Actions"
+    },
+    "surface": {
+      "hard": "Dur",
+      "clay": "Terre battue",
+      "grass": "Gazon",
+      "synthetic": "Synthétique",
+      "carpet": "Moquette",
+      "concrete": "Béton",
+      "asphalt": "Asphalte"
+    },
+    "type": {
+      "indoor": "Intérieur",
+      "outdoor": "Extérieur"
+    },
+    "status": {
+      "available": "Disponible",
+      "maintenance": "Maintenance",
+      "closed": "Fermé",
+      "reserved": "Réservé",
+      "unavailable": "Indisponible"
+    },
+    "detail": {
+      "title": "Détails du terrain",
+      "info": "Informations",
+      "surface": "Type de surface",
+      "lighting": "Éclairage",
+      "indoor": "Intérieur/Extérieur",
+      "multiSport": "Lignes multi-sports",
+      "notes": "Notes",
+      "useFacilityDefaults": "Utilise les paramètres par défaut",
+      "customAvailability": "Disponibilité personnalisée",
+      "availabilityNote": "Ce terrain utilise les paramètres de disponibilité par défaut de l'installation.",
+      "customAvailabilityNote": "Ce terrain a des paramètres de disponibilité personnalisés.",
+      "manageAvailability": "Gérer la disponibilité",
+      "editButton": "Modifier le terrain"
+    },
+    "add": {
+      "title": "Ajouter un terrain",
+      "description": "Ajouter un nouveau terrain à cette installation.",
+      "cancel": "Annuler",
+      "nameLabel": "Nom du terrain",
+      "namePlaceholder": "ex., Terrain 1, Terrain principal",
+      "numberLabel": "Numéro du terrain",
+      "numberPlaceholder": "Entrez le numéro du terrain",
+      "surfaceLabel": "Type de surface",
+      "surfacePlaceholder": "Sélectionnez le type de surface",
+      "indoorLabel": "Terrain intérieur",
+      "indoorHint": "Est-ce un terrain intérieur?",
+      "lightingLabel": "Éclairage",
+      "lightingHint": "Ce terrain a-t-il un éclairage pour jouer la nuit?",
+      "multiSportLabel": "Lignes multi-sports",
+      "multiSportHint": "Y a-t-il des lignes marquées pour plusieurs sports?",
+      "notesLabel": "Notes",
+      "notesPlaceholder": "Notes supplémentaires sur ce terrain",
+      "addButton": "Ajouter le terrain",
+      "adding": "Ajout...",
+      "success": "Terrain ajouté avec succès",
+      "error": "Échec de l'ajout du terrain"
+    },
+    "edit": {
+      "title": "Modifier le terrain",
+      "saveButton": "Enregistrer les modifications",
+      "saving": "Enregistrement...",
+      "success": "Terrain mis à jour avec succès",
+      "error": "Échec de la mise à jour du terrain"
+    },
+    "statusChange": {
+      "success": "Statut du terrain mis à jour",
+      "error": "Échec de la mise à jour du statut du terrain"
+    }
+  },
+  "availability": {
+    "title": "Disponibilité",
+    "description": "Gérez les heures de disponibilité de vos terrains.",
+    "facilityTemplate": {
+      "title": "Horaire par défaut de l'installation",
+      "description": "Définissez les heures d'ouverture par défaut pour tous les terrains de cette installation. Les terrains individuels peuvent remplacer ces paramètres.",
+      "subtitle": "Ces heures s'appliquent à tous les terrains sauf si un terrain a des paramètres personnalisés.",
+      "slotDuration": "Durée du créneau",
+      "slotDurationHint": "Quelle est la durée de chaque créneau réservable?",
+      "defaultPrice": "Prix par défaut",
+      "defaultPriceHint": "Prix par créneau de réservation",
+      "saveButton": "Enregistrer l'horaire",
+      "saving": "Enregistrement...",
+      "success": "Horaire enregistré avec succès",
+      "error": "Échec de l'enregistrement de l'horaire"
+    },
+    "courtOverride": {
+      "title": "Disponibilité du terrain",
+      "useFacilityDefaults": "Utiliser les paramètres de l'installation",
+      "useFacilityDefaultsHint": "Activez pour définir un horaire personnalisé au lieu d'utiliser les paramètres de l'installation",
+      "customSchedule": "Horaire personnalisé",
+      "customScheduleDescription": "Ce terrain a un horaire personnalisé qui remplace les paramètres de l'installation.",
+      "enableCustom": "Définir des heures personnalisées",
+      "disableCustom": "Utiliser les paramètres de l'installation",
+      "noOverrides": "Aucun horaire personnalisé défini. Ce terrain utilise les paramètres de l'installation."
+    },
+    "weeklySchedule": {
+      "title": "Horaire hebdomadaire",
+      "day": "Jour",
+      "hours": "Heures",
+      "closed": "Fermé",
+      "open": "Ouvert",
+      "openTime": "Ouverture",
+      "closeTime": "Fermeture",
+      "allDay": "Toute la journée",
+      "addTimeSlot": "Ajouter un créneau",
+      "removeTimeSlot": "Supprimer"
+    },
+    "days": {
+      "monday": "Lundi",
+      "tuesday": "Mardi",
+      "wednesday": "Mercredi",
+      "thursday": "Jeudi",
+      "friday": "Vendredi",
+      "saturday": "Samedi",
+      "sunday": "Dimanche"
+    },
+    "durations": {
+      "30": "30 minutes",
+      "60": "1 heure",
+      "90": "1h30",
+      "120": "2 heures"
+    },
+    "validation": {
+      "allSlotsValid": "Tous les créneaux horaires sont valides",
+      "validWithWarnings": "Valide avec {count} avertissement(s) - révision recommandée",
+      "hasErrors": "{count} erreur(s) à corriger avant de sauvegarder",
+      "fixErrorsBeforeSaving": "Veuillez corriger toutes les erreurs de validation avant de sauvegarder",
+      "slotDurationInfo": "Chaque plage horaire doit durer au moins {duration} et idéalement un multiple de la durée du créneau pour optimiser les réservations.",
+      "autoAdjust": "Ajuster auto.",
+      "autoAdjustTooltip": "Ajuster automatiquement l'heure de fin pour créer des créneaux complets"
+    },
+    "calendar": {
+      "title": "Calendrier de disponibilité",
+      "description": "Affichez la disponibilité calculée pour tous les terrains.",
+      "selectFacility": "Sélectionner l'installation",
+      "allCourts": "Tous les terrains",
+      "today": "Aujourd'hui",
+      "thisWeek": "Cette semaine",
+      "previousWeek": "Semaine précédente",
+      "nextWeek": "Semaine suivante",
+      "viewMode": {
+        "day": "Jour",
+        "week": "Semaine",
+        "month": "Mois"
+      },
+      "legend": {
+        "available": "Disponible",
+        "booked": "Réservé",
+        "blocked": "Bloqué",
+        "maintenance": "Maintenance",
+        "past": "Passé"
+      },
+      "noSlots": "Aucun créneau configuré pour ce jour",
+      "clickToBook": "Réserver",
+      "clickToView": "Voir la réservation",
+      "slotBlocked": "Ce créneau est bloqué",
+      "price": "Prix",
+      "currentTime": "Heure actuelle",
+      "monthView": {
+        "bookings": "réservations",
+        "noBookings": "Aucune réservation",
+        "totalBookings": "Réservations totales",
+        "availableSlots": "Créneaux disponibles",
+        "blockedSlots": "Créneaux bloqués",
+        "occupancyRate": "Taux d'occupation",
+        "clickToViewDay": "Cliquez sur un jour pour voir le détail",
+        "viewDay": "Voir le jour",
+        "noSlots": "Aucun créneau",
+        "courtActive": "terrain avec réservations",
+        "courtsActive": "terrains avec réservations",
+        "courtBreakdown": "Par terrain"
+      }
+    }
+  },
+  "blocks": {
+    "title": "Blocages de disponibilité",
+    "description": "Bloquez des créneaux horaires spécifiques lorsque les terrains ne sont pas disponibles.",
+    "emptyState": {
+      "title": "Aucun blocage",
+      "description": "Créez des blocages pour la maintenance, les jours fériés ou les événements spéciaux.",
+      "addButton": "Ajouter un blocage"
+    },
+    "addBlock": "Ajouter un blocage",
+    "facilityWide": "Tous les terrains",
+    "courtSpecific": "Terrain spécifique",
+    "list": {
+      "date": "Date",
+      "time": "Heure",
+      "court": "Terrain",
+      "reason": "Raison",
+      "type": "Type",
+      "actions": "Actions",
+      "allCourts": "Tous les terrains",
+      "allDay": "Toute la journée"
+    },
+    "types": {
+      "manual": "Blocage manuel",
+      "maintenance": "Maintenance",
+      "holiday": "Jour férié",
+      "weather": "Météo",
+      "private_event": "Événement privé"
+    },
+    "form": {
+      "title": "Créer un blocage",
+      "editTitle": "Modifier le blocage",
+      "courtLabel": "Terrain",
+      "courtPlaceholder": "Sélectionnez un terrain (ou tous les terrains)",
+      "allCourtsOption": "Tous les terrains de cette installation",
+      "dateLabel": "Date",
+      "datePlaceholder": "Sélectionnez une date",
+      "dateRangeLabel": "Plage de dates",
+      "startDateLabel": "Date de début",
+      "endDateLabel": "Date de fin",
+      "allDayLabel": "Toute la journée",
+      "allDayHint": "Bloquer la journée entière",
+      "startTimeLabel": "Heure de début",
+      "endTimeLabel": "Heure de fin",
+      "typeLabel": "Type de blocage",
+      "typePlaceholder": "Sélectionnez le type",
+      "reasonLabel": "Raison",
+      "reasonPlaceholder": "Raison optionnelle du blocage",
+      "createButton": "Créer le blocage",
+      "creating": "Création...",
+      "updateButton": "Mettre à jour le blocage",
+      "updating": "Mise à jour...",
+      "deleteButton": "Supprimer le blocage",
+      "deleting": "Suppression...",
+      "cancelButton": "Annuler",
+      "success": "Blocage créé avec succès",
+      "updateSuccess": "Blocage mis à jour avec succès",
+      "deleteSuccess": "Blocage supprimé avec succès",
+      "error": "Échec de la création du blocage",
+      "updateError": "Échec de la mise à jour du blocage",
+      "deleteError": "Échec de la suppression du blocage"
+    },
+    "confirmDelete": {
+      "title": "Supprimer le blocage",
+      "description": "Êtes-vous sûr de vouloir supprimer ce blocage? Cette action est irréversible.",
+      "confirm": "Supprimer",
+      "cancel": "Annuler"
+    }
   },
   "app": {
     "nav": {
       "dashboard": "Tableau de bord",
       "organizations": "Organisations",
       "facilities": "Installations",
+      "availability": "Disponibilité",
+      "bookings": "Réservations",
+      "analytics": "Analytiques",
       "members": "Membres",
       "settings": "Paramètres",
       "theme": "Thème",
-      "signOut": "Déconnexion"
+      "signOut": "Déconnexion",
+      "notifications": "Notifications"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "empty": "Aucune nouvelle notification",
+      "viewAll": "Voir toutes les notifications",
+      "markAllRead": "Tout marquer comme lu",
+      "newBooking": "Nouvelle réservation",
+      "bookingCancelled": "Réservation annulée",
+      "paymentReceived": "Paiement reçu",
+      "justNow": "À l'instant",
+      "minutesAgo": "Il y a {count} min",
+      "hoursAgo": "Il y a {count}h",
+      "daysAgo": "Il y a {count}j"
     }
   },
   "admin": {
@@ -3316,5 +4021,227 @@
     "inviteViaLinkOrQR": "Inviter par lien ou QR",
     "groupMemberCount": "{count} membres",
     "groupMemberCount_one": "{count} membre"
+  },
+  "bookings": {
+    "title": "Réservations",
+    "description": "Afficher et gérer les réservations de terrains.",
+    "emptyState": {
+      "title": "Aucune réservation",
+      "description": "Les réservations apparaîtront ici une fois que les joueurs commenceront à réserver.",
+      "createButton": "Créer une réservation manuelle"
+    },
+    "filters": {
+      "title": "Filtrer les réservations",
+      "allStatuses": "Tous les statuts",
+      "allCourts": "Tous les terrains",
+      "allFacilities": "Toutes les installations",
+      "dateRange": "Plage de dates",
+      "dateFrom": "Du",
+      "dateTo": "Au",
+      "search": "Rechercher par nom, courriel ou ID de réservation",
+      "clear": "Effacer",
+      "paymentStatus": "Statut de paiement",
+      "allPayments": "Tous les paiements",
+      "paid": "Payé",
+      "unpaid": "Non payé",
+      "refunded": "Remboursé",
+      "priceRange": "Plage de prix",
+      "minPrice": "Min",
+      "maxPrice": "Max"
+    },
+    "table": {
+      "date": "Date",
+      "time": "Heure",
+      "court": "Terrain",
+      "player": "Joueur",
+      "status": "Statut",
+      "amount": "Montant",
+      "actions": "Actions"
+    },
+    "status": {
+      "pending": "En attente",
+      "confirmed": "Confirmé",
+      "cancelled": "Annulé",
+      "completed": "Terminé",
+      "no_show": "Absent",
+      "awaiting_approval": "En attente d'approbation"
+    },
+    "detail": {
+      "title": "Détails de la réservation",
+      "bookingInfo": "Informations de réservation",
+      "playerInfo": "Informations du joueur",
+      "paymentInfo": "Informations de paiement",
+      "timeline": "Chronologie",
+      "bookingId": "ID de réservation",
+      "court": "Terrain",
+      "facility": "Installation",
+      "date": "Date",
+      "time": "Heure",
+      "duration": "Durée",
+      "status": "Statut",
+      "playerName": "Nom du joueur",
+      "playerEmail": "Courriel",
+      "amount": "Montant",
+      "paymentStatus": "Statut du paiement",
+      "paymentMethod": "Mode de paiement",
+      "stripePaymentId": "ID de paiement Stripe",
+      "refundStatus": "Statut du remboursement",
+      "refundAmount": "Montant remboursé",
+      "viewInStripe": "Voir dans Stripe",
+      "createdAt": "Créé le",
+      "confirmedAt": "Confirmé le",
+      "cancelledAt": "Annulé le",
+      "cancelledBy": "Annulé par",
+      "cancellationReason": "Raison",
+      "backToList": "Retour aux réservations",
+      "guestBooking": "Invité",
+      "unknownPlayer": "Inconnu"
+    },
+    "actions": {
+      "view": "Voir les détails",
+      "cancel": "Annuler la réservation",
+      "cancelling": "Annulation...",
+      "markNoShow": "Marquer comme absent",
+      "markComplete": "Marquer comme terminé",
+      "createManual": "Créer une réservation manuelle"
+    },
+    "bulk": {
+      "selected": "{count} sélectionnée(s)",
+      "cancel": "Annuler la sélection",
+      "complete": "Terminer la sélection",
+      "cancelTitle": "Annuler les réservations sélectionnées",
+      "cancelDescription": "Êtes-vous sûr de vouloir annuler {count} réservation(s) sélectionnée(s)? Cette action est irréversible.",
+      "completeTitle": "Terminer les réservations sélectionnées",
+      "completeDescription": "Marquer {count} réservation(s) sélectionnée(s) comme terminée(s)?",
+      "confirm": "Confirmer",
+      "cancelButton": "Garder les réservations"
+    },
+    "cancel": {
+      "title": "Annuler la réservation",
+      "description": "Êtes-vous sûr de vouloir annuler cette réservation?",
+      "reasonLabel": "Raison de l'annulation",
+      "reasonPlaceholder": "Entrez la raison de l'annulation (optionnel)",
+      "refundInfo": "Informations de remboursement",
+      "fullRefund": "Un remboursement complet sera effectué",
+      "partialRefund": "Un remboursement partiel de {percent}% sera effectué",
+      "noRefund": "Aucun remboursement - l'annulation est hors de la fenêtre de remboursement",
+      "confirmButton": "Annuler la réservation",
+      "cancelButton": "Garder la réservation",
+      "success": "Réservation annulée avec succès",
+      "error": "Échec de l'annulation de la réservation"
+    },
+    "noShow": {
+      "title": "Marquer comme absent",
+      "description": "Êtes-vous sûr de vouloir marquer cette réservation comme absence? Cela indique que le joueur ne s'est pas présenté.",
+      "confirmButton": "Marquer comme absent",
+      "cancelButton": "Annuler",
+      "success": "Réservation marquée comme absence",
+      "error": "Échec de la mise à jour de la réservation"
+    },
+    "complete": {
+      "title": "Marquer comme terminé",
+      "description": "Marquer cette réservation comme terminée?",
+      "confirmButton": "Marquer comme terminé",
+      "cancelButton": "Annuler",
+      "success": "Réservation marquée comme terminée",
+      "error": "Échec de la mise à jour de la réservation"
+    },
+    "manual": {
+      "title": "Créer une réservation manuelle",
+      "description": "Créer une réservation pour un client sans rendez-vous ou une réservation téléphonique.",
+      "courtLabel": "Terrain",
+      "courtPlaceholder": "Sélectionnez un terrain",
+      "dateLabel": "Date",
+      "datePlaceholder": "Sélectionnez une date",
+      "timeLabel": "Créneau horaire",
+      "timePlaceholder": "Sélectionnez un créneau",
+      "playerLabel": "Joueur",
+      "existingPlayer": "Joueur existant",
+      "guestPlayer": "Invité (sans rendez-vous)",
+      "playerSearchPlaceholder": "Rechercher un joueur par nom ou courriel",
+      "guestNameLabel": "Nom de l'invité",
+      "guestNamePlaceholder": "Entrez le nom de l'invité",
+      "guestEmailLabel": "Courriel de l'invité (optionnel)",
+      "guestEmailPlaceholder": "invite@exemple.com",
+      "guestPhoneLabel": "Téléphone de l'invité (optionnel)",
+      "guestPhonePlaceholder": "+1 (555) 123-4567",
+      "paymentMethod": "Mode de paiement",
+      "payOnline": "Payer en ligne (Stripe)",
+      "paidInCash": "Payé en espèces",
+      "paidByCard": "Payé par carte (sur place)",
+      "notesLabel": "Notes",
+      "notesPlaceholder": "Notes optionnelles sur cette réservation",
+      "createButton": "Créer la réservation",
+      "creating": "Création...",
+      "cancelButton": "Annuler",
+      "success": "Réservation créée avec succès",
+      "error": "Échec de la création de la réservation",
+      "noSlotsAvailable": "Aucun créneau disponible pour la date sélectionnée",
+      "selectCourtFirst": "Veuillez d'abord sélectionner un terrain",
+      "selectDateFirst": "Veuillez d'abord sélectionner une date",
+      "recurring": {
+        "title": "Réservation récurrente",
+        "enable": "Créer une réservation récurrente",
+        "pattern": "Fréquence",
+        "weekly": "Hebdomadaire",
+        "biweekly": "Toutes les 2 semaines",
+        "monthly": "Mensuel",
+        "endType": "Se termine",
+        "afterOccurrences": "Après occurrences",
+        "onDate": "À la date",
+        "occurrences": "Nombre d'occurrences",
+        "endDate": "Date de fin",
+        "preview": "Aperçu des dates",
+        "previewDesc": "Les {count} réservations suivantes seront créées:",
+        "conflictWarning": "Certaines dates peuvent avoir des conflits",
+        "noAvailableDates": "Aucune date disponible pour ce modèle"
+      }
+    },
+    "pagination": {
+      "showing": "Affichage de {start} à {end} sur {total} réservations",
+      "page": "Page {current} sur {total}",
+      "previous": "Précédent",
+      "next": "Suivant"
+    }
+  },
+  "analytics": {
+    "title": "Analytiques",
+    "description": "Suivez les performances et métriques de votre organisation.",
+    "tabs": {
+      "overview": "Vue d'ensemble",
+      "revenue": "Revenus",
+      "bookings": "Réservations",
+      "utilization": "Utilisation"
+    },
+    "overview": {
+      "totalBookings": "Total des réservations",
+      "totalRevenue": "Revenu total",
+      "avgBookingsPerDay": "Moy. réservations/jour",
+      "utilizationRate": "Taux d'utilisation",
+      "thisMonth": "Ce mois-ci",
+      "vsLastMonth": "vs mois dernier"
+    },
+    "charts": {
+      "revenueOverTime": "Revenus dans le temps",
+      "bookingsByStatus": "Réservations par statut",
+      "bookingsTrend": "Tendance des réservations",
+      "courtUtilization": "Utilisation des terrains",
+      "peakHours": "Heures de pointe",
+      "noData": "Aucune donnée disponible pour cette période"
+    },
+    "filters": {
+      "dateRange": "Plage de dates",
+      "last7Days": "7 derniers jours",
+      "last30Days": "30 derniers jours",
+      "last90Days": "90 derniers jours",
+      "thisMonth": "Ce mois-ci",
+      "lastMonth": "Mois dernier",
+      "custom": "Plage personnalisée"
+    },
+    "export": {
+      "exportData": "Exporter les données",
+      "exportCSV": "Exporter en CSV",
+      "exportPDF": "Exporter en PDF"
+    }
   }
 }

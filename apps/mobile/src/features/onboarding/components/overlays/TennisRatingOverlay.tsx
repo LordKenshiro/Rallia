@@ -63,7 +63,7 @@ const getNtrpSkillLabelKey = (scoreValue: number): string => {
  * Maps NTRP score value to a description translation key
  */
 const getNtrpDescriptionKey = (scoreValue: number): string => {
-  return `onboarding.ratingStep.ntrpDescriptions.${scoreValue.toFixed(1)}`;
+  return `onboarding.ratingStep.ntrpDescriptions.${scoreValue.toFixed(1).replace('.', '_')}`;
 };
 
 const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({

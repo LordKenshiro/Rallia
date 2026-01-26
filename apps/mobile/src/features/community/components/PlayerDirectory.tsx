@@ -248,22 +248,34 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
   // Filter change handler - refetch when filters are toggled on
   const handleFiltersChange = useCallback(
     (newFilters: PlayerFilters) => {
+      // For guest users, ensure favorites and blocked are always false
+      const sanitizedFilters = currentUserId
+        ? newFilters
+        : { ...newFilters, favorites: false, blocked: false };
+
       // If favorites filter is being turned on, refetch favorites first
-      if (newFilters.favorites && !filters.favorites) {
+      if (sanitizedFilters.favorites && !filters.favorites) {
         fetchFavorites();
       }
       // If blocked filter is being turned on, refetch blocked first
-      if (newFilters.blocked && !filters.blocked) {
+      if (sanitizedFilters.blocked && !filters.blocked) {
         fetchBlocked();
       }
-      setFilters(newFilters);
+      setFilters(sanitizedFilters);
     },
-    [filters.favorites, filters.blocked, fetchFavorites, fetchBlocked]
+    [filters.favorites, filters.blocked, fetchFavorites, fetchBlocked, currentUserId]
   );
 
   const handleResetFilters = useCallback(() => {
     setFilters(DEFAULT_PLAYER_FILTERS);
   }, []);
+
+  // Reset favorites/blocked filters when user signs out
+  useEffect(() => {
+    if (!currentUserId && (filters.favorites || filters.blocked)) {
+      setFilters(prev => ({ ...prev, favorites: false, blocked: false }));
+    }
+  }, [currentUserId, filters.favorites, filters.blocked]);
 
   const {
     players,
@@ -281,7 +293,7 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     filters: serviceFilters,
     favoritePlayerIds,
     blockedPlayerIds,
-    enabled: !!sportId && !!currentUserId,
+    enabled: !!sportId,
   });
 
   // Sort players based on selected sort option
@@ -430,11 +442,12 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
         maxTravelDistance={maxTravelDistanceKm ?? 50}
         onFiltersChange={handleFiltersChange}
         onReset={handleResetFilters}
+        isAuthenticated={!!currentUserId}
       />
     </View>
   );
 
-  if (!sportId || !currentUserId) {
+  if (!sportId) {
     return (
       <View style={styles.emptyContainer}>
         <Ionicons name="alert-circle-outline" size={64} color={colors.textMuted} />

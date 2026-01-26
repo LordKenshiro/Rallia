@@ -426,6 +426,7 @@ interface PlayerFiltersBarProps {
   maxTravelDistance?: number; // User's max travel distance preference (from onboarding)
   onFiltersChange: (filters: PlayerFilters) => void;
   onReset?: () => void;
+  isAuthenticated?: boolean; // Whether the user is signed in (hides favorites/blocked filters for guests)
 }
 
 export function PlayerFiltersBar({
@@ -433,6 +434,7 @@ export function PlayerFiltersBar({
   sportName = 'Tennis',
   onFiltersChange,
   onReset,
+  isAuthenticated = false,
 }: PlayerFiltersBarProps) {
   const { theme } = useTheme();
   const { t } = useTranslation();
@@ -581,16 +583,18 @@ export function PlayerFiltersBar({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Favorites Toggle */}
-        <FilterChip
-          label={t('playerDirectory.filters.favorites')}
-          value={t('playerDirectory.filters.favorites')}
-          isActive={filters.favorites}
-          onPress={handleFavoritesToggle}
-          isDark={isDark}
-          hasDropdown={false}
-          icon={filters.favorites ? 'heart' : 'heart-outline'}
-        />
+        {/* Favorites Toggle - Only show for authenticated users */}
+        {isAuthenticated && (
+          <FilterChip
+            label={t('playerDirectory.filters.favorites')}
+            value={t('playerDirectory.filters.favorites')}
+            isActive={filters.favorites}
+            onPress={handleFavoritesToggle}
+            isDark={isDark}
+            hasDropdown={false}
+            icon={filters.favorites ? 'heart' : 'heart-outline'}
+          />
+        )}
 
         {/* Gender Filter */}
         <FilterChip
@@ -646,16 +650,18 @@ export function PlayerFiltersBar({
           isDark={isDark}
         />
 
-        {/* Blocked Toggle */}
-        <FilterChip
-          label={t('playerDirectory.filters.blocked')}
-          value={t('playerDirectory.filters.blocked')}
-          isActive={filters.blocked}
-          onPress={handleBlockedToggle}
-          isDark={isDark}
-          hasDropdown={false}
-          icon={filters.blocked ? 'ban' : 'ban-outline'}
-        />
+        {/* Blocked Toggle - Only show for authenticated users */}
+        {isAuthenticated && (
+          <FilterChip
+            label={t('playerDirectory.filters.blocked')}
+            value={t('playerDirectory.filters.blocked')}
+            isActive={filters.blocked}
+            onPress={handleBlockedToggle}
+            isDark={isDark}
+            hasDropdown={false}
+            icon={filters.blocked ? 'ban' : 'ban-outline'}
+          />
+        )}
 
         {/* Sort Option */}
         <FilterChip

@@ -171,13 +171,17 @@ export async function fetchTodayAvailability(
   facilityExternalId: string | undefined,
   includeTomorrow = true
 ): Promise<AvailabilityResult> {
+  // Format date in local timezone to avoid UTC conversion issues
+  const formatDateLocal = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
   const today = new Date();
-  const dates = [today.toISOString().split('T')[0]];
+  const dates = [formatDateLocal(today)];
 
   if (includeTomorrow) {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    dates.push(tomorrow.toISOString().split('T')[0]);
+    dates.push(formatDateLocal(tomorrow));
   }
 
   return fetchAvailability(providerId, {

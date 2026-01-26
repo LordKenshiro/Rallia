@@ -114,8 +114,8 @@ export function usePlayerSearch(options: UsePlayerSearchOptions): UsePlayerSearc
   // Debounce the search query
   const debouncedQuery = useDebounce(searchQuery, debounceMs);
 
-  // Check if we have all required params
-  const hasRequiredParams = !!sportId && !!currentUserId;
+  // Check if we have all required params (only sportId is required)
+  const hasRequiredParams = !!sportId;
 
   const query = useInfiniteQuery<PlayersPage, Error>({
     queryKey: playerKeys.searchWithParams(
@@ -127,13 +127,13 @@ export function usePlayerSearch(options: UsePlayerSearchOptions): UsePlayerSearc
       blockedPlayerIds
     ),
     queryFn: async ({ pageParam }) => {
-      if (!sportId || !currentUserId) {
+      if (!sportId) {
         return { players: [], hasMore: false, nextOffset: null };
       }
 
       return searchPlayersForSport({
         sportId,
-        currentUserId,
+        currentUserId: currentUserId || undefined,
         searchQuery: debouncedQuery || undefined,
         offset: (pageParam as number) ?? 0,
         limit: pageSize,

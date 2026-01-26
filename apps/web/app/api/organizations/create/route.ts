@@ -95,6 +95,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create organization member record
+    // Role should be 'owner' for organization creator
     const { error: memberError } = await supabase.from('organization_member').insert({
       user_id: user.id,
       organization_id: organization.id,

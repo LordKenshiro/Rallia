@@ -18,7 +18,11 @@ import {
   Keyboard,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import {
+  BottomSheetTextInput,
+  BottomSheetScrollView,
+  type BottomSheetScrollViewMethods,
+} from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, PhoneInput } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
@@ -70,7 +74,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   // Refs for keyboard visibility handling
-  const scrollViewRef = useRef<View>(null);
+  const scrollViewRef = useRef<BottomSheetScrollViewMethods>(null);
   const firstNameFieldRef = useRef<View>(null);
   const lastNameFieldRef = useRef<View>(null);
   const usernameFieldRef = useRef<View>(null);
@@ -225,23 +229,10 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
           value={formData.firstName}
           onChangeText={handleFirstNameChange}
           onFocus={() => {
-            // Scroll to first name field when focused to ensure it's visible above keyboard
+            // Scroll to show the field when focused to ensure it's visible above keyboard
             // Use a delay to allow keyboard animation to start
             setTimeout(() => {
-              firstNameFieldRef.current?.measureLayout(
-                scrollViewRef.current as unknown as number,
-                (x: number, y: number, _width: number, _height: number) => {
-                  // Scroll to show the field with extra padding above it (200px)
-                  scrollViewRef.current?.scrollTo({
-                    y: Math.max(0, y - 200),
-                    animated: true,
-                  });
-                },
-                () => {
-                  // Fallback: scroll to end if measure fails
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
-                }
-              );
+              scrollViewRef.current?.scrollToEnd({ animated: true });
             }, 300);
           }}
           style={[
@@ -269,23 +260,10 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
           value={formData.lastName}
           onChangeText={handleLastNameChange}
           onFocus={() => {
-            // Scroll to last name field when focused to ensure it's visible above keyboard
+            // Scroll to show the field when focused to ensure it's visible above keyboard
             // Use a delay to allow keyboard animation to start
             setTimeout(() => {
-              lastNameFieldRef.current?.measureLayout(
-                scrollViewRef.current as unknown as number,
-                (x: number, y: number, _width: number, _height: number) => {
-                  // Scroll to show the field with extra padding above it (200px)
-                  scrollViewRef.current?.scrollTo({
-                    y: Math.max(0, y - 200),
-                    animated: true,
-                  });
-                },
-                () => {
-                  // Fallback: scroll to end if measure fails
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
-                }
-              );
+              scrollViewRef.current?.scrollToEnd({ animated: true });
             }, 300);
           }}
           style={[
@@ -314,23 +292,10 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
           onChangeText={handleUsernameChange}
           maxLength={10}
           onFocus={() => {
-            // Scroll to username field when focused to ensure it's visible above keyboard
+            // Scroll to show the field when focused to ensure it's visible above keyboard
             // Use a delay to allow keyboard animation to start
             setTimeout(() => {
-              usernameFieldRef.current?.measureLayout(
-                scrollViewRef.current as unknown as number,
-                (x: number, y: number, _width: number, _height: number) => {
-                  // Scroll to show the field with extra padding above it (200px)
-                  scrollViewRef.current?.scrollTo({
-                    y: Math.max(0, y - 200),
-                    animated: true,
-                  });
-                },
-                () => {
-                  // Fallback: scroll to end if measure fails
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
-                }
-              );
+              scrollViewRef.current?.scrollToEnd({ animated: true });
             }, 300);
           }}
           style={[

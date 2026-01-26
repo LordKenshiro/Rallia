@@ -276,30 +276,263 @@
       "feedback_reminder": {
         "title": "Don't Forget to Rate Your Game",
         "body": "Your {sportName} game feedback closes in 24 hours. Rate your experience with {opponentNames}!"
+      },
+      "score_confirmation": {
+        "title": "Confirm Match Score",
+        "body": "Please confirm the final score for your {sportName} game on {matchDate}."
       }
     }
   },
   "settings": {
-    "title": "Settings",
-    "language": "Language",
-    "languageDescription": "Choose your preferred language",
-    "languageAuto": "System Default",
+    "nav": {
+      "general": "General",
+      "generalDesc": "Basic settings",
+      "payments": "Payments",
+      "paymentsDesc": "Stripe & billing",
+      "policies": "Policies",
+      "policiesDesc": "Cancellation rules",
+      "members": "Members",
+      "membersDesc": "Team access",
+      "pricing": "Pricing",
+      "pricingDesc": "Rate management"
+    },
     "notifications": "Notifications",
     "notificationsDescription": "Choose how you want to be notified about different events. Turn each option on or off.",
-    "privacy": "Privacy",
-    "subscription": "Subscription",
-    "payments": "Payments",
-    "about": "About",
-    "version": "Version",
-    "termsOfService": "Terms of Service",
-    "privacyPolicy": "Privacy Policy",
-    "logout": "Log Out",
-    "deleteAccount": "Delete Account",
-    "theme": "Theme",
-    "darkMode": "Dark Mode",
-    "lightMode": "Light Mode",
+    "permissions": "Permissions",
+    "language": "Language",
+    "languageAuto": "Auto",
+    "languageDescription": "Choose your preferred language for the app",
+    "theme": "Appearance",
+    "lightMode": "Light",
+    "darkMode": "Dark",
     "systemTheme": "System",
-    "permissions": "Permissions"
+    "logout": "Sign Out",
+    "deleteAccount": "Delete Account",
+    "general": {
+      "title": "General Settings",
+      "description": "Manage your organization settings.",
+      "notAuthenticated": "You must be signed in to access settings.",
+      "noOrganization": "You must be a member of an organization to access settings.",
+      "fetchError": "Failed to load settings.",
+      "saveError": "Failed to save settings.",
+      "saving": "Saving...",
+      "save": "Save Changes",
+      "saveSuccess": "Settings saved successfully!",
+      "orgInfo": {
+        "title": "Organization Information",
+        "description": "Basic information about your organization.",
+        "name": "Organization Name",
+        "email": "Contact Email",
+        "phone": "Phone Number",
+        "website": "Website"
+      },
+      "booking": {
+        "title": "Booking Settings",
+        "description": "Configure how players can book courts.",
+        "slotDuration": "Default Slot Duration",
+        "slotDurationHint": "Default length of time for court bookings.",
+        "minutes": "minutes",
+        "minNotice": "Minimum Booking Notice",
+        "minNoticeHint": "How far in advance a booking must be made.",
+        "hours": "hours",
+        "hour": "hour",
+        "maxAdvance": "Maximum Advance Booking",
+        "maxAdvanceHint": "How far ahead players can book.",
+        "days": "days",
+        "allowSameDay": "Allow Same-Day Bookings",
+        "allowSameDayHint": "Allow players to book courts on the same day."
+      }
+    },
+    "orgPayments": {
+      "title": "Payment Settings",
+      "description": "Connect and manage your Stripe account to receive payments for court bookings.",
+      "noOrganization": "You need to be part of an organization to manage payment settings.",
+      "notConnected": {
+        "title": "Connect Your Stripe Account",
+        "description": "Connect a Stripe account to accept payments for court bookings. You'll be able to receive payments directly to your bank account."
+      },
+      "onboardingIncomplete": {
+        "title": "Complete Your Stripe Setup",
+        "description": "Your Stripe account setup is incomplete. Please continue the onboarding process to start accepting payments."
+      },
+      "connected": {
+        "title": "Stripe Connected",
+        "description": "Your Stripe account is connected and ready to accept payments."
+      },
+      "status": {
+        "chargesEnabled": "Accept Payments",
+        "payoutsEnabled": "Receive Payouts",
+        "enabled": "Enabled",
+        "disabled": "Disabled"
+      },
+      "accountInfo": {
+        "title": "Account Details",
+        "accountId": "Account ID",
+        "accountType": "Account Type",
+        "currency": "Currency"
+      },
+      "connectButton": "Connect Stripe",
+      "connecting": "Connecting...",
+      "continueOnboarding": "Continue Setup",
+      "continuing": "Loading...",
+      "openDashboard": "Open Stripe Dashboard",
+      "ownerOnly": "Only organization owners can connect Stripe accounts.",
+      "successMessage": "Stripe account connected successfully!",
+      "helpText": "Stripe is used to securely process payments. Funds will be deposited directly to your bank account.",
+      "errors": {
+        "missing_organization": "Organization not found.",
+        "not_authorized": "You are not authorized to manage this organization's payment settings.",
+        "no_account": "No Stripe account found. Please start the connection process again.",
+        "callback_failed": "An error occurred during the connection process. Please try again.",
+        "unknown": "An unknown error occurred."
+      }
+    },
+    "policies": {
+      "title": "Cancellation Policies",
+      "description": "Configure your cancellation and refund policies.",
+      "notAuthenticated": "You must be signed in to access policies.",
+      "noOrganization": "You must be a member of an organization to access policies.",
+      "fetchError": "Failed to load cancellation policy.",
+      "saveError": "Failed to save cancellation policy.",
+      "saving": "Saving...",
+      "save": "Save Policy",
+      "saveSuccess": "Cancellation policy saved successfully!",
+      "cancellation": {
+        "title": "Refund Periods",
+        "description": "Define when players can cancel and receive refunds.",
+        "freePeriod": "Full Refund Period",
+        "freePeriodDescription": "Cancellations made before this time receive a full refund.",
+        "partialPeriod": "Partial Refund Period",
+        "partialPeriodDescription": "Cancellations made during this period receive a partial refund.",
+        "noRefundPeriod": "No Refund Period",
+        "noRefundPeriodDescription": "Cancellations made after this point receive no refund.",
+        "hoursBeforeBooking": "hours before booking",
+        "percentRefund": "% refund"
+      },
+      "preview": {
+        "title": "Policy Preview",
+        "description": "This is how your cancellation policy will appear to players.",
+        "text": "Cancellations made more than {freeHours} hours before your booking receive a full refund. Cancellations made between {partialHours} and {freeHours} hours before receive a {partialPercent}% refund. Cancellations made less than {noRefundHours} hours before receive no refund."
+      }
+    },
+    "members": {
+      "title": "Members",
+      "description": "Manage your organization members and their roles.",
+      "notAuthenticated": "You must be signed in to manage members.",
+      "noOrganization": "You must be a member of an organization to manage members.",
+      "fetchError": "Failed to load members.",
+      "removeError": "Failed to remove member.",
+      "roleChangeError": "Failed to change member role.",
+      "list": {
+        "title": "Organization Members",
+        "description": "{count} members in your organization",
+        "member": "Member",
+        "role": "Role",
+        "joined": "Joined",
+        "unknownUser": "Unknown User"
+      },
+      "roles": {
+        "owner": "Owner",
+        "admin": "Admin",
+        "manager": "Manager",
+        "staff": "Staff",
+        "member": "Member"
+      },
+      "actions": {
+        "changeRole": "Change Role",
+        "remove": "Remove Member"
+      },
+      "remove": {
+        "title": "Remove Member",
+        "description": "Are you sure you want to remove {name} from your organization? They will lose access to all organization resources.",
+        "cancel": "Cancel",
+        "confirm": "Remove Member"
+      },
+      "changeRole": {
+        "title": "Change Role",
+        "description": "Change the role for {name}.",
+        "cancel": "Cancel",
+        "confirm": "Save Changes"
+      },
+      "invite": {
+        "button": "Invite Member",
+        "title": "Invite New Member",
+        "description": "Send an invitation email to add a new member to your organization.",
+        "emailLabel": "Email Address",
+        "emailPlaceholder": "Enter email address",
+        "roleLabel": "Role",
+        "roleHint": "The role determines what permissions the member will have.",
+        "cancel": "Cancel",
+        "send": "Send Invitation",
+        "sending": "Sending...",
+        "success": "Invitation sent to {email}!",
+        "error": "Failed to send invitation. Please try again."
+      },
+      "pending": {
+        "title": "Pending Invitations",
+        "description": "{count} pending invitation(s)",
+        "invitedAs": "Invited as {role}",
+        "expires": "Expires {date}",
+        "pending": "Pending",
+        "expired": "Expired"
+      }
+    },
+    "pricing": {
+      "title": "Pricing Rules",
+      "description": "Configure pricing for different times, days, and courts.",
+      "notAuthenticated": "You must be signed in to manage pricing.",
+      "noOrganization": "You must be a member of an organization to manage pricing.",
+      "fetchError": "Failed to load pricing rules.",
+      "saveError": "Failed to save pricing rule.",
+      "deleteError": "Failed to delete pricing rule.",
+      "addRule": "Add Pricing Rule",
+      "editRule": "Edit Pricing Rule",
+      "noRules": "No pricing rules configured. Add your first rule to customize pricing.",
+      "addFirstRule": "Add First Rule",
+      "allFacilities": "All Facilities",
+      "allDays": "All Days",
+      "weekdays": "Weekdays",
+      "weekends": "Weekends",
+      "ruleFormDescription": "Set custom pricing for specific times, days, or courts.",
+      "rules": {
+        "title": "Active Pricing Rules",
+        "description": "Higher priority rules take precedence when multiple rules apply.",
+        "name": "Name",
+        "scope": "Scope",
+        "schedule": "Schedule",
+        "price": "Price",
+        "status": "Active"
+      },
+      "actions": {
+        "edit": "Edit",
+        "delete": "Delete"
+      },
+      "form": {
+        "name": "Rule Name",
+        "namePlaceholder": "e.g., Peak Hours, Weekend Special",
+        "facility": "Facility",
+        "court": "Court",
+        "allFacilities": "All Facilities",
+        "allCourts": "All Courts",
+        "days": "Days of Week",
+        "startTime": "Start Time",
+        "endTime": "End Time",
+        "price": "Price per Slot",
+        "priority": "Priority",
+        "priorityHint": "Higher priority rules override lower ones.",
+        "validFrom": "Valid From",
+        "validUntil": "Valid Until",
+        "cancel": "Cancel",
+        "save": "Save Changes",
+        "create": "Create Rule"
+      },
+      "delete": {
+        "title": "Delete Pricing Rule",
+        "description": "Are you sure you want to delete the pricing rule \"{name}\"? This action cannot be undone.",
+        "cancel": "Cancel",
+        "confirm": "Delete Rule"
+      }
+    }
   },
   "permissions": {
     "description": "Manage app permissions to enable features like notifications, finding games near you, and calendar sync.",
@@ -514,30 +747,30 @@
         "professional": "Professional"
       },
       "ntrpDescriptions": {
-        "1.5": "Just starting to play tennis.",
-        "2.0": "You have limited experience and are working primarily on getting the ball into play.",
-        "2.5": "You are learning to judge where the ball is going and can sustain a short rally.",
-        "3.0": "You can place shots with moderate success and can sustain a rally at a slow pace.",
-        "3.5": "You have achieved improved stroke dependability with directional control.",
-        "4.0": "You have dependable strokes and can handle pace and spin.",
-        "4.5": "You have good shot anticipation and frequently have an outstanding shot.",
-        "5.0": "You have good shot anticipation and frequently have an outstanding shot or attribute.",
-        "5.5": "You can vary strategies and styles of play in competitive situations.",
-        "6.0": "You have had intensive training for national tournament competition.",
-        "1.0": "You are new to tennis and learning the basics."
+        "1_5": "Just starting to play tennis.",
+        "2_0": "You have limited experience and are working primarily on getting the ball into play.",
+        "2_5": "You are learning to judge where the ball is going and can sustain a short rally.",
+        "3_0": "You can place shots with moderate success and can sustain a rally at a slow pace.",
+        "3_5": "You have achieved improved stroke dependability with directional control.",
+        "4_0": "You have dependable strokes and can handle pace and spin.",
+        "4_5": "You have good shot anticipation and frequently have an outstanding shot.",
+        "5_0": "You have good shot anticipation and frequently have an outstanding shot or attribute.",
+        "5_5": "You can vary strategies and styles of play in competitive situations.",
+        "6_0": "You have had intensive training for national tournament competition.",
+        "1_0": "You are new to tennis and learning the basics."
       },
       "duprDescriptions": {
-        "1.0": "Just starting to play pickleball.",
-        "2.0": "You have limited experience and are working primarily on getting the ball into play.",
-        "2.5": "You are learning to judge where the ball is going and can sustain a short rally.",
-        "3.0": "You can place shots with moderate success and can sustain a rally at a slow pace.",
-        "3.5": "You have achieved improved stroke dependability with directional control.",
-        "4.0": "You have dependable strokes and can handle pace and spin.",
-        "4.5": "You have good shot anticipation and frequently have an outstanding shot.",
-        "5.0": "You have good shot anticipation and frequently have an outstanding shot or attribute.",
-        "5.5": "You can vary strategies and styles of play in competitive situations.",
-        "6.0": "You have had intensive training for national tournament competition.",
-        "1.5": "You are new to pickleball and learning the basics."
+        "1_0": "Just starting to play pickleball.",
+        "2_0": "You have limited experience and are working primarily on getting the ball into play.",
+        "2_5": "You are learning to judge where the ball is going and can sustain a short rally.",
+        "3_0": "You can place shots with moderate success and can sustain a rally at a slow pace.",
+        "3_5": "You have achieved improved stroke dependability with directional control.",
+        "4_0": "You have dependable strokes and can handle pace and spin.",
+        "4_5": "You have good shot anticipation and frequently have an outstanding shot.",
+        "5_0": "You have good shot anticipation and frequently have an outstanding shot or attribute.",
+        "5_5": "You can vary strategies and styles of play in competitive situations.",
+        "6_0": "You have had intensive training for national tournament competition.",
+        "1_5": "You are new to pickleball and learning the basics."
       }
     },
     "preferencesStep": {
@@ -655,6 +888,53 @@
       "unexpectedError": "An unexpected error occurred.",
       "failedToSaveRating": "Failed to save your rating. Please try again.",
       "invalidRatingSelected": "Invalid rating selected"
+    },
+    "createOrganization": {
+      "badge": "Get Started",
+      "pageTitle": "Create Your Organization",
+      "pageDescription": "Set up your organization profile to start managing your facilities and members.",
+      "title": "Organization Details",
+      "description": "Fill in the information below to create your organization profile.",
+      "basicInfo": "Basic Information",
+      "contactInfo": "Contact Information",
+      "locationInfo": "Location Information",
+      "yourRole": "Your Role",
+      "nameLabel": "Organization Name",
+      "namePlaceholder": "e.g., Toronto Tennis Club",
+      "typeLabel": "Organization Type",
+      "typeClub": "Club",
+      "typeMunicipality": "Municipality",
+      "typeCity": "City",
+      "typeAssociation": "Association",
+      "natureLabel": "Nature",
+      "naturePublic": "Public",
+      "naturePrivate": "Private",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Tell us about your organization...",
+      "emailLabel": "Email",
+      "emailPlaceholder": "contact@organization.com",
+      "phoneLabel": "Phone",
+      "phonePlaceholder": "+1 (555) 123-4567",
+      "websiteLabel": "Website",
+      "websitePlaceholder": "https://www.organization.com",
+      "addressLabel": "Address",
+      "addressPlaceholder": "123 Main Street",
+      "cityLabel": "City",
+      "cityPlaceholder": "Toronto",
+      "countryLabel": "Country",
+      "countryPlaceholder": "Select country",
+      "postalCodeLabel": "Postal Code",
+      "postalCodePlaceholder": "M5H 2N2",
+      "roleLabel": "Your Role in This Organization",
+      "roleOwner": "Owner",
+      "roleAdmin": "Administrator",
+      "roleStaff": "Staff",
+      "roleCoach": "Coach",
+      "rolePlayer": "Player",
+      "roleHint": "Select the role that best describes your position in this organization.",
+      "createButton": "Create Organization",
+      "creating": "Creating...",
+      "cancel": "Cancel"
     }
   },
   "matches": {
@@ -777,6 +1057,8 @@
       }
     },
     "inbox": "Inbox",
+    "signInRequired": "Sign in to view messages",
+    "signInPrompt": "Sign in to see your conversations and connect with other players.",
     "search": "Search players",
     "searchConversations": "Search conversations",
     "newGroup": "New group",
@@ -2180,7 +2462,7 @@
     },
     "hero": {
       "badge": "Coming Early 2026",
-      "headline": "Your next game is waiting",
+      "headline": "Your next game is waiting.",
       "subheadline": "Connect with players at your level, schedule games easily, and never play alone again.",
       "ctaButton": "Join the Waitlist",
       "ctaSubtext": "No credit card required • Exclusive early access"
@@ -2210,19 +2492,19 @@
       "sectionBadge": "Simple Process",
       "step1": {
         "title": "Join the Waitlist",
-        "description": "Sign up with your email to secure your spot and get notified when we launch"
+        "description": "Sign up with your email to secure your spot and get notified when we launch."
       },
       "step2": {
         "title": "Create Your Profile",
-        "description": "Share your skill level, location, and playing preferences"
+        "description": "Share your skill level, location, and playing preferences."
       },
       "step3": {
         "title": "Get Matched",
-        "description": "We find playing partners that match your profile and availability"
+        "description": "We find playing partners that match your profile and availability."
       },
       "step4": {
         "title": "Play & Review",
-        "description": "Schedule games instantly and build your network of reliable players"
+        "description": "Schedule games instantly and build your network of reliable players."
       }
     },
     "solutions": {
@@ -2248,37 +2530,37 @@
     "whyJoinEarly": {
       "sectionTitle": "Why Join Early?",
       "sectionBadge": "Early Adopter Benefits",
-      "description": "Be part of the founding community and enjoy exclusive perks that won't be available after launch",
+      "description": "Be part of the founding community and enjoy exclusive perks that won't be available after launch.",
       "benefits": {
         "priority": {
           "title": "Priority Access",
-          "description": "Skip the line and get immediate access when we launch"
+          "description": "Skip the line and get immediate access when we launch."
         },
         "pricing": {
           "title": "Special Early Benefits",
-          "description": "Enjoy special perks and benefits as an early supporter. Founding members get exclusive advantages"
+          "description": "Enjoy special perks and benefits as an early supporter. Founding members get exclusive advantages."
         },
         "influence": {
           "title": "Shape the Product",
-          "description": "Your feedback directly influences features. Help us build what you need"
+          "description": "Your feedback directly influences features. Help us build what you need."
         },
         "exclusive": {
           "title": "Exclusive Features",
-          "description": "Get early access to beta features and new releases before anyone else"
+          "description": "Get early access to beta features and new releases before anyone else."
         },
         "community": {
           "title": "Founding Community",
-          "description": "Connect with other early adopters and build your network before the crowd arrives"
+          "description": "Connect with other early adopters and build your network before the crowd arrives."
         },
         "support": {
           "title": "VIP Support",
-          "description": "Direct line to our team. Get priority support and help shape our service standards"
+          "description": "Direct line to our team. Get priority support and help shape our service standards."
         }
       }
     },
     "cta": {
       "headline": "Ready to Transform Your Tennis Experience?",
-      "description": "Be among the first to experience the future of tennis matchmaking. Join our waitlist and get exclusive early access when we launch",
+      "description": "Be among the first to experience the future of tennis matchmaking. Join our waitlist and get exclusive early access when we launch.",
       "button": "Join the Waitlist"
     },
     "socialProof": {
@@ -2463,11 +2745,11 @@
         "all": "All"
       },
       "duration": {
+        "label": "Duration",
+        "all": "Any",
         "30": "30 min",
         "60": "1 hour",
         "90": "1.5 hours",
-        "label": "Duration",
-        "all": "Any",
         "120+": "2+ hours"
       },
       "courtStatus": {
@@ -2689,34 +2971,455 @@
     "cancel": "Cancel"
   },
   "dashboard": {
-    "badge": "Dashboard",
-    "title": "Welcome to Your Dashboard",
-    "description": "Manage your organization and view your profile information.",
+    "title": "Dashboard",
+    "description": "Description",
+    "quickActions": {
+      "facilities": "Facilities",
+      "facilitiesDesc": "Manage your venues",
+      "availability": "Availability",
+      "availabilityDesc": "View schedule",
+      "bookings": "Bookings",
+      "bookingsDesc": "Manage reservations",
+      "settings": "Settings",
+      "settingsDesc": "Configure options",
+      "newBooking": "New Booking"
+    },
+    "kpi": {
+      "todaysBookings": "Today's Bookings",
+      "todaysBookingsDesc": "scheduled for today",
+      "weekRevenue": "This Week",
+      "weekRevenueDesc": "in revenue",
+      "utilization": "Utilization",
+      "utilizationDesc": "court usage rate",
+      "pendingActions": "Pending",
+      "pendingActionsDesc": "actions needed"
+    },
+    "todaySchedule": {
+      "title": "Today's Schedule",
+      "noBookings": "No bookings scheduled for today",
+      "viewAll": "View All Bookings",
+      "guest": "Guest"
+    },
+    "recentActivity": {
+      "title": "Recent Activity",
+      "noActivity": "No recent activity",
+      "bookingCreated": "New booking created",
+      "bookingCancelled": "Booking cancelled",
+      "bookingCompleted": "Booking completed"
+    },
     "profileTitle": "Your Profile",
-    "profileDescription": "Your personal information and account settings.",
-    "organizationTitle": "Your Organization",
-    "organizationDescription": "Details about your organization.",
+    "profileDescription": "Your account information",
+    "organizationTitle": "Organization",
+    "organizationDescription": "Your organization details",
     "email": "Email",
+    "phone": "Phone",
     "fullName": "Full Name",
     "displayName": "Display Name",
-    "locale": "Locale",
-    "timezone": "Timezone",
-    "name": "Name",
-    "phone": "Phone",
     "location": "Location",
     "website": "Website",
-    "role": "Role",
-    "joinedAt": "Joined"
+    "joinedAt": "Member Since"
+  },
+  "facilities": {
+    "title": "Facilities",
+    "description": "Manage your organization's facilities and courts.",
+    "emptyState": {
+      "title": "No Facilities Yet",
+      "description": "Add your first facility to start managing courts and bookings.",
+      "addButton": "Add Facility"
+    },
+    "addFacility": "Add Facility",
+    "search": {
+      "placeholder": "Search facilities...",
+      "noResults": "No Facilities Found",
+      "noResultsDescription": "No facilities match your current search or filters. Try adjusting your criteria.",
+      "clearFilters": "Clear Filters",
+      "results": "Showing {count} of {total} facilities"
+    },
+    "filter": {
+      "all": "All Status",
+      "active": "Active Only",
+      "inactive": "Inactive Only"
+    },
+    "sort": {
+      "nameAsc": "Name (A-Z)",
+      "nameDesc": "Name (Z-A)",
+      "courtsDesc": "Most Courts",
+      "courtsAsc": "Fewest Courts"
+    },
+    "courtStatus": {
+      "available": "Available",
+      "maintenance": "Maintenance",
+      "closed": "Closed",
+      "reserved": "Reserved",
+      "noCourts": "No courts added yet",
+      "court": "Court",
+      "courts": "Courts"
+    },
+    "quickActions": {
+      "availability": "Manage Availability",
+      "edit": "Edit Facility",
+      "courts": "Manage Courts"
+    },
+    "table": {
+      "name": "Name",
+      "address": "Address",
+      "courts": "Courts",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "detail": {
+      "title": "Facility Details",
+      "info": "Information",
+      "address": "Address",
+      "city": "City",
+      "country": "Country",
+      "postalCode": "Postal Code",
+      "timezone": "Timezone",
+      "description": "Description",
+      "membershipRequired": "Membership Required",
+      "editButton": "Edit Facility",
+      "courtsSection": "Courts",
+      "manageCourts": "Manage Courts",
+      "viewAllCourts": "View All Courts",
+      "stats": {
+        "totalCourts": "Total Courts",
+        "activeCourts": "Active Courts",
+        "activeBookings": "Active Bookings"
+      }
+    },
+    "new": {
+      "subtitle": "Create a new facility for your organization.",
+      "cardTitle": "Facility Details",
+      "cardDescription": "Enter the information for your new facility.",
+      "notAuthenticated": "You must be signed in to add a facility.",
+      "noOrganization": "You must be a member of an organization to add a facility.",
+      "backToFacilities": "Back to Facilities",
+      "creating": "Creating...",
+      "createButton": "Create Facility",
+      "error": "Failed to create facility. Please try again."
+    },
+    "edit": {
+      "title": "Edit Facility",
+      "subtitle": "Update the details of your facility.",
+      "nameLabel": "Facility Name",
+      "namePlaceholder": "Enter facility name",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Enter a description for this facility",
+      "addressLabel": "Address",
+      "addressPlaceholder": "Street address",
+      "cityLabel": "City",
+      "cityPlaceholder": "City name",
+      "postalCodeLabel": "Postal Code",
+      "postalCodePlaceholder": "Postal code",
+      "countryLabel": "Country",
+      "selectCountry": "Select country",
+      "timezoneLabel": "Timezone",
+      "selectTimezone": "Select timezone",
+      "timezonePlaceholder": "e.g. America/Toronto",
+      "latitudeLabel": "Latitude",
+      "latitudePlaceholder": "e.g. 45.5017",
+      "longitudeLabel": "Longitude",
+      "longitudePlaceholder": "e.g. -73.5673",
+      "membershipRequiredLabel": "Membership Required",
+      "membershipRequiredHint": "Require users to be members to book courts at this facility.",
+      "searchPlace": "Search Google Places",
+      "searchPlaceHint": "Enter at least 3 characters and click the search button to auto-fill address fields.",
+      "cancelButton": "Cancel",
+      "saving": "Saving...",
+      "saveButton": "Save Changes",
+      "error": "Failed to update facility. Please try again."
+    }
+  },
+  "courts": {
+    "title": "Courts",
+    "description": "Manage courts at this facility.",
+    "addCourt": "Add Court",
+    "emptyState": {
+      "title": "No Courts Yet",
+      "description": "Add courts to this facility to enable bookings.",
+      "addButton": "Add Court"
+    },
+    "table": {
+      "name": "Name",
+      "number": "Court #",
+      "surface": "Surface",
+      "type": "Type",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "surface": {
+      "hard": "Hard",
+      "clay": "Clay",
+      "grass": "Grass",
+      "synthetic": "Synthetic",
+      "carpet": "Carpet",
+      "concrete": "Concrete",
+      "asphalt": "Asphalt"
+    },
+    "type": {
+      "indoor": "Indoor",
+      "outdoor": "Outdoor"
+    },
+    "status": {
+      "available": "Available",
+      "maintenance": "Maintenance",
+      "closed": "Closed",
+      "reserved": "Reserved",
+      "unavailable": "Unavailable"
+    },
+    "detail": {
+      "title": "Court Details",
+      "info": "Information",
+      "surface": "Surface Type",
+      "lighting": "Lighting",
+      "indoor": "Indoor/Outdoor",
+      "multiSport": "Multi-Sport Lines",
+      "notes": "Notes",
+      "useFacilityDefaults": "Uses Facility Defaults",
+      "customAvailability": "Custom Availability",
+      "availabilityNote": "This court uses the facility's default availability settings.",
+      "customAvailabilityNote": "This court has custom availability settings.",
+      "manageAvailability": "Manage Availability",
+      "editButton": "Edit Court"
+    },
+    "add": {
+      "title": "Add Court",
+      "description": "Add a new court to this facility.",
+      "cancel": "Cancel",
+      "nameLabel": "Court Name",
+      "namePlaceholder": "e.g., Court 1, Main Court",
+      "numberLabel": "Court Number",
+      "numberPlaceholder": "Enter court number",
+      "surfaceLabel": "Surface Type",
+      "surfacePlaceholder": "Select surface type",
+      "indoorLabel": "Indoor Court",
+      "indoorHint": "Is this an indoor court?",
+      "lightingLabel": "Has Lighting",
+      "lightingHint": "Does this court have lighting for night play?",
+      "multiSportLabel": "Multi-Sport Lines",
+      "multiSportHint": "Are there lines marked for multiple sports?",
+      "notesLabel": "Notes",
+      "notesPlaceholder": "Additional notes about this court",
+      "addButton": "Add Court",
+      "adding": "Adding...",
+      "success": "Court added successfully",
+      "error": "Failed to add court"
+    },
+    "edit": {
+      "title": "Edit Court",
+      "saveButton": "Save Changes",
+      "saving": "Saving...",
+      "success": "Court updated successfully",
+      "error": "Failed to update court"
+    },
+    "statusChange": {
+      "success": "Court status updated",
+      "error": "Failed to update court status"
+    }
+  },
+  "availability": {
+    "title": "Availability",
+    "description": "Manage when your courts are available for booking.",
+    "facilityTemplate": {
+      "title": "Facility Default Schedule",
+      "description": "Set the default operating hours for all courts at this facility. Individual courts can override these settings.",
+      "subtitle": "These hours apply to all courts unless a court has custom settings.",
+      "slotDuration": "Slot Duration",
+      "slotDurationHint": "How long is each bookable time slot?",
+      "defaultPrice": "Default Price",
+      "defaultPriceHint": "Price per booking slot",
+      "saveButton": "Save Schedule",
+      "saving": "Saving...",
+      "success": "Schedule saved successfully",
+      "error": "Failed to save schedule"
+    },
+    "courtOverride": {
+      "title": "Court Availability",
+      "useFacilityDefaults": "Use Facility Defaults",
+      "useFacilityDefaultsHint": "Enable to set a custom schedule for this court instead of using facility defaults",
+      "customSchedule": "Custom Schedule",
+      "customScheduleDescription": "This court has a custom schedule that overrides the facility defaults.",
+      "enableCustom": "Set Custom Hours",
+      "disableCustom": "Use Facility Defaults Instead",
+      "noOverrides": "No custom schedule set. This court uses the facility defaults."
+    },
+    "weeklySchedule": {
+      "title": "Weekly Schedule",
+      "day": "Day",
+      "hours": "Hours",
+      "closed": "Closed",
+      "open": "Open",
+      "openTime": "Open",
+      "closeTime": "Close",
+      "allDay": "All Day",
+      "addTimeSlot": "Add Time Slot",
+      "removeTimeSlot": "Remove"
+    },
+    "days": {
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday",
+      "sunday": "Sunday"
+    },
+    "durations": {
+      "30": "30 minutes",
+      "60": "1 hour",
+      "90": "1.5 hours",
+      "120": "2 hours"
+    },
+    "validation": {
+      "allSlotsValid": "All time slots are valid",
+      "validWithWarnings": "Valid with {count} warning(s) - review recommended",
+      "hasErrors": "{count} error(s) must be fixed before saving",
+      "fixErrorsBeforeSaving": "Please fix all validation errors before saving",
+      "slotDurationInfo": "Each time range must be at least {duration} and ideally a multiple of the slot duration for optimal booking slots.",
+      "autoAdjust": "Auto-adjust",
+      "autoAdjustTooltip": "Automatically adjust end time to create complete slots"
+    },
+    "calendar": {
+      "title": "Availability Calendar",
+      "description": "View computed availability for all courts.",
+      "selectFacility": "Select Facility",
+      "allCourts": "All Courts",
+      "today": "Today",
+      "thisWeek": "This Week",
+      "previousWeek": "Previous Week",
+      "nextWeek": "Next Week",
+      "viewMode": {
+        "day": "Day",
+        "week": "Week",
+        "month": "Month"
+      },
+      "legend": {
+        "available": "Available",
+        "booked": "Booked",
+        "blocked": "Blocked",
+        "maintenance": "Maintenance",
+        "past": "Past"
+      },
+      "noSlots": "No slots configured for this day",
+      "clickToBook": "Book Now",
+      "clickToView": "View Booking",
+      "slotBlocked": "This slot is blocked",
+      "price": "Price",
+      "currentTime": "Current time",
+      "monthView": {
+        "bookings": "bookings",
+        "noBookings": "No bookings",
+        "totalBookings": "Total Bookings",
+        "availableSlots": "Available Slots",
+        "blockedSlots": "Blocked Slots",
+        "occupancyRate": "Occupancy Rate",
+        "clickToViewDay": "Click on any day to see detailed schedule",
+        "viewDay": "View Day",
+        "noSlots": "No slots",
+        "courtActive": "court with bookings",
+        "courtsActive": "courts with bookings",
+        "courtBreakdown": "By Court"
+      }
+    }
+  },
+  "blocks": {
+    "title": "Availability Blocks",
+    "description": "Block specific times when courts are not available.",
+    "emptyState": {
+      "title": "No Blocks",
+      "description": "Create blocks for maintenance, holidays, or special events.",
+      "addButton": "Add Block"
+    },
+    "addBlock": "Add Block",
+    "facilityWide": "All Courts",
+    "courtSpecific": "Specific Court",
+    "list": {
+      "date": "Date",
+      "time": "Time",
+      "court": "Court",
+      "reason": "Reason",
+      "type": "Type",
+      "actions": "Actions",
+      "allCourts": "All Courts",
+      "allDay": "All Day"
+    },
+    "types": {
+      "manual": "Manual Block",
+      "maintenance": "Maintenance",
+      "holiday": "Holiday",
+      "weather": "Weather",
+      "private_event": "Private Event"
+    },
+    "form": {
+      "title": "Create Block",
+      "editTitle": "Edit Block",
+      "courtLabel": "Court",
+      "courtPlaceholder": "Select court (or all courts)",
+      "allCourtsOption": "All courts at this facility",
+      "dateLabel": "Date",
+      "datePlaceholder": "Select date",
+      "dateRangeLabel": "Date Range",
+      "startDateLabel": "Start Date",
+      "endDateLabel": "End Date",
+      "allDayLabel": "All Day",
+      "allDayHint": "Block the entire day",
+      "startTimeLabel": "Start Time",
+      "endTimeLabel": "End Time",
+      "typeLabel": "Block Type",
+      "typePlaceholder": "Select type",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "Optional reason for the block",
+      "createButton": "Create Block",
+      "creating": "Creating...",
+      "updateButton": "Update Block",
+      "updating": "Updating...",
+      "deleteButton": "Delete Block",
+      "deleting": "Deleting...",
+      "cancelButton": "Cancel",
+      "success": "Block created successfully",
+      "updateSuccess": "Block updated successfully",
+      "deleteSuccess": "Block deleted successfully",
+      "error": "Failed to create block",
+      "updateError": "Failed to update block",
+      "deleteError": "Failed to delete block"
+    },
+    "confirmDelete": {
+      "title": "Delete Block",
+      "description": "Are you sure you want to delete this block? This action cannot be undone.",
+      "confirm": "Delete",
+      "cancel": "Cancel"
+    }
   },
   "app": {
     "nav": {
       "dashboard": "Dashboard",
       "organizations": "Organizations",
       "facilities": "Facilities",
+      "availability": "Availability",
+      "bookings": "Bookings",
+      "analytics": "Analytics",
       "members": "Members",
       "settings": "Settings",
       "theme": "Theme",
-      "signOut": "Sign Out"
+      "signOut": "Sign Out",
+      "notifications": "Notifications"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "empty": "No new notifications",
+      "viewAll": "View all notifications",
+      "markAllRead": "Mark all as read",
+      "newBooking": "New booking",
+      "bookingCancelled": "Booking cancelled",
+      "paymentReceived": "Payment received",
+      "justNow": "Just now",
+      "minutesAgo": "{count} min ago",
+      "hoursAgo": "{count}h ago",
+      "daysAgo": "{count}d ago"
     }
   },
   "admin": {
@@ -3316,5 +4019,227 @@
     "inviteViaLinkOrQR": "Invite via Link or QR",
     "groupMemberCount": "{count} members",
     "groupMemberCount_one": "{count} member"
+  },
+  "bookings": {
+    "title": "Bookings",
+    "description": "View and manage court bookings.",
+    "emptyState": {
+      "title": "No Bookings Yet",
+      "description": "Bookings will appear here once players start making reservations.",
+      "createButton": "Create Manual Booking"
+    },
+    "filters": {
+      "title": "Filter Bookings",
+      "allStatuses": "All Statuses",
+      "allCourts": "All Courts",
+      "allFacilities": "All Facilities",
+      "dateRange": "Date Range",
+      "dateFrom": "From",
+      "dateTo": "To",
+      "search": "Search by player name, email, or booking ID",
+      "clear": "Clear",
+      "paymentStatus": "Payment Status",
+      "allPayments": "All Payments",
+      "paid": "Paid",
+      "unpaid": "Unpaid",
+      "refunded": "Refunded",
+      "priceRange": "Price Range",
+      "minPrice": "Min",
+      "maxPrice": "Max"
+    },
+    "table": {
+      "date": "Date",
+      "time": "Time",
+      "court": "Court",
+      "player": "Player",
+      "status": "Status",
+      "amount": "Amount",
+      "actions": "Actions"
+    },
+    "status": {
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "cancelled": "Cancelled",
+      "completed": "Completed",
+      "no_show": "No Show",
+      "awaiting_approval": "Awaiting Approval"
+    },
+    "detail": {
+      "title": "Booking Details",
+      "bookingInfo": "Booking Information",
+      "playerInfo": "Player Information",
+      "paymentInfo": "Payment Information",
+      "timeline": "Timeline",
+      "bookingId": "Booking ID",
+      "court": "Court",
+      "facility": "Facility",
+      "date": "Date",
+      "time": "Time",
+      "duration": "Duration",
+      "status": "Status",
+      "playerName": "Player Name",
+      "playerEmail": "Email",
+      "amount": "Amount",
+      "paymentStatus": "Payment Status",
+      "paymentMethod": "Payment Method",
+      "stripePaymentId": "Stripe Payment ID",
+      "refundStatus": "Refund Status",
+      "refundAmount": "Refund Amount",
+      "viewInStripe": "View in Stripe",
+      "createdAt": "Created",
+      "confirmedAt": "Confirmed",
+      "cancelledAt": "Cancelled",
+      "cancelledBy": "Cancelled by",
+      "cancellationReason": "Reason",
+      "backToList": "Back to Bookings",
+      "guestBooking": "Guest",
+      "unknownPlayer": "Unknown"
+    },
+    "actions": {
+      "view": "View Details",
+      "cancel": "Cancel Booking",
+      "cancelling": "Cancelling...",
+      "markNoShow": "Mark as No-Show",
+      "markComplete": "Mark as Complete",
+      "createManual": "Create Manual Booking"
+    },
+    "bulk": {
+      "selected": "{count} selected",
+      "cancel": "Cancel Selected",
+      "complete": "Complete Selected",
+      "cancelTitle": "Cancel Selected Bookings",
+      "cancelDescription": "Are you sure you want to cancel {count} selected booking(s)? This action cannot be undone.",
+      "completeTitle": "Complete Selected Bookings",
+      "completeDescription": "Mark {count} selected booking(s) as completed?",
+      "confirm": "Confirm",
+      "cancelButton": "Keep Bookings"
+    },
+    "cancel": {
+      "title": "Cancel Booking",
+      "description": "Are you sure you want to cancel this booking?",
+      "reasonLabel": "Cancellation Reason",
+      "reasonPlaceholder": "Enter reason for cancellation (optional)",
+      "refundInfo": "Refund Information",
+      "fullRefund": "Full refund will be processed",
+      "partialRefund": "Partial refund of {percent}% will be processed",
+      "noRefund": "No refund - cancellation is past the refund window",
+      "confirmButton": "Cancel Booking",
+      "cancelButton": "Keep Booking",
+      "success": "Booking cancelled successfully",
+      "error": "Failed to cancel booking"
+    },
+    "noShow": {
+      "title": "Mark as No-Show",
+      "description": "Are you sure you want to mark this booking as a no-show? This indicates the player did not attend.",
+      "confirmButton": "Mark as No-Show",
+      "cancelButton": "Cancel",
+      "success": "Booking marked as no-show",
+      "error": "Failed to update booking"
+    },
+    "complete": {
+      "title": "Mark as Complete",
+      "description": "Mark this booking as completed?",
+      "confirmButton": "Mark as Complete",
+      "cancelButton": "Cancel",
+      "success": "Booking marked as complete",
+      "error": "Failed to update booking"
+    },
+    "manual": {
+      "title": "Create Manual Booking",
+      "description": "Create a booking for a walk-in customer or phone reservation.",
+      "courtLabel": "Court",
+      "courtPlaceholder": "Select a court",
+      "dateLabel": "Date",
+      "datePlaceholder": "Select date",
+      "timeLabel": "Time Slot",
+      "timePlaceholder": "Select time slot",
+      "playerLabel": "Player",
+      "existingPlayer": "Existing Player",
+      "guestPlayer": "Guest (Walk-in)",
+      "playerSearchPlaceholder": "Search for player by name or email",
+      "guestNameLabel": "Guest Name",
+      "guestNamePlaceholder": "Enter guest name",
+      "guestEmailLabel": "Guest Email (optional)",
+      "guestEmailPlaceholder": "guest@example.com",
+      "guestPhoneLabel": "Guest Phone (optional)",
+      "guestPhonePlaceholder": "+1 (555) 123-4567",
+      "paymentMethod": "Payment Method",
+      "payOnline": "Pay Online (Stripe)",
+      "paidInCash": "Paid in Cash",
+      "paidByCard": "Paid by Card (on-site)",
+      "notesLabel": "Notes",
+      "notesPlaceholder": "Optional notes about this booking",
+      "createButton": "Create Booking",
+      "creating": "Creating...",
+      "cancelButton": "Cancel",
+      "success": "Booking created successfully",
+      "error": "Failed to create booking",
+      "noSlotsAvailable": "No slots available for selected date",
+      "selectCourtFirst": "Please select a court first",
+      "selectDateFirst": "Please select a date first",
+      "recurring": {
+        "title": "Recurring Booking",
+        "enable": "Make this a recurring booking",
+        "pattern": "Repeat Pattern",
+        "weekly": "Weekly",
+        "biweekly": "Every 2 weeks",
+        "monthly": "Monthly",
+        "endType": "Ends",
+        "afterOccurrences": "After occurrences",
+        "onDate": "On date",
+        "occurrences": "Number of occurrences",
+        "endDate": "End date",
+        "preview": "Booking Dates Preview",
+        "previewDesc": "The following {count} bookings will be created:",
+        "conflictWarning": "Some dates may have conflicts",
+        "noAvailableDates": "No available dates found for this pattern"
+      }
+    },
+    "pagination": {
+      "showing": "Showing {start} to {end} of {total} bookings",
+      "page": "Page {current} of {total}",
+      "previous": "Previous",
+      "next": "Next"
+    }
+  },
+  "analytics": {
+    "title": "Analytics",
+    "description": "Track your organization's performance and metrics.",
+    "tabs": {
+      "overview": "Overview",
+      "revenue": "Revenue",
+      "bookings": "Bookings",
+      "utilization": "Utilization"
+    },
+    "overview": {
+      "totalBookings": "Total Bookings",
+      "totalRevenue": "Total Revenue",
+      "avgBookingsPerDay": "Avg. Bookings/Day",
+      "utilizationRate": "Utilization Rate",
+      "thisMonth": "This month",
+      "vsLastMonth": "vs last month"
+    },
+    "charts": {
+      "revenueOverTime": "Revenue Over Time",
+      "bookingsByStatus": "Bookings by Status",
+      "bookingsTrend": "Booking Trends",
+      "courtUtilization": "Court Utilization",
+      "peakHours": "Peak Hours",
+      "noData": "No data available for this period"
+    },
+    "filters": {
+      "dateRange": "Date Range",
+      "last7Days": "Last 7 days",
+      "last30Days": "Last 30 days",
+      "last90Days": "Last 90 days",
+      "thisMonth": "This month",
+      "lastMonth": "Last month",
+      "custom": "Custom range"
+    },
+    "export": {
+      "exportData": "Export Data",
+      "exportCSV": "Export to CSV",
+      "exportPDF": "Export to PDF"
+    }
   }
 }

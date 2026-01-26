@@ -7,7 +7,7 @@
  */
 
 import React, { useMemo, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -135,7 +135,12 @@ const Community = () => {
 
   // Render action buttons row
   const renderActionButtons = () => (
-    <View style={styles.actionButtonsContainer}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={styles.actionButtonsScrollView}
+      contentContainerStyle={styles.actionButtonsContainer}
+    >
       {actionButtons.map(button => (
         <TouchableOpacity
           key={button.id}
@@ -151,7 +156,7 @@ const Community = () => {
           </Text>
         </TouchableOpacity>
       ))}
-    </View>
+    </ScrollView>
   );
 
   return (
@@ -183,9 +188,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  actionButtonsScrollView: {
+    flexGrow: 0,
+    paddingTop: spacingPixels[2],
+    flexShrink: 0,
+  },
   actionButtonsContainer: {
     flexDirection: 'row',
-    justifyContent: 'flex-start',
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[3],
     paddingBottom: spacingPixels[2],

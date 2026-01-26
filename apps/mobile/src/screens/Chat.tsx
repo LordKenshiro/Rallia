@@ -14,6 +14,7 @@ import {
   RefreshControl,
   TextInput,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -23,6 +24,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, SkeletonConversation } from '@rallia/shared-components';
 import { lightHaptic, selectionHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useAuth, useTranslation } from '../hooks';
+import { useActionsSheet } from '../context';
+import SignInPrompt from '../components/SignInPrompt';
 import { spacingPixels, fontSizePixels, primary, neutral } from '@rallia/design-system';
 import {
   usePlayerConversations,
@@ -50,8 +53,9 @@ const TAB_CONFIGS: { key: TabKey; icon: keyof typeof Ionicons.glyphMap }[] = [
 const Chat = () => {
   const { colors, isDark } = useThemeStyles();
   const navigation = useNavigation<NavigationProp>();
-  const { session } = useAuth();
+  const { session, isAuthenticated, loading: isLoadingAuth } = useAuth();
   const { t } = useTranslation();
+  const { openSheet } = useActionsSheet();
   const playerId = session?.user?.id;
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<TabKey>('direct');
@@ -347,6 +351,30 @@ const Chat = () => {
     );
   }, [searchQuery, archivedCount, colors, isDark, handleArchivedPress, t]);
 
+  // Show loading spinner while auth state is being determined
+  if (isLoadingAuth) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+        <View style={styles.authLoadingContainer}>
+          <ActivityIndicator size="large" color={primary[500]} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Show sign-in prompt if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <SignInPrompt
+        variant="chat"
+        title={t('chat.signInRequired')}
+        description={t('chat.signInPrompt')}
+        buttonText={t('auth.signIn')}
+        onSignIn={openSheet}
+      />
+    );
+  }
+
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -506,6 +534,11 @@ const Chat = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  authLoadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     flexDirection: 'row',
