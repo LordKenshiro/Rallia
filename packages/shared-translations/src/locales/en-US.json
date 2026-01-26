@@ -76,7 +76,8 @@
     "remove": "Remove",
     "you": "You",
     "today": "Today",
-    "yesterday": "Yesterday"
+    "yesterday": "Yesterday",
+    "locale": "en-US"
   },
   "auth": {
     "signIn": "Sign In",
@@ -470,7 +471,9 @@
       "tennisRating": "Tennis Rating",
       "pickleballRating": "Pickleball Rating",
       "preferences": "Preferences",
-      "availability": "Availability"
+      "availability": "Availability",
+      "location": "Location",
+      "favoriteSites": "Favorite Courts"
     },
     "personalInfoStep": {
       "title": "Tell us about yourself",
@@ -497,7 +500,45 @@
       "tennisTitle": "Tell us about your game",
       "pickleballTitle": "Tell us about your game",
       "ntrpSubtitle": "NTRP Rating",
-      "duprSubtitle": "DUPR Rating"
+      "duprSubtitle": "DUPR Rating",
+      "skillLevels": {
+        "beginner1": "Beginner",
+        "beginner2": "Beginner",
+        "beginner3": "Beginner",
+        "intermediate1": "Intermediate",
+        "intermediate2": "Intermediate",
+        "intermediate3": "Intermediate",
+        "advanced1": "Advanced",
+        "advanced2": "Advanced",
+        "advanced3": "Advanced",
+        "professional": "Professional"
+      },
+      "ntrpDescriptions": {
+        "1.5": "Just starting to play tennis.",
+        "2.0": "You have limited experience and are working primarily on getting the ball into play.",
+        "2.5": "You are learning to judge where the ball is going and can sustain a short rally.",
+        "3.0": "You can place shots with moderate success and can sustain a rally at a slow pace.",
+        "3.5": "You have achieved improved stroke dependability with directional control.",
+        "4.0": "You have dependable strokes and can handle pace and spin.",
+        "4.5": "You have good shot anticipation and frequently have an outstanding shot.",
+        "5.0": "You have good shot anticipation and frequently have an outstanding shot or attribute.",
+        "5.5": "You can vary strategies and styles of play in competitive situations.",
+        "6.0": "You have had intensive training for national tournament competition.",
+        "1.0": "You are new to tennis and learning the basics."
+      },
+      "duprDescriptions": {
+        "1.0": "Just starting to play pickleball.",
+        "2.0": "You have limited experience and are working primarily on getting the ball into play.",
+        "2.5": "You are learning to judge where the ball is going and can sustain a short rally.",
+        "3.0": "You can place shots with moderate success and can sustain a rally at a slow pace.",
+        "3.5": "You have achieved improved stroke dependability with directional control.",
+        "4.0": "You have dependable strokes and can handle pace and spin.",
+        "4.5": "You have good shot anticipation and frequently have an outstanding shot.",
+        "5.0": "You have good shot anticipation and frequently have an outstanding shot or attribute.",
+        "5.5": "You can vary strategies and styles of play in competitive situations.",
+        "6.0": "You have had intensive training for national tournament competition.",
+        "1.5": "You are new to pickleball and learning the basics."
+      }
     },
     "preferencesStep": {
       "title": "Tell us about your preferences",
@@ -518,7 +559,18 @@
       "am": "AM",
       "pm": "PM",
       "eve": "EVE",
-      "minimumSelected": "{count} / {minimum} minimum selected"
+      "minimumSelected": "{count} / {minimum} minimum selected",
+      "saveButton": "Save",
+      "complete": "Complete",
+      "days": {
+        "monday": "Mon",
+        "tuesday": "Tue",
+        "wednesday": "Wed",
+        "thursday": "Thu",
+        "friday": "Fri",
+        "saturday": "Sat",
+        "sunday": "Sun"
+      }
     },
     "validation": {
       "fillRequiredFields": "Please fill in all required fields",
@@ -543,7 +595,9 @@
       "uploadError": "Upload Error",
       "enterAllDigits": "Please enter all 6 digits",
       "authFailed": "Authentication failed - please try again",
-      "verificationCodeSent": "Verification code sent!"
+      "verificationCodeSent": "Verification code sent!",
+      "cityRequired": "Please enter your city",
+      "failedToSaveLocation": "Failed to save your location. Please try again."
     },
     "successMessages": {
       "personalInfoUpdated": "Successfully updated Personal Information",
@@ -557,7 +611,51 @@
       "subtitle": "Your account was created successfully.",
       "getStarted": "Get Started"
     },
-    "complete": "Complete"
+    "complete": "Complete",
+    "locationStep": {
+      "title": "Where are you located?",
+      "subtitle": "Help us find courts and players near you",
+      "address": "Address",
+      "addressPlaceholder": "Enter your address",
+      "city": "City",
+      "cityPlaceholder": "Enter your city",
+      "postalCode": "Postal Code",
+      "postalCodePlaceholder": "A1A 1A1",
+      "privacyTitle": "Your privacy is protected",
+      "privacyDescription": "Your exact location is never shared with other players. We only use it to find courts and games nearby.",
+      "warningTitle": "Location Not Set",
+      "warningMessage": "Without a full address, we won't be able to find games near you as accurately. You can update this later in your profile settings."
+    },
+    "favoriteSitesStep": {
+      "title": "Select Your Favorite Courts",
+      "subtitle": "Choose up to 3 facilities where you like to play. This helps us find you better matches.",
+      "selected": "selected",
+      "searchLabel": "Search for a facility",
+      "searchPlaceholder": "Type to search...",
+      "loading": "Loading nearby facilities...",
+      "noSportSelected": "Please select a sport first",
+      "noLocation": "Location needed to find nearby facilities",
+      "noResults": "No facilities found for your search",
+      "noFacilitiesNearby": "No facilities found nearby. Try expanding your search.",
+      "hint": "You can change your favorite courts anytime in your profile settings.",
+      "failedToSave": "Failed to save favorite facilities. Please try again."
+    },
+    "ratingOverlay": {
+      "title": "Select Your Rating",
+      "editTennisTitle": "Edit Your Tennis Rating",
+      "editPickleballTitle": "Edit Your Pickleball Rating",
+      "tennisSubtitle": "NTRP Rating",
+      "pickleballSubtitle": "DUPR Rating",
+      "learnMoreNtrp": "Learn more about NTRP ratings",
+      "learnMoreDupr": "Learn more about DUPR ratings",
+      "loading": "Loading ratings...",
+      "save": "Save",
+      "continue": "Continue",
+      "failedToLoadRatings": "Failed to load ratings. Please try again.",
+      "unexpectedError": "An unexpected error occurred.",
+      "failedToSaveRating": "Failed to save your rating. Please try again.",
+      "invalidRatingSelected": "Invalid rating selected"
+    }
   },
   "matches": {
     "title": "Games",
@@ -913,7 +1011,10 @@
       "myCommunities": "My Communities",
       "home": "Home",
       "leaderboard": "Leaderboard",
-      "activity": "Activity"
+      "activity": "Activity",
+      "games": "Games",
+      "members": "Members",
+      "about": "About"
     },
     "discoverCommunities": "Discover Communities",
     "empty": {
@@ -1068,7 +1169,10 @@
     "tabs": {
       "home": "Home",
       "leaderboard": "Leaderboard",
-      "activity": "Activity"
+      "activity": "Activity",
+      "games": "Games",
+      "members": "Members",
+      "info": "Info"
     },
     "chatWithMembers": "Chat with members",
     "empty": {
@@ -1264,7 +1368,8 @@
       "playGamesToAppear": "Play games with group members to appear on the leaderboard",
       "noRecentActivity": "No recent activity",
       "addMember": "Add Member",
-      "shareInviteLink": "Share Invite Link"
+      "shareInviteLink": "Share Invite Link",
+      "noRecentGames": "No recent games"
     },
     "options": {
       "shareInviteLink": "Share Invite Link",
@@ -2060,7 +2165,15 @@
       "title": "No nearby games found",
       "description": "There are no upcoming games within your {distance} km travel distance.",
       "suggestion": "Try increasing your maximum travel distance in your profile to see more games.",
-      "updateSettings": "Update Settings"
+      "updateSettings": "Update Settings",
+      "guestDescription": "Sign in to see games near your location."
+    },
+    "location": {
+      "title": "Select Location",
+      "current": "Current Location",
+      "currentDescription": "Use your GPS location",
+      "home": "Home Location",
+      "homeNotSet": "Set your home location in settings"
     },
     "header": {
       "ctaButton": "Join Waitlist"
@@ -3196,5 +3309,12 @@
         "declining": "Declining"
       }
     }
+  },
+  "groupChat": {
+    "addGroupDescription": "Add a group description...",
+    "addMembers": "Add Members",
+    "inviteViaLinkOrQR": "Invite via Link or QR",
+    "groupMemberCount": "{count} members",
+    "groupMemberCount_one": "{count} member"
   }
 }

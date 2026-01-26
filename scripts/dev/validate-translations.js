@@ -7,13 +7,15 @@
  * - Missing keys between locales
  * - Mismatched interpolation variables
  * - Unused translation keys (not referenced in code)
- * - Duplicate keys
+ * - Missing translations (keys used in code but not in translation files)
  * - Empty values
  *
- * Usage: node scripts/dev/validate-translations.js [--check-usage] [--verbose]
+ * Usage: node scripts/dev/validate-translations.js [--check-usage] [--check-missing] [--mobile-only] [--verbose]
  *
  * Options:
  *   --check-usage    Check for unused translation keys in codebase (slower)
+ *   --check-missing  Check for keys used in code but missing from translations (slower)
+ *   --mobile-only    Only scan mobile app source files (faster, for mobile-focused checks)
  *   --verbose        Show detailed output
  *   --json           Output results as JSON
  */
@@ -23,15 +25,22 @@ const path = require('path');
 
 const ROOT_DIR = path.resolve(__dirname, '../..');
 const TRANSLATIONS_DIR = path.join(ROOT_DIR, 'packages/shared-translations/src/locales');
-const SOURCE_DIRS = [
-  path.join(ROOT_DIR, 'apps/mobile/src'),
-  path.join(ROOT_DIR, 'apps/web'),
-  path.join(ROOT_DIR, 'packages'),
-];
 
 const CHECK_USAGE = process.argv.includes('--check-usage');
+const CHECK_MISSING = process.argv.includes('--check-missing');
+const MOBILE_ONLY = process.argv.includes('--mobile-only');
 const VERBOSE = process.argv.includes('--verbose');
 const JSON_OUTPUT = process.argv.includes('--json');
+
+// Source directories to scan - filtered by --mobile-only flag
+// Note: shared-components is included in mobile-only since mobile app uses shared components
+const SOURCE_DIRS = MOBILE_ONLY
+  ? [path.join(ROOT_DIR, 'apps/mobile/src'), path.join(ROOT_DIR, 'packages/shared-components/src')]
+  : [
+      path.join(ROOT_DIR, 'apps/mobile/src'),
+      path.join(ROOT_DIR, 'apps/web'),
+      path.join(ROOT_DIR, 'packages'),
+    ];
 
 // ANSI colors
 const colors = {
@@ -322,6 +331,64 @@ function findUnusedKeys(translations) {
 }
 
 /**
+ * Find translation keys used in code but missing from translation files
+ */
+function findMissingInCode(translations) {
+  const issues = [];
+
+  log('  Scanning source files for translation usage...', 'dim');
+
+  // Get all source files
+  let allFiles = [];
+  for (const dir of SOURCE_DIRS) {
+    allFiles.push(...getSourceFiles(dir));
+  }
+
+  // Get all keys from reference locale
+  const referenceLocale =
+    Object.keys(translations).find(l => l.startsWith('en')) || Object.keys(translations)[0];
+  const translationKeys = new Set(Object.keys(translations[referenceLocale].flat));
+
+  // Pattern to match t('key.subkey') or t("key.subkey") with optional 'as TranslationKey'
+  // Key must start with lowercase letter and have at least one dot
+  const keyPattern = /t\(['"]([a-z][a-zA-Z0-9]*\.[a-zA-Z0-9_.]+)['"]/g;
+
+  const usedKeys = new Map(); // key -> [files]
+
+  for (const file of allFiles) {
+    const content = fs.readFileSync(file, 'utf8');
+    let match;
+    const regex = new RegExp(keyPattern.source, 'g');
+    while ((match = regex.exec(content)) !== null) {
+      const key = match[1];
+      if (!usedKeys.has(key)) {
+        usedKeys.set(key, []);
+      }
+      const relPath = path.relative(ROOT_DIR, file);
+      if (!usedKeys.get(key).includes(relPath)) {
+        usedKeys.get(key).push(relPath);
+      }
+    }
+  }
+
+  log(`  Found ${usedKeys.size} unique translation keys in code...`, 'dim');
+
+  // Find keys used in code but not in translations
+  for (const [key, files] of usedKeys) {
+    if (!translationKeys.has(key)) {
+      issues.push({
+        type: 'missing_in_translations',
+        key,
+        files,
+        message: `Key "${key}" used in code but missing from translations`,
+      });
+    }
+  }
+
+  return issues;
+}
+
+/**
  * Main execution
  */
 function main() {
@@ -345,6 +412,7 @@ function main() {
     variableMismatches: [],
     emptyValues: [],
     unusedKeys: [],
+    missingInCode: [],
   };
 
   // Check for missing keys
@@ -423,12 +491,35 @@ function main() {
     }
   }
 
+  // Check for keys used in code but missing from translations (optional, slower)
+  if (CHECK_MISSING) {
+    logSection('Missing in Translations');
+    results.missingInCode = findMissingInCode(translations);
+
+    if (results.missingInCode.length === 0) {
+      log('  ✓ All keys used in code exist in translations', 'green');
+    } else {
+      log(`  ✗ ${results.missingInCode.length} key(s) missing from translations`, 'red');
+      if (VERBOSE) {
+        results.missingInCode.slice(0, 20).forEach(i => {
+          log(`    • ${i.key}`, 'dim');
+          i.files.slice(0, 3).forEach(f => log(`      → ${f}`, 'dim'));
+          if (i.files.length > 3) log(`      ... and ${i.files.length - 3} more files`, 'dim');
+        });
+        if (results.missingInCode.length > 20) {
+          log(`    ... and ${results.missingInCode.length - 20} more`, 'dim');
+        }
+      }
+    }
+  }
+
   // Summary
   logSection('Summary');
 
   const criticalIssues =
     results.missingKeys.filter(i => i.type === 'missing').length +
-    results.variableMismatches.length;
+    results.variableMismatches.length +
+    results.missingInCode.length;
   const warnings =
     results.emptyValues.length +
     results.missingKeys.filter(i => i.type === 'extra').length +
@@ -463,6 +554,11 @@ function main() {
       log('  💡 Tips:', 'cyan');
       log('     • Run with --verbose for detailed output', 'dim');
       log('     • Run with --check-usage to find unused keys', 'dim');
+      log(
+        '     • Run with --check-missing to find keys used in code but missing from translations',
+        'dim'
+      );
+      log('     • Run with --mobile-only to scan only mobile app files', 'dim');
       log('     • Run with --json for machine-readable output', 'dim');
     }
   }

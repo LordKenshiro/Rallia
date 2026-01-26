@@ -76,7 +76,8 @@
       "inHours": "Dans {hours}h",
       "inHoursMinutes": "Dans {hours}h {minutes}m",
       "timeSeparator": " • "
-    }
+    },
+    "locale": "fr-CA"
   },
   "auth": {
     "signIn": "Connexion",
@@ -470,7 +471,9 @@
       "tennisRating": "Classement Tennis",
       "pickleballRating": "Classement Pickleball",
       "preferences": "Préférences",
-      "availability": "Disponibilité"
+      "availability": "Disponibilité",
+      "location": "Localisation",
+      "favoriteSites": "Terrains favoris"
     },
     "personalInfoStep": {
       "title": "Parlez-nous de vous",
@@ -497,7 +500,45 @@
       "tennisTitle": "Parlez-nous de votre jeu",
       "pickleballTitle": "Parlez-nous de votre jeu",
       "ntrpSubtitle": "Classement NTRP",
-      "duprSubtitle": "Classement DUPR"
+      "duprSubtitle": "Classement DUPR",
+      "skillLevels": {
+        "beginner1": "Débutant",
+        "beginner2": "Débutant",
+        "beginner3": "Débutant",
+        "intermediate1": "Intermédiaire",
+        "intermediate2": "Intermédiaire",
+        "intermediate3": "Intermédiaire",
+        "advanced1": "Avancé",
+        "advanced2": "Avancé",
+        "advanced3": "Avancé",
+        "professional": "Professionnel"
+      },
+      "ntrpDescriptions": {
+        "1.5": "Vous commencez tout juste à jouer au tennis.",
+        "2.0": "Vous avez une expérience limitée et travaillez principalement à mettre la balle en jeu.",
+        "2.5": "Vous apprenez à juger où va la balle et pouvez maintenir un court échange.",
+        "3.0": "Vous pouvez placer vos coups avec un succès modéré et maintenir un échange à un rythme lent.",
+        "3.5": "Vous avez atteint une meilleure fiabilité de coup avec contrôle directionnel.",
+        "4.0": "Vous avez des coups fiables et pouvez gérer le rythme et l'effet.",
+        "4.5": "Vous avez une bonne anticipation et avez fréquemment un coup exceptionnel.",
+        "5.0": "Vous avez une bonne anticipation et avez fréquemment un coup ou attribut exceptionnel.",
+        "5.5": "Vous pouvez varier les stratégies et styles de jeu en situation compétitive.",
+        "6.0": "Vous avez eu une formation intensive pour la compétition de tournois nationaux.",
+        "1.0": "Vous êtes nouveau au tennis et apprenez les bases."
+      },
+      "duprDescriptions": {
+        "1.0": "Vous commencez tout juste à jouer au pickleball.",
+        "2.0": "Vous avez une expérience limitée et travaillez principalement à mettre la balle en jeu.",
+        "2.5": "Vous apprenez à juger où va la balle et pouvez maintenir un court échange.",
+        "3.0": "Vous pouvez placer vos coups avec un succès modéré et maintenir un échange à un rythme lent.",
+        "3.5": "Vous avez atteint une meilleure fiabilité de coup avec contrôle directionnel.",
+        "4.0": "Vous avez des coups fiables et pouvez gérer le rythme et l'effet.",
+        "4.5": "Vous avez une bonne anticipation et avez fréquemment un coup exceptionnel.",
+        "5.0": "Vous avez une bonne anticipation et avez fréquemment un coup ou attribut exceptionnel.",
+        "5.5": "Vous pouvez varier les stratégies et styles de jeu en situation compétitive.",
+        "6.0": "Vous avez eu une formation intensive pour la compétition de tournois nationaux.",
+        "1.5": "Vous êtes nouveau au pickleball et apprenez les bases."
+      }
     },
     "preferencesStep": {
       "title": "Parlez-nous de vos préférences",
@@ -518,7 +559,18 @@
       "am": "AM",
       "pm": "PM",
       "eve": "SOIR",
-      "minimumSelected": "{count} / {minimum} minimum sélectionnés"
+      "minimumSelected": "{count} / {minimum} minimum sélectionnés",
+      "saveButton": "Enregistrer",
+      "complete": "Terminer",
+      "days": {
+        "monday": "Lun",
+        "tuesday": "Mar",
+        "wednesday": "Mer",
+        "thursday": "Jeu",
+        "friday": "Ven",
+        "saturday": "Sam",
+        "sunday": "Dim"
+      }
     },
     "validation": {
       "fillRequiredFields": "Veuillez remplir tous les champs obligatoires",
@@ -543,7 +595,9 @@
       "uploadError": "Erreur de téléversement",
       "enterAllDigits": "Veuillez entrer les 6 chiffres",
       "authFailed": "Échec de l'authentification - veuillez réessayer",
-      "verificationCodeSent": "Code de vérification envoyé!"
+      "verificationCodeSent": "Code de vérification envoyé!",
+      "cityRequired": "Veuillez entrer votre ville",
+      "failedToSaveLocation": "Échec de l'enregistrement de votre localisation. Veuillez réessayer."
     },
     "successMessages": {
       "personalInfoUpdated": "Informations personnelles mises à jour avec succès",
@@ -557,7 +611,51 @@
       "subtitle": "Votre compte a été créé avec succès.",
       "getStarted": "Commencer"
     },
-    "complete": "Terminer"
+    "complete": "Terminer",
+    "locationStep": {
+      "title": "Où êtes-vous situé?",
+      "subtitle": "Aidez-nous à trouver des terrains et des joueurs près de chez vous",
+      "address": "Adresse",
+      "addressPlaceholder": "Entrez votre adresse",
+      "city": "Ville",
+      "cityPlaceholder": "Entrez votre ville",
+      "postalCode": "Code postal",
+      "postalCodePlaceholder": "A1A 1A1",
+      "privacyTitle": "Votre vie privée est protégée",
+      "privacyDescription": "Votre emplacement exact n'est jamais partagé avec d'autres joueurs. Nous l'utilisons uniquement pour trouver des terrains et des parties à proximité.",
+      "warningTitle": "Emplacement non défini",
+      "warningMessage": "Sans adresse complète, nous ne pourrons pas trouver de parties près de chez vous aussi précisément. Vous pouvez mettre cela à jour plus tard dans les paramètres de votre profil."
+    },
+    "favoriteSitesStep": {
+      "title": "Sélectionnez vos terrains favoris",
+      "subtitle": "Choisissez jusqu'à 3 installations où vous aimez jouer. Cela nous aide à vous trouver de meilleures parties.",
+      "selected": "sélectionnés",
+      "searchLabel": "Rechercher une installation",
+      "searchPlaceholder": "Tapez pour rechercher...",
+      "loading": "Chargement des installations à proximité...",
+      "noSportSelected": "Veuillez d'abord sélectionner un sport",
+      "noLocation": "Localisation nécessaire pour trouver les installations à proximité",
+      "noResults": "Aucune installation trouvée pour votre recherche",
+      "noFacilitiesNearby": "Aucune installation trouvée à proximité. Essayez d'élargir votre recherche.",
+      "hint": "Vous pouvez modifier vos terrains favoris à tout moment dans les paramètres de votre profil.",
+      "failedToSave": "Échec de l'enregistrement des installations favorites. Veuillez réessayer."
+    },
+    "ratingOverlay": {
+      "title": "Sélectionnez votre classement",
+      "editTennisTitle": "Modifier votre classement de tennis",
+      "editPickleballTitle": "Modifier votre classement de pickleball",
+      "tennisSubtitle": "Classement NTRP",
+      "pickleballSubtitle": "Classement DUPR",
+      "learnMoreNtrp": "En savoir plus sur les classements NTRP",
+      "learnMoreDupr": "En savoir plus sur les classements DUPR",
+      "loading": "Chargement des classements...",
+      "save": "Enregistrer",
+      "continue": "Continuer",
+      "failedToLoadRatings": "Échec du chargement des classements. Veuillez réessayer.",
+      "unexpectedError": "Une erreur inattendue s'est produite.",
+      "failedToSaveRating": "Échec de l'enregistrement de votre classement. Veuillez réessayer.",
+      "invalidRatingSelected": "Classement sélectionné invalide"
+    }
   },
   "matches": {
     "title": "Parties",
@@ -913,7 +1011,10 @@
       "myCommunities": "Mes communautés",
       "home": "Accueil",
       "leaderboard": "Classement",
-      "activity": "Activité"
+      "activity": "Activité",
+      "games": "Parties",
+      "members": "Membres",
+      "about": "À propos"
     },
     "discoverCommunities": "Découvrir les communautés",
     "empty": {
@@ -1068,7 +1169,10 @@
     "tabs": {
       "home": "Accueil",
       "leaderboard": "Classement",
-      "activity": "Activité"
+      "activity": "Activité",
+      "games": "Parties",
+      "members": "Membres",
+      "info": "Info"
     },
     "chatWithMembers": "Discuter avec les membres",
     "empty": {
@@ -1264,7 +1368,8 @@
       "playGamesToAppear": "Jouez des parties avec les membres du groupe pour apparaître au classement",
       "noRecentActivity": "Aucune activité récente",
       "addMember": "Ajouter un membre",
-      "shareInviteLink": "Partager le lien d'invitation"
+      "shareInviteLink": "Partager le lien d'invitation",
+      "noRecentGames": "Aucune partie récente"
     },
     "options": {
       "shareInviteLink": "Partager le lien d'invitation",
@@ -2060,7 +2165,15 @@
       "title": "Aucune partie à proximité",
       "description": "Il n'y a pas de parties à venir dans votre rayon de {distance} km.",
       "suggestion": "Essayez d'augmenter votre distance maximale de déplacement dans votre profil pour voir plus de parties.",
-      "updateSettings": "Modifier les paramètres"
+      "updateSettings": "Modifier les paramètres",
+      "guestDescription": "Connectez-vous pour voir les parties près de chez vous."
+    },
+    "location": {
+      "title": "Sélectionner l'emplacement",
+      "current": "Emplacement actuel",
+      "currentDescription": "Utiliser votre position GPS",
+      "home": "Emplacement domicile",
+      "homeNotSet": "Définissez votre emplacement domicile dans les paramètres"
     },
     "header": {
       "ctaButton": "Rejoindre la liste"
@@ -3196,5 +3309,12 @@
         "declining": "En baisse"
       }
     }
+  },
+  "groupChat": {
+    "addGroupDescription": "Ajouter une description de groupe...",
+    "addMembers": "Ajouter des membres",
+    "inviteViaLinkOrQR": "Inviter par lien ou QR",
+    "groupMemberCount": "{count} membres",
+    "groupMemberCount_one": "{count} membre"
   }
 }
