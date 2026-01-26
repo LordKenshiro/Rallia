@@ -5,19 +5,21 @@
  * Handles court cost, visibility, join mode, and notes.
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   Switch,
   ActivityIndicator,
   Linking,
+  Keyboard,
+  Platform,
 } from 'react-native';
+import { ScrollView as GestureScrollView } from 'react-native-gesture-handler';
 import { UseFormReturn } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
@@ -295,8 +297,46 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
 
   // Track if we've set the default rating to avoid overwriting user selection
   const hasSetDefaultRating = useRef(false);
-  const scrollViewRef = useRef<ScrollView>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const scrollViewRef = useRef<any>(null);
   const notesFieldRef = useRef<View>(null);
+
+  // Keyboard handling state for Android
+  const [focusedField, setFocusedField] = useState<'cost' | 'notes' | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // Handle keyboard show/hide for scrolling to focused field
+  useEffect(() => {
+    const keyboardShowEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const keyboardHideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSubscription = Keyboard.addListener(keyboardShowEvent, e => {
+      setKeyboardHeight(e.endCoordinates.height);
+      // Scroll to focused field when keyboard appears
+      if (focusedField && scrollViewRef.current) {
+        setTimeout(() => {
+          // Scroll positions for each field
+          const scrollPositions = {
+            cost: 300, // Cost field is in the upper middle
+            notes: 600, // Notes field is at the bottom
+          };
+          const targetY = scrollPositions[focusedField] || 0;
+          scrollViewRef.current?.scrollTo?.({ y: targetY, animated: true });
+        }, 100);
+      }
+    });
+
+    const hideSubscription = Keyboard.addListener(keyboardHideEvent, () => {
+      setKeyboardHeight(0);
+      setFocusedField(null);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, [focusedField]);
 
   // Reset the ref when minRatingScoreId becomes undefined (form reset)
   // and set player's rating as default when appropriate
@@ -321,7 +361,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
   }, [hasLocationSpecified, courtStatus, setValue]);
 
   return (
-    <ScrollView
+    <BottomSheetScrollView
       ref={scrollViewRef}
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
@@ -523,6 +563,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                 )}
                 placeholderTextColor={colors.textMuted}
                 keyboardType="decimal-pad"
+                onFocus={() => setFocusedField('cost')}
               />
             </View>
             {costSplitType === 'equal' && typeof estimatedCost === 'number' && (
@@ -707,10 +748,11 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
               <ActivityIndicator size="small" color={colors.buttonActive} />
             </View>
           ) : (
-            <ScrollView
+            <GestureScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.ratingScrollContent}
+              nestedScrollEnabled
             >
               {/* No minimum option */}
               <TouchableOpacity
@@ -798,7 +840,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                   </TouchableOpacity>
                 );
               })}
-            </ScrollView>
+            </GestureScrollView>
           )}
         </View>
       )}
@@ -825,32 +867,13 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
           numberOfLines={4}
           textAlignVertical="top"
           maxLength={500}
-          onFocus={() => {
-            // Scroll to notes field when focused to ensure it's visible above keyboard
-            // Use a delay to allow keyboard animation to start
-            setTimeout(() => {
-              notesFieldRef.current?.measureLayout(
-                scrollViewRef.current as unknown as number,
-                (x: number, y: number, _width: number, _height: number) => {
-                  // Scroll to show the field with extra padding above it (200px)
-                  scrollViewRef.current?.scrollTo({
-                    y: Math.max(0, y - 200),
-                    animated: true,
-                  });
-                },
-                () => {
-                  // Fallback: scroll to end if measure fails
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
-                }
-              );
-            }, 300);
-          }}
+          onFocus={() => setFocusedField('notes')}
         />
         <Text size="xs" color={colors.textMuted} style={styles.characterCount}>
           {notes?.length ?? 0}/500
         </Text>
       </View>
-    </ScrollView>
+    </BottomSheetScrollView>
   );
 };
 

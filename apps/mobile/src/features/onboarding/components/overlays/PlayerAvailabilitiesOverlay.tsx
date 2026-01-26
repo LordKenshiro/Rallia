@@ -14,7 +14,7 @@ import { OnboardingService, Logger } from '@rallia/shared-services';
 import type { DayEnum, PeriodEnum, OnboardingAvailability } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation } from '../../../../hooks';
+import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
 
 interface PlayerAvailabilitiesOverlayProps {
   visible: boolean;
@@ -202,6 +202,7 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
       type="bottom"
       showBackButton={false}
       showCloseButton={false}
+      height={mode === 'edit' ? 0.80 : 0.67}
     >
       <Animated.View
         style={[
@@ -235,8 +236,8 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
         </TouchableOpacity>
 
         {/* Title */}
-        <Text style={[styles.title, { color: colors.text }]}>Tell us about your{'\n'}schedule</Text>
-        <Text style={[styles.subtitle, { color: colors.text }]}>Select your availabilities</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t('onboarding.availabilityStep.title' as TranslationKey)}</Text>
+        <Text style={[styles.subtitle, { color: colors.text }]}>{t('onboarding.availabilityStep.subtitle' as TranslationKey)}</Text>
 
         {/* Scrollable Content Area */}
         <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -247,7 +248,7 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
               <View style={styles.dayCell} />
               {timeSlots.map(slot => (
                 <View key={slot} style={styles.headerCell}>
-                  <Text style={[styles.headerText, { color: colors.textMuted }]}>{slot}</Text>
+                  <Text style={[styles.headerText, { color: colors.textMuted }]}>{t(`onboarding.availabilityStep.${slot.toLowerCase()}` as TranslationKey)}</Text>
                 </View>
               ))}
             </View>
@@ -256,7 +257,7 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
             {days.map(day => (
               <View key={day} style={styles.row}>
                 <View style={styles.dayCell}>
-                  <Text style={[styles.dayText, { color: colors.text }]}>{day}</Text>
+                  <Text style={[styles.dayText, { color: colors.text }]}>{t(`onboarding.availabilityStep.days.${day.toLowerCase()}` as TranslationKey)}</Text>
                 </View>
                 {timeSlots.map(slot => (
                   <TouchableOpacity
@@ -282,7 +283,7 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
                         },
                       ]}
                     >
-                      {slot}
+                      {t(`onboarding.availabilityStep.${slot.toLowerCase()}` as TranslationKey)}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -306,7 +307,7 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
             <ActivityIndicator size="small" color={colors.primaryForeground} />
           ) : (
             <Text style={[styles.completeButtonText, { color: colors.primaryForeground }]}>
-              {mode === 'edit' ? 'Save' : 'Complete'}
+              {mode === 'edit' ? t('onboarding.availabilityStep.saveButton' as TranslationKey) : t('onboarding.availabilityStep.complete' as TranslationKey)}
             </Text>
           )}
         </TouchableOpacity>
@@ -377,6 +378,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    marginHorizontal: 4,
   },
   headerText: {
     fontSize: 12,
@@ -391,6 +393,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'transparent',
+    minWidth: 60,
+    maxWidth: 90,
   },
   timeSlotCellSelected: {
     // backgroundColor and borderColor applied inline

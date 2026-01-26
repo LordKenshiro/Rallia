@@ -15,10 +15,12 @@ import {
   AppState,
   Linking,
   Animated,
+  Keyboard,
+  Platform,
 } from 'react-native';
 import { UseFormReturn, useWatch } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
@@ -586,8 +588,46 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   // Local state for search and selected facility
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFacility, setSelectedFacility] = useState<FacilitySearchResult | null>(null);
-  const scrollViewRef = useRef<ScrollView>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const scrollViewRef = useRef<any>(null);
   const addressFieldRef = useRef<View>(null);
+  const facilitySearchRef = useRef<View>(null);
+  const placeSearchRef = useRef<View>(null);
+
+  // Track which field is focused for keyboard handling
+  const [focusedField, setFocusedField] = useState<'facility' | 'place' | 'address' | null>(null);
+
+  // Listen for keyboard events and scroll to focused field
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const keyboardShowListener = Keyboard.addListener(showEvent, () => {
+      // Scroll to the focused field when keyboard shows
+      if (focusedField && scrollViewRef.current) {
+        // Use a timeout to ensure the keyboard is fully shown
+        setTimeout(() => {
+          // Scroll positions based on which field is focused
+          const scrollPositions = {
+            facility: 200, // Facility search is near top
+            place: 200, // Place search is similar position
+            address: 400, // Address field is lower in the form
+          };
+          const scrollY = scrollPositions[focusedField] || 200;
+          scrollViewRef.current?.scrollTo({ y: scrollY, animated: true });
+        }, 100);
+      }
+    });
+
+    const keyboardHideListener = Keyboard.addListener(hideEvent, () => {
+      setFocusedField(null);
+    });
+
+    return () => {
+      keyboardShowListener.remove();
+      keyboardHideListener.remove();
+    };
+  }, [focusedField]);
 
   // Local state for custom location search
   const [placeSearchQuery, setPlaceSearchQuery] = useState('');
@@ -1049,7 +1089,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   ]);
 
   return (
-    <ScrollView
+    <BottomSheetScrollView
       ref={scrollViewRef}
       style={styles.container}
       contentContainerStyle={[
@@ -1128,6 +1168,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
             <>
               {/* Search input */}
               <View
+                ref={facilitySearchRef}
                 style={[
                   styles.searchInputContainer,
                   { borderColor: colors.border, backgroundColor: colors.buttonInactive },
@@ -1142,6 +1183,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
                   placeholderTextColor={colors.textMuted}
                   autoCorrect={false}
                   autoCapitalize="none"
+                  onFocus={() => setFocusedField('facility')}
                 />
                 {searchQuery.length > 0 && (
                   <TouchableOpacity
@@ -1201,6 +1243,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
             <>
               {/* Search input */}
               <View
+                ref={placeSearchRef}
                 style={[
                   styles.searchInputContainer,
                   {
@@ -1219,6 +1262,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
                   )}
                   placeholderTextColor={colors.textMuted}
                   autoCorrect={false}
+                  onFocus={() => setFocusedField('place')}
                 />
                 {placeSearchQuery.length > 0 && (
                   <TouchableOpacity
@@ -1318,23 +1362,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
                 placeholderTextColor={colors.textMuted}
                 multiline
                 numberOfLines={2}
-                onFocus={() => {
-                  // Scroll to address field with extra offset to ensure it's well above keyboard
-                  setTimeout(() => {
-                    addressFieldRef.current?.measureLayout(
-                      scrollViewRef.current as unknown as number,
-                      (x: number, y: number, _width: number, _height: number) => {
-                        scrollViewRef.current?.scrollTo({
-                          y: Math.max(0, y - 200),
-                          animated: true,
-                        });
-                      },
-                      () => {
-                        scrollViewRef.current?.scrollToEnd({ animated: true });
-                      }
-                    );
-                  }, 300);
-                }}
+                onFocus={() => setFocusedField('address')}
               />
             </View>
           )}
@@ -1383,7 +1411,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
         t={t}
         isDark={isDark}
       />
-    </ScrollView>
+    </BottomSheetScrollView>
   );
 };
 
@@ -1397,6 +1425,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: spacingPixels[4],
+    paddingBottom: spacingPixels[16], // Base padding for scrolling
   },
   contentContainerWithKeyboard: {
     paddingBottom: spacingPixels[32], // Extra padding when custom location is selected to allow scrolling above keyboard

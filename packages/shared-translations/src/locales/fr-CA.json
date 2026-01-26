@@ -441,10 +441,12 @@
     "step": "Étape {current} de {total}",
     "stepNames": {
       "personal": "À propos de vous",
+      "location": "Localisation",
       "sports": "Sports",
       "tennisRating": "Classement Tennis",
       "pickleballRating": "Classement Pickleball",
       "preferences": "Préférences",
+      "favoriteSites": "Sites favoris",
       "availability": "Disponibilité"
     },
     "personalInfoStep": {
@@ -468,11 +470,78 @@
       "title": "Quels sports souhaitez-vous pratiquer?",
       "subtitle": "Sélectionnez tous ceux qui s'appliquent"
     },
+    "locationStep": {
+      "title": "Où êtes-vous situé?",
+      "subtitle": "Aidez-nous à trouver des parties près de chez vous",
+      "address": "Adresse",
+      "addressPlaceholder": "Commencez à taper votre adresse...",
+      "city": "Ville",
+      "cityPlaceholder": "Entrez votre ville",
+      "postalCode": "Code postal",
+      "postalCodePlaceholder": "Entrez votre code postal",
+      "privacyTitle": "Votre vie privée est protégée",
+      "privacyDescription": "Votre adresse exacte n'est jamais partagée avec d'autres utilisateurs. Nous utilisons uniquement votre localisation pour trouver des parties dans votre région et calculer les distances de déplacement.",
+      "warningTitle": "Recherche de parties limitée",
+      "warningMessage": "Sans votre adresse, nous ne pourrons pas vous montrer les parties les plus pertinentes près de chez vous. Êtes-vous sûr de vouloir continuer?"
+    },
     "ratingStep": {
       "tennisTitle": "Parlez-nous de votre jeu",
       "pickleballTitle": "Parlez-nous de votre jeu",
       "ntrpSubtitle": "Classement NTRP",
-      "duprSubtitle": "Classement DUPR"
+      "duprSubtitle": "Classement DUPR",
+      "skillLevels": {
+        "beginner1": "Débutant 1",
+        "beginner2": "Débutant 2",
+        "beginner3": "Débutant 3",
+        "intermediate1": "Intermédiaire 1",
+        "intermediate2": "Intermédiaire 2",
+        "intermediate3": "Intermédiaire 3",
+        "advanced1": "Avancé 1",
+        "advanced2": "Avancé 2",
+        "advanced3": "Avancé 3",
+        "professional": "Professionnel"
+      },
+      "ntrpDescriptions": {
+        "1.5": "Travaille encore sur la régularité; beaucoup d'erreurs, concentré sur la mise en jeu de la balle.",
+        "2.0": "Faiblesses évidentes dans les coups pour le simple et le double. Besoin de plus d'expérience sur le terrain.",
+        "2.5": "Commence à juger la direction de la balle et à maintenir de courts échanges; couverture de terrain limitée.",
+        "3.0": "Assez régulier sur les balles à vitesse moyenne mais manque de contrôle, profondeur et puissance sur les balles rapides.",
+        "3.5": "Coups plus fiables avec contrôle directionnel. Amélioration du jeu au filet, de la couverture et du travail d'équipe.",
+        "4.0": "Coups fiables avec contrôle et profondeur; le placement montre un bon travail d'équipe.",
+        "4.5": "Puissance et régularité solides. Contrôle la profondeur et l'effet. Placement stratégique des coups.",
+        "5.0": "Variété de coups exceptionnelle avec rythme et effet. Excellent jeu de jambes et couverture du terrain.",
+        "5.5": "Maîtrise de tous les coups. Régularité et puissance exceptionnelles. Tactiques avancées et mental solide.",
+        "6.0": "Niveau de jeu professionnel. Expérience en tournois nationaux ou internationaux."
+      },
+      "duprDescriptions": {
+        "1.0": "Début de l'apprentissage. Apprend les règles de base et la mécanique des coups.",
+        "2.0": "Tout juste commencé. Échanges courts (1-2 coups). Apprend les bases du pointage.",
+        "2.5": "Développe les coups de base. Peut maintenir de courts échanges. Apprend le positionnement.",
+        "3.0": "Peut maintenir de courts échanges et services. Commence à dink. Apprend le positionnement.",
+        "3.5": "Développe le drop au troisième coup. Peut dink modérément. Évite les revers.",
+        "4.0": "Joue des échanges plus longs avec patience. Conscient du positionnement. Utilise des coups variés.",
+        "4.5": "Forte régularité et puissance. Coups variés. À l'aise près de la cuisine.",
+        "5.0": "Plus haut niveau de types de coups. Fait rarement des erreurs non forcées. Joue de façon compétitive.",
+        "5.5": "Niveau de compétence exceptionnel. Maîtrise de tous les coups. Jeu de niveau tournoi.",
+        "6.0": "Niveau professionnel. Jeu en tournois nationaux ou internationaux."
+      },
+      "learnMore": "En savoir plus sur le système de classement {system}"
+    },
+    "ratingOverlay": {
+      "title": "Parlez-nous de votre jeu",
+      "editTennisTitle": "Mettre à jour votre classement tennis",
+      "editPickleballTitle": "Mettre à jour votre classement pickleball",
+      "tennisSubtitle": "Classement NTRP",
+      "pickleballSubtitle": "Classement DUPR",
+      "learnMoreNtrp": "En savoir plus sur le système de classement NTRP",
+      "learnMoreDupr": "En savoir plus sur le système de classement DUPR",
+      "loading": "Chargement des classements...",
+      "continue": "Continuer",
+      "save": "Enregistrer",
+      "failedToLoadRatings": "Échec du chargement des classements. Veuillez réessayer.",
+      "failedToSaveRating": "Échec de l'enregistrement du classement. Veuillez réessayer.",
+      "invalidRatingSelected": "Classement sélectionné invalide",
+      "unexpectedError": "Une erreur inattendue s'est produite."
     },
     "preferencesStep": {
       "title": "Parlez-nous de vos préférences",
@@ -493,7 +562,32 @@
       "am": "AM",
       "pm": "PM",
       "eve": "SOIR",
-      "minimumSelected": "{count} / {minimum} minimum sélectionnés"
+      "minimumSelected": "{count} / {minimum} minimum sélectionnés",
+      "days": {
+        "mon": "Lun",
+        "tue": "Mar",
+        "wed": "Mer",
+        "thu": "Jeu",
+        "fri": "Ven",
+        "sat": "Sam",
+        "sun": "Dim"
+      },
+      "complete": "Compléter",
+      "saveButton": "Enregistrer"
+    },
+    "favoriteSitesStep": {
+      "title": "Sélectionnez vos lieux de jeu favoris",
+      "subtitle": "Choisissez jusqu'à 3 installations pour un accès rapide lors de la création de parties",
+      "selected": "sélectionnés",
+      "searchLabel": "Rechercher des installations",
+      "searchPlaceholder": "Rechercher par nom ou emplacement...",
+      "loading": "Chargement des installations...",
+      "noSportSelected": "Veuillez d'abord sélectionner un sport",
+      "noLocation": "Localisation requise pour trouver les installations à proximité",
+      "noResults": "Aucune installation trouvée correspondant à votre recherche",
+      "noFacilitiesNearby": "Aucune installation trouvée dans votre région",
+      "hint": "Vos sites favoris apparaîtront en premier lors de la création de parties. Vous pourrez toujours les modifier plus tard.",
+      "failedToSave": "Échec de l'enregistrement des installations favorites. Veuillez réessayer."
     },
     "validation": {
       "fillRequiredFields": "Veuillez remplir tous les champs obligatoires",
@@ -518,7 +612,9 @@
       "uploadError": "Erreur de téléversement",
       "enterAllDigits": "Veuillez entrer les 6 chiffres",
       "authFailed": "Échec de l'authentification - veuillez réessayer",
-      "verificationCodeSent": "Code de vérification envoyé!"
+      "verificationCodeSent": "Code de vérification envoyé!",
+      "cityRequired": "Veuillez entrer votre ville",
+      "failedToSaveLocation": "Échec de l'enregistrement de votre localisation. Veuillez réessayer."
     },
     "successMessages": {
       "personalInfoUpdated": "Informations personnelles mises à jour avec succès",

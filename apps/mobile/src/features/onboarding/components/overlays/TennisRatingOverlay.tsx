@@ -41,26 +41,29 @@ interface Rating {
 }
 
 /**
- * Maps NTRP score value to a user-friendly skill level name
- * NTRP 1.5 = Beginner 1, NTRP 2.0 = Beginner 2, NTRP 2.5 = Beginner 3
- * NTRP 3.0 = Intermediate 1, NTRP 3.5 = Intermediate 2, NTRP 4.0 = Intermediate 3
- * NTRP 4.5 = Advanced 1, NTRP 5.0 = Advanced 2, NTRP 5.5 = Advanced 3
- * NTRP 6.0+ = Professional
+ * Maps NTRP score value to a translation key
  */
-const getNtrpSkillLabel = (scoreValue: number): string => {
+const getNtrpSkillLabelKey = (scoreValue: number): string => {
   const mapping: Record<number, string> = {
-    1.5: 'Beginner 1',
-    2.0: 'Beginner 2',
-    2.5: 'Beginner 3',
-    3.0: 'Intermediate 1',
-    3.5: 'Intermediate 2',
-    4.0: 'Intermediate 3',
-    4.5: 'Advanced 1',
-    5.0: 'Advanced 2',
-    5.5: 'Advanced 3',
-    6.0: 'Professional',
+    1.5: 'onboarding.ratingStep.skillLevels.beginner1',
+    2.0: 'onboarding.ratingStep.skillLevels.beginner2',
+    2.5: 'onboarding.ratingStep.skillLevels.beginner3',
+    3.0: 'onboarding.ratingStep.skillLevels.intermediate1',
+    3.5: 'onboarding.ratingStep.skillLevels.intermediate2',
+    4.0: 'onboarding.ratingStep.skillLevels.intermediate3',
+    4.5: 'onboarding.ratingStep.skillLevels.advanced1',
+    5.0: 'onboarding.ratingStep.skillLevels.advanced2',
+    5.5: 'onboarding.ratingStep.skillLevels.advanced3',
+    6.0: 'onboarding.ratingStep.skillLevels.professional',
   };
-  return mapping[scoreValue] || `Level ${scoreValue}`;
+  return mapping[scoreValue] || '';
+};
+
+/**
+ * Maps NTRP score value to a description translation key
+ */
+const getNtrpDescriptionKey = (scoreValue: number): string => {
+  return `onboarding.ratingStep.ntrpDescriptions.${scoreValue.toFixed(1)}`;
 };
 
 const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
@@ -75,6 +78,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
   onSave,
 }) => {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const [selectedRating, setSelectedRating] = useState<string | null>(initialRating || null);
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -124,6 +128,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
     };
 
     loadRatings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   // Trigger animations when overlay becomes visible
@@ -256,32 +261,33 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
 
         {/* Title */}
         <Text style={[styles.title, { color: colors.text }]}>
-          {mode === 'edit' ? 'Update your tennis rating' : 'Tell us about your game'}
+          {mode === 'edit' 
+            ? t('onboarding.ratingOverlay.editTennisTitle' as TranslationKey) 
+            : t('onboarding.ratingOverlay.title' as TranslationKey)}
         </Text>
 
         {/* Sport Badge */}
         <View style={[styles.sportBadge, { backgroundColor: colors.primary }]}>
-          <Text style={[styles.sportBadgeText, { color: colors.primaryForeground }]}>Tennis</Text>
+          <Text style={[styles.sportBadgeText, { color: colors.primaryForeground }]}>
+            {t('onboarding.tennis' as TranslationKey)}
+          </Text>
         </View>
 
         {/* Subtitle with NTRP link */}
         <Text style={[styles.subtitle, { color: colors.textMuted }]}>
           {mode === 'edit' ? (
-            <>
-              Learn more about the{' '}
-              <Text
-                style={[styles.link, { color: colors.primary }]}
-                onPress={() =>
-                  Linking.openURL(
-                    'https://www.usta.com/en/home/improve/national-tennis-rating-program.html'
-                  )
-                }
-              >
-                NTRP rating system
-              </Text>
-            </>
+            <Text
+              style={[styles.link, { color: colors.primary }]}
+              onPress={() =>
+                Linking.openURL(
+                  'https://www.usta.com/en/home/improve/national-tennis-rating-program.html'
+                )
+              }
+            >
+              {t('onboarding.ratingOverlay.learnMoreNtrp' as TranslationKey)}
+            </Text>
           ) : (
-            'NTRP Rating'
+            t('onboarding.ratingOverlay.tennisSubtitle' as TranslationKey)
           )}
         </Text>
 
@@ -291,7 +297,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
               <Text style={[styles.loadingText, { color: colors.textMuted }]}>
-                Loading ratings...
+                {t('onboarding.ratingOverlay.loading' as TranslationKey)}
               </Text>
             </View>
           ) : (
@@ -331,7 +337,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
                         },
                       ]}
                     >
-                      {getNtrpSkillLabel(rating.score_value)}
+                      {t(getNtrpSkillLabelKey(rating.score_value) as TranslationKey)}
                     </Text>
                   </View>
                   <Text
@@ -352,7 +358,7 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
                       },
                     ]}
                   >
-                    {rating.description}
+                    {t(getNtrpDescriptionKey(rating.score_value) as TranslationKey)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -384,7 +390,9 @@ const TennisRatingOverlay: React.FC<TennisRatingOverlayProps> = ({
                 !selectedRating && [styles.continueButtonTextDisabled, { color: colors.textMuted }],
               ]}
             >
-              {mode === 'edit' ? 'Save' : 'Continue'}
+              {mode === 'edit' 
+                ? t('onboarding.ratingOverlay.save' as TranslationKey) 
+                : t('onboarding.ratingOverlay.continue' as TranslationKey)}
             </Text>
           )}
         </TouchableOpacity>

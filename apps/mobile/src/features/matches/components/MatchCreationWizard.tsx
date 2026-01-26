@@ -963,7 +963,11 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   }, [isDirty, values, currentStep, sportId, saveDraft, clearDraft, onClose, t, isEditMode]);
 
   // Swipe gesture handler
+  // Use activeOffsetX to only activate for horizontal swipes
+  // Use failOffsetY to fail the gesture if the user is scrolling vertically
   const panGesture = Gesture.Pan()
+    .activeOffsetX([-20, 20]) // Only activate after 20px horizontal movement
+    .failOffsetY([-10, 10]) // Fail if user moves 10px vertically first (allow vertical scroll)
     .onUpdate(e => {
       gestureTranslateX.value = e.translationX;
     })

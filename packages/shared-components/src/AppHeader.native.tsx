@@ -175,12 +175,12 @@ const AppHeader: React.FC<AppHeaderProps> = ({
               style={[styles.sportSelector, { backgroundColor: colors.primary }]}
               onPress={() => setShowSportDropdown(!showSportDropdown)}
             >
-              <Text color={colors.primaryForeground} weight="semibold" size="sm">
+              <Text color={colors.primaryForeground} weight="semibold" size="sm" numberOfLines={1}>
                 {selectedSport.display_name}
               </Text>
               <Ionicons
                 name={showSportDropdown ? 'chevron-up' : 'chevron-down'}
-                size={16}
+                size={14}
                 color={colors.primaryForeground}
               />
             </TouchableOpacity>
@@ -285,10 +285,11 @@ const styles = StyleSheet.create({
   sportSelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
+    alignSelf: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+    gap: 4,
     // backgroundColor will be set dynamically
   },
   rightIcons: {

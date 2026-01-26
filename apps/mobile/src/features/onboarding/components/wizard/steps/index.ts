@@ -1,6 +1,8 @@
 export { PersonalInfoStep } from './PersonalInfoStep';
+export { LocationStep } from './LocationStep';
 export { SportSelectionStep } from './SportSelectionStep';
 export { RatingStep } from './RatingStep';
 export { PreferencesStep } from './PreferencesStep';
+export { FavoriteSitesStep } from './FavoriteSitesStep';
 export { AvailabilitiesStep } from './AvailabilitiesStep';
 export { SuccessStep } from './SuccessStep';

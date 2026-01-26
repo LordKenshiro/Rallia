@@ -18,6 +18,7 @@ import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../../../hooks';
 import { primary } from '@rallia/design-system';
+import type { TranslationKey } from '@rallia/shared-translations';
 
 interface PickleballRatingOverlayProps {
   visible: boolean;
@@ -40,26 +41,29 @@ interface Rating {
 }
 
 /**
- * Maps DUPR score value to a user-friendly skill level name
- * DUPR 1.0-2.5 = Beginner (1-3)
- * DUPR 3.0-4.0 = Intermediate (1-3)
- * DUPR 4.5-5.5 = Advanced (1-3)
- * DUPR 6.0+ = Professional
+ * Maps DUPR score value to a translation key
  */
-const getDuprSkillLabel = (scoreValue: number): string => {
+const getDuprSkillLabelKey = (scoreValue: number): string => {
   const mapping: Record<number, string> = {
-    1.0: 'Beginner 1',
-    2.0: 'Beginner 2',
-    2.5: 'Beginner 3',
-    3.0: 'Intermediate 1',
-    3.5: 'Intermediate 2',
-    4.0: 'Intermediate 3',
-    4.5: 'Advanced 1',
-    5.0: 'Advanced 2',
-    5.5: 'Advanced 3',
-    6.0: 'Professional',
+    1.0: 'onboarding.ratingStep.skillLevels.beginner1',
+    2.0: 'onboarding.ratingStep.skillLevels.beginner2',
+    2.5: 'onboarding.ratingStep.skillLevels.beginner3',
+    3.0: 'onboarding.ratingStep.skillLevels.intermediate1',
+    3.5: 'onboarding.ratingStep.skillLevels.intermediate2',
+    4.0: 'onboarding.ratingStep.skillLevels.intermediate3',
+    4.5: 'onboarding.ratingStep.skillLevels.advanced1',
+    5.0: 'onboarding.ratingStep.skillLevels.advanced2',
+    5.5: 'onboarding.ratingStep.skillLevels.advanced3',
+    6.0: 'onboarding.ratingStep.skillLevels.professional',
   };
-  return mapping[scoreValue] || `Level ${scoreValue}`;
+  return mapping[scoreValue] || '';
+};
+
+/**
+ * Maps DUPR score value to a description translation key
+ */
+const getDuprDescriptionKey = (scoreValue: number): string => {
+  return `onboarding.ratingStep.duprDescriptions.${scoreValue.toFixed(1)}`;
 };
 
 const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
@@ -101,7 +105,7 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
             sport: 'pickleball',
             system: 'dupr',
           });
-          Alert.alert(t('alerts.error'), t('onboarding.overlay.failedToLoadRatings'));
+          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.ratingOverlay.failedToLoadRatings' as TranslationKey));
           return;
         }
 
@@ -117,13 +121,14 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
         setRatings(transformedRatings);
       } catch (error) {
         Logger.error('Unexpected error loading pickleball ratings', error as Error);
-        Alert.alert(t('alerts.error'), t('onboarding.overlay.unexpectedError'));
+        Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.ratingOverlay.unexpectedError' as TranslationKey));
       } finally {
         setIsLoading(false);
       }
     };
 
     loadRatings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   // Trigger animations when overlay becomes visible
@@ -185,7 +190,7 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
         if (sportError || !pickleballSport) {
           Logger.error('Failed to fetch pickleball sport', sportError as Error);
           setIsSaving(false);
-          Alert.alert(t('alerts.error'), t('onboarding.overlay.failedToSaveRating'), [{ text: t('alerts.ok') }]);
+          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.ratingOverlay.failedToSaveRating' as TranslationKey), [{ text: t('common.ok' as TranslationKey) }]);
           return;
         }
 
@@ -194,7 +199,7 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
 
         if (!selectedRatingData) {
           setIsSaving(false);
-          Alert.alert(t('alerts.error'), t('onboarding.overlay.invalidRatingSelected'));
+          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.ratingOverlay.invalidRatingSelected' as TranslationKey));
           return;
         }
 
@@ -212,7 +217,7 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
         if (error) {
           Logger.error('Failed to save pickleball rating', error as Error, { ratingData });
           setIsSaving(false);
-          Alert.alert(t('alerts.error'), t('onboarding.overlay.failedToSaveRating'), [{ text: t('alerts.ok') }]);
+          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.ratingOverlay.failedToSaveRating' as TranslationKey), [{ text: t('common.ok' as TranslationKey) }]);
           return;
         }
 
@@ -221,7 +226,7 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
       } catch (error) {
         Logger.error('Unexpected error saving pickleball rating', error as Error);
         setIsSaving(false);
-        Alert.alert(t('alerts.error'), t('onboarding.overlay.unexpectedError'), [{ text: t('alerts.ok') }]);
+        Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.ratingOverlay.unexpectedError' as TranslationKey), [{ text: t('common.ok' as TranslationKey) }]);
       }
     }
   };
@@ -256,30 +261,29 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
 
         {/* Title */}
         <Text style={[styles.title, { color: colors.text }]}>
-          {mode === 'edit' ? 'Update your pickleball rating' : 'Tell us about your game'}
+          {mode === 'edit' 
+            ? t('onboarding.ratingOverlay.editPickleballTitle' as TranslationKey) 
+            : t('onboarding.ratingOverlay.title' as TranslationKey)}
         </Text>
 
         {/* Sport Badge */}
         <View style={[styles.sportBadge, { backgroundColor: colors.primary }]}>
           <Text style={[styles.sportBadgeText, { color: colors.primaryForeground }]}>
-            Pickleball
+            {t('onboarding.pickleball' as TranslationKey)}
           </Text>
         </View>
 
         {/* Subtitle with DUPR link */}
         <Text style={[styles.subtitle, { color: colors.textMuted }]}>
           {mode === 'edit' ? (
-            <>
-              Learn more about the{' '}
-              <Text
-                style={[styles.link, { color: colors.primary }]}
-                onPress={() => Linking.openURL('https://mydupr.com/')}
-              >
-                DUPR rating system
-              </Text>
-            </>
+            <Text
+              style={[styles.link, { color: colors.primary }]}
+              onPress={() => Linking.openURL('https://mydupr.com/')}
+            >
+              {t('onboarding.ratingOverlay.learnMoreDupr' as TranslationKey)}
+            </Text>
           ) : (
-            'DUPR Rating'
+            t('onboarding.ratingOverlay.pickleballSubtitle' as TranslationKey)
           )}
         </Text>
 
@@ -289,7 +293,7 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
               <Text style={[styles.loadingText, { color: colors.textMuted }]}>
-                Loading ratings...
+                {t('onboarding.ratingOverlay.loading' as TranslationKey)}
               </Text>
             </View>
           ) : (
@@ -329,7 +333,7 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
                         },
                       ]}
                     >
-                      {getDuprSkillLabel(rating.score_value)}
+                      {t(getDuprSkillLabelKey(rating.score_value) as TranslationKey)}
                     </Text>
                   </View>
                   <Text
@@ -350,7 +354,7 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
                       },
                     ]}
                   >
-                    {rating.description}
+                    {t(getDuprDescriptionKey(rating.score_value) as TranslationKey)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -382,7 +386,9 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
                 !selectedRating && [styles.continueButtonTextDisabled, { color: colors.textMuted }],
               ]}
             >
-              {mode === 'edit' ? 'Save' : 'Continue'}
+              {mode === 'edit' 
+                ? t('onboarding.ratingOverlay.save' as TranslationKey) 
+                : t('onboarding.ratingOverlay.continue' as TranslationKey)}
             </Text>
           )}
         </TouchableOpacity>

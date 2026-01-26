@@ -9,7 +9,8 @@
  */
 
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
@@ -129,13 +130,12 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
   };
 
   return (
-    <ScrollView
+    <BottomSheetScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
-      contentInsetAdjustmentBehavior="automatic"
     >
       {/* Title */}
       <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
@@ -440,7 +440,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
           </View>
         </>
       )}
-    </ScrollView>
+    </BottomSheetScrollView>
   );
 };
 
