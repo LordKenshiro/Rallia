@@ -27,7 +27,7 @@ export async function generateMetadata({
         description: t('descriptionMeta'),
       };
     }
-  } catch (error) {
+  } catch {
     // Fallback metadata
   }
 

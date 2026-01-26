@@ -1,6 +1,6 @@
 /**
  * ScoreConfirmationModal Component
- * 
+ *
  * Modal for confirming or disputing a pending match score.
  * Shows the match details and score, with options to confirm or dispute.
  */
@@ -19,11 +19,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button, useToast } from '@rallia/shared-components';
+import { successHaptic, warningHaptic, lightHaptic } from '@rallia/shared-utils';
 import { useThemeStyles } from '../../../hooks';
-import { 
-  useConfirmMatchScore, 
+import {
+  useConfirmMatchScore,
   useDisputeMatchScore,
-  type PendingScoreConfirmation 
+  type PendingScoreConfirmation,
 } from '@rallia/shared-hooks';
 
 interface ScoreConfirmationModalProps {
@@ -43,7 +44,7 @@ export function ScoreConfirmationModal({
   const toast = useToast();
   const [showDisputeReason, setShowDisputeReason] = useState(false);
   const [disputeReason, setDisputeReason] = useState('');
-  
+
   const confirmMutation = useConfirmMatchScore();
   const disputeMutation = useDisputeMatchScore();
 
@@ -51,12 +52,14 @@ export function ScoreConfirmationModal({
 
   const handleConfirm = useCallback(async () => {
     if (!confirmation) return;
-    
+
+    lightHaptic();
     try {
       await confirmMutation.mutateAsync({
         matchResultId: confirmation.match_result_id,
         playerId,
       });
+      successHaptic();
       toast.success('The match score has been confirmed.');
       onClose();
     } catch (error) {
@@ -66,12 +69,14 @@ export function ScoreConfirmationModal({
 
   const handleDispute = useCallback(async () => {
     if (!confirmation) return;
-    
+
     if (!showDisputeReason) {
+      warningHaptic();
       setShowDisputeReason(true);
       return;
     }
-    
+
+    lightHaptic();
     try {
       await disputeMutation.mutateAsync({
         matchResultId: confirmation.match_result_id,
@@ -88,13 +93,14 @@ export function ScoreConfirmationModal({
   }, [confirmation, playerId, disputeMutation, showDisputeReason, disputeReason, onClose, toast]);
 
   const handleClose = useCallback(() => {
+    lightHaptic();
     setShowDisputeReason(false);
     setDisputeReason('');
     onClose();
   }, [onClose]);
 
   if (!confirmation) return null;
-  
+
   const matchDate = new Date(confirmation.match_date).toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
@@ -103,17 +109,18 @@ export function ScoreConfirmationModal({
 
   const deadline = new Date(confirmation.confirmation_deadline);
   const now = new Date();
-  const hoursRemaining = Math.max(0, Math.floor((deadline.getTime() - now.getTime()) / (1000 * 60 * 60)));
-  const minutesRemaining = Math.max(0, Math.floor(((deadline.getTime() - now.getTime()) % (1000 * 60 * 60)) / (1000 * 60)));
+  const hoursRemaining = Math.max(
+    0,
+    Math.floor((deadline.getTime() - now.getTime()) / (1000 * 60 * 60))
+  );
+  const minutesRemaining = Math.max(
+    0,
+    Math.floor(((deadline.getTime() - now.getTime()) % (1000 * 60 * 60)) / (1000 * 60))
+  );
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={handleClose}
-    >
-      <KeyboardAvoidingView 
+    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={handleClose}>
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.overlay}
       >
@@ -132,8 +139,18 @@ export function ScoreConfirmationModal({
             {/* Content */}
             <View style={styles.content}>
               {/* Submitter info */}
-              <View style={[styles.submitterCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                <View style={[styles.submitterAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+              <View
+                style={[
+                  styles.submitterCard,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.submitterAvatar,
+                    { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
+                  ]}
+                >
                   {confirmation.submitted_by_avatar ? (
                     <Image
                       source={{ uri: confirmation.submitted_by_avatar }}
@@ -154,12 +171,20 @@ export function ScoreConfirmationModal({
               </View>
 
               {/* Match details */}
-              <View style={[styles.matchCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <View
+                style={[
+                  styles.matchCard,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                ]}
+              >
                 {/* Sport & Date */}
                 <View style={styles.matchHeader}>
                   <View style={styles.sportBadge}>
                     {confirmation.sport_icon_url ? (
-                      <Image source={{ uri: confirmation.sport_icon_url }} style={styles.sportIcon} />
+                      <Image
+                        source={{ uri: confirmation.sport_icon_url }}
+                        style={styles.sportIcon}
+                      />
                     ) : (
                       <Ionicons name="tennisball" size={16} color={colors.primary} />
                     )}
@@ -178,11 +203,11 @@ export function ScoreConfirmationModal({
                     <Text size="sm" style={{ color: colors.textSecondary }}>
                       {confirmation.player_team === 1 ? 'You' : confirmation.opponent_name}
                     </Text>
-                    <Text 
-                      size="3xl" 
-                      weight="bold" 
-                      style={{ 
-                        color: confirmation.winning_team === 1 ? colors.primary : colors.text 
+                    <Text
+                      size="3xl"
+                      weight="bold"
+                      style={{
+                        color: confirmation.winning_team === 1 ? colors.primary : colors.text,
                       }}
                     >
                       {confirmation.team1_score}
@@ -207,11 +232,11 @@ export function ScoreConfirmationModal({
                     <Text size="sm" style={{ color: colors.textSecondary }}>
                       {confirmation.player_team === 2 ? 'You' : confirmation.opponent_name}
                     </Text>
-                    <Text 
-                      size="3xl" 
-                      weight="bold" 
-                      style={{ 
-                        color: confirmation.winning_team === 2 ? colors.primary : colors.text 
+                    <Text
+                      size="3xl"
+                      weight="bold"
+                      style={{
+                        color: confirmation.winning_team === 2 ? colors.primary : colors.text,
                       }}
                     >
                       {confirmation.team2_score}
@@ -239,7 +264,12 @@ export function ScoreConfirmationModal({
               </View>
 
               {/* Deadline warning */}
-              <View style={[styles.deadlineCard, { backgroundColor: isDark ? '#3A2A00' : '#FFF9E6', borderColor: '#FFB800' }]}>
+              <View
+                style={[
+                  styles.deadlineCard,
+                  { backgroundColor: isDark ? '#3A2A00' : '#FFF9E6', borderColor: '#FFB800' },
+                ]}
+              >
                 <Ionicons name="time-outline" size={20} color="#FFB800" />
                 <View style={styles.deadlineInfo}>
                   <Text size="sm" weight="medium" style={{ color: isDark ? '#FFD54F' : '#8B6914' }}>

@@ -5,16 +5,10 @@
  */
 
 import React from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  Modal,
-  Pressable,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation, type TranslationKey } from '../../../hooks';
 
 export type MatchType = 'single' | 'double';
 
@@ -24,25 +18,17 @@ interface MatchTypeModalProps {
   onSelect: (type: MatchType) => void;
 }
 
-export function MatchTypeModal({
-  visible,
-  onClose,
-  onSelect,
-}: MatchTypeModalProps) {
+export function MatchTypeModal({ visible, onClose, onSelect }: MatchTypeModalProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
 
-  const options: { type: MatchType; label: string; icon: string }[] = [
-    { type: 'single', label: 'Single', icon: 'person' },
-    { type: 'double', label: 'Double', icon: 'people' },
+  const options: { type: MatchType; labelKey: string; icon: string }[] = [
+    { type: 'single', labelKey: 'match.format.singles', icon: 'person' },
+    { type: 'double', labelKey: 'match.format.doubles', icon: 'people' },
   ];
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
         <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
           {/* Handle bar */}
@@ -50,12 +36,12 @@ export function MatchTypeModal({
 
           {/* Title */}
           <Text weight="semibold" size="lg" style={[styles.title, { color: colors.text }]}>
-            Pick match type
+            {t('match.pickMatchType' as TranslationKey)}
           </Text>
 
           {/* Options */}
           <View style={styles.options}>
-            {options.map((option) => (
+            {options.map(option => (
               <TouchableOpacity
                 key={option.type}
                 style={[
@@ -71,7 +57,12 @@ export function MatchTypeModal({
                 }}
                 activeOpacity={0.7}
               >
-                <View style={[styles.iconContainer, { backgroundColor: isDark ? '#2C2C2E' : '#F0F0F0' }]}>
+                <View
+                  style={[
+                    styles.iconContainer,
+                    { backgroundColor: isDark ? '#2C2C2E' : '#F0F0F0' },
+                  ]}
+                >
                   <Ionicons
                     name={option.icon as keyof typeof Ionicons.glyphMap}
                     size={24}
@@ -79,19 +70,16 @@ export function MatchTypeModal({
                   />
                 </View>
                 <Text weight="medium" size="base" style={{ color: colors.text, marginLeft: 16 }}>
-                  {option.label}
+                  {t(option.labelKey as TranslationKey)}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
 
           {/* Cancel button */}
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={onClose}
-          >
+          <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
             <Text weight="medium" size="base" style={{ color: colors.textSecondary }}>
-              Cancel
+              {t('common.cancel')}
             </Text>
           </TouchableOpacity>
         </View>

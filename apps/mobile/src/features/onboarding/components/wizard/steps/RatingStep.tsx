@@ -16,7 +16,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, useToast } from '@rallia/shared-components';
+import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import DatabaseService, { Logger } from '@rallia/shared-services';
 import { selectionHaptic } from '@rallia/shared-utils';
@@ -109,9 +109,7 @@ export const RatingStep: React.FC<RatingStepProps> = ({
   onContinue: _onContinue,
   colors,
   t,
-  isDark,
 }) => {
-  const toast = useToast();
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -141,7 +139,10 @@ export const RatingStep: React.FC<RatingStepProps> = ({
             sport,
             system: ratingSystem,
           });
-          Alert.alert('Error', 'Failed to load ratings. Please try again.');
+          Alert.alert(
+            t('alerts.error' as TranslationKey),
+            t('onboarding.validation.failedToLoadRatings' as TranslationKey)
+          );
           return;
         }
 
@@ -156,13 +157,17 @@ export const RatingStep: React.FC<RatingStepProps> = ({
         setRatings(transformedRatings);
       } catch (error) {
         Logger.error(`Unexpected error loading ${sport} ratings`, error as Error);
-        toast.error('An unexpected error occurred. Please try again.');
+        Alert.alert(
+          t('alerts.error' as TranslationKey),
+          t('onboarding.validation.unexpectedError' as TranslationKey)
+        );
       } finally {
         setIsLoading(false);
       }
     };
 
     loadRatings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sport, ratingSystem]);
 
   const handleRatingSelect = (ratingId: string) => {

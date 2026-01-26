@@ -3,18 +3,12 @@
  * Bottom sheet for conversation actions (pin, mute, archive, delete)
  */
 
-import React, { memo, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  Modal,
-  Pressable,
-} from 'react-native';
+import React, { memo } from 'react';
+import { View, StyleSheet, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary, neutral, status } from '@rallia/design-system';
 import type { ConversationPreview } from '@rallia/shared-services';
 
@@ -38,6 +32,7 @@ function ConversationActionsSheetComponent({
   onLeave,
 }: ConversationActionsSheetProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
 
   if (!conversation) return null;
 
@@ -47,10 +42,10 @@ function ConversationActionsSheetComponent({
   const isGroup = conversation.conversation_type === 'group';
 
   // Get conversation name for display
-  const conversationName = 
+  const conversationName =
     conversation.conversation_type === 'direct' && conversation.other_participant
       ? `${conversation.other_participant.first_name}${conversation.other_participant.last_name ? ' ' + conversation.other_participant.last_name : ''}`
-      : conversation.title || 'Conversation';
+      : conversation.title || t('chat.actions.conversation');
 
   type ActionItem = {
     id: string;
@@ -64,7 +59,7 @@ function ConversationActionsSheetComponent({
   const actions: ActionItem[] = [
     {
       id: 'pin',
-      label: isPinned ? 'Unpin' : 'Pin',
+      label: isPinned ? t('chat.actions.unpin') : t('chat.actions.pin'),
       icon: isPinned ? 'pin-outline' : 'pin',
       onPress: () => {
         onTogglePin();
@@ -73,7 +68,7 @@ function ConversationActionsSheetComponent({
     },
     {
       id: 'mute',
-      label: isMuted ? 'Unmute' : 'Mute',
+      label: isMuted ? t('chat.actions.unmute') : t('chat.actions.mute'),
       icon: isMuted ? 'notifications' : 'notifications-off',
       onPress: () => {
         onToggleMute();
@@ -82,7 +77,7 @@ function ConversationActionsSheetComponent({
     },
     {
       id: 'archive',
-      label: isArchived ? 'Unarchive' : 'Archive',
+      label: isArchived ? t('chat.actions.unarchive') : t('chat.actions.archive'),
       icon: isArchived ? 'archive-outline' : 'archive',
       onPress: () => {
         onToggleArchive();
@@ -91,7 +86,7 @@ function ConversationActionsSheetComponent({
     },
     {
       id: 'leave',
-      label: 'Leave Group',
+      label: t('chat.actions.leaveGroup'),
       icon: 'exit',
       onPress: () => {
         onLeave?.();
@@ -102,29 +97,18 @@ function ConversationActionsSheetComponent({
     },
   ];
 
-  const visibleActions = actions.filter((action) => action.show !== false);
+  const visibleActions = actions.filter(action => action.show !== false);
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable 
-          style={[
-            styles.sheet,
-            { backgroundColor: isDark ? colors.card : '#FFFFFF' }
-          ]}
-          onPress={(e) => e.stopPropagation()}
+        <Pressable
+          style={[styles.sheet, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}
+          onPress={e => e.stopPropagation()}
         >
           {/* Conversation Name Header */}
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
-            <Text 
-              style={[styles.headerText, { color: colors.text }]}
-              numberOfLines={1}
-            >
+            <Text style={[styles.headerText, { color: colors.text }]} numberOfLines={1}>
               {conversationName}
             </Text>
           </View>
@@ -136,7 +120,10 @@ function ConversationActionsSheetComponent({
                 key={action.id}
                 style={[
                   styles.actionItem,
-                  index < visibleActions.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border },
+                  index < visibleActions.length - 1 && {
+                    borderBottomWidth: 1,
+                    borderBottomColor: colors.border,
+                  },
                 ]}
                 onPress={action.onPress}
                 activeOpacity={0.7}
@@ -165,9 +152,7 @@ function ConversationActionsSheetComponent({
             onPress={onClose}
             activeOpacity={0.7}
           >
-            <Text style={[styles.cancelText, { color: colors.text }]}>
-              Cancel
-            </Text>
+            <Text style={[styles.cancelText, { color: colors.text }]}>{t('common.cancel')}</Text>
           </TouchableOpacity>
         </Pressable>
       </Pressable>

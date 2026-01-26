@@ -13,7 +13,8 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { useAuth, useThemeStyles } from '../hooks';
+import { lightHaptic } from '@rallia/shared-utils';
+import { useAuth, useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
 import { useSport } from '../context';
 import { spacingPixels } from '@rallia/design-system';
 import { primary, neutral } from '@rallia/design-system';
@@ -39,6 +40,7 @@ const Community = () => {
   const { session } = useAuth();
   const { selectedSport } = useSport();
   const navigation = useNavigation<CommunityNavigationProp>();
+  const { t } = useTranslation();
 
   // Theme colors for components
   const themeColors = useMemo(
@@ -66,22 +68,28 @@ const Community = () => {
 
   // Action button handlers
   const handleShareLists = useCallback(() => {
+    lightHaptic();
     navigation.navigate('ShareLists');
   }, [navigation]);
 
   const handleGroups = useCallback(() => {
+    lightHaptic();
     navigation.navigate('Groups');
   }, [navigation]);
 
   const handleCommunities = useCallback(() => {
-    // TODO: Implement communities functionality
-    Alert.alert('Communities', 'This feature is coming soon!');
-  }, []);
+    lightHaptic();
+    navigation.navigate('Communities');
+  }, [navigation]);
 
   const handleTournaments = useCallback(() => {
+    lightHaptic();
     // TODO: Implement tournaments functionality
-    Alert.alert('Tournaments', 'This feature is coming soon!');
-  }, []);
+    Alert.alert(
+      t('community.tournaments' as TranslationKey),
+      t('community.tournamentsComingSoon' as TranslationKey)
+    );
+  }, [t]);
 
   // Action buttons configuration
   const actionButtons: ActionButton[] = useMemo(
@@ -89,29 +97,29 @@ const Community = () => {
       {
         id: 'share-lists',
         icon: 'paper-plane-outline',
-        label: 'Share Lists',
+        label: t('community.shareLists' as TranslationKey),
         onPress: handleShareLists,
       },
       {
         id: 'groups',
         icon: 'people-outline',
-        label: 'Groups',
+        label: t('community.groups' as TranslationKey),
         onPress: handleGroups,
       },
       {
         id: 'communities',
         icon: 'globe-outline',
-        label: 'Communities',
+        label: t('community.communities' as TranslationKey),
         onPress: handleCommunities,
       },
       {
         id: 'tournaments',
         icon: 'trophy-outline',
-        label: 'Tournaments',
+        label: t('community.tournaments' as TranslationKey),
         onPress: handleTournaments,
       },
     ],
-    [handleShareLists, handleGroups, handleCommunities, handleTournaments]
+    [handleShareLists, handleGroups, handleCommunities, handleTournaments, t]
   );
 
   const handlePlayerPress = useCallback(
@@ -155,7 +163,7 @@ const Community = () => {
       <View style={styles.sectionHeader}>
         <Ionicons name="tennisball-outline" size={20} color={colors.primary} />
         <Text size="lg" weight="bold" color={colors.text} style={styles.sectionTitle}>
-          Find a Partner
+          {t('community.findPartner' as TranslationKey)}
         </Text>
       </View>
 

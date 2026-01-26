@@ -41,6 +41,7 @@ export type RootStackParamList = {
   Map: { focusLocation?: { lat: number; lng: number } } | undefined;
   RatingProofs: RatingProofsScreenParams;
   GroupDetail: { groupId: string; groupName?: string }; // Group detail view
+  CommunityDetail: { communityId: string; communityName?: string }; // Community detail view
   GroupChatInfo: { conversationId: string }; // Group chat info/settings view
   Chat: { conversationId: string; title?: string }; // Direct chat navigation
   PlayedMatchDetail: { match: unknown }; // Played match detail view

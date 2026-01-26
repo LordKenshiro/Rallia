@@ -6,9 +6,9 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, Image, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Spinner, useToast } from '@rallia/shared-components';
+import { Text, Spinner } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 
 const BASE_WHITE = '#ffffff';
@@ -46,7 +46,6 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
   t,
   isDark,
 }) => {
-  const toast = useToast();
   const [sports, setSports] = useState<Sport[]>([]);
   const [isLoadingSports, setIsLoadingSports] = useState(true);
   const [playerId, setPlayerId] = useState<string | null>(null);
@@ -79,7 +78,10 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
 
       if (error) {
         Logger.error('Failed to fetch sports', error as Error);
-        toast.error('Failed to load sports. Please try again.');
+        Alert.alert(
+          t('alerts.error' as TranslationKey),
+          t('onboarding.validation.failedToLoadSports' as TranslationKey)
+        );
         setSports([
           {
             id: 'tennis-fallback',
@@ -115,6 +117,7 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
     };
 
     fetchSports();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Pre-populate from guest sports context (selected in SportSelectionScreen)
@@ -180,7 +183,10 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
     selectionHaptic();
 
     if (!playerId) {
-      toast.error('Player not found. Please try again.');
+      Alert.alert(
+        t('alerts.error' as TranslationKey),
+        t('onboarding.validation.playerNotFound' as TranslationKey)
+      );
       return;
     }
 
@@ -227,7 +233,10 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
           selectedSportNames: [...formData.selectedSportNames, sport.name],
         });
       }
-      toast.error('Failed to update sport selection. Please try again.');
+      Alert.alert(
+        t('alerts.error' as TranslationKey),
+        t('onboarding.validation.failedToUpdateSportSelection' as TranslationKey)
+      );
     }
   };
 

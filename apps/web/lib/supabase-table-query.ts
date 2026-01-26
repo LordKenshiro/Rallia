@@ -8,20 +8,13 @@ export interface TableQueryResult<T> {
   totalPages: number;
 }
 
-// Type representing any Postgrest query builder with the methods we need
-type PostgrestQueryBuilder = {
-  eq: (column: string, value: any) => any;
-  ilike: (column: string, pattern: string) => any;
-  order: (column: string, options: { ascending: boolean }) => any;
-  range: (from: number, to: number) => any;
-} & PromiseLike<{
-  data: any[] | null;
-  error: any | null;
-  count: number | null;
-}>;
+// Note: Using 'any' for the query parameter because Supabase's PostgrestFilterBuilder
+// and PostgrestQueryBuilder have complex generic types that are difficult to type correctly.
+// The function uses duck-typing to call the required methods (eq, ilike, order, range).
 
 export async function buildTableQuery<T>(
-  query: PostgrestQueryBuilder,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  query: any,
   tableParams: TableParams,
   options?: {
     allowedSortFields?: string[];

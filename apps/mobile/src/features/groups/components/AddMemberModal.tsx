@@ -17,7 +17,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text, useToast } from '@rallia/shared-components';
-import { useThemeStyles, useAuth } from '../../../hooks';
+import { lightHaptic, successHaptic } from '@rallia/shared-utils';
+import { useThemeStyles, useAuth, useTranslation } from '../../../hooks';
 import { useDebounce, useAddGroupMember } from '@rallia/shared-hooks';
 import { supabase } from '@rallia/shared-services';
 
@@ -49,6 +50,7 @@ export function AddMemberModal({
   const { session } = useAuth();
   const playerId = session?.user?.id;
   const toast = useToast();
+  const { t } = useTranslation();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestedPlayers, setSuggestedPlayers] = useState<PlayerProfile[]>([]);
@@ -165,6 +167,7 @@ export function AddMemberModal({
   }, [searchResults, suggestedPlayers, currentMemberIds, searchQuery]);
 
   const handleClose = useCallback(() => {
+    lightHaptic();
     setSearchQuery('');
     setSearchResults([]);
     onClose();
@@ -174,18 +177,22 @@ export function AddMemberModal({
     async (memberPlayerId: string) => {
       if (!playerId) return;
 
-    try {
-      await addMemberMutation.mutateAsync({
-        groupId,
-        inviterId: playerId,
-        playerIdToAdd: memberPlayerId,
-      });
-      toast.success('Member added to the group');
-      onSuccess();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to add member');
-    }
-  }, [groupId, playerId, addMemberMutation, onSuccess, toast]);
+      lightHaptic();
+      try {
+        await addMemberMutation.mutateAsync({
+          groupId,
+          inviterId: playerId,
+          playerIdToAdd: memberPlayerId,
+        });
+        successHaptic();
+        toast.success(t('groups.memberAddedToGroup'));
+        onSuccess();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : t('groups.failedToAddMember'));
+      }
+    },
+    [groupId, playerId, addMemberMutation, onSuccess, toast, t]
+  );
 
   const renderPlayerItem = useCallback(
     ({ item }: { item: PlayerProfile }) => (
@@ -234,7 +241,7 @@ export function AddMemberModal({
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
             <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-              Add Member
+              {t('groups.addMember')}
             </Text>
             <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={colors.text} />
@@ -252,7 +259,7 @@ export function AddMemberModal({
               <Ionicons name="search" size={20} color={colors.textMuted} />
               <TextInput
                 style={[styles.searchTextInput, { color: colors.text }]}
-                placeholder="Search players..."
+                placeholder={t('groups.searchPlayers')}
                 placeholderTextColor={colors.textMuted}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -276,7 +283,9 @@ export function AddMemberModal({
               <View style={styles.emptyState}>
                 <Ionicons name="person-outline" size={48} color={colors.textMuted} />
                 <Text style={{ color: colors.textSecondary, marginTop: 12 }}>
-                  {searchQuery.length >= 2 ? 'No players found' : 'No players available'}
+                  {searchQuery.length >= 2
+                    ? t('groups.noPlayersFound')
+                    : t('groups.noPlayersAvailable')}
                 </Text>
               </View>
             ) : (
@@ -290,7 +299,7 @@ export function AddMemberModal({
                       paddingVertical: 8,
                     }}
                   >
-                    Suggested Players
+                    {t('groups.suggestedPlayers')}
                   </Text>
                 )}
                 <FlatList

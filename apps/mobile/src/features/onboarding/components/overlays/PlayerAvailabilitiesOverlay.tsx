@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,13 +7,14 @@ import {
   ScrollView,
   Animated,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
-import { Overlay, useToast } from '@rallia/shared-components';
+import { Overlay } from '@rallia/shared-components';
 import { OnboardingService, Logger } from '@rallia/shared-services';
 import type { DayEnum, PeriodEnum, OnboardingAvailability } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles } from '../../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../../hooks';
 
 interface PlayerAvailabilitiesOverlayProps {
   visible: boolean;
@@ -52,7 +53,7 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
   onSave,
 }) => {
   const { colors } = useThemeStyles();
-  const toast = useToast();
+  const { t } = useTranslation();
   const days: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const timeSlots: TimeSlot[] = ['AM', 'PM', 'EVE'];
 
@@ -73,9 +74,9 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
   );
   const [isSaving, setIsSaving] = useState(false);
 
-  // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
+  // Animation values - using useMemo to create stable Animated.Value instances
+  const fadeAnim = useMemo(() => new Animated.Value(0), []);
+  const slideAnim = useMemo(() => new Animated.Value(50), []);
 
   // Trigger animations when overlay becomes visible
   useEffect(() => {
@@ -164,7 +165,9 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
         if (error) {
           Logger.error('Failed to save player availability', error as Error, { availabilityData });
           setIsSaving(false);
-          toast.error('Failed to save your availability. Please try again.');
+          Alert.alert(t('common.error'), t('onboarding.validation.failedToSaveAvailability'), [
+            { text: t('common.ok') },
+          ]);
           return;
         }
 
@@ -186,7 +189,9 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
       } catch (error) {
         Logger.error('Unexpected error saving availability', error as Error);
         setIsSaving(false);
-        toast.error('An unexpected error occurred. Please try again.');
+        Alert.alert(t('common.error'), t('onboarding.validation.unexpectedError'), [
+          { text: t('common.ok') },
+        ]);
       }
     }
   };

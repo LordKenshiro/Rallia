@@ -4,19 +4,11 @@
  */
 
 import React, { useState, useCallback, useRef, memo, useEffect } from 'react';
-import {
-  View,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Keyboard,
-} from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary, neutral } from '@rallia/design-system';
 import type { MessageWithSender } from '@rallia/shared-services';
 
@@ -38,42 +30,46 @@ function MessageInputComponent({
   onTypingChange,
 }: MessageInputProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const [message, setMessage] = useState('');
   const inputRef = useRef<TextInput>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const wasTypingRef = useRef(false);
 
   // Handle text change and typing indicator
-  const handleTextChange = useCallback((text: string) => {
-    setMessage(text);
-    
-    // Notify typing status
-    if (onTypingChange) {
-      const isTyping = text.length > 0;
-      
-      // Only send typing indicator when status changes or periodically
-      if (isTyping && !wasTypingRef.current) {
-        onTypingChange(true);
-        wasTypingRef.current = true;
-      }
-      
-      // Clear existing timeout
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-      
-      // Stop typing after 2 seconds of inactivity
-      if (isTyping) {
-        typingTimeoutRef.current = setTimeout(() => {
+  const handleTextChange = useCallback(
+    (text: string) => {
+      setMessage(text);
+
+      // Notify typing status
+      if (onTypingChange) {
+        const isTyping = text.length > 0;
+
+        // Only send typing indicator when status changes or periodically
+        if (isTyping && !wasTypingRef.current) {
+          onTypingChange(true);
+          wasTypingRef.current = true;
+        }
+
+        // Clear existing timeout
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+        }
+
+        // Stop typing after 2 seconds of inactivity
+        if (isTyping) {
+          typingTimeoutRef.current = setTimeout(() => {
+            onTypingChange(false);
+            wasTypingRef.current = false;
+          }, 2000);
+        } else {
           onTypingChange(false);
           wasTypingRef.current = false;
-        }, 2000);
-      } else {
-        onTypingChange(false);
-        wasTypingRef.current = false;
+        }
       }
-    }
-  }, [onTypingChange]);
+    },
+    [onTypingChange]
+  );
 
   // Cleanup typing timeout on unmount
   useEffect(() => {
@@ -99,7 +95,7 @@ function MessageInputComponent({
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
-      
+
       onSend(trimmedMessage, replyToMessage?.id);
       setMessage('');
       onCancelReply?.();
@@ -124,16 +120,15 @@ function MessageInputComponent({
     >
       {/* Reply Banner */}
       {replyToMessage && (
-        <View style={[styles.replyBanner, { backgroundColor: isDark ? colors.card : neutral[100] }]}>
+        <View
+          style={[styles.replyBanner, { backgroundColor: isDark ? colors.card : neutral[100] }]}
+        >
           <View style={[styles.replyIndicator, { backgroundColor: primary[500] }]} />
           <View style={styles.replyContent}>
             <Text style={[styles.replySenderName, { color: primary[500] }]}>
-              Replying to {replySenderName}
+              {t('chat.input.replyingTo', { name: replySenderName })}
             </Text>
-            <Text 
-              style={[styles.replyPreview, { color: colors.textMuted }]} 
-              numberOfLines={1}
-            >
+            <Text style={[styles.replyPreview, { color: colors.textMuted }]} numberOfLines={1}>
               {replyToMessage.content}
             </Text>
           </View>
@@ -143,12 +138,7 @@ function MessageInputComponent({
         </View>
       )}
 
-      <View
-        style={[
-          styles.inputContainer,
-          { backgroundColor: isDark ? colors.card : '#F0F0F0' },
-        ]}
-      >
+      <View style={[styles.inputContainer, { backgroundColor: isDark ? colors.card : '#F0F0F0' }]}>
         {/* Emoji button - opens native emoji keyboard */}
         <TouchableOpacity
           style={styles.iconButton}
@@ -177,18 +167,11 @@ function MessageInputComponent({
 
         {/* Send button */}
         <TouchableOpacity
-          style={[
-            styles.sendButton,
-            canSend && { backgroundColor: primary[500] },
-          ]}
+          style={[styles.sendButton, canSend && { backgroundColor: primary[500] }]}
           onPress={handleSend}
           disabled={!canSend}
         >
-          <Ionicons
-            name="send"
-            size={20}
-            color={canSend ? '#FFFFFF' : colors.textMuted}
-          />
+          <Ionicons name="send" size={20} color={canSend ? '#FFFFFF' : colors.textMuted} />
         </TouchableOpacity>
       </View>
     </View>

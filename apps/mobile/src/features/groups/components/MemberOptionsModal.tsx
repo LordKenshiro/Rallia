@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 
 interface OptionItem {
   id: string;
@@ -48,6 +48,7 @@ export function MemberOptionsModal({
   onAvatarPress,
 }: MemberOptionsModalProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
 
   if (!member) return null;
 
@@ -59,7 +60,7 @@ export function MemberOptionsModal({
             <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
               {/* Member Header */}
               <View style={[styles.memberHeader, { borderBottomColor: colors.border }]}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.avatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}
                   onPress={() => {
                     if (member.playerId && onAvatarPress) {
@@ -86,7 +87,7 @@ export function MemberOptionsModal({
                         style={[styles.badge, { backgroundColor: isDark ? '#FF9500' : '#FFF3E0' }]}
                       >
                         <Text size="xs" style={{ color: isDark ? '#FFFFFF' : '#FF9500' }}>
-                          Moderator
+                          {t('groups.moderator')}
                         </Text>
                       </View>
                     )}
@@ -98,7 +99,7 @@ export function MemberOptionsModal({
                         ]}
                       >
                         <Text size="xs" style={{ color: isDark ? '#FFFFFF' : colors.primary }}>
-                          Creator
+                          {t('groups.creator')}
                         </Text>
                       </View>
                     )}
@@ -173,7 +174,7 @@ export function MemberOptionsModal({
                 activeOpacity={0.7}
               >
                 <Text weight="semibold" size="base" style={{ color: colors.primary }}>
-                  Cancel
+                  {t('common.cancel')}
                 </Text>
               </TouchableOpacity>
             </View>

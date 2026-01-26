@@ -20,6 +20,7 @@ export * from './reputation';
 export * from './shared-contacts';
 export * from './match-share';
 export * from './groups';
+export * from './communities';
 export * from './chat';
 export * from './reports';
 

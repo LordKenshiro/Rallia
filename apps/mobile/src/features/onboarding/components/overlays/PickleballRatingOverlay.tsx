@@ -8,14 +8,15 @@ import {
   Animated,
   ActivityIndicator,
   Linking,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Overlay, useToast } from '@rallia/shared-components';
+import { Overlay } from '@rallia/shared-components';
 import DatabaseService, { OnboardingService, SportService, Logger } from '@rallia/shared-services';
 import type { OnboardingRating } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles } from '../../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../../hooks';
 import { primary } from '@rallia/design-system';
 
 interface PickleballRatingOverlayProps {
@@ -73,7 +74,7 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
   onSave,
 }) => {
   const { colors, isDark } = useThemeStyles();
-  const toast = useToast();
+  const { t } = useTranslation();
   const [selectedRating, setSelectedRating] = useState<string | null>(initialRating || null);
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -100,7 +101,7 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
             sport: 'pickleball',
             system: 'dupr',
           });
-          toast.error('Failed to load ratings. Please try again.');
+          Alert.alert(t('common.error'), t('onboarding.validation.failedToLoadRatings'));
           return;
         }
 
@@ -116,14 +117,14 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
         setRatings(transformedRatings);
       } catch (error) {
         Logger.error('Unexpected error loading pickleball ratings', error as Error);
-        toast.error('An unexpected error occurred. Please try again.');
+        Alert.alert(t('common.error'), t('onboarding.validation.unexpectedError'));
       } finally {
         setIsLoading(false);
       }
     };
 
     loadRatings();
-  }, [visible, toast]);
+  }, [visible, t]);
 
   // Trigger animations when overlay becomes visible
   useEffect(() => {
@@ -184,7 +185,9 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
         if (sportError || !pickleballSport) {
           Logger.error('Failed to fetch pickleball sport', sportError as Error);
           setIsSaving(false);
-          toast.error('Failed to save your rating. Please try again.');
+          Alert.alert(t('common.error'), t('onboarding.validation.failedToSaveRating'), [
+            { text: t('common.ok') },
+          ]);
           return;
         }
 
@@ -193,7 +196,7 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
 
         if (!selectedRatingData) {
           setIsSaving(false);
-          toast.error('Invalid rating selected');
+          Alert.alert(t('common.error'), t('onboarding.validation.invalidRating'));
           return;
         }
 
@@ -211,7 +214,9 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
         if (error) {
           Logger.error('Failed to save pickleball rating', error as Error, { ratingData });
           setIsSaving(false);
-          toast.error('Failed to save your rating. Please try again.');
+          Alert.alert(t('common.error'), t('onboarding.validation.failedToSaveRating'), [
+            { text: t('common.ok') },
+          ]);
           return;
         }
 
@@ -220,7 +225,9 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
       } catch (error) {
         Logger.error('Unexpected error saving pickleball rating', error as Error);
         setIsSaving(false);
-        toast.error('An unexpected error occurred. Please try again.');
+        Alert.alert(t('common.error'), t('onboarding.validation.unexpectedError'), [
+          { text: t('common.ok') },
+        ]);
       }
     }
   };

@@ -31,11 +31,7 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser();
 
   // Fetch user profile
-  const { data: profile, error: profileError } = await supabase
-    .from('profile')
-    .select('*')
-    .eq('id', user!.id)
-    .single();
+  const { data: profile } = await supabase.from('profile').select('*').eq('id', user!.id).single();
 
   // Fetch user's organization memberships with organization details
   const { data: memberships, error: membershipsError } = await supabase

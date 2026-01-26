@@ -16,12 +16,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
-import { 
-  createReport, 
-  type ReportReason, 
-  REPORT_REASON_LABELS 
-} from '@rallia/shared-services';
+import { useThemeStyles, useTranslation } from '../../../hooks';
+import { createReport, type ReportReason, REPORT_REASON_LABELS } from '@rallia/shared-services';
 import { radiusPixels, primary, status } from '@rallia/design-system';
 
 interface ReportUserModalProps {
@@ -35,7 +31,7 @@ interface ReportUserModalProps {
 
 const REPORT_REASONS: ReportReason[] = [
   'inappropriate_behavior',
-  'harassment', 
+  'harassment',
   'spam',
   'cheating',
   'other',
@@ -50,7 +46,8 @@ export function ReportUserModal({
   conversationId,
 }: ReportUserModalProps) {
   const { colors, isDark } = useThemeStyles();
-  
+  const { t } = useTranslation();
+
   const [selectedReason, setSelectedReason] = useState<ReportReason | null>(null);
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,7 +60,7 @@ export function ReportUserModal({
 
   const handleSubmit = useCallback(async () => {
     if (!selectedReason) {
-      Alert.alert('Error', 'Please select a reason for your report');
+      Alert.alert(t('common.error'), t('chat.report.pleaseSelectReason'));
       return;
     }
 
@@ -76,41 +73,30 @@ export function ReportUserModal({
         description: description.trim() || undefined,
         conversationId,
       });
-      
-      Alert.alert(
-        'Report Submitted',
-        'Thank you for your report. Our team will review it shortly.',
-        [{ text: 'OK', onPress: handleClose }]
-      );
+
+      Alert.alert(t('chat.report.submitted'), t('chat.report.thankYou'), [
+        { text: t('common.ok'), onPress: handleClose },
+      ]);
     } catch (error) {
       Alert.alert(
-        'Error',
-        error instanceof Error ? error.message : 'Failed to submit report'
+        t('common.error'),
+        error instanceof Error ? error.message : t('chat.report.failedToSubmit')
       );
     } finally {
       setIsSubmitting(false);
     }
-  }, [selectedReason, description, reporterId, reportedId, conversationId, handleClose]);
+  }, [selectedReason, description, reporterId, reportedId, conversationId, handleClose, t]);
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={handleClose}
-    >
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
       <View style={styles.overlay}>
-        <TouchableOpacity
-          style={styles.backdrop}
-          activeOpacity={1}
-          onPress={handleClose}
-        />
-        
+        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={handleClose} />
+
         <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
             <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-              Report {reportedName}
+              {t('chat.report.reportUser', { name: reportedName })}
             </Text>
             <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={colors.text} />
@@ -119,37 +105,54 @@ export function ReportUserModal({
 
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
             {/* Warning text */}
-            <View style={[styles.warningBox, { backgroundColor: isDark ? 'rgba(245, 158, 11, 0.15)' : 'rgba(245, 158, 11, 0.1)' }]}>
+            <View
+              style={[
+                styles.warningBox,
+                {
+                  backgroundColor: isDark ? 'rgba(245, 158, 11, 0.15)' : 'rgba(245, 158, 11, 0.1)',
+                },
+              ]}
+            >
               <Ionicons name="warning-outline" size={20} color={status.warning.DEFAULT} />
-              <Text size="sm" style={{ color: isDark ? status.warning.light : status.warning.dark, flex: 1, marginLeft: 8 }}>
-                Reports are taken seriously. Please only report genuine violations.
+              <Text
+                size="sm"
+                style={{
+                  color: isDark ? status.warning.light : status.warning.dark,
+                  flex: 1,
+                  marginLeft: 8,
+                }}
+              >
+                {t('chat.report.warningText')}
               </Text>
             </View>
 
             {/* Reason selection */}
             <Text weight="medium" style={{ color: colors.text, marginBottom: 12, marginTop: 16 }}>
-              Select a reason
+              {t('chat.report.selectReason')}
             </Text>
-            
-            {REPORT_REASONS.map((reason) => (
+
+            {REPORT_REASONS.map(reason => (
               <TouchableOpacity
                 key={reason}
                 style={[
                   styles.reasonOption,
                   {
-                    backgroundColor: selectedReason === reason 
-                      ? (isDark ? primary[900] : primary[50])
-                      : (isDark ? '#2C2C2E' : '#F2F2F7'),
-                    borderColor: selectedReason === reason 
-                      ? primary[500]
-                      : 'transparent',
+                    backgroundColor:
+                      selectedReason === reason
+                        ? isDark
+                          ? primary[900]
+                          : primary[50]
+                        : isDark
+                          ? '#2C2C2E'
+                          : '#F2F2F7',
+                    borderColor: selectedReason === reason ? primary[500] : 'transparent',
                   },
                 ]}
                 onPress={() => setSelectedReason(reason)}
                 activeOpacity={0.7}
               >
-                <Text 
-                  style={{ 
+                <Text
+                  style={{
                     color: selectedReason === reason ? primary[500] : colors.text,
                     flex: 1,
                   }}
@@ -164,7 +167,7 @@ export function ReportUserModal({
 
             {/* Description input */}
             <Text weight="medium" style={{ color: colors.text, marginBottom: 12, marginTop: 20 }}>
-              Additional details (optional)
+              {t('chat.report.additionalDetails')}
             </Text>
             <TextInput
               style={[
@@ -175,7 +178,7 @@ export function ReportUserModal({
                   borderColor: colors.border,
                 },
               ]}
-              placeholder="Provide more context about this report..."
+              placeholder={t('chat.report.provideContext')}
               placeholderTextColor={colors.textMuted}
               value={description}
               onChangeText={setDescription}

@@ -9,9 +9,6 @@ import { useForm, UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   matchFormSchema,
-  step1Schema,
-  step2Schema,
-  step3Schema,
   type MatchFormSchemaData,
   type Step1FormData,
   type Step2FormData,

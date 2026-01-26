@@ -17,7 +17,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary, neutral } from '@rallia/design-system';
 import type { MessageWithSender } from '@rallia/shared-services';
 
@@ -37,11 +37,14 @@ function EditMessageModalComponent({
   isSaving = false,
 }: EditMessageModalProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const [editedContent, setEditedContent] = useState('');
 
   // Reset content when modal opens with a new message
+  // This effect syncs controlled prop to local state - standard pattern for modal forms
   useEffect(() => {
     if (visible && message) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional sync of controlled prop to local state
       setEditedContent(message.content);
     }
   }, [visible, message]);
@@ -55,49 +58,52 @@ function EditMessageModalComponent({
     }
   }, [editedContent, message, onSave, onClose]);
 
-  const canSave = editedContent.trim().length > 0 && 
-                  editedContent.trim() !== message?.content &&
-                  !isSaving;
+  const canSave =
+    editedContent.trim().length > 0 && editedContent.trim() !== message?.content && !isSaving;
 
   if (!message) return null;
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView
         style={styles.overlay}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <Pressable style={styles.backdrop} onPress={onClose} />
-        
+
         <View style={[styles.container, { backgroundColor: colors.card }]}>
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={colors.text} />
             </TouchableOpacity>
-            <Text style={[styles.title, { color: colors.text }]}>Edit Message</Text>
-            <TouchableOpacity 
-              onPress={handleSave} 
+            <Text style={[styles.title, { color: colors.text }]}>{t('chat.editMessage')}</Text>
+            <TouchableOpacity
+              onPress={handleSave}
               style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
               disabled={!canSave}
             >
-              <Text style={[
-                styles.saveButtonText, 
-                { color: canSave ? primary[500] : colors.textMuted }
-              ]}>
-                {isSaving ? 'Saving...' : 'Save'}
+              <Text
+                style={[
+                  styles.saveButtonText,
+                  { color: canSave ? primary[500] : colors.textMuted },
+                ]}
+              >
+                {isSaving ? t('common.saving') : t('common.save')}
               </Text>
             </TouchableOpacity>
           </View>
 
           {/* Original message preview */}
-          <View style={[styles.originalContainer, { backgroundColor: isDark ? neutral[800] : neutral[100] }]}>
-            <Text style={[styles.originalLabel, { color: colors.textMuted }]}>Original:</Text>
+          <View
+            style={[
+              styles.originalContainer,
+              { backgroundColor: isDark ? neutral[800] : neutral[100] },
+            ]}
+          >
+            <Text style={[styles.originalLabel, { color: colors.textMuted }]}>
+              {t('chat.original')}:
+            </Text>
             <Text style={[styles.originalText, { color: colors.textMuted }]} numberOfLines={2}>
               {message.content}
             </Text>
@@ -107,16 +113,16 @@ function EditMessageModalComponent({
           <View style={styles.inputContainer}>
             <TextInput
               style={[
-                styles.input, 
-                { 
-                  color: colors.text, 
+                styles.input,
+                {
+                  color: colors.text,
                   backgroundColor: isDark ? neutral[800] : neutral[100],
                   borderColor: colors.border,
-                }
+                },
               ]}
               value={editedContent}
               onChangeText={setEditedContent}
-              placeholder="Edit your message..."
+              placeholder={t('chat.editYourMessage')}
               placeholderTextColor={colors.textMuted}
               multiline
               maxLength={2000}

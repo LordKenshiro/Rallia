@@ -21,7 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles, useAuth } from '../../../hooks';
+import { useThemeStyles, useAuth, useTranslation } from '../../../hooks';
 import { useUpdateGroup, type Group } from '@rallia/shared-hooks';
 import { uploadImage, replaceImage } from '../../../services/imageUpload';
 import { primary } from '@rallia/design-system';
@@ -36,6 +36,7 @@ interface EditGroupModalProps {
 export function EditGroupModal({ visible, onClose, group, onSuccess }: EditGroupModalProps) {
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
+  const { t } = useTranslation();
   const playerId = session?.user?.id;
 
   const [name, setName] = useState(group.name);
@@ -68,10 +69,7 @@ export function EditGroupModal({ visible, onClose, group, onSuccess }: EditGroup
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(
-          'Permission Required',
-          'Please allow access to your photos to change the group image.'
-        );
+        Alert.alert(t('groups.permissionRequired'), t('groups.photoAccessRequiredEdit'));
         return;
       }
 
@@ -87,9 +85,9 @@ export function EditGroupModal({ visible, onClose, group, onSuccess }: EditGroup
       }
     } catch (err) {
       console.error('Error picking image:', err);
-      Alert.alert('Error', 'Failed to pick image');
+      Alert.alert(t('common.error'), t('groups.failedToPickImage'));
     }
-  }, []);
+  }, [t]);
 
   const handleRemoveImage = useCallback(() => {
     setCoverImage(null);
@@ -100,17 +98,17 @@ export function EditGroupModal({ visible, onClose, group, onSuccess }: EditGroup
     if (!playerId) return;
 
     if (!name.trim()) {
-      setError('Group name is required');
+      setError(t('groups.nameRequired'));
       return;
     }
 
     if (name.trim().length < 2) {
-      setError('Group name must be at least 2 characters');
+      setError(t('groups.nameTooShort'));
       return;
     }
 
     if (name.trim().length > 50) {
-      setError('Group name must be less than 50 characters');
+      setError(t('groups.nameTooLong'));
       return;
     }
 
@@ -131,7 +129,7 @@ export function EditGroupModal({ visible, onClose, group, onSuccess }: EditGroup
           );
           if (uploadError) {
             console.error('Error replacing image:', uploadError);
-            Alert.alert('Warning', 'Failed to update group image.');
+            Alert.alert(t('common.warning'), t('groups.failedToUpdateImage'));
           } else {
             coverImageUrl = url;
           }
@@ -140,7 +138,7 @@ export function EditGroupModal({ visible, onClose, group, onSuccess }: EditGroup
           const { url, error: uploadError } = await uploadImage(newCoverImage, 'group-images');
           if (uploadError) {
             console.error('Error uploading image:', uploadError);
-            Alert.alert('Warning', 'Failed to upload group image.');
+            Alert.alert(t('common.warning'), t('groups.failedToUploadImage'));
           } else if (url) {
             coverImageUrl = url;
           }
@@ -167,7 +165,10 @@ export function EditGroupModal({ visible, onClose, group, onSuccess }: EditGroup
       });
       onSuccess();
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to update group');
+      Alert.alert(
+        t('common.error'),
+        err instanceof Error ? err.message : t('groups.failedToUpdateGroup')
+      );
     }
   }, [
     name,
@@ -179,6 +180,7 @@ export function EditGroupModal({ visible, onClose, group, onSuccess }: EditGroup
     onSuccess,
     newCoverImage,
     coverImage,
+    t,
   ]);
 
   const hasChanges =
@@ -202,7 +204,7 @@ export function EditGroupModal({ visible, onClose, group, onSuccess }: EditGroup
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
             <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-              Edit Group
+              {t('groups.editGroup')}
             </Text>
             <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={colors.text} />
@@ -214,7 +216,7 @@ export function EditGroupModal({ visible, onClose, group, onSuccess }: EditGroup
             {/* Cover Image Picker */}
             <View style={styles.inputGroup}>
               <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
-                Group Image
+                {t('groups.groupImage')}
               </Text>
               {displayImage ? (
                 <View style={styles.imagePreviewContainer}>
@@ -231,7 +233,7 @@ export function EditGroupModal({ visible, onClose, group, onSuccess }: EditGroup
                   >
                     <Ionicons name="camera" size={16} color="#FFFFFF" />
                     <Text size="xs" weight="semibold" style={{ color: '#FFFFFF', marginLeft: 4 }}>
-                      Change
+                      {t('common.change')}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -252,14 +254,14 @@ export function EditGroupModal({ visible, onClose, group, onSuccess }: EditGroup
                     <Ionicons name="camera" size={24} color={colors.primary} />
                   </View>
                   <Text size="sm" style={{ color: colors.textSecondary, marginTop: 8 }}>
-                    Add a cover image
+                    {t('groups.addCoverImage')}
                   </Text>
                 </TouchableOpacity>
               )}
             </View>
             <View style={styles.inputGroup}>
               <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
-                Group Name *
+                {t('groups.groupName')} *
               </Text>
               <TextInput
                 style={[
@@ -270,7 +272,7 @@ export function EditGroupModal({ visible, onClose, group, onSuccess }: EditGroup
                     borderColor: error ? '#FF3B30' : colors.border,
                   },
                 ]}
-                placeholder="Enter group name..."
+                placeholder={t('groups.enterGroupName')}
                 placeholderTextColor={colors.textMuted}
                 value={name}
                 onChangeText={setName}
@@ -285,7 +287,7 @@ export function EditGroupModal({ visible, onClose, group, onSuccess }: EditGroup
 
             <View style={styles.inputGroup}>
               <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
-                Description (optional)
+                {t('groups.descriptionOptional')}
               </Text>
               <TextInput
                 style={[
@@ -297,7 +299,7 @@ export function EditGroupModal({ visible, onClose, group, onSuccess }: EditGroup
                     borderColor: colors.border,
                   },
                 ]}
-                placeholder="What's this group about?"
+                placeholder={t('groups.descriptionPlaceholder')}
                 placeholderTextColor={colors.textMuted}
                 value={description}
                 onChangeText={setDescription}
@@ -319,7 +321,7 @@ export function EditGroupModal({ visible, onClose, group, onSuccess }: EditGroup
               onPress={handleClose}
               disabled={isSubmitting}
             >
-              <Text style={{ color: colors.text }}>Cancel</Text>
+              <Text style={{ color: colors.text }}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -334,7 +336,7 @@ export function EditGroupModal({ visible, onClose, group, onSuccess }: EditGroup
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <Text weight="semibold" style={{ color: '#FFFFFF' }}>
-                  Save Changes
+                  {t('common.saveChanges')}
                 </Text>
               )}
             </TouchableOpacity>

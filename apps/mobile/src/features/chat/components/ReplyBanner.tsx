@@ -8,7 +8,7 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary } from '@rallia/design-system';
 
 interface ReplyBannerProps {
@@ -19,33 +19,31 @@ interface ReplyBannerProps {
 
 function ReplyBannerComponent({ senderName, messageContent, onCancel }: ReplyBannerProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
 
   return (
-    <View 
+    <View
       style={[
-        styles.container, 
-        { 
+        styles.container,
+        {
           backgroundColor: isDark ? colors.card : '#F5F5F5',
           borderLeftColor: primary[500],
-        }
+        },
       ]}
     >
       <View style={styles.content}>
         <View style={styles.header}>
           <Ionicons name="arrow-undo" size={14} color={primary[500]} />
           <Text style={[styles.label, { color: primary[500] }]}>
-            Replying to {senderName}
+            {t('chat.input.replyingTo', { name: senderName })}
           </Text>
         </View>
-        <Text 
-          style={[styles.preview, { color: colors.textMuted }]}
-          numberOfLines={1}
-        >
+        <Text style={[styles.preview, { color: colors.textMuted }]} numberOfLines={1}>
           {messageContent}
         </Text>
       </View>
-      
-      <TouchableOpacity 
+
+      <TouchableOpacity
         style={styles.closeButton}
         onPress={onCancel}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}

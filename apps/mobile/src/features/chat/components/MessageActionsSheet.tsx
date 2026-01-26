@@ -5,18 +5,12 @@
  */
 
 import React, { memo, useCallback, useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  Modal,
-  Pressable,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Modal, Pressable } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary, neutral, status } from '@rallia/design-system';
 import type { MessageWithSender } from '@rallia/shared-services';
 import { EmojiReactionPicker } from './EmojiReactionPicker';
@@ -55,6 +49,7 @@ function MessageActionsSheetComponent({
   messageY,
 }: MessageActionsSheetProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   const handleCopy = useCallback(async () => {
@@ -62,7 +57,7 @@ function MessageActionsSheetComponent({
       await Clipboard.setStringAsync(message.content);
     }
     onClose();
-  }, [message?.content, onClose]);
+  }, [message, onClose]);
 
   const handleReply = useCallback(() => {
     onReply();
@@ -84,11 +79,14 @@ function MessageActionsSheetComponent({
     // Note: The action sheet will hide via visible && !showEmojiPicker
   }, []);
 
-  const handleEmojiSelect = useCallback((emoji: string) => {
-    setShowEmojiPicker(false);
-    onReact(emoji);
-    onClose();
-  }, [onReact, onClose]);
+  const handleEmojiSelect = useCallback(
+    (emoji: string) => {
+      setShowEmojiPicker(false);
+      onReact(emoji);
+      onClose();
+    },
+    [onReact, onClose]
+  );
 
   const handleCloseEmojiPicker = useCallback(() => {
     // Close everything when emoji picker is dismissed
@@ -105,32 +103,32 @@ function MessageActionsSheetComponent({
   const actions: ActionItem[] = [
     {
       id: 'react',
-      label: 'Add Reaction',
+      label: t('chat.messageActions.addReaction'),
       icon: 'happy-outline',
       onPress: handleShowEmojiPicker,
     },
     {
       id: 'reply',
-      label: 'Reply',
+      label: t('chat.messageActions.reply'),
       icon: 'arrow-undo',
       onPress: handleReply,
     },
     {
       id: 'copy',
-      label: 'Copy',
+      label: t('chat.messageActions.copy'),
       icon: 'copy',
       onPress: handleCopy,
     },
     {
       id: 'edit',
-      label: 'Edit',
+      label: t('chat.messageActions.edit'),
       icon: 'pencil',
       onPress: handleEdit,
       ownOnly: true,
     },
     {
       id: 'delete',
-      label: 'Delete',
+      label: t('chat.messageActions.delete'),
       icon: 'trash',
       onPress: handleDelete,
       destructive: true,
@@ -139,7 +137,7 @@ function MessageActionsSheetComponent({
   ];
 
   // Filter actions based on ownership
-  const visibleActions = actions.filter((action) => !action.ownOnly || isOwnMessage);
+  const visibleActions = actions.filter(action => !action.ownOnly || isOwnMessage);
 
   if (!message) return null;
 
@@ -152,19 +150,13 @@ function MessageActionsSheetComponent({
         onRequestClose={handleClose}
       >
         <Pressable style={styles.overlay} onPress={handleClose}>
-          <Pressable 
-            style={[
-              styles.sheet,
-              { backgroundColor: isDark ? colors.card : '#FFFFFF' }
-            ]}
-            onPress={(e) => e.stopPropagation()}
+          <Pressable
+            style={[styles.sheet, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}
+            onPress={e => e.stopPropagation()}
           >
             {/* Message Preview */}
             <View style={[styles.preview, { borderBottomColor: colors.border }]}>
-              <Text 
-                style={[styles.previewText, { color: colors.textMuted }]}
-                numberOfLines={2}
-              >
+              <Text style={[styles.previewText, { color: colors.textMuted }]} numberOfLines={2}>
                 {message.content}
               </Text>
             </View>
@@ -176,7 +168,10 @@ function MessageActionsSheetComponent({
                   key={action.id}
                   style={[
                     styles.actionItem,
-                    index < visibleActions.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border },
+                    index < visibleActions.length - 1 && {
+                      borderBottomWidth: 1,
+                      borderBottomColor: colors.border,
+                    },
                   ]}
                   onPress={action.onPress}
                   activeOpacity={0.7}
@@ -205,9 +200,7 @@ function MessageActionsSheetComponent({
               onPress={handleClose}
               activeOpacity={0.7}
             >
-              <Text style={[styles.cancelText, { color: colors.text }]}>
-                Cancel
-              </Text>
+              <Text style={[styles.cancelText, { color: colors.text }]}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
