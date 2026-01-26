@@ -467,10 +467,12 @@
     "step": "Step {current} of {total}",
     "stepNames": {
       "personal": "About You",
+      "location": "Location",
       "sports": "Sports",
       "tennisRating": "Tennis Rating",
       "pickleballRating": "Pickleball Rating",
       "preferences": "Preferences",
+      "favoriteSites": "Favorite Sites",
       "availability": "Availability"
     },
     "personalInfoStep": {
@@ -494,11 +496,78 @@
       "title": "Which sports would you like to play?",
       "subtitle": "Select all that apply"
     },
+    "locationStep": {
+      "title": "Where are you located?",
+      "subtitle": "Help us find matches near you",
+      "address": "Address",
+      "addressPlaceholder": "Start typing your address...",
+      "city": "City",
+      "cityPlaceholder": "Enter your city",
+      "postalCode": "Postal Code",
+      "postalCodePlaceholder": "Enter your postal code",
+      "privacyTitle": "Your privacy is protected",
+      "privacyDescription": "Your exact address is never shared with other users. We only use your location to help find matches in your area and calculate travel distances.",
+      "warningTitle": "Limited Match Search",
+      "warningMessage": "Without your address, we won't be able to show you the most relevant matches near you. Are you sure you want to continue?"
+    },
     "ratingStep": {
       "tennisTitle": "Tell us about your game",
       "pickleballTitle": "Tell us about your game",
       "ntrpSubtitle": "NTRP Rating",
-      "duprSubtitle": "DUPR Rating"
+      "duprSubtitle": "DUPR Rating",
+      "skillLevels": {
+        "beginner1": "Beginner 1",
+        "beginner2": "Beginner 2",
+        "beginner3": "Beginner 3",
+        "intermediate1": "Intermediate 1",
+        "intermediate2": "Intermediate 2",
+        "intermediate3": "Intermediate 3",
+        "advanced1": "Advanced 1",
+        "advanced2": "Advanced 2",
+        "advanced3": "Advanced 3",
+        "professional": "Professional"
+      },
+      "ntrpDescriptions": {
+        "1.5": "Still working on getting consistent; errors, many focused on getting the ball into play.",
+        "2.0": "Obvious stroke weaknesses for singles and doubles. Has clear stroke weaknesses and needs more court experience.",
+        "2.5": "Starting to judge ball direction and sustain short rallies; limited court coverage.",
+        "3.0": "Fairly consistent on medium paced shots but lacks control, depth and power with faster shots.",
+        "3.5": "More reliable strokes with directional control. Improving net play, coverage, and teamwork.",
+        "4.0": "Dependable strokes with control and depth; placement in point play shows teamwork.",
+        "4.5": "Solid power and consistency. Controls depth and spin. Strategic shot placement.",
+        "5.0": "Exceptional shot variety with pace and spin. Excellent footwork and court coverage.",
+        "5.5": "Mastery of all shots. Exceptional consistency and power. Advanced tactics and mental game.",
+        "6.0": "Professional level play. National or international tournament experience."
+      },
+      "duprDescriptions": {
+        "1.0": "Just starting out. Learning basic rules and stroke mechanics.",
+        "2.0": "Just getting started. Short rallies (1-2 shots). Learning basic scoring knowledge.",
+        "2.5": "Developing basic strokes. Can sustain short rallies. Learning court positioning.",
+        "3.0": "Can sustain short rallies and serves. Beginning to dink. Learning positioning.",
+        "3.5": "Developing third-shot drop. Can dink moderately. Avoids backhands.",
+        "4.0": "Plays longer rallies with patience. Aware of positioning. Uses varied shots.",
+        "4.5": "Strong consistency and power. Varied shots. Comfortable crashing near the kitchen.",
+        "5.0": "Highest level of shot types. Rarely makes unforced errors. Plays competitively.",
+        "5.5": "Exceptional skill level. Mastery of all shots. Tournament-level play.",
+        "6.0": "Professional level. National or international tournament play."
+      },
+      "learnMore": "Learn more about the {system} rating system"
+    },
+    "ratingOverlay": {
+      "title": "Tell us about your game",
+      "editTennisTitle": "Update your tennis rating",
+      "editPickleballTitle": "Update your pickleball rating",
+      "tennisSubtitle": "NTRP Rating",
+      "pickleballSubtitle": "DUPR Rating",
+      "learnMoreNtrp": "Learn more about the NTRP rating system",
+      "learnMoreDupr": "Learn more about the DUPR rating system",
+      "loading": "Loading ratings...",
+      "continue": "Continue",
+      "save": "Save",
+      "failedToLoadRatings": "Failed to load ratings. Please try again.",
+      "failedToSaveRating": "Failed to save your rating. Please try again.",
+      "invalidRatingSelected": "Invalid rating selected",
+      "unexpectedError": "An unexpected error occurred."
     },
     "preferencesStep": {
       "title": "Tell us about your preferences",
@@ -519,7 +588,32 @@
       "am": "AM",
       "pm": "PM",
       "eve": "EVE",
-      "minimumSelected": "{count} / {minimum} minimum selected"
+      "minimumSelected": "{count} / {minimum} minimum selected",
+      "days": {
+        "mon": "Mon",
+        "tue": "Tue",
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat",
+        "sun": "Sun"
+      },
+      "complete": "Complete",
+      "saveButton": "Save"
+    },
+    "favoriteSitesStep": {
+      "title": "Select your favorite places to play",
+      "subtitle": "Choose up to 3 facilities for quick access when creating games",
+      "selected": "selected",
+      "searchLabel": "Search Facilities",
+      "searchPlaceholder": "Search by name or location...",
+      "loading": "Loading facilities...",
+      "noSportSelected": "Please select a sport first",
+      "noLocation": "Location required to find nearby facilities",
+      "noResults": "No facilities found matching your search",
+      "noFacilitiesNearby": "No facilities found in your area",
+      "hint": "Your favorite sites will appear first when creating games. You can always change these later.",
+      "failedToSave": "Failed to save favorite facilities. Please try again."
     },
     "validation": {
       "fillRequiredFields": "Please fill in all required fields",
@@ -528,6 +622,8 @@
       "selectPickleballRating": "Please select your pickleball rating",
       "userNotAuthenticated": "User not authenticated",
       "failedToSaveInfo": "Failed to save your information. Please try again.",
+      "failedToSaveLocation": "Failed to save your location. Please try again.",
+      "cityRequired": "Please enter your city",
       "failedToSaveRating": "Failed to save your rating. Please try again.",
       "failedToSavePreferences": "Failed to save your preferences. Please try again.",
       "failedToSaveAvailability": "Failed to save your availability. Please try again.",

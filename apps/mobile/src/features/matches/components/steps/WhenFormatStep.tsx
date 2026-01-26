@@ -5,7 +5,7 @@
  * Handles date, time, duration, format, and match type selection.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -15,11 +15,12 @@ import {
   Modal,
   Pressable,
   FlatList,
+  Keyboard,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { UseFormReturn } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
@@ -165,6 +166,37 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showTimezonePicker, setShowTimezonePicker] = useState(false);
 
+  // Refs for keyboard handling
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const scrollViewRef = useRef<any>(null);
+  const customDurationRef = useRef<View>(null);
+
+  // Track if custom duration field is focused for keyboard handling
+  const [isCustomDurationFocused, setIsCustomDurationFocused] = useState(false);
+
+  // Listen for keyboard events and scroll to custom duration field
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const keyboardShowListener = Keyboard.addListener(showEvent, () => {
+      if (isCustomDurationFocused && scrollViewRef.current) {
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      }
+    });
+
+    const keyboardHideListener = Keyboard.addListener(hideEvent, () => {
+      setIsCustomDurationFocused(false);
+    });
+
+    return () => {
+      keyboardShowListener.remove();
+      keyboardHideListener.remove();
+    };
+  }, [isCustomDurationFocused]);
+
   const matchDate = watch('matchDate');
   const startTime = watch('startTime');
   const timezone = watch('timezone');
@@ -295,7 +327,8 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
   };
 
   return (
-    <ScrollView
+    <BottomSheetScrollView
+      ref={scrollViewRef}
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
@@ -657,7 +690,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
         </ScrollView>
         {/* Custom duration input */}
         {duration === 'custom' && (
-          <View style={styles.customDurationContainer}>
+          <View ref={customDurationRef} style={styles.customDurationContainer}>
             <View
               style={[
                 styles.customDurationInputContainer,
@@ -688,6 +721,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
                 placeholderTextColor={colors.textMuted}
                 keyboardType="number-pad"
                 maxLength={3}
+                onFocus={() => setIsCustomDurationFocused(true)}
               />
               <Text size="base" color={colors.textMuted}>
                 {t('matchCreation.fields.customDurationUnit' as TranslationKey) || 'minutes'}
@@ -705,7 +739,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
           </View>
         )}
       </View>
-    </ScrollView>
+    </BottomSheetScrollView>
   );
 };
 
@@ -719,7 +753,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: spacingPixels[4],
-    paddingBottom: spacingPixels[8],
+    paddingBottom: spacingPixels[32], // Extra padding for keyboard
   },
   stepHeader: {
     marginBottom: spacingPixels[6],

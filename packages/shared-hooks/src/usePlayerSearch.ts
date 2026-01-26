@@ -33,6 +33,9 @@ export const playerKeys = {
     ] as const,
 };
 
+/** Default number of players to load per page */
+const DEFAULT_PAGE_SIZE = 10;
+
 interface UsePlayerSearchOptions {
   /** Sport ID to filter players by (required) */
   sportId: string | undefined;
@@ -48,6 +51,8 @@ interface UsePlayerSearchOptions {
   favoritePlayerIds?: string[];
   /** Blocked player IDs (used when filtering by blocked or excluding blocked) */
   blockedPlayerIds?: string[];
+  /** Number of players to load per page (default: 10) */
+  pageSize?: number;
   /** Debounce delay in milliseconds (default: 300) */
   debounceMs?: number;
   /** Enable/disable the query */
@@ -101,6 +106,7 @@ export function usePlayerSearch(options: UsePlayerSearchOptions): UsePlayerSearc
     filters = {},
     favoritePlayerIds = [],
     blockedPlayerIds = [],
+    pageSize = DEFAULT_PAGE_SIZE,
     debounceMs = 300,
     enabled = true,
   } = options;
@@ -130,6 +136,7 @@ export function usePlayerSearch(options: UsePlayerSearchOptions): UsePlayerSearc
         currentUserId,
         searchQuery: debouncedQuery || undefined,
         offset: (pageParam as number) ?? 0,
+        limit: pageSize,
         excludePlayerIds,
         filters,
         favoritePlayerIds,

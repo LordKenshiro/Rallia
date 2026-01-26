@@ -34,7 +34,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, mediumHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
-import { OnboardingService, SportService, Logger, DatabaseService } from '@rallia/shared-services';
+import {
+  OnboardingService,
+  SportService,
+  Logger,
+  DatabaseService,
+  supabase,
+} from '@rallia/shared-services';
 import { useProfile, usePlayer } from '@rallia/shared-hooks';
 import { replaceImage } from '../../../../services/imageUpload';
 import { useImagePicker } from '../../../../hooks';
@@ -50,9 +56,11 @@ import type {
 import { useOnboardingWizard, type OnboardingStepId } from '../../hooks/useOnboardingWizard';
 import {
   PersonalInfoStep,
+  LocationStep,
   SportSelectionStep,
   RatingStep,
   PreferencesStep,
+  FavoriteSitesStep,
   AvailabilitiesStep,
   SuccessStep,
 } from './steps';
@@ -222,10 +230,12 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
 const getStepName = (stepId: OnboardingStepId, t: (key: TranslationKey) => string): string => {
   const keys: Record<OnboardingStepId, string> = {
     personal: 'onboarding.stepNames.personal',
+    location: 'onboarding.stepNames.location',
     sports: 'onboarding.stepNames.sports',
     'tennis-rating': 'onboarding.stepNames.tennisRating',
     'pickleball-rating': 'onboarding.stepNames.pickleballRating',
     preferences: 'onboarding.stepNames.preferences',
+    'favorite-sites': 'onboarding.stepNames.favoriteSites',
     availabilities: 'onboarding.stepNames.availability',
     success: 'onboarding.complete',
   };
@@ -450,6 +460,89 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           return false;
         }
 
+      case 'location': {
+        // City is mandatory
+        if (!formData.city.trim()) {
+          Alert.alert(
+            t('alerts.error' as TranslationKey),
+            t('onboarding.validation.cityRequired' as TranslationKey)
+          );
+          warningHaptic();
+          return false;
+        }
+
+        // Helper function to save location data
+        const saveLocationData = async (): Promise<boolean> => {
+          setIsSaving(true);
+          try {
+            const userId = await DatabaseService.Auth.getCurrentUserId();
+            if (!userId) {
+              Alert.alert(
+                t('alerts.error' as TranslationKey),
+                t('onboarding.validation.userNotAuthenticated' as TranslationKey)
+              );
+              setIsSaving(false);
+              return false;
+            }
+
+            const { error } = await OnboardingService.saveLocationInfo({
+              address: formData.address || null,
+              city: formData.city,
+              postal_code: formData.postalCode || null,
+              latitude: formData.latitude,
+              longitude: formData.longitude,
+            });
+
+            if (error) {
+              Logger.error('Failed to save location info', error as Error);
+              Alert.alert(
+                t('alerts.error' as TranslationKey),
+                t('onboarding.validation.failedToSaveLocation' as TranslationKey)
+              );
+              setIsSaving(false);
+              return false;
+            }
+
+            setIsSaving(false);
+            return true;
+          } catch (error) {
+            Logger.error('Unexpected error saving location info', error as Error);
+            Alert.alert(
+              t('alerts.error' as TranslationKey),
+              t('onboarding.validation.unexpectedError' as TranslationKey)
+            );
+            setIsSaving(false);
+            return false;
+          }
+        };
+
+        // If no address provided, warn user about limited match search
+        if (!formData.address.trim()) {
+          return new Promise<boolean>(resolve => {
+            Alert.alert(
+              t('onboarding.locationStep.warningTitle' as TranslationKey),
+              t('onboarding.locationStep.warningMessage' as TranslationKey),
+              [
+                {
+                  text: t('common.goBack' as TranslationKey),
+                  style: 'cancel',
+                  onPress: () => resolve(false),
+                },
+                {
+                  text: t('common.continue' as TranslationKey),
+                  onPress: async () => {
+                    const success = await saveLocationData();
+                    resolve(success);
+                  },
+                },
+              ]
+            );
+          });
+        }
+
+        return await saveLocationData();
+      }
+
       case 'sports':
         if (formData.selectedSportIds.length === 0) {
           Alert.alert(
@@ -633,6 +726,68 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           return false;
         }
 
+      case 'favorite-sites':
+        // Favorite sites is optional - always passes validation
+        // Save the selected favorites to the database
+        if (formData.favoriteFacilities.length > 0) {
+          setIsSaving(true);
+          try {
+            const userId = await DatabaseService.Auth.getCurrentUserId();
+            if (!userId) {
+              Alert.alert(
+                t('alerts.error' as TranslationKey),
+                t('onboarding.validation.userNotAuthenticated' as TranslationKey)
+              );
+              setIsSaving(false);
+              return false;
+            }
+
+            // Delete existing favorites first
+            const { error: deleteError } = await supabase
+              .from('player_favorite_facility')
+              .delete()
+              .eq('player_id', userId);
+
+            if (deleteError) {
+              Logger.warn('Failed to delete existing favorites', { error: deleteError });
+            }
+
+            // Insert new favorites with display order
+            const favoritesToInsert = formData.favoriteFacilities.map((facility, index) => ({
+              player_id: userId,
+              facility_id: facility.id,
+              display_order: index + 1,
+            }));
+
+            const { error: insertError } = await supabase
+              .from('player_favorite_facility')
+              .insert(favoritesToInsert);
+
+            if (insertError) {
+              Logger.error('Failed to save favorite facilities', insertError as Error);
+              Alert.alert(
+                t('alerts.error' as TranslationKey),
+                t('onboarding.favoriteSitesStep.failedToSave' as TranslationKey)
+              );
+              setIsSaving(false);
+              return false;
+            }
+
+            setIsSaving(false);
+            return true;
+          } catch (error) {
+            Logger.error('Unexpected error saving favorite facilities', error as Error);
+            Alert.alert(
+              t('alerts.error' as TranslationKey),
+              t('onboarding.validation.unexpectedError' as TranslationKey)
+            );
+            setIsSaving(false);
+            return false;
+          }
+        }
+        // No favorites selected - that's okay, just continue
+        return true;
+
       case 'availabilities':
         setIsSaving(true);
         try {
@@ -765,6 +920,16 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             isDark={isDark}
           />
         );
+      case 'location':
+        return (
+          <LocationStep
+            formData={formData}
+            onUpdateFormData={updateFormData}
+            colors={colors}
+            t={t}
+            isDark={isDark}
+          />
+        );
       case 'sports':
         return (
           <SportSelectionStep
@@ -809,6 +974,19 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             colors={colors}
             t={t}
             isDark={isDark}
+          />
+        );
+      case 'favorite-sites':
+        return (
+          <FavoriteSitesStep
+            formData={formData}
+            onUpdateFormData={updateFormData}
+            colors={colors}
+            t={t}
+            isDark={isDark}
+            sportId={formData.selectedSportIds[0]}
+            latitude={formData.latitude}
+            longitude={formData.longitude}
           />
         );
       case 'availabilities':
@@ -892,12 +1070,17 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       />
 
       {/* Scrollable Step content */}
-      <View style={styles.stepsViewport}>
+      <View style={styles.stepsViewport} pointerEvents="box-none">
         <Animated.View
           style={[styles.stepsContainer, { width: SCREEN_WIDTH * steps.length }, animatedStepStyle]}
+          pointerEvents="box-none"
         >
           {steps.map((stepId, index) => (
-            <View key={stepId} style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
+            <View
+              key={stepId}
+              style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}
+              pointerEvents="box-none"
+            >
               {renderStep(stepId, index)}
             </View>
           ))}

@@ -26,6 +26,7 @@ import type {
   RatingScore,
   RatingSystemCodeEnum,
   OnboardingPersonalInfo,
+  OnboardingLocationInfo,
   OnboardingPlayerPreferences,
   OnboardingRating,
   OnboardingAvailability,
@@ -992,6 +993,49 @@ export const OnboardingService = {
       }
 
       return { data: { profile, player }, error: null };
+    } catch (error) {
+      return { data: null, error: handleError(error) };
+    }
+  },
+
+  /**
+   * Save location information from LocationStep
+   */
+  async saveLocationInfo(info: OnboardingLocationInfo): Promise<DatabaseResponse<Profile>> {
+    try {
+      const userId = await getCurrentUserId();
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
+      // Update profile with location data (address, city, postal_code)
+      const { data: profile, error: profileError } = await supabase
+        .from('profile')
+        .update({
+          address: info.address,
+          city: info.city,
+          postal_code: info.postal_code,
+        })
+        .eq('id', userId)
+        .select()
+        .single();
+
+      if (profileError) throw profileError;
+
+      // If we have coordinates, also update the player table
+      if (info.latitude !== undefined && info.longitude !== undefined) {
+        const { error: playerError } = await supabase
+          .from('player')
+          .update({
+            postal_code_lat: info.latitude,
+            postal_code_long: info.longitude,
+          })
+          .eq('id', userId);
+
+        if (playerError) throw playerError;
+      }
+
+      return { data: profile, error: null };
     } catch (error) {
       return { data: null, error: handleError(error) };
     }

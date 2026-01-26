@@ -10,11 +10,11 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
   Linking,
   Alert,
 } from 'react-native';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
@@ -45,41 +45,55 @@ interface Rating {
 }
 
 /**
- * Maps NTRP score value to a user-friendly skill level name
+ * Maps NTRP score value to a translation key
  */
-const getNtrpSkillLabel = (scoreValue: number): string => {
+const getNtrpSkillLabelKey = (scoreValue: number): string => {
   const mapping: Record<number, string> = {
-    1.5: 'Beginner 1',
-    2.0: 'Beginner 2',
-    2.5: 'Beginner 3',
-    3.0: 'Intermediate 1',
-    3.5: 'Intermediate 2',
-    4.0: 'Intermediate 3',
-    4.5: 'Advanced 1',
-    5.0: 'Advanced 2',
-    5.5: 'Advanced 3',
-    6.0: 'Professional',
+    1.5: 'onboarding.ratingStep.skillLevels.beginner1',
+    2.0: 'onboarding.ratingStep.skillLevels.beginner2',
+    2.5: 'onboarding.ratingStep.skillLevels.beginner3',
+    3.0: 'onboarding.ratingStep.skillLevels.intermediate1',
+    3.5: 'onboarding.ratingStep.skillLevels.intermediate2',
+    4.0: 'onboarding.ratingStep.skillLevels.intermediate3',
+    4.5: 'onboarding.ratingStep.skillLevels.advanced1',
+    5.0: 'onboarding.ratingStep.skillLevels.advanced2',
+    5.5: 'onboarding.ratingStep.skillLevels.advanced3',
+    6.0: 'onboarding.ratingStep.skillLevels.professional',
   };
-  return mapping[scoreValue] || `Level ${scoreValue}`;
+  return mapping[scoreValue] || '';
 };
 
 /**
- * Maps DUPR score value to a user-friendly skill level name
+ * Maps DUPR score value to a translation key
  */
-const getDuprSkillLabel = (scoreValue: number): string => {
+const getDuprSkillLabelKey = (scoreValue: number): string => {
   const mapping: Record<number, string> = {
-    1.0: 'Beginner 1',
-    2.0: 'Beginner 2',
-    2.5: 'Beginner 3',
-    3.0: 'Intermediate 1',
-    3.5: 'Intermediate 2',
-    4.0: 'Intermediate 3',
-    4.5: 'Advanced 1',
-    5.0: 'Advanced 2',
-    5.5: 'Advanced 3',
-    6.0: 'Professional',
+    1.0: 'onboarding.ratingStep.skillLevels.beginner1',
+    2.0: 'onboarding.ratingStep.skillLevels.beginner2',
+    2.5: 'onboarding.ratingStep.skillLevels.beginner3',
+    3.0: 'onboarding.ratingStep.skillLevels.intermediate1',
+    3.5: 'onboarding.ratingStep.skillLevels.intermediate2',
+    4.0: 'onboarding.ratingStep.skillLevels.intermediate3',
+    4.5: 'onboarding.ratingStep.skillLevels.advanced1',
+    5.0: 'onboarding.ratingStep.skillLevels.advanced2',
+    5.5: 'onboarding.ratingStep.skillLevels.advanced3',
+    6.0: 'onboarding.ratingStep.skillLevels.professional',
   };
-  return mapping[scoreValue] || `Level ${scoreValue}`;
+  return mapping[scoreValue] || '';
+};
+
+/**
+ * Maps NTRP score value to a description translation key
+ */
+const getNtrpDescriptionKey = (scoreValue: number): string => {
+  return `onboarding.ratingStep.ntrpDescriptions.${scoreValue.toFixed(1)}`;
+};
+
+/**
+ * Maps DUPR score value to a description translation key
+ */
+const getDuprDescriptionKey = (scoreValue: number): string => {
+  return `onboarding.ratingStep.duprDescriptions.${scoreValue.toFixed(1)}`;
 };
 
 /**
@@ -189,13 +203,12 @@ export const RatingStep: React.FC<RatingStepProps> = ({
   };
 
   return (
-    <ScrollView
+    <BottomSheetScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
-      contentInsetAdjustmentBehavior="automatic"
     >
       {/* Title */}
       <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
@@ -254,9 +267,11 @@ export const RatingStep: React.FC<RatingStepProps> = ({
                     weight="bold"
                     color={isSelected ? colors.buttonActive : colors.text}
                   >
-                    {isTennis
-                      ? getNtrpSkillLabel(rating.score_value)
-                      : getDuprSkillLabel(rating.score_value)}
+                    {t(
+                      (isTennis
+                        ? getNtrpSkillLabelKey(rating.score_value)
+                        : getDuprSkillLabelKey(rating.score_value)) as TranslationKey
+                    )}
                   </Text>
                 </View>
                 <Text
@@ -272,7 +287,11 @@ export const RatingStep: React.FC<RatingStepProps> = ({
                   color={isSelected ? colors.text : colors.textSecondary}
                   style={styles.ratingDescription}
                 >
-                  {rating.description}
+                  {t(
+                    (isTennis
+                      ? getNtrpDescriptionKey(rating.score_value)
+                      : getDuprDescriptionKey(rating.score_value)) as TranslationKey
+                  )}
                 </Text>
               </TouchableOpacity>
             );
@@ -287,10 +306,14 @@ export const RatingStep: React.FC<RatingStepProps> = ({
         activeOpacity={0.7}
       >
         <Text size="sm" color={colors.buttonActive}>
-          Learn more about the {ratingSystem.toUpperCase()} rating system
+          {t(
+            (isTennis
+              ? 'onboarding.ratingOverlay.learnMoreNtrp'
+              : 'onboarding.ratingOverlay.learnMoreDupr') as TranslationKey
+          )}
         </Text>
       </TouchableOpacity>
-    </ScrollView>
+    </BottomSheetScrollView>
   );
 };
 

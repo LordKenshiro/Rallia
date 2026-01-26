@@ -6,7 +6,8 @@
  */
 
 import React, { useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { selectionHaptic } from '@rallia/shared-utils';
@@ -74,13 +75,12 @@ export const AvailabilitiesStep: React.FC<AvailabilitiesStepProps> = ({
   };
 
   return (
-    <ScrollView
+    <BottomSheetScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
-      contentInsetAdjustmentBehavior="automatic"
     >
       {/* Title */}
       <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
@@ -161,7 +161,7 @@ export const AvailabilitiesStep: React.FC<AvailabilitiesStepProps> = ({
           );
         })}
       </View>
-    </ScrollView>
+    </BottomSheetScrollView>
   );
 };
 

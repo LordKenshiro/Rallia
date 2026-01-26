@@ -8,13 +8,16 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import DatabaseService, { Logger } from '@rallia/shared-services';
+import type { FacilitySearchResult } from '@rallia/shared-types';
 
 export type OnboardingStepId =
   | 'personal'
+  | 'location'
   | 'sports'
   | 'tennis-rating'
   | 'pickleball-rating'
   | 'preferences'
+  | 'favorite-sites'
   | 'availabilities'
   | 'success';
 
@@ -29,6 +32,13 @@ export interface OnboardingFormData {
   profileImage: string | null;
   /** URL of the already-saved profile picture from DB (to avoid re-uploading) */
   savedProfilePictureUrl: string | null;
+
+  // Location Info
+  address: string;
+  city: string;
+  postalCode: string;
+  latitude: number | null;
+  longitude: number | null;
 
   // Sports
   selectedSportNames: string[];
@@ -46,6 +56,9 @@ export interface OnboardingFormData {
   pickleballMatchDuration: '30' | '60' | '90' | '120';
   tennisMatchType: 'casual' | 'competitive' | 'both';
   pickleballMatchType: 'casual' | 'competitive' | 'both';
+
+  // Favorite facilities (up to 3)
+  favoriteFacilities: FacilitySearchResult[];
 
   // Availabilities
   availabilities: Record<string, { AM: boolean; PM: boolean; EVE: boolean }>;
@@ -100,6 +113,11 @@ const INITIAL_FORM_DATA: OnboardingFormData = {
   phoneNumber: '',
   profileImage: null,
   savedProfilePictureUrl: null,
+  address: '',
+  city: '',
+  postalCode: '',
+  latitude: null,
+  longitude: null,
   selectedSportNames: [],
   selectedSportIds: [],
   tennisRatingId: null,
@@ -111,6 +129,7 @@ const INITIAL_FORM_DATA: OnboardingFormData = {
   pickleballMatchDuration: '90',
   tennisMatchType: 'competitive',
   pickleballMatchType: 'competitive',
+  favoriteFacilities: [],
   availabilities: DEFAULT_AVAILABILITIES,
 };
 
@@ -129,6 +148,10 @@ function isStepComplete(stepId: OnboardingStepId, formData: OnboardingFormData):
         formData.phoneNumber.trim()
       );
 
+    case 'location':
+      // City is mandatory, address and postal code are optional
+      return !!formData.city.trim();
+
     case 'sports':
       return formData.selectedSportIds.length > 0;
 
@@ -141,6 +164,10 @@ function isStepComplete(stepId: OnboardingStepId, formData: OnboardingFormData):
     case 'preferences':
       // Preferences have defaults, but check if user has made selections
       return !!(formData.playingHand && formData.maxTravelDistance);
+
+    case 'favorite-sites':
+      // Require exactly 3 favorite facilities to be selected
+      return formData.favoriteFacilities.length === 3;
 
     case 'availabilities':
       // Availabilities have defaults, check if at least one slot is selected
@@ -224,6 +251,12 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
             updates.savedProfilePictureUrl = profileRes.data.profile_picture_url;
             updates.profileImage = profileRes.data.profile_picture_url;
           }
+          // Location data
+          updates.address = profileRes.data.address || '';
+          updates.city = profileRes.data.city || '';
+          updates.postalCode = profileRes.data.postal_code || '';
+          updates.latitude = profileRes.data.latitude || null;
+          updates.longitude = profileRes.data.longitude || null;
         }
 
         // Player data (gender, preferences)
@@ -368,14 +401,14 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
 
   // Calculate steps dynamically based on selected sports
   const steps = useMemo<OnboardingStepId[]>(() => {
-    const baseSteps: OnboardingStepId[] = ['personal', 'sports'];
+    const baseSteps: OnboardingStepId[] = ['personal', 'location', 'sports'];
 
     // Add rating steps based on selected sports
     if (hasTennis) baseSteps.push('tennis-rating');
     if (hasPickleball) baseSteps.push('pickleball-rating');
 
-    // Add preferences and availabilities
-    baseSteps.push('preferences', 'availabilities', 'success');
+    // Add preferences, favorite sites, and availabilities
+    baseSteps.push('preferences', 'favorite-sites', 'availabilities', 'success');
 
     return baseSteps;
   }, [hasTennis, hasPickleball]);

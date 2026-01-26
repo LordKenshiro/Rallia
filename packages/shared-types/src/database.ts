@@ -466,6 +466,14 @@ export interface OnboardingPersonalInfo {
   profile_picture_url?: string;
 }
 
+export interface OnboardingLocationInfo {
+  address: string | null;
+  city: string;
+  postal_code: string | null;
+  latitude: number | null;
+  longitude: number | null;
+}
+
 export interface OnboardingPlayerPreferences {
   username?: string;
   playing_hand: PlayingHandEnum;

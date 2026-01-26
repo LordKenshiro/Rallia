@@ -10,14 +10,15 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   Platform,
   Modal,
   Image,
   Pressable,
+  ScrollView,
+  Keyboard,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, PhoneInput } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
@@ -66,13 +67,32 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempDate, setTempDate] = useState<Date>(formData.dateOfBirth || new Date(2000, 0, 1));
   const [genderOptions, setGenderOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   // Refs for keyboard visibility handling
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<View>(null);
   const firstNameFieldRef = useRef<View>(null);
   const lastNameFieldRef = useRef<View>(null);
   const usernameFieldRef = useRef<View>(null);
   const phoneNumberFieldRef = useRef<View>(null);
+
+  // Listen for keyboard events to adjust padding dynamically
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const keyboardShowListener = Keyboard.addListener(showEvent, e => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const keyboardHideListener = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      keyboardShowListener.remove();
+      keyboardHideListener.remove();
+    };
+  }, []);
 
   // Fetch gender options from database
   useEffect(() => {
@@ -159,14 +179,16 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
   };
 
   return (
-    <ScrollView
+    <BottomSheetScrollView
       ref={scrollViewRef}
       style={styles.container}
-      contentContainerStyle={styles.contentContainer}
+      contentContainerStyle={[
+        styles.contentContainer,
+        { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 20 : spacingPixels[8] },
+      ]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
-      contentInsetAdjustmentBehavior="automatic"
     >
       {/* Title */}
       <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
@@ -484,26 +506,15 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
             card: colors.cardBackground,
           }}
           onFocus={() => {
-            // Scroll to phone number field when focused to ensure it's visible above keyboard
+            // Scroll to bottom to ensure phone field is visible above keyboard
             setTimeout(() => {
-              phoneNumberFieldRef.current?.measureLayout(
-                scrollViewRef.current as unknown as number,
-                (x: number, y: number, _width: number, _height: number) => {
-                  scrollViewRef.current?.scrollTo({
-                    y: Math.max(0, y - 200),
-                    animated: true,
-                  });
-                },
-                () => {
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
-                }
-              );
-            }, 300);
+              scrollViewRef.current?.scrollToEnd({ animated: true });
+            }, 100);
           }}
           TextInputComponent={BottomSheetTextInput}
         />
       </View>
-    </ScrollView>
+    </BottomSheetScrollView>
   );
 };
 

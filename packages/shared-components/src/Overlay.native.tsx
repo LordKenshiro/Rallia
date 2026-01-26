@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  Animated,
   ScrollView,
   Dimensions,
   KeyboardAvoidingView,
@@ -32,6 +31,7 @@ interface OverlayProps {
   dismissOnBackdropPress?: boolean;
   darkBackground?: boolean; // For center overlays with dark content background
   alignTop?: boolean; // Align center overlay to top instead of center
+  height?: number; // Custom height ratio for bottom overlay (0-1, e.g., 0.75 for 75%)
 }
 
 const Overlay: React.FC<OverlayProps> = ({
@@ -46,6 +46,7 @@ const Overlay: React.FC<OverlayProps> = ({
   dismissOnBackdropPress = true,
   darkBackground = false,
   alignTop = false,
+  height,
 }) => {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useThemeStyles();
@@ -61,9 +62,10 @@ const Overlay: React.FC<OverlayProps> = ({
     };
   }, [colors]);
 
-  // Calculate overlay height: 2/3 of screen height for bottom overlays
-  const twoThirdsHeight = Math.round(SCREEN_HEIGHT * 0.67);
-  const overlayHeight = twoThirdsHeight - insets.bottom; // Account for bottom safe area
+  // Calculate overlay height: use custom height ratio if provided, otherwise 2/3 of screen height
+  const heightRatio = height ?? 0.67;
+  const calculatedHeight = Math.round(SCREEN_HEIGHT * heightRatio);
+  const overlayHeight = calculatedHeight - insets.bottom; // Account for bottom safe area
 
   const handleBackdropPress = () => {
     if (dismissOnBackdropPress) {
