@@ -34,6 +34,7 @@ import {
   type SharedContactList,
 } from '@rallia/shared-hooks';
 import { useThemeStyles, useAuth, useTranslation, type TranslationKey } from '../hooks';
+import { useActionsSheet } from '../context';
 import type { CommunityStackParamList } from '../navigation/types';
 import { CreateListModal, SharedListCard, ShareMatchModal } from '../features/shared-lists';
 
@@ -43,6 +44,7 @@ const SharedLists: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
+  const { openSheet } = useActionsSheet();
   const { t } = useTranslation();
   const playerId = session?.user?.id;
 
@@ -77,9 +79,14 @@ const SharedLists: React.FC = () => {
   // Create list handler
   const handleCreateList = useCallback(() => {
     lightHaptic();
+    if (!playerId) {
+      // Not authenticated: open auth sheet
+      openSheet();
+      return;
+    }
     setEditingList(null);
     setShowCreateModal(true);
-  }, []);
+  }, [playerId, openSheet]);
 
   // Edit list handler
   const handleEditList = useCallback((list: SharedContactList) => {
@@ -235,7 +242,14 @@ const SharedLists: React.FC = () => {
             borderColor: isDark ? primary[700] : primary[200],
           },
         ]}
-        onPress={() => setShowShareModal(true)}
+        onPress={() => {
+          if (!playerId) {
+            // Not authenticated: open auth sheet
+            openSheet();
+          } else {
+            setShowShareModal(true);
+          }
+        }}
         activeOpacity={0.8}
       >
         <View

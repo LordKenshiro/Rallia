@@ -25,6 +25,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Text, Skeleton } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useAuth, useTranslation } from '../hooks';
+import { useActionsSheet } from '../context';
 import {
   usePlayerGroups,
   useCreateGroup,
@@ -149,6 +150,7 @@ export default function GroupsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
+  const { openSheet } = useActionsSheet();
   const { t } = useTranslation();
   const playerId = session?.user?.id;
 
@@ -164,7 +166,11 @@ export default function GroupsScreen() {
 
   const handleCreateGroup = useCallback(
     async (name: string, description?: string, coverImageUrl?: string) => {
-      if (!playerId) return;
+      if (!playerId) {
+        // Not authenticated: open auth sheet
+        openSheet();
+        return;
+      }
 
       try {
         const newGroup = await createGroupMutation.mutateAsync({
@@ -181,7 +187,7 @@ export default function GroupsScreen() {
         );
       }
     },
-    [playerId, createGroupMutation, navigation, t]
+    [playerId, createGroupMutation, navigation, t, openSheet]
   );
 
   const handleGroupJoined = useCallback(
@@ -234,7 +240,14 @@ export default function GroupsScreen() {
         <View style={styles.emptyButtons}>
           <TouchableOpacity
             style={[styles.createButton, { backgroundColor: colors.primary }]}
-            onPress={() => setShowCreateModal(true)}
+            onPress={() => {
+              if (!playerId) {
+                // Not authenticated: open auth sheet
+                openSheet();
+              } else {
+                setShowCreateModal(true);
+              }
+            }}
           >
             <Ionicons name="add" size={20} color="#FFFFFF" />
             <Text weight="semibold" style={styles.createButtonText}>
@@ -246,7 +259,14 @@ export default function GroupsScreen() {
               styles.scanButton,
               { backgroundColor: colors.cardBackground, borderColor: colors.border },
             ]}
-            onPress={() => setShowScannerModal(true)}
+            onPress={() => {
+              if (!playerId) {
+                // Not authenticated: open auth sheet
+                openSheet();
+              } else {
+                setShowScannerModal(true);
+              }
+            }}
           >
             <Ionicons name="qr-code-outline" size={20} color={colors.primary} />
             <Text weight="semibold" style={[styles.scanButtonText, { color: colors.primary }]}>
@@ -256,7 +276,7 @@ export default function GroupsScreen() {
         </View>
       </View>
     ),
-    [colors, t]
+    [colors, t, playerId, openSheet]
   );
 
   if (isLoading) {
@@ -365,7 +385,14 @@ export default function GroupsScreen() {
           {/* Scan QR FAB */}
           <TouchableOpacity
             style={[styles.fabSecondary, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}
-            onPress={() => setShowScannerModal(true)}
+            onPress={() => {
+              if (!playerId) {
+                // Not authenticated: open auth sheet
+                openSheet();
+              } else {
+                setShowScannerModal(true);
+              }
+            }}
             activeOpacity={0.8}
           >
             <Ionicons name="qr-code-outline" size={24} color={colors.text} />
@@ -374,7 +401,14 @@ export default function GroupsScreen() {
           {/* Create Group FAB */}
           <TouchableOpacity
             style={[styles.fab, { backgroundColor: colors.primary }]}
-            onPress={() => setShowCreateModal(true)}
+            onPress={() => {
+              if (!playerId) {
+                // Not authenticated: open auth sheet
+                openSheet();
+              } else {
+                setShowCreateModal(true);
+              }
+            }}
             activeOpacity={0.8}
           >
             <Ionicons name="add" size={28} color="#FFFFFF" />

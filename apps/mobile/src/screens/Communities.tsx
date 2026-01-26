@@ -4,7 +4,7 @@
  * Features a segmented control to switch between "Discover" and "My Communities"
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   FlatList,
@@ -25,6 +25,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Text, Skeleton } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useAuth, useTranslation, type TranslationKey } from '../hooks';
+import { useActionsSheet } from '../context';
 import {
   usePublicCommunities,
   usePlayerCommunities,
@@ -198,12 +199,23 @@ export default function CommunitiesScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
+  const { openSheet } = useActionsSheet();
   const { t } = useTranslation();
   const playerId = session?.user?.id;
 
   const [activeTab, setActiveTab] = useState<TabType>('discover');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
+
+  // Switch to discover tab if user signs out while on "My Communities"
+  useEffect(() => {
+    if (activeTab === 'my-communities' && !playerId) {
+      // Use setTimeout to avoid calling setState synchronously within effect
+      setTimeout(() => {
+        setActiveTab('discover');
+      }, 0);
+    }
+  }, [activeTab, playerId]);
 
   // Queries
   const {
@@ -247,7 +259,11 @@ export default function CommunitiesScreen() {
       coverImageUrl?: string,
       isPublic: boolean = true
     ) => {
-      if (!playerId) return;
+      if (!playerId) {
+        // Not authenticated: open auth sheet
+        openSheet();
+        return;
+      }
 
       try {
         const newCommunity = await createCommunityMutation.mutateAsync({
@@ -261,12 +277,16 @@ export default function CommunitiesScreen() {
         Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create community');
       }
     },
-    [playerId, createCommunityMutation, navigation]
+    [playerId, createCommunityMutation, navigation, openSheet]
   );
 
   const handleRequestToJoin = useCallback(
     async (communityId: string, communityName: string) => {
-      if (!playerId) return;
+      if (!playerId) {
+        // Not authenticated: open auth sheet
+        openSheet();
+        return;
+      }
 
       try {
         await requestToJoinMutation.mutateAsync({ communityId, playerId });
@@ -281,7 +301,7 @@ export default function CommunitiesScreen() {
         );
       }
     },
-    [playerId, requestToJoinMutation]
+    [playerId, requestToJoinMutation, openSheet]
   );
 
   const handleCommunityPress = useCallback(
@@ -303,10 +323,18 @@ export default function CommunitiesScreen() {
     [t]
   );
 
-  const handleTabChange = useCallback((tab: TabType) => {
-    lightHaptic();
-    setActiveTab(tab);
-  }, []);
+  const handleTabChange = useCallback(
+    (tab: TabType) => {
+      lightHaptic();
+      // If trying to access "My Communities" without auth, open auth sheet
+      if (tab === 'my-communities' && !playerId) {
+        openSheet();
+        return;
+      }
+      setActiveTab(tab);
+    },
+    [playerId, openSheet]
+  );
 
   const renderCommunityItem = useCallback(
     ({ item, index }: { item: CommunityWithStatus; index: number }) => {
@@ -354,7 +382,14 @@ export default function CommunitiesScreen() {
         {activeTab === 'discover' && (
           <TouchableOpacity
             style={[styles.createButton, { backgroundColor: colors.primary }]}
-            onPress={() => setShowCreateModal(true)}
+            onPress={() => {
+              if (!playerId) {
+                // Not authenticated: open auth sheet
+                openSheet();
+              } else {
+                setShowCreateModal(true);
+              }
+            }}
           >
             <Ionicons name="add" size={20} color="#FFFFFF" />
             <Text weight="semibold" style={styles.createButtonText}>
@@ -375,7 +410,7 @@ export default function CommunitiesScreen() {
         )}
       </View>
     ),
-    [colors, activeTab, handleTabChange, t]
+    [colors, activeTab, handleTabChange, t, openSheet, playerId]
   );
 
   const renderTabs = useMemo(
@@ -407,35 +442,38 @@ export default function CommunitiesScreen() {
             {t('community.tabs.discover')}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === 'my-communities' && [
-              styles.activeTab,
-              { backgroundColor: colors.cardBackground },
-            ],
-          ]}
-          onPress={() => handleTabChange('my-communities')}
-        >
-          <Ionicons
-            name="heart-outline"
-            size={18}
-            color={activeTab === 'my-communities' ? colors.primary : colors.textMuted}
-          />
-          <Text
-            size="sm"
-            weight={activeTab === 'my-communities' ? 'semibold' : 'medium'}
-            style={{
-              color: activeTab === 'my-communities' ? colors.primary : colors.textMuted,
-              marginLeft: 6,
-            }}
+        {/* Only show "My Communities" tab for authenticated users */}
+        {playerId && (
+          <TouchableOpacity
+            style={[
+              styles.tab,
+              activeTab === 'my-communities' && [
+                styles.activeTab,
+                { backgroundColor: colors.cardBackground },
+              ],
+            ]}
+            onPress={() => handleTabChange('my-communities')}
           >
-            {t('community.tabs.myCommunities')}
-          </Text>
-        </TouchableOpacity>
+            <Ionicons
+              name="heart-outline"
+              size={18}
+              color={activeTab === 'my-communities' ? colors.primary : colors.textMuted}
+            />
+            <Text
+              size="sm"
+              weight={activeTab === 'my-communities' ? 'semibold' : 'medium'}
+              style={{
+                color: activeTab === 'my-communities' ? colors.primary : colors.textMuted,
+                marginLeft: 6,
+              }}
+            >
+              {t('community.tabs.myCommunities')}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     ),
-    [colors, isDark, activeTab, handleTabChange, t]
+    [colors, isDark, activeTab, handleTabChange, t, playerId]
   );
 
   if (isLoading) {
@@ -444,7 +482,8 @@ export default function CommunitiesScreen() {
         style={[styles.container, { backgroundColor: colors.background }]}
         edges={['bottom']}
       >
-        {renderTabs}
+        {/* Only show tabs when authenticated */}
+        {playerId && renderTabs}
         <View style={styles.loadingContainer}>
           <View style={styles.gridSkeleton}>
             {[1, 2, 3, 4, 5, 6].map(i => (
@@ -486,7 +525,8 @@ export default function CommunitiesScreen() {
       style={[styles.container, { backgroundColor: colors.background }]}
       edges={['bottom']}
     >
-      {renderTabs}
+      {/* Only show tabs when authenticated (to switch between Discover and My Communities) */}
+      {playerId && renderTabs}
 
       <FlatList
         data={communities}
@@ -518,7 +558,12 @@ export default function CommunitiesScreen() {
           style={[styles.fabSecondary, { backgroundColor: colors.cardBackground }]}
           onPress={() => {
             lightHaptic();
-            setShowQRScanner(true);
+            if (!playerId) {
+              // Not authenticated: open auth sheet
+              openSheet();
+            } else {
+              setShowQRScanner(true);
+            }
           }}
           activeOpacity={0.8}
         >
@@ -528,7 +573,14 @@ export default function CommunitiesScreen() {
         {/* Create Community Button */}
         <TouchableOpacity
           style={[styles.fab, { backgroundColor: colors.primary }]}
-          onPress={() => setShowCreateModal(true)}
+          onPress={() => {
+            if (!playerId) {
+              // Not authenticated: open auth sheet
+              openSheet();
+            } else {
+              setShowCreateModal(true);
+            }
+          }}
           activeOpacity={0.8}
         >
           <Ionicons name="add" size={28} color="#FFFFFF" />

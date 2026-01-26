@@ -23,6 +23,8 @@ export * from './groups';
 export * from './communities';
 export * from './chat';
 export * from './reports';
+// Stripe exports are server-only - import from '@rallia/shared-services/server' instead
+export * from './bookings';
 
 // Export default DatabaseService
 export { default } from './database';

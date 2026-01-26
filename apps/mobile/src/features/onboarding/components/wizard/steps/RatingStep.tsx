@@ -86,14 +86,14 @@ const getDuprSkillLabelKey = (scoreValue: number): string => {
  * Maps NTRP score value to a description translation key
  */
 const getNtrpDescriptionKey = (scoreValue: number): string => {
-  return `onboarding.ratingStep.ntrpDescriptions.${scoreValue.toFixed(1)}`;
+  return `onboarding.ratingStep.ntrpDescriptions.${scoreValue.toFixed(1).replace('.', '_')}`;
 };
 
 /**
  * Maps DUPR score value to a description translation key
  */
 const getDuprDescriptionKey = (scoreValue: number): string => {
-  return `onboarding.ratingStep.duprDescriptions.${scoreValue.toFixed(1)}`;
+  return `onboarding.ratingStep.duprDescriptions.${scoreValue.toFixed(1).replace('.', '_')}`;
 };
 
 /**

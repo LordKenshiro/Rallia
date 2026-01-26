@@ -255,12 +255,13 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
           updates.address = profileRes.data.address || '';
           updates.city = profileRes.data.city || '';
           updates.postalCode = profileRes.data.postal_code || '';
-          updates.latitude = profileRes.data.latitude || null;
-          updates.longitude = profileRes.data.longitude || null;
         }
 
-        // Player data (gender, preferences)
+        // Player data (gender, preferences, location coordinates)
         if (playerRes.data) {
+          // Location coordinates are stored in player table
+          updates.latitude = playerRes.data.postal_code_lat || null;
+          updates.longitude = playerRes.data.postal_code_long || null;
           updates.gender = playerRes.data.gender || '';
           if (playerRes.data.playing_hand) {
             updates.playingHand = playerRes.data.playing_hand as 'left' | 'right' | 'both';

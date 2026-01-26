@@ -8,12 +8,18 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth, type OAuthProvider } from '@rallia/shared-hooks';
 import { Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
 type AuthState = 'initial' | 'email-sent' | 'loading' | 'error';
 
-export function OrganizationSignInForm({ initialError }: { initialError?: string }) {
+export function OrganizationSignInForm({
+  initialError,
+  initialEmail,
+}: {
+  initialError?: string;
+  initialEmail?: string;
+}) {
   const t = useTranslations('signIn');
   const router = useRouter();
   // Use SSR-aware Supabase client for proper cookie handling
@@ -21,8 +27,11 @@ export function OrganizationSignInForm({ initialError }: { initialError?: string
   const { signInWithProvider, signInWithEmail, verifyOtp } = useAuth({
     client: supabase,
   });
+  const searchParams = useSearchParams();
 
-  const [email, setEmail] = useState('');
+  const token = searchParams.get('token');
+
+  const [email, setEmail] = useState(initialEmail ?? '');
   const [otp, setOtp] = useState('');
   const [authState, setAuthState] = useState<AuthState>('initial');
   const [errorMessage, setErrorMessage] = useState<string | null>(
@@ -34,8 +43,14 @@ export function OrganizationSignInForm({ initialError }: { initialError?: string
     setLoadingProvider(provider);
     setErrorMessage(null);
 
+    // Build callback URL with token if present
+    const callbackUrl = new URL('/api/auth/callback', window.location.origin);
+    if (token) {
+      callbackUrl.searchParams.set('invitation_token', token);
+    }
+
     const result = await signInWithProvider(provider, {
-      redirectTo: `${window.location.origin}/api/auth/callback`,
+      redirectTo: callbackUrl.toString(),
     });
 
     if (!result.success) {
@@ -53,8 +68,14 @@ export function OrganizationSignInForm({ initialError }: { initialError?: string
       // Send OTP
       setAuthState('loading');
 
+      // Build callback URL with token if present
+      const callbackUrl = new URL('/api/auth/callback', window.location.origin);
+      if (token) {
+        callbackUrl.searchParams.set('invitation_token', token);
+      }
+
       const result = await signInWithEmail(email, {
-        emailRedirectTo: `${window.location.origin}/api/auth/callback`,
+        emailRedirectTo: callbackUrl.toString(),
       });
 
       if (!result.success) {
@@ -78,8 +99,8 @@ export function OrganizationSignInForm({ initialError }: { initialError?: string
         setErrorMessage(result.error?.message ?? t('failedToVerifyOtp'));
         setAuthState('email-sent');
       } else {
-        // Success - redirect will happen via session change
-        router.push('/sign-in/post-auth');
+        // Success - redirect to post-auth with token if present
+        router.push(`/sign-in/post-auth${token ? `?token=${encodeURIComponent(token)}` : ''}`);
         router.refresh();
       }
     }

@@ -6,7 +6,6 @@ import {
   ActivityIndicator,
   RefreshControl,
   StyleSheet,
-  Text as RNText,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +15,7 @@ import { useAuth } from '../hooks';
 import { useTranslation, type TranslationOptions } from '../hooks/useTranslation';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { useActionsSheet, useMatchDetailSheet } from '../context';
+import SignInPrompt from '../components/SignInPrompt';
 import {
   Notification,
   NOTIFICATION_TYPE_ICONS,
@@ -29,7 +29,6 @@ import {
   darkTheme,
   spacingPixels,
   fontSizePixels,
-  fontWeightNumeric,
   radiusPixels,
   primary,
   neutral,
@@ -137,6 +136,38 @@ function groupNotificationsByDate(
     .map(key => ({ title: key, data: groups[key] }));
 }
 
+// Helper function to get notification title with fallback to translations
+function getNotificationTitle(
+  notification: Notification,
+  t: (key: TranslationKey, options?: TranslationOptions) => string
+): string {
+  // If title exists and is not empty, use it
+  if (notification.title && notification.title.trim().length > 0) {
+    return notification.title;
+  }
+
+  // Fallback to translation key for message title
+  const messageTitleKey = `notifications.messages.${notification.type}.title` as TranslationKey;
+  const messageTitle = t(messageTitleKey, notification.payload as Record<string, string | number>);
+
+  // If translation was found (not the same as key), use it
+  if (messageTitle !== messageTitleKey && messageTitle.trim().length > 0) {
+    return messageTitle;
+  }
+
+  // Final fallback to type label
+  const typeLabelKey = `notifications.types.${notification.type}` as TranslationKey;
+  const typeLabel = t(typeLabelKey);
+
+  // If type label was found, use it; otherwise return a default
+  if (typeLabel !== typeLabelKey && typeLabel.trim().length > 0) {
+    return typeLabel;
+  }
+
+  // Ultimate fallback
+  return notification.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
+
 // Notification card component
 interface NotificationCardProps {
   notification: Notification;
@@ -159,6 +190,7 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
   const notificationType = notification.type;
   const iconName = NOTIFICATION_TYPE_ICONS[notificationType] ?? 'notifications-outline';
   const iconColor = NOTIFICATION_TYPE_COLORS[notificationType] ?? primary[500];
+  const notificationTitle = getNotificationTitle(notification, t);
 
   const themeColors = isDark ? darkTheme : lightTheme;
   const cardColors = {
@@ -215,7 +247,7 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
               color={isUnread ? cardColors.text : cardColors.textSecondary}
               numberOfLines={1}
             >
-              {notification.title}
+              {notificationTitle}
             </Text>
           </View>
           {notification.body && (
@@ -387,27 +419,6 @@ const Notifications: React.FC = () => {
     </View>
   );
 
-  const renderSignInPrompt = () => (
-    <View style={[styles.emptyContainer, { backgroundColor: colors.cardBackground }]}>
-      <Ionicons name="lock-closed-outline" size={64} color={colors.iconMuted} />
-      <RNText style={[styles.signInTitle, { color: colors.textSecondary }]}>
-        {t('notifications.signInRequired')}
-      </RNText>
-      <RNText style={[styles.signInDescription, { color: colors.textMuted }]}>
-        {t('notifications.signInPrompt')}
-      </RNText>
-      <TouchableOpacity
-        onPress={openSheet}
-        style={[styles.signInButton, { backgroundColor: colors.buttonActive }]}
-      >
-        <Ionicons name="log-in-outline" size={18} color={colors.buttonTextActive} />
-        <RNText style={[styles.signInButtonText, { color: colors.buttonTextActive }]}>
-          {t('auth.signIn')}
-        </RNText>
-      </TouchableOpacity>
-    </View>
-  );
-
   const renderFooter = () => {
     if (!isFetchingNextPage) return null;
     return (
@@ -447,14 +458,25 @@ const Notifications: React.FC = () => {
     );
   };
 
+  // Show sign-in prompt if not authenticated
+  if (!isAuthenticated && !isLoadingAuth) {
+    return (
+      <SignInPrompt
+        variant="notifications"
+        title={t('notifications.signInRequired')}
+        description={t('notifications.signInPrompt')}
+        buttonText={t('auth.signIn')}
+        onSignIn={openSheet}
+      />
+    );
+  }
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       {isLoadingAuth ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.buttonActive} />
         </View>
-      ) : !isAuthenticated ? (
-        renderSignInPrompt()
       ) : isLoadingNotifications ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.buttonActive} />
@@ -590,31 +612,6 @@ const styles = StyleSheet.create({
   footerLoader: {
     alignItems: 'center',
     paddingVertical: spacingPixels[4],
-  },
-  signInTitle: {
-    fontSize: fontSizePixels.lg,
-    fontWeight: fontWeightNumeric.semibold,
-    marginTop: spacingPixels[4],
-    marginBottom: spacingPixels[2],
-  },
-  signInDescription: {
-    fontSize: fontSizePixels.sm,
-    textAlign: 'center',
-    lineHeight: fontSizePixels.sm * 1.5,
-  },
-  signInButton: {
-    marginTop: spacingPixels[6],
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacingPixels[3.5],
-    paddingHorizontal: spacingPixels[8],
-    borderRadius: radiusPixels.lg,
-    gap: spacingPixels[2],
-  },
-  signInButtonText: {
-    fontSize: fontSizePixels.base,
-    fontWeight: fontWeightNumeric.medium,
   },
 });
 

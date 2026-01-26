@@ -77,8 +77,11 @@ const PreferenceToggle: React.FC<PreferenceToggleProps> = ({
   useEffect(() => {
     if (enabled !== expectedValueRef.current) {
       // External value changed unexpectedly (error rollback or external update)
-      setLocalValue(enabled);
-      expectedValueRef.current = enabled;
+      // Use setTimeout to avoid calling setState synchronously within effect
+      setTimeout(() => {
+        setLocalValue(enabled);
+        expectedValueRef.current = enabled;
+      }, 0);
     }
   }, [enabled]);
 
@@ -312,6 +315,9 @@ const NotificationPreferencesScreen: React.FC = () => {
         match_completed: t('notifications.types.match_completed'),
         player_kicked: t('notifications.types.player_kicked'),
         player_left: t('notifications.types.player_left'),
+        feedback_request: t('notifications.types.feedback_request'),
+        feedback_reminder: t('notifications.types.feedback_reminder'),
+        score_confirmation: t('notifications.types.score_confirmation'),
         // Social category
         chat: t('notifications.types.chat'),
         new_message: t('notifications.types.new_message'),

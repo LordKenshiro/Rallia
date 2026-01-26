@@ -15,20 +15,36 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function SignInPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; token?: string }>;
 }) {
   const t = await getTranslations('signIn');
   const supabase = await createClient();
   const params = await searchParams;
+
+  const token = params.token;
 
   // Check if user is already authenticated
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // If already authenticated, redirect to post-auth flow
+  // If already authenticated, redirect to post-auth flow with token
   if (user) {
-    redirect('/sign-in/post-auth');
+    redirect(`/sign-in/post-auth${token ? `?token=${encodeURIComponent(token)}` : ''}`);
+  }
+
+  // Look up invitation email from token
+  let invitationEmail: string | undefined;
+  if (token) {
+    const { data: invitation } = await supabase
+      .from('invitation')
+      .select('email')
+      .eq('token', token)
+      .single();
+
+    if (invitation?.email) {
+      invitationEmail = invitation.email;
+    }
   }
 
   return (
@@ -39,7 +55,7 @@ export default async function SignInPage({
         <p className="text-sm text-muted-foreground">{t('welcomeMessage')}</p>
       </div>
 
-      <OrganizationSignInForm initialError={params.error} />
+      <OrganizationSignInForm initialError={params.error} initialEmail={invitationEmail} />
     </div>
   );
 }
