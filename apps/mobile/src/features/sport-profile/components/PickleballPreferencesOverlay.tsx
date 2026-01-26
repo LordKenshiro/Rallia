@@ -1,48 +1,80 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  TextInput,
-  Animated,
-} from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
-import { PreferencesInfo, PlayStyleEnum, PlayAttributeEnum } from '@rallia/shared-types';
+import { PreferencesInfo } from '@rallia/shared-types';
 import { selectionHaptic, mediumHaptic } from '../../../utils/haptics';
 import { useThemeStyles } from '../../../hooks';
-import { useTranslation } from '../../../hooks';
+import { useTranslation, type TranslationKey } from '../../../hooks';
+import { FavoriteFacilitiesSelector } from './FavoriteFacilitiesSelector';
+
+/**
+ * Dynamic play style option fetched from database
+ */
+export interface PlayStyleOption {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
+/**
+ * Dynamic play attribute option fetched from database
+ */
+export interface PlayAttributeOption {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string | null;
+}
+
+export interface PlayAttributesByCategory {
+  [category: string]: PlayAttributeOption[];
+}
 
 interface PickleballPreferencesOverlayProps {
   visible: boolean;
   onClose: () => void;
   onSave: (preferences: PreferencesInfo) => void;
   initialPreferences?: PreferencesInfo;
+  /** Dynamic play styles fetched from database */
+  playStyleOptions?: PlayStyleOption[];
+  /** Dynamic play attributes fetched from database, grouped by category */
+  playAttributesByCategory?: PlayAttributesByCategory;
+  /** Loading state for play options */
+  loadingPlayOptions?: boolean;
+  /** Player ID for favorite facilities */
+  playerId?: string;
+  /** Sport ID for filtering facilities */
+  sportId?: string;
+  /** User's latitude for distance calculation */
+  latitude?: number | null;
+  /** User's longitude for distance calculation */
+  longitude?: number | null;
 }
 
-const PLAY_STYLE_VALUES: PlayStyleEnum[] = [
-  'counterpuncher',
-  'aggressive_baseliner',
-  'serve_and_volley',
-  'all_court',
-];
-
-const PLAY_ATTRIBUTE_VALUES: PlayAttributeEnum[] = [
-  'serve_speed_and_placement',
-  'net_play',
-  'court_coverage',
-  'forehand_power',
-  'shot_selection',
-  'spin_control',
-];
+/**
+ * Format a database name into a display label
+ * e.g., 'aggressive_baseliner' -> 'Aggressive Baseliner'
+ */
+const formatName = (name: string): string => {
+  return name
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
 
 export const PickleballPreferencesOverlay: React.FC<PickleballPreferencesOverlayProps> = ({
   visible,
   onClose,
   onSave,
   initialPreferences = {},
+  playStyleOptions = [],
+  playAttributesByCategory = {},
+  loadingPlayOptions = false,
+  playerId,
+  sportId,
+  latitude,
+  longitude,
 }) => {
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
@@ -60,26 +92,19 @@ export const PickleballPreferencesOverlay: React.FC<PickleballPreferencesOverlay
     { value: 'both', label: t('profile.preferences.matchTypes.both') },
   ];
 
-  const PLAY_STYLES: { value: PlayStyleEnum; label: string }[] = PLAY_STYLE_VALUES.map(value => ({
-    value,
-    label: t(`profile.preferences.playStyles.${value}`),
+  // Build PLAY_STYLES from dynamic options
+  const PLAY_STYLES = playStyleOptions.map(style => ({
+    value: style.name,
+    label: formatName(style.name),
+    description: style.description,
   }));
 
-  const PLAY_ATTRIBUTES: { value: PlayAttributeEnum; label: string }[] = PLAY_ATTRIBUTE_VALUES.map(
-    value => ({
-      value,
-      label: t(`profile.preferences.playAttributes.${value}`),
-    })
-  );
   const [matchDuration, setMatchDuration] = useState<string | undefined>(
     initialPreferences.matchDuration
   );
   const [matchType, setMatchType] = useState<string | undefined>(initialPreferences.matchType);
-  const [court, setCourt] = useState<string>(initialPreferences.court || '');
-  const [playStyle, setPlayStyle] = useState<PlayStyleEnum | undefined>(
-    initialPreferences.playStyle
-  );
-  const [playAttributes, setPlayAttributes] = useState<PlayAttributeEnum[]>(
+  const [playStyle, setPlayStyle] = useState<string | undefined>(initialPreferences.playStyle);
+  const [playAttributes, setPlayAttributes] = useState<string[]>(
     initialPreferences.playAttributes || []
   );
   const [showPlayStyleDropdown, setShowPlayStyleDropdown] = useState(false);
@@ -108,14 +133,16 @@ export const PickleballPreferencesOverlay: React.FC<PickleballPreferencesOverlay
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  const handleTogglePlayAttribute = (attribute: PlayAttributeEnum) => {
+  const handleTogglePlayAttribute = (attributeName: string) => {
     selectionHaptic();
     setPlayAttributes(prev =>
-      prev.includes(attribute) ? prev.filter(a => a !== attribute) : [...prev, attribute]
+      prev.includes(attributeName)
+        ? prev.filter(a => a !== attributeName)
+        : [...prev, attributeName]
     );
   };
 
-  const handleSelectPlayStyle = (style: PlayStyleEnum) => {
+  const handleSelectPlayStyle = (style: string) => {
     selectionHaptic();
     setPlayStyle(style);
     setShowPlayStyleDropdown(false);
@@ -126,7 +153,6 @@ export const PickleballPreferencesOverlay: React.FC<PickleballPreferencesOverlay
     onSave({
       matchDuration,
       matchType,
-      court,
       playStyle,
       playAttributes,
     });
@@ -146,22 +172,17 @@ export const PickleballPreferencesOverlay: React.FC<PickleballPreferencesOverlay
           },
         ]}
       >
-        {/* Header with back and close buttons */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={onClose} activeOpacity={0.7}>
-            <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose} activeOpacity={0.7}>
-            <Ionicons name="close" size={24} color={colors.text} />
-          </TouchableOpacity>
-        </View>
-
         {/* Title */}
         <Text style={[styles.title, { color: colors.text }]}>
           {t('profile.preferences.updatePickleball')}
         </Text>
 
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled={true}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* Match Duration */}
           <View style={styles.section}>
             <Text style={[styles.label, { color: colors.text }]}>
@@ -240,31 +261,34 @@ export const PickleballPreferencesOverlay: React.FC<PickleballPreferencesOverlay
             </View>
           </View>
 
-          {/* Court */}
+          {/* Favorite Facilities */}
           <View style={styles.section}>
             <Text style={[styles.label, { color: colors.text }]}>
-              {t('profile.preferences.court')}
+              {t('profile.preferences.favoriteFacilities' as TranslationKey)}
             </Text>
-            <View
-              style={[
-                styles.inputContainer,
-                { backgroundColor: colors.inputBackground, borderColor: colors.border },
-              ]}
-            >
-              <TextInput
-                style={[styles.input, { color: colors.text }]}
-                placeholder={t('profile.preferences.courtPlaceholderPickleball')}
-                placeholderTextColor={colors.textMuted}
-                value={court}
-                onChangeText={setCourt}
+            <Text style={[styles.sublabel, { color: colors.textMuted }]}>
+              {t('profile.preferences.selectUpTo3' as TranslationKey)}
+            </Text>
+            {playerId && sportId ? (
+              <FavoriteFacilitiesSelector
+                playerId={playerId}
+                sportId={sportId}
+                latitude={latitude ?? null}
+                longitude={longitude ?? null}
+                colors={{
+                  text: colors.text,
+                  textMuted: colors.textMuted,
+                  inputBackground: colors.inputBackground,
+                  border: colors.border,
+                  primary: colors.primary,
+                  primaryForeground: colors.primaryForeground,
+                  card: colors.card,
+                }}
+                t={(key: string) => t(key as Parameters<typeof t>[0])}
               />
-              <Ionicons
-                name="chevron-down"
-                size={20}
-                color={colors.textMuted}
-                style={styles.inputIcon}
-              />
-            </View>
+            ) : (
+              <Text style={{ color: colors.textMuted, fontStyle: 'italic' }}>Loading...</Text>
+            )}
           </View>
 
           {/* Play Style */}
@@ -342,7 +366,7 @@ export const PickleballPreferencesOverlay: React.FC<PickleballPreferencesOverlay
             )}
           </View>
 
-          {/* Play Attributes */}
+          {/* Play Attributes - grouped by category */}
           <View style={styles.section}>
             <Text style={[styles.label, { color: colors.text }]}>
               {t('profile.fields.playAttributes')}
@@ -350,35 +374,52 @@ export const PickleballPreferencesOverlay: React.FC<PickleballPreferencesOverlay
             <Text style={[styles.sublabel, { color: colors.textMuted }]}>
               {t('profile.preferences.selectAllThatApply')}
             </Text>
-            <View style={styles.chipsContainer}>
-              {PLAY_ATTRIBUTES.map(attribute => (
-                <TouchableOpacity
-                  key={attribute.value}
-                  style={[
-                    styles.attributeChip,
-                    { backgroundColor: colors.inputBackground },
-                    playAttributes.includes(attribute.value) && [
-                      styles.attributeChipSelected,
-                      { backgroundColor: colors.primary },
-                    ],
-                  ]}
-                  onPress={() => handleTogglePlayAttribute(attribute.value)}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      { color: colors.textMuted },
-                      playAttributes.includes(attribute.value) && [
-                        styles.chipTextSelected,
-                        { color: colors.primaryForeground },
-                      ],
-                    ]}
-                  >
-                    {attribute.label}
+            {loadingPlayOptions ? (
+              <Text style={{ color: colors.textMuted, marginBottom: 12 }}>
+                {t('common.loading')}
+              </Text>
+            ) : Object.keys(playAttributesByCategory).length > 0 ? (
+              Object.entries(playAttributesByCategory).map(([category, attributes]) => (
+                <View key={category} style={styles.categorySection}>
+                  <Text style={[styles.categoryLabel, { color: colors.textMuted }]}>
+                    {category}
                   </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                  <View style={styles.chipsContainer}>
+                    {attributes.map(attribute => (
+                      <TouchableOpacity
+                        key={attribute.name}
+                        style={[
+                          styles.attributeChip,
+                          { backgroundColor: colors.inputBackground },
+                          playAttributes.includes(attribute.name) && [
+                            styles.attributeChipSelected,
+                            { backgroundColor: colors.primary },
+                          ],
+                        ]}
+                        onPress={() => handleTogglePlayAttribute(attribute.name)}
+                      >
+                        <Text
+                          style={[
+                            styles.chipText,
+                            { color: colors.textMuted },
+                            playAttributes.includes(attribute.name) && [
+                              styles.chipTextSelected,
+                              { color: colors.primaryForeground },
+                            ],
+                          ]}
+                        >
+                          {formatName(attribute.name)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              ))
+            ) : (
+              <Text style={{ color: colors.textMuted, fontStyle: 'italic' }}>
+                No attributes available
+              </Text>
+            )}
           </View>
         </ScrollView>
 
@@ -410,38 +451,18 @@ export const PickleballPreferencesOverlay: React.FC<PickleballPreferencesOverlay
 
 const styles = StyleSheet.create({
   container: {
-    padding: 24,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backButtonText: {
-    fontSize: 28,
-    fontWeight: '300',
-  },
-  closeButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 20,
+    paddingBottom: 8,
+    maxHeight: '90%',
   },
   title: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
-    marginBottom: 24,
     textAlign: 'center',
+    marginBottom: 16,
   },
   scrollView: {
-    marginBottom: 20,
+    flexGrow: 1,
   },
   section: {
     marginBottom: 24,
@@ -455,6 +476,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 12,
     marginTop: -8,
+  },
+  categorySection: {
+    marginBottom: 16,
+  },
+  categoryLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   chipsContainer: {
     flexDirection: 'row',

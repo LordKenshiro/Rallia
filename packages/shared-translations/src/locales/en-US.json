@@ -357,6 +357,7 @@
       "matchDuration": "Game Duration",
       "matchType": "Game Type",
       "facility": "Facility",
+      "favoriteFacilities": "Favorite Courts",
       "playingStyle": "Playing Style",
       "playAttributes": "Play Attributes"
     },
@@ -435,7 +436,16 @@
         "forehand_power": "Forehand Power",
         "shot_selection": "Shot Selection",
         "spin_control": "Spin Control"
-      }
+      },
+      "favoriteFacilities": "Favorite Courts",
+      "selectUpTo3": "Select up to 3 facilities",
+      "searchFacility": "Search for a court...",
+      "addAnotherFacility": "Add another court...",
+      "noFacilitiesFound": "No courts found. Try a different search.",
+      "typeToSearch": "Start typing to search nearby courts",
+      "locationRequired": "Location access is needed to find nearby courts",
+      "maxFavoritesReached": "You've selected 3 courts. Remove one to add a different court.",
+      "tapToRemove": "Tap the X to remove a court"
     }
   },
   "onboarding": {

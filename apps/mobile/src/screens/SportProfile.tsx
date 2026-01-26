@@ -8,9 +8,11 @@ import { useAppNavigation } from '../navigation/hooks';
 import type { RootStackParamList } from '../navigation/types';
 import { Text, Button, Skeleton, useToast } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
+import { usePlayPreferences, useFavoriteFacilities } from '@rallia/shared-hooks';
 import { MATCH_DURATION_ENUM_LABELS } from '@rallia/shared-types';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
 import { useSport } from '../context';
+import { useUserLocation } from '../hooks/useUserLocation';
 import {
   spacingPixels,
   radiusPixels,
@@ -50,11 +52,7 @@ interface PreferencesInfo {
   matchType: string | null;
   facilityName: string | null;
   playingStyle: string | null;
-}
-
-interface PlayAttributeValue {
-  attributeName: string;
-  attributeValue: string;
+  playAttributes: string[] | null;
 }
 
 const SportProfile = () => {
@@ -65,6 +63,14 @@ const SportProfile = () => {
   const { t } = useTranslation();
   const { refetch: refetchSportContext } = useSport();
   const toast = useToast();
+  const { location } = useUserLocation();
+
+  // Fetch play styles and attributes for this sport
+  const {
+    playStyles: playStyleOptions,
+    playAttributesByCategory,
+    loading: loadingPlayOptions,
+  } = usePlayPreferences(sportId);
 
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string>('');
@@ -77,13 +83,20 @@ const SportProfile = () => {
     matchType: null,
     facilityName: null,
     playingStyle: null,
+    playAttributes: null,
   });
-  const [playAttributes] = useState<PlayAttributeValue[]>([]);
   const [showTennisRatingOverlay, setShowTennisRatingOverlay] = useState(false);
   const [showPickleballRatingOverlay, setShowPickleballRatingOverlay] = useState(false);
   const [showPeerRatingRequestOverlay, setShowPeerRatingRequestOverlay] = useState(false);
   const [showReferenceRequestOverlay, setShowReferenceRequestOverlay] = useState(false);
   const [showPreferencesOverlay, setShowPreferencesOverlay] = useState(false);
+
+  // Fetch user's favorite facilities
+  const {
+    favorites: favoriteFacilities,
+    loading: loadingFavorites,
+    refetch: refetchFavorites,
+  } = useFavoriteFacilities(userId);
 
   useEffect(() => {
     fetchSportProfileData();
@@ -104,7 +117,7 @@ const SportProfile = () => {
 
       // Fetch both queries in parallel for better performance
       const [playerSportResult, ratingResult] = await Promise.all([
-        // Fetch player's sport connection
+        // Fetch player's sport connection including play preferences
         withTimeout(
           (async () =>
             supabase
@@ -161,10 +174,54 @@ const SportProfile = () => {
       if (playerSportData) {
         setIsActive(playerSportData.is_active || false);
         setPlayerSportId(playerSportData.id);
+
+        // Fetch play style and attributes from junction tables
+        const [playStyleResult, playAttributesResult] = await Promise.all([
+          supabase
+            .from('player_sport_play_style')
+            .select(
+              `
+              play_style:play_style_id (
+                id,
+                name,
+                description
+              )
+            `
+            )
+            .eq('player_sport_id', playerSportData.id)
+            .maybeSingle(),
+          supabase
+            .from('player_sport_play_attribute')
+            .select(
+              `
+              play_attribute:play_attribute_id (
+                id,
+                name,
+                description,
+                category
+              )
+            `
+            )
+            .eq('player_sport_id', playerSportData.id),
+        ]);
+
+        // Extract play style name
+        const playStyleName =
+          (playStyleResult.data?.play_style as { name?: string } | null)?.name || null;
+
+        // Extract play attribute names
+        const playAttributeNames =
+          playAttributesResult.data
+            ?.map(item => (item.play_attribute as { name?: string } | null)?.name)
+            .filter((name): name is string => !!name) || null;
+
         setPreferences(prev => ({
           ...prev,
           matchDuration: playerSportData.preferred_match_duration || null,
           matchType: playerSportData.preferred_match_type || null,
+          playingStyle: playStyleName,
+          playAttributes:
+            playAttributeNames && playAttributeNames.length > 0 ? playAttributeNames : null,
         }));
       } else {
         setIsActive(false);
@@ -646,6 +703,7 @@ const SportProfile = () => {
         return;
       }
 
+      // 1. Update basic preferences in player_sport table
       const updateResult = await withTimeout(
         (async () =>
           supabase
@@ -653,9 +711,6 @@ const SportProfile = () => {
             .update({
               preferred_match_duration: updatedPreferences.matchDuration,
               preferred_match_type: updatedPreferences.matchType,
-              preferred_court: updatedPreferences.court,
-              preferred_play_style: updatedPreferences.playStyle,
-              preferred_play_attributes: updatedPreferences.playAttributes,
             })
             .eq('id', playerSportId))(),
         10000,
@@ -664,13 +719,71 @@ const SportProfile = () => {
 
       if (updateResult.error) throw updateResult.error;
 
+      // 2. Save play style to junction table (if provided)
+      if (updatedPreferences.playStyle) {
+        // First, delete existing play style for this player_sport
+        await supabase
+          .from('player_sport_play_style')
+          .delete()
+          .eq('player_sport_id', playerSportId);
+
+        // Find the play_style record by name for this sport
+        const { data: playStyleData } = await supabase
+          .from('play_style')
+          .select('id')
+          .eq('sport_id', sportId)
+          .eq('name', updatedPreferences.playStyle)
+          .single();
+
+        if (playStyleData) {
+          // Insert new play style
+          await supabase.from('player_sport_play_style').insert({
+            player_sport_id: playerSportId,
+            play_style_id: playStyleData.id,
+          });
+        }
+      } else {
+        // If no play style selected, delete any existing
+        await supabase
+          .from('player_sport_play_style')
+          .delete()
+          .eq('player_sport_id', playerSportId);
+      }
+
+      // 3. Save play attributes to junction table (if provided)
+      // First, delete existing play attributes for this player_sport
+      await supabase
+        .from('player_sport_play_attribute')
+        .delete()
+        .eq('player_sport_id', playerSportId);
+
+      if (updatedPreferences.playAttributes && updatedPreferences.playAttributes.length > 0) {
+        // Find the play_attribute records by name for this sport
+        const { data: playAttributeData } = await supabase
+          .from('play_attribute')
+          .select('id, name')
+          .eq('sport_id', sportId)
+          .in('name', updatedPreferences.playAttributes);
+
+        if (playAttributeData && playAttributeData.length > 0) {
+          // Insert new play attributes
+          const attributeInserts = playAttributeData.map(attr => ({
+            player_sport_id: playerSportId,
+            play_attribute_id: attr.id,
+          }));
+
+          await supabase.from('player_sport_play_attribute').insert(attributeInserts);
+        }
+      }
+
       // Update local state
-      setPreferences({
+      setPreferences(prev => ({
+        ...prev,
         matchDuration: updatedPreferences.matchDuration || null,
         matchType: updatedPreferences.matchType || null,
-        facilityName: updatedPreferences.court || null,
         playingStyle: updatedPreferences.playStyle || null,
-      });
+        playAttributes: updatedPreferences.playAttributes || null,
+      }));
 
       // Close overlay
       setShowPreferencesOverlay(false);
@@ -1078,18 +1191,34 @@ const SportProfile = () => {
                 </Text>
               </View>
 
-              {/* Facility */}
+              {/* Favorite Facilities */}
               <View style={[styles.preferenceRow, { borderBottomColor: colors.border }]}>
                 <Text style={[styles.preferenceLabel, { color: colors.textMuted }]}>
-                  {t('profile.fields.facility')}
+                  {t('profile.fields.favoriteFacilities')}
                 </Text>
-                <Text style={[styles.preferenceValue, { color: colors.text }]}>
-                  {preferences.facilityName || t('profile.notSet')}
-                </Text>
+                <View style={styles.facilitiesContainer}>
+                  {loadingFavorites ? (
+                    <Skeleton width={120} height={16} />
+                  ) : favoriteFacilities.length > 0 ? (
+                    favoriteFacilities.map(fav => (
+                      <Text
+                        key={fav.id}
+                        style={[styles.facilityText, { color: colors.text }]}
+                        numberOfLines={1}
+                      >
+                        {fav.facility?.name || t('profile.notSet')}
+                      </Text>
+                    ))
+                  ) : (
+                    <Text style={[styles.preferenceValue, { color: colors.text }]}>
+                      {t('profile.notSet')}
+                    </Text>
+                  )}
+                </View>
               </View>
 
               {/* Playing Style (for Tennis: Server & Volley, etc.) */}
-              <View style={styles.preferenceRow}>
+              <View style={[styles.preferenceRow, { borderBottomWidth: 0 }]}>
                 <Text style={[styles.preferenceLabel, { color: colors.textMuted }]}>
                   {t('profile.fields.playingStyle')}
                 </Text>
@@ -1099,13 +1228,13 @@ const SportProfile = () => {
               </View>
 
               {/* Play Attributes */}
-              {playAttributes.length > 0 && (
+              {preferences.playAttributes && preferences.playAttributes.length > 0 && (
                 <View style={[styles.playAttributesContainer, { borderTopColor: colors.border }]}>
                   <Text style={[styles.playAttributesTitle, { color: colors.textMuted }]}>
                     {t('profile.fields.playAttributes')}
                   </Text>
                   <View style={styles.attributeTags}>
-                    {playAttributes.map((attr, index) => (
+                    {preferences.playAttributes.map((attr: string, index: number) => (
                       <View
                         key={index}
                         style={[
@@ -1114,7 +1243,7 @@ const SportProfile = () => {
                         ]}
                       >
                         <Text style={[styles.attributeTagText, { color: colors.primary }]}>
-                          {formatPlayAttribute(attr.attributeValue)}
+                          {formatPlayAttribute(attr)}
                         </Text>
                       </View>
                     ))}
@@ -1169,20 +1298,25 @@ const SportProfile = () => {
       {sportName.toLowerCase() === 'tennis' && (
         <TennisPreferencesOverlay
           visible={showPreferencesOverlay}
-          onClose={() => setShowPreferencesOverlay(false)}
+          onClose={() => {
+            setShowPreferencesOverlay(false);
+            refetchFavorites();
+          }}
           onSave={handleSavePreferences}
           initialPreferences={{
             matchDuration: preferences.matchDuration || undefined,
             matchType: preferences.matchType || undefined,
             court: preferences.facilityName || undefined,
-            playStyle:
-              (preferences.playingStyle as
-                | 'counterpuncher'
-                | 'aggressive_baseliner'
-                | 'serve_and_volley'
-                | 'all_court') || undefined,
-            playAttributes: [],
+            playStyle: preferences.playingStyle || undefined,
+            playAttributes: preferences.playAttributes || undefined,
           }}
+          playStyleOptions={playStyleOptions}
+          playAttributesByCategory={playAttributesByCategory}
+          loadingPlayOptions={loadingPlayOptions}
+          playerId={userId}
+          sportId={sportId}
+          latitude={location?.latitude ?? null}
+          longitude={location?.longitude ?? null}
         />
       )}
 
@@ -1190,20 +1324,25 @@ const SportProfile = () => {
       {sportName.toLowerCase() === 'pickleball' && (
         <PickleballPreferencesOverlay
           visible={showPreferencesOverlay}
-          onClose={() => setShowPreferencesOverlay(false)}
+          onClose={() => {
+            setShowPreferencesOverlay(false);
+            refetchFavorites();
+          }}
           onSave={handleSavePreferences}
           initialPreferences={{
             matchDuration: preferences.matchDuration || undefined,
             matchType: preferences.matchType || undefined,
             court: preferences.facilityName || undefined,
-            playStyle:
-              (preferences.playingStyle as
-                | 'counterpuncher'
-                | 'aggressive_baseliner'
-                | 'serve_and_volley'
-                | 'all_court') || undefined,
-            playAttributes: [],
+            playStyle: preferences.playingStyle || undefined,
+            playAttributes: preferences.playAttributes || undefined,
           }}
+          playStyleOptions={playStyleOptions}
+          playAttributesByCategory={playAttributesByCategory}
+          loadingPlayOptions={loadingPlayOptions}
+          playerId={userId}
+          sportId={sportId}
+          latitude={location?.latitude ?? null}
+          longitude={location?.longitude ?? null}
         />
       )}
     </SafeAreaView>
@@ -1435,6 +1574,18 @@ const styles = StyleSheet.create({
   attributeTagText: {
     fontSize: fontSizePixels.xs,
     fontWeight: fontWeightNumeric.semibold,
+  },
+  facilitiesContainer: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    gap: 2,
+    flex: 1,
+    marginLeft: spacingPixels[4],
+  },
+  facilityText: {
+    fontSize: fontSizePixels.sm,
+    fontWeight: fontWeightNumeric.semibold,
+    textAlign: 'right',
   },
 });
 

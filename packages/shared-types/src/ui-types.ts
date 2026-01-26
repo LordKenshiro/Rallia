@@ -341,26 +341,27 @@ export interface PreferencesFormData {
   playAttributes?: string[];
 }
 
-import type { PlayStyleEnum, PlayAttributeEnum } from './database';
-
 /**
  * Player sport preferences information (UI view model)
+ * Note: playStyle and playAttributes now use string values from the
+ * play_style and play_attribute database tables instead of enums,
+ * allowing for sport-specific options that can be updated without code changes.
  */
 export interface PreferencesInfo {
-  /** Preferred match duration (e.g., '1h', '1.5h', '2h') */
+  /** Preferred match duration (e.g., '30', '60', '90', '120') */
   matchDuration?: string;
 
-  /** Preferred match type (e.g., 'Casual', 'Competitive', 'Both') */
+  /** Preferred match type (e.g., 'casual', 'competitive', 'both') */
   matchType?: string;
 
   /** Preferred court location/name */
   court?: string;
 
-  /** Player's preferred play style (enum value) */
-  playStyle?: PlayStyleEnum;
+  /** Player's preferred play style (name from play_style table) */
+  playStyle?: string;
 
-  /** Player's key attributes/strengths (enum values) */
-  playAttributes?: PlayAttributeEnum[];
+  /** Player's key attributes/strengths (names from play_attribute table) */
+  playAttributes?: string[];
 }
 
 // ============================================
