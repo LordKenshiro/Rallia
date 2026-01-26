@@ -103,6 +103,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ currentStep, totalSteps, colo
     progress.value = withTiming((currentStep / totalSteps) * 100, {
       duration: 300,
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, totalSteps]);
 
   const animatedProgressStyle = useAnimatedStyle(() => ({
@@ -512,6 +513,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
       // No draft exists (loading complete, no draft found), mark as checked
       hasCheckedDraft.current = true;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDraftLoading, hasDraft, draft, sportId, isEditMode]);
 
   // Track form changes to detect unsaved modifications
@@ -571,12 +573,14 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   }, [values.locationType, values.facilityId, form, formatDateLocal, timezone]);
 
   // Animate step changes
+  // Animate step changes
   useEffect(() => {
     translateX.value = withSpring(-((currentStep - 1) * SCREEN_WIDTH), {
       damping: 80,
       stiffness: 600,
       overshootClamping: false,
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep]);
 
   // Navigate to next step
@@ -976,6 +980,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
       // Reset post-success position
       postSuccessTranslateX.value = 0;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showSuccess]);
 
   // Animate transition to invite step
@@ -985,6 +990,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     } else if (showSuccess) {
       postSuccessTranslateX.value = withTiming(0, { duration: 300 });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showInviteStep, showSuccess]);
 
   // Animated style for success view
@@ -996,11 +1002,6 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   // Animated style for post-success container (horizontal slide)
   const postSuccessAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: postSuccessTranslateX.value }],
-  }));
-
-  // Animated style for form (fades out on success)
-  const formAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: formOpacity.value,
   }));
 
   // Success and Invite steps - horizontal slide animation between them

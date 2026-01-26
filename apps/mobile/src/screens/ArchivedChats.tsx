@@ -4,20 +4,14 @@
  */
 
 import React, { useCallback, useMemo } from 'react';
-import {
-  View,
-  StyleSheet,
-  FlatList,
-  RefreshControl,
-  TouchableOpacity,
-} from 'react-native';
+import { View, StyleSheet, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text, SkeletonConversation } from '@rallia/shared-components';
-import { useThemeStyles, useAuth } from '../hooks';
+import { useThemeStyles, useAuth, useTranslation, type TranslationKey } from '../hooks';
 import { spacingPixels, fontSizePixels, primary } from '@rallia/design-system';
 import {
   usePlayerConversations,
@@ -36,10 +30,12 @@ const ArchivedChats = () => {
   const { colors } = useThemeStyles();
   const navigation = useNavigation<NavigationProp>();
   const { session } = useAuth();
+  const { t } = useTranslation();
   const playerId = session?.user?.id;
 
   // State for conversation actions sheet
-  const [selectedConversation, setSelectedConversation] = React.useState<ConversationPreview | null>(null);
+  const [selectedConversation, setSelectedConversation] =
+    React.useState<ConversationPreview | null>(null);
   const [showActionsSheet, setShowActionsSheet] = React.useState(false);
 
   const {
@@ -60,7 +56,7 @@ const ArchivedChats = () => {
   // Filter to only archived conversations
   const archivedConversations = useMemo(() => {
     if (!conversations) return [];
-    return conversations.filter((c) => c.is_archived);
+    return conversations.filter(c => c.is_archived);
   }, [conversations]);
 
   const handleConversationPress = useCallback(
@@ -109,11 +105,11 @@ const ArchivedChats = () => {
     ({ item }: { item: ConversationPreview }) => {
       // Check if the other user in a direct chat is blocked
       const isOtherUserBlocked = Boolean(
-        item.conversation_type === 'direct' && 
-        item.other_participant?.id && 
+        item.conversation_type === 'direct' &&
+        item.other_participant?.id &&
         blockedUserIds.has(item.other_participant.id)
       );
-      
+
       return (
         <ConversationItem
           conversation={item}
@@ -135,14 +131,14 @@ const ArchivedChats = () => {
       <View style={styles.emptyContainer}>
         <Ionicons name="archive-outline" size={64} color={colors.textMuted} />
         <Text style={[styles.emptyTitle, { color: colors.text }]}>
-          No archived chats
+          {t('chat.archivedChats.noArchivedChats' as TranslationKey)}
         </Text>
         <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
-          Chats you archive will appear here
+          {t('chat.archivedChats.chatsAppearHere' as TranslationKey)}
         </Text>
       </View>
     );
-  }, [isLoading, colors]);
+  }, [isLoading, colors, t]);
 
   const renderSeparator = useCallback(
     () => <View style={[styles.separator, { backgroundColor: colors.border }]} />,
@@ -156,13 +152,12 @@ const ArchivedChats = () => {
     >
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Archived</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          {t('chat.archivedChats.title' as TranslationKey)}
+        </Text>
         <View style={styles.headerSpacer} />
       </View>
 

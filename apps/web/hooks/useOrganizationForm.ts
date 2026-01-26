@@ -12,7 +12,6 @@ import {
   CreateFacilityImage,
   UpdateFacilityImage,
   NewImage,
-  ExistingImage,
   FacilityContact,
   CourtRow,
   SurfaceType,

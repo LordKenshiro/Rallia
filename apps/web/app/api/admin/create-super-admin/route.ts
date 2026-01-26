@@ -54,10 +54,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Check if any admins already exist
-    const { data: existingAdmins, error: checkError } = await supabaseAdmin
-      .from('admin')
-      .select('id')
-      .limit(1);
+    const { error: checkError } = await supabaseAdmin.from('admin').select('id').limit(1);
 
     if (checkError) {
       console.error('Error checking existing admins:', checkError);

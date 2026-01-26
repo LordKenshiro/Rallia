@@ -53,6 +53,8 @@ import GroupDetail from '../screens/GroupDetail';
 import PreOnboardingScreen from '../screens/PreOnboarding';
 import GroupChatInfo from '../screens/GroupChatInfo';
 import PlayedMatchDetail from '../screens/PlayedMatchDetail';
+import Communities from '../screens/Communities';
+import CommunityDetail from '../screens/CommunityDetail';
 
 // Components
 import { ThemeLogo } from '../components/ThemeLogo';
@@ -394,7 +396,14 @@ function CommunityStack() {
           headerBackTitle: 'Back',
         }}
       />
-      {/* Future screens: Communities, Tournaments, Leagues, etc. */}
+      <CommunityStackNavigator.Screen
+        name="Communities"
+        component={Communities}
+        options={{
+          title: 'Communities',
+          headerBackTitle: 'Back',
+        }}
+      />
     </CommunityStackNavigator.Navigator>
   );
 }
@@ -746,6 +755,16 @@ export default function AppNavigator() {
         options={({ route, navigation }) => ({
           ...sharedOptions,
           headerTitle: route.params?.groupName || t('screens.group'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="CommunityDetail"
+        component={CommunityDetail}
+        options={({ route, navigation }) => ({
+          ...sharedOptions,
+          headerTitle: route.params?.communityName || 'Community',
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />

@@ -3,7 +3,7 @@
  * Modal with camera view for scanning group invite QR codes
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Modal,
@@ -12,12 +12,15 @@ import {
   Alert,
   ActivityIndicator,
   Linking,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import { useJoinGroupByInviteCode } from '@rallia/shared-hooks';
 
 interface QRScannerModalProps {
@@ -27,24 +30,29 @@ interface QRScannerModalProps {
   onGroupJoined: (groupId: string, groupName: string) => void;
 }
 
-export function QRScannerModal({
-  visible,
-  onClose,
-  playerId,
-  onGroupJoined,
-}: QRScannerModalProps) {
+export function QRScannerModal({ visible, onClose, playerId, onGroupJoined }: QRScannerModalProps) {
   const { colors } = useThemeStyles();
+  const { t } = useTranslation();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [torchEnabled, setTorchEnabled] = useState(false);
+  const [showManualEntry, setShowManualEntry] = useState(false);
+  const [manualCode, setManualCode] = useState('');
+  const cameraRef = useRef<CameraView>(null);
 
   const joinGroupMutation = useJoinGroupByInviteCode();
 
   // Reset scanned state when modal opens
+  // This effect resets modal state when it becomes visible - standard modal reset pattern
   useEffect(() => {
     if (visible) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional reset of modal state on open
       setScanned(false);
       setIsProcessing(false);
+      setTorchEnabled(false);
+      setShowManualEntry(false);
+      setManualCode('');
     }
   }, [visible]);
 
@@ -65,128 +73,227 @@ export function QRScannerModal({
     return null;
   }, []);
 
-  const handleBarCodeScanned = useCallback(async ({ data }: { data: string }) => {
-    if (scanned || isProcessing) return;
+  const handleBarCodeScanned = useCallback(
+    async ({ data }: { data: string }) => {
+      if (scanned || isProcessing) return;
 
-    setScanned(true);
-    setIsProcessing(true);
+      setScanned(true);
+      setIsProcessing(true);
 
-    const inviteCode = extractInviteCode(data);
+      const inviteCode = extractInviteCode(data);
 
-    if (!inviteCode) {
-      Alert.alert(
-        'Invalid QR Code',
-        'This QR code is not a valid Rallia group invite.',
-        [
+      if (!inviteCode) {
+        Alert.alert(t('groups.invalidQRCode'), t('groups.invalidQRCodeMessage'), [
           {
-            text: 'Try Again',
+            text: t('groups.tryAgain'),
             onPress: () => {
               setScanned(false);
               setIsProcessing(false);
             },
           },
           {
-            text: 'Cancel',
+            text: t('common.cancel'),
             style: 'cancel',
             onPress: onClose,
           },
-        ]
-      );
-      return;
-    }
+        ]);
+        return;
+      }
 
-    try {
-      const result = await joinGroupMutation.mutateAsync({
-        inviteCode,
-        playerId,
-      });
+      try {
+        const result = await joinGroupMutation.mutateAsync({
+          inviteCode,
+          playerId,
+        });
 
-      if (result.success && result.groupId && result.groupName) {
-        onClose();
-        onGroupJoined(result.groupId, result.groupName);
-      } else {
-        Alert.alert(
-          'Could Not Join',
-          result.error || 'Failed to join the group. Please try again.',
-          [
+        if (result.success && result.groupId && result.groupName) {
+          onClose();
+          onGroupJoined(result.groupId, result.groupName);
+        } else {
+          Alert.alert(t('groups.couldNotJoin'), result.error || t('groups.failedToJoinGroup'), [
             {
-              text: 'Try Again',
+              text: t('groups.tryAgain'),
               onPress: () => {
                 setScanned(false);
                 setIsProcessing(false);
               },
             },
             {
-              text: 'Cancel',
+              text: t('common.cancel'),
+              style: 'cancel',
+              onPress: onClose,
+            },
+          ]);
+        }
+      } catch (error) {
+        Alert.alert(
+          t('common.error'),
+          error instanceof Error ? error.message : t('groups.failedToJoinGroup'),
+          [
+            {
+              text: t('groups.tryAgain'),
+              onPress: () => {
+                setScanned(false);
+                setIsProcessing(false);
+              },
+            },
+            {
+              text: t('common.cancel'),
               style: 'cancel',
               onPress: onClose,
             },
           ]
         );
       }
-    } catch (error) {
-      Alert.alert(
-        'Error',
-        error instanceof Error ? error.message : 'Failed to join group',
-        [
-          {
-            text: 'Try Again',
-            onPress: () => {
-              setScanned(false);
-              setIsProcessing(false);
-            },
-          },
-          {
-            text: 'Cancel',
-            style: 'cancel',
-            onPress: onClose,
-          },
-        ]
-      );
+    },
+    [
+      scanned,
+      isProcessing,
+      extractInviteCode,
+      joinGroupMutation,
+      playerId,
+      onClose,
+      onGroupJoined,
+      t,
+    ]
+  );
+
+  // Handle manual code submission
+  const handleManualSubmit = useCallback(() => {
+    if (!manualCode.trim()) {
+      Alert.alert(t('common.error'), t('groups.pleaseEnterInviteCode'));
+      return;
     }
-  }, [scanned, isProcessing, extractInviteCode, joinGroupMutation, playerId, onClose, onGroupJoined]);
+    // Simulate barcode scan with manual entry
+    handleBarCodeScanned({ data: manualCode.trim().toUpperCase() });
+  }, [manualCode, handleBarCodeScanned, t]);
+
+  // Toggle flashlight
+  const toggleTorch = useCallback(() => {
+    setTorchEnabled(prev => !prev);
+  }, []);
 
   const handleRequestPermission = useCallback(async () => {
     const result = await requestPermission();
     if (!result.granted) {
-      Alert.alert(
-        'Camera Permission Required',
-        'Please enable camera access in your device settings to scan QR codes.',
-        [
-          { text: 'Cancel', style: 'cancel', onPress: onClose },
-          { text: 'Open Settings', onPress: () => Linking.openSettings() },
-        ]
-      );
+      Alert.alert(t('groups.cameraPermissionRequired'), t('groups.cameraPermissionMessage'), [
+        { text: t('common.cancel'), style: 'cancel', onPress: onClose },
+        { text: t('groups.openSettings'), onPress: () => Linking.openSettings() },
+      ]);
     }
-  }, [requestPermission, onClose]);
+  }, [requestPermission, onClose, t]);
 
   // Render permission request screen
   const renderPermissionRequest = () => (
     <View style={styles.permissionContainer}>
       <Ionicons name="camera-outline" size={64} color={colors.textMuted} />
-      <Text weight="semibold" size="lg" style={{ color: colors.text, marginTop: 16, textAlign: 'center' }}>
-        Camera Access Required
+      <Text
+        weight="semibold"
+        size="lg"
+        style={{ color: colors.text, marginTop: 16, textAlign: 'center' }}
+      >
+        {t('groups.cameraAccessRequired')}
       </Text>
-      <Text style={{ color: colors.textSecondary, marginTop: 8, textAlign: 'center', paddingHorizontal: 32 }}>
-        To scan QR codes and join groups, we need access to your camera.
+      <Text
+        style={{
+          color: colors.textSecondary,
+          marginTop: 8,
+          textAlign: 'center',
+          paddingHorizontal: 32,
+        }}
+      >
+        {t('groups.cameraAccessDescription')}
       </Text>
       <TouchableOpacity
         style={[styles.permissionButton, { backgroundColor: colors.primary }]}
         onPress={handleRequestPermission}
       >
         <Text weight="semibold" style={{ color: '#FFFFFF' }}>
-          Allow Camera Access
+          {t('groups.allowCameraAccess')}
         </Text>
       </TouchableOpacity>
     </View>
+  );
+
+  // Render manual entry form
+  const renderManualEntry = () => (
+    <KeyboardAvoidingView
+      style={styles.manualEntryContainer}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <View style={styles.manualEntryContent}>
+        <Ionicons name="keypad-outline" size={48} color={colors.textMuted} />
+        <Text
+          weight="semibold"
+          size="lg"
+          style={{ color: colors.text, marginTop: 16, textAlign: 'center' }}
+        >
+          {t('groups.enterInviteCode')}
+        </Text>
+        <Text style={{ color: colors.textSecondary, marginTop: 8, textAlign: 'center' }}>
+          {t('groups.enterInviteCodeDescription')}
+        </Text>
+
+        <TextInput
+          style={[
+            styles.manualInput,
+            {
+              backgroundColor: colors.inputBackground,
+              color: colors.text,
+              borderColor: colors.border,
+            },
+          ]}
+          placeholder="ABC12345"
+          placeholderTextColor={colors.textMuted}
+          value={manualCode}
+          onChangeText={text => setManualCode(text.toUpperCase())}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          maxLength={8}
+          returnKeyType="done"
+          onSubmitEditing={handleManualSubmit}
+        />
+
+        <View style={styles.manualEntryButtons}>
+          <TouchableOpacity
+            style={[styles.manualEntryButton, { backgroundColor: colors.border }]}
+            onPress={() => setShowManualEntry(false)}
+          >
+            <Ionicons name="camera" size={20} color={colors.text} />
+            <Text weight="medium" style={{ color: colors.text, marginLeft: 8 }}>
+              {t('groups.scanQR')}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.manualEntryButton, { backgroundColor: colors.primary }]}
+            onPress={handleManualSubmit}
+            disabled={isProcessing || manualCode.length < 8}
+          >
+            {isProcessing ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <>
+                <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+                <Text weight="medium" style={{ color: '#FFFFFF', marginLeft: 8 }}>
+                  {t('groups.join')}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </KeyboardAvoidingView>
   );
 
   // Render scanner
   const renderScanner = () => (
     <View style={styles.scannerContainer}>
       <CameraView
+        ref={cameraRef}
         style={StyleSheet.absoluteFillObject}
         facing="back"
+        enableTorch={torchEnabled}
         barcodeScannerSettings={{
           barcodeTypes: ['qr'],
         }}
@@ -197,11 +304,11 @@ export function QRScannerModal({
       <View style={styles.overlay}>
         {/* Top dark area */}
         <View style={styles.overlayTop} />
-        
+
         {/* Middle row with scan frame */}
         <View style={styles.overlayMiddle}>
           <View style={styles.overlaySide} />
-          
+
           {/* Scan frame */}
           <View style={styles.scanFrame}>
             {/* Corner markers */}
@@ -210,17 +317,48 @@ export function QRScannerModal({
             <View style={[styles.corner, styles.cornerBottomLeft]} />
             <View style={[styles.corner, styles.cornerBottomRight]} />
           </View>
-          
+
           <View style={styles.overlaySide} />
         </View>
-        
-        {/* Bottom dark area with instructions */}
+
+        {/* Bottom dark area with instructions and controls */}
         <View style={styles.overlayBottom}>
           <Text weight="medium" style={styles.instructionText}>
-            {isProcessing ? 'Processing...' : 'Point at a group invite QR code'}
+            {isProcessing ? t('groups.processing') : t('groups.pointAtQRCode')}
           </Text>
           {isProcessing && (
             <ActivityIndicator size="small" color="#FFFFFF" style={{ marginTop: 12 }} />
+          )}
+
+          {/* Scanner controls */}
+          {!isProcessing && (
+            <View style={styles.scannerControls}>
+              {/* Flashlight toggle */}
+              <TouchableOpacity
+                style={[styles.controlButton, torchEnabled && styles.controlButtonActive]}
+                onPress={toggleTorch}
+              >
+                <Ionicons
+                  name={torchEnabled ? 'flash' : 'flash-outline'}
+                  size={24}
+                  color="#FFFFFF"
+                />
+                <Text size="xs" style={styles.controlButtonText}>
+                  {torchEnabled ? t('groups.lightOn') : t('groups.lightOff')}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Manual entry */}
+              <TouchableOpacity
+                style={styles.controlButton}
+                onPress={() => setShowManualEntry(true)}
+              >
+                <Ionicons name="keypad-outline" size={24} color="#FFFFFF" />
+                <Text size="xs" style={styles.controlButtonText}>
+                  {t('groups.enterCode')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
       </View>
@@ -241,13 +379,17 @@ export function QRScannerModal({
             <Ionicons name="close" size={28} color="#FFFFFF" />
           </TouchableOpacity>
           <Text weight="semibold" size="lg" style={styles.headerTitle}>
-            Scan QR Code
+            {t('groups.scanQRCode')}
           </Text>
           <View style={styles.headerSpacer} />
         </View>
 
         {/* Content */}
-        {!permission?.granted ? renderPermissionRequest() : renderScanner()}
+        {!permission?.granted
+          ? renderPermissionRequest()
+          : showManualEntry
+            ? renderManualEntry()
+            : renderScanner()}
       </View>
     </Modal>
   );
@@ -366,5 +508,60 @@ const styles = StyleSheet.create({
   instructionText: {
     color: '#FFFFFF',
     fontSize: 16,
+  },
+  scannerControls: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 24,
+    gap: 32,
+  },
+  controlButton: {
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    minWidth: 80,
+  },
+  controlButtonActive: {
+    backgroundColor: 'rgba(255, 193, 7, 0.4)',
+  },
+  controlButtonText: {
+    color: '#FFFFFF',
+    marginTop: 4,
+  },
+  manualEntryContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  manualEntryContent: {
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 320,
+  },
+  manualInput: {
+    width: '100%',
+    height: 56,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    fontSize: 24,
+    fontWeight: '600',
+    textAlign: 'center',
+    letterSpacing: 4,
+    marginTop: 24,
+  },
+  manualEntryButtons: {
+    flexDirection: 'row',
+    marginTop: 24,
+    gap: 12,
+  },
+  manualEntryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
   },
 });

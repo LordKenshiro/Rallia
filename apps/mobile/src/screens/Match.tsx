@@ -1,10 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AppHeader } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation } from '../hooks';
 import { spacingPixels, fontSizePixels } from '@rallia/design-system';
-import RalliaLogo from '../../assets/images/logo-dark.svg';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 

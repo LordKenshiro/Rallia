@@ -33,4 +33,4 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Build preview
-        run: eas build --cwd apps/mobile --platform android --profile preview --non-interactive
+        run: eas build --cwd apps/mobile --platform all --profile preview --non-interactive

@@ -169,7 +169,6 @@ export function useSocialAuth(): UseSocialAuthReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingProvider, setLoadingProvider] = useState<SocialProvider | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
-  const [modulesReady, setModulesReady] = useState(false);
   const initAttempted = useRef(false);
 
   // Check if we're in a native build (not Expo Go)
@@ -183,7 +182,7 @@ export function useSocialAuth(): UseSocialAuthReturn {
   useEffect(() => {
     if (!initAttempted.current && isNativeBuild) {
       initAttempted.current = true;
-      initializeNativeModules().then(setModulesReady);
+      initializeNativeModules();
     }
   }, [isNativeBuild]);
 

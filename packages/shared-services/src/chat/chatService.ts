@@ -1,9 +1,9 @@
 /**
  * Chat Service - Main Barrel File
- * 
+ *
  * Re-exports all chat-related functions and types from modular service files.
  * This maintains backward compatibility with existing imports.
- * 
+ *
  * Module Structure:
  * - chatTypes.ts          - Type definitions
  * - conversationService.ts - Conversation CRUD operations
@@ -87,10 +87,12 @@ export {
 export {
   subscribeToMessages,
   subscribeToConversations,
+  subscribeToReactions,
   unsubscribeFromChannel,
   subscribeToTypingIndicators,
   sendTypingIndicator,
   unsubscribeFromTypingIndicators,
+  type MessageEventCallback,
 } from './realtimeService';
 
 // ============================================================================

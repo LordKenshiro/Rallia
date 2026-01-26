@@ -21,7 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import { uploadImage } from '../../../services/imageUpload';
 import { primary } from '@rallia/design-system';
 
@@ -39,6 +39,7 @@ export function CreateGroupModal({
   isLoading = false,
 }: CreateGroupModalProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -59,10 +60,7 @@ export function CreateGroupModal({
       // Request permission
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(
-          'Permission Required',
-          'Please allow access to your photos to add a group image.'
-        );
+        Alert.alert(t('groups.permissionRequired'), t('groups.photoAccessRequired'));
         return;
       }
 
@@ -79,9 +77,9 @@ export function CreateGroupModal({
       }
     } catch (err) {
       console.error('Error picking image:', err);
-      Alert.alert('Error', 'Failed to pick image');
+      Alert.alert(t('common.error'), t('groups.failedToPickImage'));
     }
-  }, []);
+  }, [t]);
 
   const handleRemoveImage = useCallback(() => {
     setCoverImage(null);
@@ -89,17 +87,17 @@ export function CreateGroupModal({
 
   const handleSubmit = useCallback(async () => {
     if (!name.trim()) {
-      setError('Group name is required');
+      setError(t('groups.nameRequired'));
       return;
     }
 
     if (name.trim().length < 2) {
-      setError('Group name must be at least 2 characters');
+      setError(t('groups.nameTooShort'));
       return;
     }
 
     if (name.trim().length > 50) {
-      setError('Group name must be less than 50 characters');
+      setError(t('groups.nameTooLong'));
       return;
     }
 
@@ -114,10 +112,7 @@ export function CreateGroupModal({
         const { url, error: uploadError } = await uploadImage(coverImage, 'group-images');
         if (uploadError) {
           console.error('Error uploading image:', uploadError);
-          Alert.alert(
-            'Warning',
-            'Failed to upload group image. Group will be created without image.'
-          );
+          Alert.alert(t('common.warning'), t('groups.failedToUploadImage'));
         } else if (url) {
           coverImageUrl = url;
         }
@@ -132,7 +127,7 @@ export function CreateGroupModal({
     setName('');
     setDescription('');
     setCoverImage(null);
-  }, [name, description, coverImage, onSubmit]);
+  }, [name, description, coverImage, onSubmit, t]);
 
   const isSubmitting = isLoading || isUploadingImage;
 
@@ -148,7 +143,7 @@ export function CreateGroupModal({
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
             <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-              Create New Group
+              {t('groups.createNewGroup')}
             </Text>
             <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={colors.text} />
@@ -160,7 +155,7 @@ export function CreateGroupModal({
             {/* Cover Image Picker */}
             <View style={styles.inputGroup}>
               <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
-                Group Image (optional)
+                {t('groups.groupImageOptional')}
               </Text>
               {coverImage ? (
                 <View style={styles.imagePreviewContainer}>
@@ -177,7 +172,7 @@ export function CreateGroupModal({
                   >
                     <Ionicons name="camera" size={16} color="#FFFFFF" />
                     <Text size="xs" weight="semibold" style={{ color: '#FFFFFF', marginLeft: 4 }}>
-                      Change
+                      {t('common.change')}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -198,16 +193,21 @@ export function CreateGroupModal({
                     <Ionicons name="camera" size={24} color={colors.primary} />
                   </View>
                   <Text size="sm" style={{ color: colors.textSecondary, marginTop: 8 }}>
-                    Add a cover image
+                    {t('groups.addCoverImage')}
                   </Text>
                 </TouchableOpacity>
               )}
             </View>
 
             <View style={styles.inputGroup}>
-              <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
-                Group Name *
-              </Text>
+              <View style={styles.labelRow}>
+                <Text weight="medium" size="sm" style={{ color: colors.text }}>
+                  {t('groups.groupName')} *
+                </Text>
+                <Text size="xs" style={{ color: colors.textMuted }}>
+                  {name.length}/50
+                </Text>
+              </View>
               <TextInput
                 style={[
                   styles.input,
@@ -217,7 +217,7 @@ export function CreateGroupModal({
                     borderColor: error ? '#FF3B30' : colors.border,
                   },
                 ]}
-                placeholder="Enter group name..."
+                placeholder={t('groups.enterGroupName')}
                 placeholderTextColor={colors.textMuted}
                 value={name}
                 onChangeText={setName}
@@ -231,9 +231,14 @@ export function CreateGroupModal({
             </View>
 
             <View style={styles.inputGroup}>
-              <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
-                Description (optional)
-              </Text>
+              <View style={styles.labelRow}>
+                <Text weight="medium" size="sm" style={{ color: colors.text }}>
+                  {t('groups.descriptionOptional')}
+                </Text>
+                <Text size="xs" style={{ color: colors.textMuted }}>
+                  {description.length}/200
+                </Text>
+              </View>
               <TextInput
                 style={[
                   styles.input,
@@ -244,7 +249,7 @@ export function CreateGroupModal({
                     borderColor: colors.border,
                   },
                 ]}
-                placeholder="What's this group about?"
+                placeholder={t('groups.descriptionPlaceholder')}
                 placeholderTextColor={colors.textMuted}
                 value={description}
                 onChangeText={setDescription}
@@ -253,16 +258,12 @@ export function CreateGroupModal({
                 numberOfLines={3}
                 textAlignVertical="top"
               />
-              <Text size="xs" style={{ color: colors.textMuted, marginTop: 4, textAlign: 'right' }}>
-                {description.length}/200
-              </Text>
             </View>
 
             <View style={[styles.infoBox, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
               <Ionicons name="information-circle" size={20} color={colors.primary} />
               <Text size="sm" style={{ color: colors.textSecondary, flex: 1, marginLeft: 8 }}>
-                Groups can have up to 10 members. As the creator, you'll be a moderator with the
-                ability to add and remove members.
+                {t('groups.createGroupHint')}
               </Text>
             </View>
           </ScrollView>
@@ -274,7 +275,7 @@ export function CreateGroupModal({
               onPress={handleClose}
               disabled={isSubmitting}
             >
-              <Text style={{ color: colors.text }}>Cancel</Text>
+              <Text style={{ color: colors.text }}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -289,7 +290,7 @@ export function CreateGroupModal({
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <Text weight="semibold" style={{ color: '#FFFFFF' }}>
-                  Create Group
+                  {t('groups.createGroup')}
                 </Text>
               )}
             </TouchableOpacity>
@@ -333,6 +334,12 @@ const styles = StyleSheet.create({
   },
   inputGroup: {
     gap: 0,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
   },
   imagePicker: {
     height: 120,

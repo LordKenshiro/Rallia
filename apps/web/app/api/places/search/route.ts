@@ -38,11 +38,12 @@ export async function POST(request: NextRequest) {
     // Parse the first place result if available
     if (data.places && data.places.length > 0) {
       const place = data.places[0];
-      const addressComponents = place.addressComponents || [];
+      const addressComponents: Array<{ types?: string[]; longText?: string }> =
+        place.addressComponents || [];
 
       // Extract address parts from components
       const getComponent = (types: string[]) => {
-        const component = addressComponents.find((c: any) =>
+        const component = addressComponents.find(c =>
           types.some((type: string) => c.types?.includes(type))
         );
         return component?.longText || '';

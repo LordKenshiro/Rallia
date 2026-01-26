@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import {
   useGroupInviteCode,
   useResetGroupInviteCode,
@@ -32,6 +32,7 @@ interface InviteLinkModalProps {
   groupName: string;
   currentUserId: string;
   isModerator: boolean;
+  type?: 'group' | 'community';
 }
 
 export function InviteLinkModal({
@@ -41,105 +42,107 @@ export function InviteLinkModal({
   groupName,
   currentUserId,
   isModerator,
+  type = 'group',
 }: InviteLinkModalProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
+
+  // Use proper terminology based on type
+  const typeLabel = type === 'community' ? t('groups.community') : t('groups.group');
+  const typeLabelCapitalized =
+    type === 'community' ? t('groups.communityCapital') : t('groups.groupCapital');
 
   const { data: inviteCode, isLoading, refetch } = useGroupInviteCode(groupId);
   const resetInviteCodeMutation = useResetGroupInviteCode();
 
   const inviteLink = inviteCode ? getGroupInviteLink(inviteCode) : '';
-  
+
   // Generate QR code URL using a public API (Google Charts API for QR codes)
-  const qrCodeUrl = inviteLink 
+  const qrCodeUrl = inviteLink
     ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(inviteLink)}&bgcolor=${isDark ? '1C1C1E' : 'F2F2F7'}`
     : '';
 
   const handleCopyLink = useCallback(async () => {
     if (!inviteLink) return;
-    
+
     try {
       await Clipboard.setStringAsync(inviteLink);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      Alert.alert('Error', 'Failed to copy link');
+      Alert.alert(t('common.error'), t('groups.failedToCopyLink'));
     }
-  }, [inviteLink]);
+  }, [inviteLink, t]);
 
   const handleCopyCode = useCallback(async () => {
     if (!inviteCode) return;
-    
+
     try {
       await Clipboard.setStringAsync(inviteCode);
-      Alert.alert('Copied!', 'Invite code copied to clipboard');
+      Alert.alert(t('common.copied'), t('groups.inviteCodeCopied'));
     } catch (error) {
-      Alert.alert('Error', 'Failed to copy code');
+      Alert.alert(t('common.error'), t('groups.failedToCopyCode'));
     }
-  }, [inviteCode]);
+  }, [inviteCode, t]);
 
   const handleShare = useCallback(async () => {
     if (!inviteLink) return;
 
     try {
       await Share.share({
-        message: `Join my group "${groupName}" on Rallia!\n\nUse code: ${inviteCode}\n\nOr click this link: ${inviteLink}`,
-        title: `Join ${groupName} on Rallia`,
+        message: t('groups.shareInviteMessage', {
+          typeLabel,
+          groupName,
+          inviteCode: inviteCode || '',
+          inviteLink,
+        }),
+        title: t('groups.shareInviteTitle', { groupName }),
       });
     } catch (error) {
       // User cancelled or error
       if (error instanceof Error && error.message !== 'User did not share') {
-        Alert.alert('Error', 'Failed to share invite');
+        Alert.alert(t('common.error'), t('groups.failedToShare'));
       }
     }
-  }, [inviteLink, inviteCode, groupName]);
+  }, [inviteLink, inviteCode, groupName, typeLabel, t]);
 
   const handleResetCode = useCallback(() => {
-    Alert.alert(
-      'Reset Invite Code',
-      'This will invalidate the current invite link. Anyone with the old link won\'t be able to join. Continue?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reset',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await resetInviteCodeMutation.mutateAsync({
-                groupId,
-                moderatorId: currentUserId,
-              });
-              refetch();
-              Alert.alert('Success', 'Invite code has been reset');
-            } catch (error) {
-              Alert.alert('Error', error instanceof Error ? error.message : 'Failed to reset code');
-            }
-          },
+    Alert.alert(t('groups.resetInviteCode'), t('groups.resetInviteCodeWarning'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.reset'),
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await resetInviteCodeMutation.mutateAsync({
+              groupId,
+              moderatorId: currentUserId,
+            });
+            refetch();
+            Alert.alert(t('common.success'), t('groups.inviteCodeReset'));
+          } catch (error) {
+            Alert.alert(
+              t('common.error'),
+              error instanceof Error ? error.message : t('groups.failedToResetCode')
+            );
+          }
         },
-      ]
-    );
-  }, [groupId, currentUserId, resetInviteCodeMutation, refetch]);
+      },
+    ]);
+  }, [groupId, currentUserId, resetInviteCodeMutation, refetch, t]);
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <TouchableOpacity
-          style={styles.backdrop}
-          activeOpacity={1}
-          onPress={onClose}
-        />
-        
+        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
+
         <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
             <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-              Invite to Group
+              {t('groups.inviteTo', { type: typeLabelCapitalized })}
             </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={colors.text} />
@@ -151,14 +154,16 @@ export function InviteLinkModal({
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={colors.primary} />
                 <Text style={{ color: colors.textSecondary, marginTop: 12 }}>
-                  Generating invite link...
+                  {t('groups.generatingInviteLink')}
                 </Text>
               </View>
             ) : (
               <>
                 {/* Description */}
-                <Text style={{ color: colors.textSecondary, textAlign: 'center', marginBottom: 24 }}>
-                  Share this link or code with anyone you want to invite to the group.
+                <Text
+                  style={{ color: colors.textSecondary, textAlign: 'center', marginBottom: 24 }}
+                >
+                  {t('groups.shareInviteDescription', { typeLabel })}
                 </Text>
 
                 {/* Toggle between Code and QR */}
@@ -167,56 +172,70 @@ export function InviteLinkModal({
                     style={[
                       styles.toggleButton,
                       !showQRCode && { backgroundColor: colors.primary },
-                      { borderTopLeftRadius: 8, borderBottomLeftRadius: 8 }
+                      { borderTopLeftRadius: 8, borderBottomLeftRadius: 8 },
                     ]}
                     onPress={() => setShowQRCode(false)}
                   >
-                    <Text 
-                      size="sm" 
-                      weight="medium" 
+                    <Text
+                      size="sm"
+                      weight="medium"
                       style={{ color: !showQRCode ? '#FFFFFF' : colors.textSecondary }}
                     >
-                      Code
+                      {t('groups.code')}
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[
                       styles.toggleButton,
                       showQRCode && { backgroundColor: colors.primary },
-                      { borderTopRightRadius: 8, borderBottomRightRadius: 8 }
+                      { borderTopRightRadius: 8, borderBottomRightRadius: 8 },
                     ]}
                     onPress={() => setShowQRCode(true)}
                   >
-                    <Text 
-                      size="sm" 
-                      weight="medium" 
+                    <Text
+                      size="sm"
+                      weight="medium"
                       style={{ color: showQRCode ? '#FFFFFF' : colors.textSecondary }}
                     >
-                      QR Code
+                      {t('groups.qrCode')}
                     </Text>
                   </TouchableOpacity>
                 </View>
 
                 {showQRCode ? (
                   /* QR Code Display */
-                  <View style={[styles.qrContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
+                  <View
+                    style={[
+                      styles.qrContainer,
+                      { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' },
+                    ]}
+                  >
                     <Image
                       source={{ uri: qrCodeUrl }}
                       style={styles.qrImage}
                       resizeMode="contain"
                     />
                     <Text size="xs" style={{ color: colors.textMuted, marginTop: 8 }}>
-                      Scan to join the group
+                      {t('groups.scanToJoin', { typeLabel })}
                     </Text>
                   </View>
                 ) : (
                   /* Invite Code Display */
-                  <View style={[styles.codeContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
+                  <View
+                    style={[
+                      styles.codeContainer,
+                      { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' },
+                    ]}
+                  >
                     <Text size="xs" style={{ color: colors.textMuted, marginBottom: 4 }}>
-                      INVITE CODE
+                      {t('groups.inviteCode')}
                     </Text>
                     <TouchableOpacity onPress={handleCopyCode} activeOpacity={0.7}>
-                      <Text weight="bold" size="xl" style={{ color: colors.primary, letterSpacing: 4 }}>
+                      <Text
+                        weight="bold"
+                        size="xl"
+                        style={{ color: colors.primary, letterSpacing: 4 }}
+                      >
                         {inviteCode}
                       </Text>
                     </TouchableOpacity>
@@ -224,18 +243,26 @@ export function InviteLinkModal({
                 )}
 
                 {/* Link Display */}
-                <View style={[styles.linkContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', borderColor: colors.border }]}>
+                <View
+                  style={[
+                    styles.linkContainer,
+                    { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', borderColor: colors.border },
+                  ]}
+                >
                   <Text numberOfLines={1} style={{ color: colors.text, flex: 1 }}>
                     {inviteLink}
                   </Text>
-                  <TouchableOpacity 
-                    onPress={handleCopyLink} 
-                    style={[styles.copyButton, { backgroundColor: copied ? colors.primary : (isDark ? '#3A3A3C' : '#E5E5EA') }]}
+                  <TouchableOpacity
+                    onPress={handleCopyLink}
+                    style={[
+                      styles.copyButton,
+                      { backgroundColor: copied ? colors.primary : isDark ? '#3A3A3C' : '#E5E5EA' },
+                    ]}
                   >
-                    <Ionicons 
-                      name={copied ? 'checkmark' : 'copy-outline'} 
-                      size={18} 
-                      color={copied ? '#FFFFFF' : colors.text} 
+                    <Ionicons
+                      name={copied ? 'checkmark' : 'copy-outline'}
+                      size={18}
+                      color={copied ? '#FFFFFF' : colors.text}
                     />
                   </TouchableOpacity>
                 </View>
@@ -248,7 +275,7 @@ export function InviteLinkModal({
                   >
                     <Ionicons name="share-outline" size={20} color="#FFFFFF" />
                     <Text weight="semibold" style={{ color: '#FFFFFF', marginLeft: 8 }}>
-                      Share Invite
+                      {t('groups.shareInvite')}
                     </Text>
                   </TouchableOpacity>
 
@@ -260,7 +287,7 @@ export function InviteLinkModal({
                     >
                       <Ionicons name="refresh-outline" size={18} color={colors.textSecondary} />
                       <Text size="sm" style={{ color: colors.textSecondary, marginLeft: 6 }}>
-                        Reset Code
+                        {t('groups.resetCode')}
                       </Text>
                     </TouchableOpacity>
                   )}
@@ -270,7 +297,7 @@ export function InviteLinkModal({
                 <View style={styles.infoSection}>
                   <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />
                   <Text size="xs" style={{ color: colors.textMuted, marginLeft: 6, flex: 1 }}>
-                    Anyone with this code or link can join the group directly.
+                    {t('groups.inviteLinkInfo')}
                   </Text>
                 </View>
               </>

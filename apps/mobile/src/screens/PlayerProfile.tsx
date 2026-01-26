@@ -21,13 +21,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import * as Haptics from 'expo-haptics';
 import { Text, Skeleton, SkeletonAvatar } from '@rallia/shared-components';
-import { supabase, Logger } from '@rallia/shared-services';
+import { supabase, Logger, isPlayerOnline } from '@rallia/shared-services';
 import { useGetOrCreateDirectConversation } from '@rallia/shared-hooks';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
-import { getProfilePictureUrl } from '@rallia/shared-utils';
+import { getProfilePictureUrl, lightHaptic, mediumHaptic } from '@rallia/shared-utils';
 import { formatDateMonthYear } from '../utils/dateFormatting';
 import type { RootStackParamList } from '../navigation/types';
 import type { Profile, Player } from '@rallia/shared-types';
@@ -37,7 +36,6 @@ import {
   radiusPixels,
   fontSizePixels,
   fontWeightNumeric,
-  primary,
   neutral,
   status,
 } from '@rallia/design-system';
@@ -87,7 +85,7 @@ const PlayerProfile = () => {
   const route = useRoute<PlayerProfileRouteProp>();
   const navigation = useNavigation<NavigationProp>();
   const { playerId, sportId } = route.params;
-  const { colors, isDark } = useThemeStyles();
+  const { colors } = useThemeStyles();
   const { t, locale } = useTranslation();
   const getOrCreateDirectConversation = useGetOrCreateDirectConversation();
 
@@ -108,10 +106,13 @@ const PlayerProfile = () => {
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockLoading, setBlockLoading] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
+  const [isOnline, setIsOnline] = useState(false);
 
   // Fetch player data on mount
   useEffect(() => {
     fetchPlayerProfileData();
+    // Fetch online status
+    isPlayerOnline(playerId).then(setIsOnline);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playerId]);
 
@@ -528,20 +529,21 @@ const PlayerProfile = () => {
 
   const handleStartChat = useCallback(async () => {
     if (!currentUserId || chatLoading) return;
-    
+
     setChatLoading(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
+    lightHaptic();
+
     try {
       const conversation = await getOrCreateDirectConversation.mutateAsync({
         playerId1: currentUserId,
         playerId2: playerId,
       });
-      
+
       // Navigate to the chat conversation
       // Use the other player's name as the title
-      const playerName = profile 
-        ? `${(profile as unknown as { first_name?: string }).first_name || ''} ${(profile as unknown as { last_name?: string }).last_name || ''}`.trim() || 'Player'
+      const playerName = profile
+        ? `${(profile as unknown as { first_name?: string }).first_name || ''} ${(profile as unknown as { last_name?: string }).last_name || ''}`.trim() ||
+          'Player'
         : 'Chat';
       navigation.navigate('Chat', {
         conversationId: conversation.id,
@@ -559,7 +561,7 @@ const PlayerProfile = () => {
     if (!currentUserId || favoriteLoading) return;
 
     setFavoriteLoading(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    lightHaptic();
 
     try {
       if (isFavorite) {
@@ -599,7 +601,7 @@ const PlayerProfile = () => {
     if (!currentUserId || blockLoading) return;
 
     setBlockLoading(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    mediumHaptic();
 
     try {
       if (isBlocked) {
@@ -658,29 +660,76 @@ const PlayerProfile = () => {
         <View style={styles.loadingContainer}>
           {/* Player Profile Skeleton */}
           <View style={[styles.profileHeader, { backgroundColor: colors.card }]}>
-            <SkeletonAvatar size={120} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            <SkeletonAvatar
+              size={120}
+              backgroundColor={colors.cardBackground}
+              highlightColor={colors.border}
+            />
             <View style={{ marginTop: 16, alignItems: 'center' }}>
-              <Skeleton width={150} height={18} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
-              <Skeleton width={80} height={14} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} style={{ marginTop: 8 }} />
+              <Skeleton
+                width={150}
+                height={18}
+                borderRadius={4}
+                backgroundColor={colors.cardBackground}
+                highlightColor={colors.border}
+              />
+              <Skeleton
+                width={80}
+                height={14}
+                borderRadius={4}
+                backgroundColor={colors.cardBackground}
+                highlightColor={colors.border}
+                style={{ marginTop: 8 }}
+              />
             </View>
             {/* Action buttons skeleton */}
             <View style={{ flexDirection: 'row', marginTop: 16, gap: 12 }}>
-              <Skeleton width={140} height={44} borderRadius={22} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
-              <Skeleton width={140} height={44} borderRadius={22} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+              <Skeleton
+                width={140}
+                height={44}
+                borderRadius={22}
+                backgroundColor={colors.cardBackground}
+                highlightColor={colors.border}
+              />
+              <Skeleton
+                width={140}
+                height={44}
+                borderRadius={22}
+                backgroundColor={colors.cardBackground}
+                highlightColor={colors.border}
+              />
             </View>
           </View>
           {/* Stats cards skeleton */}
           <View style={{ flexDirection: 'row', paddingHorizontal: 16, marginTop: 16, gap: 12 }}>
             <View style={{ flex: 1 }}>
-              <Skeleton width="100%" height={80} borderRadius={12} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+              <Skeleton
+                width="100%"
+                height={80}
+                borderRadius={12}
+                backgroundColor={colors.cardBackground}
+                highlightColor={colors.border}
+              />
             </View>
             <View style={{ flex: 1 }}>
-              <Skeleton width="100%" height={80} borderRadius={12} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+              <Skeleton
+                width="100%"
+                height={80}
+                borderRadius={12}
+                backgroundColor={colors.cardBackground}
+                highlightColor={colors.border}
+              />
             </View>
           </View>
           {/* Info section skeleton */}
           <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
-            <Skeleton width="100%" height={120} borderRadius={12} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            <Skeleton
+              width="100%"
+              height={120}
+              borderRadius={12}
+              backgroundColor={colors.cardBackground}
+              highlightColor={colors.border}
+            />
           </View>
         </View>
       </SafeAreaView>
@@ -737,15 +786,27 @@ const PlayerProfile = () => {
             )}
           </TouchableOpacity>
 
-          <View style={[styles.profilePicContainer, { borderColor: colors.primary }]}>
-            {profile?.profile_picture_url ? (
-              <Image
-                source={{ uri: getProfilePictureUrl(profile.profile_picture_url) || '' }}
-                style={styles.profileImage}
-              />
-            ) : (
-              <Ionicons name="person" size={40} color={colors.primary} />
-            )}
+          <View style={styles.avatarWrapper}>
+            <View style={[styles.profilePicContainer, { borderColor: colors.primary }]}>
+              {profile?.profile_picture_url ? (
+                <Image
+                  source={{ uri: getProfilePictureUrl(profile.profile_picture_url) || '' }}
+                  style={styles.profileImage}
+                />
+              ) : (
+                <Ionicons name="person" size={40} color={colors.primary} />
+              )}
+            </View>
+            {/* Online Status Indicator */}
+            <View
+              style={[
+                styles.onlineIndicator,
+                {
+                  backgroundColor: isOnline ? '#22C55E' : neutral[400],
+                  borderColor: colors.card,
+                },
+              ]}
+            />
           </View>
 
           <Text style={[styles.profileName, { color: colors.text }]}>{displayName}</Text>
@@ -791,7 +852,10 @@ const PlayerProfile = () => {
           {/* Secondary Action */}
           <View style={styles.secondaryAction}>
             <TouchableOpacity
-              style={[styles.actionButtonSecondary, { borderColor: colors.border, flex: 0, paddingHorizontal: spacingPixels[4] }]}
+              style={[
+                styles.actionButtonSecondary,
+                { borderColor: colors.border, flex: 0, paddingHorizontal: spacingPixels[4] },
+              ]}
               onPress={handleRequestReference}
             >
               <Ionicons name="document-text-outline" size={18} color={colors.textSecondary} />
@@ -1124,6 +1188,10 @@ const styles = StyleSheet.create({
     padding: spacingPixels[2],
     zIndex: 1,
   },
+  avatarWrapper: {
+    position: 'relative',
+    marginBottom: spacingPixels[3],
+  },
   profilePicContainer: {
     width: 100,
     height: 100,
@@ -1132,7 +1200,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-    marginBottom: spacingPixels[3],
+  },
+  onlineIndicator: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 3,
   },
   profileImage: {
     width: '100%',

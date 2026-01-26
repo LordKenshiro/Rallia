@@ -52,7 +52,6 @@ export const BookingConfirmationSheet: React.FC<BookingConfirmationSheetProps> =
   onCancel,
   colors,
   t,
-  isDark,
 }) => {
   const handleConfirm = () => {
     successHaptic();

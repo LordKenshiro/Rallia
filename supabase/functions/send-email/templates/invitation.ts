@@ -2,7 +2,25 @@ import type { EmailContent, InvitationEmailPayload } from '../types.ts';
 
 export function renderInvitationEmail(payload: InvitationEmailPayload): EmailContent {
   const currentYear = new Date().getFullYear();
-  const roleDisplay = payload.adminRole ? `${payload.role} (${payload.adminRole})` : payload.role;
+
+  // Build role display text
+  let roleDisplay: string;
+  if (payload.organizationName && payload.orgRole) {
+    // For organization invitations, show the org role (admin, manager, staff, member)
+    roleDisplay = payload.orgRole;
+  } else if (payload.adminRole) {
+    roleDisplay = `${payload.role} (${payload.adminRole})`;
+  } else {
+    roleDisplay = payload.role;
+  }
+
+  // Build invitation message
+  let invitationMessage: string;
+  if (payload.organizationName) {
+    invitationMessage = `<strong style="color: #006d77;">${payload.inviterName}</strong> has invited you to join <strong style="color: #006d77;">${payload.organizationName}</strong> on Rallia as a <strong style="color: #006d77;">${roleDisplay}</strong>.`;
+  } else {
+    invitationMessage = `<strong style="color: #006d77;">${payload.inviterName}</strong> has invited you to join Rallia as a <strong style="color: #006d77;">${roleDisplay}</strong>.`;
+  }
 
   const html = `
 <!DOCTYPE html>
@@ -107,7 +125,7 @@ export function renderInvitationEmail(payload: InvitationEmailPayload): EmailCon
                     color: #374151;
                   "
                 >
-                  <strong style="color: #006d77;">${payload.inviterName}</strong> has invited you to join Rallia as a <strong style="color: #006d77;">${roleDisplay}</strong>.
+                  ${invitationMessage}
                 </p>
 
                 <p

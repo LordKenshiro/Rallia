@@ -40,12 +40,43 @@ export class InvitationHandler {
         : inviterProfile?.first_name) ||
       'a team member';
 
+    // Fetch organization info if this is an organization invitation
+    let organizationName: string | undefined;
+    let orgRole: string | undefined;
+    if (record.organization_id) {
+      const { data: organization, error: orgError } = await supabase
+        .from('organization')
+        .select('name')
+        .eq('id', record.organization_id)
+        .single();
+
+      if (orgError) {
+        console.error('Error fetching organization:', orgError);
+        // Continue without organization name - not critical
+      } else {
+        organizationName = organization?.name;
+      }
+
+      // Extract org_role from metadata if present
+      if (record.metadata && typeof record.metadata === 'object' && 'org_role' in record.metadata) {
+        orgRole = String(record.metadata.org_role);
+      }
+    }
+
     // Construct sign-up URL
     const baseUrl =
       Deno.env.get('NEXT_PUBLIC_BASE_URL') ||
       Deno.env.get('NEXT_PUBLIC_SITE_URL') ||
       'https://www.rallia.ca';
-    const rolePath = record.role === 'admin' ? 'admin/sign-in' : 'sign-in';
+
+    // For organization invitations, use organization sign-in path
+    let rolePath = 'sign-in';
+    if (record.role === 'admin') {
+      rolePath = 'admin/sign-in';
+    } else if (record.role === 'organization_member' && record.organization_id) {
+      rolePath = 'sign-in'; // Organization members sign in through regular sign-in
+    }
+
     const signUpUrl = `${baseUrl}/${rolePath}?token=${record.token}`;
 
     // Format expiration date
@@ -66,6 +97,8 @@ export class InvitationHandler {
       signUpUrl,
       inviterName,
       expiresAt,
+      organizationName,
+      orgRole,
     };
 
     return renderInvitationEmail(payload);

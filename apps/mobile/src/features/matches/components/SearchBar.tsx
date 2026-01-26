@@ -6,15 +6,12 @@
 import React, { useRef } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '@rallia/shared-hooks';
 import { useThemeStyles } from '../../../hooks';
 import {
   spacingPixels,
   radiusPixels,
   fontSizePixels,
   fontFamilyNative,
-  lightTheme,
-  darkTheme,
   neutral,
 } from '@rallia/design-system';
 
@@ -41,11 +38,8 @@ export function SearchBar({
   onClear,
   autoFocus = false,
 }: SearchBarProps) {
-  const { theme } = useTheme();
-  const { colors } = useThemeStyles();
+  const { colors, isDark } = useThemeStyles();
   const inputRef = useRef<TextInput>(null);
-  const isDark = theme === 'dark';
-  const themeColors = isDark ? darkTheme : lightTheme;
 
   const handleClear = () => {
     onChangeText('');

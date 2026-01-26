@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -30,7 +30,6 @@ import {
   fontSizePixels,
   fontWeightNumeric,
   primary,
-  neutral,
   shadowsNative,
 } from '@rallia/design-system';
 
@@ -66,7 +65,7 @@ type WeeklyAvailability = Record<DayOfWeek, DayAvailability>;
 
 const UserProfile = () => {
   const navigation = useAppNavigation();
-  const { colors, shadows, isDark } = useThemeStyles();
+  const { colors, isDark } = useThemeStyles();
   const { t, locale } = useTranslation();
   const toast = useToast();
   const [loading, setLoading] = useState(true);
@@ -108,12 +107,13 @@ const UserProfile = () => {
   // Re-fetch data when screen comes into focus (e.g., when navigating back from SportProfile)
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const unsubscribe = (navigation as any).addListener('focus', () => {
+    const unsubscribe = navigation.addListener('focus', () => {
       Logger.debug('user_profile_screen_focused');
       fetchUserProfileData();
     });
 
     return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigation]);
 
   // Upload profile picture when a new image is selected
@@ -540,20 +540,61 @@ const UserProfile = () => {
         <View style={styles.loadingContainer}>
           {/* Profile Header Skeleton */}
           <View style={[styles.profileHeader, { backgroundColor: colors.card }]}>
-            <SkeletonAvatar size={120} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            <SkeletonAvatar
+              size={120}
+              backgroundColor={colors.cardBackground}
+              highlightColor={colors.border}
+            />
             <View style={{ marginTop: 16, alignItems: 'center' }}>
-              <Skeleton width={150} height={18} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
-              <Skeleton width={100} height={14} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} style={{ marginTop: 8 }} />
+              <Skeleton
+                width={150}
+                height={18}
+                borderRadius={4}
+                backgroundColor={colors.cardBackground}
+                highlightColor={colors.border}
+              />
+              <Skeleton
+                width={100}
+                height={14}
+                borderRadius={4}
+                backgroundColor={colors.cardBackground}
+                highlightColor={colors.border}
+                style={{ marginTop: 8 }}
+              />
             </View>
           </View>
           {/* Profile Details Skeleton */}
           <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
             <View style={[styles.card, { backgroundColor: colors.card }]}>
-              <Skeleton width={120} height={18} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+              <Skeleton
+                width={120}
+                height={18}
+                borderRadius={4}
+                backgroundColor={colors.cardBackground}
+                highlightColor={colors.border}
+              />
               <View style={{ marginTop: 12, gap: 12 }}>
-                <Skeleton width="100%" height={44} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
-                <Skeleton width="100%" height={44} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
-                <Skeleton width="100%" height={44} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+                <Skeleton
+                  width="100%"
+                  height={44}
+                  borderRadius={8}
+                  backgroundColor={colors.cardBackground}
+                  highlightColor={colors.border}
+                />
+                <Skeleton
+                  width="100%"
+                  height={44}
+                  borderRadius={8}
+                  backgroundColor={colors.cardBackground}
+                  highlightColor={colors.border}
+                />
+                <Skeleton
+                  width="100%"
+                  height={44}
+                  borderRadius={8}
+                  backgroundColor={colors.cardBackground}
+                  highlightColor={colors.border}
+                />
               </View>
             </View>
           </View>

@@ -90,10 +90,12 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
   const [editMatchData, setEditMatchData] = useState<MatchDetailData | null>(null);
 
   // Refetch profile when auth state changes
+  // Refetch profile when auth state changes
   useEffect(() => {
     if (session?.user) {
       refetch();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id, refetch]);
 
   /**

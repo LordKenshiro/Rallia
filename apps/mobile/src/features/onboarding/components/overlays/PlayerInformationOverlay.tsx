@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -7,13 +7,16 @@ import {
   Animated,
   TextInput,
   ActivityIndicator,
+  Alert,
+  ToastAndroid,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
-import { Overlay, Button, Heading, Text, useToast } from '@rallia/shared-components';
+import { Overlay, Button, Heading, Text } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
 import { supabase, Logger } from '@rallia/shared-services';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, usePlayer, useProfile } from '../../../../hooks';
+import { useThemeStyles, usePlayer, useProfile, useTranslation } from '../../../../hooks';
+import type { TranslationKey } from '@rallia/shared-translations';
 
 interface PlayerInformationOverlayProps {
   visible: boolean;
@@ -32,9 +35,9 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
   initialData,
 }) => {
   const { colors } = useThemeStyles();
+  const { t } = useTranslation();
   const { refetch: refetchPlayer } = usePlayer();
   const { refetch: refetchProfile } = useProfile();
-  const toast = useToast();
   const [username, setUsername] = useState(initialData?.username || '');
   const [bio, setBio] = useState(initialData?.bio || '');
   const [preferredPlayingHand, setPreferredPlayingHand] = useState<string>(
@@ -45,13 +48,15 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
   );
   const [isSaving, setIsSaving] = useState(false);
 
-  // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
+  // Animation values - using useMemo to create stable Animated.Value instances
+  const fadeAnim = useMemo(() => new Animated.Value(0), []);
+  const slideAnim = useMemo(() => new Animated.Value(50), []);
 
   // Update local state when initialData changes
+  // This pattern syncs controlled props to local state - React 18+ batches these updates automatically
   useEffect(() => {
     if (initialData) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional sync of controlled props to local state
       setUsername(initialData.username || '');
       setBio(initialData.bio || '');
       setPreferredPlayingHand(initialData.preferredPlayingHand || '');
@@ -93,7 +98,10 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
 
       if (!user) {
         setIsSaving(false);
-        toast.error('User not found');
+        Alert.alert(
+          t('alerts.error' as TranslationKey),
+          t('onboarding.validation.playerNotFound' as TranslationKey)
+        );
         return;
       }
 
@@ -110,7 +118,10 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
       if (profileUpdateError) {
         Logger.error('Failed to update profile', profileUpdateError as Error, { userId: user.id });
         setIsSaving(false);
-        toast.error('Failed to update your information. Please try again.');
+        Alert.alert(
+          t('alerts.error' as TranslationKey),
+          t('onboarding.validation.failedToUpdateProfile' as TranslationKey)
+        );
         return;
       }
 
@@ -126,7 +137,10 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
       if (playerUpdateError) {
         Logger.error('Failed to update player', playerUpdateError as Error, { userId: user.id });
         setIsSaving(false);
-        toast.error('Failed to update your information. Please try again.');
+        Alert.alert(
+          t('alerts.error' as TranslationKey),
+          t('onboarding.validation.failedToUpdateProfile' as TranslationKey)
+        );
         return;
       }
 
@@ -148,7 +162,17 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
       await refetchProfile();
 
       // Show success toast
-      toast.success('Successfully updated Player Information');
+      if (Platform.OS === 'android') {
+        ToastAndroid.show(
+          t('onboarding.successMessages.playerInfoUpdated' as TranslationKey),
+          ToastAndroid.LONG
+        );
+      } else {
+        Alert.alert(
+          t('alerts.success' as TranslationKey),
+          t('onboarding.successMessages.playerInfoUpdated' as TranslationKey)
+        );
+      }
 
       // Close modal automatically after brief delay
       setTimeout(() => {
@@ -157,7 +181,10 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
     } catch (error) {
       Logger.error('Unexpected error updating player information', error as Error);
       setIsSaving(false);
-      toast.error('An unexpected error occurred. Please try again.');
+      Alert.alert(
+        t('alerts.error' as TranslationKey),
+        t('onboarding.validation.unexpectedError' as TranslationKey)
+      );
     }
   };
 

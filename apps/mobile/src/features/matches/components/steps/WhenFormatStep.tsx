@@ -157,7 +157,6 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
   isLocked = false,
 }) => {
   const {
-    control,
     watch,
     setValue,
     formState: { errors },
