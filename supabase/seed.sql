@@ -1,6 +1,61 @@
 -- Seed file for local development
 -- Creates a profile for existing auth users and seeds 30 notifications
 
+-- ============================================================================
+-- Setup Vault secrets for Edge Functions (required for triggers to work)
+-- ============================================================================
+-- These secrets are used by database triggers to call Edge Functions with
+-- standard Bearer authentication (Authorization: Bearer <token>).
+--
+-- For local development:
+--   - supabase_functions_url: Uses host.docker.internal so Postgres container can reach host
+--   - service_role_key: The JWT service role key (not the short-form sb_secret_... key)
+--
+-- The JWT token can be found by running:
+--   docker exec supabase_edge_runtime_<project> env | grep SUPABASE_SERVICE_ROLE_KEY
+-- ============================================================================
+DO $$
+DECLARE
+  local_service_role_key TEXT := 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU';
+  local_functions_url TEXT := 'http://host.docker.internal:54321';
+  existing_url_id UUID;
+  existing_key_id UUID;
+BEGIN
+  -- Check if secrets already exist
+  SELECT id INTO existing_url_id FROM vault.secrets WHERE name = 'supabase_functions_url';
+  SELECT id INTO existing_key_id FROM vault.secrets WHERE name = 'service_role_key';
+
+  -- Create or update supabase_functions_url
+  IF existing_url_id IS NULL THEN
+    PERFORM vault.create_secret(local_functions_url, 'supabase_functions_url');
+    RAISE NOTICE 'Created vault secret: supabase_functions_url';
+  ELSE
+    PERFORM vault.update_secret(existing_url_id, local_functions_url, 'supabase_functions_url');
+    RAISE NOTICE 'Updated vault secret: supabase_functions_url';
+  END IF;
+
+  -- Create or update service_role_key
+  IF existing_key_id IS NULL THEN
+    PERFORM vault.create_secret(local_service_role_key, 'service_role_key');
+    RAISE NOTICE 'Created vault secret: service_role_key';
+  ELSE
+    PERFORM vault.update_secret(existing_key_id, local_service_role_key, 'service_role_key');
+    RAISE NOTICE 'Updated vault secret: service_role_key';
+  END IF;
+END $$;
+
+-- Verify vault secrets are configured
+SELECT 
+  name,
+  CASE WHEN decrypted_secret IS NOT NULL THEN '✓ Configured' ELSE '✗ Missing' END as status
+FROM vault.decrypted_secrets 
+WHERE name IN ('supabase_functions_url', 'service_role_key')
+ORDER BY name;
+
+-- ============================================================================
+-- Profile and Notification Seeding
+-- ============================================================================
+
 -- First, create a profile for the auth user if it doesn't exist
 INSERT INTO profile (id, first_name, last_name, email, onboarding_completed)
 SELECT 

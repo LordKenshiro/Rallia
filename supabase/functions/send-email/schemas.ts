@@ -38,6 +38,7 @@ export const InvitationRecordSchema = z
     source: InviteSourceSchema.nullable().optional(),
     inviter_id: z.string().uuid(),
     invited_user_id: z.string().uuid().nullable().optional(),
+    organization_id: z.string().uuid().nullable().optional(),
     role: AppRoleSchema,
     admin_role: AdminRoleSchema.nullable().optional(),
     status: InviteStatusSchema.optional(),

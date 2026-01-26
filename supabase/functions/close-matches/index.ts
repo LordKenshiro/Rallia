@@ -525,23 +525,23 @@ Deno.serve(async req => {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, x-service-key',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       },
     });
   }
 
-  // Verify service role key authentication
-  // Note: Use x-service-key header because Kong strips Authorization header values
-  const serviceKey = req.headers.get('x-service-key');
+  // Verify service role key authentication via standard Bearer token
+  const authHeader = req.headers.get('Authorization');
+  const token = authHeader?.replace('Bearer ', '');
 
-  if (!serviceKey) {
-    return new Response(JSON.stringify({ error: 'Missing x-service-key header' }), {
+  if (!token) {
+    return new Response(JSON.stringify({ error: 'Missing Authorization header' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
     });
   }
 
-  if (serviceKey !== supabaseServiceKey) {
+  if (token !== supabaseServiceKey) {
     console.warn('Invalid service role key provided');
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
