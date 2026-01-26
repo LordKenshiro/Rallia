@@ -796,6 +796,16 @@
       "unarchive": "Unarchive",
       "leaveGroup": "Leave Group"
     },
+    "messages": {
+      "addReaction": "Add Reaction",
+      "reply": "Reply",
+      "copy": "Copy",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteConfirm": "Are you sure you want to delete this message?",
+      "edited": "edited",
+      "replyingTo": "Replying to {name}"
+    },
     "groupChat": {
       "groupMemberCount": "Group · {count} members",
       "groupMemberCount_one": "Group · {count} member",

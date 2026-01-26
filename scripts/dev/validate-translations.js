@@ -80,11 +80,40 @@ function flattenObject(obj, prefix = '') {
 /**
  * Extract interpolation variables from a string
  * e.g., "Hello {name}, you have {count} messages" -> ["name", "count"]
+ * Handles nested braces correctly for ICU MessageFormat pluralization
  */
 function extractVariables(str) {
   if (typeof str !== 'string') return [];
-  const matches = str.match(/\{([^}]+)\}/g) || [];
-  return matches.map(m => m.slice(1, -1)).sort();
+
+  const variables = [];
+  let depth = 0;
+  let start = -1;
+  let varName = '';
+
+  for (let i = 0; i < str.length; i++) {
+    if (str[i] === '{') {
+      if (depth === 0) {
+        start = i;
+        varName = '';
+      }
+      depth++;
+    } else if (str[i] === '}') {
+      depth--;
+      if (depth === 0 && start !== -1) {
+        // Extract variable name (everything before the first comma or space after opening brace)
+        const content = str.slice(start + 1, i);
+        // For plural format like "{count, plural, ...}", extract just "count"
+        // For simple format like "{name}", extract "name"
+        const match = content.match(/^([^,\s}]+)/);
+        if (match) {
+          variables.push(match[1]);
+        }
+        start = -1;
+      }
+    }
+  }
+
+  return variables.sort();
 }
 
 /**
