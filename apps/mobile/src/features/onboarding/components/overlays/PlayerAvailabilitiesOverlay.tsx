@@ -201,7 +201,6 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
       onBack={onBack}
       type="bottom"
       showBackButton={false}
-      showCloseButton={false}
       height={mode === 'edit' ? 0.80 : 0.67}
     >
       <Animated.View
@@ -229,11 +228,6 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
             <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
           </TouchableOpacity>
         )}
-
-        {/* Close Button */}
-        <TouchableOpacity style={styles.closeButton} onPress={onClose} activeOpacity={0.7}>
-          <Text style={[styles.closeButtonText, { color: colors.text }]}>✕</Text>
-        </TouchableOpacity>
 
         {/* Title */}
         <Text style={[styles.title, { color: colors.text }]}>{t('onboarding.availabilityStep.title' as TranslationKey)}</Text>
@@ -335,17 +329,6 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 24,
   },
-  closeButton: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
-    padding: 10,
-    zIndex: 10,
-  },
-  closeButtonText: {
-    fontSize: 20,
-    fontWeight: '300',
-  },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
@@ -378,7 +361,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 4,
   },
   headerText: {
     fontSize: 12,
@@ -393,8 +375,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'transparent',
-    minWidth: 60,
-    maxWidth: 90,
   },
   timeSlotCellSelected: {
     // backgroundColor and borderColor applied inline

@@ -115,7 +115,7 @@ const Overlay: React.FC<OverlayProps> = ({
                   type === 'center' && styles.containerCenter,
                   type === 'bottom' && {
                     height: overlayHeight,
-                    paddingBottom: insets.bottom + 20, // Safe area + padding
+                    paddingBottom: insets.bottom + 8, // Safe area + minimal padding
                   },
                 ]}
               >

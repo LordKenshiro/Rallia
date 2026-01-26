@@ -332,6 +332,7 @@
       "matchDuration": "Durée de la partie",
       "matchType": "Type de partie",
       "facility": "Site de jeu",
+      "favoriteFacilities": "Sites favoris",
       "playingStyle": "Style de jeu",
       "playAttributes": "Attributs de jeu"
     },
@@ -410,7 +411,16 @@
         "forehand_power": "Puissance du coup droit",
         "shot_selection": "Sélection des coups",
         "spin_control": "Contrôle de l'effet"
-      }
+      },
+      "favoriteFacilities": "Terrains préférés",
+      "selectUpTo3": "Sélectionner jusqu'à 3 installations",
+      "searchFacility": "Rechercher un terrain...",
+      "addAnotherFacility": "Ajouter un autre terrain...",
+      "noFacilitiesFound": "Aucun terrain trouvé. Essayez une autre recherche.",
+      "typeToSearch": "Commencez à taper pour rechercher des terrains à proximité",
+      "locationRequired": "L'accès à la localisation est nécessaire pour trouver les terrains à proximité",
+      "maxFavoritesReached": "Vous avez sélectionné 3 terrains. Retirez-en un pour en ajouter un autre.",
+      "tapToRemove": "Appuyez sur le X pour retirer un terrain"
     }
   },
   "onboarding": {
