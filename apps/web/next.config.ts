@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
     '@rallia/shared-constants',
     '@rallia/shared-hooks',
     '@rallia/shared-services',
+    '@rallia/shared-translations',
     '@rallia/shared-types',
     '@rallia/shared-utils',
   ],
