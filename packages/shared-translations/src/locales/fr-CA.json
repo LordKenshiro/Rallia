@@ -3237,7 +3237,8 @@
       "customAvailability": "Disponibilité personnalisée",
       "availabilityNote": "Ce terrain utilise les paramètres de disponibilité par défaut de l'installation.",
       "customAvailabilityNote": "Ce terrain a des paramètres de disponibilité personnalisés.",
-      "manageAvailability": "Gérer la disponibilité",
+      "manageAvailability": "Gérer l'horaire hebdomadaire",
+      "manageOneTimeAvailability": "Gérer la disponibilité ponctuelle",
       "editButton": "Modifier le terrain"
     },
     "add": {
@@ -3336,6 +3337,31 @@
       "slotDurationInfo": "Chaque plage horaire doit durer au moins {duration} et idéalement un multiple de la durée du créneau pour optimiser les réservations.",
       "autoAdjust": "Ajuster auto.",
       "autoAdjustTooltip": "Ajuster automatiquement l'heure de fin pour créer des créneaux complets"
+    },
+    "oneTime": {
+      "title": "Disponibilité ponctuelle",
+      "description": "Ajoutez des disponibilités pour des dates spécifiques qui remplacent l'horaire hebdomadaire régulier.",
+      "hint": "Les créneaux ponctuels sont utiles pour les événements spéciaux, les heures prolongées ou les horaires de jours fériés. Ces créneaux sont fusionnés avec l'horaire régulier pour la date spécifiée.",
+      "addSlot": "Ajouter un créneau ponctuel",
+      "addNewSlot": "Ajouter un nouveau créneau ponctuel",
+      "selectDate": "Sélectionner la date",
+      "pickDate": "Choisir une date",
+      "selectDateFirst": "Veuillez d'abord sélectionner une date",
+      "endTimeMustBeAfterStartTime": "L'heure de fin doit être après l'heure de début",
+      "reason": "Raison (optionnel)",
+      "reasonPlaceholder": "ex. Heures de jour férié, Événement spécial",
+      "save": "Enregistrer le créneau",
+      "cancel": "Annuler",
+      "addError": "Échec de l'ajout du créneau ponctuel. Veuillez réessayer.",
+      "deleteError": "Échec de la suppression du créneau ponctuel. Veuillez réessayer.",
+      "existingSlots": "Créneaux ponctuels programmés",
+      "existingSlotsDescription": "Créneaux de disponibilité ponctuelle à venir pour ce terrain.",
+      "noSlots": "Aucun créneau ponctuel programmé.",
+      "date": "Date",
+      "time": "Heure",
+      "duration": "Durée",
+      "price": "Prix",
+      "backToCourt": "Retour au terrain"
     },
     "calendar": {
       "title": "Calendrier de disponibilité",

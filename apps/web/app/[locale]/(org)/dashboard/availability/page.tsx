@@ -86,10 +86,9 @@ function formatTime(time: string): string {
   return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
 }
 
-// Operating hours
-const START_HOUR = 7; // 7am
-const END_HOUR = 21; // 9pm
-const OPERATING_MINUTES = (END_HOUR - START_HOUR) * 60; // 840 minutes
+// Default operating hours (can be expanded based on actual data)
+const DEFAULT_START_HOUR = 7; // 7am
+const DEFAULT_END_HOUR = 21; // 9pm
 
 // Skeleton for calendar grid
 function CalendarSkeleton() {
@@ -365,20 +364,45 @@ export default function AvailabilityCalendarPage() {
     [isPastDate, isToday, currentTime]
   );
 
+  // Calculate actual time range from slots data (expand beyond default if needed)
+  const { actualStartHour, actualEndHour, operatingMinutes } = useMemo(() => {
+    let minHour = DEFAULT_START_HOUR;
+    let maxHour = DEFAULT_END_HOUR;
+
+    // Find earliest start and latest end from actual slots
+    for (const slot of slots) {
+      const startHour = parseInt(slot.start_time.split(':')[0], 10);
+      const endHour = parseInt(slot.end_time.split(':')[0], 10);
+      const endMinutes = parseInt(slot.end_time.split(':')[1], 10);
+
+      // If there are minutes past the hour, we need to include the next hour
+      const effectiveEndHour = endMinutes > 0 ? endHour + 1 : endHour;
+
+      if (startHour < minHour) minHour = startHour;
+      if (effectiveEndHour > maxHour) maxHour = effectiveEndHour;
+    }
+
+    return {
+      actualStartHour: minHour,
+      actualEndHour: maxHour,
+      operatingMinutes: (maxHour - minHour) * 60,
+    };
+  }, [slots]);
+
   // Calculate the "now" position as a percentage
   const getNowPosition = useMemo(() => {
     const hour = currentTime.getHours();
     const minutes = currentTime.getMinutes();
 
     // Only show if within operating hours
-    if (hour < START_HOUR || hour >= END_HOUR) return null;
+    if (hour < actualStartHour || hour >= actualEndHour) return null;
 
     // Calculate position as percentage of the operating window
-    const currentMinutes = (hour - START_HOUR) * 60 + minutes;
-    const position = (currentMinutes / OPERATING_MINUTES) * 100;
+    const currentMinutes = (hour - actualStartHour) * 60 + minutes;
+    const position = (currentMinutes / operatingMinutes) * 100;
 
     return position;
-  }, [currentTime]);
+  }, [currentTime, actualStartHour, actualEndHour, operatingMinutes]);
 
   const fetchFacilities = useCallback(async () => {
     const supabase = createClient();
@@ -483,139 +507,169 @@ export default function AvailabilityCalendarPage() {
 
     setCourts(courtsWithDuration);
 
-    // Fetch availability for each court based on view mode
+    // Get date range for fetching
     const datesToFetch = getDatesToFetch();
+    const dateFrom = formatDateLocal(datesToFetch[0]);
+    const dateTo = formatDateLocal(datesToFetch[datesToFetch.length - 1]);
+
+    // Helper function to parse guest info from notes
+    const parseGuestInfo = (notes: string | null) => {
+      if (!notes) return { name: null, email: null };
+
+      const guestMatch = notes.match(/Guest:\s*([^|]+)/);
+      const emailMatch = notes.match(/Email:\s*([^|]+)/);
+
+      return {
+        name: guestMatch ? guestMatch[1].trim() : null,
+        email: emailMatch ? emailMatch[1].trim() : null,
+      };
+    };
+
+    // Type for the batched RPC response (will be auto-generated after running supabase gen types)
+    type BatchedSlotResponse = {
+      data: Array<{
+        out_court_id: string;
+        out_slot_date: string;
+        out_start_time: string;
+        out_end_time: string;
+        out_price_cents: number;
+        out_template_source: string;
+      }> | null;
+      error: unknown;
+    };
+
+    // BATCHED QUERIES: Fetch all data in parallel with just 4 queries
+    const [availableSlotsResult, bookingsResult, blocksResult] = await Promise.all([
+      // 1. Single RPC call for all available slots across all courts and dates
+      (supabase.rpc as unknown as (fn: string, params: object) => Promise<BatchedSlotResponse>)(
+        'get_available_slots_batch',
+        {
+          p_court_ids: courtIds,
+          p_date_from: dateFrom,
+          p_date_to: dateTo,
+        }
+      ),
+
+      // 2. Single query for all bookings in the date range
+      supabase
+        .from('booking')
+        .select('id, court_id, booking_date, start_time, end_time, player_id, notes')
+        .in('court_id', courtIds)
+        .gte('booking_date', dateFrom)
+        .lte('booking_date', dateTo)
+        .not('status', 'eq', 'cancelled'),
+
+      // 3. Single query for all blocks in the date range
+      supabase
+        .from('availability_block')
+        .select('id, court_id, block_date, start_time, end_time')
+        .gte('block_date', dateFrom)
+        .lte('block_date', dateTo)
+        .or(`facility_id.eq.${selectedFacility}`),
+    ]);
+
     const allSlots: SlotData[] = [];
 
-    for (const court of courtsWithDuration) {
-      for (const date of datesToFetch) {
-        const dateStr = formatDateLocal(date);
-
-        // Call the get_available_slots function
-        const { data: slotsData, error } = await supabase.rpc('get_available_slots', {
-          p_court_id: court.id,
-          p_date: dateStr,
+    // Process available slots from batched RPC
+    if (availableSlotsResult.data) {
+      for (const slot of availableSlotsResult.data) {
+        allSlots.push({
+          court_id: slot.out_court_id,
+          date: slot.out_slot_date,
+          start_time: slot.out_start_time,
+          end_time: slot.out_end_time,
+          price_cents: slot.out_price_cents || 0,
+          status: 'available',
         });
+      }
+    } else if (availableSlotsResult.error) {
+      console.error('Error fetching available slots:', availableSlotsResult.error);
+    }
 
-        if (error) {
-          console.error('Error fetching slots:', error);
-          continue;
+    // Process bookings
+    const bookings = bookingsResult.data;
+    if (bookings && bookings.length > 0) {
+      // Fetch all player profiles in a single query
+      const playerIds = bookings
+        .filter(b => b.player_id)
+        .map(b => b.player_id)
+        .filter((id): id is string => id !== null);
+
+      const uniquePlayerIds = [...new Set(playerIds)];
+
+      const profilesMap: Map<string, { first_name: string; last_name: string; email: string }> =
+        new Map();
+
+      if (uniquePlayerIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profile')
+          .select('id, first_name, last_name, email')
+          .in('id', uniquePlayerIds);
+
+        if (profiles) {
+          profiles.forEach(profile => {
+            profilesMap.set(profile.id, {
+              first_name: profile.first_name || '',
+              last_name: profile.last_name || '',
+              email: profile.email || '',
+            });
+          });
+        }
+      }
+
+      // Add bookings to slots
+      for (const booking of bookings) {
+        // Skip bookings without court_id (shouldn't happen but handle for type safety)
+        if (!booking.court_id) continue;
+
+        const profile = booking.player_id ? profilesMap.get(booking.player_id) : null;
+
+        let playerName: string | undefined;
+        let playerEmail: string | undefined;
+
+        if (profile) {
+          playerName =
+            profile.first_name && profile.last_name
+              ? `${profile.first_name} ${profile.last_name}`
+              : undefined;
+          playerEmail = profile.email || undefined;
+        } else if (!booking.player_id && booking.notes) {
+          const guestInfo = parseGuestInfo(booking.notes);
+          playerName = guestInfo.name || undefined;
+          playerEmail = guestInfo.email || undefined;
         }
 
-        if (slotsData) {
-          for (const slot of slotsData) {
-            allSlots.push({
-              court_id: court.id,
-              date: dateStr,
-              start_time: slot.start_time,
-              end_time: slot.end_time,
-              price_cents: slot.price_cents || 0,
-              status: 'available',
-            });
-          }
-        }
+        allSlots.push({
+          court_id: booking.court_id,
+          date: booking.booking_date,
+          start_time: booking.start_time,
+          end_time: booking.end_time,
+          price_cents: 0,
+          status: 'booked',
+          booking_id: booking.id,
+          player_name: playerName,
+          player_email: playerEmail,
+        });
+      }
+    }
 
-        // Fetch bookings for this court and date
-        const { data: bookings } = await supabase
-          .from('booking')
-          .select('id, start_time, end_time, player_id, notes')
-          .eq('court_id', court.id)
-          .eq('booking_date', dateStr)
-          .not('status', 'eq', 'cancelled');
+    // Process blocks - need to expand facility-wide blocks to all courts
+    const blocks = blocksResult.data;
+    if (blocks && blocks.length > 0) {
+      for (const block of blocks) {
+        // If block has a specific court_id, only add for that court
+        // If court_id is null, it's a facility-wide block - add for all courts
+        const targetCourtIds = block.court_id ? [block.court_id] : courtIds;
 
-        // Fetch profiles for all bookings with player_id in a single query
-        const playerIds =
-          bookings
-            ?.filter(b => b.player_id)
-            .map(b => b.player_id)
-            .filter((id): id is string => id !== null) || [];
-
-        const profilesMap: Map<string, { first_name: string; last_name: string; email: string }> =
-          new Map();
-        if (playerIds.length > 0) {
-          const { data: profiles } = await supabase
-            .from('profile')
-            .select('id, first_name, last_name, email')
-            .in('id', playerIds);
-
-          if (profiles) {
-            profiles.forEach(profile => {
-              profilesMap.set(profile.id, {
-                first_name: profile.first_name || '',
-                last_name: profile.last_name || '',
-                email: profile.email || '',
-              });
-            });
-          }
-        }
-
-        // Helper function to parse guest info from notes
-        const parseGuestInfo = (notes: string | null) => {
-          if (!notes) return { name: null, email: null };
-
-          const guestMatch = notes.match(/Guest:\s*([^|]+)/);
-          const emailMatch = notes.match(/Email:\s*([^|]+)/);
-
-          return {
-            name: guestMatch ? guestMatch[1].trim() : null,
-            email: emailMatch ? emailMatch[1].trim() : null,
-          };
-        };
-
-        if (bookings) {
-          for (const booking of bookings) {
-            const profile = booking.player_id ? profilesMap.get(booking.player_id) : null;
-
-            // For player bookings, use profile info; for guest bookings, parse from notes
-            let playerName: string | undefined;
-            let playerEmail: string | undefined;
-
-            if (profile) {
-              // Player booking
-              playerName =
-                profile.first_name && profile.last_name
-                  ? `${profile.first_name} ${profile.last_name}`
-                  : undefined;
-              playerEmail = profile.email || undefined;
-            } else if (!booking.player_id && booking.notes) {
-              // Guest booking - parse from notes
-              const guestInfo = parseGuestInfo(booking.notes);
-              playerName = guestInfo.name || undefined;
-              playerEmail = guestInfo.email || undefined;
-            }
-
-            allSlots.push({
-              court_id: court.id,
-              date: dateStr,
-              start_time: booking.start_time,
-              end_time: booking.end_time,
-              price_cents: 0,
-              status: 'booked',
-              booking_id: booking.id,
-              player_name: playerName,
-              player_email: playerEmail,
-            });
-          }
-        }
-
-        // Fetch blocks for this court and date
-        const { data: blocks } = await supabase
-          .from('availability_block')
-          .select('start_time, end_time')
-          .eq('block_date', dateStr)
-          .or(`court_id.eq.${court.id},and(facility_id.eq.${selectedFacility},court_id.is.null)`);
-
-        if (blocks) {
-          for (const block of blocks) {
-            allSlots.push({
-              court_id: court.id,
-              date: dateStr,
-              start_time: block.start_time || '00:00:00',
-              end_time: block.end_time || '23:59:59',
-              price_cents: 0,
-              status: 'blocked',
-            });
-          }
+        for (const targetCourtId of targetCourtIds) {
+          allSlots.push({
+            court_id: targetCourtId,
+            date: block.block_date,
+            start_time: block.start_time || '00:00:00',
+            end_time: block.end_time || '23:59:59',
+            price_cents: 0,
+            status: 'blocked',
+          });
         }
       }
     }
@@ -677,22 +731,25 @@ export default function AvailabilityCalendarPage() {
   };
 
   // Generate time slots for a court based on its slot duration
-  const generateTimeSlots = useCallback((slotDurationMinutes: number) => {
-    const slots: { startTime: string; endTime: string; startMinutes: number }[] = [];
-    const startMinutes = START_HOUR * 60;
-    const endMinutes = END_HOUR * 60;
+  const generateTimeSlots = useCallback(
+    (slotDurationMinutes: number) => {
+      const generatedSlots: { startTime: string; endTime: string; startMinutes: number }[] = [];
+      const startMinutes = actualStartHour * 60;
+      const endMinutes = actualEndHour * 60;
 
-    for (let minutes = startMinutes; minutes < endMinutes; minutes += slotDurationMinutes) {
-      const endSlotMinutes = Math.min(minutes + slotDurationMinutes, endMinutes);
-      slots.push({
-        startTime: minutesToTime(minutes) + ':00',
-        endTime: minutesToTime(endSlotMinutes) + ':00',
-        startMinutes: minutes,
-      });
-    }
+      for (let minutes = startMinutes; minutes < endMinutes; minutes += slotDurationMinutes) {
+        const endSlotMinutes = Math.min(minutes + slotDurationMinutes, endMinutes);
+        generatedSlots.push({
+          startTime: minutesToTime(minutes) + ':00',
+          endTime: minutesToTime(endSlotMinutes) + ':00',
+          startMinutes: minutes,
+        });
+      }
 
-    return slots;
-  }, []);
+      return generatedSlots;
+    },
+    [actualStartHour, actualEndHour]
+  );
 
   // Get slot data for a specific time range
   const getSlotDataForTime = useCallback(

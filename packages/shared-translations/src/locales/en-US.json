@@ -3235,7 +3235,8 @@
       "customAvailability": "Custom Availability",
       "availabilityNote": "This court uses the facility's default availability settings.",
       "customAvailabilityNote": "This court has custom availability settings.",
-      "manageAvailability": "Manage Availability",
+      "manageAvailability": "Manage Weekly Schedule",
+      "manageOneTimeAvailability": "Manage One-Time Availability",
       "editButton": "Edit Court"
     },
     "add": {
@@ -3334,6 +3335,31 @@
       "slotDurationInfo": "Each time range must be at least {duration} and ideally a multiple of the slot duration for optimal booking slots.",
       "autoAdjust": "Auto-adjust",
       "autoAdjustTooltip": "Automatically adjust end time to create complete slots"
+    },
+    "oneTime": {
+      "title": "One-Time Availability",
+      "description": "Add availability for specific dates that override the regular weekly schedule.",
+      "hint": "One-time availability slots are useful for special events, extended hours, or holiday schedules. These slots are merged with the regular schedule for the specified date.",
+      "addSlot": "Add One-Time Slot",
+      "addNewSlot": "Add New One-Time Slot",
+      "selectDate": "Select Date",
+      "pickDate": "Pick a date",
+      "selectDateFirst": "Please select a date first",
+      "endTimeMustBeAfterStartTime": "End time must be after start time",
+      "reason": "Reason (optional)",
+      "reasonPlaceholder": "e.g., Holiday hours, Special event",
+      "save": "Save Slot",
+      "cancel": "Cancel",
+      "addError": "Failed to add one-time slot. Please try again.",
+      "deleteError": "Failed to delete one-time slot. Please try again.",
+      "existingSlots": "Scheduled One-Time Slots",
+      "existingSlotsDescription": "Upcoming one-time availability slots for this court.",
+      "noSlots": "No one-time availability slots scheduled.",
+      "date": "Date",
+      "time": "Time",
+      "duration": "Duration",
+      "price": "Price",
+      "backToCourt": "Back to Court"
     },
     "calendar": {
       "title": "Availability Calendar",

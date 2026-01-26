@@ -322,8 +322,8 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">{t('detail.title')}</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-3xl font-bold mb-0">{t('detail.title')}</h1>
+            <p className="text-muted-foreground mb-0">
               {t('detail.bookingId')}: {booking.id.slice(0, 8)}...
             </p>
           </div>

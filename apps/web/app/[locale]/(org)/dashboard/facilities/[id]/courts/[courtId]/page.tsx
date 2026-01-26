@@ -241,10 +241,17 @@ export default async function CourtDetailPage({ params }: PageProps) {
             </div>
 
             {canEdit && (
-              <div className="mt-4">
+              <div className="mt-4 space-y-2">
                 <Button variant="outline" className="w-full" asChild>
                   <Link href={`/dashboard/facilities/${id}/courts/${courtId}/availability`}>
                     {t('detail.manageAvailability')}
+                  </Link>
+                </Button>
+                <Button variant="outline" className="w-full" asChild>
+                  <Link
+                    href={`/dashboard/facilities/${id}/courts/${courtId}/one-time-availability`}
+                  >
+                    {t('detail.manageOneTimeAvailability')}
                   </Link>
                 </Button>
               </div>

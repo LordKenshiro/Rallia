@@ -468,6 +468,76 @@ export type Database = {
           },
         ];
       };
+      court_one_time_availability: {
+        Row: {
+          availability_date: string;
+          court_id: string | null;
+          created_at: string | null;
+          created_by: string | null;
+          end_time: string;
+          facility_id: string;
+          id: string;
+          is_available: boolean;
+          price_cents: number | null;
+          reason: string | null;
+          slot_duration_minutes: number;
+          start_time: string;
+          updated_at: string | null;
+        };
+        Insert: {
+          availability_date: string;
+          court_id?: string | null;
+          created_at?: string | null;
+          created_by?: string | null;
+          end_time: string;
+          facility_id: string;
+          id?: string;
+          is_available?: boolean;
+          price_cents?: number | null;
+          reason?: string | null;
+          slot_duration_minutes?: number;
+          start_time: string;
+          updated_at?: string | null;
+        };
+        Update: {
+          availability_date?: string;
+          court_id?: string | null;
+          created_at?: string | null;
+          created_by?: string | null;
+          end_time?: string;
+          facility_id?: string;
+          id?: string;
+          is_available?: boolean;
+          price_cents?: number | null;
+          reason?: string | null;
+          slot_duration_minutes?: number;
+          start_time?: string;
+          updated_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'court_one_time_availability_court_id_fkey';
+            columns: ['court_id'];
+            isOneToOne: false;
+            referencedRelation: 'court';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'court_one_time_availability_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'court_one_time_availability_facility_id_fkey';
+            columns: ['facility_id'];
+            isOneToOne: false;
+            referencedRelation: 'facility';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       court_slot: {
         Row: {
           court_id: string | null;
@@ -3974,6 +4044,17 @@ export type Database = {
           price_cents: number;
           start_time: string;
           template_source: string;
+        }[];
+      };
+      get_available_slots_batch: {
+        Args: { p_court_ids: string[]; p_date_from: string; p_date_to: string };
+        Returns: {
+          out_court_id: string;
+          out_slot_date: string;
+          out_start_time: string;
+          out_end_time: string;
+          out_price_cents: number;
+          out_template_source: string;
         }[];
       };
       get_effective_templates: {
