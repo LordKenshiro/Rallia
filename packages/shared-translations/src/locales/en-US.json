@@ -1,7 +1,7 @@
 {
   "common": {
     "loading": "Loading...",
-    "error": "Something went wrong",
+    "error": "Error",
     "retry": "Try again",
     "tryAgain": "Try Again",
     "tryDifferentSearch": "Try a different search term",
@@ -65,7 +65,6 @@
     "selectAll": "Select All",
     "user": "User",
     "discard": "Discard",
-    "error": "Error",
     "copied": "Copied",
     "reset": "Reset",
     "success": "Success",
@@ -467,12 +466,10 @@
     "step": "Step {current} of {total}",
     "stepNames": {
       "personal": "About You",
-      "location": "Location",
       "sports": "Sports",
       "tennisRating": "Tennis Rating",
       "pickleballRating": "Pickleball Rating",
       "preferences": "Preferences",
-      "favoriteSites": "Favorite Sites",
       "availability": "Availability"
     },
     "personalInfoStep": {
@@ -496,78 +493,11 @@
       "title": "Which sports would you like to play?",
       "subtitle": "Select all that apply"
     },
-    "locationStep": {
-      "title": "Where are you located?",
-      "subtitle": "Help us find matches near you",
-      "address": "Address",
-      "addressPlaceholder": "Start typing your address...",
-      "city": "City",
-      "cityPlaceholder": "Enter your city",
-      "postalCode": "Postal Code",
-      "postalCodePlaceholder": "Enter your postal code",
-      "privacyTitle": "Your privacy is protected",
-      "privacyDescription": "Your exact address is never shared with other users. We only use your location to help find matches in your area and calculate travel distances.",
-      "warningTitle": "Limited Match Search",
-      "warningMessage": "Without your address, we won't be able to show you the most relevant matches near you. Are you sure you want to continue?"
-    },
     "ratingStep": {
       "tennisTitle": "Tell us about your game",
       "pickleballTitle": "Tell us about your game",
       "ntrpSubtitle": "NTRP Rating",
-      "duprSubtitle": "DUPR Rating",
-      "skillLevels": {
-        "beginner1": "Beginner 1",
-        "beginner2": "Beginner 2",
-        "beginner3": "Beginner 3",
-        "intermediate1": "Intermediate 1",
-        "intermediate2": "Intermediate 2",
-        "intermediate3": "Intermediate 3",
-        "advanced1": "Advanced 1",
-        "advanced2": "Advanced 2",
-        "advanced3": "Advanced 3",
-        "professional": "Professional"
-      },
-      "ntrpDescriptions": {
-        "1.5": "Still working on getting consistent; errors, many focused on getting the ball into play.",
-        "2.0": "Obvious stroke weaknesses for singles and doubles. Has clear stroke weaknesses and needs more court experience.",
-        "2.5": "Starting to judge ball direction and sustain short rallies; limited court coverage.",
-        "3.0": "Fairly consistent on medium paced shots but lacks control, depth and power with faster shots.",
-        "3.5": "More reliable strokes with directional control. Improving net play, coverage, and teamwork.",
-        "4.0": "Dependable strokes with control and depth; placement in point play shows teamwork.",
-        "4.5": "Solid power and consistency. Controls depth and spin. Strategic shot placement.",
-        "5.0": "Exceptional shot variety with pace and spin. Excellent footwork and court coverage.",
-        "5.5": "Mastery of all shots. Exceptional consistency and power. Advanced tactics and mental game.",
-        "6.0": "Professional level play. National or international tournament experience."
-      },
-      "duprDescriptions": {
-        "1.0": "Just starting out. Learning basic rules and stroke mechanics.",
-        "2.0": "Just getting started. Short rallies (1-2 shots). Learning basic scoring knowledge.",
-        "2.5": "Developing basic strokes. Can sustain short rallies. Learning court positioning.",
-        "3.0": "Can sustain short rallies and serves. Beginning to dink. Learning positioning.",
-        "3.5": "Developing third-shot drop. Can dink moderately. Avoids backhands.",
-        "4.0": "Plays longer rallies with patience. Aware of positioning. Uses varied shots.",
-        "4.5": "Strong consistency and power. Varied shots. Comfortable crashing near the kitchen.",
-        "5.0": "Highest level of shot types. Rarely makes unforced errors. Plays competitively.",
-        "5.5": "Exceptional skill level. Mastery of all shots. Tournament-level play.",
-        "6.0": "Professional level. National or international tournament play."
-      },
-      "learnMore": "Learn more about the {system} rating system"
-    },
-    "ratingOverlay": {
-      "title": "Tell us about your game",
-      "editTennisTitle": "Update your tennis rating",
-      "editPickleballTitle": "Update your pickleball rating",
-      "tennisSubtitle": "NTRP Rating",
-      "pickleballSubtitle": "DUPR Rating",
-      "learnMoreNtrp": "Learn more about the NTRP rating system",
-      "learnMoreDupr": "Learn more about the DUPR rating system",
-      "loading": "Loading ratings...",
-      "continue": "Continue",
-      "save": "Save",
-      "failedToLoadRatings": "Failed to load ratings. Please try again.",
-      "failedToSaveRating": "Failed to save your rating. Please try again.",
-      "invalidRatingSelected": "Invalid rating selected",
-      "unexpectedError": "An unexpected error occurred."
+      "duprSubtitle": "DUPR Rating"
     },
     "preferencesStep": {
       "title": "Tell us about your preferences",
@@ -588,32 +518,7 @@
       "am": "AM",
       "pm": "PM",
       "eve": "EVE",
-      "minimumSelected": "{count} / {minimum} minimum selected",
-      "days": {
-        "mon": "Mon",
-        "tue": "Tue",
-        "wed": "Wed",
-        "thu": "Thu",
-        "fri": "Fri",
-        "sat": "Sat",
-        "sun": "Sun"
-      },
-      "complete": "Complete",
-      "saveButton": "Save"
-    },
-    "favoriteSitesStep": {
-      "title": "Select your favorite places to play",
-      "subtitle": "Choose up to 3 facilities for quick access when creating games",
-      "selected": "selected",
-      "searchLabel": "Search Facilities",
-      "searchPlaceholder": "Search by name or location...",
-      "loading": "Loading facilities...",
-      "noSportSelected": "Please select a sport first",
-      "noLocation": "Location required to find nearby facilities",
-      "noResults": "No facilities found matching your search",
-      "noFacilitiesNearby": "No facilities found in your area",
-      "hint": "Your favorite sites will appear first when creating games. You can always change these later.",
-      "failedToSave": "Failed to save favorite facilities. Please try again."
+      "minimumSelected": "{count} / {minimum} minimum selected"
     },
     "validation": {
       "fillRequiredFields": "Please fill in all required fields",
@@ -622,8 +527,6 @@
       "selectPickleballRating": "Please select your pickleball rating",
       "userNotAuthenticated": "User not authenticated",
       "failedToSaveInfo": "Failed to save your information. Please try again.",
-      "failedToSaveLocation": "Failed to save your location. Please try again.",
-      "cityRequired": "Please enter your city",
       "failedToSaveRating": "Failed to save your rating. Please try again.",
       "failedToSavePreferences": "Failed to save your preferences. Please try again.",
       "failedToSaveAvailability": "Failed to save your availability. Please try again.",
@@ -761,7 +664,20 @@
     "mustBeLoggedIn": "Please sign in to create a game."
   },
   "chat": {
-    "empty": "No messages yet",
+    "empty": {
+      "direct": {
+        "title": "No direct messages yet",
+        "subtitle": "Start a conversation with another player"
+      },
+      "groups": {
+        "title": "No group chats yet",
+        "subtitle": "Join a group or community to start chatting"
+      },
+      "matches": {
+        "title": "No match chats yet",
+        "subtitle": "Join a match to start chatting with opponents"
+      }
+    },
     "inbox": "Inbox",
     "search": "Search players",
     "searchConversations": "Search conversations",
@@ -778,20 +694,6 @@
       "direct": "Direct",
       "groups": "Groups",
       "matches": "Matches"
-    },
-    "empty": {
-      "direct": {
-        "title": "No direct messages yet",
-        "subtitle": "Start a conversation with another player"
-      },
-      "groups": {
-        "title": "No group chats yet",
-        "subtitle": "Join a group or community to start chatting"
-      },
-      "matches": {
-        "title": "No match chats yet",
-        "subtitle": "Join a match to start chatting with opponents"
-      }
     },
     "typeMessage": "Type your message",
     "today": "Today",
@@ -1481,7 +1383,12 @@
       "subtitle": "Invite contacts to your upcoming games"
     },
     "errors": {
-      "failedToDelete": "Failed to delete the list. Please try again."
+      "nameRequired": "Please enter a list name",
+      "failedToCreate": "Failed to create the list. Please try again.",
+      "failedToUpdate": "Failed to update the list. Please try again.",
+      "failedToDelete": "Failed to delete list",
+      "failedToAddContact": "Failed to add the contact. Please try again.",
+      "failedToDeleteContact": "Failed to delete contact"
     },
     "listName": "List Name",
     "listNamePlaceholder": "e.g., Tennis buddies",
@@ -1560,14 +1467,6 @@
       "howToShare": "How do you want to share?",
       "recipients": "{count} Recipient(s)",
       "selectContactsButton": "Select Contacts"
-    },
-    "errors": {
-      "nameRequired": "Please enter a list name",
-      "failedToCreate": "Failed to create the list. Please try again.",
-      "failedToUpdate": "Failed to update the list. Please try again.",
-      "failedToDelete": "Failed to delete list",
-      "failedToAddContact": "Failed to add the contact. Please try again.",
-      "failedToDeleteContact": "Failed to delete contact"
     },
     "confirmations": {
       "deleteList": "Are you sure you want to delete \"{name}\"? This will also delete all contacts in this list."
@@ -2149,7 +2048,7 @@
     "signInPrompt": "Please sign in to create and access your games",
     "user": "User",
     "subtitle": "The best way to find your next tennis or pickleball partner",
-    "soonAndNearby": "Nearby Games",
+    "soonAndNearby": "Soon & Nearby",
     "publicMatches": "Public Games",
     "viewAll": "View All",
     "myMatches": "My Games",
@@ -2160,16 +2059,8 @@
     "nearbyEmpty": {
       "title": "No nearby games found",
       "description": "There are no upcoming games within your {distance} km travel distance.",
-      "guestDescription": "There are no upcoming games nearby.",
       "suggestion": "Try increasing your maximum travel distance in your profile to see more games.",
       "updateSettings": "Update Settings"
-    },
-    "location": {
-      "title": "Search Location",
-      "current": "Current Location",
-      "currentDescription": "Use your GPS location",
-      "home": "Home",
-      "homeNotSet": "Set your home location in settings"
     },
     "header": {
       "ctaButton": "Join Waitlist"
@@ -2459,11 +2350,11 @@
         "all": "All"
       },
       "duration": {
-        "label": "Duration",
-        "all": "Any",
         "30": "30 min",
         "60": "1 hour",
         "90": "1.5 hours",
+        "label": "Duration",
+        "all": "Any",
         "120+": "2+ hours"
       },
       "courtStatus": {
@@ -2490,1005 +2381,6 @@
     "results": {
       "count": "{count} games",
       "countSingular": "1 game"
-    }
-  },
-  "winter": {
-    "title": "Winter Indoor Court Crisis - Rallia",
-    "subtitle": "Solving the indoor court shortage for Canadian tennis and pickleball players",
-    "hero": {
-      "badge": "Coming Soon",
-      "headline": "The outdoor season is over. Now what?",
-      "subheadline": "Over 5 million Canadian tennis players and 1.5 million pickleballers are about to be benched for weeks, sidelined by a severe lack of indoor courts.",
-      "ctaButton": "Become a Founding Member",
-      "ctaSubtext": "Premium features FREE at launch • Help shape the app"
-    },
-    "problem": {
-      "sectionBadge": "The Crisis",
-      "sectionTitle": "The Indoor Court Shortage",
-      "coreMessage": "There simply aren't enough indoor courts for everyone who wants to play.",
-      "noCourtNoGame": {
-        "title": "No Court, No Game",
-        "description": "A shortage of indoor facilities is about to sideline 6 million Canadian tennis and pickleball players. While the demand for these sports is exploding, the number of indoor courts has stayed the same."
-      },
-      "bookingCompetition": {
-        "title": "Booking is a Competition",
-        "description": "It shouldn't be a competitive sport just to book a court. Prime time slots are gone in minutes. You're left refreshing pages at midnight, hoping for a cancellation."
-      },
-      "temperatureDrop": {
-        "title": "Benched by the Cold",
-        "description": "Your playing time shouldn't end just because the temperature drops. But without access to indoor facilities, thousands of players will go weeks—or months—without stepping on a court."
-      }
-    },
-    "stats": {
-      "sectionBadge": "The Numbers",
-      "sectionTitle": "The Crisis in Numbers",
-      "affectedPlayers": "6M+",
-      "affectedPlayersLabel": "Players Affected by Court Shortage",
-      "courtDensity": "1:25,000",
-      "courtDensityLabel": "Indoor Court to Player Ratio in Canada",
-      "demandGrowth": "300%",
-      "demandGrowthLabel": "Growth in Tennis & Pickleball Demand Since 2020",
-      "courtGrowth": "<5%",
-      "courtGrowthLabel": "Growth in Indoor Court Availability"
-    },
-    "solution": {
-      "sectionBadge": "The Solution",
-      "sectionTitle": "A Better Way to Share Court Time",
-      "pitch": "We're building a better way to connect and share court time.",
-      "vision": "We're building a community where players help each other get on the court, no matter the season.",
-      "findPartners": {
-        "title": "Find Booked Court Partners",
-        "description": "Connect with players who have already booked a court and need a partner. No court? No problem. They've done the hard part—now you just need to show up and play."
-      },
-      "shareCosts": {
-        "title": "Share the Cost",
-        "description": "Indoor court time is expensive. Share the cost of that premium court with a great match, making winter play affordable for everyone."
-      },
-      "fillCancellations": {
-        "title": "Fill Last-Minute Cancellations",
-        "description": "Get notified when court time opens up. Fill last-minute cancellations so no court time goes to waste. Turn someone's cancellation into your opportunity."
-      },
-      "unlockPotential": {
-        "title": "Maximize Existing Facilities",
-        "description": "Unlock the full potential of existing facilities while championing future construction. Every court should be used to its maximum capacity."
-      }
-    },
-    "foundingMember": {
-      "sectionBadge": "Exclusive Offer",
-      "sectionTitle": "Become a Founding Member",
-      "offer": "Sign up for the waitlist and get premium features FREE at launch.",
-      "survey": "Help us build the perfect app for Canadian players. Join the waitlist and we'll send you a 3-question survey to tell us what you need most.",
-      "ctaButton": "Join the Waitlist",
-      "benefits": "Premium features FREE • Shape the product • Priority access"
-    },
-    "waitlist": {
-      "sectionBadge": "Get Started",
-      "sectionTitle": "Join the Founding Members",
-      "description": "Be part of the solution. Join our waitlist and help us build a community where every player gets on the court, no matter the season.",
-      "form": {
-        "namePlaceholder": "Your name",
-        "emailPlaceholder": "your.email@example.com",
-        "submitButton": "Become a Founding Member",
-        "successMessage": "Welcome to the founding community! Stay posted for future updates.",
-        "nameLabel": "Name",
-        "emailLabel": "Email",
-        "phoneLabel": "Phone (Optional)",
-        "phonePlaceholder": "+1 (555) 123-4567",
-        "noCard": "No credit card required • Premium features FREE at launch"
-      }
-    },
-    "faq": {
-      "sectionBadge": "FAQ",
-      "sectionTitle": "Frequently Asked Questions",
-      "questions": {
-        "whatIsThis": {
-          "question": "How does this solve the indoor court problem?",
-          "answer": "We're helping Canadian tennis and pickleball players deal with the indoor court shortage during winter. We're building tools to help players find partners who have already booked courts, share costs, and fill last-minute cancellations—making the most of existing facilities."
-        },
-        "foundingMember": {
-          "question": "What do Founding Members get?",
-          "answer": "Founding Members get premium features completely free when we launch. You'll also help shape the product through our survey, get priority access to the app, and be part of the community from day one."
-        },
-        "whenLaunch": {
-          "question": "When will this be available?",
-          "answer": "We're launching in early 2026, just in time for the outdoor season. You'll have the full summer to build your network and master the app, so when winter 2026-2027 arrives, you'll be ready to dominate indoor court bookings. Join the waitlist to be notified when we launch."
-        },
-        "bothSports": {
-          "question": "Does this work for both tennis and pickleball?",
-          "answer": "Yes! The indoor court shortage affects both tennis and pickleball players. Our platform is designed to help players of both sports find partners, share costs, and maximize court time."
-        },
-        "howHelp": {
-          "question": "How will this help with the court shortage?",
-          "answer": "While we can't build new courts overnight, we can help make the most of existing facilities. By connecting players who need courts with those who have them booked, sharing costs, and filling cancellations, we ensure every minute of court time is used."
-        }
-      }
-    }
-  },
-  "footer": {
-    "title": "Rallia",
-    "description": "The platform that will connect tennis and pickleball players for better matches, every time.",
-    "quickLinks": "Quick Links",
-    "joinWaitlist": "Join Waitlist",
-    "privacy": "Privacy Policy",
-    "terms": "Terms of Service",
-    "rights": "All rights reserved.",
-    "comingSoon": "Coming Early 2026"
-  },
-  "signIn": {
-    "title": "Organization Sign In",
-    "description": "This is the first step to create your organization",
-    "welcomeMessage": "Welcome! Sign in to get started with your organization account",
-    "signInWithGoogle": "Continue with Google",
-    "signInWithMicrosoft": "Continue with Microsoft",
-    "or": "Or continue with email",
-    "emailLabel": "Email",
-    "emailPlaceholder": "your.email@example.com",
-    "sendOtp": "Send Verification Code",
-    "otpLabel": "Verification Code",
-    "otpPlaceholder": "000000",
-    "otpHint": "Enter the 6-digit code sent to your email",
-    "otpSentMessage": "We've sent a verification code to your email. Please check your inbox and enter the 6-digit code below.",
-    "verifyOtp": "Verify Code",
-    "changeEmail": "Use a different email",
-    "loading": "Processing...",
-    "adminTitle": "Admin",
-    "adminDescription": "Sign in to access the administration dashboard",
-    "invalidOtpCode": "Please enter the 6-digit verification code",
-    "failedToSendOtp": "Couldn't send verification code",
-    "failedToVerifyOtp": "Couldn't verify code"
-  },
-  "webOnboarding": {
-    "badge": "Get Started",
-    "pageTitle": "Create Your Organization",
-    "pageDescription": "Set up your organization profile to start managing your facilities and members",
-    "title": "Organization Details",
-    "description": "Fill in the information below to create your organization profile",
-    "basicInfo": "Basic Information",
-    "contactInfo": "Contact Information",
-    "locationInfo": "Location Information",
-    "yourRole": "Your Role",
-    "nameLabel": "Organization Name",
-    "namePlaceholder": "e.g., Toronto Tennis Club",
-    "typeLabel": "Organization Type",
-    "typeClub": "Club",
-    "typeMunicipality": "Municipality",
-    "typeCity": "City",
-    "typeAssociation": "Association",
-    "natureLabel": "Nature",
-    "naturePublic": "Public",
-    "naturePrivate": "Private",
-    "descriptionLabel": "Description",
-    "descriptionPlaceholder": "Tell us about your organization...",
-    "emailLabel": "Email",
-    "emailPlaceholder": "contact@organization.com",
-    "phoneLabel": "Phone",
-    "phonePlaceholder": "+1 (555) 123-4567",
-    "websiteLabel": "Website",
-    "websitePlaceholder": "https://www.organization.com",
-    "addressLabel": "Address",
-    "addressPlaceholder": "123 Main Street",
-    "cityLabel": "City",
-    "cityPlaceholder": "Toronto",
-    "countryLabel": "Country",
-    "countryPlaceholder": "Select country",
-    "postalCodeLabel": "Postal Code",
-    "postalCodePlaceholder": "M5H 2N2",
-    "roleLabel": "Your Role in This Organization",
-    "roleOwner": "Owner",
-    "roleAdmin": "Administrator",
-    "roleStaff": "Staff",
-    "roleCoach": "Coach",
-    "rolePlayer": "Player",
-    "roleHint": "Select the role that best describes your position in this organization.",
-    "createButton": "Create Organization",
-    "creating": "Creating...",
-    "cancel": "Cancel"
-  },
-  "dashboard": {
-    "badge": "Dashboard",
-    "title": "Welcome to Your Dashboard",
-    "description": "Manage your organization and view your profile information",
-    "profileTitle": "Your Profile",
-    "profileDescription": "Your personal information and account settings.",
-    "organizationTitle": "Your Organization",
-    "organizationDescription": "Details about your organization.",
-    "email": "Email",
-    "fullName": "Full Name",
-    "displayName": "Display Name",
-    "locale": "Locale",
-    "timezone": "Timezone",
-    "name": "Name",
-    "phone": "Phone",
-    "location": "Location",
-    "website": "Website",
-    "role": "Role",
-    "joinedAt": "Joined"
-  },
-  "app": {
-    "nav": {
-      "dashboard": "Dashboard",
-      "organizations": "Organizations",
-      "facilities": "Facilities",
-      "members": "Members",
-      "settings": "Settings",
-      "theme": "Theme",
-      "signOut": "Sign Out"
-    }
-  },
-  "admin": {
-    "signIn": {
-      "title": "Admin Sign In",
-      "description": "Sign in to access the administration dashboard",
-      "restricted": "Restricted to Rallia employees and authorized administrators",
-      "titleMeta": "Admin Sign In - Rallia",
-      "descriptionMeta": "Sign in to access the Rallia administration dashboard."
-    },
-    "sidebar": {
-      "brand": "Rallia Admin",
-      "dashboard": "Dashboard",
-      "organizations": "Organizations",
-      "users": "Users",
-      "analytics": "Analytics",
-      "settings": "Settings"
-    },
-    "dashboard": {
-      "title": "Admin Dashboard",
-      "description": "Manage organizations, users, and settings",
-      "titleMeta": "Admin Dashboard - Rallia",
-      "descriptionMeta": "Administration dashboard for Rallia employees.",
-      "organizationsCard": {
-        "title": "Organizations",
-        "description": "Manage all organizations"
-      },
-      "usersCard": {
-        "title": "Users",
-        "description": "View and manage user accounts"
-      },
-      "analyticsCard": {
-        "title": "Analytics",
-        "description": "Analytics and insights"
-      }
-    },
-    "organizations": {
-      "title": "Organizations",
-      "description": "Manage all organizations",
-      "titleMeta": "Organizations - Admin - Rallia",
-      "descriptionMeta": "Manage all organizations.",
-      "comingSoon": "Organization management interface coming soon.",
-      "table": {
-        "name": "Name",
-        "email": "Email",
-        "phone": "Phone",
-        "website": "Website",
-        "nature": "Nature",
-        "type": "Type",
-        "city": "City",
-        "country": "Country",
-        "status": "Status",
-        "createdAt": "Created",
-        "noOrganizations": "No organizations found.",
-        "loading": "Loading organizations...",
-        "error": "Couldn't load organizations"
-      },
-      "status": {
-        "active": "Active",
-        "inactive": "Inactive"
-      },
-      "nature": {
-        "public": "Public",
-        "private": "Private"
-      },
-      "pagination": {
-        "showing": "Showing {start} to {end} of {total} organizations",
-        "page": "Page {current} of {total}"
-      },
-      "createButton": "Create Organization",
-      "bulkActions": {
-        "selected": "{count, plural, =0 {No organizations selected} one {# organization selected} other {# organizations selected}}",
-        "delete": "Delete Selected",
-        "confirmTitle": "Delete Organizations",
-        "confirmDescription": "Are you sure you want to permanently delete {count, plural, one {this organization} other {these # organizations}}? This action cannot be undone and will delete all associated facilities, courts, contacts, and images.",
-        "cancel": "Cancel",
-        "confirmDelete": "Delete",
-        "deleting": "Deleting..."
-      },
-      "create": {
-        "title": "Create Organization",
-        "description": "Create a new organization with facilities, sports, contacts, and courts.",
-        "titleMeta": "Create Organization - Admin - Rallia",
-        "descriptionMeta": "Create a new organization with all related entities.",
-        "formTitle": "New Organization",
-        "formDescription": "Fill in the details below to create a new organization.",
-        "sections": {
-          "organization": "Organization Information",
-          "dataProvider": "Data Provider",
-          "facilities": "Facilities",
-          "facility": "Facility",
-          "facilityImages": "Facility Images",
-          "facilityInfo": "Facility Information",
-          "sports": "Sports",
-          "contacts": "Contacts",
-          "contact": "Contact",
-          "courts": "Courts",
-          "courtRow": "Court Row"
-        },
-        "fields": {
-          "orgName": "Organization Name",
-          "orgType": "Organization Type",
-          "selectOrgType": "Select organization type (optional)",
-          "selectType": "Select Type",
-          "orgNature": "Nature",
-          "email": "Email",
-          "phone": "Phone",
-          "website": "Website",
-          "description": "Description",
-          "descriptionPlaceholder": "Enter organization description...",
-          "isActive": "Active",
-          "dataProvider": "Data Provider",
-          "selectDataProvider": "Select Data Provider",
-          "dataProviderHint": "Select a data provider for court availability fetching. Leave empty to use organization default.",
-          "address": "Address",
-          "city": "City",
-          "country": "Country",
-          "postalCode": "Postal Code",
-          "selectCountry": "Select Country",
-          "facilityName": "Facility Name",
-          "facilityNamePlaceholder": "Enter facility name to search...",
-          "facilityType": "Facility Type",
-          "selectFacilityType": "Select Facility Type",
-          "facilityDescriptionPlaceholder": "Enter facility description...",
-          "timezone": "Timezone",
-          "selectTimezone": "Select Timezone",
-          "externalProviderId": "External Provider ID",
-          "externalProviderIdPlaceholder": "External ID from data provider (e.g., siteId)",
-          "latitude": "Latitude",
-          "longitude": "Longitude",
-          "contactType": "Contact Type",
-          "isPrimary": "Primary Contact",
-          "notes": "Notes",
-          "surfaceType": "Surface Type",
-          "selectSurfaceType": "Select Surface Type",
-          "quantity": "Quantity",
-          "sports": "Sports",
-          "options": "Options",
-          "lighting": "Lighting",
-          "indoor": "Indoor",
-          "markAsPrimary": "Mark as primary contact",
-          "selectSportsFirst": "Select sports above first",
-          "membershipRequired": "Membership required to access this facility"
-        },
-        "types": {
-          "club": "Club",
-          "municipality": "Municipality",
-          "city": "City",
-          "association": "Association"
-        },
-        "natures": {
-          "public": "Public",
-          "private": "Private"
-        },
-        "facilityTypes": {
-          "park": "Park",
-          "club": "Club",
-          "community_club": "Community Club",
-          "indoor_center": "Indoor Center",
-          "private": "Private",
-          "other": "Other"
-        },
-        "contactTypes": {
-          "general": "General",
-          "reservation": "Reservation",
-          "maintenance": "Maintenance",
-          "other": "Other"
-        },
-        "surfaceTypes": {
-          "hard": "Hard",
-          "clay": "Clay",
-          "grass": "Grass",
-          "synthetic": "Synthetic",
-          "carpet": "Carpet",
-          "asphalt": "Asphalt",
-          "concrete": "Concrete"
-        },
-        "actions": {
-          "addFacility": "Add Facility",
-          "addContact": "Add Contact",
-          "addCourtRow": "Add Court Row",
-          "uploadImages": "Click to upload images",
-          "create": "Create Organization",
-          "creating": "Creating...",
-          "cancel": "Cancel",
-          "useOrgAddress": "Use organization address",
-          "useOrgContact": "Use organization contact information",
-          "searchPlace": "Search Google Places"
-        },
-        "loading": {
-          "sports": "Loading sports...",
-          "dataProviders": "Loading data providers..."
-        },
-        "hints": {
-          "holdCtrlToSelect": "Hold Ctrl/Cmd to select multiple"
-        },
-        "validation": {
-          "requiredFields": "Please fill in all required fields",
-          "atLeastOneFacility": "At least one facility is required",
-          "facilityNameRequired": "Facility {index} name is required",
-          "facilitySportsRequired": "Facility {index} must have at least one sport selected",
-          "facilityCountryRequired": "Facility {index} country is required"
-        },
-        "error": {
-          "createFailed": "Couldn't create organization"
-        },
-        "success": {
-          "title": "Organization Created Successfully",
-          "description": "The organization has been created successfully. What would you like to do next?",
-          "viewOrganization": "View Organization",
-          "createAnother": "Create Another",
-          "backToList": "Back to List"
-        }
-      },
-      "profile": {
-        "title": "Organization Profile",
-        "description": "View organization details for {slug}",
-        "titleMeta": "Organization Profile - Admin - Rallia",
-        "descriptionMeta": "View organization details",
-        "updateButton": "Update Organization",
-        "deleteButton": "Delete Organization",
-        "deleteConfirm": {
-          "title": "Delete Organization",
-          "description": "Are you sure you want to permanently delete \"{name}\"? This action cannot be undone and will delete all associated facilities, courts, contacts, and images.",
-          "cancel": "Cancel",
-          "confirm": "Delete Organization",
-          "deleting": "Deleting..."
-        },
-        "sections": {
-          "organizationInfo": "Organization Information",
-          "facilities": "Facilities",
-          "facilityImages": "Facility Images",
-          "sports": "Sports",
-          "contacts": "Contacts",
-          "courts": "Courts"
-        },
-        "fields": {
-          "email": "Email",
-          "phone": "Phone",
-          "website": "Website",
-          "address": "Address",
-          "description": "Description",
-          "createdAt": "Created At",
-          "updatedAt": "Updated At"
-        },
-        "status": {
-          "active": "Active",
-          "inactive": "Inactive"
-        },
-        "nature": {
-          "public": "Public",
-          "private": "Private"
-        },
-        "facility": "Facility",
-        "facilities": "Facilities",
-        "noFacilities": "No facilities found for this organization",
-        "primary": "Primary",
-        "court": "Court",
-        "courts": "Courts",
-        "surfaceType": "Surface Type",
-        "lighting": "Lighting",
-        "indoor": "Indoor",
-        "error": "Couldn't load organization"
-      },
-      "update": {
-        "title": "Update Organization",
-        "description": "Update organization details, facilities, and related information.",
-        "titleMeta": "Update Organization - Admin - Rallia",
-        "descriptionMeta": "Update organization details.",
-        "formTitle": "Update Organization",
-        "formDescription": "Update the details below to modify the organization.",
-        "sections": {
-          "organization": "Organization Information",
-          "dataProvider": "Data Provider",
-          "facilities": "Facilities",
-          "facility": "Facility",
-          "facilityImages": "Facility Images",
-          "facilityInfo": "Facility Information",
-          "sports": "Sports",
-          "contacts": "Contacts",
-          "contact": "Contact",
-          "courts": "Courts",
-          "courtRow": "Court Row"
-        },
-        "fields": {
-          "orgName": "Organization Name",
-          "orgType": "Organization Type",
-          "selectOrgType": "Select organization type (optional)",
-          "selectType": "Select Type",
-          "orgNature": "Nature",
-          "email": "Email",
-          "phone": "Phone",
-          "website": "Website",
-          "description": "Description",
-          "descriptionPlaceholder": "Enter organization description...",
-          "isActive": "Active",
-          "dataProvider": "Data Provider",
-          "selectDataProvider": "Select Data Provider",
-          "dataProviderHint": "Select a data provider for court availability fetching. Leave empty to use organization default.",
-          "address": "Address",
-          "city": "City",
-          "country": "Country",
-          "postalCode": "Postal Code",
-          "selectCountry": "Select Country",
-          "facilityName": "Facility Name",
-          "facilityNamePlaceholder": "Enter facility name to search...",
-          "facilityType": "Facility Type",
-          "selectFacilityType": "Select Facility Type",
-          "facilityDescriptionPlaceholder": "Enter facility description...",
-          "timezone": "Timezone",
-          "selectTimezone": "Select Timezone",
-          "externalProviderId": "External Provider ID",
-          "externalProviderIdPlaceholder": "External ID from data provider (e.g., siteId)",
-          "latitude": "Latitude",
-          "longitude": "Longitude",
-          "contactType": "Contact Type",
-          "isPrimary": "Primary Contact",
-          "notes": "Notes",
-          "surfaceType": "Surface Type",
-          "selectSurfaceType": "Select Surface Type",
-          "quantity": "Quantity",
-          "sports": "Sports",
-          "options": "Options",
-          "lighting": "Lighting",
-          "indoor": "Indoor",
-          "markAsPrimary": "Mark as primary contact",
-          "selectSportsFirst": "Select sports above first",
-          "membershipRequired": "Membership required to access this facility"
-        },
-        "types": {
-          "club": "Club",
-          "municipality": "Municipality",
-          "city": "City",
-          "association": "Association"
-        },
-        "natures": {
-          "public": "Public",
-          "private": "Private"
-        },
-        "facilityTypes": {
-          "park": "Park",
-          "club": "Club",
-          "community_club": "Community Club",
-          "indoor_center": "Indoor Center",
-          "private": "Private",
-          "other": "Other"
-        },
-        "contactTypes": {
-          "general": "General",
-          "reservation": "Reservation",
-          "maintenance": "Maintenance",
-          "other": "Other"
-        },
-        "surfaceTypes": {
-          "hard": "Hard",
-          "clay": "Clay",
-          "grass": "Grass",
-          "synthetic": "Synthetic",
-          "carpet": "Carpet",
-          "asphalt": "Asphalt",
-          "concrete": "Concrete"
-        },
-        "actions": {
-          "addFacility": "Add Facility",
-          "addContact": "Add Contact",
-          "addCourtRow": "Add Court Row",
-          "uploadImages": "Click to upload images",
-          "update": "Update Organization",
-          "updating": "Updating...",
-          "cancel": "Cancel",
-          "useOrgAddress": "Use organization address",
-          "useOrgContact": "Use organization contact information",
-          "searchPlace": "Search Google Places"
-        },
-        "loading": {
-          "sports": "Loading sports...",
-          "dataProviders": "Loading data providers..."
-        },
-        "hints": {
-          "holdCtrlToSelect": "Hold Ctrl/Cmd to select multiple"
-        },
-        "validation": {
-          "requiredFields": "Please fill in all required fields",
-          "atLeastOneFacility": "At least one facility is required",
-          "facilityNameRequired": "Facility {index} name is required",
-          "facilitySportsRequired": "Facility {index} must have at least one sport selected",
-          "facilityCountryRequired": "Facility {index} country is required"
-        },
-        "error": {
-          "updateFailed": "Couldn't update organization",
-          "loadFailed": "Couldn't load organization"
-        },
-        "success": {
-          "title": "Organization Updated Successfully",
-          "description": "The organization has been updated successfully. What would you like to do next?",
-          "viewOrganization": "View Organization",
-          "backToList": "Back to List"
-        }
-      }
-    },
-    "users": {
-      "title": "Users",
-      "description": "Manage all users including admins, organization members, and players",
-      "titleMeta": "Users - Admin - Rallia",
-      "descriptionMeta": "Manage all users including admins, organization members, and players.",
-      "comingSoon": "User management interface coming soon.",
-      "tabs": {
-        "admins": "Admins",
-        "organizationMembers": "Organization Members",
-        "players": "Players",
-        "comingSoon": "Coming soon"
-      },
-      "table": {
-        "name": "Name",
-        "email": "Email",
-        "role": "Role",
-        "assignedAt": "Assigned At",
-        "status": "Status",
-        "createdAt": "Created At",
-        "noAdmins": "No admins found.",
-        "error": "Couldn't load admins"
-      },
-      "status": {
-        "active": "Active",
-        "inactive": "Inactive"
-      },
-      "roles": {
-        "super_admin": "Super Admin",
-        "moderator": "Moderator",
-        "support": "Support"
-      },
-      "inviteButton": "Invite User",
-      "invite": {
-        "title": "Invite User",
-        "description": "Send an email invitation to a new user.",
-        "fields": {
-          "email": "Email",
-          "emailPlaceholder": "user@example.com",
-          "role": "Role",
-          "adminRole": "Admin Type"
-        },
-        "roles": {
-          "selectRole": "Select a role",
-          "player": "Player",
-          "admin": "Admin",
-          "orgMember": "Organization Member"
-        },
-        "adminRoles": {
-          "super_admin": "Super Admin",
-          "moderator": "Moderator",
-          "support": "Support"
-        },
-        "actions": {
-          "send": "Send Invitation",
-          "sending": "Sending...",
-          "cancel": "Cancel"
-        },
-        "validation": {
-          "invalidEmail": "Please enter a valid email address.",
-          "adminRoleRequired": "Please select an admin type."
-        },
-        "error": {
-          "sendFailed": "Couldn't send invitation. Please try again."
-        },
-        "success": {
-          "invitationSent": "Invitation sent successfully to {email}!"
-        }
-      }
-    },
-    "analytics": {
-      "title": "Analytics",
-      "description": "Analytics and insights",
-      "titleMeta": "Analytics - Admin - Rallia",
-      "descriptionMeta": "Analytics and insights.",
-      "comingSoon": "Analytics dashboard coming soon."
-    },
-    "settings": {
-      "title": "Settings",
-      "description": "Manage settings and configuration",
-      "titleMeta": "Settings - Admin - Rallia",
-      "descriptionMeta": "Manage settings.",
-      "comingSoon": "Settings interface coming soon."
-    },
-    "errors": {
-      "accessDenied": "Access denied. Admin access required.",
-      "unexpectedError": "Something unexpected happened",
-      "invalidCallback": "Invalid callback parameters"
-    }
-  },
-  "sportSelectionOverlay": {
-    "welcomeBadge": "👋 Welcome to Rallia",
-    "title": "Let's find your game",
-    "subtitle": "Choose the sports you love playing. You can always add more later!",
-    "loading": "Loading sports...",
-    "getStarted": "Let's Go!",
-    "selectAtLeastOne": "Select a sport to continue",
-    "selectionHint": "You will start with {sport}",
-    "tapToSelect": "Tap to add",
-    "tapToRemove": "Tap to remove"
-  },
-  "preOnboarding": {
-    "step": "Step {current} of {total}",
-    "postalCode": {
-      "title": "Where do you play?",
-      "subtitle": "Your postal code helps us find matches and players in your area. No more scrolling through games across the country!",
-      "whyNeeded": "We use this to show you matches you can actually get to",
-      "placeholder": "Enter your postal code",
-      "placeholderCA": "e.g., H2X 1Y4",
-      "placeholderUS": "e.g., 90210",
-      "verifying": "Finding your area...",
-      "verified": "Perfect! We found your area",
-      "continue": "Find Matches Near Me",
-      "benefits": {
-        "title": "With your postal code, you'll:",
-        "item1": "See matches within your travel distance",
-        "item2": "Connect with local players",
-        "item3": "Get notified about games nearby",
-        "findPlayers": {
-          "title": "Find players near you",
-          "description": "Match with players in your area who are at your level"
-        },
-        "discoverCourts": {
-          "title": "Discover local courts",
-          "description": "Find the best courts and clubs nearby"
-        },
-        "joinEvents": {
-          "title": "Never miss a game",
-          "description": "Get notified about matches in your neighborhood"
-        }
-      },
-      "privacy": "We never share your exact address",
-      "errors": {
-        "invalid": "Please enter a valid postal code",
-        "invalidCA": "Please enter a valid Canadian postal code (e.g., H2X 1Y4)",
-        "invalidUS": "Please enter a valid US ZIP code (e.g., 90210)",
-        "notFound": "We couldn't find this postal code. Please check and try again.",
-        "networkError": "Connection error. Please try again."
-      }
-    },
-    "locationPermission": {
-      "title": "Get the best match recommendations",
-      "subtitle": "Enable location to see exactly how far matches are and never miss a game nearby",
-      "whyNeeded": "Your device's GPS gives us precise distances so you know exactly how long it takes to get there",
-      "comparison": {
-        "without": "Without GPS",
-        "withoutExample": "~5 km away",
-        "with": "With GPS",
-        "withExample": "2.3 km • 8 min"
-      },
-      "benefits": {
-        "title": "With precise location, you'll:",
-        "item1": "See exact distances to matches",
-        "item2": "Find the closest available courts",
-        "item3": "Get real-time match alerts when you're nearby",
-        "item4": "Discover players in your neighborhood"
-      },
-      "enable": "Enable Precise Location",
-      "skip": "Maybe Later",
-      "privacyNote": "Your location stays on your device and is only used to calculate distances. We never track or store your movements.",
-      "skipNote": "You can always enable this later in Settings"
-    }
-  },
-  "reputation": {
-    "tiers": {
-      "unknown": "New",
-      "bronze": "Bronze",
-      "silver": "Silver",
-      "gold": "Gold",
-      "platinum": "Platinum"
-    },
-    "labels": {
-      "newPlayer": "New Player",
-      "score": "{score}%",
-      "tierWithScore": "{tier} {score}%"
-    },
-    "tooltips": {
-      "unknown": "This player hasn't completed enough matches yet",
-      "bronze": "Bronze tier player",
-      "silver": "Silver tier player",
-      "gold": "Gold tier player - reliable and trustworthy",
-      "platinum": "Platinum tier player - exceptional reputation"
-    },
-    "profile": {
-      "title": "Reputation",
-      "matchesCompleted": "Matches Completed",
-      "eventsToPublic": "{count} more events until public",
-      "trend": {
-        "improving": "Improving",
-        "stable": "Stable",
-        "declining": "Declining"
-      }
-    }
-  },
-  "home": {
-    "subtitle": "The best way to find your next tennis or pickleball partner",
-    "header": {
-      "ctaButton": "Join Waitlist"
-    },
-    "hero": {
-      "badge": "🚀 Coming Early 2026",
-      "headline": "Your next game is waiting.",
-      "subheadline": "Connect with compatible players, schedule games effortlessly, and never play alone again.",
-      "ctaButton": "Join the Waitlist",
-      "ctaSubtext": "✓ No credit card required  •  ✓ Exclusive early access"
-    },
-    "problems": {
-      "sectionTitle": "The Challenge",
-      "sectionBadge": "The Problem",
-      "scheduling": {
-        "title": "The Scheduling Nightmare",
-        "description": "Hours spent coordinating through WhatsApp groups and Facebook. Last-minute cancellations. Games that never happen."
-      },
-      "compatibility": {
-        "title": "The Compatibility Crisis",
-        "description": "Skill mismatches ruin the experience. Location conflicts. Surface preferences don't align. Finding the right game feels impossible."
-      },
-      "reliability": {
-        "title": "The Reliability Problem",
-        "description": "No-shows without warning. Serial flakeys with no accountability. No way to know who's trustworthy."
-      },
-      "growth": {
-        "title": "The Growth Barrier",
-        "description": "Can't find enough games to improve. Limited partner pool. Skill progression stalls without consistent play."
-      }
-    },
-    "howItWorks": {
-      "sectionTitle": "How It Works",
-      "sectionBadge": "Simple Process",
-      "step1": {
-        "title": "Join the Waitlist",
-        "description": "Sign up with your email to secure your spot and get notified when we launch."
-      },
-      "step2": {
-        "title": "Create Your Profile",
-        "description": "Tell us about your skill level, location, and playing preferences."
-      },
-      "step3": {
-        "title": "Get Matched",
-        "description": "We find perfect playing partners based on your profile and availability."
-      },
-      "step4": {
-        "title": "Play & Review",
-        "description": "Schedule games instantly and build your reliable player network."
-      }
-    },
-    "solutions": {
-      "sectionTitle": "The Solution",
-      "sectionBadge": "How It Works",
-      "matchmaking": {
-        "title": "Smart Matchmaking",
-        "description": "Smart skill assessment and reliability tracking. Get paired with players who match your level and commitment."
-      },
-      "scheduling": {
-        "title": "Instant Scheduling",
-        "description": "One-click game proposals with smart calendar sync. Auto-confirmations and live availability. No more endless back-and-forth."
-      },
-      "marketplace": {
-        "title": "Game Marketplace",
-        "description": "Post or browse games by time, location, and skill level. Instant booking with built-in ratings and reviews."
-      },
-      "portfolio": {
-        "title": "Player Network",
-        "description": "Build your roster of favorite players. Get smart suggestions based on your preferences and play history."
-      }
-    },
-    "whyJoinEarly": {
-      "sectionTitle": "Why Join Early?",
-      "sectionBadge": "Early Adopter Benefits",
-      "description": "Be part of the founding community and enjoy exclusive perks that won't be available after launch.",
-      "benefits": {
-        "priority": {
-          "title": "Priority Access",
-          "description": "Skip the line and get immediate access when we launch. No waiting period."
-        },
-        "pricing": {
-          "title": "Special Early Benefits",
-          "description": "Enjoy special perks and benefits as an early supporter. Founding members get exclusive advantages."
-        },
-        "influence": {
-          "title": "Shape the Product",
-          "description": "Your feedback directly influences features. Help us build exactly what you need."
-        },
-        "exclusive": {
-          "title": "Exclusive Features",
-          "description": "Get early access to beta features and new releases before anyone else."
-        },
-        "community": {
-          "title": "Founding Community",
-          "description": "Connect with other early adopters and build your network before the crowd arrives."
-        },
-        "support": {
-          "title": "VIP Support",
-          "description": "Direct line to our team. Get priority support and help shape our service standards."
-        }
-      }
-    },
-    "cta": {
-      "headline": "Ready to Transform Your Tennis Experience?",
-      "description": "Be among the first to experience the future of tennis matchmaking. Join our waitlist and get exclusive early access when we launch.",
-      "button": "Join the Waitlist"
-    },
-    "socialProof": {
-      "sectionTitle": "What Beta Testers Are Saying",
-      "sectionBadge": "Early Feedback",
-      "testimonials": {
-        "first": {
-          "name": "Sarah M.",
-          "location": "Toronto, ON",
-          "rating": "5",
-          "text": "I tested the beta and the skill matching is incredible. Can't wait for the full launch - this will completely change how I find tennis partners!"
-        },
-        "second": {
-          "name": "Michael R.",
-          "location": "Vancouver, BC",
-          "rating": "5",
-          "text": "Finally, someone is solving the real problem! The interface is clean and the matching algorithm actually understands what players need."
-        },
-        "third": {
-          "name": "Jennifer L.",
-          "location": "Montreal, QC",
-          "rating": "5",
-          "text": "The scheduling feature alone is worth it. As a beta tester, I'm excited to see where this goes. Sign up for the waitlist!"
-        }
-      },
-      "stats": {
-        "players": "2,500+",
-        "playersLabel": "Waitlist Signups",
-        "matches": "500+",
-        "matchesLabel": "Beta Test Games",
-        "rating": "4.9/5",
-        "ratingLabel": "Beta Tester Rating"
-      }
-    },
-    "waitlist": {
-      "sectionTitle": "Join the Waitlist",
-      "sectionBadge": "Early Access",
-      "description": "Be among the first to experience the future of tennis matchmaking. Get exclusive early access and special perks.",
-      "form": {
-        "namePlaceholder": "Your name",
-        "emailPlaceholder": "your.email@example.com",
-        "submitButton": "Get Early Access",
-        "successMessage": "Thanks! We'll be in touch soon.",
-        "nameLabel": "Name",
-        "emailLabel": "Email",
-        "noCard": "No credit card required • Get exclusive perks as an early supporter"
-      }
-    },
-    "faq": {
-      "sectionTitle": "Frequently Asked Questions",
-      "sectionBadge": "FAQ",
-      "questions": {
-        "cost": {
-          "question": "Is Rallia free to use?",
-          "answer": "We're currently finalizing our pricing model. Early supporters will receive special benefits. Join the waitlist to stay updated on our plans."
-        },
-        "sports": {
-          "question": "What sports are supported?",
-          "answer": "Currently, we support tennis and pickleball. We're planning to expand to other racquet sports like squash and badminton based on user demand."
-        },
-        "matching": {
-          "question": "How does the skill matching work?",
-          "answer": "Our system analyzes your self-reported skill level, game history, and player feedback to accurately assess your ability. You'll be matched with players within your skill range for competitive and enjoyable games."
-        },
-        "privacy": {
-          "question": "Is my data private and secure?",
-          "answer": "Absolutely. We use industry-standard encryption and never share your personal information with third parties. You control what information is visible to other players."
-        },
-        "availability": {
-          "question": "When will Rallia be available?",
-          "answer": "We're currently in beta testing and plan to launch publicly in early 2026. Join our waitlist to get early access and be notified when we launch in your area."
-        },
-        "platforms": {
-          "question": "What platforms is Rallia available on?",
-          "answer": "Rallia will be available as a web app, iOS app, and Android app. You'll be able to access your account and schedule games from any device."
-        }
-      }
     }
   },
   "winter": {
@@ -3636,12 +2528,12 @@
     "failedToSendOtp": "Failed to send OTP",
     "failedToVerifyOtp": "Failed to verify OTP"
   },
-  "onboarding": {
+  "webOnboarding": {
     "badge": "Get Started",
     "pageTitle": "Create Your Organization",
-    "pageDescription": "Set up your organization profile to start managing your facilities and members.",
+    "pageDescription": "Set up your organization profile to start managing your facilities and members",
     "title": "Organization Details",
-    "description": "Fill in the information below to create your organization profile.",
+    "description": "Fill in the information below to create your organization profile",
     "basicInfo": "Basic Information",
     "contactInfo": "Contact Information",
     "locationInfo": "Location Information",
@@ -4199,6 +3091,110 @@
       "accessDenied": "Access denied. Admin access required.",
       "unexpectedError": "An unexpected error occurred",
       "invalidCallback": "Invalid callback parameters"
+    }
+  },
+  "sportSelectionOverlay": {
+    "welcomeBadge": "👋 Welcome to Rallia",
+    "title": "Let's find your game",
+    "subtitle": "Choose the sports you love playing. You can always add more later!",
+    "loading": "Loading sports...",
+    "getStarted": "Let's Go!",
+    "selectAtLeastOne": "Select a sport to continue",
+    "selectionHint": "You will start with {sport}",
+    "tapToSelect": "Tap to add",
+    "tapToRemove": "Tap to remove"
+  },
+  "preOnboarding": {
+    "step": "Step {current} of {total}",
+    "postalCode": {
+      "title": "Where do you play?",
+      "subtitle": "Your postal code helps us find matches and players in your area. No more scrolling through games across the country!",
+      "whyNeeded": "We use this to show you matches you can actually get to",
+      "placeholder": "Enter your postal code",
+      "placeholderCA": "e.g., H2X 1Y4",
+      "placeholderUS": "e.g., 90210",
+      "verifying": "Finding your area...",
+      "verified": "Perfect! We found your area",
+      "continue": "Find Matches Near Me",
+      "benefits": {
+        "title": "With your postal code, you'll:",
+        "item1": "See matches within your travel distance",
+        "item2": "Connect with local players",
+        "item3": "Get notified about games nearby",
+        "findPlayers": {
+          "title": "Find players near you",
+          "description": "Match with players in your area who are at your level"
+        },
+        "discoverCourts": {
+          "title": "Discover local courts",
+          "description": "Find the best courts and clubs nearby"
+        },
+        "joinEvents": {
+          "title": "Never miss a game",
+          "description": "Get notified about matches in your neighborhood"
+        }
+      },
+      "privacy": "We never share your exact address",
+      "errors": {
+        "invalid": "Please enter a valid postal code",
+        "invalidCA": "Please enter a valid Canadian postal code (e.g., H2X 1Y4)",
+        "invalidUS": "Please enter a valid US ZIP code (e.g., 90210)",
+        "notFound": "We couldn't find this postal code. Please check and try again.",
+        "networkError": "Connection error. Please try again."
+      }
+    },
+    "locationPermission": {
+      "title": "Get the best match recommendations",
+      "subtitle": "Enable location to see exactly how far matches are and never miss a game nearby",
+      "whyNeeded": "Your device's GPS gives us precise distances so you know exactly how long it takes to get there",
+      "comparison": {
+        "without": "Without GPS",
+        "withoutExample": "~5 km away",
+        "with": "With GPS",
+        "withExample": "2.3 km • 8 min"
+      },
+      "benefits": {
+        "title": "With precise location, you'll:",
+        "item1": "See exact distances to matches",
+        "item2": "Find the closest available courts",
+        "item3": "Get real-time match alerts when you're nearby",
+        "item4": "Discover players in your neighborhood"
+      },
+      "enable": "Enable Precise Location",
+      "skip": "Maybe Later",
+      "privacyNote": "Your location stays on your device and is only used to calculate distances. We never track or store your movements.",
+      "skipNote": "You can always enable this later in Settings"
+    }
+  },
+  "reputation": {
+    "tiers": {
+      "unknown": "New",
+      "bronze": "Bronze",
+      "silver": "Silver",
+      "gold": "Gold",
+      "platinum": "Platinum"
+    },
+    "labels": {
+      "newPlayer": "New Player",
+      "score": "{score}%",
+      "tierWithScore": "{tier} {score}%"
+    },
+    "tooltips": {
+      "unknown": "This player hasn't completed enough matches yet",
+      "bronze": "Bronze tier player",
+      "silver": "Silver tier player",
+      "gold": "Gold tier player - reliable and trustworthy",
+      "platinum": "Platinum tier player - exceptional reputation"
+    },
+    "profile": {
+      "title": "Reputation",
+      "matchesCompleted": "Matches Completed",
+      "eventsToPublic": "{count} more events until public",
+      "trend": {
+        "improving": "Improving",
+        "stable": "Stable",
+        "declining": "Declining"
+      }
     }
   }
 }
