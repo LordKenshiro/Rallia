@@ -1009,51 +1009,6 @@ export type Database = {
           },
         ];
       };
-      group_activity: {
-        Row: {
-          activity_type: string;
-          created_at: string;
-          id: string;
-          metadata: Json | null;
-          network_id: string;
-          player_id: string;
-          related_entity_id: string | null;
-        };
-        Insert: {
-          activity_type: string;
-          created_at?: string;
-          id?: string;
-          metadata?: Json | null;
-          network_id: string;
-          player_id: string;
-          related_entity_id?: string | null;
-        };
-        Update: {
-          activity_type?: string;
-          created_at?: string;
-          id?: string;
-          metadata?: Json | null;
-          network_id?: string;
-          player_id?: string;
-          related_entity_id?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'group_activity_network_id_fkey';
-            columns: ['network_id'];
-            isOneToOne: false;
-            referencedRelation: 'network';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'group_activity_player_id_fkey';
-            columns: ['player_id'];
-            isOneToOne: false;
-            referencedRelation: 'player';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
       invitation: {
         Row: {
           accepted_at: string | null;
@@ -1924,7 +1879,7 @@ export type Database = {
           invite_code: string | null;
           is_private: boolean | null;
           max_members: number | null;
-          member_count: number;
+          member_count: number | null;
           name: string;
           network_type_id: string;
           updated_at: string | null;
@@ -1939,7 +1894,7 @@ export type Database = {
           invite_code?: string | null;
           is_private?: boolean | null;
           max_members?: number | null;
-          member_count?: number;
+          member_count?: number | null;
           name: string;
           network_type_id: string;
           updated_at?: string | null;
@@ -1954,7 +1909,7 @@ export type Database = {
           invite_code?: string | null;
           is_private?: boolean | null;
           max_members?: number | null;
-          member_count?: number;
+          member_count?: number | null;
           name?: string;
           network_type_id?: string;
           updated_at?: string | null;
@@ -1992,7 +1947,7 @@ export type Database = {
           network_id: string;
           player_id: string;
           request_type: Database['public']['Enums']['network_member_request_type'] | null;
-          role: Database['public']['Enums']['network_member_role_enum'];
+          role: Database['public']['Enums']['network_member_role_enum'] | null;
           status: Database['public']['Enums']['network_member_status'] | null;
           updated_at: string | null;
         };
@@ -2004,7 +1959,7 @@ export type Database = {
           network_id: string;
           player_id: string;
           request_type?: Database['public']['Enums']['network_member_request_type'] | null;
-          role?: Database['public']['Enums']['network_member_role_enum'];
+          role?: Database['public']['Enums']['network_member_role_enum'] | null;
           status?: Database['public']['Enums']['network_member_status'] | null;
           updated_at?: string | null;
         };
@@ -2016,7 +1971,7 @@ export type Database = {
           network_id?: string;
           player_id?: string;
           request_type?: Database['public']['Enums']['network_member_request_type'] | null;
-          role?: Database['public']['Enums']['network_member_role_enum'];
+          role?: Database['public']['Enums']['network_member_role_enum'] | null;
           status?: Database['public']['Enums']['network_member_status'] | null;
           updated_at?: string | null;
         };
@@ -2779,6 +2734,48 @@ export type Database = {
           },
         ];
       };
+      player_favorite_facility: {
+        Row: {
+          created_at: string;
+          display_order: number;
+          facility_id: string;
+          id: string;
+          player_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          display_order?: number;
+          facility_id: string;
+          id?: string;
+          player_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          display_order?: number;
+          facility_id?: string;
+          id?: string;
+          player_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'player_favorite_facility_facility_id_fkey';
+            columns: ['facility_id'];
+            isOneToOne: false;
+            referencedRelation: 'facility';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'player_favorite_facility_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       player_rating_score: {
         Row: {
           assigned_at: string;
@@ -3037,6 +3034,84 @@ export type Database = {
             columns: ['sport_id'];
             isOneToOne: false;
             referencedRelation: 'sport';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      player_sport_play_attribute: {
+        Row: {
+          created_at: string;
+          id: string;
+          play_attribute_id: string;
+          player_sport_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          play_attribute_id: string;
+          player_sport_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          play_attribute_id?: string;
+          player_sport_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'player_sport_play_attribute_play_attribute_id_fkey';
+            columns: ['play_attribute_id'];
+            isOneToOne: false;
+            referencedRelation: 'play_attribute';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'player_sport_play_attribute_player_sport_id_fkey';
+            columns: ['player_sport_id'];
+            isOneToOne: false;
+            referencedRelation: 'player_sport';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      player_sport_play_style: {
+        Row: {
+          created_at: string;
+          id: string;
+          play_style_id: string;
+          player_sport_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          play_style_id: string;
+          player_sport_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          play_style_id?: string;
+          player_sport_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'player_sport_play_style_play_style_id_fkey';
+            columns: ['play_style_id'];
+            isOneToOne: false;
+            referencedRelation: 'play_style';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'player_sport_play_style_player_sport_id_fkey';
+            columns: ['player_sport_id'];
+            isOneToOne: true;
+            referencedRelation: 'player_sport';
             referencedColumns: ['id'];
           },
         ];
