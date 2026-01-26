@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
-import { COLORS } from '@rallia/shared-constants';
 import { PreferencesInfo, PlayStyleEnum, PlayAttributeEnum } from '@rallia/shared-types';
 import { selectionHaptic, mediumHaptic } from '../../../utils/haptics';
 import { useThemeStyles } from '../../../hooks';
@@ -85,8 +84,8 @@ export const PickleballPreferencesOverlay: React.FC<PickleballPreferencesOverlay
   );
   const [showPlayStyleDropdown, setShowPlayStyleDropdown] = useState(false);
 
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
+  const fadeAnim = useMemo(() => new Animated.Value(0), []);
+  const slideAnim = useMemo(() => new Animated.Value(50), []);
 
   useEffect(() => {
     if (visible) {
@@ -106,7 +105,8 @@ export const PickleballPreferencesOverlay: React.FC<PickleballPreferencesOverlay
         }),
       ]).start();
     }
-  }, [visible, fadeAnim, slideAnim]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
 
   const handleTogglePlayAttribute = (attribute: PlayAttributeEnum) => {
     selectionHaptic();

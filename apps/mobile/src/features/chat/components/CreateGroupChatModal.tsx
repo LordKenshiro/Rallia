@@ -3,7 +3,7 @@
  * Multi-step modal for creating a group chat (friends network).
  * Step 1: Select members from all active players
  * Step 2: Set group name and picture
- * 
+ *
  * Creates a network with type 'friends' which automatically creates
  * a linked conversation and adds members to both.
  */
@@ -27,7 +27,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
 import { Text, Button } from '@rallia/shared-components';
-import { useThemeStyles, useAuth } from '../../../hooks';
+import { useThemeStyles, useAuth, useTranslation } from '../../../hooks';
 import { uploadImage } from '../../../services/imageUpload';
 import { primary, spacingPixels, fontSizePixels } from '@rallia/design-system';
 import { supabase } from '../../../lib/supabase';
@@ -48,12 +48,9 @@ interface CreateGroupChatModalProps {
 
 type Step = 'select-members' | 'group-details';
 
-export function CreateGroupChatModal({
-  visible,
-  onClose,
-  onSuccess,
-}: CreateGroupChatModalProps) {
+export function CreateGroupChatModal({ visible, onClose, onSuccess }: CreateGroupChatModalProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const { session } = useAuth();
   const currentUserId = session?.user?.id;
 
@@ -81,7 +78,8 @@ export function CreateGroupChatModal({
     try {
       const { data, error: fetchError } = await supabase
         .from('player')
-        .select(`
+        .select(
+          `
           id,
           profile:profile!player_id_fkey (
             first_name,
@@ -89,7 +87,8 @@ export function CreateGroupChatModal({
             display_name,
             profile_picture_url
           )
-        `)
+        `
+        )
         .neq('id', currentUserId)
         .limit(200);
 
@@ -140,7 +139,7 @@ export function CreateGroupChatModal({
     if (!searchQuery.trim()) return allPlayers;
 
     const query = searchQuery.toLowerCase().trim();
-    return allPlayers.filter((player) => {
+    return allPlayers.filter(player => {
       const firstName = (player.firstName || '').toLowerCase();
       const lastName = (player.lastName || '').toLowerCase();
       const displayName = (player.displayName || '').toLowerCase();
@@ -172,9 +171,9 @@ export function CreateGroupChatModal({
 
   // Member selection handlers
   const handleSelectMember = useCallback((player: SelectedMember) => {
-    setSelectedMembers((prev) => {
-      if (prev.some((p) => p.id === player.id)) {
-        return prev.filter((p) => p.id !== player.id);
+    setSelectedMembers(prev => {
+      if (prev.some(p => p.id === player.id)) {
+        return prev.filter(p => p.id !== player.id);
       }
       return [...prev, player];
     });
@@ -182,11 +181,11 @@ export function CreateGroupChatModal({
 
   const handleContinueToDetails = useCallback(() => {
     if (selectedMembers.length === 0) {
-      Alert.alert('Select Members', 'Please select at least one member for the group.');
+      Alert.alert(t('chat.selectMembers'), t('chat.pleaseSelectMember'));
       return;
     }
     setStep('group-details');
-  }, [selectedMembers]);
+  }, [selectedMembers, t]);
 
   const handleBackToMembers = useCallback(() => {
     setStep('select-members');
@@ -197,7 +196,7 @@ export function CreateGroupChatModal({
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Please allow access to your photos to add a group image.');
+        Alert.alert(t('common.permissionRequired'), t('chat.photoAccessRequired'));
         return;
       }
 
@@ -213,9 +212,9 @@ export function CreateGroupChatModal({
       }
     } catch (err) {
       console.error('Error picking image:', err);
-      Alert.alert('Error', 'Failed to pick image');
+      Alert.alert(t('common.error'), t('chat.failedToPickImage'));
     }
-  }, []);
+  }, [t]);
 
   const handleRemoveImage = useCallback(() => {
     setGroupImage(null);
@@ -224,17 +223,17 @@ export function CreateGroupChatModal({
   // Create group chat (simple group conversation without network)
   const handleCreateGroup = useCallback(async () => {
     if (!groupName.trim()) {
-      setError('Group name is required');
+      setError(t('chat.groupNameRequired'));
       return;
     }
 
     if (groupName.trim().length < 2) {
-      setError('Group name must be at least 2 characters');
+      setError(t('chat.groupNameTooShort'));
       return;
     }
 
     if (!currentUserId) {
-      Alert.alert('Error', 'You must be logged in to create a group.');
+      Alert.alert(t('common.error'), t('chat.mustBeLoggedIn'));
       return;
     }
 
@@ -288,16 +287,16 @@ export function CreateGroupChatModal({
       onSuccess?.(conversation.id);
     } catch (err) {
       console.error('Error creating group:', err);
-      Alert.alert('Error', 'Failed to create group chat. Please try again.');
+      Alert.alert(t('common.error'), t('chat.failedToCreateGroup'));
     } finally {
       setIsCreating(false);
     }
-  }, [groupName, groupImage, selectedMembers, currentUserId, handleClose, onSuccess]);
+  }, [groupName, groupImage, selectedMembers, currentUserId, handleClose, onSuccess, t]);
 
   // Render player item
   const renderPlayerItem = useCallback(
     ({ item }: { item: SelectedMember }) => {
-      const isSelected = selectedMembers.some((p) => p.id === item.id);
+      const isSelected = selectedMembers.some(p => p.id === item.id);
       const displayName = item.displayName || `${item.firstName} ${item.lastName || ''}`.trim();
 
       return (
@@ -341,16 +340,24 @@ export function CreateGroupChatModal({
 
     return (
       <View style={styles.selectedChipsRow}>
-        {selectedMembers.map((member) => (
+        {selectedMembers.map(member => (
           <TouchableOpacity
             key={member.id}
             style={styles.selectedChip}
             onPress={() => handleSelectMember(member)}
           >
             <View style={styles.selectedChipAvatarContainer}>
-              <View style={[styles.selectedChipAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+              <View
+                style={[
+                  styles.selectedChipAvatar,
+                  { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
+                ]}
+              >
                 {member.profilePictureUrl ? (
-                  <Image source={{ uri: member.profilePictureUrl }} style={styles.selectedChipAvatarImage} />
+                  <Image
+                    source={{ uri: member.profilePictureUrl }}
+                    style={styles.selectedChipAvatarImage}
+                  />
                 ) : (
                   <Ionicons name="person" size={16} color={colors.textMuted} />
                 )}
@@ -359,7 +366,11 @@ export function CreateGroupChatModal({
                 <Ionicons name="close" size={10} color="#fff" />
               </View>
             </View>
-            <Text size="xs" style={[styles.selectedChipName, { color: colors.text }]} numberOfLines={1}>
+            <Text
+              size="xs"
+              style={[styles.selectedChipName, { color: colors.text }]}
+              numberOfLines={1}
+            >
               {member.firstName}
             </Text>
           </TouchableOpacity>
@@ -373,7 +384,7 @@ export function CreateGroupChatModal({
     <View style={styles.stepContainer}>
       {/* Title */}
       <Text weight="bold" size="xl" style={[styles.stepTitle, { color: colors.text }]}>
-        Select Members
+        {t('chat.selectMembers')}
       </Text>
 
       {/* Search input */}
@@ -386,7 +397,7 @@ export function CreateGroupChatModal({
         <Ionicons name="search" size={20} color={colors.textMuted} />
         <TextInput
           style={[styles.searchInput, { color: colors.text }]}
-          placeholder="Search players"
+          placeholder={t('chat.searchPlayers')}
           placeholderTextColor={colors.textMuted}
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -407,19 +418,21 @@ export function CreateGroupChatModal({
       {isLoadingPlayers ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={primary[500]} />
-          <Text style={{ color: colors.textMuted, marginTop: 12 }}>Loading players...</Text>
+          <Text style={{ color: colors.textMuted, marginTop: 12 }}>{t('chat.loadingPlayers')}</Text>
         </View>
       ) : filteredPlayers.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="people-outline" size={48} color={colors.textMuted} />
           <Text style={{ color: colors.textMuted, marginTop: 12, textAlign: 'center' }}>
-            {searchQuery ? `No players found matching "${searchQuery}"` : 'No players available'}
+            {searchQuery
+              ? t('chat.noPlayersFoundMatching', { query: searchQuery })
+              : t('chat.noPlayersAvailable')}
           </Text>
         </View>
       ) : (
         <FlatList
           data={filteredPlayers}
-          keyExtractor={(item) => item.id}
+          keyExtractor={item => item.id}
           renderItem={renderPlayerItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
@@ -434,7 +447,7 @@ export function CreateGroupChatModal({
           disabled={selectedMembers.length === 0}
           style={[selectedMembers.length === 0 && styles.disabledButton]}
         >
-          Continue ({selectedMembers.length} selected)
+          {t('chat.continueSelected', { count: selectedMembers.length })}
         </Button>
       </View>
     </View>
@@ -449,7 +462,7 @@ export function CreateGroupChatModal({
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text weight="bold" size="xl" style={{ color: colors.text }}>
-          Group Details
+          {t('chat.groupDetails')}
         </Text>
       </View>
 
@@ -483,7 +496,7 @@ export function CreateGroupChatModal({
               <Ionicons name="camera" size={24} color={primary[500]} />
             </View>
             <Text size="sm" style={{ color: colors.textMuted, marginTop: 8 }}>
-              Add Photo
+              {t('chat.addPhoto')}
             </Text>
           </TouchableOpacity>
         )}
@@ -492,7 +505,7 @@ export function CreateGroupChatModal({
       {/* Group Name Input */}
       <View style={styles.inputSection}>
         <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
-          Group Name *
+          {t('chat.groupName')} *
         </Text>
         <TextInput
           style={[
@@ -503,10 +516,10 @@ export function CreateGroupChatModal({
               borderColor: error ? '#EF4444' : colors.border,
             },
           ]}
-          placeholder="Enter group name"
+          placeholder={t('chat.enterGroupName')}
           placeholderTextColor={colors.textMuted}
           value={groupName}
-          onChangeText={(text) => {
+          onChangeText={text => {
             setGroupName(text);
             setError(null);
           }}
@@ -522,7 +535,7 @@ export function CreateGroupChatModal({
       {/* Members preview */}
       <View style={styles.membersPreview}>
         <Text size="sm" weight="medium" style={{ color: colors.text, marginBottom: 8 }}>
-          Members ({selectedMembers.length + 1})
+          {t('chat.members')} ({selectedMembers.length + 1})
         </Text>
         <View style={styles.memberAvatars}>
           {/* Current user */}
@@ -530,13 +543,16 @@ export function CreateGroupChatModal({
             <Ionicons name="person" size={16} color="#fff" />
           </View>
           {/* Selected members (show first 5) */}
-          {selectedMembers.slice(0, 5).map((member) => (
+          {selectedMembers.slice(0, 5).map(member => (
             <View
               key={member.id}
               style={[styles.memberAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}
             >
               {member.profilePictureUrl ? (
-                <Image source={{ uri: member.profilePictureUrl }} style={styles.memberAvatarImage} />
+                <Image
+                  source={{ uri: member.profilePictureUrl }}
+                  style={styles.memberAvatarImage}
+                />
               ) : (
                 <Ionicons name="person" size={16} color={colors.textMuted} />
               )}
@@ -560,11 +576,7 @@ export function CreateGroupChatModal({
           disabled={isCreating || !groupName.trim()}
           style={[(isCreating || !groupName.trim()) && styles.disabledButton]}
         >
-          {isCreating ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            'Create Group'
-          )}
+          {isCreating ? <ActivityIndicator size="small" color="#fff" /> : t('chat.createGroup')}
         </Button>
       </View>
     </View>
@@ -580,7 +592,7 @@ export function CreateGroupChatModal({
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
             <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-              New Group
+              {t('chat.newGroup')}
             </Text>
             <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={colors.text} />

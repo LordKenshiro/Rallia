@@ -5,17 +5,11 @@
  */
 
 import React, { memo, useState, useCallback, useEffect, useMemo } from 'react';
-import {
-  View,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
-} from 'react-native';
+import { View, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary, neutral } from '@rallia/design-system';
 import { useSearchMessages } from '@rallia/shared-hooks';
 
@@ -52,25 +46,24 @@ function ChatSearchBarComponent({
   onNavigateToMatch,
 }: ChatSearchBarProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
   const debouncedQuery = useDebounce(query, 300);
 
-  const { data: results, isLoading } = useSearchMessages(
-    conversationId,
-    debouncedQuery,
-    visible
-  );
+  const { data: results, isLoading } = useSearchMessages(conversationId, debouncedQuery, visible);
 
   // Get array of matched message IDs - wrapped in useMemo for stable reference
   const matchedMessageIds = useMemo(() => results?.map(r => r.id) || [], [results]);
   const totalMatches = matchedMessageIds.length;
 
   // Notify parent of search changes
+  // This effect syncs derived state from search results - React 18+ batches these updates
   useEffect(() => {
     onSearchChange(debouncedQuery, matchedMessageIds);
     // Reset to first match when results change
     if (matchedMessageIds.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional sync when search results change
       setCurrentMatchIndex(0);
       onNavigateToMatch(matchedMessageIds[0]);
     }
@@ -110,16 +103,16 @@ function ChatSearchBarComponent({
     <View style={[styles.container, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
       {/* Search Input */}
       <View style={styles.inputContainer}>
-        <View 
+        <View
           style={[
-            styles.inputWrapper, 
-            { backgroundColor: isDark ? colors.background : neutral[100] }
+            styles.inputWrapper,
+            { backgroundColor: isDark ? colors.background : neutral[100] },
           ]}
         >
           <Ionicons name="search" size={18} color={colors.textMuted} style={styles.searchIcon} />
           <TextInput
             style={[styles.input, { color: colors.text }]}
-            placeholder="Search in chat..."
+            placeholder={t('chat.searchInChat.placeholder')}
             placeholderTextColor={colors.textMuted}
             value={query}
             onChangeText={setQuery}
@@ -141,32 +134,32 @@ function ChatSearchBarComponent({
                 <Text style={[styles.matchCounter, { color: colors.textMuted }]}>
                   {currentMatchIndex + 1}/{totalMatches}
                 </Text>
-                <TouchableOpacity 
-                  onPress={handlePrevMatch} 
+                <TouchableOpacity
+                  onPress={handlePrevMatch}
                   style={styles.navButton}
                   disabled={totalMatches === 0}
                 >
-                  <Ionicons 
-                    name="chevron-up" 
-                    size={22} 
-                    color={totalMatches > 0 ? colors.text : colors.textMuted} 
+                  <Ionicons
+                    name="chevron-up"
+                    size={22}
+                    color={totalMatches > 0 ? colors.text : colors.textMuted}
                   />
                 </TouchableOpacity>
-                <TouchableOpacity 
-                  onPress={handleNextMatch} 
+                <TouchableOpacity
+                  onPress={handleNextMatch}
                   style={styles.navButton}
                   disabled={totalMatches === 0}
                 >
-                  <Ionicons 
-                    name="chevron-down" 
-                    size={22} 
-                    color={totalMatches > 0 ? colors.text : colors.textMuted} 
+                  <Ionicons
+                    name="chevron-down"
+                    size={22}
+                    color={totalMatches > 0 ? colors.text : colors.textMuted}
                   />
                 </TouchableOpacity>
               </>
             ) : (
               <Text style={[styles.noMatchText, { color: colors.textMuted }]}>
-                No matches
+                {t('chat.searchInChat.noMatches')}
               </Text>
             )}
           </View>

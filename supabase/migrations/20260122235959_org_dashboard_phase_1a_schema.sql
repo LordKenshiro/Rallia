@@ -76,15 +76,24 @@ CREATE INDEX IF NOT EXISTS idx_booking_cancelled ON booking(cancelled_at)
 -- Add exclusion constraint to prevent double-booking
 -- This enforces at database level that no two active bookings overlap for the same court
 -- Note: We use tsrange with the date + time to create a proper time range
-DO $$ BEGIN
-    ALTER TABLE booking ADD CONSTRAINT no_overlapping_bookings
-        EXCLUDE USING gist (
-            court_id WITH =,
-            tsrange(
-                booking_date + start_time, 
-                booking_date + end_time
-            ) WITH &&
-        ) WHERE (status NOT IN ('cancelled') AND court_id IS NOT NULL);
+DO $$ 
+BEGIN
+    -- Check if constraint already exists
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM pg_constraint 
+        WHERE conname = 'no_overlapping_bookings'
+        AND conrelid = 'booking'::regclass
+    ) THEN
+        ALTER TABLE booking ADD CONSTRAINT no_overlapping_bookings
+            EXCLUDE USING gist (
+                court_id WITH =,
+                tsrange(
+                    booking_date + start_time, 
+                    booking_date + end_time
+                ) WITH &&
+            ) WHERE (status NOT IN ('cancelled') AND court_id IS NOT NULL);
+    END IF;
 EXCEPTION
     WHEN duplicate_object THEN NULL;
 END $$;
@@ -463,203 +472,383 @@ ALTER TABLE organization_player_block ENABLE ROW LEVEL SECURITY;
 ALTER TABLE organization_settings ENABLE ROW LEVEL SECURITY;
 
 -- availability_block policies
-CREATE POLICY "availability_block_select_org_members" ON availability_block
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM organization_member om
-            JOIN facility f ON f.organization_id = om.organization_id
-            WHERE f.id = availability_block.facility_id
-                AND om.user_id = auth.uid()
-        )
-    );
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'availability_block' 
+        AND policyname = 'availability_block_select_org_members'
+    ) THEN
+        CREATE POLICY "availability_block_select_org_members" ON availability_block
+            FOR SELECT USING (
+                EXISTS (
+                    SELECT 1 FROM organization_member om
+                    JOIN facility f ON f.organization_id = om.organization_id
+                    WHERE f.id = availability_block.facility_id
+                        AND om.user_id = auth.uid()
+                )
+            );
+    END IF;
+END $$;
 
-CREATE POLICY "availability_block_insert_org_staff" ON availability_block
-    FOR INSERT WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM organization_member om
-            JOIN facility f ON f.organization_id = om.organization_id
-            WHERE f.id = availability_block.facility_id
-                AND om.user_id = auth.uid()
-                AND om.role IN ('admin', 'owner')
-        )
-    );
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'availability_block' 
+        AND policyname = 'availability_block_insert_org_staff'
+    ) THEN
+        CREATE POLICY "availability_block_insert_org_staff" ON availability_block
+            FOR INSERT WITH CHECK (
+                EXISTS (
+                    SELECT 1 FROM organization_member om
+                    JOIN facility f ON f.organization_id = om.organization_id
+                    WHERE f.id = availability_block.facility_id
+                        AND om.user_id = auth.uid()
+                        AND om.role IN ('admin', 'owner')
+                )
+            );
+    END IF;
+END $$;
 
-CREATE POLICY "availability_block_update_org_staff" ON availability_block
-    FOR UPDATE USING (
-        EXISTS (
-            SELECT 1 FROM organization_member om
-            JOIN facility f ON f.organization_id = om.organization_id
-            WHERE f.id = availability_block.facility_id
-                AND om.user_id = auth.uid()
-                AND om.role IN ('admin', 'owner')
-        )
-    );
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'availability_block' 
+        AND policyname = 'availability_block_update_org_staff'
+    ) THEN
+        CREATE POLICY "availability_block_update_org_staff" ON availability_block
+            FOR UPDATE USING (
+                EXISTS (
+                    SELECT 1 FROM organization_member om
+                    JOIN facility f ON f.organization_id = om.organization_id
+                    WHERE f.id = availability_block.facility_id
+                        AND om.user_id = auth.uid()
+                        AND om.role IN ('admin', 'owner')
+                )
+            );
+    END IF;
+END $$;
 
-CREATE POLICY "availability_block_delete_org_staff" ON availability_block
-    FOR DELETE USING (
-        EXISTS (
-            SELECT 1 FROM organization_member om
-            JOIN facility f ON f.organization_id = om.organization_id
-            WHERE f.id = availability_block.facility_id
-                AND om.user_id = auth.uid()
-                AND om.role IN ('admin', 'owner')
-        )
-    );
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'availability_block' 
+        AND policyname = 'availability_block_delete_org_staff'
+    ) THEN
+        CREATE POLICY "availability_block_delete_org_staff" ON availability_block
+            FOR DELETE USING (
+                EXISTS (
+                    SELECT 1 FROM organization_member om
+                    JOIN facility f ON f.organization_id = om.organization_id
+                    WHERE f.id = availability_block.facility_id
+                        AND om.user_id = auth.uid()
+                        AND om.role IN ('admin', 'owner')
+                )
+            );
+    END IF;
+END $$;
 
 -- organization_stripe_account policies
-CREATE POLICY "org_stripe_select_org_members" ON organization_stripe_account
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM organization_member om
-            WHERE om.organization_id = organization_stripe_account.organization_id
-                AND om.user_id = auth.uid()
-        )
-    );
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'organization_stripe_account' 
+        AND policyname = 'org_stripe_select_org_members'
+    ) THEN
+        CREATE POLICY "org_stripe_select_org_members" ON organization_stripe_account
+            FOR SELECT USING (
+                EXISTS (
+                    SELECT 1 FROM organization_member om
+                    WHERE om.organization_id = organization_stripe_account.organization_id
+                        AND om.user_id = auth.uid()
+                )
+            );
+    END IF;
+END $$;
 
-CREATE POLICY "org_stripe_insert_org_owner" ON organization_stripe_account
-    FOR INSERT WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM organization_member om
-            WHERE om.organization_id = organization_stripe_account.organization_id
-                AND om.user_id = auth.uid()
-                AND om.role = 'owner'
-        )
-    );
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'organization_stripe_account' 
+        AND policyname = 'org_stripe_insert_org_owner'
+    ) THEN
+        CREATE POLICY "org_stripe_insert_org_owner" ON organization_stripe_account
+            FOR INSERT WITH CHECK (
+                EXISTS (
+                    SELECT 1 FROM organization_member om
+                    WHERE om.organization_id = organization_stripe_account.organization_id
+                        AND om.user_id = auth.uid()
+                        AND om.role = 'owner'
+                )
+            );
+    END IF;
+END $$;
 
-CREATE POLICY "org_stripe_update_org_owner" ON organization_stripe_account
-    FOR UPDATE USING (
-        EXISTS (
-            SELECT 1 FROM organization_member om
-            WHERE om.organization_id = organization_stripe_account.organization_id
-                AND om.user_id = auth.uid()
-                AND om.role = 'owner'
-        )
-    );
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'organization_stripe_account' 
+        AND policyname = 'org_stripe_update_org_owner'
+    ) THEN
+        CREATE POLICY "org_stripe_update_org_owner" ON organization_stripe_account
+            FOR UPDATE USING (
+                EXISTS (
+                    SELECT 1 FROM organization_member om
+                    WHERE om.organization_id = organization_stripe_account.organization_id
+                        AND om.user_id = auth.uid()
+                        AND om.role = 'owner'
+                )
+            );
+    END IF;
+END $$;
 
 -- pricing_rule policies
-CREATE POLICY "pricing_rule_select_org_members" ON pricing_rule
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM organization_member om
-            WHERE om.organization_id = pricing_rule.organization_id
-                AND om.user_id = auth.uid()
-        )
-    );
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'pricing_rule' 
+        AND policyname = 'pricing_rule_select_org_members'
+    ) THEN
+        CREATE POLICY "pricing_rule_select_org_members" ON pricing_rule
+            FOR SELECT USING (
+                EXISTS (
+                    SELECT 1 FROM organization_member om
+                    WHERE om.organization_id = pricing_rule.organization_id
+                        AND om.user_id = auth.uid()
+                )
+            );
+    END IF;
+END $$;
 
-CREATE POLICY "pricing_rule_insert_org_staff" ON pricing_rule
-    FOR INSERT WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM organization_member om
-            WHERE om.organization_id = pricing_rule.organization_id
-                AND om.user_id = auth.uid()
-                AND om.role IN ('admin', 'owner')
-        )
-    );
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'pricing_rule' 
+        AND policyname = 'pricing_rule_insert_org_staff'
+    ) THEN
+        CREATE POLICY "pricing_rule_insert_org_staff" ON pricing_rule
+            FOR INSERT WITH CHECK (
+                EXISTS (
+                    SELECT 1 FROM organization_member om
+                    WHERE om.organization_id = pricing_rule.organization_id
+                        AND om.user_id = auth.uid()
+                        AND om.role IN ('admin', 'owner')
+                )
+            );
+    END IF;
+END $$;
 
-CREATE POLICY "pricing_rule_update_org_staff" ON pricing_rule
-    FOR UPDATE USING (
-        EXISTS (
-            SELECT 1 FROM organization_member om
-            WHERE om.organization_id = pricing_rule.organization_id
-                AND om.user_id = auth.uid()
-                AND om.role IN ('admin', 'owner')
-        )
-    );
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'pricing_rule' 
+        AND policyname = 'pricing_rule_update_org_staff'
+    ) THEN
+        CREATE POLICY "pricing_rule_update_org_staff" ON pricing_rule
+            FOR UPDATE USING (
+                EXISTS (
+                    SELECT 1 FROM organization_member om
+                    WHERE om.organization_id = pricing_rule.organization_id
+                        AND om.user_id = auth.uid()
+                        AND om.role IN ('admin', 'owner')
+                )
+            );
+    END IF;
+END $$;
 
-CREATE POLICY "pricing_rule_delete_org_staff" ON pricing_rule
-    FOR DELETE USING (
-        EXISTS (
-            SELECT 1 FROM organization_member om
-            WHERE om.organization_id = pricing_rule.organization_id
-                AND om.user_id = auth.uid()
-                AND om.role IN ('admin', 'owner')
-        )
-    );
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'pricing_rule' 
+        AND policyname = 'pricing_rule_delete_org_staff'
+    ) THEN
+        CREATE POLICY "pricing_rule_delete_org_staff" ON pricing_rule
+            FOR DELETE USING (
+                EXISTS (
+                    SELECT 1 FROM organization_member om
+                    WHERE om.organization_id = pricing_rule.organization_id
+                        AND om.user_id = auth.uid()
+                        AND om.role IN ('admin', 'owner')
+                )
+            );
+    END IF;
+END $$;
 
 -- cancellation_policy policies
-CREATE POLICY "cancellation_policy_select_all" ON cancellation_policy
-    FOR SELECT USING (true);  -- Anyone can view cancellation policies
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'cancellation_policy' 
+        AND policyname = 'cancellation_policy_select_all'
+    ) THEN
+        CREATE POLICY "cancellation_policy_select_all" ON cancellation_policy
+            FOR SELECT USING (true);  -- Anyone can view cancellation policies
+    END IF;
+END $$;
 
-CREATE POLICY "cancellation_policy_insert_org_owner" ON cancellation_policy
-    FOR INSERT WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM organization_member om
-            WHERE om.organization_id = cancellation_policy.organization_id
-                AND om.user_id = auth.uid()
-                AND om.role = 'owner'
-        )
-    );
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'cancellation_policy' 
+        AND policyname = 'cancellation_policy_insert_org_owner'
+    ) THEN
+        CREATE POLICY "cancellation_policy_insert_org_owner" ON cancellation_policy
+            FOR INSERT WITH CHECK (
+                EXISTS (
+                    SELECT 1 FROM organization_member om
+                    WHERE om.organization_id = cancellation_policy.organization_id
+                        AND om.user_id = auth.uid()
+                        AND om.role = 'owner'
+                )
+            );
+    END IF;
+END $$;
 
-CREATE POLICY "cancellation_policy_update_org_staff" ON cancellation_policy
-    FOR UPDATE USING (
-        EXISTS (
-            SELECT 1 FROM organization_member om
-            WHERE om.organization_id = cancellation_policy.organization_id
-                AND om.user_id = auth.uid()
-                AND om.role IN ('admin', 'owner')
-        )
-    );
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'cancellation_policy' 
+        AND policyname = 'cancellation_policy_update_org_staff'
+    ) THEN
+        CREATE POLICY "cancellation_policy_update_org_staff" ON cancellation_policy
+            FOR UPDATE USING (
+                EXISTS (
+                    SELECT 1 FROM organization_member om
+                    WHERE om.organization_id = cancellation_policy.organization_id
+                        AND om.user_id = auth.uid()
+                        AND om.role IN ('admin', 'owner')
+                )
+            );
+    END IF;
+END $$;
 
 -- organization_player_block policies
-CREATE POLICY "org_player_block_select_org_staff" ON organization_player_block
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM organization_member om
-            WHERE om.organization_id = organization_player_block.organization_id
-                AND om.user_id = auth.uid()
-                AND om.role IN ('admin', 'owner', 'staff')
-        )
-    );
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'organization_player_block' 
+        AND policyname = 'org_player_block_select_org_staff'
+    ) THEN
+        CREATE POLICY "org_player_block_select_org_staff" ON organization_player_block
+            FOR SELECT USING (
+                EXISTS (
+                    SELECT 1 FROM organization_member om
+                    WHERE om.organization_id = organization_player_block.organization_id
+                        AND om.user_id = auth.uid()
+                        AND om.role IN ('admin', 'owner', 'staff')
+                )
+            );
+    END IF;
+END $$;
 
-CREATE POLICY "org_player_block_insert_org_staff" ON organization_player_block
-    FOR INSERT WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM organization_member om
-            WHERE om.organization_id = organization_player_block.organization_id
-                AND om.user_id = auth.uid()
-                AND om.role IN ('admin', 'owner')
-        )
-    );
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'organization_player_block' 
+        AND policyname = 'org_player_block_insert_org_staff'
+    ) THEN
+        CREATE POLICY "org_player_block_insert_org_staff" ON organization_player_block
+            FOR INSERT WITH CHECK (
+                EXISTS (
+                    SELECT 1 FROM organization_member om
+                    WHERE om.organization_id = organization_player_block.organization_id
+                        AND om.user_id = auth.uid()
+                        AND om.role IN ('admin', 'owner')
+                )
+            );
+    END IF;
+END $$;
 
-CREATE POLICY "org_player_block_update_org_staff" ON organization_player_block
-    FOR UPDATE USING (
-        EXISTS (
-            SELECT 1 FROM organization_member om
-            WHERE om.organization_id = organization_player_block.organization_id
-                AND om.user_id = auth.uid()
-                AND om.role IN ('admin', 'owner')
-        )
-    );
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'organization_player_block' 
+        AND policyname = 'org_player_block_update_org_staff'
+    ) THEN
+        CREATE POLICY "org_player_block_update_org_staff" ON organization_player_block
+            FOR UPDATE USING (
+                EXISTS (
+                    SELECT 1 FROM organization_member om
+                    WHERE om.organization_id = organization_player_block.organization_id
+                        AND om.user_id = auth.uid()
+                        AND om.role IN ('admin', 'owner')
+                )
+            );
+    END IF;
+END $$;
 
 -- organization_settings policies
-CREATE POLICY "org_settings_select_org_members" ON organization_settings
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM organization_member om
-            WHERE om.organization_id = organization_settings.organization_id
-                AND om.user_id = auth.uid()
-        )
-    );
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'organization_settings' 
+        AND policyname = 'org_settings_select_org_members'
+    ) THEN
+        CREATE POLICY "org_settings_select_org_members" ON organization_settings
+            FOR SELECT USING (
+                EXISTS (
+                    SELECT 1 FROM organization_member om
+                    WHERE om.organization_id = organization_settings.organization_id
+                        AND om.user_id = auth.uid()
+                )
+            );
+    END IF;
+END $$;
 
-CREATE POLICY "org_settings_insert_org_owner" ON organization_settings
-    FOR INSERT WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM organization_member om
-            WHERE om.organization_id = organization_settings.organization_id
-                AND om.user_id = auth.uid()
-                AND om.role = 'owner'
-        )
-    );
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'organization_settings' 
+        AND policyname = 'org_settings_insert_org_owner'
+    ) THEN
+        CREATE POLICY "org_settings_insert_org_owner" ON organization_settings
+            FOR INSERT WITH CHECK (
+                EXISTS (
+                    SELECT 1 FROM organization_member om
+                    WHERE om.organization_id = organization_settings.organization_id
+                        AND om.user_id = auth.uid()
+                        AND om.role = 'owner'
+                )
+            );
+    END IF;
+END $$;
 
-CREATE POLICY "org_settings_update_org_staff" ON organization_settings
-    FOR UPDATE USING (
-        EXISTS (
-            SELECT 1 FROM organization_member om
-            WHERE om.organization_id = organization_settings.organization_id
-                AND om.user_id = auth.uid()
-                AND om.role IN ('admin', 'owner')
-        )
-    );
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'organization_settings' 
+        AND policyname = 'org_settings_update_org_staff'
+    ) THEN
+        CREATE POLICY "org_settings_update_org_staff" ON organization_settings
+            FOR UPDATE USING (
+                EXISTS (
+                    SELECT 1 FROM organization_member om
+                    WHERE om.organization_id = organization_settings.organization_id
+                        AND om.user_id = auth.uid()
+                        AND om.role IN ('admin', 'owner')
+                )
+            );
+    END IF;
+END $$;
 
 -- ============================================
 -- 8. GRANT PERMISSIONS

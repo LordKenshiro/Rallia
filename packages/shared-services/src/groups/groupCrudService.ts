@@ -4,7 +4,13 @@
  */
 
 import { supabase } from '../supabase';
-import type { Group, GroupWithMembers, GroupMember, CreateGroupInput, UpdateGroupInput } from './groupTypes';
+import type {
+  Group,
+  GroupWithMembers,
+  GroupMember,
+  CreateGroupInput,
+  UpdateGroupInput,
+} from './groupTypes';
 
 // ============================================================================
 // INTERNAL HELPERS
@@ -50,10 +56,7 @@ async function checkIsGroupModerator(groupId: string, playerId: string): Promise
 /**
  * Create a new player group
  */
-export async function createGroup(
-  playerId: string,
-  input: CreateGroupInput
-): Promise<Group> {
+export async function createGroup(playerId: string, input: CreateGroupInput): Promise<Group> {
   const typeId = await getPlayerGroupTypeId();
 
   const { data, error } = await supabase
@@ -85,11 +88,7 @@ export async function createGroup(
  * Get a group by ID
  */
 export async function getGroup(groupId: string): Promise<Group | null> {
-  const { data, error } = await supabase
-    .from('network')
-    .select('*')
-    .eq('id', groupId)
-    .single();
+  const { data, error } = await supabase.from('network').select('*').eq('id', groupId).single();
 
   if (error) {
     if (error.code === 'PGRST116') return null; // Not found
@@ -118,7 +117,8 @@ export async function getGroupWithMembers(groupId: string): Promise<GroupWithMem
 
   const { data: members, error: membersError } = await supabase
     .from('network_member')
-    .select(`
+    .select(
+      `
       *,
       player:player_id (
         id,
@@ -130,7 +130,8 @@ export async function getGroupWithMembers(groupId: string): Promise<GroupWithMem
           last_active_at
         )
       )
-    `)
+    `
+    )
     .eq('network_id', groupId)
     .eq('status', 'active')
     .order('role', { ascending: false }) // Moderators first
@@ -149,15 +150,21 @@ export async function getGroupWithMembers(groupId: string): Promise<GroupWithMem
 
 /**
  * Get all groups for a player (groups they are a member of)
+ * Only returns networks with type 'player_group', not communities
  */
 export async function getPlayerGroups(playerId: string): Promise<Group[]> {
+  // First get the player_group type ID
+  const typeId = await getPlayerGroupTypeId();
+
   const { data, error } = await supabase
     .from('network_member')
-    .select(`
+    .select(
+      `
       network:network_id (
         *
       )
-    `)
+    `
+    )
     .eq('player_id', playerId)
     .eq('status', 'active');
 
@@ -166,9 +173,14 @@ export async function getPlayerGroups(playerId: string): Promise<Group[]> {
     throw new Error(error.message);
   }
 
-  // Extract networks from the join - use explicit type cast due to Supabase relation inference
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const groups = (data || []).map((d: any) => d.network).filter(Boolean) as Group[];
+  // Extract networks from the join and filter to only player_group type
+  // The raw database row includes network_type_id which we filter on
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const groups = (data || [])
+    .map((d: any) => d.network)
+    .filter((network: any) => network && network.network_type_id === typeId) as Group[];
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+
   return groups;
 }
 
@@ -194,7 +206,7 @@ export async function updateGroup(
   const updateData: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
   };
-  
+
   if (input.name !== undefined) {
     updateData.name = input.name;
   }
@@ -234,10 +246,7 @@ export async function deleteGroup(groupId: string, playerId: string): Promise<vo
     throw new Error('Only the group creator can delete the group');
   }
 
-  const { error } = await supabase
-    .from('network')
-    .delete()
-    .eq('id', groupId);
+  const { error } = await supabase.from('network').delete().eq('id', groupId);
 
   if (error) {
     console.error('Error deleting group:', error);

@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import { supabase } from '../../../lib/supabase';
 import { spacingPixels, fontSizePixels, primary, neutral } from '@rallia/design-system';
 
@@ -46,6 +46,7 @@ export function AddMembersToGroupModal({
   currentUserId,
 }: AddMembersToGroupModalProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [allPlayers, setAllPlayers] = useState<PlayerItem[]>([]);
@@ -60,7 +61,8 @@ export function AddMembersToGroupModal({
     try {
       const { data, error } = await supabase
         .from('player')
-        .select(`
+        .select(
+          `
           id,
           profile:profile!player_id_fkey (
             first_name,
@@ -68,7 +70,8 @@ export function AddMembersToGroupModal({
             display_name,
             profile_picture_url
           )
-        `)
+        `
+        )
         .limit(200);
 
       if (error) throw error;
@@ -129,9 +132,9 @@ export function AddMembersToGroupModal({
   // Filter by search query
   const filteredPlayers = useMemo(() => {
     if (!searchQuery.trim()) return allPlayers;
-    
+
     const query = searchQuery.toLowerCase();
-    return allPlayers.filter((p) => {
+    return allPlayers.filter(p => {
       const fullName = `${p.firstName} ${p.lastName || ''}`.toLowerCase();
       const displayName = (p.displayName || '').toLowerCase();
       return fullName.includes(query) || displayName.includes(query);
@@ -140,9 +143,9 @@ export function AddMembersToGroupModal({
 
   // Toggle selection
   const handleToggleSelect = useCallback((playerId: string) => {
-    setSelectedIds((prev) => {
+    setSelectedIds(prev => {
       if (prev.includes(playerId)) {
-        return prev.filter((id) => id !== playerId);
+        return prev.filter(id => id !== playerId);
       }
       return [...prev, playerId];
     });
@@ -165,64 +168,70 @@ export function AddMembersToGroupModal({
   }, [onClose]);
 
   // Render player item
-  const renderPlayerItem = useCallback(({ item }: { item: PlayerItem }) => {
-    const isSelected = selectedIds.includes(item.id);
-    const displayName = item.displayName || `${item.firstName} ${item.lastName || ''}`.trim();
+  const renderPlayerItem = useCallback(
+    ({ item }: { item: PlayerItem }) => {
+      const isSelected = selectedIds.includes(item.id);
+      const displayName = item.displayName || `${item.firstName} ${item.lastName || ''}`.trim();
 
-    return (
-      <TouchableOpacity
-        style={[
-          styles.playerItem,
-          {
-            backgroundColor: isSelected
-              ? isDark ? primary[900] : primary[50]
-              : 'transparent',
-          },
-        ]}
-        onPress={() => handleToggleSelect(item.id)}
-        activeOpacity={0.7}
-      >
-        {/* Avatar */}
-        {item.profilePictureUrl ? (
-          <Image source={{ uri: item.profilePictureUrl }} style={styles.avatar} />
-        ) : (
-          <View style={[styles.avatarPlaceholder, { backgroundColor: primary[100] }]}>
-            <Ionicons name="person" size={20} color={primary[500]} />
-          </View>
-        )}
-
-        {/* Name */}
-        <View style={styles.playerInfo}>
-          <Text style={[styles.playerName, { color: colors.text }]} numberOfLines={1}>
-            {displayName}
-          </Text>
-        </View>
-
-        {/* Selection indicator */}
-        <View
+      return (
+        <TouchableOpacity
           style={[
-            styles.checkbox,
+            styles.playerItem,
             {
-              backgroundColor: isSelected ? primary[500] : 'transparent',
-              borderColor: isSelected ? primary[500] : colors.border,
+              backgroundColor: isSelected ? (isDark ? primary[900] : primary[50]) : 'transparent',
             },
           ]}
+          onPress={() => handleToggleSelect(item.id)}
+          activeOpacity={0.7}
         >
-          {isSelected && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
-        </View>
-      </TouchableOpacity>
-    );
-  }, [colors, isDark, selectedIds, handleToggleSelect]);
+          {/* Avatar */}
+          {item.profilePictureUrl ? (
+            <Image source={{ uri: item.profilePictureUrl }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatarPlaceholder, { backgroundColor: primary[100] }]}>
+              <Ionicons name="person" size={20} color={primary[500]} />
+            </View>
+          )}
+
+          {/* Name */}
+          <View style={styles.playerInfo}>
+            <Text style={[styles.playerName, { color: colors.text }]} numberOfLines={1}>
+              {displayName}
+            </Text>
+          </View>
+
+          {/* Selection indicator */}
+          <View
+            style={[
+              styles.checkbox,
+              {
+                backgroundColor: isSelected ? primary[500] : 'transparent',
+                borderColor: isSelected ? primary[500] : colors.border,
+              },
+            ]}
+          >
+            {isSelected && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
+          </View>
+        </TouchableOpacity>
+      );
+    },
+    [colors, isDark, selectedIds, handleToggleSelect]
+  );
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['top']}
+      >
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <TouchableOpacity style={styles.headerButton} onPress={handleClose}>
-            <Text style={[styles.headerButtonText, { color: colors.text }]}>Cancel</Text>
+            <Text style={[styles.headerButtonText, { color: colors.text }]}>
+              {t('common.cancel')}
+            </Text>
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Add Members</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('chat.addMembers')}</Text>
           <TouchableOpacity
             style={styles.headerButton}
             onPress={handleDone}
@@ -234,17 +243,22 @@ export function AddMembersToGroupModal({
                 { color: selectedIds.length > 0 ? primary[500] : colors.textMuted },
               ]}
             >
-              Add ({selectedIds.length})
+              {t('chat.addCount', { count: selectedIds.length })}
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Search Bar */}
-        <View style={[styles.searchContainer, { backgroundColor: isDark ? neutral[800] : neutral[100] }]}>
+        <View
+          style={[
+            styles.searchContainer,
+            { backgroundColor: isDark ? neutral[800] : neutral[100] },
+          ]}
+        >
           <Ionicons name="search" size={20} color={colors.textMuted} />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Search players..."
+            placeholder={t('chat.searchPlayers')}
             placeholderTextColor={colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -266,13 +280,13 @@ export function AddMembersToGroupModal({
           <View style={styles.emptyContainer}>
             <Ionicons name="people-outline" size={48} color={colors.textMuted} />
             <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-              {searchQuery ? 'No players found' : 'No more players to add'}
+              {searchQuery ? t('chat.noPlayersFound') : t('chat.noMorePlayersToAdd')}
             </Text>
           </View>
         ) : (
           <FlatList
             data={filteredPlayers}
-            keyExtractor={(item) => item.id}
+            keyExtractor={item => item.id}
             renderItem={renderPlayerItem}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}

@@ -14,17 +14,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
 import { lightHaptic, mediumHaptic, successHaptic } from '@rallia/shared-utils';
 import { ProfileService, Logger } from '@rallia/shared-services';
-import { useAuth } from '../../../../hooks';
+import { useAuth, useTranslation } from '../../../../hooks';
 import {
   spacingPixels,
   radiusPixels,
   fontSizePixels,
   fontWeightNumeric,
   shadowsNative,
-  primary,
-  neutral,
-  base,
-  status,
 } from '@rallia/design-system';
 import { useThemeStyles } from '../../../../hooks';
 
@@ -42,7 +38,8 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
   onReturningUser,
 }) => {
   const { signInWithEmail, verifyOtp } = useAuth();
-  const { colors, isDark } = useThemeStyles();
+  const { colors } = useThemeStyles();
+  const { t } = useTranslation();
 
   const [email, setEmail] = useState('');
   const [step, setStep] = useState<'email' | 'code'>('email');
@@ -122,12 +119,12 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
       } else {
         const errorMsg = result.error?.message || 'Failed to send verification code';
         setErrorMessage(errorMsg);
-        Alert.alert('Error', errorMsg);
+        Alert.alert(t('alerts.error'), errorMsg);
       }
     } catch (error) {
       Logger.error('Failed to send OTP', error as Error, { emailDomain: email.split('@')[1] });
       setErrorMessage('An unexpected error occurred');
-      Alert.alert('Error', 'An unexpected error occurred');
+      Alert.alert(t('common.error'), t('onboarding.validation.unexpectedError'));
     } finally {
       setIsLoading(false);
     }
@@ -143,16 +140,16 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
 
       if (result.success) {
         Logger.info('OTP resent successfully', { emailDomain: email.split('@')[1] });
-        Alert.alert('Success', 'Verification code sent!');
+        Alert.alert(t('alerts.success'), t('auth.verificationCodeSent'));
       } else {
         const errorMsg = result.error?.message || 'Failed to resend verification code';
         setErrorMessage(errorMsg);
-        Alert.alert('Error', errorMsg);
+        Alert.alert(t('alerts.error'), errorMsg);
       }
     } catch (error) {
       Logger.error('Failed to resend OTP', error as Error, { emailDomain: email.split('@')[1] });
       setErrorMessage('An unexpected error occurred');
-      Alert.alert('Error', 'An unexpected error occurred');
+      Alert.alert(t('common.error'), t('onboarding.validation.unexpectedError'));
     } finally {
       setIsLoading(false);
     }
@@ -160,7 +157,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
 
   const handleVerifyCode = async () => {
     if (code.length !== 6) {
-      Alert.alert('Error', 'Please enter all 6 digits');
+      Alert.alert(t('common.error'), t('auth.enterAllDigits'));
       return;
     }
 
@@ -179,7 +176,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
       if (!result.success) {
         const errorMsg = result.error?.message || 'Invalid verification code';
         setErrorMessage(errorMsg);
-        Alert.alert('Error', errorMsg);
+        Alert.alert(t('alerts.error'), errorMsg);
         setIsLoading(false);
         return;
       }
@@ -201,7 +198,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
       if (!userId) {
         Logger.error('No user ID after OTP verification', new Error('Missing userId'));
         setErrorMessage('Authentication failed - please try again');
-        Alert.alert('Error', 'Authentication failed - please try again');
+        Alert.alert(t('common.error'), t('auth.authFailed'));
         setIsLoading(false);
         return;
       }
@@ -258,7 +255,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
     } catch (error) {
       Logger.error('Error during OTP verification', error as Error);
       setErrorMessage('An unexpected error occurred');
-      Alert.alert('Error', 'An unexpected error occurred');
+      Alert.alert(t('common.error'), t('onboarding.validation.unexpectedError'));
     } finally {
       setIsLoading(false);
     }

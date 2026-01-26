@@ -249,11 +249,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
   sportId,
   userId,
 }) => {
-  const {
-    watch,
-    setValue,
-    formState: { errors },
-  } = form;
+  const { watch, setValue } = form;
 
   const format = watch('format');
   const playerExpectation = watch('playerExpectation');

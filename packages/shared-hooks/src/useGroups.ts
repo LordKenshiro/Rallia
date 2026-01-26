@@ -3,6 +3,7 @@
  * React Query hooks for managing player groups
  */
 
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getPlayerGroups,
@@ -33,6 +34,14 @@ import {
   getPendingScoreConfirmations,
   confirmMatchScore,
   disputeMatchScore,
+  // Realtime functions
+  subscribeToGroupMembers,
+  subscribeToGroupActivity,
+  subscribeToGroupMatches,
+  subscribeToGroupSettings,
+  subscribeToPlayerGroups,
+  subscribeToScoreConfirmations,
+  unsubscribeFromGroupChannel,
   type Group,
   type GroupWithMembers,
   type GroupMember,
@@ -57,13 +66,18 @@ export const groupKeys = {
   withMembers: (groupId: string) => [...groupKeys.detail(groupId), 'members'] as const,
   activity: (groupId: string) => [...groupKeys.detail(groupId), 'activity'] as const,
   stats: (groupId: string) => [...groupKeys.detail(groupId), 'stats'] as const,
-  isModerator: (groupId: string, playerId: string) => [...groupKeys.detail(groupId), 'moderator', playerId] as const,
-  isMember: (groupId: string, playerId: string) => [...groupKeys.detail(groupId), 'member', playerId] as const,
+  isModerator: (groupId: string, playerId: string) =>
+    [...groupKeys.detail(groupId), 'moderator', playerId] as const,
+  isMember: (groupId: string, playerId: string) =>
+    [...groupKeys.detail(groupId), 'member', playerId] as const,
   inviteCode: (groupId: string) => [...groupKeys.detail(groupId), 'inviteCode'] as const,
-  matches: (groupId: string, daysBack?: number) => [...groupKeys.detail(groupId), 'matches', daysBack] as const,
+  matches: (groupId: string, daysBack?: number) =>
+    [...groupKeys.detail(groupId), 'matches', daysBack] as const,
   recentMatch: (groupId: string) => [...groupKeys.detail(groupId), 'recentMatch'] as const,
-  leaderboard: (groupId: string, daysBack?: number) => [...groupKeys.detail(groupId), 'leaderboard', daysBack] as const,
-  pendingConfirmations: (playerId: string) => [...groupKeys.all, 'pendingConfirmations', playerId] as const,
+  leaderboard: (groupId: string, daysBack?: number) =>
+    [...groupKeys.detail(groupId), 'leaderboard', daysBack] as const,
+  pendingConfirmations: (playerId: string) =>
+    [...groupKeys.all, 'pendingConfirmations', playerId] as const,
 };
 
 // =============================================================================
@@ -344,7 +358,7 @@ export function useJoinGroupByInviteCode() {
   return useMutation({
     mutationFn: ({ inviteCode, playerId }: { inviteCode: string; playerId: string }) =>
       joinGroupByInviteCode(inviteCode, playerId),
-    onSuccess: (result) => {
+    onSuccess: result => {
       if (result.success && result.groupId) {
         // Invalidate player's groups list and the joined group
         queryClient.invalidateQueries({ queryKey: groupKeys.lists() });
@@ -377,7 +391,11 @@ export function useResetGroupInviteCode() {
 /**
  * Get matches posted to a group
  */
-export function useGroupMatches(groupId: string | undefined, daysBack: number = 180, limit: number = 50) {
+export function useGroupMatches(
+  groupId: string | undefined,
+  daysBack: number = 180,
+  limit: number = 50
+) {
   return useQuery({
     queryKey: groupKeys.matches(groupId!, daysBack),
     queryFn: () => getGroupMatches(groupId!, daysBack, limit),
@@ -414,12 +432,31 @@ export function usePostMatchToGroup() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ matchId, groupId, playerId }: { matchId: string; groupId: string; playerId: string }) =>
-      postMatchToGroup(matchId, groupId, playerId),
+    mutationFn: ({
+      matchId,
+      groupId,
+      playerId,
+    }: {
+      matchId: string;
+      groupId: string;
+      playerId: string;
+    }) => postMatchToGroup(matchId, groupId, playerId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: groupKeys.matches(variables.groupId) });
       queryClient.invalidateQueries({ queryKey: groupKeys.recentMatch(variables.groupId) });
-      queryClient.invalidateQueries({ queryKey: groupKeys.leaderboard(variables.groupId) });
+      // Use predicate to invalidate all leaderboard queries for this group (regardless of daysBack)
+      queryClient.invalidateQueries({
+        predicate: query => {
+          const key = query.queryKey;
+          return (
+            Array.isArray(key) &&
+            key[0] === 'groups' &&
+            key[1] === 'detail' &&
+            key[2] === variables.groupId &&
+            key[3] === 'leaderboard'
+          );
+        },
+      });
       queryClient.invalidateQueries({ queryKey: groupKeys.activity(variables.groupId) });
     },
   });
@@ -437,7 +474,19 @@ export function useRemoveMatchFromGroup() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: groupKeys.matches(variables.groupId) });
       queryClient.invalidateQueries({ queryKey: groupKeys.recentMatch(variables.groupId) });
-      queryClient.invalidateQueries({ queryKey: groupKeys.leaderboard(variables.groupId) });
+      // Use predicate to invalidate all leaderboard queries for this group (regardless of daysBack)
+      queryClient.invalidateQueries({
+        predicate: query => {
+          const key = query.queryKey;
+          return (
+            Array.isArray(key) &&
+            key[0] === 'groups' &&
+            key[1] === 'detail' &&
+            key[2] === variables.groupId &&
+            key[3] === 'leaderboard'
+          );
+        },
+      });
     },
   });
 }
@@ -454,7 +503,19 @@ export function useCreatePlayedMatch() {
       if (variables.networkId) {
         queryClient.invalidateQueries({ queryKey: groupKeys.matches(variables.networkId) });
         queryClient.invalidateQueries({ queryKey: groupKeys.recentMatch(variables.networkId) });
-        queryClient.invalidateQueries({ queryKey: groupKeys.leaderboard(variables.networkId) });
+        // Use predicate to invalidate all leaderboard queries for this network (regardless of daysBack)
+        queryClient.invalidateQueries({
+          predicate: query => {
+            const key = query.queryKey;
+            return (
+              Array.isArray(key) &&
+              key[0] === 'groups' &&
+              key[1] === 'detail' &&
+              key[2] === variables.networkId &&
+              key[3] === 'leaderboard'
+            );
+          },
+        });
         queryClient.invalidateQueries({ queryKey: groupKeys.activity(variables.networkId) });
         queryClient.invalidateQueries({ queryKey: groupKeys.stats(variables.networkId) });
       }
@@ -490,7 +551,9 @@ export function useConfirmMatchScore() {
       confirmMatchScore(matchResultId, playerId),
     onSuccess: (_, variables) => {
       // Invalidate pending confirmations
-      queryClient.invalidateQueries({ queryKey: groupKeys.pendingConfirmations(variables.playerId) });
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.pendingConfirmations(variables.playerId),
+      });
       // Invalidate all leaderboards (we don't know which group this affects)
       queryClient.invalidateQueries({ queryKey: [...groupKeys.all, 'detail'] });
     },
@@ -515,7 +578,9 @@ export function useDisputeMatchScore() {
     }) => disputeMatchScore(matchResultId, playerId, reason),
     onSuccess: (_, variables) => {
       // Invalidate pending confirmations
-      queryClient.invalidateQueries({ queryKey: groupKeys.pendingConfirmations(variables.playerId) });
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.pendingConfirmations(variables.playerId),
+      });
     },
   });
 }
@@ -535,3 +600,129 @@ export type {
   CreatePlayedMatchInput,
   PendingScoreConfirmation,
 };
+
+// =============================================================================
+// REALTIME HOOKS
+// =============================================================================
+
+/**
+ * Subscribe to real-time updates for player's groups list
+ * Automatically refreshes when the player joins or leaves a group
+ */
+export function usePlayerGroupsRealtime(playerId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!playerId) return;
+
+    const channel = subscribeToPlayerGroups(playerId, () => {
+      // Refresh the groups list when membership changes
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.playerGroups(playerId),
+      });
+    });
+
+    return () => {
+      unsubscribeFromGroupChannel(channel);
+    };
+  }, [playerId, queryClient]);
+}
+
+/**
+ * Subscribe to real-time updates for a specific group
+ * Handles member changes, activity, matches, and settings updates
+ */
+export function useGroupRealtime(groupId: string | undefined, playerId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!groupId || !playerId) return;
+
+    // Subscribe to member changes (joins, leaves, role changes)
+    const membersChannel = subscribeToGroupMembers(groupId, () => {
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.withMembers(groupId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.stats(groupId),
+      });
+    });
+
+    // Subscribe to activity feed updates
+    const activityChannel = subscribeToGroupActivity(groupId, () => {
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.activity(groupId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.stats(groupId),
+      });
+    });
+
+    // Subscribe to match/score changes
+    const matchesChannel = subscribeToGroupMatches(groupId, () => {
+      // Refresh all match-related data
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.matches(groupId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.recentMatch(groupId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.leaderboard(groupId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.stats(groupId),
+      });
+      // Also refresh pending confirmations for the current player
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.pendingConfirmations(playerId),
+      });
+    });
+
+    // Subscribe to group settings changes (name, description, cover)
+    const settingsChannel = subscribeToGroupSettings(groupId, payload => {
+      if (payload.eventType === 'DELETE') {
+        // Group was deleted, invalidate all related queries
+        queryClient.invalidateQueries({
+          queryKey: groupKeys.playerGroups(playerId),
+        });
+      } else {
+        // Group was updated
+        queryClient.invalidateQueries({
+          queryKey: groupKeys.detail(groupId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: groupKeys.withMembers(groupId),
+        });
+      }
+    });
+
+    return () => {
+      unsubscribeFromGroupChannel(membersChannel);
+      unsubscribeFromGroupChannel(activityChannel);
+      unsubscribeFromGroupChannel(matchesChannel);
+      unsubscribeFromGroupChannel(settingsChannel);
+    };
+  }, [groupId, playerId, queryClient]);
+}
+
+/**
+ * Subscribe to real-time updates for pending score confirmations
+ */
+export function useScoreConfirmationsRealtime(playerId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!playerId) return;
+
+    const channel = subscribeToScoreConfirmations(playerId, () => {
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.pendingConfirmations(playerId),
+      });
+    });
+
+    return () => {
+      unsubscribeFromGroupChannel(channel);
+    };
+  }, [playerId, queryClient]);
+}

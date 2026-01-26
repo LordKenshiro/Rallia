@@ -1,17 +1,29 @@
 /**
  * MessageList Component
  * Displays messages in a chat with date separators and infinite scroll
- * Supports search highlighting and navigation
+ * Supports search highlighting, navigation, and scroll-to-bottom button
  */
 
-import React, { useCallback, useMemo, memo, useRef, useImperativeHandle, forwardRef } from 'react';
+import React, {
+  useCallback,
+  useMemo,
+  memo,
+  useRef,
+  useImperativeHandle,
+  forwardRef,
+  useState,
+} from 'react';
 import {
   View,
   FlatList,
   StyleSheet,
   ActivityIndicator,
-  RefreshControl,
+  TouchableOpacity,
+  Animated,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
 import { useThemeStyles } from '../../../hooks';
@@ -21,6 +33,7 @@ import { MessageBubble } from './MessageBubble';
 
 export interface MessageListRef {
   scrollToMessage: (messageId: string) => void;
+  scrollToBottom: () => void;
 }
 
 interface MessageListProps {
@@ -30,8 +43,6 @@ interface MessageListProps {
   onLoadMore: () => void;
   isLoadingMore: boolean;
   hasMore: boolean;
-  onRefresh?: () => void;
-  isRefreshing?: boolean;
   reactions?: Map<string, ReactionSummary[]>;
   onReplyToMessage?: (message: MessageWithSender) => void;
   onLongPressMessage?: (message: MessageWithSender, pageY?: number) => void;
@@ -39,6 +50,9 @@ interface MessageListProps {
   highlightedMessageIds?: string[];
   currentHighlightedId?: string;
 }
+
+// Threshold for showing scroll-to-bottom button (in pixels)
+const SCROLL_THRESHOLD = 200;
 
 // Helper to format date for separators
 function formatDateSeparator(date: Date): string {
@@ -78,33 +92,36 @@ function shouldShowSenderInfo(
   if (currentMessage.sender_id === currentUserId) return false;
   if (!previousMessage) return true;
   if (previousMessage.sender_id !== currentMessage.sender_id) return true;
-  
+
   // Also show if there's been a significant time gap (5 minutes)
-  const timeDiff = new Date(currentMessage.created_at).getTime() -
-    new Date(previousMessage.created_at).getTime();
+  const timeDiff =
+    new Date(currentMessage.created_at).getTime() - new Date(previousMessage.created_at).getTime();
   if (timeDiff > 5 * 60 * 1000) return true;
-  
+
   return false;
 }
 
-function MessageListComponent({
-  messages,
-  currentUserId,
-  onReact,
-  onLoadMore,
-  isLoadingMore,
-  hasMore,
-  onRefresh,
-  isRefreshing = false,
-  reactions = new Map(),
-  onReplyToMessage,
-  onLongPressMessage,
-  searchQuery = '',
-  highlightedMessageIds = [],
-  currentHighlightedId,
-}: MessageListProps, ref: React.Ref<MessageListRef>) {
+function MessageListComponent(
+  {
+    messages = [],
+    currentUserId,
+    onReact,
+    onLoadMore,
+    isLoadingMore,
+    hasMore,
+    reactions = new Map(),
+    onReplyToMessage,
+    onLongPressMessage,
+    searchQuery = '',
+    highlightedMessageIds = [],
+    currentHighlightedId,
+  }: MessageListProps,
+  ref: React.Ref<MessageListRef>
+) {
   const { colors } = useThemeStyles();
   const flatListRef = useRef<FlatList>(null);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const scrollButtonOpacity = useRef(new Animated.Value(0)).current;
 
   // Create a set for O(1) lookup of highlighted IDs
   const highlightedSet = useMemo(() => new Set(highlightedMessageIds), [highlightedMessageIds]);
@@ -121,16 +138,21 @@ function MessageListComponent({
       showSenderInfo?: boolean;
     }> = [];
 
+    // Guard against undefined messages
+    if (!messages || messages.length === 0) {
+      return result;
+    }
+
     // Messages are in descending order (newest first)
     // In inverted list: first item (newest) appears at bottom, last item (oldest) at top
     // We want: DateSeparator to appear ABOVE its day's messages
     // In data terms: DateSeparator should come AFTER its day's messages
-    
+
     for (let i = 0; i < messages.length; i++) {
       const message = messages[i];
       const messageDate = new Date(message.created_at);
       const nextMessage = messages[i + 1]; // Older message (appears above in UI)
-      
+
       // Determine if we should show sender info
       const showSenderInfo = shouldShowSenderInfo(message, nextMessage, currentUserId);
 
@@ -144,8 +166,9 @@ function MessageListComponent({
 
       // Check if we need a date separator AFTER this message (appears ABOVE in UI)
       // Add separator if this is the last message OR the next message is from a different day
-      const needsSeparator = !nextMessage || !isSameDay(messageDate, new Date(nextMessage.created_at));
-      
+      const needsSeparator =
+        !nextMessage || !isSameDay(messageDate, new Date(nextMessage.created_at));
+
       if (needsSeparator) {
         result.push({
           type: 'dateSeparator',
@@ -158,22 +181,56 @@ function MessageListComponent({
     return result;
   }, [messages, currentUserId]);
 
-  // Expose scrollToMessage method to parent
-  useImperativeHandle(ref, () => ({
-    scrollToMessage: (messageId: string) => {
-      // Find the index of the message in processedMessages
-      const index = processedMessages.findIndex(
-        item => item.type === 'message' && item.id === messageId
-      );
-      if (index !== -1 && flatListRef.current) {
-        flatListRef.current.scrollToIndex({
-          index,
-          animated: true,
-          viewPosition: 0.5, // Center the message on screen
-        });
+  // Handle scroll to track if user scrolled up
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      // In an inverted list, contentOffset.y increases as you scroll UP (away from bottom)
+      const offsetY = event.nativeEvent.contentOffset.y;
+      const shouldShow = offsetY > SCROLL_THRESHOLD;
+
+      if (shouldShow !== showScrollButton) {
+        setShowScrollButton(shouldShow);
+        Animated.timing(scrollButtonOpacity, {
+          toValue: shouldShow ? 1 : 0,
+          duration: 200,
+          useNativeDriver: true,
+        }).start();
       }
     },
-  }), [processedMessages]);
+    [showScrollButton, scrollButtonOpacity]
+  );
+
+  // Scroll to bottom (index 0 in inverted list)
+  const scrollToBottom = useCallback(() => {
+    if (flatListRef.current && processedMessages.length > 0) {
+      flatListRef.current.scrollToIndex({
+        index: 0,
+        animated: true,
+      });
+    }
+  }, [processedMessages.length]);
+
+  // Expose scrollToMessage and scrollToBottom methods to parent
+  useImperativeHandle(
+    ref,
+    () => ({
+      scrollToMessage: (messageId: string) => {
+        // Find the index of the message in processedMessages
+        const index = processedMessages.findIndex(
+          item => item.type === 'message' && item.id === messageId
+        );
+        if (index !== -1 && flatListRef.current) {
+          flatListRef.current.scrollToIndex({
+            index,
+            animated: true,
+            viewPosition: 0.5, // Center the message on screen
+          });
+        }
+      },
+      scrollToBottom,
+    }),
+    [processedMessages, scrollToBottom]
+  );
 
   const handleReact = useCallback(
     (messageId: string) => (emoji: string) => {
@@ -183,14 +240,12 @@ function MessageListComponent({
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: typeof processedMessages[0] }) => {
+    ({ item }: { item: (typeof processedMessages)[0] }) => {
       if (item.type === 'dateSeparator') {
         return (
           <View style={styles.dateSeparatorContainer}>
             <View style={[styles.dateSeparatorLine, { backgroundColor: colors.border }]} />
-            <Text style={[styles.dateSeparatorText, { color: colors.textMuted }]}>
-              {item.date}
-            </Text>
+            <Text style={[styles.dateSeparatorText, { color: colors.textMuted }]}>{item.date}</Text>
             <View style={[styles.dateSeparatorLine, { backgroundColor: colors.border }]} />
           </View>
         );
@@ -200,7 +255,7 @@ function MessageListComponent({
         const messageReactions = reactions.get(item.message.id) || [];
         const isHighlighted = highlightedSet.has(item.message.id);
         const isCurrentHighlight = item.message.id === currentHighlightedId;
-        
+
         return (
           <MessageBubble
             message={item.message}
@@ -209,7 +264,11 @@ function MessageListComponent({
             onReact={handleReact(item.message.id)}
             reactions={messageReactions}
             onReplyPress={onReplyToMessage ? () => onReplyToMessage(item.message!) : undefined}
-            onLongPress={onLongPressMessage ? (pageY: number) => onLongPressMessage(item.message!, pageY) : undefined}
+            onLongPress={
+              onLongPressMessage
+                ? (pageY: number) => onLongPressMessage(item.message!, pageY)
+                : undefined
+            }
             searchQuery={searchQuery}
             isHighlighted={isHighlighted}
             isCurrentHighlight={isCurrentHighlight}
@@ -219,7 +278,17 @@ function MessageListComponent({
 
       return null;
     },
-    [colors, currentUserId, handleReact, reactions, onReplyToMessage, onLongPressMessage, searchQuery, highlightedSet, currentHighlightedId]
+    [
+      colors,
+      currentUserId,
+      handleReact,
+      reactions,
+      onReplyToMessage,
+      onLongPressMessage,
+      searchQuery,
+      highlightedSet,
+      currentHighlightedId,
+    ]
   );
 
   const renderFooter = useCallback(() => {
@@ -231,7 +300,7 @@ function MessageListComponent({
     );
   }, [isLoadingMore, colors]);
 
-  const keyExtractor = useCallback((item: typeof processedMessages[0]) => item.id, []);
+  const keyExtractor = useCallback((item: (typeof processedMessages)[0]) => item.id, []);
 
   const handleEndReached = useCallback(() => {
     if (hasMore && !isLoadingMore) {
@@ -240,50 +309,61 @@ function MessageListComponent({
   }, [hasMore, isLoadingMore, onLoadMore]);
 
   // Handle scroll to index failure (item not rendered yet)
-  const handleScrollToIndexFailed = useCallback((info: {
-    index: number;
-    highestMeasuredFrameIndex: number;
-    averageItemLength: number;
-  }) => {
-    // Wait and try again
-    setTimeout(() => {
-      if (flatListRef.current && processedMessages.length > 0) {
-        flatListRef.current.scrollToIndex({
-          index: Math.min(info.index, processedMessages.length - 1),
-          animated: true,
-          viewPosition: 0.5,
-        });
-      }
-    }, 100);
-  }, [processedMessages.length]);
+  const handleScrollToIndexFailed = useCallback(
+    (info: { index: number; highestMeasuredFrameIndex: number; averageItemLength: number }) => {
+      // Wait and try again
+      setTimeout(() => {
+        if (flatListRef.current && processedMessages.length > 0) {
+          flatListRef.current.scrollToIndex({
+            index: Math.min(info.index, processedMessages.length - 1),
+            animated: true,
+            viewPosition: 0.5,
+          });
+        }
+      }, 100);
+    },
+    [processedMessages.length]
+  );
 
   return (
-    <FlatList
-      ref={flatListRef}
-      data={processedMessages}
-      renderItem={renderItem}
-      keyExtractor={keyExtractor}
-      inverted
-      contentContainerStyle={styles.listContent}
-      onEndReached={handleEndReached}
-      onEndReachedThreshold={0.2}
-      ListFooterComponent={renderFooter}
-      refreshControl={
-        onRefresh ? (
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={onRefresh}
-            colors={[colors.primary]}
-            tintColor={colors.primary}
-          />
-        ) : undefined
-      }
-      showsVerticalScrollIndicator={false}
-      initialNumToRender={20}
-      maxToRenderPerBatch={10}
-      windowSize={10}
-      onScrollToIndexFailed={handleScrollToIndexFailed}
-    />
+    <View style={styles.container}>
+      <FlatList
+        ref={flatListRef}
+        data={processedMessages}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        inverted
+        contentContainerStyle={styles.listContent}
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.2}
+        ListFooterComponent={renderFooter}
+        // Note: RefreshControl is intentionally not used here because:
+        // 1. The list is inverted, which reverses the pull gesture direction
+        // 2. New messages arrive via real-time subscriptions automatically
+        // 3. Older messages are loaded via onEndReached when scrolling up
+        showsVerticalScrollIndicator={false}
+        initialNumToRender={20}
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        onScrollToIndexFailed={handleScrollToIndexFailed}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      />
+
+      {/* Scroll to Bottom Button */}
+      <Animated.View
+        style={[styles.scrollButtonContainer, { opacity: scrollButtonOpacity }]}
+        pointerEvents={showScrollButton ? 'auto' : 'none'}
+      >
+        <TouchableOpacity
+          style={[styles.scrollButton, { backgroundColor: colors.cardBackground }]}
+          onPress={scrollToBottom}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="chevron-down" size={24} color={colors.primary} />
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
   );
 }
 
@@ -294,6 +374,9 @@ export const MessageList = memo(forwardRef(MessageListComponent)) as React.MemoE
 const styles = StyleSheet.create({
   listContent: {
     paddingVertical: spacingPixels[4],
+  },
+  container: {
+    flex: 1,
   },
   dateSeparatorContainer: {
     flexDirection: 'row',
@@ -314,5 +397,22 @@ const styles = StyleSheet.create({
   loadingFooter: {
     paddingVertical: spacingPixels[4],
     alignItems: 'center',
+  },
+  scrollButtonContainer: {
+    position: 'absolute',
+    bottom: 16,
+    right: 16,
+  },
+  scrollButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
 });

@@ -1,12 +1,18 @@
 {
   "common": {
     "loading": "Loading...",
-    "error": "Something went wrong",
+    "error": "Error",
     "retry": "Try again",
+    "tryAgain": "Try Again",
+    "tryDifferentSearch": "Try a different search term",
+    "noResultsFound": "No results found",
+    "processing": "Processing...",
+    "openSettings": "Open Settings",
     "save": "Save",
     "cancel": "Cancel",
     "confirm": "Confirm",
     "delete": "Delete",
+    "leave": "Leave",
     "edit": "Edit",
     "back": "Back",
     "goBack": "Go back",
@@ -21,6 +27,8 @@
     "search": "Search",
     "filter": "Filter",
     "sort": "Sort",
+    "memberCount": "{count} members",
+    "memberCount_one": "{count} member",
     "time": {
       "now": "Now",
       "today": "Today",
@@ -48,8 +56,27 @@
       "left": "Left",
       "right": "Right"
     },
+    "player": "Player",
     "verified": "Verified",
-    "lastActive": "Last Active"
+    "lastActive": "Last Active",
+    "game": "Game",
+    "more": "+{count} more",
+    "share": "Share",
+    "selectAll": "Select All",
+    "user": "User",
+    "discard": "Discard",
+    "copied": "Copied",
+    "reset": "Reset",
+    "success": "Success",
+    "permissionRequired": "Permission Required",
+    "saving": "Saving...",
+    "warning": "Warning",
+    "change": "Change",
+    "saveChanges": "Save Changes",
+    "remove": "Remove",
+    "you": "You",
+    "today": "Today",
+    "yesterday": "Yesterday"
   },
   "auth": {
     "signIn": "Sign In",
@@ -76,7 +103,10 @@
     "stepNames": {
       "email": "Email",
       "verify": "Verify"
-    }
+    },
+    "verificationCodeSent": "Verification code sent successfully",
+    "enterAllDigits": "Please enter all 6 digits",
+    "authFailed": "Authentication failed. Please try again."
   },
   "navigation": {
     "home": "Home",
@@ -249,36 +279,52 @@
     }
   },
   "settings": {
-    "title": "Settings",
-    "language": "Language",
-    "languageDescription": "Choose your preferred language",
-    "languageAuto": "System Default",
-    "notifications": "Notifications",
-    "notificationsDescription": "Choose how you want to be notified about different events. Turn each option on or off.",
-    "privacy": "Privacy",
-    "subscription": "Subscription",
-    "payments": "Payments",
-    "about": "About",
-    "version": "Version",
-    "termsOfService": "Terms of Service",
-    "privacyPolicy": "Privacy Policy",
-    "logout": "Log Out",
-    "deleteAccount": "Delete Account",
-    "theme": "Theme",
-    "darkMode": "Dark Mode",
-    "lightMode": "Light Mode",
-    "systemTheme": "System",
-    "permissions": "Permissions",
     "nav": {
       "general": "General",
+      "generalDesc": "Basic settings",
       "payments": "Payments",
+      "paymentsDesc": "Stripe & billing",
       "policies": "Policies",
-      "members": "Members"
+      "policiesDesc": "Cancellation rules",
+      "members": "Members",
+      "membersDesc": "Team access",
+      "pricing": "Pricing",
+      "pricingDesc": "Rate management"
     },
     "general": {
       "title": "General Settings",
       "description": "Manage your organization settings.",
-      "comingSoon": "General settings configuration coming soon."
+      "notAuthenticated": "You must be signed in to access settings.",
+      "noOrganization": "You must be a member of an organization to access settings.",
+      "fetchError": "Failed to load settings.",
+      "saveError": "Failed to save settings.",
+      "saving": "Saving...",
+      "save": "Save Changes",
+      "saveSuccess": "Settings saved successfully!",
+      "orgInfo": {
+        "title": "Organization Information",
+        "description": "Basic information about your organization.",
+        "name": "Organization Name",
+        "email": "Contact Email",
+        "phone": "Phone Number",
+        "website": "Website"
+      },
+      "booking": {
+        "title": "Booking Settings",
+        "description": "Configure how players can book courts.",
+        "slotDuration": "Default Slot Duration",
+        "slotDurationHint": "Default length of time for court bookings.",
+        "minutes": "minutes",
+        "minNotice": "Minimum Booking Notice",
+        "minNoticeHint": "How far in advance a booking must be made.",
+        "hours": "hours",
+        "hour": "hour",
+        "maxAdvance": "Maximum Advance Booking",
+        "maxAdvanceHint": "How far ahead players can book.",
+        "days": "days",
+        "allowSameDay": "Allow Same-Day Bookings",
+        "allowSameDayHint": "Allow players to book courts on the same day."
+      }
     },
     "orgPayments": {
       "title": "Payment Settings",
@@ -327,12 +373,148 @@
     "policies": {
       "title": "Cancellation Policies",
       "description": "Configure your cancellation and refund policies.",
-      "comingSoon": "Cancellation policy configuration coming soon."
+      "notAuthenticated": "You must be signed in to access policies.",
+      "noOrganization": "You must be a member of an organization to access policies.",
+      "fetchError": "Failed to load cancellation policy.",
+      "saveError": "Failed to save cancellation policy.",
+      "saving": "Saving...",
+      "save": "Save Policy",
+      "saveSuccess": "Cancellation policy saved successfully!",
+      "cancellation": {
+        "title": "Refund Periods",
+        "description": "Define when players can cancel and receive refunds.",
+        "freePeriod": "Full Refund Period",
+        "freePeriodDescription": "Cancellations made before this time receive a full refund.",
+        "partialPeriod": "Partial Refund Period",
+        "partialPeriodDescription": "Cancellations made during this period receive a partial refund.",
+        "noRefundPeriod": "No Refund Period",
+        "noRefundPeriodDescription": "Cancellations made after this point receive no refund.",
+        "hoursBeforeBooking": "hours before booking",
+        "percentRefund": "% refund"
+      },
+      "preview": {
+        "title": "Policy Preview",
+        "description": "This is how your cancellation policy will appear to players.",
+        "text": "Cancellations made more than {freeHours} hours before your booking receive a full refund. Cancellations made between {partialHours} and {freeHours} hours before receive a {partialPercent}% refund. Cancellations made less than {noRefundHours} hours before receive no refund."
+      }
     },
     "members": {
       "title": "Members",
       "description": "Manage your organization members and their roles.",
-      "comingSoon": "Member management coming soon."
+      "notAuthenticated": "You must be signed in to manage members.",
+      "noOrganization": "You must be a member of an organization to manage members.",
+      "fetchError": "Failed to load members.",
+      "removeError": "Failed to remove member.",
+      "roleChangeError": "Failed to change member role.",
+      "list": {
+        "title": "Organization Members",
+        "description": "{count} members in your organization",
+        "member": "Member",
+        "role": "Role",
+        "joined": "Joined",
+        "unknownUser": "Unknown User"
+      },
+      "roles": {
+        "owner": "Owner",
+        "admin": "Admin",
+        "manager": "Manager",
+        "staff": "Staff",
+        "member": "Member"
+      },
+      "actions": {
+        "changeRole": "Change Role",
+        "remove": "Remove Member"
+      },
+      "remove": {
+        "title": "Remove Member",
+        "description": "Are you sure you want to remove {name} from your organization? They will lose access to all organization resources.",
+        "cancel": "Cancel",
+        "confirm": "Remove Member"
+      },
+      "changeRole": {
+        "title": "Change Role",
+        "description": "Change the role for {name}.",
+        "cancel": "Cancel",
+        "confirm": "Save Changes"
+      },
+      "invite": {
+        "button": "Invite Member",
+        "title": "Invite New Member",
+        "description": "Send an invitation email to add a new member to your organization.",
+        "emailLabel": "Email Address",
+        "emailPlaceholder": "Enter email address",
+        "roleLabel": "Role",
+        "roleHint": "The role determines what permissions the member will have.",
+        "cancel": "Cancel",
+        "send": "Send Invitation",
+        "sending": "Sending...",
+        "success": "Invitation sent to {email}!",
+        "error": "Failed to send invitation. Please try again."
+      },
+      "pending": {
+        "title": "Pending Invitations",
+        "description": "{count} pending invitation(s)",
+        "invitedAs": "Invited as {role}",
+        "expires": "Expires {date}",
+        "pending": "Pending",
+        "expired": "Expired"
+      }
+    },
+    "pricing": {
+      "title": "Pricing Rules",
+      "description": "Configure pricing for different times, days, and courts.",
+      "notAuthenticated": "You must be signed in to manage pricing.",
+      "noOrganization": "You must be a member of an organization to manage pricing.",
+      "fetchError": "Failed to load pricing rules.",
+      "saveError": "Failed to save pricing rule.",
+      "deleteError": "Failed to delete pricing rule.",
+      "addRule": "Add Pricing Rule",
+      "editRule": "Edit Pricing Rule",
+      "noRules": "No pricing rules configured. Add your first rule to customize pricing.",
+      "addFirstRule": "Add First Rule",
+      "allFacilities": "All Facilities",
+      "allDays": "All Days",
+      "weekdays": "Weekdays",
+      "weekends": "Weekends",
+      "ruleFormDescription": "Set custom pricing for specific times, days, or courts.",
+      "rules": {
+        "title": "Active Pricing Rules",
+        "description": "Higher priority rules take precedence when multiple rules apply.",
+        "name": "Name",
+        "scope": "Scope",
+        "schedule": "Schedule",
+        "price": "Price",
+        "status": "Active"
+      },
+      "actions": {
+        "edit": "Edit",
+        "delete": "Delete"
+      },
+      "form": {
+        "name": "Rule Name",
+        "namePlaceholder": "e.g., Peak Hours, Weekend Special",
+        "facility": "Facility",
+        "court": "Court",
+        "allFacilities": "All Facilities",
+        "allCourts": "All Courts",
+        "days": "Days of Week",
+        "startTime": "Start Time",
+        "endTime": "End Time",
+        "price": "Price per Slot",
+        "priority": "Priority",
+        "priorityHint": "Higher priority rules override lower ones.",
+        "validFrom": "Valid From",
+        "validUntil": "Valid Until",
+        "cancel": "Cancel",
+        "save": "Save Changes",
+        "create": "Create Rule"
+      },
+      "delete": {
+        "title": "Delete Pricing Rule",
+        "description": "Are you sure you want to delete the pricing rule \"{name}\"? This action cannot be undone.",
+        "cancel": "Cancel",
+        "confirm": "Delete Rule"
+      }
     }
   },
   "permissions": {
@@ -342,7 +524,9 @@
       "notifications": "Notifications",
       "location": "Location",
       "calendar": "Calendar",
-      "photos": "Photos & Media"
+      "photos": "Photos & Media",
+      "contacts": "Contacts",
+      "camera": "Camera"
     },
     "status": {
       "granted": "Allowed",
@@ -472,92 +656,6 @@
     }
   },
   "onboarding": {
-    "welcome": "Welcome to Rallia",
-    "welcomeSubtitle": "Find your perfect tennis and pickleball playing partners",
-    "getStarted": "Get Started",
-    "personalInfo": "Personal Information",
-    "personalInfoSubtitle": "Tell us a bit about yourself",
-    "sportSelection": "Select Your Sports",
-    "sportSelectionSubtitle": "Which sports do you play?",
-    "tennis": "Tennis",
-    "pickleball": "Pickleball",
-    "skillLevel": "Skill Level",
-    "skillLevelSubtitle": "What's your skill level?",
-    "beginner": "Beginner",
-    "intermediate": "Intermediate",
-    "advanced": "Advanced",
-    "professional": "Professional",
-    "ratingSource": "Rating Source",
-    "selfRated": "Self-Rated",
-    "verified": "Verified",
-    "availability": "Availability",
-    "availabilitySubtitle": "When are you usually available to play?",
-    "preferences": "Preferences",
-    "preferencesSubtitle": "Set your playing preferences",
-    "allSet": "You're all set!",
-    "allSetSubtitle": "Start finding games",
-    "step": "Step {current} of {total}",
-    "stepNames": {
-      "personal": "About You",
-      "sports": "Sports",
-      "tennisRating": "Tennis Rating",
-      "pickleballRating": "Pickleball Rating",
-      "preferences": "Preferences",
-      "availability": "Availability"
-    },
-    "personalInfoStep": {
-      "title": "Tell us about yourself",
-      "firstName": "First Name",
-      "firstNamePlaceholder": "Enter your first name",
-      "lastName": "Last Name",
-      "lastNamePlaceholder": "Enter your last name",
-      "fullName": "Full Name",
-      "fullNamePlaceholder": "Enter your full name",
-      "username": "Username",
-      "usernamePlaceholder": "Choose a username",
-      "usernameHelper": "Max 10 characters, no spaces",
-      "dateOfBirth": "Date of Birth",
-      "gender": "Gender",
-      "genderPlaceholder": "Select your gender",
-      "phoneNumber": "Phone Number",
-      "required": "*"
-    },
-    "sportSelectionStep": {
-      "title": "Which sports would you like to play?",
-      "subtitle": "Select all that apply"
-    },
-    "ratingStep": {
-      "tennisTitle": "Tell us about your game",
-      "pickleballTitle": "Tell us about your game",
-      "ntrpSubtitle": "NTRP Rating",
-      "duprSubtitle": "DUPR Rating"
-    },
-    "preferencesStep": {
-      "title": "Tell us about your preferences",
-      "playingHand": "Preferred Playing Hand",
-      "left": "Left",
-      "right": "Right",
-      "both": "Both",
-      "travelDistance": "Maximum Travel Distance",
-      "matchDuration": "Preferred Game Duration",
-      "matchType": "Preferred Game Type",
-      "casual": "Casual",
-      "competitive": "Competitive",
-      "sameForAll": "Same for all sports"
-    },
-    "availabilityStep": {
-      "title": "Tell us about your schedule",
-      "subtitle": "Select your availabilities",
-      "am": "AM",
-      "pm": "PM",
-      "eve": "EVE"
-    },
-    "success": {
-      "title": "Welcome to Rallia!",
-      "subtitle": "Your account was created successfully.",
-      "getStarted": "Get Started"
-    },
-    "complete": "Complete",
     "badge": "Get Started",
     "pageTitle": "Create Your Organization",
     "pageDescription": "Set up your organization profile to start managing your facilities and members.",
@@ -709,12 +807,37 @@
     "mustBeLoggedIn": "Please sign in to create a game."
   },
   "chat": {
-    "empty": "No messages yet",
+    "empty": {
+      "direct": {
+        "title": "No direct messages yet",
+        "subtitle": "Start a conversation with another player"
+      },
+      "groups": {
+        "title": "No group chats yet",
+        "subtitle": "Join a group or community to start chatting"
+      },
+      "matches": {
+        "title": "No match chats yet",
+        "subtitle": "Join a match to start chatting with opponents"
+      }
+    },
     "inbox": "Inbox",
     "search": "Search players",
+    "searchConversations": "Search conversations",
     "newGroup": "New group",
+    "archived": "Archived",
+    "archivedChats": {
+      "title": "Archived",
+      "noArchivedChats": "No archived chats",
+      "chatsAppearHere": "Chats you archive will appear here"
+    },
     "noConversations": "No conversations yet",
     "noConversationsSubtitle": "Join a group or start a conversation with another player",
+    "tabs": {
+      "direct": "Direct",
+      "groups": "Groups",
+      "matches": "Matches"
+    },
     "typeMessage": "Type your message",
     "today": "Today",
     "yesterday": "Yesterday",
@@ -731,17 +854,771 @@
       "noHarassment": "No harassment, hate speech, sexual language",
       "noAdvertising": "No advertising or self promotion",
       "noDisrespect": "No disrespect!"
+    },
+    "title": "Chat",
+    "thisUser": "this user",
+    "alerts": {
+      "cannotReport": "Cannot Report",
+      "cannotReportMessage": "You can only report users in direct conversations",
+      "clearYourMessages": "Clear Your Messages",
+      "clearYourMessagesConfirm": "This will delete all messages you sent in this conversation. This action cannot be undone.",
+      "clear": "Clear",
+      "messagesDeleted": "{count} message(s) deleted",
+      "failedToClear": "Failed to clear messages. Please try again."
+    },
+    "blocked": {
+      "title": "You blocked {name}",
+      "description": "You need to unblock this user to continue the conversation. If you experienced serious issues, you can report them.",
+      "unblocking": "Unblocking...",
+      "unblock": "Unblock",
+      "report": "Report"
+    },
+    "report": {
+      "title": "Report User",
+      "reason": "Reason for reporting",
+      "reasonPlaceholder": "Please describe the issue...",
+      "submit": "Submit Report",
+      "success": "Report submitted successfully",
+      "error": "Failed to submit report",
+      "reportUser": "Report {name}",
+      "pleaseSelectReason": "Please select a reason for your report",
+      "submitted": "Report Submitted",
+      "thankYou": "Thank you for your report. Our team will review it shortly.",
+      "failedToSubmit": "Failed to submit report",
+      "warningText": "Reports are taken seriously. Please only report genuine violations.",
+      "selectReason": "Select a reason",
+      "additionalDetails": "Additional details (optional)",
+      "provideContext": "Provide more context about this report..."
+    },
+    "selectMembers": "Select Members",
+    "pleaseSelectMember": "Please select at least one member for the group.",
+    "photoAccessRequired": "Please allow access to your photos to add a group image.",
+    "failedToPickImage": "Failed to pick image",
+    "groupNameRequired": "Group name is required",
+    "groupNameTooShort": "Group name must be at least 2 characters",
+    "mustBeLoggedIn": "You must be logged in to create a group.",
+    "failedToCreateGroup": "Failed to create group chat. Please try again.",
+    "searchPlayers": "Search players...",
+    "loadingPlayers": "Loading players...",
+    "noPlayersFoundMatching": "No players found matching \"{query}\"",
+    "noPlayersAvailable": "No players available",
+    "continueSelected": "Continue ({count} selected)",
+    "groupDetails": "Group Details",
+    "addPhoto": "Add Photo",
+    "groupName": "Group Name",
+    "enterGroupName": "Enter group name",
+    "members": "Members",
+    "createGroup": "Create Group",
+    "addMembers": "Add Members",
+    "addCount": "Add ({count})",
+    "noPlayersFound": "No players found",
+    "noMorePlayersToAdd": "No more players to add",
+    "editMessage": "Edit Message",
+    "original": "Original",
+    "editYourMessage": "Edit your message...",
+    "menu": {
+      "search": "Search",
+      "muteNotifications": "Mute notifications",
+      "unmuteNotifications": "Unmute notifications",
+      "addToFavorites": "Add to favorites",
+      "removeFromFavorites": "Remove from favorites",
+      "block": "Block",
+      "unblock": "Unblock",
+      "report": "Report",
+      "clearChat": "Clear chat"
+    },
+    "actions": {
+      "conversation": "Conversation",
+      "pin": "Pin",
+      "unpin": "Unpin",
+      "mute": "Mute",
+      "unmute": "Unmute",
+      "archive": "Archive",
+      "unarchive": "Unarchive",
+      "leaveGroup": "Leave Group"
+    },
+    "messages": {
+      "addReaction": "Add Reaction",
+      "reply": "Reply",
+      "copy": "Copy",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteConfirm": "Are you sure you want to delete this message?",
+      "edited": "edited",
+      "replyingTo": "Replying to {name}"
+    },
+    "groupChat": {
+      "groupMemberCount": "Group · {count} members",
+      "groupMemberCount_one": "Group · {count} member",
+      "addGroupDescription": "Add group description",
+      "addMembers": "Add members",
+      "inviteViaLinkOrQR": "Invite via link or QR code"
+    },
+    "messageActions": {
+      "addReaction": "Add Reaction",
+      "reply": "Reply",
+      "copy": "Copy",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "conversation": {
+      "groupChat": "Group Chat",
+      "blockedUser": "You blocked this user",
+      "online": "Online",
+      "lastSeen": "Last seen {time}",
+      "noMessages": "No messages yet"
+    },
+    "message": {
+      "deleted": "This message was deleted",
+      "edited": "edited"
+    },
+    "input": {
+      "replyingTo": "Replying to {name}"
+    },
+    "searchInChat": {
+      "placeholder": "Search in chat...",
+      "noMatches": "No matches"
+    },
+    "typing": {
+      "one": "{name} is typing",
+      "two": "{name1} and {name2} are typing",
+      "many": "{name} and {count} others are typing"
     }
   },
   "map": {
     "placeholder": "Map View"
   },
   "community": {
-    "placeholder": "Connect with other players"
+    "placeholder": "Connect with other players",
+    "title": "Community",
+    "communities": "Communities",
+    "groups": "Groups",
+    "shareLists": "Share Lists",
+    "tournaments": "Tournaments",
+    "tournamentsComingSoon": "This feature is coming soon!",
+    "findPartner": "Find a Partner",
+    "myCommunities": "My Communities",
+    "createCommunity": "Create Community",
+    "editCommunity": "Edit Community",
+    "deleteCommunity": "Delete Community",
+    "leaveCommunity": "Leave Community",
+    "joinCommunity": "Join Community",
+    "inviteToCommunity": "Invite to Community",
+    "communityOptions": "Community Options",
+    "communityName": "Community Name",
+    "communityNamePlaceholder": "Enter community name",
+    "communityDescription": "Description",
+    "communityDescriptionPlaceholder": "Enter a description (optional)",
+    "communityImage": "Community Image",
+    "changeImage": "Change Image",
+    "removeImage": "Remove Image",
+    "communityVisibility": "Community Visibility",
+    "public": "Public",
+    "private": "Private",
+    "publicDescription": "Anyone can find and join this community",
+    "privateDescription": "Only invited members can join",
+    "visibility": {
+      "public": "Public",
+      "private": "Private"
+    },
+    "stats": {
+      "title": "Community Stats",
+      "totalMembers": "Total Members",
+      "totalGames": "Total Games",
+      "avgRating": "Avg Rating",
+      "visibility": "Visibility"
+    },
+    "members": {
+      "title": "Members",
+      "moderators": "Moderators",
+      "addMember": "Add Member",
+      "referPlayer": "Refer a Player",
+      "removeMember": "Remove Member",
+      "makeModerator": "Make Moderator",
+      "removeModerator": "Remove Moderator",
+      "viewAll": "View all"
+    },
+    "pendingRequests": {
+      "title": "Pending Requests",
+      "count": "{count} pending request(s)",
+      "approve": "Approve",
+      "decline": "Decline",
+      "approveSuccess": "Member approved successfully",
+      "declineSuccess": "Request declined",
+      "noRequests": "No pending requests",
+      "requestToJoin": "Request to Join",
+      "pending": "Pending",
+      "joinRequest": "Join request"
+    },
+    "referredBy": "Referred by {name}",
+    "tabs": {
+      "discover": "Discover",
+      "myCommunities": "My Communities",
+      "home": "Home",
+      "leaderboard": "Leaderboard",
+      "activity": "Activity"
+    },
+    "discoverCommunities": "Discover Communities",
+    "empty": {
+      "discover": {
+        "title": "No Communities Found",
+        "subtitle": "Be the first to create a community!"
+      },
+      "myCommunities": {
+        "title": "No Communities Yet",
+        "subtitle": "Join or create a community to connect with players"
+      }
+    },
+    "leaderboard": {
+      "title": "Leaderboard",
+      "rank": "Rank",
+      "player": "Player",
+      "gamesPlayed": "Games",
+      "wins": "Wins",
+      "losses": "Losses",
+      "winRate": "Win %",
+      "addPlayedGame": "Add a played game",
+      "noGamesYet": "No games played yet"
+    },
+    "activity": {
+      "title": "Activity",
+      "recentGames": "Recent Games",
+      "noActivity": "No activity yet"
+    },
+    "detail": {
+      "last7DaysActivities": "Last 7 days activities",
+      "activities": "ACTIVITIES",
+      "newMembers": "{count} new members",
+      "gamesCreated": "{count, plural, one {{count} game created} other {{count} games created}}",
+      "newMessages": "{count} new messages in\ncommunity chat",
+      "about": "About",
+      "viewAll": "View all",
+      "notFound": "Community not found",
+      "players": "Players",
+      "gamesPlayed": "Games played"
+    },
+    "chat": {
+      "title": "Chat",
+      "chatWithMembers": "Chat with members",
+      "placeholder": "Type a message..."
+    },
+    "invite": {
+      "title": "Invite to Community",
+      "shareLink": "Share Invite Link",
+      "copyLink": "Copy Link",
+      "linkCopied": "Link copied!",
+      "scanToJoin": "Scan to join the community",
+      "qrCode": "QR Code"
+    },
+    "options": {
+      "shareInviteLink": "Share Invite Link",
+      "pendingRequests": "Pending Requests ({count})",
+      "editCommunity": "Edit Community",
+      "leaveCommunity": "Leave Community",
+      "deleteCommunity": "Delete Community"
+    },
+    "qrScanner": {
+      "title": "Scan QR Code",
+      "instructions": "Point at a community invite QR code",
+      "invalidCode": "Invalid QR Code",
+      "invalidCodeMessage": "This QR code is not a valid Rallia community invite.",
+      "requestFailed": "Request Failed",
+      "requestFailedMessage": "Failed to send join request. Please try again.",
+      "requestSent": "Request Sent",
+      "requestSentMessage": "Your request to join {communityName} has been sent for approval.",
+      "cameraPermissionRequired": "Camera Permission Required",
+      "cameraPermissionMessage": "Please enable camera access in your device settings to scan QR codes.",
+      "cameraAccessRequired": "Camera Access Required",
+      "cameraAccessMessage": "To scan QR codes and join communities, we need access to your camera.",
+      "allowCameraAccess": "Allow Camera Access",
+      "alreadyMember": "You are already a member of this community.",
+      "notACommunity": "This invite code is not for a community.",
+      "lightOn": "Light On",
+      "lightOff": "Light Off",
+      "enterCode": "Enter Code",
+      "enterCodeTitle": "Enter Invite Code",
+      "enterCodeDescription": "Enter the 8-character invite code manually",
+      "enterCodeError": "Please enter an invite code",
+      "scanQR": "Scan QR",
+      "joinButton": "Join"
+    },
+    "errors": {
+      "nameRequired": "Community name is required",
+      "nameTooShort": "Name must be at least 2 characters",
+      "nameTooLong": "Name cannot exceed 50 characters",
+      "descriptionTooLong": "Description cannot exceed 200 characters",
+      "failedToCreate": "Failed to create community",
+      "failedToUpdate": "Failed to update community",
+      "failedToDelete": "Failed to delete community",
+      "failedToLeave": "Failed to leave community",
+      "failedToAddMember": "Failed to add member",
+      "failedToRemoveMember": "Failed to remove member",
+      "failedToApprove": "Failed to approve request",
+      "failedToDecline": "Failed to decline request"
+    },
+    "success": {
+      "created": "Community created successfully",
+      "updated": "Community updated successfully",
+      "deleted": "Community deleted successfully",
+      "left": "You have left the community",
+      "memberAdded": "Member added successfully",
+      "memberRemoved": "Member removed successfully",
+      "referralSent": "Referral sent for approval"
+    },
+    "confirmations": {
+      "leave": "Are you sure you want to leave this community?",
+      "delete": "Are you sure you want to delete this community? This action cannot be undone.",
+      "removeMember": "Are you sure you want to remove this member?"
+    },
+    "permissionRequired": "Permission Required",
+    "photoAccessRequired": "Please allow access to your photos to add a community image.",
+    "photoAccessRequiredEdit": "Please allow access to your photos to change the community image.",
+    "failedToPickImage": "Failed to pick image",
+    "failedToUploadImage": "Failed to upload community image. Community will be created without image.",
+    "failedToUpdateImage": "Failed to update community image.",
+    "failedToUpdateCommunity": "Failed to update community",
+    "nameRequired": "Community name is required",
+    "nameTooShort": "Community name must be at least 2 characters",
+    "nameTooLong": "Community name must be less than 100 characters",
+    "communityImageOptional": "Community Image (optional)",
+    "communityImageLabel": "Community Image",
+    "addCoverImage": "Add a cover image",
+    "enterCommunityName": "Enter community name...",
+    "descriptionOptional": "Description (optional)",
+    "descriptionPlaceholder": "What's this community about?",
+    "publicCommunity": "Public Community",
+    "privateCommunity": "Private Community",
+    "createInfo": "Communities have no member limit. As the creator, you'll be a moderator with the ability to manage members and approve join requests.",
+    "createCommunityButton": "Create Community",
+    "addCommunityMember": "Add Community Member",
+    "referAPlayer": "Refer a Player",
+    "referralApprovalInfo": "Your referral will be sent to moderators for approval",
+    "addAsModerator": "Add as moderator",
+    "searchPlayers": "Search players...",
+    "noPlayersFound": "No players found",
+    "noPlayersAvailable": "No players available to add",
+    "moderatorAddedToCommunity": "Moderator added to the community",
+    "memberAddedToCommunity": "Member added to the community",
+    "membershipRequestSubmitted": "Membership request submitted for approval",
+    "failedToAddMember": "Failed to add member"
+  },
+  "groups": {
+    "title": "Groups",
+    "myGroups": "My Groups",
+    "createGroup": "Create Group",
+    "createNewGroup": "Create New Group",
+    "notFound": "Group not found",
+    "tabs": {
+      "home": "Home",
+      "leaderboard": "Leaderboard",
+      "activity": "Activity"
+    },
+    "chatWithMembers": "Chat with members",
+    "empty": {
+      "title": "No Groups Yet",
+      "subtitle": "Create a group or scan a QR code to join one",
+      "createButton": "Create Group",
+      "scanButton": "Scan QR Code"
+    },
+    "welcome": {
+      "title": "Welcome!",
+      "joinedMessage": "You've successfully joined \"{groupName}\""
+    },
+    "viewGroup": "View Group",
+    "editGroup": "Edit Group",
+    "deleteGroup": "Delete Group",
+    "leaveGroup": "Leave Group",
+    "joinGroup": "Join Group",
+    "groupOptions": "Group Options",
+    "groupName": "Group Name",
+    "groupNamePlaceholder": "Enter group name",
+    "enterGroupName": "Enter group name...",
+    "groupDescription": "Description",
+    "groupDescriptionPlaceholder": "Enter a description (optional)",
+    "descriptionOptional": "Description (optional)",
+    "descriptionPlaceholder": "What's this group about?",
+    "groupImage": "Group Image",
+    "groupImageOptional": "Group Image (optional)",
+    "addCoverImage": "Add a cover image",
+    "changeImage": "Change",
+    "removeImage": "Remove",
+    "createGroupHint": "Groups can have up to 10 members. As the creator, you'll be a moderator with the ability to add and remove members.",
+    "permissionRequired": "Permission Required",
+    "photoAccessRequired": "Please allow access to your photos to add a group image.",
+    "photoAccessRequiredEdit": "Please allow access to your photos to change the group image.",
+    "failedToPickImage": "Failed to pick image",
+    "failedToUploadImage": "Failed to upload group image. Group will be created without image.",
+    "failedToUpdateImage": "Failed to update group image.",
+    "failedToUpdateGroup": "Failed to update group",
+    "nameRequired": "Group name is required",
+    "nameTooShort": "Group name must be at least 2 characters",
+    "nameTooLong": "Group name must be less than 50 characters",
+    "moderator": "Moderator",
+    "creator": "Creator",
+    "group": "group",
+    "groupCapital": "Group",
+    "community": "community",
+    "communityCapital": "Community",
+    "members": "Members",
+    "searchMembers": "Search members...",
+    "addMember": "Add Member",
+    "memberAddedToGroup": "Member added to the group",
+    "failedToAddMember": "Failed to add member",
+    "searchPlayers": "Search players...",
+    "noPlayersFound": "No players found",
+    "noPlayersAvailable": "No players available",
+    "suggestedPlayers": "Suggested Players",
+    "promoteToModerator": "Promote to Moderator",
+    "demoteToMember": "Demote to Member",
+    "memberPromoted": "Member promoted to moderator",
+    "moderatorDemoted": "Moderator demoted to member",
+    "failedToPromote": "Failed to promote member",
+    "failedToDemote": "Failed to demote member",
+    "removeFromGroup": "Remove from Group",
+    "removeMember": "Remove Member",
+    "removeMemberConfirm": "Are you sure you want to remove {name} from the group?",
+    "thisMember": "this member",
+    "memberRemoved": "Member removed from group",
+    "failedToRemoveMember": "Failed to remove member",
+    "inviteTo": "Invite to {type}",
+    "generatingInviteLink": "Generating invite link...",
+    "shareInviteDescription": "Share this link or code with anyone you want to invite to the {typeLabel}.",
+    "code": "Code",
+    "qrCode": "QR Code",
+    "scanToJoin": "Scan to join the {typeLabel}",
+    "inviteCode": "INVITE CODE",
+    "shareInvite": "Share Invite",
+    "resetCode": "Reset Code",
+    "inviteLinkInfo": "Anyone with this code or link can join the group directly.",
+    "failedToCopyLink": "Failed to copy link",
+    "inviteCodeCopied": "Invite code copied to clipboard",
+    "failedToCopyCode": "Failed to copy code",
+    "shareInviteMessage": "Join my {typeLabel} \"{groupName}\" on Rallia!\n\nUse code: {inviteCode}\n\nOr click this link: {inviteLink}",
+    "shareInviteTitle": "Join {groupName} on Rallia",
+    "failedToShare": "Failed to share invite",
+    "resetInviteCode": "Reset Invite Code",
+    "resetInviteCodeWarning": "This will invalidate the current invite link. Anyone with the old link won't be able to join. Continue?",
+    "inviteCodeReset": "Invite code has been reset",
+    "failedToResetCode": "Failed to reset code",
+    "scanQRCode": "Scan QR Code",
+    "invalidQRCode": "Invalid QR Code",
+    "invalidQRCodeMessage": "This QR code is not a valid Rallia group invite.",
+    "tryAgain": "Try Again",
+    "couldNotJoin": "Could Not Join",
+    "failedToJoinGroup": "Failed to join the group. Please try again.",
+    "pleaseEnterInviteCode": "Please enter an invite code",
+    "cameraPermissionRequired": "Camera Permission Required",
+    "cameraPermissionMessage": "Please enable camera access in your device settings to scan QR codes.",
+    "openSettings": "Open Settings",
+    "cameraAccessRequired": "Camera Access Required",
+    "cameraAccessDescription": "To scan QR codes and join groups, we need access to your camera.",
+    "allowCameraAccess": "Allow Camera Access",
+    "enterInviteCode": "Enter Invite Code",
+    "enterInviteCodeDescription": "Enter the 8-character invite code manually",
+    "scanQR": "Scan QR",
+    "join": "Join",
+    "processing": "Processing...",
+    "pointAtQRCode": "Point at a group invite QR code",
+    "lightOn": "Light On",
+    "lightOff": "Light Off",
+    "enterCode": "Enter Code",
+    "membersSection": {
+      "title": "Members",
+      "allMembers": "All Members",
+      "moderators": "Moderators",
+      "viewProfile": "View Profile",
+      "joinedToday": "Joined today",
+      "joinedYesterday": "Joined yesterday",
+      "joinedDaysAgo": "Joined {days} days ago",
+      "joinedWeeksAgo": "Joined {weeks} weeks ago",
+      "onlineNow": "Online now",
+      "activeAgo": "Active {time} ago"
+    },
+    "stats": {
+      "title": "Group Stats",
+      "totalMembers": "Total Members",
+      "totalGames": "Total Games",
+      "avgRating": "Avg Rating"
+    },
+    "invite": {
+      "title": "Invite to Group",
+      "shareLink": "Share Invite Link",
+      "copyLink": "Copy Link",
+      "linkCopied": "Link copied!",
+      "scanToJoin": "Scan to join the group",
+      "qrCode": "QR Code"
+    },
+    "leaderboard": {
+      "title": "Leaderboard",
+      "rank": "Rank",
+      "player": "Player",
+      "players": "Players",
+      "gamesPlayed": "Games played",
+      "wins": "Wins",
+      "losses": "Losses",
+      "winRate": "Win %"
+    },
+    "activity": {
+      "title": "Activity",
+      "recentGames": "Recent Games",
+      "noActivity": "No activity yet",
+      "activities": "ACTIVITIES",
+      "newMembers": "{count} new members",
+      "gamesCreated": "{count, plural, one {{count} game created} other {{count} games created}}",
+      "newMessages": "{count} new messages in\ncommunity chat"
+    },
+    "home": {
+      "about": "About",
+      "viewAll": "View all"
+    },
+    "errors": {
+      "nameRequired": "Group name is required",
+      "nameTooShort": "Group name must be at least 2 characters",
+      "nameTooLong": "Group name must be less than 50 characters",
+      "failedToCreate": "Failed to create group",
+      "failedToUpdate": "Failed to update group",
+      "failedToDelete": "Failed to delete group",
+      "failedToLeave": "Failed to leave group"
+    },
+    "success": {
+      "created": "Group created successfully",
+      "updated": "Group updated successfully",
+      "deleted": "Group deleted successfully",
+      "left": "You have left the group"
+    },
+    "confirmations": {
+      "leave": "Are you sure you want to leave this group?",
+      "delete": "Are you sure you want to delete this group? This action cannot be undone.",
+      "removeMember": "Are you sure you want to remove {name} from the group?"
+    },
+    "recentGames": {
+      "title": "Recent Games",
+      "noGames": "No games played in the last 180 days",
+      "competitive": "Competitive",
+      "practice": "Practice",
+      "player": "Player",
+      "daysAgo": "{count} days ago",
+      "viewAll": "View all"
+    },
+    "detail": {
+      "scoresToConfirm": "Scores to Confirm",
+      "last7DaysActivities": "Last 7 days activities",
+      "noGamesPlayedYet": "No games played yet",
+      "playGamesToAppear": "Play games with group members to appear on the leaderboard",
+      "noRecentActivity": "No recent activity",
+      "addMember": "Add Member",
+      "shareInviteLink": "Share Invite Link"
+    },
+    "options": {
+      "shareInviteLink": "Share Invite Link",
+      "editGroup": "Edit Group",
+      "leaveGroup": "Leave Group",
+      "deleteGroup": "Delete Group"
+    },
+    "leaderboardPeriod": {
+      "30days": "30 days",
+      "90days": "90 days",
+      "180days": "180 days",
+      "allTime": "All time"
+    },
+    "activityMessages": {
+      "someone": "Someone",
+      "wasAddedBy": "{actorName} was added by {addedByName}",
+      "joinedTheGroup": "{actorName} joined the group",
+      "leftTheGroup": "{actorName} left the group",
+      "promotedMember": "{actorName} promoted a member to moderator",
+      "demotedMember": "{actorName} demoted a moderator to member",
+      "createdGame": "{actorName} created a new game",
+      "sentMessage": "{actorName} sent a message",
+      "updatedGroup": "{actorName} updated the group",
+      "performedAction": "{actorName} performed an action",
+      "today": "Today",
+      "yesterday": "Yesterday"
+    },
+    "time": {
+      "justNow": "Just now",
+      "minutesAgo": "{count}m ago",
+      "hoursAgo": "{count}h ago",
+      "daysAgo": "{count}d ago"
+    }
+  },
+  "playerDirectory": {
+    "title": "Player Directory",
+    "searchPlaceholder": "Search by name or city...",
+    "noPlayers": "No players yet",
+    "noPlayersDescription": "Be the first to invite players to your sport",
+    "noPlayersFound": "No players found",
+    "noPlayersFoundDescription": "Try adjusting your search or filters",
+    "noPlayersYet": "No players yet",
+    "adjustSearch": "Try adjusting your search or filters",
+    "beFirstToInvite": "Be the first to invite players to your sport",
+    "selectSport": "Select a sport",
+    "selectSportDescription": "Choose a sport from the header to view players",
+    "chooseSport": "Choose a sport from the header to view players",
+    "failedToLoad": "Failed to load players",
+    "checkConnection": "Please check your connection and try again",
+    "filters": {
+      "title": "Filters",
+      "favorites": "Favorites",
+      "blocked": "Blocked",
+      "gender": "Gender",
+      "genderAll": "All",
+      "genderMen": "Men",
+      "genderWomen": "Women",
+      "genderOther": "Other",
+      "skillLevel": "Skill Level",
+      "distance": "Distance",
+      "distanceAll": "All",
+      "distanceKm": "{distance} km",
+      "availability": "Time",
+      "availabilityAll": "All",
+      "availabilityMorning": "Morning",
+      "availabilityAfternoon": "Afternoon",
+      "availabilityEvening": "Evening",
+      "playStyle": "Style",
+      "playStyleAll": "All",
+      "playStyleCounterpuncher": "Counterpuncher",
+      "playStyleAggressive": "Aggressive",
+      "playStyleServeAndVolley": "Serve & Volley",
+      "playStyleAllCourt": "All Court",
+      "sortBy": "Sort",
+      "sortNameAsc": "Name (A-Z)",
+      "sortNameDesc": "Name (Z-A)",
+      "sortRatingHigh": "Rating (High to Low)",
+      "sortRatingLow": "Rating (Low to High)",
+      "sortDistanceNearest": "Distance (Nearest)",
+      "sortRecentlyActive": "Recently Active",
+      "reset": "Reset",
+      "selectGender": "Select Gender",
+      "selectSkillLevel": "Select Skill Level",
+      "selectMaxDistance": "Select Max Distance",
+      "selectAvailability": "Select Availability",
+      "selectPlayStyle": "Select Play Style",
+      "sortPlayersBy": "Sort Players By"
+    }
+  },
+  "sharedLists": {
+    "title": "Shared Lists",
+    "noLists": "No Shared Lists Yet",
+    "noListsDescription": "Create a list to easily invite friends and contacts to your matches",
+    "createFirstList": "Create Your First List",
+    "createList": "Create List",
+    "newList": "New List",
+    "editList": "Edit List",
+    "deleteList": "Delete List",
+    "deleteListConfirm": "Are you sure you want to delete \"{name}\"? This will also delete all contacts in this list.",
+    "yourLists": "Your Contact Lists",
+    "searchLists": "Search lists...",
+    "searchContacts": "Search contacts...",
+    "contactCount": "{count, plural, one {{count} contact} other {{count} contacts}}",
+    "ofTotal": "of {total}",
+    "deleteContact": "Delete Contact",
+    "deleteContactConfirm": "Are you sure you want to remove \"{name}\" from this list?",
+    "failedToDeleteContact": "Failed to delete the contact. Please try again.",
+    "importFromPhone": "Import from Phone",
+    "addManually": "Add Manually",
+    "emptyState": {
+      "noContacts": "No Contacts Yet",
+      "addContacts": "Add contacts to this list to easily invite them to your matches"
+    },
+    "shareMatch": {
+      "title": "Share a Match",
+      "subtitle": "Invite contacts to your upcoming games"
+    },
+    "errors": {
+      "nameRequired": "Please enter a list name",
+      "failedToCreate": "Failed to create the list. Please try again.",
+      "failedToUpdate": "Failed to update the list. Please try again.",
+      "failedToDelete": "Failed to delete list",
+      "failedToAddContact": "Failed to add the contact. Please try again.",
+      "failedToDeleteContact": "Failed to delete contact"
+    },
+    "listName": "List Name",
+    "listNamePlaceholder": "e.g., Tennis buddies",
+    "listDescription": "Description (optional)",
+    "listDescriptionPlaceholder": "Add a description...",
+    "discardChanges": "Discard Changes?",
+    "discardChangesMessage": "You have unsaved changes. Are you sure you want to discard them?",
+    "discard": "Discard",
+    "createListHint": "After creating your list, you can add contacts from your phone or enter them manually.",
+    "contacts": {
+      "title": "Contacts",
+      "noContacts": "No Contacts Yet",
+      "noContactsDescription": "Add contacts to this list to easily invite them to your matches",
+      "addManually": "Add Manually",
+      "addContact": "Add Contact",
+      "editContact": "Edit Contact",
+      "add": "Add",
+      "importFromPhone": "Import from Phone",
+      "deleteContact": "Delete Contact",
+      "deleteContactConfirm": "Are you sure you want to remove \"{name}\" from this list?",
+      "contactName": "Name",
+      "contactNamePlaceholder": "Full name",
+      "contactPhone": "Phone Number",
+      "contactPhonePlaceholder": "+1 234 567 8900",
+      "contactEmail": "Email Address",
+      "contactEmailPlaceholder": "email@example.com",
+      "notes": "Notes (optional)",
+      "notesPlaceholder": "Add a note about this contact...",
+      "contactMethodRequired": "At least one contact method (phone or email) is required.",
+      "nameRequired": "Please enter a name",
+      "phoneOrEmailRequired": "Please enter at least a phone number or email address",
+      "invalidEmail": "Please enter a valid email address",
+      "failedToUpdate": "Failed to update the contact. Please try again.",
+      "noContactsInList": "No contacts in this list",
+      "searchContacts": "Search contacts...",
+      "contactCount": "{count} contacts",
+      "contactCountSingular": "{count} contact"
+    },
+    "contact": {
+      "fromContacts": "From contacts",
+      "manual": "Manual"
+    },
+    "import": {
+      "import": "Import",
+      "loadingContacts": "Loading contacts...",
+      "searchContacts": "Search contacts...",
+      "selectAll": "Select All",
+      "selectAtLeastOne": "Please select at least one contact to import.",
+      "importSuccess": "{count} contact(s) imported successfully.",
+      "failedToImport": "Failed to import contacts. Please try again.",
+      "failedToLoadContacts": "Failed to load contacts. Please try again.",
+      "contactsAccessRequired": "Contacts Access Required",
+      "grantAccessMessage": "To import contacts from your phone, please grant access to your contacts in Settings.",
+      "noResults": "No Results",
+      "noContactsAvailable": "No Contacts Available",
+      "tryDifferentSearch": "Try a different search term",
+      "allContactsInList": "All your contacts are already in this list, or your contacts are empty."
+    },
+    "share": {
+      "title": "Share Match",
+      "shareWith": "Share With",
+      "selectContacts": "Select Contacts to Share With",
+      "sendInvites": "Send Invites",
+      "invitesSent": "Invitations sent successfully",
+      "shareMatch": "Share Match",
+      "shareGame": "Share Game",
+      "gameInvitation": "Game Invitation",
+      "invitationShared": "Invitation shared with {count} contact(s)!",
+      "failedToShare": "Failed to share the match. Please try again.",
+      "selectMatch": "Select a Match to Share",
+      "noUpcomingMatches": "No Upcoming Matches",
+      "createMatchFirst": "Create a match first to share it with your contacts",
+      "noSharedLists": "No Shared Lists",
+      "createListFirst": "Create a shared list first to add contacts",
+      "contactsSelected": "{count} contact(s) selected",
+      "howToShare": "How do you want to share?",
+      "recipients": "{count} Recipient(s)",
+      "selectContactsButton": "Select Contacts"
+    },
+    "confirmations": {
+      "deleteList": "Are you sure you want to delete \"{name}\"? This will also delete all contacts in this list."
+    }
   },
   "match": {
     "placeholder": "Game Screen - Ready for your implementation",
     "host": "Host",
+    "pickMatchType": "Pick match type",
     "format": {
       "singles": "Singles",
       "doubles": "Doubles"
@@ -931,6 +1808,112 @@
       "success": "Report submitted"
     }
   },
+  "addScore": {
+    "title": "Add Score",
+    "discardChanges": "Discard Changes?",
+    "discardChangesMessage": "You have unsaved changes. Are you sure you want to discard your progress?",
+    "sportNotFound": "Could not find sport: {sport}",
+    "scoreSubmitted": "Score Submitted!",
+    "scoreSubmittedMessage": "Your score has been submitted. Your opponent has 24 hours to confirm.",
+    "failedToSubmit": "Failed to submit score. Please try again.",
+    "findOpponent": {
+      "title": "Find your opponent",
+      "titleDouble": "Find your opponents",
+      "subtitle": "Select 3 players (you + 3 others = 4 players for doubles)",
+      "searchPlaceholder": "Search players",
+      "addPlayer": "Add player",
+      "fromPhoneContacts": "From Phone Contacts",
+      "searchHint": "Type the name of the player to find them on Rallia",
+      "noPlayersFound": "No players found matching \"{query}\"",
+      "players": "PLAYERS"
+    },
+    "contactPicker": {
+      "title": "Select Contact",
+      "searchPlaceholder": "Search contacts...",
+      "loading": "Loading contacts...",
+      "accessRequired": "Access Required",
+      "accessRequiredMessage": "To add players from your contacts, please allow access to your contacts.",
+      "openSettings": "Open Settings",
+      "noContactsMatch": "No contacts match your search",
+      "noContactsFound": "No contacts found",
+      "error": "Error",
+      "errorMessage": "Failed to load contacts. Please try again."
+    },
+    "matchDetails": {
+      "title": "Match details",
+      "whenAndWhere": "When and where did you play?",
+      "datePlayed": "Date played",
+      "selectDate": "Select Date",
+      "location": "Location",
+      "locationOptional": "(optional)",
+      "enterLocation": "Enter location",
+      "sport": "Sport",
+      "selectLocation": "Select Location",
+      "searchLocation": "Search location",
+      "noLocationsFound": "No locations found",
+      "optional": "(Optional)",
+      "matchExpectation": "Match Expectation",
+      "competitive": "Competitive",
+      "practice": "Practice",
+      "competitiveDescription": "Ranked game that affects your rating",
+      "practiceDescription": "Casual game, no rating impact"
+    },
+    "createTeams": {
+      "title": "Create teams",
+      "pickPartner": "Pick a player as your partner",
+      "teamsPreview": "Teams Preview",
+      "yourTeam": "Your team",
+      "opponentTeam": "Opponent team",
+      "opponents": "Opponents",
+      "youAnd": "You & {name}",
+      "you": "You",
+      "dragToSwap": "Drag players to swap teams"
+    },
+    "winnerScores": {
+      "title": "Choose a winner",
+      "subtitle": "Select the winner team and add score",
+      "selectWinner": "Select Winner",
+      "selectWinnerMessage": "Please select the winner of the match.",
+      "enterScores": "Enter Scores",
+      "enterScoresMessage": "Please enter at least one set score.",
+      "confirmMatchResult": "Confirm Match Result",
+      "defeated": "{winner} defeated {loser}",
+      "date": "Date: {date}",
+      "friendlyMatch": "Type: Friendly Match",
+      "set": "Set {number}",
+      "edit": "Edit",
+      "submit": "Submit",
+      "yourTeam": "Your team",
+      "opponentTeam": "Opponent",
+      "enterScore": "Enter score",
+      "yourScore": "Your score",
+      "opponentScore": "Opponent score",
+      "addSet": "Add Set",
+      "you": "You",
+      "today": "Today",
+      "opponent": "Opponent",
+      "scores": "Scores",
+      "newSet": "New set",
+      "saving": "Saving...",
+      "continue": "Continue"
+    },
+    "matchExpectation": {
+      "title": "Pick a match type",
+      "subtitle": "Have you played this match",
+      "friendly": "Friendly",
+      "friendlyDescription": "Fun without scores",
+      "competitive": "Competitive",
+      "competitiveDescription": "Score matters",
+      "continue": "Continue"
+    },
+    "pickMatchType": {
+      "title": "Pick match type",
+      "singles": "Singles",
+      "doubles": "Doubles",
+      "singlesDescription": "1 vs 1",
+      "doublesDescription": "2 vs 2"
+    }
+  },
   "alerts": {
     "success": "Success",
     "error": "Error",
@@ -969,7 +1952,13 @@
     "createNetwork": "Create Network",
     "createNetworkDescription": "Start a group or community for regular games",
     "createEvent": "Create Event",
-    "createEventDescription": "Organize a tournament or league"
+    "createEventDescription": "Organize a tournament or league",
+    "selectNetworkType": "Create Network",
+    "selectNetworkTypeDescription": "Choose the type of network you want to create",
+    "group": "Group",
+    "groupDescription": "Private network for friends",
+    "community": "Community",
+    "communityDescription": "Public network for players"
   },
   "matchCreation": {
     "title": "Create a game",
@@ -1197,61 +2186,35 @@
     }
   },
   "home": {
-    "welcomeBack": "Welcome back! 👋",
-    "yourMatches": "🎾 Your Games",
-    "signInPrompt": "Please sign in to create and access your games",
-    "user": "User",
     "subtitle": "The best way to find your next tennis or pickleball partner",
-    "soonAndNearby": "Nearby Games",
-    "publicMatches": "Public Games",
-    "viewAll": "View All",
-    "myMatches": "My Games",
-    "myMatchesEmpty": {
-      "title": "No upcoming games",
-      "description": "Create a game or join one to see it here"
-    },
-    "nearbyEmpty": {
-      "title": "No nearby games found",
-      "description": "There are no upcoming games within your {distance} km travel distance.",
-      "guestDescription": "There are no upcoming games nearby.",
-      "suggestion": "Try increasing your maximum travel distance in your profile to see more games.",
-      "updateSettings": "Update Settings"
-    },
-    "location": {
-      "title": "Search Location",
-      "current": "Current Location",
-      "currentDescription": "Use your GPS location",
-      "home": "Home",
-      "homeNotSet": "Set your home location in settings"
-    },
     "header": {
       "ctaButton": "Join Waitlist"
     },
     "hero": {
-      "badge": "Coming Early 2026",
-      "headline": "Your next game is waiting",
-      "subheadline": "Connect with players at your level, schedule games easily, and never play alone again.",
+      "badge": "🚀 Coming Early 2026",
+      "headline": "Your next game is waiting.",
+      "subheadline": "Connect with compatible players, schedule games effortlessly, and never play alone again.",
       "ctaButton": "Join the Waitlist",
-      "ctaSubtext": "No credit card required • Exclusive early access"
+      "ctaSubtext": "✓ No credit card required  •  ✓ Exclusive early access"
     },
     "problems": {
       "sectionTitle": "The Challenge",
       "sectionBadge": "The Problem",
       "scheduling": {
         "title": "The Scheduling Nightmare",
-        "description": "Hours spent coordinating through WhatsApp and Facebook. Last-minute cancellations. Games that never happen."
+        "description": "Hours spent coordinating through WhatsApp groups and Facebook. Last-minute cancellations. Games that never happen."
       },
       "compatibility": {
         "title": "The Compatibility Crisis",
-        "description": "Skill mismatches ruin the experience. Location conflicts. Different preferences. Finding the right game feels impossible."
+        "description": "Skill mismatches ruin the experience. Location conflicts. Surface preferences don't align. Finding the right game feels impossible."
       },
       "reliability": {
         "title": "The Reliability Problem",
-        "description": "No-shows without warning. Players who cancel last minute. No way to know who's reliable."
+        "description": "No-shows without warning. Serial flakeys with no accountability. No way to know who's trustworthy."
       },
       "growth": {
         "title": "The Growth Barrier",
-        "description": "Can't find enough games to improve. Limited partner options. Skill progression stalls without regular play."
+        "description": "Can't find enough games to improve. Limited partner pool. Skill progression stalls without consistent play."
       }
     },
     "howItWorks": {
@@ -1259,19 +2222,19 @@
       "sectionBadge": "Simple Process",
       "step1": {
         "title": "Join the Waitlist",
-        "description": "Sign up with your email to secure your spot and get notified when we launch"
+        "description": "Sign up with your email to secure your spot and get notified when we launch."
       },
       "step2": {
         "title": "Create Your Profile",
-        "description": "Share your skill level, location, and playing preferences"
+        "description": "Tell us about your skill level, location, and playing preferences."
       },
       "step3": {
         "title": "Get Matched",
-        "description": "We find playing partners that match your profile and availability"
+        "description": "We find perfect playing partners based on your profile and availability."
       },
       "step4": {
         "title": "Play & Review",
-        "description": "Schedule games instantly and build your network of reliable players"
+        "description": "Schedule games instantly and build your reliable player network."
       }
     },
     "solutions": {
@@ -1279,55 +2242,55 @@
       "sectionBadge": "How It Works",
       "matchmaking": {
         "title": "Smart Matchmaking",
-        "description": "Smart skill assessment and reliability tracking. Get matched with players at your level who are just as committed."
+        "description": "Smart skill assessment and reliability tracking. Get paired with players who match your level and commitment."
       },
       "scheduling": {
         "title": "Instant Scheduling",
-        "description": "One-click game proposals with calendar sync. Auto-confirmations and live availability. No more endless back-and-forth."
+        "description": "One-click game proposals with smart calendar sync. Auto-confirmations and live availability. No more endless back-and-forth."
       },
       "marketplace": {
         "title": "Game Marketplace",
-        "description": "Post or browse games by time, location, and skill level. Instant booking with ratings and reviews."
+        "description": "Post or browse games by time, location, and skill level. Instant booking with built-in ratings and reviews."
       },
       "portfolio": {
         "title": "Player Network",
-        "description": "Build your network of favorite players. Get suggestions based on your preferences and play history."
+        "description": "Build your roster of favorite players. Get smart suggestions based on your preferences and play history."
       }
     },
     "whyJoinEarly": {
       "sectionTitle": "Why Join Early?",
       "sectionBadge": "Early Adopter Benefits",
-      "description": "Be part of the founding community and enjoy exclusive perks that won't be available after launch",
+      "description": "Be part of the founding community and enjoy exclusive perks that won't be available after launch.",
       "benefits": {
         "priority": {
           "title": "Priority Access",
-          "description": "Skip the line and get immediate access when we launch"
+          "description": "Skip the line and get immediate access when we launch. No waiting period."
         },
         "pricing": {
           "title": "Special Early Benefits",
-          "description": "Enjoy special perks and benefits as an early supporter. Founding members get exclusive advantages"
+          "description": "Enjoy special perks and benefits as an early supporter. Founding members get exclusive advantages."
         },
         "influence": {
           "title": "Shape the Product",
-          "description": "Your feedback directly influences features. Help us build what you need"
+          "description": "Your feedback directly influences features. Help us build exactly what you need."
         },
         "exclusive": {
           "title": "Exclusive Features",
-          "description": "Get early access to beta features and new releases before anyone else"
+          "description": "Get early access to beta features and new releases before anyone else."
         },
         "community": {
           "title": "Founding Community",
-          "description": "Connect with other early adopters and build your network before the crowd arrives"
+          "description": "Connect with other early adopters and build your network before the crowd arrives."
         },
         "support": {
           "title": "VIP Support",
-          "description": "Direct line to our team. Get priority support and help shape our service standards"
+          "description": "Direct line to our team. Get priority support and help shape our service standards."
         }
       }
     },
     "cta": {
       "headline": "Ready to Transform Your Tennis Experience?",
-      "description": "Be among the first to experience the future of tennis matchmaking. Join our waitlist and get exclusive early access when we launch",
+      "description": "Be among the first to experience the future of tennis matchmaking. Join our waitlist and get exclusive early access when we launch.",
       "button": "Join the Waitlist"
     },
     "socialProof": {
@@ -1390,11 +2353,11 @@
         },
         "matching": {
           "question": "How does the skill matching work?",
-          "answer": "Our system analyzes your skill level, match history, and player feedback to assess your ability. You'll be matched with players at your level for competitive and enjoyable games."
+          "answer": "Our system analyzes your self-reported skill level, game history, and player feedback to accurately assess your ability. You'll be matched with players within your skill range for competitive and enjoyable games."
         },
         "privacy": {
           "question": "Is my data private and secure?",
-          "answer": "Absolutely. We use industry-standard encryption and never share your personal information with third parties. You control what information other players can see."
+          "answer": "Absolutely. We use industry-standard encryption and never share your personal information with third parties. You control what information is visible to other players."
         },
         "availability": {
           "question": "When will Rallia be available?",
@@ -1402,7 +2365,7 @@
         },
         "platforms": {
           "question": "What platforms is Rallia available on?",
-          "answer": "Rallia will be available as a web app, iOS app, and Android app. You can access your account and schedule games from any device."
+          "answer": "Rallia will be available as a web app, iOS app, and Android app. You'll be able to access your account and schedule games from any device."
         }
       }
     }
@@ -1549,11 +2512,11 @@
     "title": "Winter Indoor Court Crisis - Rallia",
     "subtitle": "Solving the indoor court shortage for Canadian tennis and pickleball players",
     "hero": {
-      "badge": "Coming Soon",
+      "badge": "🚀 Coming Soon",
       "headline": "The outdoor season is over. Now what?",
       "subheadline": "Over 5 million Canadian tennis players and 1.5 million pickleballers are about to be benched for weeks, sidelined by a severe lack of indoor courts.",
       "ctaButton": "Become a Founding Member",
-      "ctaSubtext": "Premium features FREE at launch • Help shape the app"
+      "ctaSubtext": "✓ Premium features FREE at launch  •  ✓ Help shape the app"
     },
     "problem": {
       "sectionBadge": "The Crisis",
@@ -1612,7 +2575,7 @@
       "offer": "Sign up for the waitlist and get premium features FREE at launch.",
       "survey": "Help us build the perfect app for Canadian players. Join the waitlist and we'll send you a 3-question survey to tell us what you need most.",
       "ctaButton": "Join the Waitlist",
-      "benefits": "Premium features FREE • Shape the product • Priority access"
+      "benefits": "✓ Premium features FREE  •  ✓ Shape the product  •  ✓ Priority access"
     },
     "waitlist": {
       "sectionBadge": "Get Started",
@@ -1636,7 +2599,7 @@
       "questions": {
         "whatIsThis": {
           "question": "How does this solve the indoor court problem?",
-          "answer": "We're helping Canadian tennis and pickleball players deal with the indoor court shortage during winter. We're building tools to help players find partners who have already booked courts, share costs, and fill last-minute cancellations—making the most of existing facilities."
+          "answer": "We're helping Canadian tennis and pickleball players deal with the indoor court shortage during winter months. We're building tools to help players find partners who have already booked courts, share costs, and fill last-minute cancellations—maximizing the use of existing facilities."
         },
         "foundingMember": {
           "question": "What do Founding Members get?",
@@ -1652,14 +2615,14 @@
         },
         "howHelp": {
           "question": "How will this help with the court shortage?",
-          "answer": "While we can't build new courts overnight, we can help make the most of existing facilities. By connecting players who need courts with those who have them booked, sharing costs, and filling cancellations, we ensure every minute of court time is used."
+          "answer": "While we can't build new courts overnight, we can help maximize the use of existing facilities. By connecting players who need courts with those who have them booked, sharing costs, and filling cancellations, we ensure every minute of court time is used."
         }
       }
     }
   },
   "footer": {
     "title": "Rallia",
-    "description": "The platform that will connect tennis and pickleball players for better matches, every time.",
+    "description": "The platform that will connect tennis and pickleball players for better games, every time.",
     "quickLinks": "Quick Links",
     "joinWaitlist": "Join Waitlist",
     "privacy": "Privacy Policy",
@@ -1669,8 +2632,8 @@
   },
   "signIn": {
     "title": "Organization Sign In",
-    "description": "This is the first step to create your organization",
-    "welcomeMessage": "Welcome! Sign in to get started with your organization account",
+    "description": "This is the first step to create your organization on our platform.",
+    "welcomeMessage": "Welcome! Sign in to get started with your organization account.",
     "signInWithGoogle": "Continue with Google",
     "signInWithMicrosoft": "Continue with Microsoft",
     "or": "Or continue with email",
@@ -1687,8 +2650,8 @@
     "adminTitle": "Admin",
     "adminDescription": "Sign in to access the administration dashboard",
     "invalidOtpCode": "Please enter the 6-digit verification code",
-    "failedToSendOtp": "Couldn't send verification code",
-    "failedToVerifyOtp": "Couldn't verify code"
+    "failedToSendOtp": "Failed to send OTP",
+    "failedToVerifyOtp": "Failed to verify OTP"
   },
   "webOnboarding": {
     "badge": "Get Started",
@@ -1738,34 +2701,18 @@
     "cancel": "Cancel"
   },
   "dashboard": {
-    "badge": "Dashboard",
-    "title": "Welcome to Your Dashboard",
-    "description": "Manage your organization and view your profile information",
-    "profileTitle": "Your Profile",
-    "profileDescription": "Your personal information and account settings.",
-    "organizationTitle": "Your Organization",
-    "organizationDescription": "Details about your organization.",
-    "email": "Email",
-    "fullName": "Full Name",
-    "displayName": "Display Name",
-    "locale": "Locale",
-    "timezone": "Timezone",
-    "name": "Name",
-    "phone": "Phone",
-    "location": "Location",
-    "website": "Website",
-    "role": "Role",
-    "joinedAt": "Joined",
+    "title": "Dashboard",
+    "description": "Description",
     "quickActions": {
-      "newBooking": "New Booking",
       "facilities": "Facilities",
-      "facilitiesDesc": "Manage your courts",
+      "facilitiesDesc": "Manage your venues",
       "availability": "Availability",
-      "availabilityDesc": "View calendar",
+      "availabilityDesc": "View schedule",
       "bookings": "Bookings",
       "bookingsDesc": "Manage reservations",
       "settings": "Settings",
-      "settingsDesc": "Configure options"
+      "settingsDesc": "Configure options",
+      "newBooking": "New Booking"
     },
     "kpi": {
       "todaysBookings": "Today's Bookings",
@@ -1789,7 +2736,18 @@
       "bookingCreated": "New booking created",
       "bookingCancelled": "Booking cancelled",
       "bookingCompleted": "Booking completed"
-    }
+    },
+    "profileTitle": "Your Profile",
+    "profileDescription": "Your account information",
+    "organizationTitle": "Organization",
+    "organizationDescription": "Your organization details",
+    "email": "Email",
+    "phone": "Phone",
+    "fullName": "Full Name",
+    "displayName": "Display Name",
+    "location": "Location",
+    "website": "Website",
+    "joinedAt": "Member Since"
   },
   "facilities": {
     "title": "Facilities",
@@ -1800,6 +2758,38 @@
       "addButton": "Add Facility"
     },
     "addFacility": "Add Facility",
+    "search": {
+      "placeholder": "Search facilities...",
+      "noResults": "No Facilities Found",
+      "noResultsDescription": "No facilities match your current search or filters. Try adjusting your criteria.",
+      "clearFilters": "Clear Filters",
+      "results": "Showing {count} of {total} facilities"
+    },
+    "filter": {
+      "all": "All Status",
+      "active": "Active Only",
+      "inactive": "Inactive Only"
+    },
+    "sort": {
+      "nameAsc": "Name (A-Z)",
+      "nameDesc": "Name (Z-A)",
+      "courtsDesc": "Most Courts",
+      "courtsAsc": "Fewest Courts"
+    },
+    "courtStatus": {
+      "available": "Available",
+      "maintenance": "Maintenance",
+      "closed": "Closed",
+      "reserved": "Reserved",
+      "noCourts": "No courts added yet",
+      "court": "Court",
+      "courts": "Courts"
+    },
+    "quickActions": {
+      "availability": "Manage Availability",
+      "edit": "Edit Facility",
+      "courts": "Manage Courts"
+    },
     "table": {
       "name": "Name",
       "address": "Address",
@@ -1831,39 +2821,47 @@
         "activeBookings": "Active Bookings"
       }
     },
+    "new": {
+      "subtitle": "Create a new facility for your organization.",
+      "cardTitle": "Facility Details",
+      "cardDescription": "Enter the information for your new facility.",
+      "notAuthenticated": "You must be signed in to add a facility.",
+      "noOrganization": "You must be a member of an organization to add a facility.",
+      "backToFacilities": "Back to Facilities",
+      "creating": "Creating...",
+      "createButton": "Create Facility",
+      "error": "Failed to create facility. Please try again."
+    },
     "edit": {
       "title": "Edit Facility",
+      "subtitle": "Update the details of your facility.",
       "nameLabel": "Facility Name",
       "namePlaceholder": "Enter facility name",
       "descriptionLabel": "Description",
-      "descriptionPlaceholder": "Enter facility description",
+      "descriptionPlaceholder": "Enter a description for this facility",
       "addressLabel": "Address",
-      "addressPlaceholder": "Enter street address",
+      "addressPlaceholder": "Street address",
       "cityLabel": "City",
-      "cityPlaceholder": "Enter city",
+      "cityPlaceholder": "City name",
       "postalCodeLabel": "Postal Code",
-      "postalCodePlaceholder": "Enter postal code",
+      "postalCodePlaceholder": "Postal code",
+      "countryLabel": "Country",
+      "selectCountry": "Select country",
       "timezoneLabel": "Timezone",
-      "timezonePlaceholder": "Select timezone",
+      "selectTimezone": "Select timezone",
+      "timezonePlaceholder": "e.g. America/Toronto",
+      "latitudeLabel": "Latitude",
+      "latitudePlaceholder": "e.g. 45.5017",
+      "longitudeLabel": "Longitude",
+      "longitudePlaceholder": "e.g. -73.5673",
       "membershipRequiredLabel": "Membership Required",
-      "membershipRequiredHint": "Require membership to book courts at this facility",
-      "saveButton": "Save Changes",
-      "saving": "Saving...",
+      "membershipRequiredHint": "Require users to be members to book courts at this facility.",
+      "searchPlace": "Search Google Places",
+      "searchPlaceHint": "Enter at least 3 characters and click the search button to auto-fill address fields.",
       "cancelButton": "Cancel",
-      "success": "Facility updated successfully",
-      "error": "Failed to update facility"
-    },
-    "new": {
-      "subtitle": "Add a new facility to your organization.",
-      "cardTitle": "Facility Information",
-      "cardDescription": "Enter the details of your new facility below.",
-      "createButton": "Create Facility",
-      "creating": "Creating...",
-      "success": "Facility created successfully",
-      "error": "Failed to create facility. Please try again.",
-      "backToFacilities": "Back to Facilities",
-      "notAuthenticated": "Not authenticated",
-      "noOrganization": "No organization found"
+      "saving": "Saving...",
+      "saveButton": "Save Changes",
+      "error": "Failed to update facility. Please try again."
     }
   },
   "courts": {
@@ -1972,7 +2970,7 @@
     "courtOverride": {
       "title": "Court Availability",
       "useFacilityDefaults": "Use Facility Defaults",
-      "useFacilityDefaultsHint": "When enabled, this court uses the facility's default schedule",
+      "useFacilityDefaultsHint": "Enable to set a custom schedule for this court instead of using facility defaults",
       "customSchedule": "Custom Schedule",
       "customScheduleDescription": "This court has a custom schedule that overrides the facility defaults.",
       "enableCustom": "Set Custom Hours",
@@ -2006,6 +3004,15 @@
       "90": "1.5 hours",
       "120": "2 hours"
     },
+    "validation": {
+      "allSlotsValid": "All time slots are valid",
+      "validWithWarnings": "Valid with {count} warning(s) - review recommended",
+      "hasErrors": "{count} error(s) must be fixed before saving",
+      "fixErrorsBeforeSaving": "Please fix all validation errors before saving",
+      "slotDurationInfo": "Each time range must be at least {duration} and ideally a multiple of the slot duration for optimal booking slots.",
+      "autoAdjust": "Auto-adjust",
+      "autoAdjustTooltip": "Automatically adjust end time to create complete slots"
+    },
     "calendar": {
       "title": "Availability Calendar",
       "description": "View computed availability for all courts.",
@@ -2015,15 +3022,38 @@
       "thisWeek": "This Week",
       "previousWeek": "Previous Week",
       "nextWeek": "Next Week",
+      "viewMode": {
+        "day": "Day",
+        "week": "Week",
+        "month": "Month"
+      },
       "legend": {
         "available": "Available",
         "booked": "Booked",
         "blocked": "Blocked",
-        "maintenance": "Maintenance"
+        "maintenance": "Maintenance",
+        "past": "Past"
       },
       "noSlots": "No slots configured for this day",
-      "clickToBook": "Click to create booking",
-      "clickToView": "Click to view booking"
+      "clickToBook": "Book Now",
+      "clickToView": "View Booking",
+      "slotBlocked": "This slot is blocked",
+      "price": "Price",
+      "currentTime": "Current time",
+      "monthView": {
+        "bookings": "bookings",
+        "noBookings": "No bookings",
+        "totalBookings": "Total Bookings",
+        "availableSlots": "Available Slots",
+        "blockedSlots": "Blocked Slots",
+        "occupancyRate": "Occupancy Rate",
+        "clickToViewDay": "Click on any day to see detailed schedule",
+        "viewDay": "View Day",
+        "noSlots": "No slots",
+        "courtActive": "court with bookings",
+        "courtsActive": "courts with bookings",
+        "courtBreakdown": "By Court"
+      }
     }
   },
   "blocks": {
@@ -2100,10 +3130,26 @@
       "organizations": "Organizations",
       "facilities": "Facilities",
       "availability": "Availability",
+      "bookings": "Bookings",
+      "analytics": "Analytics",
       "members": "Members",
       "settings": "Settings",
       "theme": "Theme",
-      "signOut": "Sign Out"
+      "signOut": "Sign Out",
+      "notifications": "Notifications"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "empty": "No new notifications",
+      "viewAll": "View all notifications",
+      "markAllRead": "Mark all as read",
+      "newBooking": "New booking",
+      "bookingCancelled": "Booking cancelled",
+      "paymentReceived": "Payment received",
+      "justNow": "Just now",
+      "minutesAgo": "{count} min ago",
+      "hoursAgo": "{count}h ago",
+      "daysAgo": "{count}d ago"
     }
   },
   "admin": {
@@ -2124,7 +3170,7 @@
     },
     "dashboard": {
       "title": "Admin Dashboard",
-      "description": "Manage organizations, users, and settings",
+      "description": "Manage organizations, users, and settings.",
       "titleMeta": "Admin Dashboard - Rallia",
       "descriptionMeta": "Administration dashboard for Rallia employees.",
       "organizationsCard": {
@@ -2142,7 +3188,7 @@
     },
     "organizations": {
       "title": "Organizations",
-      "description": "Manage all organizations",
+      "description": "Manage all organizations.",
       "titleMeta": "Organizations - Admin - Rallia",
       "descriptionMeta": "Manage all organizations.",
       "comingSoon": "Organization management interface coming soon.",
@@ -2159,7 +3205,7 @@
         "createdAt": "Created",
         "noOrganizations": "No organizations found.",
         "loading": "Loading organizations...",
-        "error": "Couldn't load organizations"
+        "error": "Failed to load organizations."
       },
       "status": {
         "active": "Active",
@@ -2308,7 +3354,7 @@
           "facilityCountryRequired": "Facility {index} country is required"
         },
         "error": {
-          "createFailed": "Couldn't create organization"
+          "createFailed": "Failed to create organization"
         },
         "success": {
           "title": "Organization Created Successfully",
@@ -2366,7 +3412,7 @@
         "surfaceType": "Surface Type",
         "lighting": "Lighting",
         "indoor": "Indoor",
-        "error": "Couldn't load organization"
+        "error": "Failed to load organization"
       },
       "update": {
         "title": "Update Organization",
@@ -2493,8 +3539,8 @@
           "facilityCountryRequired": "Facility {index} country is required"
         },
         "error": {
-          "updateFailed": "Couldn't update organization",
-          "loadFailed": "Couldn't load organization"
+          "updateFailed": "Failed to update organization",
+          "loadFailed": "Failed to load organization"
         },
         "success": {
           "title": "Organization Updated Successfully",
@@ -2506,7 +3552,7 @@
     },
     "users": {
       "title": "Users",
-      "description": "Manage all users including admins, organization members, and players",
+      "description": "Manage all users including admins, organization members, and players.",
       "titleMeta": "Users - Admin - Rallia",
       "descriptionMeta": "Manage all users including admins, organization members, and players.",
       "comingSoon": "User management interface coming soon.",
@@ -2524,7 +3570,7 @@
         "status": "Status",
         "createdAt": "Created At",
         "noAdmins": "No admins found.",
-        "error": "Couldn't load admins"
+        "error": "Failed to load admins."
       },
       "status": {
         "active": "Active",
@@ -2566,7 +3612,7 @@
           "adminRoleRequired": "Please select an admin type."
         },
         "error": {
-          "sendFailed": "Couldn't send invitation. Please try again."
+          "sendFailed": "Failed to send invitation. Please try again."
         },
         "success": {
           "invitationSent": "Invitation sent successfully to {email}!"
@@ -2575,21 +3621,21 @@
     },
     "analytics": {
       "title": "Analytics",
-      "description": "Analytics and insights",
+      "description": "Analytics and insights.",
       "titleMeta": "Analytics - Admin - Rallia",
       "descriptionMeta": "Analytics and insights.",
       "comingSoon": "Analytics dashboard coming soon."
     },
     "settings": {
       "title": "Settings",
-      "description": "Manage settings and configuration",
+      "description": "Manage settings and configuration.",
       "titleMeta": "Settings - Admin - Rallia",
       "descriptionMeta": "Manage settings.",
       "comingSoon": "Settings interface coming soon."
     },
     "errors": {
       "accessDenied": "Access denied. Admin access required.",
-      "unexpectedError": "Something unexpected happened",
+      "unexpectedError": "An unexpected error occurred",
       "invalidCallback": "Invalid callback parameters"
     }
   },
@@ -2695,6 +3741,228 @@
         "stable": "Stable",
         "declining": "Declining"
       }
+    }
+  },
+  "bookings": {
+    "title": "Bookings",
+    "description": "View and manage court bookings.",
+    "emptyState": {
+      "title": "No Bookings Yet",
+      "description": "Bookings will appear here once players start making reservations.",
+      "createButton": "Create Manual Booking"
+    },
+    "filters": {
+      "title": "Filter Bookings",
+      "allStatuses": "All Statuses",
+      "allCourts": "All Courts",
+      "allFacilities": "All Facilities",
+      "dateRange": "Date Range",
+      "dateFrom": "From",
+      "dateTo": "To",
+      "search": "Search by player name, email, or booking ID",
+      "clear": "Clear",
+      "paymentStatus": "Payment Status",
+      "allPayments": "All Payments",
+      "paid": "Paid",
+      "unpaid": "Unpaid",
+      "refunded": "Refunded",
+      "priceRange": "Price Range",
+      "minPrice": "Min",
+      "maxPrice": "Max"
+    },
+    "table": {
+      "date": "Date",
+      "time": "Time",
+      "court": "Court",
+      "player": "Player",
+      "status": "Status",
+      "amount": "Amount",
+      "actions": "Actions"
+    },
+    "status": {
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "cancelled": "Cancelled",
+      "completed": "Completed",
+      "no_show": "No Show",
+      "awaiting_approval": "Awaiting Approval"
+    },
+    "detail": {
+      "title": "Booking Details",
+      "bookingInfo": "Booking Information",
+      "playerInfo": "Player Information",
+      "paymentInfo": "Payment Information",
+      "timeline": "Timeline",
+      "bookingId": "Booking ID",
+      "court": "Court",
+      "facility": "Facility",
+      "date": "Date",
+      "time": "Time",
+      "duration": "Duration",
+      "status": "Status",
+      "playerName": "Player Name",
+      "playerEmail": "Email",
+      "amount": "Amount",
+      "paymentStatus": "Payment Status",
+      "paymentMethod": "Payment Method",
+      "stripePaymentId": "Stripe Payment ID",
+      "refundStatus": "Refund Status",
+      "refundAmount": "Refund Amount",
+      "viewInStripe": "View in Stripe",
+      "createdAt": "Created",
+      "confirmedAt": "Confirmed",
+      "cancelledAt": "Cancelled",
+      "cancelledBy": "Cancelled by",
+      "cancellationReason": "Reason",
+      "backToList": "Back to Bookings",
+      "guestBooking": "Guest",
+      "unknownPlayer": "Unknown"
+    },
+    "actions": {
+      "view": "View Details",
+      "cancel": "Cancel Booking",
+      "cancelling": "Cancelling...",
+      "markNoShow": "Mark as No-Show",
+      "markComplete": "Mark as Complete",
+      "createManual": "Create Manual Booking"
+    },
+    "bulk": {
+      "selected": "{count} selected",
+      "cancel": "Cancel Selected",
+      "complete": "Complete Selected",
+      "cancelTitle": "Cancel Selected Bookings",
+      "cancelDescription": "Are you sure you want to cancel {count} selected booking(s)? This action cannot be undone.",
+      "completeTitle": "Complete Selected Bookings",
+      "completeDescription": "Mark {count} selected booking(s) as completed?",
+      "confirm": "Confirm",
+      "cancelButton": "Keep Bookings"
+    },
+    "cancel": {
+      "title": "Cancel Booking",
+      "description": "Are you sure you want to cancel this booking?",
+      "reasonLabel": "Cancellation Reason",
+      "reasonPlaceholder": "Enter reason for cancellation (optional)",
+      "refundInfo": "Refund Information",
+      "fullRefund": "Full refund will be processed",
+      "partialRefund": "Partial refund of {percent}% will be processed",
+      "noRefund": "No refund - cancellation is past the refund window",
+      "confirmButton": "Cancel Booking",
+      "cancelButton": "Keep Booking",
+      "success": "Booking cancelled successfully",
+      "error": "Failed to cancel booking"
+    },
+    "noShow": {
+      "title": "Mark as No-Show",
+      "description": "Are you sure you want to mark this booking as a no-show? This indicates the player did not attend.",
+      "confirmButton": "Mark as No-Show",
+      "cancelButton": "Cancel",
+      "success": "Booking marked as no-show",
+      "error": "Failed to update booking"
+    },
+    "complete": {
+      "title": "Mark as Complete",
+      "description": "Mark this booking as completed?",
+      "confirmButton": "Mark as Complete",
+      "cancelButton": "Cancel",
+      "success": "Booking marked as complete",
+      "error": "Failed to update booking"
+    },
+    "manual": {
+      "title": "Create Manual Booking",
+      "description": "Create a booking for a walk-in customer or phone reservation.",
+      "courtLabel": "Court",
+      "courtPlaceholder": "Select a court",
+      "dateLabel": "Date",
+      "datePlaceholder": "Select date",
+      "timeLabel": "Time Slot",
+      "timePlaceholder": "Select time slot",
+      "playerLabel": "Player",
+      "existingPlayer": "Existing Player",
+      "guestPlayer": "Guest (Walk-in)",
+      "playerSearchPlaceholder": "Search for player by name or email",
+      "guestNameLabel": "Guest Name",
+      "guestNamePlaceholder": "Enter guest name",
+      "guestEmailLabel": "Guest Email (optional)",
+      "guestEmailPlaceholder": "guest@example.com",
+      "guestPhoneLabel": "Guest Phone (optional)",
+      "guestPhonePlaceholder": "+1 (555) 123-4567",
+      "paymentMethod": "Payment Method",
+      "payOnline": "Pay Online (Stripe)",
+      "paidInCash": "Paid in Cash",
+      "paidByCard": "Paid by Card (on-site)",
+      "notesLabel": "Notes",
+      "notesPlaceholder": "Optional notes about this booking",
+      "createButton": "Create Booking",
+      "creating": "Creating...",
+      "cancelButton": "Cancel",
+      "success": "Booking created successfully",
+      "error": "Failed to create booking",
+      "noSlotsAvailable": "No slots available for selected date",
+      "selectCourtFirst": "Please select a court first",
+      "selectDateFirst": "Please select a date first",
+      "recurring": {
+        "title": "Recurring Booking",
+        "enable": "Make this a recurring booking",
+        "pattern": "Repeat Pattern",
+        "weekly": "Weekly",
+        "biweekly": "Every 2 weeks",
+        "monthly": "Monthly",
+        "endType": "Ends",
+        "afterOccurrences": "After occurrences",
+        "onDate": "On date",
+        "occurrences": "Number of occurrences",
+        "endDate": "End date",
+        "preview": "Booking Dates Preview",
+        "previewDesc": "The following {count} bookings will be created:",
+        "conflictWarning": "Some dates may have conflicts",
+        "noAvailableDates": "No available dates found for this pattern"
+      }
+    },
+    "pagination": {
+      "showing": "Showing {start} to {end} of {total} bookings",
+      "page": "Page {current} of {total}",
+      "previous": "Previous",
+      "next": "Next"
+    }
+  },
+  "analytics": {
+    "title": "Analytics",
+    "description": "Track your organization's performance and metrics.",
+    "tabs": {
+      "overview": "Overview",
+      "revenue": "Revenue",
+      "bookings": "Bookings",
+      "utilization": "Utilization"
+    },
+    "overview": {
+      "totalBookings": "Total Bookings",
+      "totalRevenue": "Total Revenue",
+      "avgBookingsPerDay": "Avg. Bookings/Day",
+      "utilizationRate": "Utilization Rate",
+      "thisMonth": "This month",
+      "vsLastMonth": "vs last month"
+    },
+    "charts": {
+      "revenueOverTime": "Revenue Over Time",
+      "bookingsByStatus": "Bookings by Status",
+      "bookingsTrend": "Booking Trends",
+      "courtUtilization": "Court Utilization",
+      "peakHours": "Peak Hours",
+      "noData": "No data available for this period"
+    },
+    "filters": {
+      "dateRange": "Date Range",
+      "last7Days": "Last 7 days",
+      "last30Days": "Last 30 days",
+      "last90Days": "Last 90 days",
+      "thisMonth": "This month",
+      "lastMonth": "Last month",
+      "custom": "Custom range"
+    },
+    "export": {
+      "exportData": "Export Data",
+      "exportCSV": "Export to CSV",
+      "exportPDF": "Export to PDF"
     }
   }
 }

@@ -17,7 +17,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text, useToast } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import {
   useRemoveGroupMember,
   usePromoteMember,
@@ -50,16 +50,18 @@ function formatJoinDate(dateStr: string): string {
   if (diffDays === 1) return 'Joined yesterday';
   if (diffDays < 7) return `Joined ${diffDays} days ago`;
   if (diffDays < 30) return `Joined ${Math.floor(diffDays / 7)} weeks ago`;
-  
+
   return `Joined ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined })}`;
 }
 
 /**
  * Format last active status - returns null if never active
  */
-function formatLastActive(dateStr: string | null | undefined): { text: string; isOnline: boolean } | null {
+function formatLastActive(
+  dateStr: string | null | undefined
+): { text: string; isOnline: boolean } | null {
   if (!dateStr) return null;
-  
+
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -72,8 +74,11 @@ function formatLastActive(dateStr: string | null | undefined): { text: string; i
   if (diffMins < 60) return { text: `Active ${diffMins}m ago`, isOnline: false };
   if (diffHours < 24) return { text: `Active ${diffHours}h ago`, isOnline: false };
   if (diffDays < 7) return { text: `Active ${diffDays}d ago`, isOnline: false };
-  
-  return { text: `Active ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`, isOnline: false };
+
+  return {
+    text: `Active ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+    isOnline: false,
+  };
 }
 
 export function MemberListModal({
@@ -87,14 +92,17 @@ export function MemberListModal({
 }: MemberListModalProps) {
   const { colors, isDark } = useThemeStyles();
   const toast = useToast();
+  const { t } = useTranslation();
 
   const [selectedMember, setSelectedMember] = useState<GroupMember | null>(null);
   const [showMemberOptions, setShowMemberOptions] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Clear search when modal closes
+  // This effect resets search state when modal closes - standard modal cleanup pattern
   useEffect(() => {
     if (!visible) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional reset of modal state on close
       setSearchQuery('');
     }
   }, [visible]);
@@ -141,7 +149,7 @@ export function MemberListModal({
       if (!memberIsModerator) {
         options.push({
           id: 'promote',
-          label: 'Promote to Moderator',
+          label: t('groups.promoteToModerator'),
           icon: 'arrow-up-circle-outline',
           onPress: async () => {
             try {
@@ -150,17 +158,17 @@ export function MemberListModal({
                 moderatorId: currentUserId,
                 playerIdToPromote: selectedMember.player_id,
               });
-              toast.success('Member promoted to moderator');
+              toast.success(t('groups.memberPromoted'));
               onMemberRemoved();
             } catch (error) {
-              toast.error(error instanceof Error ? error.message : 'Failed to promote member');
+              toast.error(error instanceof Error ? error.message : t('groups.failedToPromote'));
             }
           },
         });
       } else {
         options.push({
           id: 'demote',
-          label: 'Demote to Member',
+          label: t('groups.demoteToMember'),
           icon: 'arrow-down-circle-outline',
           onPress: async () => {
             try {
@@ -169,10 +177,10 @@ export function MemberListModal({
                 moderatorId: currentUserId,
                 playerIdToDemote: selectedMember.player_id,
               });
-              toast.success('Moderator demoted to member');
+              toast.success(t('groups.moderatorDemoted'));
               onMemberRemoved();
             } catch (error) {
-              toast.error(error instanceof Error ? error.message : 'Failed to demote member');
+              toast.error(error instanceof Error ? error.message : t('groups.failedToDemote'));
             }
           },
         });
@@ -180,17 +188,19 @@ export function MemberListModal({
 
       options.push({
         id: 'remove',
-        label: 'Remove from Group',
+        label: t('groups.removeFromGroup'),
         icon: 'person-remove-outline',
         destructive: true,
         onPress: () => {
           Alert.alert(
-            'Remove Member',
-            `Are you sure you want to remove ${selectedMember.player?.profile?.first_name || 'this member'} from the group?`,
+            t('groups.removeMember'),
+            t('groups.removeMemberConfirm', {
+              name: selectedMember.player?.profile?.first_name || t('groups.thisMember'),
+            }),
             [
-              { text: 'Cancel', style: 'cancel' },
+              { text: t('common.cancel'), style: 'cancel' },
               {
-                text: 'Remove',
+                text: t('common.remove'),
                 style: 'destructive',
                 onPress: async () => {
                   try {
@@ -199,10 +209,12 @@ export function MemberListModal({
                       moderatorId: currentUserId,
                       playerIdToRemove: selectedMember.player_id,
                     });
-                    toast.success('Member removed from group');
+                    toast.success(t('groups.memberRemoved'));
                     onMemberRemoved();
                   } catch (error) {
-                    toast.error(error instanceof Error ? error.message : 'Failed to remove member');
+                    toast.error(
+                      error instanceof Error ? error.message : t('groups.failedToRemoveMember')
+                    );
                   }
                 },
               },
@@ -223,6 +235,7 @@ export function MemberListModal({
     demoteMemberMutation,
     onMemberRemoved,
     toast,
+    t,
   ]);
 
   // Get member info for the options modal
@@ -240,74 +253,86 @@ export function MemberListModal({
     };
   }, [selectedMember, group]);
 
-  const renderMemberItem = useCallback(({ item }: { item: GroupMember }) => {
-    const isCreator = group.created_by === item.player_id;
-    const isSelf = item.player_id === currentUserId;
-    const canManage = isModerator && !isSelf && !isCreator;
-    const lastActive = formatLastActive(item.player?.profile?.last_active_at);
-    const joinDate = formatJoinDate(item.joined_at);
+  const renderMemberItem = useCallback(
+    ({ item }: { item: GroupMember }) => {
+      const isCreator = group.created_by === item.player_id;
+      const isSelf = item.player_id === currentUserId;
+      const canManage = isModerator && !isSelf && !isCreator;
+      const lastActive = formatLastActive(item.player?.profile?.last_active_at);
+      const joinDate = formatJoinDate(item.joined_at);
 
-    return (
-      <TouchableOpacity
-        style={[styles.memberItem, { borderBottomColor: colors.border }]}
-        onPress={() => handleMemberOptions(item)}
-        disabled={!canManage}
-        activeOpacity={canManage ? 0.7 : 1}
-      >
-        <View style={styles.avatarContainer}>
-          <View style={[styles.memberAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-            {item.player?.profile?.profile_picture_url ? (
-              <Image
-                source={{ uri: item.player.profile.profile_picture_url }}
-                style={styles.avatarImage}
-              />
-            ) : (
-              <Ionicons name="person" size={24} color={colors.textMuted} />
-            )}
+      return (
+        <TouchableOpacity
+          style={[styles.memberItem, { borderBottomColor: colors.border }]}
+          onPress={() => handleMemberOptions(item)}
+          disabled={!canManage}
+          activeOpacity={canManage ? 0.7 : 1}
+        >
+          <View style={styles.avatarContainer}>
+            <View
+              style={[styles.memberAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}
+            >
+              {item.player?.profile?.profile_picture_url ? (
+                <Image
+                  source={{ uri: item.player.profile.profile_picture_url }}
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <Ionicons name="person" size={24} color={colors.textMuted} />
+              )}
+            </View>
+            {/* Online indicator */}
+            {lastActive?.isOnline && <View style={styles.onlineIndicator} />}
           </View>
-          {/* Online indicator */}
-          {lastActive?.isOnline && (
-            <View style={styles.onlineIndicator} />
-          )}
-        </View>
 
-        <View style={styles.memberInfo}>
-          <View style={styles.memberNameRow}>
-            <Text weight="medium" style={{ color: colors.text }}>
-              {item.player?.profile?.display_name ||
-                `${item.player?.profile?.first_name || ''} ${item.player?.profile?.last_name || ''}`.trim() ||
-                'Unknown'}
+          <View style={styles.memberInfo}>
+            <View style={styles.memberNameRow}>
+              <Text weight="medium" style={{ color: colors.text }}>
+                {item.player?.profile?.display_name ||
+                  `${item.player?.profile?.first_name || ''} ${item.player?.profile?.last_name || ''}`.trim() ||
+                  'Unknown'}
+              </Text>
+              {isSelf && (
+                <Text size="xs" style={{ color: colors.textSecondary, marginLeft: 6 }}>
+                  ({t('common.you')})
+                </Text>
+              )}
+            </View>
+            {/* Last active / Join date */}
+            <Text
+              size="xs"
+              style={{
+                color: lastActive?.isOnline ? colors.primary : colors.textMuted,
+                marginTop: 2,
+              }}
+            >
+              {lastActive ? lastActive.text : joinDate}
             </Text>
+            <View style={styles.memberBadges}>
+              {item.role === 'moderator' && (
+                <View style={[styles.badge, { backgroundColor: isDark ? '#FF9500' : '#FFF3E0' }]}>
+                  <Text size="xs" style={{ color: isDark ? '#FFFFFF' : '#FF9500' }}>
+                    {t('groups.moderator')}
+                  </Text>
+                </View>
+              )}
+              {isCreator && (
+                <View
+                  style={[styles.badge, { backgroundColor: isDark ? colors.primary : '#E8F5E9' }]}
+                >
+                  <Text size="xs" style={{ color: isDark ? '#FFFFFF' : colors.primary }}>
+                    {t('groups.creator')}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
-          {/* Last active / Join date */}
-          <Text size="xs" style={{ color: lastActive?.isOnline ? colors.primary : colors.textMuted, marginTop: 2 }}>
-            {lastActive ? lastActive.text : joinDate}
-          </Text>
-          <View style={styles.memberBadges}>
-            {item.role === 'moderator' && (
-              <View style={[styles.badge, { backgroundColor: isDark ? '#FF9500' : '#FFF3E0' }]}>
-                <Text size="xs" style={{ color: isDark ? '#FFFFFF' : '#FF9500' }}>
-                  Moderator
-                </Text>
-              </View>
-            )}
-            {isCreator && (
-              <View
-                style={[styles.badge, { backgroundColor: isDark ? colors.primary : '#E8F5E9' }]}
-              >
-                <Text size="xs" style={{ color: isDark ? '#FFFFFF' : colors.primary }}>
-                  Creator
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
 
-        {canManage && <Ionicons name="ellipsis-horizontal" size={20} color={colors.textMuted} />}
+          {canManage && <Ionicons name="ellipsis-horizontal" size={20} color={colors.textMuted} />}
         </TouchableOpacity>
       );
     },
-    [colors, isDark, group, currentUserId, isModerator, handleMemberOptions]
+    [colors, isDark, group, currentUserId, isModerator, handleMemberOptions, t]
   );
 
   return (
@@ -320,7 +345,7 @@ export function MemberListModal({
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: colors.border }]}>
               <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-                Members ({group.member_count})
+                {t('groups.members')} ({group.member_count})
               </Text>
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                 <Ionicons name="close" size={24} color={colors.text} />
@@ -330,11 +355,21 @@ export function MemberListModal({
             {/* Search Bar - show when 10+ members */}
             {group.member_count >= 10 && (
               <View style={[styles.searchContainer, { borderBottomColor: colors.border }]}>
-                <View style={[styles.searchInputContainer, { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}>
-                  <Ionicons name="search-outline" size={18} color={colors.textMuted} style={styles.searchIcon} />
+                <View
+                  style={[
+                    styles.searchInputContainer,
+                    { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' },
+                  ]}
+                >
+                  <Ionicons
+                    name="search-outline"
+                    size={18}
+                    color={colors.textMuted}
+                    style={styles.searchIcon}
+                  />
                   <TextInput
                     style={[styles.searchInput, { color: colors.text }]}
-                    placeholder="Search members..."
+                    placeholder={t('groups.searchMembers')}
                     placeholderTextColor={colors.textMuted}
                     value={searchQuery}
                     onChangeText={setSearchQuery}
@@ -371,7 +406,7 @@ export function MemberListModal({
         }}
         member={selectedMemberInfo}
         options={memberOptions}
-        onAvatarPress={(playerId) => {
+        onAvatarPress={playerId => {
           setShowMemberOptions(false);
           setSelectedMember(null);
           onPlayerPress?.(playerId);

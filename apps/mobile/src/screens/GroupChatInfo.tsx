@@ -2,7 +2,7 @@
  * GroupChatInfo Screen
  * Shows group chat details - profile picture, name, description, members
  * Allows editing group info and managing members
- * 
+ *
  * Refactored to use extracted hooks:
  * - useGroupChatInfo: Data fetching and admin checks
  * - useGroupMemberManagement: Member CRUD operations
@@ -26,12 +26,14 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 
 import { Text, Skeleton, SkeletonAvatar } from '@rallia/shared-components';
-import { 
-  useThemeStyles, 
+import {
+  useThemeStyles,
   useAuth,
   useGroupChatInfo,
   useGroupMemberManagement,
   useGroupEditActions,
+  useTranslation,
+  type TranslationKey,
 } from '../hooks';
 import type { RootStackParamList } from '../navigation/types';
 import { spacingPixels, fontSizePixels, primary, status, neutral } from '@rallia/design-system';
@@ -61,6 +63,7 @@ export default function GroupChatInfoScreen() {
 
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
+  const { t } = useTranslation();
   const playerId = session?.user?.id;
 
   // Network info state (needed for useGroupEditActions callback)
@@ -144,59 +147,65 @@ export default function GroupChatInfoScreen() {
   }, []);
 
   // Navigate to member profile
-  const handleMemberPress = useCallback((memberId: string) => {
-    navigation.navigate('PlayerProfile', { playerId: memberId });
-  }, [navigation]);
+  const handleMemberPress = useCallback(
+    (memberId: string) => {
+      navigation.navigate('PlayerProfile', { playerId: memberId });
+    },
+    [navigation]
+  );
 
   // Render member item
-  const renderMemberItem = useCallback(({ item }: { item: ParticipantInfo }) => {
-    const profile = item.player?.profile;
-    const isMemberAdmin = isParticipantAdmin(item.player_id);
-    const isCurrentUser = item.player_id === playerId;
-    const displayName = profile 
-      ? `${profile.first_name}${profile.last_name ? ` ${profile.last_name}` : ''}`
-      : 'Unknown User';
+  const renderMemberItem = useCallback(
+    ({ item }: { item: ParticipantInfo }) => {
+      const profile = item.player?.profile;
+      const isMemberAdmin = isParticipantAdmin(item.player_id);
+      const isCurrentUser = item.player_id === playerId;
+      const displayName = profile
+        ? `${profile.first_name}${profile.last_name ? ` ${profile.last_name}` : ''}`
+        : 'Unknown User';
 
-    return (
-      <TouchableOpacity
-        style={[styles.memberItem, { borderBottomColor: colors.border }]}
-        onPress={() => handleMemberPress(item.player_id)}
-        onLongPress={() => handleMemberLongPress(item.player_id, isMemberAdmin)}
-      >
-        {/* Avatar */}
-        {profile?.profile_picture_url ? (
-          <Image source={{ uri: profile.profile_picture_url }} style={styles.memberAvatar} />
-        ) : (
-          <View style={[styles.memberAvatarPlaceholder, { backgroundColor: primary[100] }]}>
-            <Ionicons name="person" size={20} color={primary[500]} />
-          </View>
-        )}
-
-        {/* Name and role */}
-        <View style={styles.memberInfo}>
-          <Text style={[styles.memberName, { color: colors.text }]}>
-            {displayName}
-            {isCurrentUser && <Text style={{ color: primary[500] }}> (You)</Text>}
-          </Text>
-          {isMemberAdmin && (
-            <View style={[styles.adminBadge, { backgroundColor: primary[500] }]}>
-              <Text style={styles.adminBadgeText}>Admin</Text>
+      return (
+        <TouchableOpacity
+          style={[styles.memberItem, { borderBottomColor: colors.border }]}
+          onPress={() => handleMemberPress(item.player_id)}
+          onLongPress={() => handleMemberLongPress(item.player_id, isMemberAdmin)}
+        >
+          {/* Avatar */}
+          {profile?.profile_picture_url ? (
+            <Image source={{ uri: profile.profile_picture_url }} style={styles.memberAvatar} />
+          ) : (
+            <View style={[styles.memberAvatarPlaceholder, { backgroundColor: primary[100] }]}>
+              <Ionicons name="person" size={20} color={primary[500]} />
             </View>
           )}
-        </View>
 
-        {/* More options button (for admin to manage members) */}
-        {isAdmin && !isCurrentUser && (
-          <TouchableOpacity
-            style={styles.moreButton}
-            onPress={() => handleMemberLongPress(item.player_id, isMemberAdmin)}
-          >
-            <Ionicons name="ellipsis-vertical" size={20} color={colors.textMuted} />
-          </TouchableOpacity>
-        )}
-      </TouchableOpacity>
-    );
-  }, [colors, playerId, isAdmin, isParticipantAdmin, handleMemberPress, handleMemberLongPress]);
+          {/* Name and role */}
+          <View style={styles.memberInfo}>
+            <Text style={[styles.memberName, { color: colors.text }]}>
+              {displayName}
+              {isCurrentUser && <Text style={{ color: primary[500] }}> (You)</Text>}
+            </Text>
+            {isMemberAdmin && (
+              <View style={[styles.adminBadge, { backgroundColor: primary[500] }]}>
+                <Text style={styles.adminBadgeText}>Admin</Text>
+              </View>
+            )}
+          </View>
+
+          {/* More options button (for admin to manage members) */}
+          {isAdmin && !isCurrentUser && (
+            <TouchableOpacity
+              style={styles.moreButton}
+              onPress={() => handleMemberLongPress(item.player_id, isMemberAdmin)}
+            >
+              <Ionicons name="ellipsis-vertical" size={20} color={colors.textMuted} />
+            </TouchableOpacity>
+          )}
+        </TouchableOpacity>
+      );
+    },
+    [colors, playerId, isAdmin, isParticipantAdmin, handleMemberPress, handleMemberLongPress]
+  );
 
   if (isLoading) {
     return (
@@ -204,19 +213,60 @@ export default function GroupChatInfoScreen() {
         <View style={styles.loadingContainer}>
           {/* Group Chat Info Skeleton */}
           <View style={{ alignItems: 'center', paddingVertical: 24 }}>
-            <SkeletonAvatar size={100} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
-            <Skeleton width={150} height={18} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} style={{ marginTop: 16 }} />
-            <Skeleton width={100} height={14} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} style={{ marginTop: 8 }} />
+            <SkeletonAvatar
+              size={100}
+              backgroundColor={colors.cardBackground}
+              highlightColor={colors.border}
+            />
+            <Skeleton
+              width={150}
+              height={18}
+              borderRadius={4}
+              backgroundColor={colors.cardBackground}
+              highlightColor={colors.border}
+              style={{ marginTop: 16 }}
+            />
+            <Skeleton
+              width={100}
+              height={14}
+              borderRadius={4}
+              backgroundColor={colors.cardBackground}
+              highlightColor={colors.border}
+              style={{ marginTop: 8 }}
+            />
           </View>
           <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
-            <Skeleton width={100} height={16} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            <Skeleton
+              width={100}
+              height={16}
+              borderRadius={4}
+              backgroundColor={colors.cardBackground}
+              highlightColor={colors.border}
+            />
             <View style={{ marginTop: 12, gap: 12 }}>
               {[...Array(4)].map((_, index) => (
                 <View key={index} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <SkeletonAvatar size={48} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+                  <SkeletonAvatar
+                    size={48}
+                    backgroundColor={colors.cardBackground}
+                    highlightColor={colors.border}
+                  />
                   <View style={{ flex: 1 }}>
-                    <Skeleton width={120} height={16} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
-                    <Skeleton width={80} height={14} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} style={{ marginTop: 4 }} />
+                    <Skeleton
+                      width={120}
+                      height={16}
+                      borderRadius={4}
+                      backgroundColor={colors.cardBackground}
+                      highlightColor={colors.border}
+                    />
+                    <Skeleton
+                      width={80}
+                      height={14}
+                      borderRadius={4}
+                      backgroundColor={colors.cardBackground}
+                      highlightColor={colors.border}
+                      style={{ marginTop: 4 }}
+                    />
                   </View>
                 </View>
               ))}
@@ -238,7 +288,10 @@ export default function GroupChatInfoScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['top']}
+    >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
@@ -270,8 +323,8 @@ export default function GroupChatInfoScreen() {
               <TextInput
                 style={[
                   styles.editInput,
-                  { 
-                    color: colors.text, 
+                  {
+                    color: colors.text,
                     borderColor: primary[500],
                     backgroundColor: isDark ? neutral[800] : neutral[50],
                   },
@@ -295,7 +348,7 @@ export default function GroupChatInfoScreen() {
             </TouchableOpacity>
           )}
           <Text style={[styles.memberCount, { color: colors.textMuted }]}>
-            Group · {memberCount} member{memberCount !== 1 ? 's' : ''}
+            {t('groupChat.groupMemberCount' as TranslationKey, { count: memberCount })}
           </Text>
         </View>
 
@@ -308,7 +361,7 @@ export default function GroupChatInfoScreen() {
               </View>
               <View style={styles.sectionContent}>
                 <Text style={[styles.sectionLabel, { color: colors.text }]}>
-                  {networkInfo.description || 'Add group description'}
+                  {networkInfo.description || t('groupChat.addGroupDescription' as TranslationKey)}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
@@ -324,20 +377,24 @@ export default function GroupChatInfoScreen() {
               <Ionicons name="person-add" size={20} color={primary[500]} />
             </View>
             <View style={styles.sectionContent}>
-              <Text style={[styles.sectionLabel, { color: colors.text }]}>Add members</Text>
+              <Text style={[styles.sectionLabel, { color: colors.text }]}>
+                {t('groupChat.addMembers' as TranslationKey)}
+              </Text>
             </View>
           </TouchableOpacity>
 
           {/* Invite via QR */}
-          <TouchableOpacity 
-            style={[styles.sectionRow, { borderBottomWidth: 0 }]} 
+          <TouchableOpacity
+            style={[styles.sectionRow, { borderBottomWidth: 0 }]}
             onPress={handleInviteViaQR}
           >
             <View style={[styles.sectionIcon, { backgroundColor: primary[100] }]}>
               <Ionicons name="qr-code" size={20} color={primary[500]} />
             </View>
             <View style={styles.sectionContent}>
-              <Text style={[styles.sectionLabel, { color: colors.text }]}>Invite via link or QR code</Text>
+              <Text style={[styles.sectionLabel, { color: colors.text }]}>
+                {t('groupChat.inviteViaLinkOrQR' as TranslationKey)}
+              </Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -345,7 +402,7 @@ export default function GroupChatInfoScreen() {
         {/* Members List Header */}
         <View style={styles.membersHeader}>
           <Text style={[styles.membersHeaderText, { color: colors.textMuted }]}>
-            {memberCount} member{memberCount !== 1 ? 's' : ''}
+            {t('common.memberCount', { count: memberCount })}
           </Text>
           <TouchableOpacity>
             <Ionicons name="search" size={20} color={colors.textMuted} />
@@ -354,25 +411,30 @@ export default function GroupChatInfoScreen() {
 
         {/* Members List */}
         <View style={[styles.section, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
-          {participants.map((participant) => (
-            <View key={participant.id}>
-              {renderMemberItem({ item: participant })}
-            </View>
+          {participants.map(participant => (
+            <View key={participant.id}>{renderMemberItem({ item: participant })}</View>
           ))}
         </View>
 
         {/* Leave Group */}
         {playerId && (
-          <View style={[styles.section, { backgroundColor: isDark ? colors.card : '#FFFFFF', marginTop: spacingPixels[4] }]}>
-            <TouchableOpacity 
-              style={[styles.sectionRow, { borderBottomWidth: 0 }]} 
+          <View
+            style={[
+              styles.section,
+              { backgroundColor: isDark ? colors.card : '#FFFFFF', marginTop: spacingPixels[4] },
+            ]}
+          >
+            <TouchableOpacity
+              style={[styles.sectionRow, { borderBottomWidth: 0 }]}
               onPress={() => handleRemoveMember(playerId)}
             >
               <View style={[styles.sectionIcon, { backgroundColor: status.error.light }]}>
                 <Ionicons name="exit-outline" size={20} color={status.error.DEFAULT} />
               </View>
               <View style={styles.sectionContent}>
-                <Text style={[styles.sectionLabel, { color: status.error.DEFAULT }]}>Leave group</Text>
+                <Text style={[styles.sectionLabel, { color: status.error.DEFAULT }]}>
+                  Leave group
+                </Text>
               </View>
             </TouchableOpacity>
           </View>

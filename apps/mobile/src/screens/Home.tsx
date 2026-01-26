@@ -17,8 +17,10 @@ import {
   Heading,
   Button,
   LocationSelector,
-  Skeleton, SkeletonMatchCard
+  Skeleton,
+  SkeletonMatchCard,
 } from '@rallia/shared-components';
+import { lightHaptic } from '@rallia/shared-utils';
 import {
   useAuth,
   useThemeStyles,
@@ -61,13 +63,8 @@ const Home = () => {
   const appNavigation = useAppNavigation();
 
   // Get user's current location and player preferences for nearby matches
-  const {
-    location,
-    locationMode,
-    setLocationMode,
-    hasHomeLocation,
-    hasBothLocationOptions,
-  } = useEffectiveLocation();
+  const { location, locationMode, setLocationMode, hasHomeLocation, hasBothLocationOptions } =
+    useEffectiveLocation();
   const { homeLocation } = useUserHomeLocation();
   const { player, maxTravelDistanceKm, loading: playerLoading } = usePlayer();
   const { selectedSport, isLoading: sportLoading } = useSport();
@@ -208,7 +205,7 @@ const Home = () => {
     if (!isFetchingNextPage) return null;
     return (
       <View style={styles.footerLoader}>
-        <SkeletonMatchCard 
+        <SkeletonMatchCard
           backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
           highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
           style={{ backgroundColor: colors.card, marginHorizontal: 16 }}
@@ -292,7 +289,10 @@ const Home = () => {
         </View>
         <TouchableOpacity
           style={styles.viewAllButton}
-          onPress={() => navigation.navigate('PublicMatches')}
+          onPress={() => {
+            lightHaptic();
+            navigation.navigate('PublicMatches');
+          }}
           activeOpacity={0.7}
         >
           <Text size="base" weight="medium" color={colors.primary}>
@@ -334,7 +334,10 @@ const Home = () => {
           </Text>
           <TouchableOpacity
             style={styles.viewAllButton}
-            onPress={() => navigation.navigate('PlayerMatches')}
+            onPress={() => {
+              lightHaptic();
+              navigation.navigate('PlayerMatches');
+            }}
             activeOpacity={0.7}
           >
             <Text size="base" weight="medium" color={colors.primary}>
@@ -352,12 +355,39 @@ const Home = () => {
         {/* Content: horizontal scroll or empty state */}
         {loadingMyMatches ? (
           <View style={styles.myMatchesLoading}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
-              {[1, 2, 3].map((i) => (
-                <View key={i} style={[styles.myMatchSkeletonCard, { backgroundColor: colors.card, marginRight: 12 }]}>
-                  <Skeleton width={120} height={16} backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'} highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'} style={{ marginBottom: 8 }} />
-                  <Skeleton width={80} height={14} backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'} highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'} style={{ marginBottom: 6 }} />
-                  <Skeleton width={100} height={12} backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'} highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'} />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 16 }}
+            >
+              {[1, 2, 3].map(i => (
+                <View
+                  key={i}
+                  style={[
+                    styles.myMatchSkeletonCard,
+                    { backgroundColor: colors.card, marginRight: 12 },
+                  ]}
+                >
+                  <Skeleton
+                    width={120}
+                    height={16}
+                    backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                    highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                    style={{ marginBottom: 8 }}
+                  />
+                  <Skeleton
+                    width={80}
+                    height={14}
+                    backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                    highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                    style={{ marginBottom: 6 }}
+                  />
+                  <Skeleton
+                    width={100}
+                    height={12}
+                    backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                    highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                  />
                 </View>
               ))}
             </ScrollView>
@@ -415,6 +445,7 @@ const Home = () => {
         )}
       </View>
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     session,
     colors.text,
@@ -517,52 +548,79 @@ const Home = () => {
         <View style={styles.loadingContainer}>
           {/* Welcome skeleton */}
           <View style={styles.skeletonWelcome}>
-            <Skeleton 
-              width={200} 
-              height={24} 
+            <Skeleton
+              width={200}
+              height={24}
               backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
               highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
               style={{ marginBottom: 8 }}
             />
-            <Skeleton 
-              width={150} 
-              height={16} 
+            <Skeleton
+              width={150}
+              height={16}
               backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
               highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
             />
           </View>
-          
+
           {/* My Matches skeleton */}
           <View style={styles.skeletonSection}>
-            <Skeleton 
-              width={120} 
-              height={20} 
+            <Skeleton
+              width={120}
+              height={20}
               backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
               highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
               style={{ marginBottom: 12, marginHorizontal: 16 }}
             />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
-              {[1, 2, 3].map((i) => (
-                <View key={i} style={[styles.myMatchSkeletonCard, { backgroundColor: colors.card, marginRight: 12 }]}>
-                  <Skeleton width={120} height={16} backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'} highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'} style={{ marginBottom: 8 }} />
-                  <Skeleton width={80} height={14} backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'} highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'} style={{ marginBottom: 6 }} />
-                  <Skeleton width={100} height={12} backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'} highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'} />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 16 }}
+            >
+              {[1, 2, 3].map(i => (
+                <View
+                  key={i}
+                  style={[
+                    styles.myMatchSkeletonCard,
+                    { backgroundColor: colors.card, marginRight: 12 },
+                  ]}
+                >
+                  <Skeleton
+                    width={120}
+                    height={16}
+                    backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                    highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                    style={{ marginBottom: 8 }}
+                  />
+                  <Skeleton
+                    width={80}
+                    height={14}
+                    backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                    highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                    style={{ marginBottom: 6 }}
+                  />
+                  <Skeleton
+                    width={100}
+                    height={12}
+                    backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                    highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                  />
                 </View>
               ))}
             </ScrollView>
           </View>
-          
+
           {/* Nearby Matches skeleton */}
           <View style={styles.skeletonSection}>
-            <Skeleton 
-              width={150} 
-              height={20} 
+            <Skeleton
+              width={150}
+              height={20}
               backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
               highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
               style={{ marginBottom: 12, marginHorizontal: 16 }}
             />
-            {[1, 2, 3].map((i) => (
-              <SkeletonMatchCard 
+            {[1, 2, 3].map(i => (
+              <SkeletonMatchCard
                 key={i}
                 backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
                 highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
@@ -598,15 +656,15 @@ const Home = () => {
         <View style={styles.loadingContainer}>
           {/* Skeleton for matches list */}
           <View style={styles.skeletonSection}>
-            <Skeleton 
-              width={150} 
-              height={20} 
+            <Skeleton
+              width={150}
+              height={20}
               backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
               highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
               style={{ marginBottom: 12, marginHorizontal: 16 }}
             />
-            {[1, 2, 3].map((i) => (
-              <SkeletonMatchCard 
+            {[1, 2, 3].map(i => (
+              <SkeletonMatchCard
                 key={i}
                 backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
                 highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}

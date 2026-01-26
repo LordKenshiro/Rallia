@@ -9,7 +9,7 @@
     "lint": "eslint",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf node_modules .next",
-    "types": "supabase gen types typescript --project-id bvfszzxkrsbojwpfromf > types/index.ts"
+    "types": "supabase gen types typescript --project-id ncewkeoohdkpbcovbppd > types/index.ts"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",

@@ -1991,6 +1991,7 @@ export type Database = {
           joined_at: string | null;
           network_id: string;
           player_id: string;
+          request_type: Database['public']['Enums']['network_member_request_type'] | null;
           role: Database['public']['Enums']['network_member_role_enum'];
           status: Database['public']['Enums']['network_member_status'] | null;
           updated_at: string | null;
@@ -2002,6 +2003,7 @@ export type Database = {
           joined_at?: string | null;
           network_id: string;
           player_id: string;
+          request_type?: Database['public']['Enums']['network_member_request_type'] | null;
           role?: Database['public']['Enums']['network_member_role_enum'];
           status?: Database['public']['Enums']['network_member_status'] | null;
           updated_at?: string | null;
@@ -2013,6 +2015,7 @@ export type Database = {
           joined_at?: string | null;
           network_id?: string;
           player_id?: string;
+          request_type?: Database['public']['Enums']['network_member_request_type'] | null;
           role?: Database['public']['Enums']['network_member_role_enum'];
           status?: Database['public']['Enums']['network_member_status'] | null;
           updated_at?: string | null;
@@ -3846,6 +3849,14 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      approve_community_member: {
+        Args: {
+          p_approver_id?: string;
+          p_community_id: string;
+          p_member_id: string;
+        };
+        Returns: boolean;
+      };
       auto_confirm_expired_scores: { Args: never; Returns: number };
       calculate_reputation_tier: {
         Args: { min_events?: number; score: number; total_events: number };
@@ -3968,6 +3979,19 @@ export type Database = {
           timezone: string;
         }[];
       };
+      get_pending_community_members: {
+        Args: { p_community_id: string; p_moderator_id?: string };
+        Returns: {
+          added_by: string;
+          created_at: string;
+          id: string;
+          player_id: string;
+          player_name: string;
+          player_profile_picture: string;
+          referrer_name: string;
+          request_type: Database['public']['Enums']['network_member_request_type'];
+        }[];
+      };
       get_pending_score_confirmations: {
         Args: { p_player_id: string };
         Returns: {
@@ -3988,6 +4012,21 @@ export type Database = {
           team1_score: number;
           team2_score: number;
           winning_team: number;
+        }[];
+      };
+      get_player_communities: {
+        Args: { p_player_id: string };
+        Returns: {
+          cover_image_url: string;
+          created_at: string;
+          created_by: string;
+          description: string;
+          id: string;
+          is_private: boolean;
+          member_count: number;
+          membership_role: string;
+          membership_status: string;
+          name: string;
         }[];
       };
       get_player_matches: {
@@ -4038,6 +4077,21 @@ export type Database = {
         Returns: {
           label: string;
           value: string;
+        }[];
+      };
+      get_public_communities: {
+        Args: { p_player_id?: string };
+        Returns: {
+          cover_image_url: string;
+          created_at: string;
+          created_by: string;
+          description: string;
+          id: string;
+          is_member: boolean;
+          member_count: number;
+          membership_role: string;
+          membership_status: string;
+          name: string;
         }[];
       };
       get_rating_scores_by_type: {
@@ -4206,6 +4260,26 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      refer_player_to_community: {
+        Args: {
+          p_community_id: string;
+          p_referred_player_id: string;
+          p_referrer_id?: string;
+        };
+        Returns: string;
+      };
+      reject_community_member: {
+        Args: {
+          p_community_id: string;
+          p_member_id: string;
+          p_rejector_id?: string;
+        };
+        Returns: boolean;
+      };
+      request_to_join_community: {
+        Args: { p_community_id: string; p_player_id?: string };
+        Returns: string;
       };
       reset_group_invite_code: {
         Args: { p_group_id: string; p_moderator_id: string };
@@ -4385,6 +4459,11 @@ export type Database = {
       member_role: 'owner' | 'admin' | 'manager' | 'staff' | 'member';
       member_status: 'active' | 'inactive' | 'pending' | 'suspended';
       message_status: 'sent' | 'delivered' | 'read' | 'failed';
+      network_member_request_type:
+        | 'direct_add'
+        | 'join_request'
+        | 'member_referral'
+        | 'invite_code';
       network_member_role_enum: 'member' | 'moderator';
       network_member_status: 'active' | 'pending' | 'blocked' | 'removed';
       network_visibility: 'public' | 'private' | 'friends' | 'club';
@@ -4706,6 +4785,7 @@ export const Constants = {
       member_role: ['owner', 'admin', 'manager', 'staff', 'member'],
       member_status: ['active', 'inactive', 'pending', 'suspended'],
       message_status: ['sent', 'delivered', 'read', 'failed'],
+      network_member_request_type: ['direct_add', 'join_request', 'member_referral', 'invite_code'],
       network_member_role_enum: ['member', 'moderator'],
       network_member_status: ['active', 'pending', 'blocked', 'removed'],
       network_visibility: ['public', 'private', 'friends', 'club'],

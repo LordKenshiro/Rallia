@@ -19,8 +19,7 @@ import { useThemeStyles } from '../../../hooks';
 import { spacingPixels } from '@rallia/design-system';
 import { COMMON_REACTIONS } from '@rallia/shared-services';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const PICKER_WIDTH = 320; // Approximate picker width
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const PICKER_HEIGHT = 60; // Approximate picker height
 
 interface EmojiReactionPickerProps {
@@ -42,9 +41,12 @@ function EmojiReactionPickerComponent({
 }: EmojiReactionPickerProps) {
   const { colors, isDark } = useThemeStyles();
 
-  const handleSelect = useCallback((emoji: string) => {
-    onSelect(emoji);
-  }, [onSelect]);
+  const handleSelect = useCallback(
+    (emoji: string) => {
+      onSelect(emoji);
+    },
+    [onSelect]
+  );
 
   // Calculate position based on anchor
   const getPositionStyle = () => {
@@ -67,20 +69,12 @@ function EmojiReactionPickerComponent({
       position: 'absolute' as const,
       top: topPosition,
       // Position on the left for own messages, right for others
-      ...(isOwnMessage 
-        ? { right: 16 } 
-        : { left: 16 }
-      ),
+      ...(isOwnMessage ? { right: 16 } : { left: 16 }),
     };
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={[styles.overlay, anchorY === undefined && styles.centered]}>
           <TouchableWithoutFeedback>
@@ -92,7 +86,7 @@ function EmojiReactionPickerComponent({
               ]}
             >
               <View style={styles.emojiRow}>
-                {COMMON_REACTIONS.map((emoji) => (
+                {COMMON_REACTIONS.map(emoji => (
                   <TouchableOpacity
                     key={emoji}
                     style={styles.emojiButton}

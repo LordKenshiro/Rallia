@@ -1,11 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute } from '@react-navigation/native';
@@ -27,7 +21,7 @@ import {
 
 const BASE_BLACK = '#000000';
 
-import * as Haptics from 'expo-haptics';
+import { mediumHaptic, selectionHaptic } from '@rallia/shared-utils';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import TennisRatingOverlay from '../features/onboarding/components/overlays/TennisRatingOverlay';
 import PickleballRatingOverlay from '../features/onboarding/components/overlays/PickleballRatingOverlay';
@@ -409,7 +403,7 @@ const SportProfile = () => {
 
   const handleToggleActive = async (newValue: boolean) => {
     try {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      mediumHaptic();
 
       const {
         data: { user },
@@ -441,10 +435,7 @@ const SportProfile = () => {
 
         // If user only has 1 active sport (this one), prevent deactivation
         if (count !== null && count <= 1) {
-          Alert.alert(
-            t('alerts.cannotDeactivate'),
-            t('alerts.mustHaveOneSport')
-          );
+          Alert.alert(t('alerts.cannotDeactivate'), t('alerts.mustHaveOneSport'));
           return;
         }
       }
@@ -701,22 +692,77 @@ const SportProfile = () => {
         <View style={styles.loadingContainer}>
           {/* Sport Profile Skeleton */}
           <View style={[styles.card, { backgroundColor: colors.card }]}>
-            <Skeleton width={180} height={18} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            <Skeleton
+              width={180}
+              height={18}
+              borderRadius={4}
+              backgroundColor={colors.cardBackground}
+              highlightColor={colors.border}
+            />
             <View style={{ marginTop: 12, flexDirection: 'row', gap: 12 }}>
-              <Skeleton width={80} height={40} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
-              <Skeleton width={80} height={40} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+              <Skeleton
+                width={80}
+                height={40}
+                borderRadius={8}
+                backgroundColor={colors.cardBackground}
+                highlightColor={colors.border}
+              />
+              <Skeleton
+                width={80}
+                height={40}
+                borderRadius={8}
+                backgroundColor={colors.cardBackground}
+                highlightColor={colors.border}
+              />
             </View>
           </View>
           <View style={[styles.card, { backgroundColor: colors.card, marginTop: 16 }]}>
-            <Skeleton width={120} height={18} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
-            <Skeleton width="100%" height={60} borderRadius={12} backgroundColor={colors.cardBackground} highlightColor={colors.border} style={{ marginTop: 12 }} />
+            <Skeleton
+              width={120}
+              height={18}
+              borderRadius={4}
+              backgroundColor={colors.cardBackground}
+              highlightColor={colors.border}
+            />
+            <Skeleton
+              width="100%"
+              height={60}
+              borderRadius={12}
+              backgroundColor={colors.cardBackground}
+              highlightColor={colors.border}
+              style={{ marginTop: 12 }}
+            />
           </View>
           <View style={[styles.card, { backgroundColor: colors.card, marginTop: 16 }]}>
-            <Skeleton width={150} height={18} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            <Skeleton
+              width={150}
+              height={18}
+              borderRadius={4}
+              backgroundColor={colors.cardBackground}
+              highlightColor={colors.border}
+            />
             <View style={{ marginTop: 12, gap: 8 }}>
-              <Skeleton width="100%" height={48} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
-              <Skeleton width="100%" height={48} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
-              <Skeleton width="100%" height={48} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+              <Skeleton
+                width="100%"
+                height={48}
+                borderRadius={8}
+                backgroundColor={colors.cardBackground}
+                highlightColor={colors.border}
+              />
+              <Skeleton
+                width="100%"
+                height={48}
+                borderRadius={8}
+                backgroundColor={colors.cardBackground}
+                highlightColor={colors.border}
+              />
+              <Skeleton
+                width="100%"
+                height={48}
+                borderRadius={8}
+                backgroundColor={colors.cardBackground}
+                highlightColor={colors.border}
+              />
             </View>
           </View>
         </View>
@@ -1003,7 +1049,7 @@ const SportProfile = () => {
               <TouchableOpacity
                 style={styles.editIconButton}
                 onPress={() => {
-                  Haptics.selectionAsync();
+                  selectionHaptic();
                   setShowPreferencesOverlay(true);
                 }}
               >

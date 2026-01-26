@@ -16,7 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import type { GroupMatch } from '@rallia/shared-hooks';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -37,206 +37,231 @@ export function RecentGamesModal({
   onPlayerPress,
 }: RecentGamesModalProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
 
-  const formatMatchDate = useCallback((dateStr: string) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  }, []);
+  const formatMatchDate = useCallback(
+    (dateStr: string) => {
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
 
-  const renderMatchCard = useCallback((groupMatch: GroupMatch) => {
-    const { match } = groupMatch;
-    if (!match) return null;
+      if (diffDays === 0) return t('common.today');
+      if (diffDays === 1) return t('common.yesterday');
+      if (diffDays < 7) return t('groups.recentGames.daysAgo', { count: diffDays });
 
-    const team1Players = match.participants.filter(p => p.team_number === 1);
-    const team2Players = match.participants.filter(p => p.team_number === 2);
-    const isCompetitive = match.player_expectation === 'competitive';
-    const sportName = match.sport?.name || 'Sport';
-    const winningTeam = match.result?.winning_team;
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    },
+    [t]
+  );
 
-    return (
-      <TouchableOpacity
-        key={groupMatch.id}
-        style={[styles.matchCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
-        onPress={() => onMatchPress(groupMatch)}
-        activeOpacity={0.7}
-      >
-        {/* Header: Sport & Date + Badge */}
-        <View style={styles.matchHeader}>
-          <View style={styles.matchInfo}>
-            <Ionicons 
-              name={sportName.toLowerCase() === 'tennis' ? 'tennisball' : 'american-football'} 
-              size={16} 
-              color={colors.primary} 
-            />
-            <Text size="sm" style={{ color: colors.textSecondary, marginLeft: 6 }}>
-              {sportName} · {formatMatchDate(match.match_date)}
-            </Text>
-          </View>
-          <View style={[
-            styles.badge, 
-            { backgroundColor: isCompetitive ? '#E8F5E9' : '#FFF3E0' }
-          ]}>
-            <Ionicons 
-              name={isCompetitive ? 'trophy' : 'fitness'} 
-              size={12} 
-              color={isCompetitive ? '#2E7D32' : '#EF6C00'} 
-            />
-            <Text size="xs" weight="semibold" style={{ 
-              color: isCompetitive ? '#2E7D32' : '#EF6C00',
-              marginLeft: 4,
-            }}>
-              {isCompetitive ? 'Competitive' : 'Practice'}
-            </Text>
-          </View>
-        </View>
+  const renderMatchCard = useCallback(
+    (groupMatch: GroupMatch) => {
+      const { match } = groupMatch;
+      if (!match) return null;
 
-        {/* Players - Team Cards with Overlapping Avatars */}
-        <View style={styles.matchPlayersContainer}>
-          {/* Team 1 Card */}
-          <View style={[
-            styles.teamCard,
-            winningTeam === 1 && styles.winnerCard,
-            winningTeam === 1 && { borderColor: '#F59E0B' },
-            { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }
-          ]}>
-            {winningTeam === 1 && (
-              <View style={styles.winnerBadge}>
-                <Ionicons name="trophy" size={12} color="#F59E0B" />
-              </View>
-            )}
-            <View style={styles.teamAvatarsContainer}>
-              {team1Players.map((participant, index) => (
-                <TouchableOpacity 
-                  key={participant.id}
-                  style={[
-                    styles.overlappingAvatar,
-                    { 
-                      backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA',
-                      marginLeft: index > 0 ? -12 : 0,
-                      zIndex: team1Players.length - index
-                    }
-                  ]}
-                  onPress={() => participant.player_id && onPlayerPress?.(participant.player_id)}
-                  activeOpacity={0.7}
-                >
-                  {participant.player?.profile?.profile_picture_url ? (
-                    <Image
-                      source={{ uri: participant.player.profile.profile_picture_url }}
-                      style={styles.avatarImage}
-                    />
-                  ) : (
-                    <Ionicons name="person" size={20} color={colors.textMuted} />
-                  )}
-                </TouchableOpacity>
-              ))}
+      const team1Players = match.participants.filter(p => p.team_number === 1);
+      const team2Players = match.participants.filter(p => p.team_number === 2);
+      const isCompetitive = match.player_expectation === 'competitive';
+      const sportName = match.sport?.name || 'Sport';
+      const winningTeam = match.result?.winning_team;
+
+      return (
+        <TouchableOpacity
+          key={groupMatch.id}
+          style={[
+            styles.matchCard,
+            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+          ]}
+          onPress={() => onMatchPress(groupMatch)}
+          activeOpacity={0.7}
+        >
+          {/* Header: Sport & Date + Badge */}
+          <View style={styles.matchHeader}>
+            <View style={styles.matchInfo}>
+              <Ionicons
+                name={sportName.toLowerCase() === 'tennis' ? 'tennisball' : 'american-football'}
+                size={16}
+                color={colors.primary}
+              />
+              <Text size="sm" style={{ color: colors.textSecondary, marginLeft: 6 }}>
+                {sportName} · {formatMatchDate(match.match_date)}
+              </Text>
             </View>
-            <Text 
-              size="sm" 
-              weight={winningTeam === 1 ? 'semibold' : 'regular'} 
-              style={styles.teamNames}
-              numberOfLines={1}
+            <View
+              style={[styles.badge, { backgroundColor: isCompetitive ? '#E8F5E9' : '#FFF3E0' }]}
             >
-              {team1Players.map(p => p.player?.profile?.first_name || 'Player').join(' & ')}
-            </Text>
-            {/* Set scores under team - show individual set game scores */}
-            {match.result && (
-              <Text 
-                size="sm" 
-                weight="bold" 
-                style={{ 
-                  color: winningTeam === 1 ? '#F59E0B' : colors.textMuted,
-                  marginTop: 4,
+              <Ionicons
+                name={isCompetitive ? 'trophy' : 'fitness'}
+                size={12}
+                color={isCompetitive ? '#2E7D32' : '#EF6C00'}
+              />
+              <Text
+                size="xs"
+                weight="semibold"
+                style={{
+                  color: isCompetitive ? '#2E7D32' : '#EF6C00',
+                  marginLeft: 4,
                 }}
               >
-                {match.result.sets && match.result.sets.length > 0
-                  ? match.result.sets
-                      .sort((a, b) => a.set_number - b.set_number)
-                      .map(set => set.team1_score)
-                      .join('  ')
-                  : match.result.team1_score ?? '-'}
+                {isCompetitive
+                  ? t('groups.recentGames.competitive')
+                  : t('groups.recentGames.practice')}
               </Text>
-            )}
-          </View>
-
-          {/* VS */}
-          <Text weight="semibold" style={{ color: colors.textMuted, marginHorizontal: 12 }}>vs</Text>
-
-          {/* Team 2 Card */}
-          <View style={[
-            styles.teamCard,
-            winningTeam === 2 && styles.winnerCard,
-            winningTeam === 2 && { borderColor: '#F59E0B' },
-            { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }
-          ]}>
-            {winningTeam === 2 && (
-              <View style={styles.winnerBadge}>
-                <Ionicons name="trophy" size={12} color="#F59E0B" />
-              </View>
-            )}
-            <View style={styles.teamAvatarsContainer}>
-              {team2Players.map((participant, index) => (
-                <TouchableOpacity 
-                  key={participant.id}
-                  style={[
-                    styles.overlappingAvatar,
-                    { 
-                      backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA',
-                      marginLeft: index > 0 ? -12 : 0,
-                      zIndex: team2Players.length - index
-                    }
-                  ]}
-                  onPress={() => participant.player_id && onPlayerPress?.(participant.player_id)}
-                  activeOpacity={0.7}
-                >
-                  {participant.player?.profile?.profile_picture_url ? (
-                    <Image
-                      source={{ uri: participant.player.profile.profile_picture_url }}
-                      style={styles.avatarImage}
-                    />
-                  ) : (
-                    <Ionicons name="person" size={20} color={colors.textMuted} />
-                  )}
-                </TouchableOpacity>
-              ))}
             </View>
-            <Text 
-              size="sm" 
-              weight={winningTeam === 2 ? 'semibold' : 'regular'} 
-              style={styles.teamNames}
-              numberOfLines={1}
-            >
-              {team2Players.map(p => p.player?.profile?.first_name || 'Player').join(' & ')}
-            </Text>
-            {/* Set scores under team - show individual set game scores */}
-            {match.result && (
-              <Text 
-                size="sm" 
-                weight="bold" 
-                style={{ 
-                  color: winningTeam === 2 ? '#F59E0B' : colors.textMuted,
-                  marginTop: 4,
-                }}
-              >
-                {match.result.sets && match.result.sets.length > 0
-                  ? match.result.sets
-                      .sort((a, b) => a.set_number - b.set_number)
-                      .map(set => set.team2_score)
-                      .join('  ')
-                  : match.result.team2_score ?? '-'}
-              </Text>
-            )}
           </View>
-        </View>
-      </TouchableOpacity>
-    );
-  }, [colors, isDark, formatMatchDate, onMatchPress, onPlayerPress]);
+
+          {/* Players - Team Cards with Overlapping Avatars */}
+          <View style={styles.matchPlayersContainer}>
+            {/* Team 1 Card */}
+            <View
+              style={[
+                styles.teamCard,
+                winningTeam === 1 && styles.winnerCard,
+                winningTeam === 1 && { borderColor: '#F59E0B' },
+                { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' },
+              ]}
+            >
+              {winningTeam === 1 && (
+                <View style={styles.winnerBadge}>
+                  <Ionicons name="trophy" size={12} color="#F59E0B" />
+                </View>
+              )}
+              <View style={styles.teamAvatarsContainer}>
+                {team1Players.map((participant, index) => (
+                  <TouchableOpacity
+                    key={participant.id}
+                    style={[
+                      styles.overlappingAvatar,
+                      {
+                        backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA',
+                        marginLeft: index > 0 ? -12 : 0,
+                        zIndex: team1Players.length - index,
+                      },
+                    ]}
+                    onPress={() => participant.player_id && onPlayerPress?.(participant.player_id)}
+                    activeOpacity={0.7}
+                  >
+                    {participant.player?.profile?.profile_picture_url ? (
+                      <Image
+                        source={{ uri: participant.player.profile.profile_picture_url }}
+                        style={styles.avatarImage}
+                      />
+                    ) : (
+                      <Ionicons name="person" size={20} color={colors.textMuted} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text
+                size="sm"
+                weight={winningTeam === 1 ? 'semibold' : 'regular'}
+                style={styles.teamNames}
+                numberOfLines={1}
+              >
+                {team1Players
+                  .map(p => p.player?.profile?.first_name || t('groups.recentGames.player'))
+                  .join(' & ')}
+              </Text>
+              {/* Set scores under team - show individual set game scores */}
+              {match.result && (
+                <Text
+                  size="sm"
+                  weight="bold"
+                  style={{
+                    color: winningTeam === 1 ? '#F59E0B' : colors.textMuted,
+                    marginTop: 4,
+                  }}
+                >
+                  {match.result.sets && match.result.sets.length > 0
+                    ? match.result.sets
+                        .sort((a, b) => a.set_number - b.set_number)
+                        .map(set => set.team1_score)
+                        .join('  ')
+                    : (match.result.team1_score ?? '-')}
+                </Text>
+              )}
+            </View>
+
+            {/* VS */}
+            <Text weight="semibold" style={{ color: colors.textMuted, marginHorizontal: 12 }}>
+              vs
+            </Text>
+
+            {/* Team 2 Card */}
+            <View
+              style={[
+                styles.teamCard,
+                winningTeam === 2 && styles.winnerCard,
+                winningTeam === 2 && { borderColor: '#F59E0B' },
+                { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' },
+              ]}
+            >
+              {winningTeam === 2 && (
+                <View style={styles.winnerBadge}>
+                  <Ionicons name="trophy" size={12} color="#F59E0B" />
+                </View>
+              )}
+              <View style={styles.teamAvatarsContainer}>
+                {team2Players.map((participant, index) => (
+                  <TouchableOpacity
+                    key={participant.id}
+                    style={[
+                      styles.overlappingAvatar,
+                      {
+                        backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA',
+                        marginLeft: index > 0 ? -12 : 0,
+                        zIndex: team2Players.length - index,
+                      },
+                    ]}
+                    onPress={() => participant.player_id && onPlayerPress?.(participant.player_id)}
+                    activeOpacity={0.7}
+                  >
+                    {participant.player?.profile?.profile_picture_url ? (
+                      <Image
+                        source={{ uri: participant.player.profile.profile_picture_url }}
+                        style={styles.avatarImage}
+                      />
+                    ) : (
+                      <Ionicons name="person" size={20} color={colors.textMuted} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text
+                size="sm"
+                weight={winningTeam === 2 ? 'semibold' : 'regular'}
+                style={styles.teamNames}
+                numberOfLines={1}
+              >
+                {team2Players
+                  .map(p => p.player?.profile?.first_name || t('groups.recentGames.player'))
+                  .join(' & ')}
+              </Text>
+              {/* Set scores under team - show individual set game scores */}
+              {match.result && (
+                <Text
+                  size="sm"
+                  weight="bold"
+                  style={{
+                    color: winningTeam === 2 ? '#F59E0B' : colors.textMuted,
+                    marginTop: 4,
+                  }}
+                >
+                  {match.result.sets && match.result.sets.length > 0
+                    ? match.result.sets
+                        .sort((a, b) => a.set_number - b.set_number)
+                        .map(set => set.team2_score)
+                        .join('  ')
+                    : (match.result.team2_score ?? '-')}
+                </Text>
+              )}
+            </View>
+          </View>
+        </TouchableOpacity>
+      );
+    },
+    [colors, isDark, formatMatchDate, onMatchPress, onPlayerPress, t]
+  );
 
   const content = useMemo(() => {
     if (matches.length === 0) {
@@ -244,33 +269,28 @@ export function RecentGamesModal({
         <View style={styles.emptyState}>
           <Ionicons name="tennisball-outline" size={48} color={colors.textMuted} />
           <Text style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}>
-            No games played in the last 180 days
+            {t('groups.recentGames.noGames')}
           </Text>
         </View>
       );
     }
 
     return matches.map(renderMatchCard);
-  }, [matches, renderMatchCard, colors]);
+  }, [matches, renderMatchCard, colors, t]);
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <TouchableOpacity style={styles.overlayBackground} onPress={onClose} activeOpacity={1} />
-        
+
         <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
           {/* Handle */}
           <View style={[styles.handle, { backgroundColor: colors.border }]} />
-          
+
           {/* Header */}
           <View style={styles.header}>
             <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-              Recent Games
+              {t('groups.recentGames.title')}
             </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={colors.text} />
@@ -278,7 +298,7 @@ export function RecentGamesModal({
           </View>
 
           {/* Content */}
-          <ScrollView 
+          <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
