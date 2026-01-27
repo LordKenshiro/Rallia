@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
+import { useOrganization } from '@/components/organization-context';
 import {
   Ban,
   Calendar,
@@ -271,6 +272,7 @@ export default function AvailabilityCalendarPage() {
   const tDays = useTranslations('availability.days');
   const tCourtStatus = useTranslations('courts.status');
   const router = useRouter();
+  const { selectedOrganization, isLoading: orgLoading } = useOrganization();
 
   const [loading, setLoading] = useState(true);
   const [slotsLoading, setSlotsLoading] = useState(false);
@@ -405,33 +407,17 @@ export default function AvailabilityCalendarPage() {
   }, [currentTime, actualStartHour, actualEndHour, operatingMinutes]);
 
   const fetchFacilities = useCallback(async () => {
+    if (!selectedOrganization) {
+      setLoading(false);
+      return;
+    }
+
     const supabase = createClient();
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
-    const { data: membership } = await supabase
-      .from('organization_member')
-      .select('organization_id')
-      .eq('user_id', user.id)
-      .is('left_at', null)
-      .single();
-
-    if (!membership) {
-      setLoading(false);
-      return;
-    }
 
     const { data: facilitiesData } = await supabase
       .from('facility')
       .select('id, name')
-      .eq('organization_id', membership.organization_id)
+      .eq('organization_id', selectedOrganization.id)
       .is('archived_at', null)
       .order('name');
 
@@ -440,7 +426,7 @@ export default function AvailabilityCalendarPage() {
       setSelectedFacility(facilitiesData[0].id);
     }
     setLoading(false);
-  }, []);
+  }, [selectedOrganization]);
 
   const fetchCourtsAndSlots = useCallback(async () => {
     if (!selectedFacility) return;
@@ -679,9 +665,11 @@ export default function AvailabilityCalendarPage() {
   }, [selectedFacility, getDatesToFetch]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void fetchFacilities();
-  }, [fetchFacilities]);
+    if (!orgLoading) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      void fetchFacilities();
+    }
+  }, [fetchFacilities, orgLoading]);
 
   useEffect(() => {
     if (selectedFacility) {

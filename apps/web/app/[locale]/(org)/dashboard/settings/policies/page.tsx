@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { createClient } from '@/lib/supabase/client';
+import { useOrganization } from '@/components/organization-context';
 import { AlertCircle, Clock, Loader2, Percent, Save } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
@@ -28,13 +29,13 @@ interface CancellationPolicy {
 export default function PoliciesPage() {
   const t = useTranslations('settings');
   const supabase = createClient();
+  const { selectedOrganization, isLoading: orgLoading } = useOrganization();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [policy, setPolicy] = useState<CancellationPolicy | null>(null);
 
   // Form state
@@ -45,38 +46,20 @@ export default function PoliciesPage() {
 
   useEffect(() => {
     async function fetchPolicy() {
+      if (orgLoading) return;
+
+      if (!selectedOrganization) {
+        setError(t('policies.noOrganization'));
+        setLoading(false);
+        return;
+      }
+
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        if (!user) {
-          setError(t('policies.notAuthenticated'));
-          setLoading(false);
-          return;
-        }
-
-        // Get user's organization
-        const { data: membership, error: membershipError } = await supabase
-          .from('organization_member')
-          .select('organization_id')
-          .eq('user_id', user.id)
-          .is('left_at', null)
-          .single();
-
-        if (membershipError || !membership) {
-          setError(t('policies.noOrganization'));
-          setLoading(false);
-          return;
-        }
-
-        setOrganizationId(membership.organization_id);
-
         // Fetch cancellation policy
         const { data: policyData } = await supabase
           .from('cancellation_policy')
           .select('*')
-          .eq('organization_id', membership.organization_id)
+          .eq('organization_id', selectedOrganization.id)
           .single();
 
         if (policyData) {
@@ -96,11 +79,10 @@ export default function PoliciesPage() {
     }
 
     fetchPolicy();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedOrganization, orgLoading, supabase, t]);
 
   const handleSave = async () => {
-    if (!organizationId) return;
+    if (!selectedOrganization) return;
 
     setSaving(true);
     setError(null);
@@ -108,7 +90,7 @@ export default function PoliciesPage() {
 
     try {
       const policyData = {
-        organization_id: organizationId,
+        organization_id: selectedOrganization.id,
         free_cancellation_hours: parseInt(freeCancellationHours),
         partial_refund_hours: parseInt(partialRefundHours),
         partial_refund_percent: parseInt(partialRefundPercent),
@@ -163,7 +145,7 @@ export default function PoliciesPage() {
     );
   }
 
-  if (error && !organizationId) {
+  if (error && !selectedOrganization) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
         <p className="text-muted-foreground">{error}</p>

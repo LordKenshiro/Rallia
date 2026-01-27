@@ -1,5 +1,6 @@
 import { FacilitiesList } from '@/components/facilities-list';
 import { createClient } from '@/lib/supabase/server';
+import { getSelectedOrganization } from '@/lib/supabase/get-selected-organization';
 import type { Metadata } from 'next';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -17,15 +18,10 @@ export default async function FacilitiesPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Get user's organization
-  const { data: membership } = await supabase
-    .from('organization_member')
-    .select('organization_id')
-    .eq('user_id', user!.id)
-    .is('left_at', null)
-    .single();
+  // Get selected organization (respects user's selection from org switcher)
+  const organization = await getSelectedOrganization(user!.id);
 
-  if (!membership) {
+  if (!organization) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
         <p className="text-muted-foreground">No organization found.</p>
@@ -51,7 +47,7 @@ export default async function FacilitiesPage() {
       )
     `
     )
-    .eq('organization_id', membership.organization_id)
+    .eq('organization_id', organization.id)
     .is('archived_at', null)
     .order('name');
 
@@ -59,7 +55,5 @@ export default async function FacilitiesPage() {
     console.error('Error fetching facilities:', error);
   }
 
-  return (
-    <FacilitiesList facilities={facilities ?? []} organizationId={membership.organization_id} />
-  );
+  return <FacilitiesList facilities={facilities ?? []} organizationId={organization.id} />;
 }

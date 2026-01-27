@@ -3600,6 +3600,10 @@
       "signOut": "Sign Out",
       "notifications": "Notifications"
     },
+    "orgSwitcher": {
+      "switchOrganization": "Switch Organization",
+      "clickToSwitch": "Click to switch organization"
+    },
     "notifications": {
       "title": "Notifications",
       "empty": "No new notifications",

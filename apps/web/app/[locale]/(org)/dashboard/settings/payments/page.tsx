@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { getSelectedOrganization } from '@/lib/supabase/get-selected-organization';
 import { getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 import { PaymentSettingsClient } from './client';
@@ -25,24 +26,10 @@ export default async function PaymentSettingsPage() {
     redirect('/sign-in');
   }
 
-  // Get user's organization membership
-  const { data: membership } = await supabase
-    .from('organization_member')
-    .select(
-      `
-      role,
-      organization:organization_id (
-        id,
-        name,
-        slug
-      )
-    `
-    )
-    .eq('user_id', user.id)
-    .in('role', ['owner', 'admin'])
-    .single();
+  // Get selected organization (respects user's selection from org switcher)
+  const organization = await getSelectedOrganization(user.id);
 
-  if (!membership || !membership.organization) {
+  if (!organization) {
     return (
       <div className="space-y-6">
         <div>
@@ -56,7 +43,31 @@ export default async function PaymentSettingsPage() {
     );
   }
 
-  const organization = membership.organization as { id: string; name: string; slug: string };
+  // Check if user has owner/admin role in this organization
+  const { data: membership } = await supabase
+    .from('organization_member')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('organization_id', organization.id)
+    .is('left_at', null)
+    .single();
+
+  const isOwner = membership?.role === 'owner';
+  const isAdminOrOwner = membership?.role === 'owner' || membership?.role === 'admin';
+
+  if (!isAdminOrOwner) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold mb-0">{t('orgPayments.title')}</h1>
+          <p className="text-muted-foreground">{t('orgPayments.description')}</p>
+        </div>
+        <div className="rounded-lg border border-[var(--secondary-200)] dark:border-[var(--secondary-800)] p-6">
+          <p className="text-muted-foreground text-sm">{t('orgPayments.noOrganization')}</p>
+        </div>
+      </div>
+    );
+  }
 
   // Get Stripe account status
   const { data: stripeAccount } = await supabase
@@ -76,7 +87,7 @@ export default async function PaymentSettingsPage() {
         organizationId={organization.id}
         organizationName={organization.name}
         stripeAccount={stripeAccount}
-        isOwner={membership.role === 'owner'}
+        isOwner={isOwner}
       />
     </div>
   );

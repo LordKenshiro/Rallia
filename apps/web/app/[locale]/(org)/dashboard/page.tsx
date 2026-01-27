@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { getSelectedOrganization } from '@/lib/supabase/get-selected-organization';
 import {
   ArrowRight,
   Calendar,
@@ -64,58 +65,8 @@ export default async function DashboardPage() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { data: profile } = await supabase.from('profile').select('*').eq('id', user!.id).single();
 
-  // Fetch user's organization memberships with organization details
-  const { data: memberships, error: membershipsError } = await supabase
-    .from('organization_member')
-    .select(
-      `
-      organization (
-        id,
-        name,
-        nature,
-        email,
-        phone,
-        slug,
-        address,
-        city,
-        country,
-        postal_code,
-        type,
-        description,
-        website,
-        is_active,
-        created_at
-      )
-    `
-    )
-    .eq('user_id', user!.id)
-    .is('left_at', null);
-
-  if (membershipsError) {
-    console.error('Error fetching memberships:', membershipsError);
-  }
-
-  // Get the first active organization (for now, showing one)
-  const organization =
-    (memberships?.[0]?.organization as
-      | {
-          id: string;
-          name: string;
-          nature: string | null;
-          email: string | null;
-          phone: string | null;
-          slug: string;
-          address: string | null;
-          city: string | null;
-          country: string | null;
-          postal_code: string | null;
-          type: string | null;
-          description: string | null;
-          website: string | null;
-          is_active: boolean;
-          created_at: string;
-        }
-      | undefined) || undefined;
+  // Get the selected organization (respects user's selection from org switcher)
+  const organization = await getSelectedOrganization(user!.id);
 
   // Fetch KPI data if organization exists
   let todaysBookingsCount = 0;

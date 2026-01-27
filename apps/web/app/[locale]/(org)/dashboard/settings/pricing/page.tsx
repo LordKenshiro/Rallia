@@ -30,6 +30,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { createClient } from '@/lib/supabase/client';
+import { useOrganization } from '@/components/organization-context';
 import { DollarSign, Loader2, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
@@ -81,11 +82,11 @@ const ALL_VALUE = '__all__';
 export default function PricingPage() {
   const t = useTranslations('settings');
   const supabase = createClient();
+  const { selectedOrganization, isLoading: orgLoading } = useOrganization();
 
   const [loading, setLoading] = useState(true);
   const [rules, setRules] = useState<PricingRule[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
-  const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Dialog states
@@ -108,38 +109,20 @@ export default function PricingPage() {
 
   useEffect(() => {
     async function fetchData() {
+      if (orgLoading) return;
+
+      if (!selectedOrganization) {
+        setError(t('pricing.noOrganization'));
+        setLoading(false);
+        return;
+      }
+
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        if (!user) {
-          setError(t('pricing.notAuthenticated'));
-          setLoading(false);
-          return;
-        }
-
-        // Get user's organization
-        const { data: membership, error: membershipError } = await supabase
-          .from('organization_member')
-          .select('organization_id')
-          .eq('user_id', user.id)
-          .is('left_at', null)
-          .single();
-
-        if (membershipError || !membership) {
-          setError(t('pricing.noOrganization'));
-          setLoading(false);
-          return;
-        }
-
-        setOrganizationId(membership.organization_id);
-
         // Fetch facilities for dropdown
         const { data: facilitiesData } = await supabase
           .from('facility')
           .select('id, name, court:court(id, name)')
-          .eq('organization_id', membership.organization_id)
+          .eq('organization_id', selectedOrganization.id)
           .eq('is_active', true);
 
         if (facilitiesData) {
@@ -162,7 +145,7 @@ export default function PricingPage() {
             court:court_id (name)
           `
           )
-          .eq('organization_id', membership.organization_id)
+          .eq('organization_id', selectedOrganization.id)
           .order('priority', { ascending: true });
 
         if (rulesError) {
@@ -181,8 +164,7 @@ export default function PricingPage() {
     }
 
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedOrganization, orgLoading, supabase, t]);
 
   const resetForm = () => {
     setFormName('');
@@ -212,12 +194,12 @@ export default function PricingPage() {
   };
 
   const handleSaveRule = async () => {
-    if (!organizationId || !formName || !formPrice) return;
+    if (!selectedOrganization || !formName || !formPrice) return;
 
     setIsProcessing(true);
     try {
       const ruleData = {
-        organization_id: organizationId,
+        organization_id: selectedOrganization.id,
         name: formName,
         facility_id: formFacilityId || null,
         court_id: formCourtId || null,
@@ -243,7 +225,7 @@ export default function PricingPage() {
         const { data: rulesData } = await supabase
           .from('pricing_rule')
           .select(`*, facility:facility_id (name), court:court_id (name)`)
-          .eq('organization_id', organizationId)
+          .eq('organization_id', selectedOrganization.id)
           .order('priority', { ascending: true });
 
         setRules((rulesData as PricingRule[]) || []);

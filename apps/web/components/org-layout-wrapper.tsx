@@ -2,6 +2,7 @@
 
 import { OrgSidebar } from '@/components/org-sidebar';
 import { SidebarProvider, useSidebar } from '@/components/sidebar-context';
+import { OrganizationProvider } from '@/components/organization-context';
 import { usePathname } from '@/i18n/navigation';
 import { TooltipProvider } from './ui/tooltip';
 
@@ -47,9 +48,11 @@ export function OrgLayoutWrapper({
 
   return (
     <SidebarProvider>
-      <TooltipProvider delayDuration={100}>
-        <LayoutContent showSidebar={showSidebar}>{children}</LayoutContent>
-      </TooltipProvider>
+      <OrganizationProvider>
+        <TooltipProvider delayDuration={100}>
+          <LayoutContent showSidebar={showSidebar}>{children}</LayoutContent>
+        </TooltipProvider>
+      </OrganizationProvider>
     </SidebarProvider>
   );
 }

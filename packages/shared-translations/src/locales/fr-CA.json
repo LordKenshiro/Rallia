@@ -3602,6 +3602,10 @@
       "signOut": "Déconnexion",
       "notifications": "Notifications"
     },
+    "orgSwitcher": {
+      "switchOrganization": "Changer d'organisation",
+      "clickToSwitch": "Cliquez pour changer d'organisation"
+    },
     "notifications": {
       "title": "Notifications",
       "empty": "Aucune nouvelle notification",

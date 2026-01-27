@@ -39,6 +39,7 @@ import { Link } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useOrganization } from '@/components/organization-context';
 import {
   CalendarCheck,
   CheckCircle2,
@@ -106,12 +107,12 @@ const ITEMS_PER_PAGE = 10;
 
 export default function BookingsPage() {
   const t = useTranslations('bookings');
+  const { selectedOrganization, isLoading: orgLoading } = useOrganization();
 
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [courts, setCourts] = useState<Court[]>([]);
-  const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -142,36 +143,18 @@ export default function BookingsPage() {
   const [actionLoading, setActionLoading] = useState(false);
 
   const fetchInitialData = useCallback(async () => {
+    if (!selectedOrganization) {
+      setLoading(false);
+      return;
+    }
+
     const supabase = createClient();
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
-    const { data: membership } = await supabase
-      .from('organization_member')
-      .select('organization_id')
-      .eq('user_id', user.id)
-      .is('left_at', null)
-      .single();
-
-    if (!membership) {
-      setLoading(false);
-      return;
-    }
-
-    setOrganizationId(membership.organization_id);
 
     // Fetch facilities
     const { data: facilitiesData } = await supabase
       .from('facility')
       .select('id, name')
-      .eq('organization_id', membership.organization_id)
+      .eq('organization_id', selectedOrganization.id)
       .is('archived_at', null)
       .order('name');
 
@@ -191,10 +174,10 @@ export default function BookingsPage() {
     }
 
     setLoading(false);
-  }, []);
+  }, [selectedOrganization]);
 
   const fetchBookings = useCallback(async () => {
-    if (!organizationId || courts.length === 0) return;
+    if (!selectedOrganization || courts.length === 0) return;
 
     const supabase = createClient();
     const offset = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -307,7 +290,7 @@ export default function BookingsPage() {
     setBookings(filteredData);
     setTotalCount(searchQuery.trim() ? filteredData.length : count || 0);
   }, [
-    organizationId,
+    selectedOrganization,
     currentPage,
     statusFilter,
     facilityFilter,
@@ -320,14 +303,16 @@ export default function BookingsPage() {
   ]);
 
   useEffect(() => {
-    fetchInitialData();
-  }, [fetchInitialData]);
+    if (!orgLoading) {
+      fetchInitialData();
+    }
+  }, [fetchInitialData, orgLoading]);
 
   useEffect(() => {
-    if (organizationId) {
+    if (selectedOrganization) {
       fetchBookings();
     }
-  }, [organizationId, fetchBookings]);
+  }, [selectedOrganization, fetchBookings]);
 
   const getPlayerName = (booking: Booking): string => {
     // Player info not loaded in simplified query - show player ID or placeholder

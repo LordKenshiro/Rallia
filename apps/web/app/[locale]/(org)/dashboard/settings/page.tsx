@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { createClient } from '@/lib/supabase/client';
+import { useOrganization } from '@/components/organization-context';
 import { Loader2, Save } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
@@ -42,13 +43,13 @@ interface Organization {
 export default function SettingsPage() {
   const t = useTranslations('settings');
   const supabase = createClient();
+  const { selectedOrganization, isLoading: orgLoading } = useOrganization();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [settings, setSettings] = useState<OrganizationSettings | null>(null);
 
@@ -64,38 +65,20 @@ export default function SettingsPage() {
 
   useEffect(() => {
     async function fetchData() {
+      if (orgLoading) return;
+
+      if (!selectedOrganization) {
+        setError(t('general.noOrganization'));
+        setLoading(false);
+        return;
+      }
+
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        if (!user) {
-          setError(t('general.notAuthenticated'));
-          setLoading(false);
-          return;
-        }
-
-        // Get user's organization
-        const { data: membership, error: membershipError } = await supabase
-          .from('organization_member')
-          .select('organization_id, role')
-          .eq('user_id', user.id)
-          .is('left_at', null)
-          .single();
-
-        if (membershipError || !membership) {
-          setError(t('general.noOrganization'));
-          setLoading(false);
-          return;
-        }
-
-        setOrganizationId(membership.organization_id);
-
         // Fetch organization details
         const { data: org, error: orgError } = await supabase
           .from('organization')
           .select('id, name, email, phone, website, address, city, postal_code')
-          .eq('id', membership.organization_id)
+          .eq('id', selectedOrganization.id)
           .single();
 
         if (orgError || !org) {
@@ -114,7 +97,7 @@ export default function SettingsPage() {
         const { data: orgSettings } = await supabase
           .from('organization_settings')
           .select('*')
-          .eq('organization_id', membership.organization_id)
+          .eq('organization_id', selectedOrganization.id)
           .single();
 
         if (orgSettings) {
@@ -134,11 +117,10 @@ export default function SettingsPage() {
     }
 
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedOrganization, orgLoading, supabase, t]);
 
   const handleSave = async () => {
-    if (!organizationId) return;
+    if (!selectedOrganization) return;
 
     setSaving(true);
     setError(null);
@@ -154,13 +136,13 @@ export default function SettingsPage() {
           phone: orgPhone || null,
           website: orgWebsite || null,
         })
-        .eq('id', organizationId);
+        .eq('id', selectedOrganization.id);
 
       if (orgUpdateError) throw orgUpdateError;
 
       // Upsert organization settings
       const settingsData = {
-        organization_id: organizationId,
+        organization_id: selectedOrganization.id,
         slot_duration_minutes: parseInt(slotDuration),
         allow_same_day_booking: allowSameDay,
         min_booking_notice_hours: parseInt(minNoticeHours),

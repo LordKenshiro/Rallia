@@ -1,10 +1,21 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
-import { Building2 } from 'lucide-react';
+import { Building2, Check, ChevronsUpDown } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useSidebar } from './sidebar-context';
+import { useOrganization } from './organization-context';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
+import { cn } from '@/lib/utils';
 
 interface ProfileData {
   user: {
@@ -12,10 +23,6 @@ interface ProfileData {
     firstName: string | null;
     lastName: string | null;
   };
-  organization: {
-    name: string;
-    slug: string;
-  } | null;
 }
 
 function getInitials(firstName: string | null, lastName: string | null, email: string): string {
@@ -29,7 +36,15 @@ function getInitials(firstName: string | null, lastName: string | null, email: s
 }
 
 export function SidebarProfile() {
+  const t = useTranslations('app');
   const { isCollapsed } = useSidebar();
+  const {
+    organizations,
+    selectedOrganization,
+    selectOrganization,
+    hasMultipleOrgs,
+    isLoading: orgLoading,
+  } = useOrganization();
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const supabase = useMemo(() => createClient(), []);
@@ -53,31 +68,12 @@ export function SidebarProfile() {
           .eq('id', user.id)
           .single();
 
-        // Fetch organization membership
-        const { data: membership } = await supabase
-          .from('organization_member')
-          .select(
-            `
-            organization (
-              name,
-              slug
-            )
-          `
-          )
-          .eq('user_id', user.id)
-          .is('left_at', null)
-          .limit(1)
-          .single();
-
-        const org = membership?.organization as { name: string; slug: string } | null;
-
         setProfileData({
           user: {
             email: user.email || '',
             firstName: profile?.first_name || null,
             lastName: profile?.last_name || null,
           },
-          organization: org,
         });
       } catch (error) {
         console.error('Error fetching sidebar profile:', error);
@@ -89,7 +85,7 @@ export function SidebarProfile() {
     fetchProfileData();
   }, [supabase]);
 
-  if (isLoading) {
+  if (isLoading || orgLoading) {
     return (
       <div className="px-4 py-3">
         <div className="flex items-center gap-3">
@@ -119,6 +115,15 @@ export function SidebarProfile() {
     ? `${profileData.user.firstName}${profileData.user.lastName ? ` ${profileData.user.lastName}` : ''}`
     : profileData.user.email.split('@')[0];
 
+  // Organization switcher for users with multiple orgs
+  const organizationSection = selectedOrganization && (
+    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+      <Building2 className="size-3 shrink-0" />
+      <span className="truncate">{selectedOrganization.name}</span>
+      {hasMultipleOrgs && <ChevronsUpDown className="size-3 shrink-0 ml-auto" />}
+    </div>
+  );
+
   const content = (
     <div className="flex items-center gap-3 w-full">
       {/* Avatar */}
@@ -134,12 +139,7 @@ export function SidebarProfile() {
       {!isCollapsed && (
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate m-0">{displayName}</p>
-          {profileData.organization && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Building2 className="size-3 shrink-0" />
-              <span className="truncate">{profileData.organization.name}</span>
-            </div>
-          )}
+          {organizationSection}
         </div>
       )}
     </div>
@@ -155,12 +155,53 @@ export function SidebarProfile() {
           </TooltipTrigger>
           <TooltipContent side="right" className="flex flex-col gap-0.5">
             <span className="font-medium">{displayName}</span>
-            {profileData.organization && (
-              <span className="text-muted-foreground text-xs">{profileData.organization.name}</span>
+            {selectedOrganization && (
+              <span className="text-muted-foreground text-xs">{selectedOrganization.name}</span>
+            )}
+            {hasMultipleOrgs && (
+              <span className="text-muted-foreground text-xs italic">
+                {t('orgSwitcher.clickToSwitch')}
+              </span>
             )}
           </TooltipContent>
         </Tooltip>
       </div>
+    );
+  }
+
+  // If user has multiple orgs, wrap in dropdown menu
+  if (hasMultipleOrgs) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="px-4 py-3 w-full hover:bg-muted/50 transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+            {content}
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-56">
+          <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+            {t('orgSwitcher.switchOrganization')}
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {organizations.map(org => (
+            <DropdownMenuItem
+              key={org.id}
+              onClick={() => {
+                if (org.id !== selectedOrganization?.id) {
+                  selectOrganization(org);
+                }
+              }}
+              className={cn('cursor-pointer', org.id === selectedOrganization?.id && 'bg-accent')}
+            >
+              <Building2 className="size-4 mr-2" />
+              <span className="flex-1 truncate">{org.name}</span>
+              {org.id === selectedOrganization?.id && (
+                <Check className="size-4 ml-2 text-primary" />
+              )}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     );
   }
 

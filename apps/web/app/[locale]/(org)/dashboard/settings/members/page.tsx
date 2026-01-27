@@ -35,6 +35,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { createClient } from '@/lib/supabase/client';
+import { useOrganization } from '@/components/organization-context';
 import {
   Clock,
   Crown,
@@ -83,11 +84,11 @@ interface PendingInvitation {
 export default function MembersPage() {
   const t = useTranslations('settings');
   const supabase = createClient();
+  const { selectedOrganization, isLoading: orgLoading } = useOrganization();
 
   const [loading, setLoading] = useState(true);
   const [members, setMembers] = useState<Member[]>([]);
   const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([]);
-  const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<Role | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -120,6 +121,14 @@ export default function MembersPage() {
 
   useEffect(() => {
     async function fetchMembers() {
+      if (orgLoading) return;
+
+      if (!selectedOrganization) {
+        setError(t('members.noOrganization'));
+        setLoading(false);
+        return;
+      }
+
       try {
         const {
           data: { user },
@@ -133,11 +142,12 @@ export default function MembersPage() {
 
         setCurrentUserId(user.id);
 
-        // Get user's organization and role
+        // Get user's role in the selected organization
         const { data: membership, error: membershipError } = await supabase
           .from('organization_member')
-          .select('organization_id, role')
+          .select('role')
           .eq('user_id', user.id)
+          .eq('organization_id', selectedOrganization.id)
           .is('left_at', null)
           .single();
 
@@ -147,7 +157,6 @@ export default function MembersPage() {
           return;
         }
 
-        setOrganizationId(membership.organization_id);
         setCurrentUserRole(membership.role as Role);
 
         // Fetch all members
@@ -161,7 +170,7 @@ export default function MembersPage() {
             joined_at
           `
           )
-          .eq('organization_id', membership.organization_id)
+          .eq('organization_id', selectedOrganization.id)
           .is('left_at', null)
           .order('joined_at', { ascending: true });
 
@@ -190,7 +199,7 @@ export default function MembersPage() {
         setMembers(membersWithProfiles);
 
         // Fetch pending invitations
-        await fetchPendingInvitations(membership.organization_id);
+        await fetchPendingInvitations(selectedOrganization.id);
 
         setLoading(false);
       } catch (err) {
@@ -201,8 +210,7 @@ export default function MembersPage() {
     }
 
     fetchMembers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedOrganization, orgLoading, supabase, t]);
 
   const getRoleIcon = (role: Role) => {
     switch (role) {
@@ -239,7 +247,7 @@ export default function MembersPage() {
   };
 
   const handleRemoveMember = async () => {
-    if (!removingMember || !organizationId) return;
+    if (!removingMember || !selectedOrganization) return;
 
     setIsProcessing(true);
     try {
@@ -261,7 +269,7 @@ export default function MembersPage() {
   };
 
   const handleChangeRole = async () => {
-    if (!changingRole || !organizationId) return;
+    if (!changingRole || !selectedOrganization) return;
 
     setIsProcessing(true);
     try {
@@ -286,7 +294,7 @@ export default function MembersPage() {
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!organizationId || !inviteEmail || !inviteRole) return;
+    if (!selectedOrganization || !inviteEmail || !inviteRole) return;
 
     setIsInviting(true);
     setInviteError(null);
@@ -298,7 +306,7 @@ export default function MembersPage() {
         body: JSON.stringify({
           email: inviteEmail,
           role: inviteRole,
-          organizationId,
+          organizationId: selectedOrganization.id,
         }),
       });
 
@@ -309,7 +317,7 @@ export default function MembersPage() {
       }
 
       setInviteSuccess(true);
-      await fetchPendingInvitations(organizationId);
+      await fetchPendingInvitations(selectedOrganization.id);
 
       setTimeout(() => {
         setShowInviteDialog(false);
