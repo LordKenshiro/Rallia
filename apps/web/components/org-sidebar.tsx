@@ -16,17 +16,13 @@ import { Link, usePathname } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@rallia/shared-hooks';
-import { Badge } from '@/components/ui/badge';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import {
   BarChart3,
-  Bell,
   Calendar,
   CalendarCheck,
-  CalendarX,
   ChevronLeft,
   ChevronRight,
-  DollarSign,
   Globe,
   LayoutDashboard,
   LogOut,
@@ -35,7 +31,7 @@ import {
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useMemo, useState, useTransition } from 'react';
+import { useMemo, useTransition } from 'react';
 import { useSidebar } from './sidebar-context';
 
 const locales = [
@@ -43,18 +39,8 @@ const locales = [
   { code: 'fr-CA', name: 'Français', short: 'FR' },
 ] as const;
 
-// Mock notifications - in a real app, these would come from a notification service
-interface Notification {
-  id: string;
-  type: 'newBooking' | 'bookingCancelled' | 'paymentReceived';
-  message: string;
-  timestamp: Date;
-  read: boolean;
-}
-
 export function OrgSidebar() {
   const t = useTranslations('app');
-  const tNotif = useTranslations('app.notifications');
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -63,21 +49,6 @@ export function OrgSidebar() {
   const { signOut } = useAuth({ client: supabase });
   const { isCollapsed, toggleCollapse } = useSidebar();
   const [isPending, startTransition] = useTransition();
-
-  // In a real app, notifications would be fetched from a store or API
-  const [notifications] = useState<Notification[]>([]);
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  const getNotificationIcon = (type: Notification['type']) => {
-    switch (type) {
-      case 'newBooking':
-        return <CalendarCheck className="size-4 text-green-500" />;
-      case 'bookingCancelled':
-        return <CalendarX className="size-4 text-red-500" />;
-      case 'paymentReceived':
-        return <DollarSign className="size-4 text-blue-500" />;
-    }
-  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -170,81 +141,7 @@ export function OrgSidebar() {
       </div>
 
       {/* Notification Bell */}
-      <div className={cn('border-b border-border p-3', isCollapsed && 'flex justify-center')}>
-        <Popover>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size={isCollapsed ? 'icon' : 'default'}
-                  className={cn('relative', isCollapsed ? 'size-9' : 'w-full justify-start gap-2')}
-                >
-                  <Bell className="size-4" />
-                  {!isCollapsed && <span>{t('nav.notifications')}</span>}
-                  {unreadCount > 0 && (
-                    <Badge
-                      variant="destructive"
-                      className={cn(
-                        'absolute text-[10px] px-1.5 py-0 min-w-[18px] h-[18px] flex items-center justify-center',
-                        isCollapsed ? 'top-0 right-0' : 'right-3'
-                      )}
-                    >
-                      {unreadCount > 9 ? '9+' : unreadCount}
-                    </Badge>
-                  )}
-                </Button>
-              </PopoverTrigger>
-            </TooltipTrigger>
-            {isCollapsed && (
-              <TooltipContent side="right">
-                {t('nav.notifications')} {unreadCount > 0 && `(${unreadCount})`}
-              </TooltipContent>
-            )}
-          </Tooltip>
-          <PopoverContent
-            side={isCollapsed ? 'right' : 'bottom'}
-            align="start"
-            className="w-80 p-0"
-            sideOffset={isCollapsed ? 12 : 8}
-          >
-            <div className="p-3 border-b font-medium flex items-center justify-between">
-              <span>{tNotif('title')}</span>
-              {notifications.length > 0 && (
-                <Button variant="ghost" size="sm" className="text-xs h-7">
-                  {tNotif('markAllRead')}
-                </Button>
-              )}
-            </div>
-            <div className="max-h-[300px] overflow-y-auto">
-              {notifications.length === 0 ? (
-                <div className="p-6 text-center text-muted-foreground text-sm">
-                  <Bell className="size-8 mx-auto mb-2 opacity-50" />
-                  {tNotif('empty')}
-                </div>
-              ) : (
-                notifications.map(notif => (
-                  <div
-                    key={notif.id}
-                    className={cn(
-                      'p-3 border-b last:border-b-0 hover:bg-muted/50 transition-colors cursor-pointer',
-                      !notif.read && 'bg-primary/5'
-                    )}
-                  >
-                    <div className="flex gap-3">
-                      <div className="shrink-0 mt-0.5">{getNotificationIcon(notif.type)}</div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">{tNotif(notif.type)}</p>
-                        <p className="text-xs text-muted-foreground truncate">{notif.message}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </PopoverContent>
-        </Popover>
-      </div>
+      <NotificationBell isCollapsed={isCollapsed} />
 
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">

@@ -178,7 +178,8 @@
     "categories": {
       "match": "Notifications de parties",
       "social": "Notifications sociales",
-      "system": "Notifications système"
+      "system": "Notifications système",
+      "organization": "Notifications d'organisation"
     },
     "channels": {
       "email": "Courriel",
@@ -294,10 +295,65 @@
       "members": "Membres",
       "membersDesc": "Accès équipe",
       "pricing": "Tarification",
-      "pricingDesc": "Gestion des tarifs"
+      "pricingDesc": "Gestion des tarifs",
+      "notifications": "Notifications",
+      "notificationsDesc": "Préférences email et SMS"
     },
     "notifications": "Notifications",
     "notificationsDescription": "Choisissez comment vous souhaitez être notifié pour différents événements. Activez ou désactivez chaque option.",
+    "notificationPreferences": {
+      "title": "Préférences de notifications",
+      "description": "Configurez quelles notifications votre organisation reçoit et comment elles sont livrées.",
+      "channels": "Canaux :",
+      "email": "Courriel",
+      "sms": "SMS",
+      "resetToDefaults": "Réinitialiser aux valeurs par défaut",
+      "saving": "Enregistrement...",
+      "saveChanges": "Enregistrer les modifications",
+      "savedSuccessfully": "Enregistré avec succès",
+      "failedToLoad": "Échec du chargement des préférences de notifications",
+      "failedToSave": "Échec de l'enregistrement des préférences de notifications",
+      "failedToReset": "Échec de la réinitialisation des préférences de notifications",
+      "noOrganization": "Aucune organisation sélectionnée",
+      "aboutTitle": "À propos des préférences de notifications",
+      "aboutDescription": "Ces paramètres contrôlent quelles notifications sont envoyées aux administrateurs et propriétaires de l'organisation. Les notifications par courriel sont envoyées à l'adresse courriel principale associée à chaque compte administrateur. Les notifications SMS nécessitent un numéro de téléphone vérifié.",
+      "categories": {
+        "bookings": {
+          "label": "Notifications de réservation",
+          "description": "Alertes lorsque des réservations sont créées, modifiées ou annulées"
+        },
+        "members": {
+          "label": "Notifications de membres",
+          "description": "Mises à jour sur l'activité et les changements des membres"
+        },
+        "payments": {
+          "label": "Notifications de paiement",
+          "description": "Alertes pour les événements et transactions de paiement"
+        },
+        "reports": {
+          "label": "Rapports et résumés",
+          "description": "Courriels de résumé périodiques sur votre organisation"
+        }
+      },
+      "types": {
+        "booking_created": "Nouvelle réservation",
+        "booking_cancelled_by_player": "Réservation annulée par le joueur",
+        "booking_modified": "Réservation modifiée",
+        "new_member_joined": "Nouveau membre rejoint",
+        "member_left": "Membre parti",
+        "member_role_changed": "Rôle du membre modifié",
+        "payment_received": "Paiement reçu",
+        "payment_failed": "Paiement échoué",
+        "refund_processed": "Remboursement traité",
+        "daily_summary": "Résumé quotidien",
+        "weekly_report": "Rapport hebdomadaire",
+        "booking_confirmed": "Réservation confirmée (au membre)",
+        "booking_reminder": "Rappel de réservation (au membre)",
+        "booking_cancelled_by_org": "Réservation annulée (au membre)",
+        "membership_approved": "Adhésion approuvée (au membre)",
+        "org_announcement": "Annonce"
+      }
+    },
     "permissions": "Autorisations",
     "language": "Langue",
     "languageAuto": "Auto",
@@ -3609,6 +3665,9 @@
     "notifications": {
       "title": "Notifications",
       "empty": "Aucune nouvelle notification",
+      "emptyDescription": "Vous n'avez aucune {filter} pour le moment.",
+      "allCaughtUp": "Vous êtes à jour!",
+      "unreadCount": "Vous avez {count} {count, plural, one {notification non lue} other {notifications non lues}}",
       "viewAll": "Voir toutes les notifications",
       "markAllRead": "Tout marquer comme lu",
       "newBooking": "Nouvelle réservation",
@@ -3617,7 +3676,23 @@
       "justNow": "À l'instant",
       "minutesAgo": "Il y a {count} min",
       "hoursAgo": "Il y a {count}h",
-      "daysAgo": "Il y a {count}j"
+      "daysAgo": "Il y a {count}j",
+      "today": "Aujourd'hui",
+      "yesterday": "Hier",
+      "tabs": {
+        "all": "Tout",
+        "bookings": "Réservations",
+        "members": "Membres",
+        "payments": "Paiements",
+        "system": "Système"
+      },
+      "filters": {
+        "all": "notification",
+        "bookings": "notification de réservation",
+        "members": "notification de membre",
+        "payments": "notification de paiement",
+        "system": "notification système"
+      }
     }
   },
   "admin": {

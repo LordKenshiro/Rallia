@@ -3,7 +3,8 @@
  * Uses Resend API to send email notifications
  */
 
-import type { NotificationRecord, DeliveryResult } from '../types.ts';
+import type { NotificationRecord, DeliveryResult, OrganizationInfo } from '../types.ts';
+import { renderOrgEmail } from '../templates/organization.ts';
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'noreply@rallia.com';
@@ -357,4 +358,66 @@ function escapeHtml(text: string): string {
     "'": '&#39;',
   };
   return text.replace(/[&<>"']/g, char => htmlEscapes[char] || char);
+}
+
+/**
+ * Send an organization-branded email notification via Resend
+ */
+export async function sendOrgEmail(
+  notification: NotificationRecord,
+  recipientEmail: string,
+  organization: OrganizationInfo
+): Promise<DeliveryResult> {
+  if (!RESEND_API_KEY) {
+    return {
+      channel: 'email',
+      status: 'failed',
+      errorMessage: 'RESEND_API_KEY not configured',
+    };
+  }
+
+  try {
+    // Use organization email template
+    const { subject, html } = renderOrgEmail(notification, organization);
+
+    // Use organization's email as sender if available, otherwise fall back to default
+    const fromEmail = organization.email || FROM_EMAIL;
+
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: fromEmail,
+        to: recipientEmail,
+        subject,
+        html,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        channel: 'email',
+        status: 'failed',
+        errorMessage: data?.message || data?.error || 'Failed to send email',
+        providerResponse: data,
+      };
+    }
+
+    return {
+      channel: 'email',
+      status: 'success',
+      providerResponse: { id: data?.id, organizationId: organization.id },
+    };
+  } catch (error) {
+    return {
+      channel: 'email',
+      status: 'failed',
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
 }

@@ -317,6 +317,24 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   feedback_request: 'star-outline',
   feedback_reminder: 'notifications-outline',
   score_confirmation: 'checkmark-done-outline',
+  // Organization staff notifications
+  booking_created: 'calendar-outline',
+  booking_cancelled_by_player: 'calendar-clear-outline',
+  booking_modified: 'create-outline',
+  new_member_joined: 'person-add-outline',
+  member_left: 'exit-outline',
+  member_role_changed: 'people-outline',
+  payment_received: 'card-outline',
+  payment_failed: 'alert-circle-outline',
+  refund_processed: 'cash-outline',
+  daily_summary: 'document-text-outline',
+  weekly_report: 'bar-chart-outline',
+  // Organization member notifications
+  booking_confirmed: 'checkmark-circle-outline',
+  booking_reminder: 'alarm-outline',
+  booking_cancelled_by_org: 'calendar-clear-outline',
+  membership_approved: 'checkmark-done-outline',
+  org_announcement: 'megaphone-outline',
 };
 
 /**
@@ -349,6 +367,24 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   feedback_request: '#FFC107', // Amber
   feedback_reminder: '#FF9800', // Orange
   score_confirmation: '#4CAF50', // Green
+  // Organization staff notifications
+  booking_created: '#4DB8A8', // Teal
+  booking_cancelled_by_player: '#F44336', // Red
+  booking_modified: '#2196F3', // Blue
+  new_member_joined: '#4CAF50', // Green
+  member_left: '#FF9800', // Orange
+  member_role_changed: '#2196F3', // Blue
+  payment_received: '#4CAF50', // Green
+  payment_failed: '#F44336', // Red
+  refund_processed: '#FF9800', // Orange
+  daily_summary: '#607D8B', // Blue Grey
+  weekly_report: '#607D8B', // Blue Grey
+  // Organization member notifications
+  booking_confirmed: '#4CAF50', // Green
+  booking_reminder: '#FF9800', // Orange
+  booking_cancelled_by_org: '#F44336', // Red
+  membership_approved: '#4CAF50', // Green
+  org_announcement: '#2196F3', // Blue
 };
 
 /**
@@ -377,12 +413,30 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   feedback_request: 'Feedback Request',
   feedback_reminder: 'Feedback Reminder',
   score_confirmation: 'Score Confirmation',
+  // Organization staff notifications
+  booking_created: 'New Booking',
+  booking_cancelled_by_player: 'Booking Cancelled',
+  booking_modified: 'Booking Modified',
+  new_member_joined: 'New Member',
+  member_left: 'Member Left',
+  member_role_changed: 'Role Changed',
+  payment_received: 'Payment Received',
+  payment_failed: 'Payment Failed',
+  refund_processed: 'Refund Processed',
+  daily_summary: 'Daily Summary',
+  weekly_report: 'Weekly Report',
+  // Organization member notifications
+  booking_confirmed: 'Booking Confirmed',
+  booking_reminder: 'Booking Reminder',
+  booking_cancelled_by_org: 'Booking Cancelled',
+  membership_approved: 'Membership Approved',
+  org_announcement: 'Announcement',
 };
 
 /**
  * Notification type categories for grouping in preferences UI
  */
-export type NotificationCategory = 'match' | 'social' | 'system';
+export type NotificationCategory = 'match' | 'social' | 'system' | 'organization';
 
 export const NOTIFICATION_TYPE_CATEGORIES: Record<
   ExtendedNotificationTypeEnum,
@@ -414,6 +468,23 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   feedback_request: 'match',
   feedback_reminder: 'match',
   score_confirmation: 'match',
+  // Organization category
+  booking_created: 'organization',
+  booking_cancelled_by_player: 'organization',
+  booking_modified: 'organization',
+  new_member_joined: 'organization',
+  member_left: 'organization',
+  member_role_changed: 'organization',
+  payment_received: 'organization',
+  payment_failed: 'organization',
+  refund_processed: 'organization',
+  daily_summary: 'organization',
+  weekly_report: 'organization',
+  booking_confirmed: 'organization',
+  booking_reminder: 'organization',
+  booking_cancelled_by_org: 'organization',
+  membership_approved: 'organization',
+  org_announcement: 'organization',
 };
 
 /**
@@ -423,6 +494,7 @@ export const NOTIFICATION_CATEGORY_LABELS: Record<NotificationCategory, string> 
   match: 'Match Notifications',
   social: 'Social Notifications',
   system: 'System Notifications',
+  organization: 'Organization Notifications',
 };
 
 /**
@@ -488,6 +560,24 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   feedback_request: { email: true, push: true, sms: false },
   feedback_reminder: { email: true, push: true, sms: false },
   score_confirmation: { email: true, push: true, sms: false },
+  // Organization staff notifications - email only by default
+  booking_created: { email: true, push: false, sms: false },
+  booking_cancelled_by_player: { email: true, push: false, sms: false },
+  booking_modified: { email: true, push: false, sms: false },
+  new_member_joined: { email: true, push: false, sms: false },
+  member_left: { email: true, push: false, sms: false },
+  member_role_changed: { email: true, push: false, sms: false },
+  payment_received: { email: true, push: false, sms: false },
+  payment_failed: { email: true, push: false, sms: true }, // SMS for payment failures
+  refund_processed: { email: true, push: false, sms: false },
+  daily_summary: { email: false, push: false, sms: false }, // Opt-in
+  weekly_report: { email: true, push: false, sms: false },
+  // Organization member notifications - email only by default
+  booking_confirmed: { email: true, push: false, sms: false },
+  booking_reminder: { email: true, push: false, sms: true }, // SMS for reminders
+  booking_cancelled_by_org: { email: true, push: false, sms: true }, // SMS for cancellations
+  membership_approved: { email: true, push: false, sms: false },
+  org_announcement: { email: true, push: false, sms: false },
 };
 
 // ============================================

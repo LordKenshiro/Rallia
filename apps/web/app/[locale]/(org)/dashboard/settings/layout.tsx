@@ -3,7 +3,15 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Link, usePathname } from '@/i18n/navigation';
-import { CreditCard, Settings, FileText, Users, DollarSign, ChevronRight } from 'lucide-react';
+import {
+  Bell,
+  CreditCard,
+  Settings,
+  FileText,
+  Users,
+  DollarSign,
+  ChevronRight,
+} from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 interface SettingsLayoutProps {
@@ -48,6 +56,13 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
       label: t('nav.pricing'),
       description: t('nav.pricingDesc'),
       icon: DollarSign,
+      exactMatch: false,
+    },
+    {
+      href: '/dashboard/settings/notifications',
+      label: t('nav.notifications'),
+      description: t('nav.notificationsDesc'),
+      icon: Bell,
       exactMatch: false,
     },
   ];

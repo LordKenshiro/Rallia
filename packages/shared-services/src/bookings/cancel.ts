@@ -11,6 +11,7 @@ import type {
   CancellationPolicy,
   RefundStatus,
 } from './types';
+import { organizationNotificationFactory } from '../notifications/organizationNotificationFactory';
 
 // Lazy import Stripe functions to avoid bundling Stripe SDK in React Native
 async function getStripeFunctions() {
@@ -212,6 +213,69 @@ export async function cancelBooking(
 
   if (updateError) {
     throw new Error(`Failed to update booking: ${updateError.message}`);
+  }
+
+  // 8. Send notifications
+  try {
+    // Get court details for notification
+    const { data: courtData } = await supabase
+      .from('court')
+      .select('name, facility:facility_id(name)')
+      .eq('id', booking.court_id)
+      .single();
+
+    let playerName = 'A player';
+    if (booking.player_id) {
+      const { data: playerData } = await supabase
+        .from('profile')
+        .select('full_name')
+        .eq('id', booking.player_id)
+        .single();
+      if (playerData?.full_name) {
+        playerName = playerData.full_name;
+      }
+    }
+
+    const courtName = courtData?.name || 'Court';
+    const facilityName = (courtData?.facility as { name?: string } | null)?.name || '';
+
+    // Determine if cancelled by player or organization
+    const cancelledByPlayer = params.cancelledBy === booking.player_id;
+
+    if (cancelledByPlayer) {
+      // Notify organization staff that a player cancelled
+      await organizationNotificationFactory.bookingCancelledByPlayer(
+        booking.organization_id,
+        booking.id,
+        {
+          bookingId: booking.id,
+          courtName,
+          facilityName,
+          bookingDate: booking.booking_date,
+          startTime: booking.start_time,
+          endTime: booking.end_time,
+          playerName,
+        }
+      );
+    } else if (booking.player_id) {
+      // Notify player that organization cancelled their booking
+      await organizationNotificationFactory.bookingCancelledByOrg(
+        booking.organization_id,
+        booking.player_id,
+        booking.id,
+        {
+          bookingId: booking.id,
+          courtName,
+          facilityName,
+          bookingDate: booking.booking_date,
+          startTime: booking.start_time,
+          endTime: booking.end_time,
+        }
+      );
+    }
+  } catch (notifError) {
+    // Don't fail the cancellation if notification fails
+    console.error('Failed to send cancellation notifications:', notifError);
   }
 
   return {

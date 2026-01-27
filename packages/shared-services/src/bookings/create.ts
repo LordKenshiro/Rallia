@@ -6,6 +6,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CreateBookingParams, CreateBookingResult, BookingValidationResult } from './types';
+import { organizationNotificationFactory } from '../notifications/organizationNotificationFactory';
 
 // Lazy import Stripe functions to avoid bundling Stripe SDK in React Native
 async function getStripeFunctions() {
@@ -286,6 +287,66 @@ export async function createBooking(
       throw new Error('This time slot has already been booked');
     }
     throw new Error(`Failed to create booking: ${bookingError.message}`);
+  }
+
+  // 7. Send notifications
+  try {
+    // Get court and player details for notification
+    const { data: courtData } = await supabase
+      .from('court')
+      .select('name, facility:facility_id(name)')
+      .eq('id', params.courtId)
+      .single();
+
+    let playerName = 'A player';
+    if (params.playerId) {
+      const { data: playerData } = await supabase
+        .from('profile')
+        .select('full_name')
+        .eq('id', params.playerId)
+        .single();
+      if (playerData?.full_name) {
+        playerName = playerData.full_name;
+      }
+    }
+
+    const courtName = courtData?.name || 'Court';
+    const facilityName = (courtData?.facility as { name?: string } | null)?.name || '';
+
+    // Notify organization staff about the new booking
+    await organizationNotificationFactory.bookingCreated(params.organizationId, booking.id, {
+      bookingId: booking.id,
+      courtName,
+      facilityName,
+      bookingDate: params.bookingDate,
+      startTime: params.startTime,
+      endTime: params.endTime,
+      playerName,
+      priceCents: params.priceCents,
+      currency: params.currency || 'CAD',
+    });
+
+    // Send booking confirmation to the player if they have an account
+    if (params.playerId) {
+      await organizationNotificationFactory.bookingConfirmed(
+        params.organizationId,
+        params.playerId,
+        booking.id,
+        {
+          bookingId: booking.id,
+          courtName,
+          facilityName,
+          bookingDate: params.bookingDate,
+          startTime: params.startTime,
+          endTime: params.endTime,
+          priceCents: params.priceCents,
+          currency: params.currency || 'CAD',
+        }
+      );
+    }
+  } catch (notifError) {
+    // Don't fail the booking if notification fails
+    console.error('Failed to send booking notifications:', notifError);
   }
 
   return {

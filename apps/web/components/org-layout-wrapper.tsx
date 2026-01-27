@@ -3,6 +3,7 @@
 import { OrgSidebar } from '@/components/org-sidebar';
 import { SidebarProvider, useSidebar } from '@/components/sidebar-context';
 import { OrganizationProvider } from '@/components/organization-context';
+import { QueryProvider } from '@/components/query-provider';
 import { usePathname } from '@/i18n/navigation';
 import { TooltipProvider } from './ui/tooltip';
 
@@ -47,12 +48,14 @@ export function OrgLayoutWrapper({
   const showSidebar = hasOrg && !isOnboardingPage;
 
   return (
-    <SidebarProvider>
-      <OrganizationProvider>
-        <TooltipProvider delayDuration={100}>
-          <LayoutContent showSidebar={showSidebar}>{children}</LayoutContent>
-        </TooltipProvider>
-      </OrganizationProvider>
-    </SidebarProvider>
+    <QueryProvider>
+      <SidebarProvider>
+        <OrganizationProvider>
+          <TooltipProvider delayDuration={100}>
+            <LayoutContent showSidebar={showSidebar}>{children}</LayoutContent>
+          </TooltipProvider>
+        </OrganizationProvider>
+      </SidebarProvider>
+    </QueryProvider>
   );
 }

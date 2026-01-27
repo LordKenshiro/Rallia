@@ -11,7 +11,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { sendEmail } from './handlers/email.ts';
+import { sendEmail, sendOrgEmail } from './handlers/email.ts';
 import { sendPush } from './handlers/push.ts';
 import { sendSms, isValidPhoneNumber } from './handlers/sms.ts';
 import type {
@@ -22,13 +22,59 @@ import type {
   DeliveryStatus,
   DeliveryAttemptInsert,
   DeliveryResult,
+  OrganizationInfo,
 } from './types.ts';
-import { DEFAULT_PREFERENCES } from './types.ts';
+import { DEFAULT_PREFERENCES, isOrgNotification } from './types.ts';
 
 // Initialize Supabase client with service role for full access
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+/**
+ * Get organization info from payload
+ */
+async function getOrganizationInfo(organizationId: string): Promise<OrganizationInfo | null> {
+  const { data, error } = await supabase
+    .from('organization')
+    .select('id, name, email, website')
+    .eq('id', organizationId)
+    .single();
+
+  if (error) {
+    console.error('Failed to fetch organization:', error);
+    return null;
+  }
+
+  return data as OrganizationInfo;
+}
+
+/**
+ * Get organization's notification preferences for a type/channel
+ */
+async function getOrgPreferences(
+  organizationId: string,
+  notificationType: string
+): Promise<Map<DeliveryChannel, boolean>> {
+  const { data, error } = await supabase
+    .from('organization_notification_preference')
+    .select('channel, enabled')
+    .eq('organization_id', organizationId)
+    .eq('notification_type', notificationType);
+
+  if (error) {
+    console.error('Failed to fetch org preferences:', error);
+  }
+
+  const prefMap = new Map<DeliveryChannel, boolean>();
+  if (data) {
+    for (const pref of data as NotificationPreference[]) {
+      prefMap.set(pref.channel, pref.enabled);
+    }
+  }
+
+  return prefMap;
+}
 
 /**
  * Get user's explicit notification preferences
@@ -178,10 +224,15 @@ function hasValidContact(
 async function sendViaChannel(
   channel: DeliveryChannel,
   notification: NotificationRecord,
-  contact: UserContactInfo
+  contact: UserContactInfo,
+  organization?: OrganizationInfo | null
 ): Promise<DeliveryResult> {
   switch (channel) {
     case 'email':
+      // Use org-branded email template if this is an org notification
+      if (organization && isOrgNotification(notification.type)) {
+        return sendOrgEmail(notification, contact.email!, organization);
+      }
       return sendEmail(notification, contact.email!);
 
     case 'push':
@@ -203,16 +254,35 @@ async function sendViaChannel(
  * Main handler for processing a notification
  */
 async function handleNotification(notification: NotificationRecord): Promise<void> {
-  const { id: notificationId, user_id: userId, type: notificationType } = notification;
+  const { id: notificationId, user_id: userId, type: notificationType, payload } = notification;
   const channels: DeliveryChannel[] = ['email', 'push', 'sms'];
 
   console.log(
     `Processing notification ${notificationId} of type ${notificationType} for user ${userId}`
   );
 
-  // 1. Get user's preferences
-  const explicitPrefs = await getUserPreferences(userId, notificationType);
-  const enabledChannels = getEnabledChannels(explicitPrefs, notificationType);
+  // Check if this is an organization notification
+  const organizationId = payload?.organizationId as string | undefined;
+  const isOrgNotif = isOrgNotification(notificationType);
+  let organization: OrganizationInfo | null = null;
+
+  // 1. Get preferences - use org preferences for org notifications, else user preferences
+  let enabledChannels: Set<DeliveryChannel>;
+
+  if (isOrgNotif && organizationId) {
+    console.log(`Organization notification detected, org: ${organizationId}`);
+
+    // Fetch organization info for branded emails
+    organization = await getOrganizationInfo(organizationId);
+
+    // Get org-level preferences
+    const orgPrefs = await getOrgPreferences(organizationId, notificationType);
+    enabledChannels = getEnabledChannels(orgPrefs, notificationType);
+  } else {
+    // Standard user preferences
+    const explicitPrefs = await getUserPreferences(userId, notificationType);
+    enabledChannels = getEnabledChannels(explicitPrefs, notificationType);
+  }
 
   console.log(`Enabled channels:`, Array.from(enabledChannels));
 
@@ -254,7 +324,7 @@ async function handleNotification(notification: NotificationRecord): Promise<voi
       } else {
         // Actually send the notification
         console.log(`Sending via ${channel}...`);
-        const result = await sendViaChannel(channel, notification, contact);
+        const result = await sendViaChannel(channel, notification, contact, organization);
         status = result.status;
         errorMessage = result.errorMessage ?? null;
         providerResponse = result.providerResponse ?? null;

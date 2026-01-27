@@ -117,7 +117,46 @@ export type ExtendedNotificationTypeEnum =
   | 'rating_verified'
   | 'feedback_request'
   | 'feedback_reminder'
-  | 'score_confirmation';
+  | 'score_confirmation'
+  // Organization staff notifications
+  | 'booking_created'
+  | 'booking_cancelled_by_player'
+  | 'booking_modified'
+  | 'new_member_joined'
+  | 'member_left'
+  | 'member_role_changed'
+  | 'payment_received'
+  | 'payment_failed'
+  | 'refund_processed'
+  | 'daily_summary'
+  | 'weekly_report'
+  // Organization member notifications
+  | 'booking_confirmed'
+  | 'booking_reminder'
+  | 'booking_cancelled_by_org'
+  | 'membership_approved'
+  | 'org_announcement';
+
+// Organization notification types (subset for org-specific features)
+export type OrgNotificationTypeEnum =
+  // Staff notifications
+  | 'booking_created'
+  | 'booking_cancelled_by_player'
+  | 'booking_modified'
+  | 'new_member_joined'
+  | 'member_left'
+  | 'member_role_changed'
+  | 'payment_received'
+  | 'payment_failed'
+  | 'refund_processed'
+  | 'daily_summary'
+  | 'weekly_report'
+  // Member notifications
+  | 'booking_confirmed'
+  | 'booking_reminder'
+  | 'booking_cancelled_by_org'
+  | 'membership_approved'
+  | 'org_announcement';
 
 // Extended delivery status (added by migration)
 export type ExtendedDeliveryStatusEnum =
@@ -236,6 +275,69 @@ export interface NotificationPreferenceUpdate {
   user_id?: string;
   notification_type?: ExtendedNotificationTypeEnum;
   channel?: DeliveryChannelEnum;
+  enabled?: boolean;
+  updated_at?: string;
+}
+
+// Organization Notification Preference (manual definition until supabase types regenerated)
+export interface OrganizationNotificationPreference {
+  id: string;
+  organization_id: string;
+  notification_type: ExtendedNotificationTypeEnum;
+  channel: DeliveryChannelEnum;
+  enabled: boolean;
+  recipient_roles: RoleEnum[] | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrganizationNotificationPreferenceInsert {
+  id?: string;
+  organization_id: string;
+  notification_type: ExtendedNotificationTypeEnum;
+  channel: DeliveryChannelEnum;
+  enabled?: boolean;
+  recipient_roles?: RoleEnum[] | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface OrganizationNotificationPreferenceUpdate {
+  id?: string;
+  organization_id?: string;
+  notification_type?: ExtendedNotificationTypeEnum;
+  channel?: DeliveryChannelEnum;
+  enabled?: boolean;
+  recipient_roles?: RoleEnum[] | null;
+  updated_at?: string;
+}
+
+// Organization Notification Recipient (manual definition until supabase types regenerated)
+export interface OrganizationNotificationRecipient {
+  id: string;
+  organization_id: string;
+  notification_type: ExtendedNotificationTypeEnum;
+  user_id: string;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrganizationNotificationRecipientInsert {
+  id?: string;
+  organization_id: string;
+  notification_type: ExtendedNotificationTypeEnum;
+  user_id: string;
+  enabled?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface OrganizationNotificationRecipientUpdate {
+  id?: string;
+  organization_id?: string;
+  notification_type?: ExtendedNotificationTypeEnum;
+  user_id?: string;
   enabled?: boolean;
   updated_at?: string;
 }

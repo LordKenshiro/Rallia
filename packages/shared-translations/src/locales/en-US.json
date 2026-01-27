@@ -178,7 +178,8 @@
     "categories": {
       "match": "Game Notifications",
       "social": "Social Notifications",
-      "system": "System Notifications"
+      "system": "System Notifications",
+      "organization": "Organization Notifications"
     },
     "channels": {
       "email": "Email",
@@ -294,10 +295,65 @@
       "members": "Members",
       "membersDesc": "Team access",
       "pricing": "Pricing",
-      "pricingDesc": "Rate management"
+      "pricingDesc": "Rate management",
+      "notifications": "Notifications",
+      "notificationsDesc": "Email & SMS preferences"
     },
     "notifications": "Notifications",
     "notificationsDescription": "Choose how you want to be notified about different events. Turn each option on or off.",
+    "notificationPreferences": {
+      "title": "Notification Preferences",
+      "description": "Configure which notifications your organization receives and how they are delivered.",
+      "channels": "Channels:",
+      "email": "Email",
+      "sms": "SMS",
+      "resetToDefaults": "Reset to Defaults",
+      "saving": "Saving...",
+      "saveChanges": "Save Changes",
+      "savedSuccessfully": "Saved successfully",
+      "failedToLoad": "Failed to load notification preferences",
+      "failedToSave": "Failed to save notification preferences",
+      "failedToReset": "Failed to reset notification preferences",
+      "noOrganization": "No organization selected",
+      "aboutTitle": "About Notification Preferences",
+      "aboutDescription": "These settings control which notifications are sent to organization admins and owners. Email notifications are sent to the primary email associated with each admin account. SMS notifications require a verified phone number.",
+      "categories": {
+        "bookings": {
+          "label": "Booking Notifications",
+          "description": "Alerts when bookings are created, modified, or cancelled"
+        },
+        "members": {
+          "label": "Member Notifications",
+          "description": "Updates about member activity and changes"
+        },
+        "payments": {
+          "label": "Payment Notifications",
+          "description": "Alerts for payment events and transactions"
+        },
+        "reports": {
+          "label": "Reports & Summaries",
+          "description": "Periodic summary emails about your organization"
+        }
+      },
+      "types": {
+        "booking_created": "New Booking",
+        "booking_cancelled_by_player": "Booking Cancelled by Player",
+        "booking_modified": "Booking Modified",
+        "new_member_joined": "New Member Joined",
+        "member_left": "Member Left",
+        "member_role_changed": "Member Role Changed",
+        "payment_received": "Payment Received",
+        "payment_failed": "Payment Failed",
+        "refund_processed": "Refund Processed",
+        "daily_summary": "Daily Summary",
+        "weekly_report": "Weekly Report",
+        "booking_confirmed": "Booking Confirmed (to member)",
+        "booking_reminder": "Booking Reminder (to member)",
+        "booking_cancelled_by_org": "Booking Cancelled (to member)",
+        "membership_approved": "Membership Approved (to member)",
+        "org_announcement": "Announcement"
+      }
+    },
     "permissions": "Permissions",
     "language": "Language",
     "languageAuto": "Auto",
@@ -3607,6 +3663,9 @@
     "notifications": {
       "title": "Notifications",
       "empty": "No new notifications",
+      "emptyDescription": "You have no {filter} at the moment.",
+      "allCaughtUp": "All caught up!",
+      "unreadCount": "You have {count} unread {count, plural, one {notification} other {notifications}}",
       "viewAll": "View all notifications",
       "markAllRead": "Mark all as read",
       "newBooking": "New booking",
@@ -3615,7 +3674,23 @@
       "justNow": "Just now",
       "minutesAgo": "{count} min ago",
       "hoursAgo": "{count}h ago",
-      "daysAgo": "{count}d ago"
+      "daysAgo": "{count}d ago",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "tabs": {
+        "all": "All",
+        "bookings": "Bookings",
+        "members": "Members",
+        "payments": "Payments",
+        "system": "System"
+      },
+      "filters": {
+        "all": "notifications",
+        "bookings": "booking notifications",
+        "members": "member notifications",
+        "payments": "payment notifications",
+        "system": "system notifications"
+      }
     }
   },
   "admin": {

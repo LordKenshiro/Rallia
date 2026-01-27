@@ -46,6 +46,7 @@ function groupByCategory(): Record<NotificationCategory, ExtendedNotificationTyp
     match: [],
     social: [],
     system: [],
+    organization: [], // Organization notifications are managed separately in the web dashboard
   };
 
   for (const [type, category] of Object.entries(NOTIFICATION_TYPE_CATEGORIES)) {
@@ -282,11 +283,12 @@ const NotificationPreferencesScreen: React.FC = () => {
   const categoryGroups = useMemo(() => groupByCategory(), []);
 
   // Translated labels
-  const categoryLabels = useMemo(
+  const categoryLabels: Record<NotificationCategory, string> = useMemo(
     () => ({
       match: t('notifications.categories.match'),
       social: t('notifications.categories.social'),
       system: t('notifications.categories.system'),
+      organization: t('notifications.categories.organization'),
     }),
     [t]
   );
