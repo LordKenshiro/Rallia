@@ -288,8 +288,8 @@ const FacilityItem: React.FC<FacilityItemProps> = ({
   isDark,
   isPreferred = false,
 }) => {
-  // Fetch availability using the provider system
-  const { slotsByDate, isLoading, hasProvider } = useCourtAvailability({
+  // Fetch availability using the unified system (local-first, then external provider)
+  const { slotsByDate, isLoading } = useCourtAvailability({
     facilityId: facility.id,
     dataProviderId: facility.data_provider_id,
     dataProviderType: facility.data_provider_type,
@@ -297,8 +297,13 @@ const FacilityItem: React.FC<FacilityItemProps> = ({
     bookingUrlTemplate: facility.booking_url_template,
   });
 
+  // Determine if slot is actionable (has booking URL or is a local slot)
+  const isSlotActionable = (slot: FormattedSlot): boolean => {
+    return !!slot.bookingUrl || !!slot.isLocalSlot;
+  };
+
   const handleSlotPress = (slot: FormattedSlot) => {
-    if (onSlotPress) {
+    if (onSlotPress && isSlotActionable(slot)) {
       lightHaptic();
       onSlotPress(facility, slot);
     }
@@ -349,10 +354,10 @@ const FacilityItem: React.FC<FacilityItemProps> = ({
         </View>
 
         {/* Skeleton slots while loading */}
-        {hasProvider && isLoading && <SkeletonSlots colors={colors} />}
+        {isLoading && <SkeletonSlots colors={colors} />}
 
         {/* Date-sectioned slots with horizontal scroll */}
-        {hasProvider && slotsByDate.length > 0 && !isLoading && (
+        {slotsByDate.length > 0 && !isLoading && (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -370,64 +375,71 @@ const FacilityItem: React.FC<FacilityItemProps> = ({
                   {dateGroup.dateLabel}
                 </Text>
                 <View style={styles.dateSlotsRow}>
-                  {dateGroup.slots.map((slot, index) => (
-                    <TouchableOpacity
-                      key={`${slot.facilityScheduleId}-${index}`}
-                      style={[
-                        styles.slotChip,
-                        {
-                          backgroundColor: slot.bookingUrl
-                            ? `${colors.buttonActive}15`
-                            : colors.buttonInactive,
-                          borderColor: slot.bookingUrl ? colors.buttonActive : colors.border,
-                        },
-                      ]}
-                      onPress={() => slot.bookingUrl && handleSlotPress(slot)}
-                      disabled={!slot.bookingUrl}
-                      activeOpacity={0.7}
-                    >
-                      <Text
-                        size="xs"
-                        weight="medium"
-                        color={slot.bookingUrl ? colors.buttonActive : colors.textMuted}
+                  {dateGroup.slots.map((slot, index) => {
+                    // Slot is tappable if it has a booking URL (external) or is a local slot
+                    const isTappable = !!slot.bookingUrl || !!slot.isLocalSlot;
+                    return (
+                      <TouchableOpacity
+                        key={`${slot.facilityScheduleId}-${index}`}
+                        style={[
+                          styles.slotChip,
+                          {
+                            backgroundColor: isTappable
+                              ? `${colors.buttonActive}15`
+                              : colors.buttonInactive,
+                            borderColor: isTappable ? colors.buttonActive : colors.border,
+                          },
+                        ]}
+                        onPress={() => isTappable && handleSlotPress(slot)}
+                        disabled={!isTappable}
+                        activeOpacity={0.7}
                       >
-                        {slot.time}
-                      </Text>
-                      {slot.courtCount > 0 && (
-                        <View
-                          style={[
-                            styles.courtCountBadge,
-                            {
-                              backgroundColor: slot.bookingUrl
-                                ? colors.buttonActive
-                                : isDark
-                                  ? colors.border
-                                  : colors.textMuted,
-                            },
-                          ]}
+                        <Text
+                          size="xs"
+                          weight="medium"
+                          color={isTappable ? colors.buttonActive : colors.textMuted}
                         >
-                          <Text
-                            size="xs"
-                            weight="bold"
-                            color={
-                              slot.bookingUrl ? colors.buttonTextActive : colors.buttonInactive
-                            }
-                            style={styles.courtCountText}
-                          >
-                            {slot.courtCount}
-                          </Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  ))}
+                          {slot.time}
+                        </Text>
+                        {/* Show court count badge for external slots, building icon for local */}
+                        {slot.isLocalSlot ? (
+                          <Ionicons name="business" size={10} color={colors.buttonActive} />
+                        ) : (
+                          slot.courtCount > 0 && (
+                            <View
+                              style={[
+                                styles.courtCountBadge,
+                                {
+                                  backgroundColor: isTappable
+                                    ? colors.buttonActive
+                                    : isDark
+                                      ? colors.border
+                                      : colors.textMuted,
+                                },
+                              ]}
+                            >
+                              <Text
+                                size="xs"
+                                weight="bold"
+                                color={isTappable ? colors.buttonTextActive : colors.buttonInactive}
+                                style={styles.courtCountText}
+                              >
+                                {slot.courtCount}
+                              </Text>
+                            </View>
+                          )
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </View>
             ))}
           </ScrollView>
         )}
 
-        {/* Empty state when no slots available */}
-        {hasProvider && slotsByDate.length === 0 && !isLoading && (
+        {/* Empty state when no slots available - only show if we fetched but got no results */}
+        {slotsByDate.length === 0 && !isLoading && (
           <View style={styles.emptySlots}>
             <Ionicons name="calendar-clear-outline" size={14} color={colors.textMuted} />
             <Text size="xs" color={colors.textMuted}>
@@ -727,9 +739,71 @@ export const WhereStep: React.FC<WhereStepProps> = ({
     return () => subscription.remove();
   }, [pendingBookingSlot]);
 
-  // Handle slot press - show court selection or open external booking URL
+  // Handle local slot confirmation - select slot directly without external URL
+  const handleLocalSlotConfirm = useCallback(
+    (facility: FacilitySearchResult, slot: FormattedSlot, selectedCourt?: CourtOption) => {
+      // Update form with facility
+      setValue('facilityId', facility.id);
+      setValue('courtStatus', 'to_book'); // Local slots are marked as "to book" (in-app booking coming later)
+      setSelectedFacility(facility);
+
+      // Link the court if available
+      const courtId = selectedCourt?.courtId || slot.courtId;
+      if (courtId) {
+        setValue('courtId', courtId);
+        const courtNum =
+          selectedCourt?.courtNumber ?? parseCourtNumber(selectedCourt?.courtName || '');
+        setBookedCourtNumber(courtNum);
+      }
+
+      // Extract slot data for auto-filling date/time/duration
+      const matchDate = formatDateLocal(slot.datetime);
+      const startTime = formatTime24(slot.datetime);
+      const endTime = formatTime24(slot.endDateTime);
+      const durationMins = calculateDurationMinutes(slot.datetime, slot.endDateTime);
+      const facilityTimezone = facility.timezone || deviceTimezone;
+
+      // Call parent callback with booking data
+      onSlotBooked?.({
+        matchDate,
+        startTime,
+        endTime,
+        duration: mapDurationToFormValue(durationMins),
+        customDurationMinutes: durationMins,
+        timezone: facilityTimezone,
+      });
+
+      // Also set location name/address for display
+      setValue('locationName', facility.name, { shouldDirty: true });
+      const fullAddress = [facility.address, facility.city].filter(Boolean).join(', ');
+      setValue('locationAddress', fullAddress || undefined, { shouldDirty: true });
+
+      successHaptic();
+    },
+    [setValue, deviceTimezone, onSlotBooked]
+  );
+
+  // Handle slot press - different behavior for local vs external slots
   const handleSlotPress = useCallback(
     async (facility: FacilitySearchResult, slot: FormattedSlot) => {
+      // === LOCAL SLOT: Select directly (no external booking) ===
+      if (slot.isLocalSlot) {
+        lightHaptic();
+
+        // If multiple courts available at this time, show court selection
+        if (slot.courtOptions.length > 1) {
+          setCourtSelectionData({ facility, slot });
+          setShowCourtSelection(true);
+          return;
+        }
+
+        // Single court - auto-select and update form
+        const selectedCourt = slot.courtOptions[0];
+        handleLocalSlotConfirm(facility, slot, selectedCourt);
+        return;
+      }
+
+      // === EXTERNAL SLOT: Open external booking URL ===
       if (!slot.bookingUrl) return;
 
       // If multiple courts available, show selection modal
@@ -754,7 +828,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
         setPendingBookingSlot(null);
       }
     },
-    []
+    [handleLocalSlotConfirm]
   );
 
   // Handle court selection from modal
@@ -766,6 +840,19 @@ export const WhereStep: React.FC<WhereStepProps> = ({
 
       // Close the court selection modal
       setShowCourtSelection(false);
+
+      // === LOCAL SLOT: Confirm directly without external URL ===
+      if (slot.isLocalSlot || court.isLocalSlot) {
+        handleLocalSlotConfirm(facility, slot, court);
+        setCourtSelectionData(null);
+        return;
+      }
+
+      // === EXTERNAL SLOT: Open booking URL ===
+      if (!court.bookingUrl) {
+        setCourtSelectionData(null);
+        return;
+      }
 
       // Store the pending booking info with selected court
       setPendingBookingSlot({ facility, slot, selectedCourt: court });
@@ -780,7 +867,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
 
       setCourtSelectionData(null);
     },
-    [courtSelectionData]
+    [courtSelectionData, handleLocalSlotConfirm]
   );
 
   // Handle court selection cancel

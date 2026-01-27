@@ -7,12 +7,20 @@
 
 import { supabase } from '../supabase';
 import { getProvider, isProviderRegistered } from './providers';
+import { hasLocalTemplates, fetchLocalAvailability } from './localAvailabilityFetcher';
 import type {
   AvailabilitySlot,
   ProviderConfig,
   FetchAvailabilityParams,
   AvailabilityResult,
 } from './types';
+
+// Re-export for external access
+export {
+  hasLocalTemplates,
+  fetchLocalAvailability,
+  clearLocalTemplatesCache,
+} from './localAvailabilityFetcher';
 
 // =============================================================================
 // PROVIDER CONFIG CACHE
@@ -108,7 +116,7 @@ export function clearProviderCache(): void {
 // =============================================================================
 
 /**
- * Fetch availability slots for a facility.
+ * Fetch availability slots for a facility from an external provider.
  *
  * @param providerId - UUID of the data_provider
  * @param params - Fetch parameters
@@ -216,4 +224,71 @@ export function getNextSlots(slots: AvailabilitySlot[], count: number = 3): Avai
   return filterFutureSlots(slots)
     .sort((a, b) => a.datetime.getTime() - b.datetime.getTime())
     .slice(0, count);
+}
+
+// =============================================================================
+// UNIFIED AVAILABILITY FETCHING (LOCAL-FIRST)
+// =============================================================================
+
+/**
+ * Parameters for unified availability fetching.
+ */
+export interface UnifiedAvailabilityParams {
+  /** Facility UUID */
+  facilityId: string;
+  /** Dates to fetch (YYYY-MM-DD format) */
+  dates: string[];
+  /** External provider ID (from data_provider table) */
+  dataProviderId?: string | null;
+  /** External facility ID (e.g., Loisir Montreal siteId) */
+  externalProviderId?: string | null;
+}
+
+/**
+ * Fetch availability with local-first priority.
+ *
+ * Priority:
+ * 1. Local templates (court_slot, court_one_time_availability) → use Supabase RPC
+ * 2. External provider (data_provider configured) → use provider system
+ * 3. Neither → return empty result
+ *
+ * This unified entry point abstracts away the source of availability,
+ * allowing consumers to fetch availability without knowing whether it
+ * comes from local templates or external providers.
+ *
+ * @param params - Unified fetch parameters
+ * @returns Availability result with slots
+ */
+export async function fetchUnifiedAvailability(
+  params: UnifiedAvailabilityParams
+): Promise<AvailabilityResult> {
+  const { facilityId, dates, dataProviderId, externalProviderId } = params;
+
+  try {
+    // 1. Check for local templates (cached for 5 minutes)
+    const hasLocal = await hasLocalTemplates(facilityId);
+
+    // 2. Local templates take priority
+    if (hasLocal) {
+      return fetchLocalAvailability(facilityId, dates);
+    }
+
+    // 3. Fall back to external provider
+    if (dataProviderId && externalProviderId) {
+      return fetchAvailability(dataProviderId, {
+        dates,
+        siteId: parseInt(externalProviderId, 10),
+      });
+    }
+
+    // 4. No availability source configured
+    return { slots: [], success: true };
+  } catch (error) {
+    console.error('[AvailabilityService] Error in unified fetch:', error);
+    return {
+      slots: [],
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
 }
