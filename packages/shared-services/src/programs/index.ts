@@ -77,14 +77,9 @@ export {
   getPlayerWaitlistPosition,
 } from './waitlistService';
 
-// Cancellation Service
-export {
-  calculateProgramRefund,
-  processInstallmentRefund,
-  cancelRegistration,
-  previewCancellationRefund,
-  cancelAllProgramRegistrations,
-} from './cancellationService';
+// Cancellation Service - client-safe exports (calculation, preview)
+// For server-side functions (cancelRegistration, processInstallmentRefund), use web app's lib/programs
+export { calculateProgramRefund, previewCancellationRefund } from './cancellationService';
 
 // Notification Service
 export {
