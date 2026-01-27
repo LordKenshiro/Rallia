@@ -42,6 +42,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 import UserProfile from '../screens/UserProfile';
 import SportProfile from '../screens/SportProfile';
 import RatingProofs from '../screens/RatingProofs';
+import IncomingReferenceRequests from '../screens/IncomingReferenceRequests';
 import Notifications from '../screens/Notifications';
 import NotificationPreferencesScreen from '../screens/NotificationPreferencesScreen';
 import PermissionsScreen from '../screens/PermissionsScreen';
@@ -724,6 +725,16 @@ export default function AppNavigator() {
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('screens.ratingProofs'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="IncomingReferenceRequests"
+        component={IncomingReferenceRequests}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('referenceRequest.screenTitle'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />

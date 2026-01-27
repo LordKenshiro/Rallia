@@ -780,12 +780,17 @@ const SportProfile = () => {
 
       Logger.logUserAction('send_reference_requests', { count: selectedPlayerIds.length, sportId });
 
+      // Calculate expiration date (14 days from now)
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 14);
+
       // Insert reference requests into the database
       const referenceRequests = selectedPlayerIds.map(refereePlayerId => ({
-        requester_player_rating_score_id: playerRatingScoreId,
+        player_rating_score_id: playerRatingScoreId,
         requester_id: userId,
         referee_id: refereePlayerId,
         status: 'pending',
+        expires_at: expiresAt.toISOString(),
       }));
 
       const { error: insertError } = await supabase

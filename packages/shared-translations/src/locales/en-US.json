@@ -40,6 +40,7 @@
     },
     "refresh": "Refresh",
     "submit": "Submit",
+    "submitting": "Submitting...",
     "send": "Send",
     "select": "Select",
     "required": "Required",
@@ -251,6 +252,40 @@
         "title": "System Notification",
         "body": "System notification"
       }
+    }
+  },
+  "referenceRequest": {
+    "screenTitle": "Reference Requests",
+    "incomingTitle": "Reference Requests",
+    "pendingRequests": "Pending Requests",
+    "helpCertifyRatings": "Help certify other players' ratings",
+    "noRequests": "No Pending Requests",
+    "noRequestsDescription": "When other players ask you to verify their rating, their requests will appear here.",
+    "headerInfo": "Other players have asked you to verify their rating level. Tap on a request to review and respond.",
+    "claimedRating": "Claimed Rating",
+    "expiresVerySoon": "Expires today",
+    "expiresSoon": "Expires in {days} days",
+    "expiresIn": "Expires in {days} days",
+    "tapToRespond": "Tap to respond",
+    "respondTitle": "Verify Rating",
+    "respondSubtitle": "Help this player get their rating certified",
+    "claimsToBeRated": "Claims to be rated at",
+    "question": "Based on your experience playing with {name}, is this rating accurate?",
+    "yesApprove": "Yes, Approve",
+    "approveDescription": "This rating seems accurate",
+    "noDecline": "No, Decline",
+    "declineDescription": "This rating seems inaccurate",
+    "addMessage": "Add a message",
+    "messagePlaceholder": "Add any feedback or context for the player...",
+    "submitResponse": "Submit Response",
+    "selectResponse": "Please select approve or decline",
+    "responseSubmittedApprove": "Reference approved successfully!",
+    "responseSubmittedDecline": "Reference declined",
+    "failedToSubmit": "Failed to submit response. Please try again.",
+    "privacyNote": "Your response will be visible to the requesting player. Declined requests won't count towards their certification.",
+    "badge": {
+      "pending": "Pending",
+      "count": "{count} pending"
     }
   },
   "settings": {

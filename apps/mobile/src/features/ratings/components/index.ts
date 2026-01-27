@@ -13,3 +13,6 @@ export { default as ProofGallerySection } from './ProofGallerySection';
 export { CertificationBadge, type BadgeStatus, type CertificationBadgeProps } from './CertificationBadge';
 export { CertificationSection, type CertificationSectionProps } from './CertificationSection';
 
+// Reference Request Components
+export { RespondToReferenceOverlay } from './RespondToReferenceOverlay';
+
