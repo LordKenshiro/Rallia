@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useFocusEffect } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import { useAppNavigation } from '../navigation/hooks';
 import type { RootStackParamList } from '../navigation/types';
@@ -28,6 +28,31 @@ import {
 
 const BASE_BLACK = '#000000';
 
+// Certification status colors for rating display
+const getCertificationColors = (status: 'self_declared' | 'certified' | 'disputed') => {
+  switch (status) {
+    case 'certified':
+      return {
+        background: '#E8F5E9',
+        border: '#4CAF50',
+        text: '#4CAF50',
+      };
+    case 'disputed':
+      return {
+        background: '#FFEBEE',
+        border: '#F44336',
+        text: '#F44336',
+      };
+    case 'self_declared':
+    default:
+      return {
+        background: '#FFF8E1',
+        border: '#FFC107',
+        text: '#F57C00',
+      };
+  }
+};
+
 import { mediumHaptic, selectionHaptic } from '@rallia/shared-utils';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import TennisRatingOverlay from '../features/onboarding/components/overlays/TennisRatingOverlay';
@@ -36,6 +61,7 @@ import PeerRatingRequestOverlay from '../features/sport-profile/components/PeerR
 import ReferenceRequestOverlay from '../features/sport-profile/components/ReferenceRequestOverlay';
 import { TennisPreferencesOverlay } from '../features/sport-profile/components/TennisPreferencesOverlay';
 import { PickleballPreferencesOverlay } from '../features/sport-profile/components/PickleballPreferencesOverlay';
+import { CertificationSection } from '../features/ratings/components';
 
 type SportProfileRouteProp = RouteProp<RootStackParamList, 'SportProfile'>;
 
@@ -82,6 +108,14 @@ const SportProfile = () => {
   const [playerSportId, setPlayerSportId] = useState<string | null>(null);
   const [playerRatingScoreId, setPlayerRatingScoreId] = useState<string | null>(null);
   const [ratingInfo, setRatingInfo] = useState<RatingInfo | null>(null);
+  // Total proofs count (all proofs for this sport) - shown in "Rating Proof" button
+  const [totalProofsCount, setTotalProofsCount] = useState(0);
+  // Current-level proofs count (proofs matching current rating) - used for certification
+  const [currentLevelProofsCount, setCurrentLevelProofsCount] = useState(0);
+  const [referencesCount, setReferencesCount] = useState(0);
+  const [certificationStatus, setCertificationStatus] = useState<'self_declared' | 'certified' | 'disputed'>('self_declared');
+  const [peerEvaluationAverage, setPeerEvaluationAverage] = useState<number | undefined>(undefined);
+  const [peerEvaluationCount, setPeerEvaluationCount] = useState<number>(0);
   const [preferences, setPreferences] = useState<PreferencesInfo>({
     matchDuration: null,
     matchType: null,
@@ -102,6 +136,35 @@ const SportProfile = () => {
     fetchSportProfileData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Refresh proof counts when returning to this screen
+  const refreshProofCounts = useCallback(async () => {
+    if (!playerRatingScoreId || !ratingInfo?.ratingScoreId) return;
+    
+    // Fetch all proofs for this player_rating_score (total count)
+    const { data: proofs, error } = await supabase
+      .from('rating_proof')
+      .select('rating_score_id')
+      .eq('player_rating_score_id', playerRatingScoreId)
+      .eq('is_active', true);
+    
+    if (!error && proofs) {
+      // Total count: all proofs for this sport
+      setTotalProofsCount(proofs.length);
+      
+      // Current-level count: only proofs matching current rating_score_id
+      const currentLevelCount = proofs.filter(
+        p => p.rating_score_id === ratingInfo.ratingScoreId
+      ).length;
+      setCurrentLevelProofsCount(currentLevelCount);
+    }
+  }, [playerRatingScoreId, ratingInfo?.ratingScoreId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshProofCounts();
+    }, [refreshProofCounts])
+  );
 
   const fetchSportProfileData = async () => {
     try {
@@ -130,7 +193,7 @@ const SportProfile = () => {
           'Failed to load sport profile - connection timeout'
         ),
 
-        // Fetch player's ratings (fetch in parallel, process only if sport is active)
+        // Fetch player's ratings with certification badge data
         withTimeout(
           (async () =>
             supabase
@@ -141,13 +204,18 @@ const SportProfile = () => {
               rating_score_id,
               is_certified,
               certified_at,
-              rating_score!player_rating_scores_rating_score_id_fkey (
+              badge_status,
+              referrals_count,
+              approved_proofs_count,
+              peer_evaluation_average,
+              peer_evaluation_count,
+              rating_score:rating_score_id (
                 id,
                 value,
                 label,
                 description,
                 skill_level,
-                rating_system (
+                rating_system:rating_system_id (
                   code,
                   name,
                   description,
@@ -255,6 +323,7 @@ const SportProfile = () => {
             skill_level?: string | null;
             rating_system?: {
               name?: string;
+              code?: string;
               min_value?: number;
               max_value?: number;
               description?: string;
@@ -263,7 +332,7 @@ const SportProfile = () => {
           const ratingSystem = ratingScore?.rating_system;
           const newRatingInfo = {
             ratingScoreId: ratingScore?.id || ratingData.rating_score_id || '',
-            ratingTypeName: ratingSystem?.name || '',
+            ratingTypeName: ratingSystem?.code || ratingSystem?.name || '',
             displayLabel: ratingScore?.label || '',
             scoreValue: ratingScore?.value || 0,
             skillLevel: ratingScore?.skill_level
@@ -281,10 +350,70 @@ const SportProfile = () => {
           });
           setRatingInfo(newRatingInfo);
           setPlayerRatingScoreId(ratingData.id || null);
+
+          // Get counts for certification logic
+          const referralsCount = ratingData.referrals_count || 0;
+          const badgeStatus = ratingData.badge_status as string | undefined;
+
+          // Set references count
+          setReferencesCount(referralsCount);
+
+          // Set peer evaluation data
+          setPeerEvaluationAverage(ratingData.peer_evaluation_average || undefined);
+          setPeerEvaluationCount(ratingData.peer_evaluation_count || 0);
+
+          // Fetch rating proofs for this player_rating_score
+          // We need both total count and current-level count
+          let totalCount = 0;
+          let currentLevelCount = 0;
+          const currentRatingScoreId = newRatingInfo.ratingScoreId;
+          
+          if (ratingData.id) {
+            // Fetch all proofs with their rating_score_id
+            const { data: proofs, error: proofsError } = await supabase
+              .from('rating_proof')
+              .select('rating_score_id')
+              .eq('player_rating_score_id', ratingData.id)
+              .eq('is_active', true);
+            
+            if (!proofsError && proofs) {
+              // Total proofs count (for "Rating Proof" button in My Rating section)
+              totalCount = proofs.length;
+              setTotalProofsCount(totalCount);
+              
+              // Current-level proofs count (proofs that match current rating_score_id)
+              // Used for certification logic
+              currentLevelCount = proofs.filter(
+                p => p.rating_score_id === currentRatingScoreId
+              ).length;
+              setCurrentLevelProofsCount(currentLevelCount);
+            } else {
+              setTotalProofsCount(0);
+              setCurrentLevelProofsCount(0);
+            }
+          } else {
+            setTotalProofsCount(0);
+            setCurrentLevelProofsCount(0);
+          }
+
+          // Determine certification status based on counts:
+          // - certified (green): 3+ references OR 2+ current-level proofs
+          // - disputed (red): badge_status is 'disputed'
+          // - self_declared (yellow): default when criteria not met
+          // NOTE: Only CURRENT-LEVEL proofs count for certification
+          if (badgeStatus === 'disputed') {
+            setCertificationStatus('disputed');
+          } else if (referralsCount >= 3 || currentLevelCount >= 2) {
+            setCertificationStatus('certified');
+          } else {
+            setCertificationStatus('self_declared');
+          }
         } else {
           Logger.debug('no_rating_data_found', { sportName, sportId });
           setRatingInfo(null);
           setPlayerRatingScoreId(null);
+          setTotalProofsCount(0);
+          setCurrentLevelProofsCount(0);
         }
       }
     } catch (error) {
@@ -307,7 +436,7 @@ const SportProfile = () => {
 
       Logger.debug('save_rating_start', { ratingScoreId, sportId, sportName });
 
-      // Step 1: Get ALL player ratings with source info
+      // Step 1: Get ALL player ratings with source info for this sport
       const ratingsResult = await withTimeout(
         (async () =>
           supabase
@@ -340,77 +469,89 @@ const SportProfile = () => {
 
       Logger.debug('player_ratings_fetched', { count: allPlayerRatings?.length });
 
-      // Step 2: Find and DELETE only SELF_REPORTED ratings for this specific sport
-      const ratingsToDelete =
-        allPlayerRatings?.filter(item => {
-          const ratingScoreData = Array.isArray(item.rating_score)
-            ? item.rating_score[0]
-            : item.rating_score;
-          if (!ratingScoreData) return false;
+      // Step 2: Find existing self_reported rating for this sport (to UPDATE instead of DELETE)
+      // This preserves the player_rating_score_id and keeps proofs linked!
+      const existingSelfReportedRating = allPlayerRatings?.find(item => {
+        const ratingScoreData = Array.isArray(item.rating_score)
+          ? item.rating_score[0]
+          : item.rating_score;
+        if (!ratingScoreData) return false;
 
-          const ratingSystemData = Array.isArray(ratingScoreData.rating_system)
-            ? ratingScoreData.rating_system[0]
-            : ratingScoreData.rating_system;
-          const itemSportId = ratingSystemData?.sport_id;
-          const source = item.source || 'self_reported'; // Default to self_reported for old data
+        const ratingSystemData = Array.isArray(ratingScoreData.rating_system)
+          ? ratingScoreData.rating_system[0]
+          : ratingScoreData.rating_system;
+        const itemSportId = ratingSystemData?.sport_id;
+        const source = item.source || 'self_reported';
 
-          // Only delete self_reported ratings for current sport
-          const shouldDelete = itemSportId === sportId && source === 'self_reported';
+        return itemSportId === sportId && source === 'self_reported';
+      });
 
-          Logger.debug('rating_delete_check', {
-            ratingId: item.id,
-            sportId: itemSportId,
-            source,
-            shouldDelete,
-          });
-          return shouldDelete;
-        }) || [];
+      Logger.debug('existing_rating_check', { 
+        sportId, 
+        existingId: existingSelfReportedRating?.id,
+        existingRatingScoreId: existingSelfReportedRating?.rating_score_id,
+      });
 
-      Logger.debug('ratings_to_delete', { sportId, count: ratingsToDelete.length });
-
-      // Delete only self_reported ratings (keep peer_verified, api_verified, admin_verified)
-      for (const rating of ratingsToDelete) {
-        Logger.debug('deleting_rating', { ratingId: rating.id });
-        const deleteResult = await withTimeout(
-          (async () => supabase.from('player_rating_score').delete().eq('id', rating.id))(),
+      if (existingSelfReportedRating) {
+        // UPDATE the existing record instead of deleting it
+        // This preserves the player_rating_score_id and keeps all proofs linked!
+        Logger.debug('updating_existing_rating', { 
+          existingId: existingSelfReportedRating.id, 
+          newRatingScoreId: ratingScoreId,
+        });
+        
+        const updateResult = await withTimeout(
+          (async () =>
+            supabase
+              .from('player_rating_score')
+              .update({
+                rating_score_id: ratingScoreId,
+                is_certified: false, // Reset certification when rating changes
+                badge_status: 'self_declared', // Reset badge status
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', existingSelfReportedRating.id))(),
           10000,
-          'Failed to delete rating - connection timeout'
+          'Failed to update rating - connection timeout'
         );
 
-        if (deleteResult.error) {
-          Logger.error('Failed to delete rating', deleteResult.error as Error, {
-            ratingId: rating.id,
+        if (updateResult.error) {
+          Logger.error('Failed to update rating', updateResult.error as Error, {
+            ratingId: existingSelfReportedRating.id,
+            ratingScoreId,
           });
-          throw deleteResult.error;
+          throw updateResult.error;
         }
-        Logger.debug('rating_deleted', { ratingId: rating.id });
-      }
-
-      // Step 3: Upsert the new self_reported rating (insert or update if exists)
-      Logger.debug('upserting_new_rating', { ratingScoreId, playerId: user.id });
-      const insertResult = await withTimeout(
-        (async () =>
-          supabase.from('player_rating_score').upsert(
-            {
+        
+        Logger.info('rating_updated', { 
+          ratingId: existingSelfReportedRating.id, 
+          ratingScoreId, 
+          sportId,
+        });
+      } else {
+        // No existing rating - INSERT a new one
+        Logger.debug('inserting_new_rating', { ratingScoreId, playerId: user.id });
+        const insertResult = await withTimeout(
+          (async () =>
+            supabase.from('player_rating_score').insert({
               player_id: user.id,
               rating_score_id: ratingScoreId,
-              source: 'self_reported', // Explicitly self-reported
+              source: 'self_reported',
               is_certified: false,
-            },
-            {
-              onConflict: 'player_id,rating_score_id',
-            }
-          ))(),
-        10000,
-        'Failed to save rating - connection timeout'
-      );
+            }))(),
+          10000,
+          'Failed to save rating - connection timeout'
+        );
 
-      if (insertResult.error) {
-        Logger.error('Failed to insert new rating', insertResult.error as Error, {
-          ratingScoreId,
-          playerId: user.id,
-        });
-        throw insertResult.error;
+        if (insertResult.error) {
+          Logger.error('Failed to insert new rating', insertResult.error as Error, {
+            ratingScoreId,
+            playerId: user.id,
+          });
+          throw insertResult.error;
+        }
+        
+        Logger.info('rating_inserted', { ratingScoreId, sportId });
       }
 
       Logger.info('rating_save_complete', { ratingScoreId, sportId, sourceType: 'self_reported' });
@@ -633,12 +774,34 @@ const SportProfile = () => {
 
   const handleSendReferenceRequests = async (selectedPlayerIds: string[]) => {
     try {
-      // TODO: Implement reference request logic
-      // This will insert records into reference_request table
+      if (!playerRatingScoreId || !userId) {
+        throw new Error('Missing required data for reference request');
+      }
+
       Logger.logUserAction('send_reference_requests', { count: selectedPlayerIds.length, sportId });
 
-      // For now, just show a success message
-      toast.success(t('alerts.referenceRequestsSent', { count: selectedPlayerIds.length }));
+      // Insert reference requests into the database
+      const referenceRequests = selectedPlayerIds.map(refereePlayerId => ({
+        requester_player_rating_score_id: playerRatingScoreId,
+        requester_id: userId,
+        referee_id: refereePlayerId,
+        status: 'pending',
+      }));
+
+      const { error: insertError } = await supabase
+        .from('rating_reference_request')
+        .insert(referenceRequests);
+
+      if (insertError) {
+        // Check for unique constraint violation (already requested)
+        if (insertError.code === '23505') {
+          toast.warning(t('profile.certification.referenceRequest.alreadyRequested'));
+        } else {
+          throw insertError;
+        }
+      } else {
+        toast.success(t('alerts.referenceRequestsSent', { count: selectedPlayerIds.length }));
+      }
 
       setShowReferenceRequestOverlay(false);
     } catch (error) {
@@ -894,9 +1057,16 @@ const SportProfile = () => {
                   {/* Rating Level Display */}
                   <View style={styles.ratingDisplay}>
                     <View
-                      style={[styles.ratingBadgeLarge, { backgroundColor: colors.inputBackground }]}
+                      style={[
+                        styles.ratingBadgeLarge, 
+                        { 
+                          backgroundColor: getCertificationColors(certificationStatus).background,
+                          borderWidth: 2,
+                          borderColor: getCertificationColors(certificationStatus).border,
+                        }
+                      ]}
                     >
-                      <Text style={[styles.ratingLevelText, { color: colors.text }]}>
+                      <Text style={[styles.ratingLevelText, { color: getCertificationColors(certificationStatus).text }]}>
                         {ratingInfo.displayLabel}
                       </Text>
                       <Text style={[styles.ratingTypeText, { color: colors.textMuted }]}>
@@ -962,34 +1132,12 @@ const SportProfile = () => {
                       }}
                       leftIcon={<Ionicons name="people" size={16} color={colors.primary} />}
                     >
-                      {t('profile.rating.references', { count: 6 })}
+                      {t('profile.rating.references', { count: referencesCount })}
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      onPress={() => {}}
-                      style={styles.actionButton}
-                      isDark={isDark}
-                      themeColors={{
-                        primary: colors.primary,
-                        primaryForeground: colors.primaryForeground,
-                        buttonActive: colors.buttonActive,
-                        buttonInactive: colors.buttonInactive,
-                        buttonTextActive: colors.buttonTextActive,
-                        buttonTextInactive: colors.buttonTextInactive,
-                        text: colors.text,
-                        textMuted: colors.textMuted,
-                        border: colors.border,
-                        background: colors.background,
-                      }}
-                      leftIcon={<Ionicons name="star" size={16} color={colors.primary} />}
-                    >
-                      {t('profile.rating.peerRating', { count: 2 })}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onPress={() => {}}
+                      onPress={handleManageProofs}
                       style={styles.actionButton}
                       isDark={isDark}
                       themeColors={{
@@ -1006,46 +1154,36 @@ const SportProfile = () => {
                       }}
                       leftIcon={<Ionicons name="document-text" size={16} color={colors.primary} />}
                     >
-                      {t('profile.rating.ratingProof', { count: 1 })}
+                      {t('profile.rating.ratingProof', { count: totalProofsCount })}
                     </Button>
                   </View>
 
-                  {/* Request Buttons */}
-                  <View style={styles.requestButtons}>
-                    <Button
-                      variant="primary"
-                      size="md"
-                      onPress={() => setShowReferenceRequestOverlay(true)}
-                      style={[styles.requestButton, styles.coralButton]}
-                      leftIcon={
-                        <Ionicons name="add-circle" size={18} color={colors.primaryForeground} />
-                      }
-                    >
-                      {t('profile.rating.requestReference')}
-                    </Button>
-                    <Button
-                      variant="primary"
-                      size="md"
-                      onPress={() => setShowPeerRatingRequestOverlay(true)}
-                      style={[styles.requestButton, styles.coralButton]}
-                      leftIcon={
-                        <Ionicons name="add-circle" size={18} color={colors.primaryForeground} />
-                      }
-                    >
-                      {t('profile.rating.requestPeerRating')}
-                    </Button>
-                    <Button
-                      variant="primary"
-                      size="md"
-                      onPress={handleManageProofs}
-                      style={[styles.requestButton, styles.coralButton]}
-                      leftIcon={
-                        <Ionicons name="folder-open" size={18} color={colors.primaryForeground} />
-                      }
-                    >
-                      {t('profile.rating.manageRatingProofs')}
-                    </Button>
-                  </View>
+                  {/* Certification Status Section */}
+                  <CertificationSection
+                    badgeStatus={certificationStatus}
+                    referencesCount={referencesCount}
+                    approvedProofsCount={currentLevelProofsCount}
+                    requiredReferences={3}
+                    requiredProofs={2}
+                    peerEvaluationAverage={peerEvaluationAverage}
+                    peerEvaluationCount={peerEvaluationCount}
+                    ratingSystemName={ratingInfo.ratingTypeName}
+                    isOwnProfile={true}
+                    onRequestReference={() => setShowReferenceRequestOverlay(true)}
+                    onManageProofs={handleManageProofs}
+                    canRequestReferences={
+                      ratingInfo.ratingTypeName?.toUpperCase() === 'NTRP'
+                        ? ratingInfo.scoreValue >= 3.0
+                        : ratingInfo.ratingTypeName?.toUpperCase() === 'DUPR'
+                        ? ratingInfo.scoreValue >= 3.5
+                        : true
+                    }
+                    minimumLevel={
+                      ratingInfo.ratingTypeName?.toUpperCase() === 'NTRP' ? 3.0 :
+                      ratingInfo.ratingTypeName?.toUpperCase() === 'DUPR' ? 3.5 : undefined
+                    }
+                    currentLevel={ratingInfo.scoreValue}
+                  />
                 </>
               ) : (
                 <View style={styles.noRatingContainer}>
@@ -1200,6 +1338,9 @@ const SportProfile = () => {
         onClose={() => setShowReferenceRequestOverlay(false)}
         currentUserId={userId}
         sportId={sportId}
+        currentUserRatingScore={ratingInfo?.scoreValue}
+        currentUserRatingScoreId={playerRatingScoreId || undefined}
+        ratingSystemCode={ratingInfo?.ratingTypeName?.toUpperCase()}
         onSendRequests={handleSendReferenceRequests}
       />
 

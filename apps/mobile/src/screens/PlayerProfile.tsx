@@ -39,6 +39,7 @@ import {
   neutral,
   status,
 } from '@rallia/design-system';
+import { ProofGallerySection, CertificationBadge, type BadgeStatus } from '../features/ratings/components';
 
 // Types
 type PlayerProfileRouteProp = RouteProp<RootStackParamList, 'PlayerProfile'>;
@@ -52,7 +53,14 @@ interface SportWithRating {
   isPrimary: boolean;
   ratingLabel?: string;
   ratingValue?: number | null;
+  ratingScoreId?: string; // The actual rating_score id (for current level)
   isCertified?: boolean;
+  badgeStatus?: BadgeStatus;
+  playerRatingScoreId?: string;
+  referencesCount?: number;
+  peerEvaluationCount?: number;
+  totalProofsCount?: number; // All proofs for this sport
+  currentLevelProofsCount?: number; // Proofs matching current rating level
 }
 
 interface PlayerSportPreferences {
@@ -185,17 +193,24 @@ const PlayerProfile = () => {
           'Failed to load player sports'
         ),
 
-        // Fetch player's ratings
+        // Fetch player's ratings with certification badge data
         withTimeout(
           (async () =>
             supabase
               .from('player_rating_score')
               .select(`
-                *,
-                rating_score!player_rating_scores_rating_score_id_fkey (
+                id,
+                rating_score_id,
+                is_certified,
+                badge_status,
+                referrals_count,
+                approved_proofs_count,
+                peer_evaluation_count,
+                rating_score:rating_score_id (
+                  id,
                   label,
                   value,
-                  rating_system (
+                  rating_system:rating_system_id (
                     sport_id
                   )
                 )
@@ -283,9 +298,54 @@ const PlayerProfile = () => {
       );
 
       // Map ratings
-      const ratingsMap = new Map<string, { label: string; value: number | null; isCertified: boolean }>();
-      (ratingsData || []).forEach(rating => {
+      const ratingsMap = new Map<string, { 
+        label: string; 
+        value: number | null; 
+        ratingScoreId: string;
+        isCertified: boolean; 
+        badgeStatus: BadgeStatus;
+        playerRatingScoreId: string;
+        referencesCount: number;
+        peerEvaluationCount: number;
+        totalProofsCount: number;
+        currentLevelProofsCount: number;
+      }>();
+
+      // Fetch proofs for all ratings in parallel (with rating_score_id for current-level filtering)
+      const ratingsWithProofsCounts = await Promise.all(
+        (ratingsData || []).map(async (rating) => {
+          let totalProofsCount = 0;
+          let currentLevelProofsCount = 0;
+          
+          // Get the current rating_score_id from the rating
+          const ratingScore = rating.rating_score as { id?: string } | null;
+          const currentRatingScoreId = ratingScore?.id || rating.rating_score_id;
+          
+          if (rating.id) {
+            // Fetch all proofs with their rating_score_id
+            const { data: proofs, error: proofsError } = await supabase
+              .from('rating_proof')
+              .select('rating_score_id')
+              .eq('player_rating_score_id', rating.id)
+              .eq('is_active', true);
+            
+            if (!proofsError && proofs) {
+              // Total count: all proofs
+              totalProofsCount = proofs.length;
+              
+              // Current-level count: proofs matching current rating_score_id
+              currentLevelProofsCount = proofs.filter(
+                p => p.rating_score_id === currentRatingScoreId
+              ).length;
+            }
+          }
+          return { ...rating, totalProofsCount, currentLevelProofsCount, currentRatingScoreId };
+        })
+      );
+
+      ratingsWithProofsCounts.forEach(rating => {
         const ratingScore = rating.rating_score as {
+          id?: string;
           label?: string;
           value?: number | null;
           rating_system?: { sport_id?: string };
@@ -294,12 +354,38 @@ const PlayerProfile = () => {
         const sportIdFromRating = ratingSystemData?.sport_id;
         const displayLabel = ratingScore?.label || '';
         const displayValue = ratingScore?.value ?? null;
+        const ratingScoreId = ratingScore?.id || rating.currentRatingScoreId || '';
+
+        // Determine badge status based on counts:
+        // - certified (green): 3+ references OR 2+ current-level proofs
+        // - disputed (red): badge_status is 'disputed'
+        // - self_declared (yellow): default when criteria not met
+        // NOTE: Only CURRENT-LEVEL proofs count for certification
+        const rawBadgeStatus = rating.badge_status as string | undefined;
+        const referralsCount = rating.referrals_count || 0;
+        const currentLevelProofsCount = rating.currentLevelProofsCount || 0;
+        const totalProofsCount = rating.totalProofsCount || 0;
+        const peerEvalCount = rating.peer_evaluation_count || 0;
+        
+        let badgeStatus: BadgeStatus = 'self_declared';
+        if (rawBadgeStatus === 'disputed') {
+          badgeStatus = 'disputed';
+        } else if (referralsCount >= 3 || currentLevelProofsCount >= 2) {
+          badgeStatus = 'certified';
+        }
 
         if (sportIdFromRating && !ratingsMap.has(sportIdFromRating)) {
           ratingsMap.set(sportIdFromRating, {
             label: displayLabel,
             value: displayValue,
-            isCertified: rating.is_certified || false,
+            ratingScoreId,
+            isCertified: badgeStatus === 'certified',
+            badgeStatus,
+            playerRatingScoreId: rating.id,
+            referencesCount: referralsCount,
+            peerEvaluationCount: peerEvalCount,
+            totalProofsCount,
+            currentLevelProofsCount,
           });
         }
       });
@@ -317,7 +403,14 @@ const PlayerProfile = () => {
             isPrimary: sportInfo?.isPrimary || false,
             ratingLabel: ratingInfo?.label,
             ratingValue: ratingInfo?.value,
+            ratingScoreId: ratingInfo?.ratingScoreId,
             isCertified: ratingInfo?.isCertified,
+            badgeStatus: ratingInfo?.badgeStatus,
+            playerRatingScoreId: ratingInfo?.playerRatingScoreId,
+            referencesCount: ratingInfo?.referencesCount,
+            peerEvaluationCount: ratingInfo?.peerEvaluationCount,
+            totalProofsCount: ratingInfo?.totalProofsCount,
+            currentLevelProofsCount: ratingInfo?.currentLevelProofsCount,
           };
         });
 
@@ -890,12 +983,10 @@ const PlayerProfile = () => {
                     {primarySport.name === 'tennis' ? 'NTRP' : 'DUPR'} {primarySport.ratingLabel || '-'}
                   </Text>
                 </View>
-                {primarySport.isCertified && (
-                  <View style={[styles.certifiedBadge, { backgroundColor: '#d1fae5' }]}>
-                    <Ionicons name="checkmark-circle" size={14} color={status.success.DEFAULT} />
-                    <Text style={[styles.certifiedText, { color: status.success.DEFAULT }]}>Certified</Text>
-                  </View>
-                )}
+                <CertificationBadge 
+                  status={primarySport.badgeStatus || 'self_declared'} 
+                  size="md"
+                />
               </View>
               <Text style={[styles.ratingDescription, { color: colors.textMuted }]}>
                 {getRatingDescription(primarySport.ratingValue)}
@@ -904,16 +995,30 @@ const PlayerProfile = () => {
               {/* Rating Actions */}
               <View style={styles.ratingActions}>
                 <TouchableOpacity style={[styles.ratingActionButton, { borderColor: colors.border }]}>
-                  <Text style={[styles.ratingActionText, { color: colors.primary }]}>0 References</Text>
+                  <Text style={[styles.ratingActionText, { color: colors.primary }]}>
+                    {t('profile.rating.references', { count: primarySport.referencesCount || 0 })}
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.ratingActionButton, { borderColor: colors.border }]}>
-                  <Text style={[styles.ratingActionText, { color: colors.primary }]}>0 Peer Ratings</Text>
+                  <Text style={[styles.ratingActionText, { color: colors.primary }]}>
+                    {t('profile.rating.peerRating', { count: primarySport.peerEvaluationCount || 0 })}
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.ratingActionButton, { borderColor: colors.border }]}>
-                  <Text style={[styles.ratingActionText, { color: colors.primary }]}>0 Rating Proof</Text>
+                  <Text style={[styles.ratingActionText, { color: colors.primary }]}>
+                    {t('profile.rating.ratingProof', { count: primarySport.totalProofsCount || 0 })}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
+
+            {/* Rating Proofs Gallery */}
+            {primarySport.playerRatingScoreId && (
+              <ProofGallerySection
+                playerRatingScoreId={primarySport.playerRatingScoreId}
+                sportName={primarySport.display_name}
+              />
+            )}
           </View>
         )}
 

@@ -21,6 +21,7 @@ import { formatDate as formatDateUtil, formatDateMonthYear } from '../utils/date
 import PersonalInformationOverlay from '../features/onboarding/components/overlays/PersonalInformationOverlay';
 import PlayerInformationOverlay from '../features/onboarding/components/overlays/PlayerInformationOverlay';
 import PlayerAvailabilitiesOverlay from '../features/onboarding/components/overlays/PlayerAvailabilitiesOverlay';
+import ImagePickerSheet from '../components/ImagePickerSheet';
 import type { Profile, Player, Sport } from '@rallia/shared-types';
 import {
   spacingPixels,
@@ -77,7 +78,15 @@ const UserProfile = () => {
   const [showAvailabilitiesOverlay, setShowAvailabilitiesOverlay] = useState(false);
 
   // Use custom hook for image picker (for profile picture editing)
-  const { image: newProfileImage, pickImage } = useImagePicker();
+  const {
+    image: newProfileImage,
+    showPicker,
+    openPicker,
+    closePicker,
+    pickFromCamera,
+    pickFromGallery,
+    permissions,
+  } = useImagePicker();
 
   // Check authentication on mount and redirect if not logged in
   useEffect(() => {
@@ -566,7 +575,7 @@ const UserProfile = () => {
               { borderColor: colors.primary, backgroundColor: colors.inputBackground },
             ]}
             activeOpacity={0.8}
-            onPress={pickImage}
+            onPress={openPicker}
             disabled={uploadingImage}
           >
             {profile?.profile_picture_url || newProfileImage ? (
@@ -891,9 +900,9 @@ const UserProfile = () => {
       {/* Personal Information Edit Overlay */}
       <PersonalInformationOverlay
         visible={showPersonalInfoOverlay}
-        onClose={() => {
-          setShowPersonalInfoOverlay(false);
-          // Refresh data after closing to show updated info
+        onClose={() => setShowPersonalInfoOverlay(false)}
+        onSave={() => {
+          // Only refresh data when save is successful
           fetchUserProfileData();
         }}
         mode="edit"
@@ -912,9 +921,9 @@ const UserProfile = () => {
       {/* Player Information Edit Overlay */}
       <PlayerInformationOverlay
         visible={showPlayerInfoOverlay}
-        onClose={() => {
-          setShowPlayerInfoOverlay(false);
-          // Refresh data after closing to show updated info
+        onClose={() => setShowPlayerInfoOverlay(false)}
+        onSave={() => {
+          // Only refresh data when save is successful
           fetchUserProfileData();
         }}
         initialData={{
@@ -932,6 +941,20 @@ const UserProfile = () => {
         mode="edit"
         initialData={convertToUIFormat(availabilities)}
         onSave={handleSaveAvailabilities}
+      />
+
+      {/* Image Picker Sheet */}
+      <ImagePickerSheet
+        visible={showPicker}
+        onClose={closePicker}
+        onTakePhoto={pickFromCamera}
+        onChooseFromGallery={pickFromGallery}
+        title={t('profile.profilePicture')}
+        cameraLabel={t('profile.takePhoto')}
+        galleryLabel={t('profile.chooseFromGallery')}
+        cancelLabel={t('common.cancel')}
+        cameraDisabled={!permissions.camera}
+        galleryDisabled={!permissions.library}
       />
     </SafeAreaView>
   );

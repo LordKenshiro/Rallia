@@ -13,13 +13,20 @@ import { Ionicons } from '@expo/vector-icons';
 import { Overlay, Text } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
 import { selectionHaptic, mediumHaptic } from '../../../utils/haptics';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
+import { CertificationBadge } from '../../ratings/components';
 
 interface ReferenceRequestOverlayProps {
   visible: boolean;
   onClose: () => void;
   currentUserId: string;
   sportId: string;
+  /** Current user's rating score for this sport */
+  currentUserRatingScore?: number;
+  /** Current user's player_rating_score_id for this sport */
+  currentUserRatingScoreId?: string;
+  /** The rating system code (e.g., 'NTRP', 'DUPR') */
+  ratingSystemCode?: string;
   onSendRequests: (selectedPlayerIds: string[]) => Promise<void>;
 }
 
@@ -30,17 +37,47 @@ interface Player {
   display_name: string | null;
   profile_picture_url: string | null;
   rating: string | null;
+  ratingScore: number | null;
   isCertified: boolean;
+  playerRatingScoreId: string | null;
 }
+
+// Interface for Supabase rating response
+interface RatingResponse {
+  id: string;
+  player_id: string;
+  source: string;
+  is_certified: boolean;
+  rating_score: {
+    id: string;
+    label: string;
+    value: number;
+    rating_system: {
+      id: string;
+      sport_id: string;
+      code: string;
+    }[];
+  }[];
+}
+
+// Minimum level thresholds for requesting references
+const MIN_LEVEL_THRESHOLDS: Record<string, number> = {
+  'NTRP': 3.0,
+  'DUPR': 3.5,
+};
 
 const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
   visible,
   onClose,
   currentUserId,
   sportId,
+  currentUserRatingScore,
+  currentUserRatingScoreId: _currentUserRatingScoreId,
+  ratingSystemCode,
   onSendRequests,
 }) => {
   const { colors } = useThemeStyles();
+  const { t } = useTranslation();
   const [players, setPlayers] = useState<Player[]>([]);
   const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
   const [selectedPlayers, setSelectedPlayers] = useState<Set<string>>(new Set());
@@ -96,45 +133,76 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
     }
   }, [visible, fadeAnim, slideAnim]);
 
+  // Get minimum level threshold for current rating system
+  const getMinLevelThreshold = (): number => {
+    if (ratingSystemCode && MIN_LEVEL_THRESHOLDS[ratingSystemCode]) {
+      return MIN_LEVEL_THRESHOLDS[ratingSystemCode];
+    }
+    // Default to NTRP threshold if unknown
+    return 3.0;
+  };
+
+  // Check if current user meets minimum level for requesting references
+  const canRequestReferences = (): boolean => {
+    if (!currentUserRatingScore) return false;
+    return currentUserRatingScore >= getMinLevelThreshold();
+  };
+
   const fetchCertifiedPlayers = async () => {
     try {
       setLoading(true);
 
-      // Step 1: Find all players with CERTIFIED ratings for this sport
+      // Step 1: Find all players with CERTIFIED ratings for this sport at same/higher level
       const { data: certifiedRatings, error: ratingsError } = await supabase
         .from('player_rating_score')
         .select(
           `
+          id,
           player_id,
           source,
           is_certified,
-          rating_score!player_rating_scores_rating_score_id_fkey (
+          badge_status,
+          rating_score:rating_score_id (
             id,
             label,
-            rating_system (
-              sport_id
+            value,
+            rating_system:rating_system_id (
+              id,
+              sport_id,
+              code
             )
           )
         `
         )
-        .eq('is_certified', true)
-        .neq('source', 'self_reported')
+        .or('is_certified.eq.true,badge_status.eq.certified')
         .neq('player_id', currentUserId); // Exclude current user
 
       if (ratingsError) throw ratingsError;
 
-      // Filter by sport and get unique player IDs
-      const sportCertifiedRatings =
-        certifiedRatings?.filter(
-          (rating: { rating_score: Array<{ rating_system: Array<{ sport_id: string }> }> }) => {
-            const ratingScoreArray = rating.rating_score;
-            const ratingSystemArray = ratingScoreArray?.[0]?.rating_system;
-            return ratingSystemArray?.[0]?.sport_id === sportId;
+      // Filter by sport and level (same or higher than current user)
+      const sportCertifiedRatings = ((certifiedRatings || []) as RatingResponse[]).filter(
+          (rating) => {
+            const ratingScore = Array.isArray(rating.rating_score) 
+              ? rating.rating_score[0] 
+              : rating.rating_score;
+            const ratingSystem = Array.isArray(ratingScore?.rating_system)
+              ? ratingScore?.rating_system[0]
+              : ratingScore?.rating_system;
+            
+            // Must be same sport
+            if (ratingSystem?.sport_id !== sportId) return false;
+            
+            // If current user has a rating, only show players at same or higher level
+            if (currentUserRatingScore && ratingScore?.value) {
+              return ratingScore.value >= currentUserRatingScore;
+            }
+            
+            return true;
           }
-        ) || [];
+        );
 
       const uniquePlayerIds = [
-        ...new Set(sportCertifiedRatings.map((r: { player_id: string }) => r.player_id)),
+        ...new Set(sportCertifiedRatings.map((r) => r.player_id)),
       ];
 
       if (uniquePlayerIds.length === 0) {
@@ -153,21 +221,25 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
       if (profilesError) throw profilesError;
 
       // Step 3: Map ratings by player_id (get certified rating)
-      const ratingsMap = new Map<string, { display_label: string; isCertified: boolean }>();
-      sportCertifiedRatings.forEach(
-        (rating: {
-          player_id: string;
-          source: string;
-          is_certified: boolean;
-          rating_score: unknown;
-        }) => {
-          const ratingScore = rating.rating_score as { label?: string };
+      const ratingsMap = new Map<string, { 
+        display_label: string; 
+        ratingScore: number | null;
+        isCertified: boolean;
+        playerRatingScoreId: string;
+      }>();
+      
+      sportCertifiedRatings.forEach((rating) => {
+          const ratingScore = Array.isArray(rating.rating_score)
+            ? rating.rating_score[0]
+            : rating.rating_score;
           const isCertified = rating.is_certified;
 
           if (!ratingsMap.has(rating.player_id)) {
             ratingsMap.set(rating.player_id, {
               display_label: ratingScore?.label || '',
+              ratingScore: ratingScore?.value || null,
               isCertified,
+              playerRatingScoreId: rating.id,
             });
           }
         }
@@ -190,10 +262,15 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
             display_name: profile.display_name,
             profile_picture_url: profile.profile_picture_url,
             rating: ratingInfo?.display_label || null,
+            ratingScore: ratingInfo?.ratingScore || null,
             isCertified: ratingInfo?.isCertified || false,
+            playerRatingScoreId: ratingInfo?.playerRatingScoreId || null,
           };
         }
       );
+
+      // Sort by rating score (highest first)
+      playersWithRatings.sort((a, b) => (b.ratingScore || 0) - (a.ratingScore || 0));
 
       setPlayers(playersWithRatings);
       setFilteredPlayers(playersWithRatings);
@@ -273,7 +350,14 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
 
         {/* Player Info */}
         <View style={styles.playerInfo}>
-          <Text style={[styles.playerName, { color: colors.text }]}>{player.first_name} {player.last_name}</Text>
+          <View style={styles.playerNameRow}>
+            <Text style={[styles.playerName, { color: colors.text }]}>
+              {player.first_name} {player.last_name}
+            </Text>
+            {player.isCertified && (
+              <CertificationBadge status="certified" size="sm" showLabel={false} />
+            )}
+          </View>
           {player.display_name && (
             <Text style={[styles.playerUsername, { color: colors.textMuted }]}>
               @{player.display_name}
@@ -292,6 +376,10 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
       </TouchableOpacity>
     );
   };
+
+  // Check if user can request references (meets minimum level)
+  const userCanRequest = canRequestReferences();
+  const minLevel = getMinLevelThreshold();
 
   return (
     <Overlay
@@ -312,19 +400,28 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
       >
         {/* Title */}
         <Text style={[styles.title, { color: colors.text }]}>
-          Request references for your current rating
+          {t('profile.certification.referenceRequest.title')}
         </Text>
         <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-          Request references allow you to certify your rating by asking other higher-rated or
-          certified players to confirm your declared rating
+          {t('profile.certification.referenceRequest.description')}
         </Text>
+
+        {/* Minimum Level Warning (if user doesn't meet threshold) */}
+        {!userCanRequest && (
+          <View style={[styles.warningBox, { backgroundColor: '#FFF8E1' }]}>
+            <Ionicons name="information-circle" size={20} color={colors.warning} />
+            <Text style={[styles.warningText, { color: '#F57C00' }]}>
+              {t('profile.certification.referenceRequest.minimumLevelRequired', { level: minLevel })}
+            </Text>
+          </View>
+        )}
 
         {/* Search Bar */}
         <View style={[styles.searchContainer, { backgroundColor: colors.inputBackground }]}>
           <Ionicons name="search" size={20} color={colors.textMuted} style={styles.searchIcon} />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Search players..."
+            placeholder={t('profile.certification.referenceRequest.searchPlaceholder')}
             placeholderTextColor={colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -344,19 +441,19 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
               <Text style={[styles.loadingText, { color: colors.textMuted }]}>
-                Loading certified players...
+                {t('common.loading')}
               </Text>
             </View>
           ) : filteredPlayers.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Ionicons name="people-outline" size={64} color={colors.textMuted} />
               <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-                No certified players found
+                {t('profile.certification.referenceRequest.noPlayersFound')}
               </Text>
               <Text style={[styles.emptySubtext, { color: colors.textMuted }]}>
                 {players.length === 0
-                  ? 'No players with certified ratings for this sport yet'
-                  : 'Try a different search term'}
+                  ? t('profile.certification.referenceRequest.noEligiblePlayers')
+                  : t('common.tryDifferentSearch')}
               </Text>
             </View>
           ) : (
@@ -371,20 +468,23 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
           style={[
             styles.sendButton,
             { backgroundColor: colors.primary },
-            (selectedPlayers.size === 0 || sending) && [
+            (selectedPlayers.size === 0 || sending || !userCanRequest) && [
               styles.sendButtonDisabled,
               { backgroundColor: colors.buttonInactive },
             ],
           ]}
           onPress={handleSendRequests}
-          disabled={selectedPlayers.size === 0 || sending}
+          disabled={selectedPlayers.size === 0 || sending || !userCanRequest}
           activeOpacity={0.8}
         >
           {sending ? (
             <ActivityIndicator color={colors.primaryForeground} />
           ) : (
             <Text style={[styles.sendButtonText, { color: colors.primaryForeground }]}>
-              Send Requests{selectedPlayers.size > 0 ? ` (${selectedPlayers.size})` : ''}
+              {t('profile.certification.referenceRequest.sendRequest')}
+              {selectedPlayers.size > 0 
+                ? ` (${t('profile.certification.referenceRequest.selectedCount', { count: selectedPlayers.size })})` 
+                : ''}
             </Text>
           )}
         </TouchableOpacity>
@@ -410,6 +510,18 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     paddingHorizontal: 20,
     lineHeight: 20,
+  },
+  warningBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    gap: 8,
+  },
+  warningText: {
+    fontSize: 14,
+    flex: 1,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -470,10 +582,15 @@ const styles = StyleSheet.create({
   playerInfo: {
     flex: 1,
   },
+  playerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
+  },
   playerName: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 2,
   },
   playerUsername: {
     fontSize: 13,

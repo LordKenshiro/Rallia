@@ -306,6 +306,8 @@
     "gender": "Gender",
     "profilePicture": "Profile Picture",
     "changePhoto": "Change Photo",
+    "takePhoto": "Take Photo",
+    "chooseFromGallery": "Choose from Gallery",
     "removePhoto": "Remove Photo",
     "sportProfiles": "Sport Profiles",
     "ratings": "Ratings",
@@ -363,7 +365,178 @@
       "ratingProof": "{count} Rating Proof",
       "requestReference": "Request reference",
       "requestPeerRating": "Request peer rating",
-      "manageRatingProofs": "Manage rating proofs"
+      "manageRatingProofs": "Manage rating proofs",
+      "currentLevel": "Current",
+      "previousLevel": "Previous"
+    },
+    "certification": {
+      "title": "Certification Status",
+      "badge": {
+        "selfDeclared": "Self-Declared",
+        "certified": "Certified",
+        "disputed": "Disputed"
+      },
+      "status": {
+        "selfDeclared": "Self-Declared Rating",
+        "certified": "Certified Rating",
+        "disputed": "Disputed Rating",
+        "selfDeclaredDescription": "This rating has not been verified yet",
+        "certifiedDescription": "This rating has been verified by references or proofs",
+        "disputedDescription": "Peer evaluations suggest a different skill level"
+      },
+      "requirements": {
+        "title": "How to Get Certified",
+        "references": "Get {count}+ references from certified players",
+        "proofs": "Upload {count}+ approved rating proofs",
+        "minimumLevel": "Minimum level required: {level}",
+        "currentReferences": "{current}/{required} references",
+        "currentProofs": "{current}/{required} proofs"
+      },
+      "referenceRequest": {
+        "title": "Request Reference",
+        "subtitle": "Select players to request a reference from",
+        "description": "Request references from certified players at your level or higher",
+        "searchPlaceholder": "Search certified players...",
+        "noPlayersFound": "No certified players found",
+        "noEligiblePlayers": "No eligible players found at your level or higher",
+        "minimumLevelRequired": "Players must be at level {level} or higher to provide references",
+        "selectedCount": "{count} selected",
+        "maxSelectionReached": "Maximum {max} players can be selected",
+        "sendRequest": "Send Request",
+        "sendingRequests": "Sending requests...",
+        "requestsSent": "Reference requests sent to {count} player(s)",
+        "requestFailed": "Failed to send reference requests",
+        "alreadyRequested": "Reference already requested",
+        "playerLevel": "Level {level}",
+        "certifiedPlayer": "Certified Player"
+      },
+      "levelChange": {
+        "increased": "Level increased - certification reset",
+        "decreased": "Level decreased - certification maintained",
+        "newLevel": "New level: {level}"
+      },
+      "evaluation": {
+        "title": "Peer Evaluation",
+        "average": "Average: {score}",
+        "count": "{count} evaluations",
+        "belowLevel": "Evaluations suggest level may be lower",
+        "matchesLevel": "Evaluations match declared level"
+      }
+    },
+    "ratingProofs": {
+      "title": "Rating Proofs",
+      "myProofs": "My Rating Proofs",
+      "addProof": "Add Rating Proof",
+      "addFirstProof": "Add Your First Proof",
+      "chooseProofType": "Choose how you want to verify your rating",
+      "noProofsYet": "No Proofs Yet",
+      "noProofsDescription": "Add proof of your rating to help others verify your skill level",
+      "noProofsOtherUser": "This user has not added any rating proofs yet",
+      "proofTypes": {
+        "externalLink": {
+          "title": "External Link",
+          "description": "Link to your rating on an official platform (e.g., FFT, WTN, YouTube)",
+          "placeholder": "https://www.example.com/your-rating",
+          "urlLabel": "Rating URL",
+          "urlHint": "Enter the URL where your rating can be verified"
+        },
+        "video": {
+          "title": "Video Recording",
+          "description": "Upload a video of you playing to verify your skill level",
+          "uploadVideo": "Upload Video",
+          "recordVideo": "Record Video",
+          "selectFromGallery": "Select from Gallery",
+          "maxDuration": "Maximum duration: 5 minutes",
+          "maxSize": "Maximum size: 500 MB"
+        },
+        "image": {
+          "title": "Screenshot / Image",
+          "description": "Upload a screenshot of your official rating or ranking",
+          "uploadImage": "Upload Image",
+          "takePhoto": "Take Photo",
+          "selectFromGallery": "Select from Gallery",
+          "maxSize": "Maximum size: 10 MB"
+        },
+        "document": {
+          "title": "Official Document",
+          "description": "Upload an official rating certificate or license",
+          "uploadDocument": "Upload Document",
+          "selectDocument": "Select Document",
+          "selectFile": "Select File",
+          "supportedFormats": "Supported formats: PDF, DOC, DOCX, TXT",
+          "maxSize": "Maximum size: 25 MB"
+        }
+      },
+      "form": {
+        "title": "Proof Title",
+        "titlePlaceholder": "e.g., FFT Official Rating 2024",
+        "description": "Description (optional)",
+        "descriptionPlaceholder": "Add any additional details about this proof...",
+        "submit": "Submit Proof"
+      },
+      "status": {
+        "pending": "Pending Review",
+        "approved": "Verified",
+        "rejected": "Rejected",
+        "unverified": "Unverified"
+      },
+      "upload": {
+        "uploading": "Uploading...",
+        "processing": "Processing...",
+        "success": "Proof uploaded successfully!",
+        "error": "Upload failed. Please try again.",
+        "fileTooLarge": "File size exceeds the maximum allowed",
+        "invalidFormat": "Unsupported file format",
+        "selectFile": "Select a file to upload"
+      },
+      "delete": {
+        "title": "Delete Proof",
+        "confirm": "Are you sure you want to delete this proof? This action cannot be undone.",
+        "success": "Proof deleted successfully"
+      },
+      "view": {
+        "openInBrowser": "Open in Browser",
+        "playVideo": "Play Video",
+        "viewImage": "View Image",
+        "viewDocument": "View Document",
+        "downloadDocument": "Download Document"
+      },
+      "info": {
+        "title": "About Rating Proofs",
+        "description": "Rating proofs help verify your skill level to other players. Verified proofs increase trust and help you find better matches.",
+        "types": {
+          "title": "Types of Proof",
+          "externalLink": "Link to an official rating website or video platform",
+          "video": "Video recording of you playing (shows your actual skill)",
+          "image": "Screenshot of your official rating or tournament results",
+          "document": "Official certificate, license, or ranking document"
+        },
+        "verification": "All proofs are reviewed before being marked as verified. This usually takes 1-2 business days."
+      },
+      "errors": {
+        "loadFailed": "Failed to load proofs",
+        "saveFailed": "Failed to save proof",
+        "invalidUrl": "Please enter a valid URL",
+        "titleRequired": "Please enter a title for your proof",
+        "fileRequired": "Please select a file to upload"
+      },
+      "gallery": {
+        "title": "Rating Proofs",
+        "noProofsTitle": "No Rating Proofs Yet",
+        "noProofsDescription": "This player hasn't added any proofs to verify their rating level.",
+        "openInBrowser": "Open in Browser",
+        "openLink": "Open Link",
+        "retry": "Retry",
+        "videoNotAvailable": "Video not available",
+        "imageNotAvailable": "Image not available",
+        "documentNotAvailable": "Document not available",
+        "failedToLoadVideo": "Failed to load video",
+        "failedToLoadImage": "Failed to load image",
+        "failedToLoadDocument": "Failed to load document",
+        "cannotOpenLink": "Cannot open this link",
+        "failedToOpenLink": "Failed to open link",
+        "unknownProofType": "Unknown proof type"
+      }
     },
     "genderValues": {
       "male": "Male",
