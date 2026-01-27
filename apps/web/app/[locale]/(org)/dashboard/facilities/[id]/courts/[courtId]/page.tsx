@@ -66,7 +66,7 @@ export default async function CourtDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // Fetch court details
+  // Fetch court details with sports
   const { data: court, error } = await supabase
     .from('court')
     .select(
@@ -81,7 +81,14 @@ export default async function CourtDetailPage({ params }: PageProps) {
       availability_status,
       is_active,
       notes,
-      attributes
+      attributes,
+      court_sport (
+        sport_id,
+        sport:sport (
+          id,
+          name
+        )
+      )
     `
     )
     .eq('id', courtId)
@@ -178,6 +185,23 @@ export default async function CourtDetailPage({ params }: PageProps) {
                 </div>
               )}
             </div>
+
+            {court.court_sport &&
+              Array.isArray(court.court_sport) &&
+              court.court_sport.length > 0 && (
+                <div className="mt-3">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                    {t('detail.sports')}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {court.court_sport.map(cs => (
+                      <Badge key={cs.sport_id} variant="default">
+                        {cs.sport?.name || cs.sport_id}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
 
             {court.notes && (
               <div className="mt-3 p-2.5 bg-muted/30 rounded-lg">

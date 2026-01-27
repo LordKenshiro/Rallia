@@ -1,5 +1,8 @@
+import { FacilityContactsSection } from '@/components/facility-contacts-section';
 import { FacilityCourtsSection } from '@/components/facility-courts-section';
 import { FacilityEditButton } from '@/components/facility-edit-button';
+import { FacilityFilesSection } from '@/components/facility-files-section';
+import { FacilityImagesSection } from '@/components/facility-images-section';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from '@/i18n/navigation';
@@ -49,7 +52,7 @@ export default async function FacilityDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // Fetch facility with courts
+  // Fetch facility with courts and contacts
   const { data: facility, error } = await supabase
     .from('facility')
     .select(
@@ -73,7 +76,51 @@ export default async function FacilityDetailPage({ params }: PageProps) {
         indoor,
         lighting,
         availability_status,
-        is_active
+        is_active,
+        court_sport (
+          sport_id,
+          sport:sport (
+            id,
+            name
+          )
+        )
+      ),
+      facility_contact (
+        id,
+        contact_type,
+        phone,
+        email,
+        website,
+        is_primary,
+        sport_id,
+        notes,
+        sport:sport (
+          id,
+          name
+        )
+      ),
+      facility_image (
+        id,
+        url,
+        thumbnail_url,
+        display_order,
+        is_primary,
+        description
+      ),
+      facility_file (
+        id,
+        file_id,
+        display_order,
+        is_primary,
+        file:file (
+          id,
+          file_type,
+          original_name,
+          file_size,
+          url,
+          mime_type,
+          storage_key
+        )
       )
     `
     )
@@ -271,6 +318,27 @@ export default async function FacilityDetailPage({ params }: PageProps) {
           </Link>
         </Card>
       </div>
+
+      {/* Images Section */}
+      <FacilityImagesSection
+        facilityId={id}
+        images={Array.isArray(facility.facility_image) ? facility.facility_image : []}
+        canEdit={canEdit}
+      />
+
+      {/* Contacts Section */}
+      <FacilityContactsSection
+        facilityId={id}
+        contacts={Array.isArray(facility.facility_contact) ? facility.facility_contact : []}
+        canEdit={canEdit}
+      />
+
+      {/* Files Section */}
+      <FacilityFilesSection
+        facilityId={id}
+        files={Array.isArray(facility.facility_file) ? facility.facility_file : []}
+        canEdit={canEdit}
+      />
 
       {/* Courts Section */}
       <FacilityCourtsSection facilityId={id} courts={courts} canEdit={canEdit} />

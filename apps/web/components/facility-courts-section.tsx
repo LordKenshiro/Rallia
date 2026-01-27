@@ -18,6 +18,13 @@ interface Court {
   lighting: boolean | null;
   availability_status: string | null;
   is_active: boolean | null;
+  court_sport?: Array<{
+    sport_id: string;
+    sport?: {
+      id: string;
+      name: string;
+    } | null;
+  }>;
 }
 
 interface FacilityCourtsSectionProps {
@@ -106,6 +113,15 @@ export function FacilityCourtsSection({ facilityId, courts, canEdit }: FacilityC
                         </span>
                       )}
                     </div>
+                    {court.court_sport && court.court_sport.length > 0 && (
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {court.court_sport.map(cs => (
+                          <Badge key={cs.sport_id} variant="outline" className="text-xs">
+                            {cs.sport?.name || cs.sport_id}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <Badge

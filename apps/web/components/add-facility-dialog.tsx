@@ -1,5 +1,6 @@
 'use client';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -11,11 +12,18 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 import { useRouter } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Loader2, Plus, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+interface Sport {
+  id: string;
+  name: string;
+  slug: string;
+}
 
 interface AddFacilityDialogProps {
   open: boolean;
@@ -29,6 +37,11 @@ export function AddFacilityDialog({ open, onOpenChange, organizationId }: AddFac
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Sports state
+  const [sports, setSports] = useState<Sport[]>([]);
+  const [loadingSports, setLoadingSports] = useState(true);
+  const [selectedSports, setSelectedSports] = useState<string[]>([]);
 
   // Form state
   const [name, setName] = useState('');
@@ -45,6 +58,25 @@ export function AddFacilityDialog({ open, onOpenChange, organizationId }: AddFac
   // Google Places search state
   const [isSearching, setIsSearching] = useState(false);
 
+  // Fetch sports on mount
+  useEffect(() => {
+    const fetchSports = async () => {
+      try {
+        const response = await fetch('/api/sports');
+        if (response.ok) {
+          const data = await response.json();
+          setSports(data.sports || []);
+        }
+      } catch (err) {
+        console.error('Error fetching sports:', err);
+      } finally {
+        setLoadingSports(false);
+      }
+    };
+
+    fetchSports();
+  }, []);
+
   const resetForm = () => {
     setName('');
     setDescription('');
@@ -56,7 +88,14 @@ export function AddFacilityDialog({ open, onOpenChange, organizationId }: AddFac
     setLongitude('');
     setTimezone('');
     setMembershipRequired(false);
+    setSelectedSports([]);
     setError(null);
+  };
+
+  const toggleSport = (sportId: string) => {
+    setSelectedSports(prev =>
+      prev.includes(sportId) ? prev.filter(id => id !== sportId) : [...prev, sportId]
+    );
   };
 
   const handleClose = () => {
@@ -146,6 +185,23 @@ export function AddFacilityDialog({ open, onOpenChange, organizationId }: AddFac
         .single();
 
       if (insertError) throw insertError;
+
+      // Insert facility_sport records
+      if (selectedSports.length > 0) {
+        const facilitySportRecords = selectedSports.map(sportId => ({
+          facility_id: facility.id,
+          sport_id: sportId,
+        }));
+
+        const { error: sportError } = await supabase
+          .from('facility_sport')
+          .insert(facilitySportRecords);
+
+        if (sportError) {
+          console.error('Error creating facility sports:', sportError);
+          // Continue even if this fails - facility is created
+        }
+      }
 
       resetForm();
       onOpenChange(false);
@@ -337,6 +393,48 @@ export function AddFacilityDialog({ open, onOpenChange, organizationId }: AddFac
               </Label>
               <p className="text-sm text-muted-foreground">{t('edit.membershipRequiredHint')}</p>
             </div>
+          </div>
+
+          {/* Sports Selection */}
+          <div className="space-y-2">
+            <Label>{t('edit.sportsLabel')}</Label>
+            {loadingSports ? (
+              <div className="flex items-center gap-2 py-4">
+                <Loader2 className="size-4 animate-spin" />
+                <span className="text-sm text-muted-foreground">{t('edit.loadingSports')}</span>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2 p-3 border rounded-lg bg-muted/20">
+                {sports.map(sport => {
+                  const isSelected = selectedSports.includes(sport.id);
+                  return (
+                    <button
+                      key={sport.id}
+                      type="button"
+                      onClick={() => toggleSport(sport.id)}
+                      disabled={saving}
+                      className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-full"
+                    >
+                      <Badge
+                        variant={isSelected ? 'default' : 'outline'}
+                        className={cn(
+                          'px-3 py-1.5 text-sm font-medium transition-all cursor-pointer hover:scale-105',
+                          isSelected
+                            ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                            : 'hover:bg-accent hover:text-accent-foreground'
+                        )}
+                      >
+                        {sport.name
+                          .split(' ')
+                          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                          .join(' ')}
+                      </Badge>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">{t('edit.sportsHint')}</p>
           </div>
 
           <DialogFooter>

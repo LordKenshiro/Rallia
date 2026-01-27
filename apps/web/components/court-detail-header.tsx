@@ -18,6 +18,7 @@ interface Court {
   lines_marked_for_multiple_sports: boolean | null;
   availability_status: string | null;
   notes: string | null;
+  court_sport?: Array<{ sport_id: string; sport?: { id: string; name: string } | null }>;
 }
 
 interface CourtDetailHeaderProps {

@@ -11,11 +11,13 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { createClient } from '@/lib/supabase/client';
+import { cn } from '@/lib/utils';
 import { Loader2, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 // These must match the surface_type_enum in the database
 const SURFACE_TYPES = [
@@ -43,6 +45,11 @@ export function AddCourtDialog({ open, onOpenChange, facilityId }: AddCourtDialo
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Sports state
+  const [sports, setSports] = useState<Array<{ id: string; name: string; slug: string }>>([]);
+  const [loadingSports, setLoadingSports] = useState(true);
+  const [selectedSports, setSelectedSports] = useState<string[]>([]);
+
   // Form state
   const [name, setName] = useState('');
   const [courtNumber, setCourtNumber] = useState<number | ''>('');
@@ -52,6 +59,33 @@ export function AddCourtDialog({ open, onOpenChange, facilityId }: AddCourtDialo
   const [multiSport, setMultiSport] = useState(false);
   const [notes, setNotes] = useState('');
 
+  // Fetch sports on mount
+  useEffect(() => {
+    const fetchSports = async () => {
+      try {
+        const response = await fetch('/api/sports');
+        if (response.ok) {
+          const data = await response.json();
+          setSports(data.sports || []);
+        }
+      } catch (err) {
+        console.error('Error fetching sports:', err);
+      } finally {
+        setLoadingSports(false);
+      }
+    };
+
+    if (open) {
+      fetchSports();
+    }
+  }, [open]);
+
+  const toggleSport = (sportId: string) => {
+    setSelectedSports(prev =>
+      prev.includes(sportId) ? prev.filter(id => id !== sportId) : [...prev, sportId]
+    );
+  };
+
   const resetForm = () => {
     setName('');
     setCourtNumber('');
@@ -60,6 +94,7 @@ export function AddCourtDialog({ open, onOpenChange, facilityId }: AddCourtDialo
     setLighting(false);
     setMultiSport(false);
     setNotes('');
+    setSelectedSports([]);
     setError(null);
   };
 
@@ -78,20 +113,39 @@ export function AddCourtDialog({ open, onOpenChange, facilityId }: AddCourtDialo
     try {
       const supabase = createClient();
 
-      const { error: insertError } = await supabase.from('court').insert({
-        facility_id: facilityId,
-        name: name || null,
-        court_number: courtNumber || null,
-        surface_type: surfaceType || null,
-        indoor,
-        lighting,
-        lines_marked_for_multiple_sports: multiSport,
-        notes: notes || null,
-        availability_status: 'available' as const,
-        is_active: true,
-      });
+      const { data: court, error: insertError } = await supabase
+        .from('court')
+        .insert({
+          facility_id: facilityId,
+          name: name || null,
+          court_number: courtNumber || null,
+          surface_type: surfaceType || null,
+          indoor,
+          lighting,
+          lines_marked_for_multiple_sports: multiSport,
+          notes: notes || null,
+          availability_status: 'available' as const,
+          is_active: true,
+        })
+        .select('id')
+        .single();
 
       if (insertError) throw insertError;
+
+      // Insert court_sport records
+      if (selectedSports.length > 0 && court) {
+        const courtSportRecords = selectedSports.map(sportId => ({
+          court_id: court.id,
+          sport_id: sportId,
+        }));
+
+        const { error: sportError } = await supabase.from('court_sport').insert(courtSportRecords);
+
+        if (sportError) {
+          console.error('Error creating court sports:', sportError);
+          // Continue even if this fails - court is created
+        }
+      }
 
       resetForm();
       onOpenChange(false);
@@ -228,6 +282,48 @@ export function AddCourtDialog({ open, onOpenChange, facilityId }: AddCourtDialo
               className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={saving}
             />
+          </div>
+
+          {/* Sports Selection */}
+          <div className="space-y-2">
+            <Label>{t('add.sportsLabel')}</Label>
+            {loadingSports ? (
+              <div className="flex items-center gap-2 py-4">
+                <Loader2 className="size-4 animate-spin" />
+                <span className="text-sm text-muted-foreground">{t('add.loadingSports')}</span>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2 p-3 border rounded-lg bg-muted/20">
+                {sports.map(sport => {
+                  const isSelected = selectedSports.includes(sport.id);
+                  return (
+                    <button
+                      key={sport.id}
+                      type="button"
+                      onClick={() => toggleSport(sport.id)}
+                      disabled={saving}
+                      className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-full"
+                    >
+                      <Badge
+                        variant={isSelected ? 'default' : 'outline'}
+                        className={cn(
+                          'px-3 py-1.5 text-sm font-medium transition-all cursor-pointer hover:scale-105',
+                          isSelected
+                            ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                            : 'hover:bg-accent hover:text-accent-foreground'
+                        )}
+                      >
+                        {sport.name
+                          .split(' ')
+                          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                          .join(' ')}
+                      </Badge>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">{t('add.sportsHint')}</p>
           </div>
 
           <DialogFooter>
