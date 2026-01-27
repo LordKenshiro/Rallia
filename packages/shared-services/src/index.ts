@@ -23,7 +23,8 @@ export * from './groups';
 export * from './communities';
 export * from './chat';
 export * from './reports';
-// Stripe exports are server-only - import from '@rallia/shared-services/server' instead
+// Bookings - client-safe exports (types, validation, status, policy)
+// For server-side functions (createBooking, cancelBooking), use web app's lib/bookings
 export * from './bookings';
 
 // Export default DatabaseService

@@ -5,7 +5,7 @@
  * Processes account updates, payment events, etc.
  */
 
-import { verifyWebhookSignature, handleAccountUpdated } from '@rallia/shared-services/server';
+import { verifyWebhookSignature, handleAccountUpdated } from '@/lib/stripe';
 import {
   confirmBookingPayment,
   markBookingPaymentFailed,

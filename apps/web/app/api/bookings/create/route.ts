@@ -5,7 +5,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
-import { createBooking } from '@rallia/shared-services';
+import { createBooking } from '@/lib/bookings';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {

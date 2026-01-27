@@ -8,83 +8,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
   CancelBookingParams,
   CancelBookingResult,
-  CancellationPolicy,
   RefundStatus,
-} from './types';
-
-// Lazy import Stripe functions to avoid bundling Stripe SDK in React Native
-async function getStripeFunctions() {
-  // Dynamic import only loads in Node.js/server environments
-  const stripeModule = await import('../stripe/payments');
-  return {
-    createRefund: stripeModule.createRefund,
-    cancelPaymentIntent: stripeModule.cancelPaymentIntent,
-    getPaymentIntent: stripeModule.getPaymentIntent,
-  };
-}
-
-/**
- * Default cancellation policy if none is configured
- */
-const DEFAULT_CANCELLATION_POLICY: CancellationPolicy = {
-  freeCancellationHours: 24,
-  partialRefundHours: 12,
-  partialRefundPercent: 50,
-  noRefundHours: 0,
-};
-
-/**
- * Get the cancellation policy for an organization
- */
-export async function getCancellationPolicy(
-  supabase: SupabaseClient,
-  organizationId: string
-): Promise<CancellationPolicy> {
-  const { data: policy } = await supabase
-    .from('cancellation_policy')
-    .select('*')
-    .eq('organization_id', organizationId)
-    .single();
-
-  if (!policy) {
-    return DEFAULT_CANCELLATION_POLICY;
-  }
-
-  return {
-    freeCancellationHours: policy.free_cancellation_hours,
-    partialRefundHours: policy.partial_refund_hours,
-    partialRefundPercent: policy.partial_refund_percent,
-    noRefundHours: policy.no_refund_hours,
-  };
-}
-
-/**
- * Calculate the refund amount based on cancellation policy
- */
-export function calculateRefundAmount(
-  priceCents: number,
-  hoursUntilBooking: number,
-  policy: CancellationPolicy
-): { refundAmountCents: number; refundPercent: number } {
-  // Full refund if within free cancellation window
-  if (hoursUntilBooking >= policy.freeCancellationHours) {
-    return { refundAmountCents: priceCents, refundPercent: 100 };
-  }
-
-  // Partial refund if within partial refund window
-  if (hoursUntilBooking >= policy.partialRefundHours) {
-    const refundAmount = Math.round((priceCents * policy.partialRefundPercent) / 100);
-    return { refundAmountCents: refundAmount, refundPercent: policy.partialRefundPercent };
-  }
-
-  // No refund if past all windows
-  if (hoursUntilBooking <= policy.noRefundHours) {
-    return { refundAmountCents: 0, refundPercent: 0 };
-  }
-
-  // Between partial and no-refund windows - no refund
-  return { refundAmountCents: 0, refundPercent: 0 };
-}
+} from '@rallia/shared-services';
+import { getCancellationPolicy, calculateRefundAmount } from '@rallia/shared-services';
+import { createRefund, cancelPaymentIntent, getPaymentIntent } from '@/lib/stripe/payments';
 
 /**
  * Cancel a booking
@@ -146,12 +73,8 @@ export async function cancelBooking(
 
   if (booking.stripe_payment_intent_id) {
     try {
-      const stripeFunctions = await getStripeFunctions();
-
       // Check the PaymentIntent status
-      const paymentIntent = await stripeFunctions.getPaymentIntent(
-        booking.stripe_payment_intent_id
-      );
+      const paymentIntent = await getPaymentIntent(booking.stripe_payment_intent_id);
 
       if (
         paymentIntent.status === 'requires_payment_method' ||
@@ -159,7 +82,7 @@ export async function cancelBooking(
         paymentIntent.status === 'requires_action'
       ) {
         // Payment not completed yet, just cancel the intent
-        await stripeFunctions.cancelPaymentIntent(booking.stripe_payment_intent_id);
+        await cancelPaymentIntent(booking.stripe_payment_intent_id);
         refundStatus = 'none';
         refundMessage = 'Payment cancelled (not yet processed)';
       } else if (paymentIntent.status === 'succeeded' && refundAmountCents > 0) {
@@ -171,7 +94,7 @@ export async function cancelBooking(
             : paymentIntent.latest_charge?.id);
 
         if (chargeId) {
-          const refundResult = await stripeFunctions.createRefund({
+          const refundResult = await createRefund({
             chargeId,
             amountCents: refundAmountCents,
             reason: 'requested_by_customer',

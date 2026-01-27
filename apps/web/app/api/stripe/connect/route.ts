@@ -6,7 +6,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
-import { createConnectAccount, createAccountLink } from '@rallia/shared-services/server';
+import { createConnectAccount, createAccountLink } from '@/lib/stripe';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
