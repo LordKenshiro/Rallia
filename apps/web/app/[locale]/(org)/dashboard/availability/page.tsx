@@ -1,5 +1,15 @@
 'use client';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,6 +37,7 @@ import {
   ExternalLink,
   LayoutGrid,
   Loader2,
+  Trash2,
   User,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -35,6 +46,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 interface Facility {
   id: string;
   name: string;
+  timezone: string | null;
 }
 
 interface Court {
@@ -56,6 +68,10 @@ interface SlotData {
   booking_id?: string;
   player_name?: string;
   player_email?: string;
+  // Block-specific fields
+  block_id?: string;
+  block_type?: 'manual' | 'maintenance' | 'holiday' | 'weather' | 'private_event';
+  block_reason?: string;
 }
 
 // Format a Date to YYYY-MM-DD in local timezone (not UTC)
@@ -157,8 +173,13 @@ function SlotPopover({
   playerName,
   playerEmail,
   bookingId,
+  blockId,
+  blockType,
+  blockReason,
+  isDeleting,
   onCreateBooking,
   onViewBooking,
+  onDeleteBlock,
 }: {
   status: 'available' | 'booked' | 'blocked' | 'none';
   startTime: string;
@@ -169,11 +190,17 @@ function SlotPopover({
   playerName?: string;
   playerEmail?: string;
   bookingId?: string;
+  blockId?: string;
+  blockType?: 'manual' | 'maintenance' | 'holiday' | 'weather' | 'private_event';
+  blockReason?: string;
+  isDeleting?: boolean;
   onCreateBooking: () => void;
   onViewBooking: () => void;
+  onDeleteBlock: () => void;
 }) {
   const t = useTranslations('availability.calendar');
   const tStatus = useTranslations('availability.calendar.legend');
+  const tBlocks = useTranslations('blocks');
 
   const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString(undefined, {
     weekday: 'short',
@@ -182,6 +209,9 @@ function SlotPopover({
   });
 
   const timeRange = `${formatTime(startTime)} - ${formatTime(endTime)}`;
+
+  // Check if block is all-day (00:00 to 23:59)
+  const isAllDay = startTime === '00:00:00' && endTime === '23:59:59';
 
   return (
     <div className="space-y-3">
@@ -212,7 +242,7 @@ function SlotPopover({
           </div>
           <div className="flex items-center gap-2">
             <Clock className="size-3.5" />
-            <span>{timeRange}</span>
+            <span>{status === 'blocked' && isAllDay ? t('allDay') : timeRange}</span>
           </div>
         </div>
       </div>
@@ -240,6 +270,21 @@ function SlotPopover({
         </div>
       )}
 
+      {/* Block info for blocked slots */}
+      {status === 'blocked' && (
+        <div className="space-y-2 p-2 rounded-md bg-muted/50">
+          {blockType && (
+            <div className="flex items-center gap-2 text-sm">
+              <Ban className="size-3.5 text-muted-foreground" />
+              <Badge variant="outline" className="text-xs">
+                {tBlocks(`types.${blockType}`)}
+              </Badge>
+            </div>
+          )}
+          {blockReason && <div className="text-xs text-muted-foreground">{blockReason}</div>}
+        </div>
+      )}
+
       {/* Actions */}
       <div className="flex gap-2 pt-1">
         {status === 'available' && (
@@ -254,11 +299,21 @@ function SlotPopover({
             {t('clickToView')}
           </Button>
         )}
-        {status === 'blocked' && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Ban className="size-3.5" />
-            <span>{t('slotBlocked')}</span>
-          </div>
+        {status === 'blocked' && blockId && (
+          <Button
+            size="sm"
+            variant="destructive"
+            className="flex-1 gap-1.5"
+            onClick={onDeleteBlock}
+            disabled={isDeleting}
+          >
+            {isDeleting ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Trash2 className="size-3.5" />
+            )}
+            {t('deleteBlock')}
+          </Button>
         )}
       </div>
     </div>
@@ -289,15 +344,80 @@ export default function AvailabilityCalendarPage() {
     return new Date(today.setDate(diff));
   });
   const [openPopover, setOpenPopover] = useState<string | null>(null);
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [facilityTime, setFacilityTime] = useState<{ hours: number; minutes: number } | null>(null);
+  const [blockToDelete, setBlockToDelete] = useState<{ id: string; facilityId: string } | null>(
+    null
+  );
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // Update current time every minute for the "now" indicator
+  // Get the selected facility's timezone
+  const selectedFacilityTimezone = useMemo(() => {
+    const facility = facilities.find(f => f.id === selectedFacility);
+    return facility?.timezone || null;
+  }, [facilities, selectedFacility]);
+
+  // Calculate current time in the facility's timezone
+  const getFacilityTime = useCallback(() => {
+    if (!selectedFacilityTimezone) {
+      // Fallback to local time if no timezone set
+      const now = new Date();
+      return { hours: now.getHours(), minutes: now.getMinutes() };
+    }
+
+    try {
+      // Get current time in the facility's timezone using a more reliable method
+      const now = new Date();
+
+      // Create a formatter for the facility timezone
+      const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: selectedFacilityTimezone,
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+
+      // Format the time and parse it
+      const formatted = formatter.format(now);
+      // Format should be "HH:MM" or "H:MM"
+      const match = formatted.match(/(\d{1,2}):(\d{2})/);
+
+      if (match) {
+        const hours = parseInt(match[1], 10);
+        const minutes = parseInt(match[2], 10);
+        return { hours, minutes };
+      }
+
+      // Fallback: try formatToParts
+      const parts = formatter.formatToParts(now);
+      const hourPart = parts.find(p => p.type === 'hour');
+      const minutePart = parts.find(p => p.type === 'minute');
+
+      if (hourPart && minutePart) {
+        const hours = parseInt(hourPart.value, 10);
+        const minutes = parseInt(minutePart.value, 10);
+        return { hours, minutes };
+      }
+
+      throw new Error('Could not parse time');
+    } catch (error) {
+      // Fallback to local time if timezone is invalid
+      console.warn('Failed to get facility time, using local time:', error);
+      const now = new Date();
+      return { hours: now.getHours(), minutes: now.getMinutes() };
+    }
+  }, [selectedFacilityTimezone]);
+
+  // Initialize and update facility time on client side only
+  // Re-runs when getFacilityTime changes (which depends on selectedFacilityTimezone)
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 60000);
+    // Update time immediately when timezone changes
+    const updateTime = () => setFacilityTime(getFacilityTime());
+    updateTime();
+
+    // Update every minute for the "now" indicator
+    const interval = setInterval(updateTime, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [getFacilityTime]);
 
   const getWeekDates = useCallback(() => {
     const dates: Date[] = [];
@@ -354,16 +474,16 @@ export default function AvailabilityCalendarPage() {
       if (isPastDate(date)) return true;
 
       // If date is today, check if the slot end time has passed
-      if (isToday(date)) {
+      if (isToday(date) && facilityTime) {
         const [hours, minutes] = endTime.split(':').map(Number);
         const slotEndMinutes = hours * 60 + minutes;
-        const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+        const currentMinutes = facilityTime.hours * 60 + facilityTime.minutes;
         return slotEndMinutes <= currentMinutes;
       }
 
       return false;
     },
-    [isPastDate, isToday, currentTime]
+    [isPastDate, isToday, facilityTime]
   );
 
   // Calculate actual time range from slots data (expand beyond default if needed)
@@ -393,8 +513,9 @@ export default function AvailabilityCalendarPage() {
 
   // Calculate the "now" position as a percentage
   const getNowPosition = useMemo(() => {
-    const hour = currentTime.getHours();
-    const minutes = currentTime.getMinutes();
+    if (!facilityTime) return null;
+
+    const { hours: hour, minutes } = facilityTime;
 
     // Only show if within operating hours
     if (hour < actualStartHour || hour >= actualEndHour) return null;
@@ -404,7 +525,7 @@ export default function AvailabilityCalendarPage() {
     const position = (currentMinutes / operatingMinutes) * 100;
 
     return position;
-  }, [currentTime, actualStartHour, actualEndHour, operatingMinutes]);
+  }, [facilityTime, actualStartHour, actualEndHour, operatingMinutes]);
 
   const fetchFacilities = useCallback(async () => {
     if (!selectedOrganization) {
@@ -416,7 +537,7 @@ export default function AvailabilityCalendarPage() {
 
     const { data: facilitiesData } = await supabase
       .from('facility')
-      .select('id, name')
+      .select('id, name, timezone')
       .eq('organization_id', selectedOrganization.id)
       .is('archived_at', null)
       .order('name');
@@ -548,7 +669,7 @@ export default function AvailabilityCalendarPage() {
       // 3. Single query for all blocks in the date range
       supabase
         .from('availability_block')
-        .select('id, court_id, block_date, start_time, end_time')
+        .select('id, court_id, block_date, start_time, end_time, block_type, reason')
         .gte('block_date', dateFrom)
         .lte('block_date', dateTo)
         .or(`facility_id.eq.${selectedFacility}`),
@@ -655,6 +776,9 @@ export default function AvailabilityCalendarPage() {
             end_time: block.end_time || '23:59:59',
             price_cents: 0,
             status: 'blocked',
+            block_id: block.id,
+            block_type: block.block_type as SlotData['block_type'],
+            block_reason: block.reason || undefined,
           });
         }
       }
@@ -785,6 +909,99 @@ export default function AvailabilityCalendarPage() {
     [slots]
   );
 
+  // Calculate how many grid slots a booking spans based on actual slot boundaries
+  const getBookingSpan = useCallback(
+    (
+      slot: SlotData,
+      slotDurationMinutes: number,
+      timeSlots: Array<{ startTime: string; endTime: string; startMinutes: number }>,
+      currentSlotIndex: number
+    ): number => {
+      const bookingStart = timeToMinutes(slot.start_time);
+      const bookingEnd = timeToMinutes(slot.end_time);
+
+      // Find which grid slots the booking actually overlaps with
+      let endSlotIndex = currentSlotIndex;
+      for (let i = currentSlotIndex; i < timeSlots.length; i++) {
+        const slotStart = timeSlots[i].startMinutes;
+        const slotEnd = slotStart + slotDurationMinutes;
+
+        // If the booking ends before or at this slot's start, stop
+        if (bookingEnd <= slotStart) {
+          break;
+        }
+
+        // If the booking overlaps with this slot, include it
+        if (bookingStart < slotEnd && bookingEnd > slotStart) {
+          endSlotIndex = i;
+        }
+      }
+
+      const span = endSlotIndex - currentSlotIndex + 1;
+      return Math.max(1, span);
+    },
+    []
+  );
+
+  // Check if this slot should be skipped because it's part of a multi-slot booking/block
+  const shouldSkipSlot = useCallback(
+    (
+      courtId: string,
+      date: string,
+      currentSlotStartMinutes: number,
+      slotDurationMinutes: number
+    ): { skip: boolean; reason?: 'booked' | 'blocked' } => {
+      // Check for bookings that started earlier and still cover this slot
+      const overlappingBooking = slots.find(s => {
+        if (s.court_id !== courtId || s.date !== date || s.status !== 'booked') return false;
+        const bookingStart = timeToMinutes(s.start_time);
+        const bookingEnd = timeToMinutes(s.end_time);
+
+        // This slot should be skipped if:
+        // 1. The booking starts before this slot
+        // 2. The booking ends after this slot starts (overlaps)
+        return bookingStart < currentSlotStartMinutes && bookingEnd > currentSlotStartMinutes;
+      });
+
+      if (overlappingBooking) {
+        return { skip: true, reason: 'booked' };
+      }
+
+      // Check for blocks that started earlier and still cover this slot
+      const overlappingBlock = slots.find(s => {
+        if (s.court_id !== courtId || s.date !== date || s.status !== 'blocked') return false;
+        const blockStart = timeToMinutes(s.start_time);
+        const blockEnd = timeToMinutes(s.end_time);
+
+        return blockStart < currentSlotStartMinutes && blockEnd > currentSlotStartMinutes;
+      });
+
+      if (overlappingBlock) {
+        return { skip: true, reason: 'blocked' };
+      }
+
+      return { skip: false };
+    },
+    [slots]
+  );
+
+  // Get all bookings that overlap with a specific time range (for detecting multiple bookings in one slot)
+  const getOverlappingBookings = useCallback(
+    (courtId: string, date: string, startTime: string, endTime: string): SlotData[] => {
+      const startMinutes = timeToMinutes(startTime);
+      const endMinutes = timeToMinutes(endTime);
+
+      return slots.filter(s => {
+        if (s.court_id !== courtId || s.date !== date || s.status !== 'booked') return false;
+        const slotStart = timeToMinutes(s.start_time);
+        const slotEnd = timeToMinutes(s.end_time);
+        // Check if there's any overlap
+        return slotStart < endMinutes && slotEnd > startMinutes;
+      });
+    },
+    [slots]
+  );
+
   const getStatusColor = (
     status: 'available' | 'booked' | 'blocked' | 'none',
     isExpired: boolean = false,
@@ -811,7 +1028,7 @@ export default function AvailabilityCalendarPage() {
     const hover = {
       available: 'hover:bg-green-500/40 hover:border-green-500/70 hover:scale-105',
       booked: 'hover:bg-blue-500/40 hover:border-blue-500/70 hover:scale-105',
-      blocked: 'hover:bg-gray-500/30',
+      blocked: 'hover:bg-gray-500/40 hover:border-gray-500/70 hover:scale-105',
       none: '',
     }[status];
 
@@ -831,6 +1048,37 @@ export default function AvailabilityCalendarPage() {
   const handleViewBooking = (bookingId: string) => {
     router.push(`/dashboard/bookings/${bookingId}`);
     setOpenPopover(null);
+  };
+
+  const handleManageBlocks = (facilityId: string) => {
+    router.push(`/dashboard/facilities/${facilityId}/blocks`);
+    setOpenPopover(null);
+  };
+
+  const handleDeleteBlock = async () => {
+    if (!blockToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(
+        `/api/facilities/${blockToDelete.facilityId}/blocks?blockId=${blockToDelete.id}`,
+        { method: 'DELETE' }
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete block');
+      }
+
+      // Refresh the slots data
+      await fetchCourtsAndSlots();
+      setOpenPopover(null);
+    } catch (err) {
+      console.error('Error deleting block:', err);
+    } finally {
+      setIsDeleting(false);
+      setBlockToDelete(null);
+    }
   };
 
   const weekDates = getWeekDates();
@@ -940,7 +1188,7 @@ export default function AvailabilityCalendarPage() {
         </div>
         <div className="flex items-center gap-2 ml-auto text-xs text-muted-foreground">
           <div className="w-0.5 h-4 bg-red-500 rounded-full" />
-          <span>{t('calendar.currentTime')}</span>
+          <span>{t('calendar.currentTimeAtFacility')}</span>
         </div>
       </div>
 
@@ -1008,16 +1256,53 @@ export default function AvailabilityCalendarPage() {
                       )}
                     </div>
                     <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
-                      {timeSlots.map(timeSlot => {
+                      {timeSlots.map((timeSlot, slotIndex) => {
+                        // Check if this slot should be skipped because it's part of a multi-slot booking/block
+                        const skipResult = shouldSkipSlot(
+                          court.id,
+                          dateStr,
+                          timeSlot.startMinutes,
+                          court.slot_duration_minutes
+                        );
+
+                        if (skipResult.skip) {
+                          return null; // Skip this slot - it's covered by a previous booking/block element
+                        }
+
                         const { status, slot } = getSlotDataForTime(
                           court.id,
                           dateStr,
                           timeSlot.startTime,
                           timeSlot.endTime
                         );
+
+                        // Calculate span for bookings/blocks (how many grid slots they cover)
+                        let spanCount = 1;
+                        if (slot && (status === 'booked' || status === 'blocked')) {
+                          spanCount = getBookingSpan(
+                            slot,
+                            court.slot_duration_minutes,
+                            timeSlots,
+                            slotIndex
+                          );
+                        }
+
+                        // Check for multiple bookings within this slot
+                        const overlappingBookings =
+                          status === 'booked'
+                            ? getOverlappingBookings(
+                                court.id,
+                                dateStr,
+                                timeSlot.startTime,
+                                timeSlot.endTime
+                              )
+                            : [];
+                        const hasMultipleBookings = overlappingBookings.length > 1;
+
                         const expired = isSlotExpired(selectedDate, timeSlot.endTime);
                         const isClickable =
-                          !expired && (status === 'available' || status === 'booked');
+                          !expired &&
+                          (status === 'available' || status === 'booked' || status === 'blocked');
                         const popoverId = `${court.id}-${dateStr}-${timeSlot.startTime}`;
                         const courtName = court.name || `Court ${court.court_number}`;
 
@@ -1030,19 +1315,29 @@ export default function AvailabilityCalendarPage() {
                             <PopoverTrigger asChild>
                               <button
                                 className={cn(
-                                  'p-2 rounded-md border text-center transition-all duration-150',
+                                  'p-2 rounded-md border text-center transition-all duration-150 relative',
                                   getStatusColor(status, expired),
                                   isClickable ? 'cursor-pointer' : 'cursor-default',
-                                  'focus:outline-none focus:ring-2 focus:ring-primary/50'
+                                  'focus:outline-none focus:ring-2 focus:ring-primary/50',
+                                  hasMultipleBookings && 'ring-1 ring-inset ring-blue-600/50'
                                 )}
+                                style={{
+                                  gridColumn: spanCount > 1 ? `span ${spanCount}` : undefined,
+                                }}
                                 disabled={!isClickable}
                               >
                                 <div className="text-xs font-medium">
-                                  {formatTime(timeSlot.startTime)}
+                                  {formatTime(slot?.start_time || timeSlot.startTime)}
                                 </div>
                                 <div className="text-[10px] text-muted-foreground">
-                                  {formatTime(timeSlot.endTime)}
+                                  {formatTime(slot?.end_time || timeSlot.endTime)}
                                 </div>
+                                {/* Show count indicator for multiple bookings */}
+                                {hasMultipleBookings && (
+                                  <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow-sm">
+                                    {overlappingBookings.length}
+                                  </span>
+                                )}
                               </button>
                             </PopoverTrigger>
                             {isClickable && (
@@ -1052,23 +1347,76 @@ export default function AvailabilityCalendarPage() {
                                 className="w-72"
                                 sideOffset={8}
                               >
-                                <SlotPopover
-                                  status={status}
-                                  startTime={slot?.start_time || timeSlot.startTime}
-                                  endTime={slot?.end_time || timeSlot.endTime}
-                                  date={dateStr}
-                                  courtName={courtName}
-                                  priceCents={slot?.price_cents}
-                                  playerName={slot?.player_name}
-                                  playerEmail={slot?.player_email}
-                                  bookingId={slot?.booking_id}
-                                  onCreateBooking={() =>
-                                    handleCreateBooking(court.id, dateStr, timeSlot.startTime)
-                                  }
-                                  onViewBooking={() =>
-                                    slot?.booking_id && handleViewBooking(slot.booking_id)
-                                  }
-                                />
+                                {hasMultipleBookings ? (
+                                  // Show multiple bookings in the popover
+                                  <div className="space-y-3">
+                                    <div className="text-sm font-semibold border-b pb-2">
+                                      {overlappingBookings.length} bookings in this slot
+                                    </div>
+                                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                                      {overlappingBookings.map((booking, idx) => (
+                                        <div
+                                          key={booking.booking_id || idx}
+                                          className="p-2 rounded-md bg-muted/50 space-y-1"
+                                        >
+                                          <div className="flex items-center justify-between text-sm">
+                                            <span className="font-medium">
+                                              {formatTime(booking.start_time)} -{' '}
+                                              {formatTime(booking.end_time)}
+                                            </span>
+                                            {booking.booking_id && (
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-6 px-2 text-xs"
+                                                onClick={() =>
+                                                  handleViewBooking(booking.booking_id!)
+                                                }
+                                              >
+                                                View
+                                              </Button>
+                                            )}
+                                          </div>
+                                          {booking.player_name && (
+                                            <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                              <User className="size-3" />
+                                              {booking.player_name}
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <SlotPopover
+                                    status={status}
+                                    startTime={slot?.start_time || timeSlot.startTime}
+                                    endTime={slot?.end_time || timeSlot.endTime}
+                                    date={dateStr}
+                                    courtName={courtName}
+                                    priceCents={slot?.price_cents}
+                                    playerName={slot?.player_name}
+                                    playerEmail={slot?.player_email}
+                                    bookingId={slot?.booking_id}
+                                    blockId={slot?.block_id}
+                                    blockType={slot?.block_type}
+                                    blockReason={slot?.block_reason}
+                                    isDeleting={isDeleting && blockToDelete?.id === slot?.block_id}
+                                    onCreateBooking={() =>
+                                      handleCreateBooking(court.id, dateStr, timeSlot.startTime)
+                                    }
+                                    onViewBooking={() =>
+                                      slot?.booking_id && handleViewBooking(slot.booking_id)
+                                    }
+                                    onDeleteBlock={() =>
+                                      slot?.block_id &&
+                                      setBlockToDelete({
+                                        id: slot.block_id,
+                                        facilityId: selectedFacility,
+                                      })
+                                    }
+                                  />
+                                )}
                               </PopoverContent>
                             )}
                           </Popover>
@@ -1578,18 +1926,29 @@ export default function AvailabilityCalendarPage() {
                                 isPast && 'bg-muted/30'
                               )}
                             >
-                              {/* Now indicator line */}
-                              {isTodayDate && getNowPosition !== null && (
-                                <div
-                                  className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10 pointer-events-none rounded-full shadow-sm shadow-red-500/50"
-                                  style={{
-                                    left: `calc(${getNowPosition}% + 0.5rem)`,
-                                  }}
-                                />
-                              )}
-
-                              <div className="flex gap-px w-full">
+                              <div className="flex gap-px w-full relative">
+                                {/* Now indicator line - positioned inside the flex container */}
+                                {isTodayDate && getNowPosition !== null && (
+                                  <div
+                                    className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10 pointer-events-none rounded-full shadow-sm shadow-red-500/50"
+                                    style={{
+                                      left: `${getNowPosition}%`,
+                                    }}
+                                  />
+                                )}
                                 {timeSlots.map((timeSlot, slotIndex) => {
+                                  // Check if this slot should be skipped because it's part of a multi-slot booking/block
+                                  const skipResult = shouldSkipSlot(
+                                    court.id,
+                                    dateStr,
+                                    timeSlot.startMinutes,
+                                    court.slot_duration_minutes
+                                  );
+
+                                  if (skipResult.skip) {
+                                    return null; // Skip this slot - it's covered by a previous booking/block element
+                                  }
+
                                   const { status, slot } = getSlotDataForTime(
                                     court.id,
                                     dateStr,
@@ -1597,12 +1956,38 @@ export default function AvailabilityCalendarPage() {
                                     timeSlot.endTime
                                   );
 
+                                  // Calculate span for bookings/blocks (how many grid slots they cover)
+                                  let spanCount = 1;
+                                  if (slot && (status === 'booked' || status === 'blocked')) {
+                                    spanCount = getBookingSpan(
+                                      slot,
+                                      court.slot_duration_minutes,
+                                      timeSlots,
+                                      slotIndex
+                                    );
+                                  }
+
+                                  // Check for multiple bookings within this slot (when slot duration is larger than booking duration)
+                                  const overlappingBookings =
+                                    status === 'booked'
+                                      ? getOverlappingBookings(
+                                          court.id,
+                                          dateStr,
+                                          timeSlot.startTime,
+                                          timeSlot.endTime
+                                        )
+                                      : [];
+                                  const hasMultipleBookings = overlappingBookings.length > 1;
+
                                   // Check if slot is expired (in the past)
                                   const expired = isSlotExpired(date, timeSlot.endTime);
 
                                   // Only clickable if not expired and status allows
                                   const isClickable =
-                                    !expired && (status === 'available' || status === 'booked');
+                                    !expired &&
+                                    (status === 'available' ||
+                                      status === 'booked' ||
+                                      status === 'blocked');
                                   const popoverId = `${court.id}-${dateStr}-${timeSlot.startTime}`;
                                   const courtName = court.name || `Court ${court.court_number}`;
 
@@ -1615,14 +2000,18 @@ export default function AvailabilityCalendarPage() {
                                       <PopoverTrigger asChild>
                                         <div
                                           className={cn(
-                                            'h-7 rounded-sm border transition-all duration-150 flex-1 min-w-0',
+                                            'h-7 rounded-sm border transition-all duration-150 min-w-0 relative',
                                             getStatusColor(status, expired),
                                             'animate-in fade-in-0 zoom-in-95',
-                                            isClickable ? 'cursor-pointer' : 'cursor-default'
+                                            isClickable ? 'cursor-pointer' : 'cursor-default',
+                                            // Add visual indicator for multiple bookings
+                                            hasMultipleBookings &&
+                                              'ring-1 ring-inset ring-blue-600/50'
                                           )}
                                           style={{
                                             animationDelay: `${courtIndex * 50 + slotIndex * 15}ms`,
                                             animationFillMode: 'backwards',
+                                            flex: spanCount, // Use flex-grow to span multiple slots
                                           }}
                                           role={isClickable ? 'button' : undefined}
                                           tabIndex={isClickable ? 0 : undefined}
@@ -1634,9 +2023,16 @@ export default function AvailabilityCalendarPage() {
                                               setOpenPopover(popoverId);
                                             }
                                           }}
-                                          aria-label={`${courtName}, ${formatTime(timeSlot.startTime)}, ${expired ? 'expired' : status}`}
-                                          title={`${formatTime(timeSlot.startTime)} - ${formatTime(timeSlot.endTime)}${expired ? ' (Past)' : ''}`}
-                                        />
+                                          aria-label={`${courtName}, ${formatTime(slot?.start_time || timeSlot.startTime)} - ${formatTime(slot?.end_time || timeSlot.endTime)}, ${expired ? 'expired' : status}${hasMultipleBookings ? `, ${overlappingBookings.length} bookings` : ''}`}
+                                          title={`${formatTime(slot?.start_time || timeSlot.startTime)} - ${formatTime(slot?.end_time || timeSlot.endTime)}${expired ? ' (Past)' : ''}${hasMultipleBookings ? ` (${overlappingBookings.length} bookings)` : ''}`}
+                                        >
+                                          {/* Show count indicator for multiple bookings */}
+                                          {hasMultipleBookings && (
+                                            <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center shadow-sm">
+                                              {overlappingBookings.length}
+                                            </span>
+                                          )}
+                                        </div>
                                       </PopoverTrigger>
                                       {isClickable && (
                                         <PopoverContent
@@ -1645,27 +2041,83 @@ export default function AvailabilityCalendarPage() {
                                           className="w-72"
                                           sideOffset={8}
                                         >
-                                          <SlotPopover
-                                            status={status}
-                                            startTime={slot?.start_time || timeSlot.startTime}
-                                            endTime={slot?.end_time || timeSlot.endTime}
-                                            date={dateStr}
-                                            courtName={courtName}
-                                            priceCents={slot?.price_cents}
-                                            playerName={slot?.player_name}
-                                            playerEmail={slot?.player_email}
-                                            bookingId={slot?.booking_id}
-                                            onCreateBooking={() =>
-                                              handleCreateBooking(
-                                                court.id,
-                                                dateStr,
-                                                timeSlot.startTime
-                                              )
-                                            }
-                                            onViewBooking={() =>
-                                              slot?.booking_id && handleViewBooking(slot.booking_id)
-                                            }
-                                          />
+                                          {hasMultipleBookings ? (
+                                            // Show multiple bookings in the popover
+                                            <div className="space-y-3">
+                                              <div className="text-sm font-semibold border-b pb-2">
+                                                {overlappingBookings.length} bookings in this slot
+                                              </div>
+                                              <div className="space-y-2 max-h-48 overflow-y-auto">
+                                                {overlappingBookings.map((booking, idx) => (
+                                                  <div
+                                                    key={booking.booking_id || idx}
+                                                    className="p-2 rounded-md bg-muted/50 space-y-1"
+                                                  >
+                                                    <div className="flex items-center justify-between text-sm">
+                                                      <span className="font-medium">
+                                                        {formatTime(booking.start_time)} -{' '}
+                                                        {formatTime(booking.end_time)}
+                                                      </span>
+                                                      {booking.booking_id && (
+                                                        <Button
+                                                          size="sm"
+                                                          variant="ghost"
+                                                          className="h-6 px-2 text-xs"
+                                                          onClick={() =>
+                                                            handleViewBooking(booking.booking_id!)
+                                                          }
+                                                        >
+                                                          View
+                                                        </Button>
+                                                      )}
+                                                    </div>
+                                                    {booking.player_name && (
+                                                      <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                                        <User className="size-3" />
+                                                        {booking.player_name}
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          ) : (
+                                            <SlotPopover
+                                              status={status}
+                                              startTime={slot?.start_time || timeSlot.startTime}
+                                              endTime={slot?.end_time || timeSlot.endTime}
+                                              date={dateStr}
+                                              courtName={courtName}
+                                              priceCents={slot?.price_cents}
+                                              playerName={slot?.player_name}
+                                              playerEmail={slot?.player_email}
+                                              bookingId={slot?.booking_id}
+                                              blockId={slot?.block_id}
+                                              blockType={slot?.block_type}
+                                              blockReason={slot?.block_reason}
+                                              isDeleting={
+                                                isDeleting && blockToDelete?.id === slot?.block_id
+                                              }
+                                              onCreateBooking={() =>
+                                                handleCreateBooking(
+                                                  court.id,
+                                                  dateStr,
+                                                  timeSlot.startTime
+                                                )
+                                              }
+                                              onViewBooking={() =>
+                                                slot?.booking_id &&
+                                                handleViewBooking(slot.booking_id)
+                                              }
+                                              onDeleteBlock={() =>
+                                                slot?.block_id &&
+                                                setBlockToDelete({
+                                                  id: slot.block_id,
+                                                  facilityId: selectedFacility,
+                                                })
+                                              }
+                                            />
+                                          )}
                                         </PopoverContent>
                                       )}
                                     </Popover>
@@ -1684,6 +2136,37 @@ export default function AvailabilityCalendarPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Delete Block Confirmation Dialog */}
+      <AlertDialog open={!!blockToDelete} onOpenChange={open => !open && setBlockToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('calendar.deleteBlockConfirm.title')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('calendar.deleteBlockConfirm.description')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>
+              {t('calendar.deleteBlockConfirm.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteBlock}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  {t('calendar.deleteBlockConfirm.deleting')}
+                </>
+              ) : (
+                t('calendar.deleteBlockConfirm.confirm')
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

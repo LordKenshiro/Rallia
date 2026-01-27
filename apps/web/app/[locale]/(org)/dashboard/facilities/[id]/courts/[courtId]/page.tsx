@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CourtDetailHeader } from '@/components/court-detail-header';
 import { Link } from '@/i18n/navigation';
+import { getSelectedOrganization } from '@/lib/supabase/get-selected-organization';
 import { createClient } from '@/lib/supabase/server';
 import { Calendar, Info, Lightbulb, MapPin, Palette } from 'lucide-react';
 import type { Metadata } from 'next';
@@ -42,24 +43,28 @@ export default async function CourtDetailPage({ params }: PageProps) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Get user's organization
-  const { data: membership } = await supabase
-    .from('organization_member')
-    .select('organization_id, role')
-    .eq('user_id', user!.id)
-    .is('left_at', null)
-    .single();
+  // Get selected organization (respects user's selection from org switcher)
+  const organization = await getSelectedOrganization(user!.id);
 
-  if (!membership) {
+  if (!organization) {
     notFound();
   }
+
+  // Get user's role in the organization
+  const { data: membership } = await supabase
+    .from('organization_member')
+    .select('role')
+    .eq('user_id', user!.id)
+    .eq('organization_id', organization.id)
+    .is('left_at', null)
+    .single();
 
   // Fetch facility to verify access
   const { data: facility } = await supabase
     .from('facility')
     .select('id, name, organization_id')
     .eq('id', id)
-    .eq('organization_id', membership.organization_id)
+    .eq('organization_id', organization.id)
     .single();
 
   if (!facility) {
@@ -106,7 +111,7 @@ export default async function CourtDetailPage({ params }: PageProps) {
     .eq('court_id', courtId);
 
   const hasCustomAvailability = (customSlotCount ?? 0) > 0;
-  const canEdit = ['owner', 'admin'].includes(membership.role);
+  const canEdit = membership ? ['owner', 'admin'].includes(membership.role) : false;
 
   return (
     <div className="flex flex-col w-full gap-8">
@@ -138,7 +143,7 @@ export default async function CourtDetailPage({ params }: PageProps) {
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-0.5">
                       {t('detail.surface')}
                     </p>
-                    <p className="text-sm font-medium">{t(`surface.${court.surface_type}`)}</p>
+                    <p className="text-sm font-medium mb-0">{t(`surface.${court.surface_type}`)}</p>
                   </div>
                 </div>
               )}
@@ -151,7 +156,7 @@ export default async function CourtDetailPage({ params }: PageProps) {
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-0.5">
                     {t('detail.indoor')}
                   </p>
-                  <p className="text-sm font-medium">
+                  <p className="text-sm font-medium mb-0">
                     {court.indoor ? t('type.indoor') : t('type.outdoor')}
                   </p>
                 </div>
@@ -165,7 +170,7 @@ export default async function CourtDetailPage({ params }: PageProps) {
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-0.5">
                     {t('detail.lighting')}
                   </p>
-                  <p className="text-sm font-medium">{court.lighting ? 'Yes' : 'No'}</p>
+                  <p className="text-sm font-medium mb-0">{court.lighting ? 'Yes' : 'No'}</p>
                 </div>
               </div>
 
@@ -178,7 +183,7 @@ export default async function CourtDetailPage({ params }: PageProps) {
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-0.5">
                       {t('detail.multiSport')}
                     </p>
-                    <p className="text-sm font-medium">
+                    <p className="text-sm font-medium mb-0">
                       {court.lines_marked_for_multiple_sports ? 'Yes' : 'No'}
                     </p>
                   </div>

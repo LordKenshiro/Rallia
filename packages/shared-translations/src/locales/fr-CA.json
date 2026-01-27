@@ -3557,9 +3557,20 @@
       "noSlots": "Aucun créneau configuré pour ce jour",
       "clickToBook": "Réserver",
       "clickToView": "Voir la réservation",
+      "manageBlocks": "Gérer les blocages",
+      "deleteBlock": "Supprimer le blocage",
+      "allDay": "Toute la journée",
       "slotBlocked": "Ce créneau est bloqué",
+      "deleteBlockConfirm": {
+        "title": "Supprimer le blocage",
+        "description": "Êtes-vous sûr de vouloir supprimer ce blocage? Le créneau horaire sera à nouveau disponible pour les réservations.",
+        "cancel": "Annuler",
+        "confirm": "Supprimer",
+        "deleting": "Suppression..."
+      },
       "price": "Prix",
       "currentTime": "Heure actuelle",
+      "currentTimeAtFacility": "Heure actuelle à l'installation",
       "monthView": {
         "bookings": "réservations",
         "noBookings": "Aucune réservation",
@@ -3595,7 +3606,8 @@
       "type": "Type",
       "actions": "Actions",
       "allCourts": "Tous les terrains",
-      "allDay": "Toute la journée"
+      "allDay": "Toute la journée",
+      "unknownCourt": "Terrain inconnu"
     },
     "types": {
       "manual": "Blocage manuel",
@@ -3635,7 +3647,18 @@
       "deleteSuccess": "Blocage supprimé avec succès",
       "error": "Échec de la création du blocage",
       "updateError": "Échec de la mise à jour du blocage",
-      "deleteError": "Échec de la suppression du blocage"
+      "deleteError": "Échec de la suppression du blocage",
+      "dateRequired": "Veuillez sélectionner une date",
+      "conflictError": "Impossible de créer le blocage en raison de réservations existantes",
+      "conflictTitle": "Réservations en conflit trouvées",
+      "conflictDescription": "Les réservations suivantes seraient affectées par ce blocage. Vous devez annuler ces réservations avant de créer le blocage.",
+      "conflictHint": "Conseil : Annulez d'abord les réservations en conflit, puis créez le blocage.",
+      "viewBooking": "Voir",
+      "unknownPlayer": "Joueur inconnu",
+      "overlapError": "Impossible de créer le blocage en raison de blocages existants",
+      "overlapTitle": "Blocages chevauchants trouvés",
+      "overlapDescription": "Les blocages suivants couvrent déjà cette période. Supprimez-les ou modifiez-les d'abord.",
+      "overlapHint": "Conseil : Supprimez les blocages existants ou choisissez une plage horaire différente."
     },
     "confirmDelete": {
       "title": "Supprimer le blocage",
@@ -3651,6 +3674,7 @@
       "facilities": "Installations",
       "availability": "Disponibilité",
       "bookings": "Réservations",
+      "programs": "Programmes",
       "analytics": "Analytiques",
       "members": "Membres",
       "settings": "Paramètres",
@@ -4513,6 +4537,498 @@
       "exportData": "Exporter les données",
       "exportCSV": "Exporter en CSV",
       "exportPDF": "Exporter en PDF"
+    }
+  },
+  "programs": {
+    "title": "Programmes et leçons",
+    "description": "Créez et gérez des cliniques, camps et leçons",
+    "newProgram": "Nouveau programme",
+    "stats": {
+      "totalPrograms": "Total des programmes",
+      "active": "Actifs",
+      "totalParticipants": "Total des participants",
+      "drafts": "Brouillons",
+      "sessions": "séances"
+    },
+    "empty": {
+      "noPrograms": "Aucun programme pour le moment",
+      "createFirst": "Créez votre premier programme pour commencer à offrir des cliniques, camps ou leçons.",
+      "createProgram": "Créer un programme"
+    },
+    "status": {
+      "published": "Publié",
+      "draft": "Brouillon",
+      "cancelled": "Annulé",
+      "completed": "Terminé"
+    },
+    "type": {
+      "program": "Programme",
+      "lesson": "Leçon"
+    },
+    "detail": {
+      "backToPrograms": "Retour aux programmes",
+      "edit": "Modifier",
+      "publish": "Publier",
+      "tabs": {
+        "sessions": "Séances",
+        "registrations": "Inscriptions",
+        "waitlist": "Liste d'attente",
+        "instructors": "Instructeurs"
+      },
+      "stats": {
+        "startDate": "Date de début",
+        "participants": "Participants",
+        "price": "Prix",
+        "sessions": "Séances",
+        "totalSessions": "total"
+      },
+      "noSessions": "Aucune séance planifiée pour le moment",
+      "noRegistrations": "Aucune inscription pour le moment",
+      "noWaitlist": "Personne sur la liste d'attente",
+      "noInstructors": "Aucun instructeur assigné pour le moment",
+      "upcomingSessions": "séances à venir",
+      "confirmedParticipants": "participants confirmés",
+      "peopleWaiting": "personnes en attente",
+      "coachesAssigned": "Entraîneurs assignés à ce programme",
+      "leadInstructor": "Instructeur principal",
+      "manageSessions": "Gérer les séances",
+      "manageRegistrations": "Gérer les inscriptions",
+      "manageWaitlist": "Gérer la liste d'attente",
+      "manageInstructors": "Gérer les instructeurs",
+      "viewAllSessions": "Voir toutes les {count} séances"
+    },
+    "new": {
+      "title": "Créer un nouveau programme",
+      "description": "Configurez une nouvelle clinique, camp ou leçon pour votre organisation.",
+      "backToPrograms": "Retour aux programmes",
+      "sections": {
+        "basicInfo": "Informations de base",
+        "location": "Lieu et sport",
+        "locationDescription": "Sélectionnez où se déroule le programme",
+        "schedule": "Horaire",
+        "capacity": "Capacité",
+        "pricing": "Tarification",
+        "eligibility": "Admissibilité",
+        "eligibilityDescription": "Définir les restrictions d'âge et de niveau (optionnel)",
+        "cancellationPolicy": "Politique d'annulation",
+        "cancellationPolicyDescription": "Configurer les règles de remboursement",
+        "options": "Options"
+      },
+      "fields": {
+        "name": "Nom du programme",
+        "type": "Type",
+        "description": "Description",
+        "facility": "Installation",
+        "sport": "Sport",
+        "startDate": "Date de début",
+        "endDate": "Date de fin",
+        "registrationOpensAt": "Ouverture des inscriptions",
+        "registrationDeadline": "Date limite d'inscription",
+        "minParticipants": "Participants minimum",
+        "maxParticipants": "Participants maximum",
+        "price": "Prix (CAD)",
+        "allowInstallments": "Autoriser les paiements échelonnés",
+        "installmentDescription": "Permettre aux participants de payer en plusieurs versements",
+        "installmentCount": "Nombre de versements",
+        "deposit": "Montant du dépôt",
+        "waitlistEnabled": "Activer la liste d'attente",
+        "waitlistDescription": "Permettre aux joueurs de rejoindre une liste d'attente lorsque le programme est complet",
+        "waitlistLimit": "Limite de la liste d'attente",
+        "autoBlockCourts": "Bloquer automatiquement les terrains",
+        "autoBlockDescription": "Réserver automatiquement les terrains pour les séances du programme",
+        "ageMin": "Âge minimum",
+        "ageMax": "Âge maximum",
+        "skillLevelMin": "Niveau minimum",
+        "skillLevelMax": "Niveau maximum",
+        "fullRefundDays": "Remboursement complet (jours avant début)",
+        "partialRefundDays": "Remboursement partiel (jours avant début)",
+        "partialRefundPercent": "Pourcentage de remboursement partiel",
+        "noRefundAfterStart": "Pas de remboursement après le début",
+        "noRefundAfterStartDescription": "Désactiver les remboursements une fois le programme commencé",
+        "prorateBySessionsAttended": "Calculer au prorata des séances",
+        "prorateBySessionsAttendedDescription": "Calculer le remboursement selon les séances assistées"
+      },
+      "placeholders": {
+        "name": "ex. : Clinique de tennis d'été",
+        "description": "Décrivez ce que les participants apprendront...",
+        "price": "0,00",
+        "maxParticipants": "Illimité",
+        "selectFacility": "Sélectionner une installation",
+        "selectSport": "Sélectionner un sport",
+        "noLimit": "Pas de limite",
+        "noMinimum": "Pas de minimum",
+        "noMaximum": "Pas de maximum",
+        "anyLevel": "Tous niveaux",
+        "deposit": "0,00"
+      },
+      "types": {
+        "program": "Programme (multi-séances)",
+        "lesson": "Leçon (séance unique)"
+      },
+      "installments": {
+        "2": "2 paiements",
+        "3": "3 paiements",
+        "4": "4 paiements"
+      },
+      "skillLevels": {
+        "beginner": "Débutant",
+        "intermediate": "Intermédiaire",
+        "advanced": "Avancé",
+        "expert": "Expert"
+      },
+      "actions": {
+        "cancel": "Annuler",
+        "create": "Créer le programme"
+      },
+      "errors": {
+        "failedToCreate": "Échec de la création du programme",
+        "somethingWentWrong": "Une erreur s'est produite"
+      }
+    },
+    "edit": {
+      "title": "Modifier le programme",
+      "description": "Mettez à jour les détails et les paramètres du programme.",
+      "backToProgram": "Retour au programme",
+      "cannotEdit": "Impossible de modifier le programme",
+      "cannotEditDescription": "Ce programme est {status} et ne peut pas être modifié.",
+      "programNotFound": "Programme introuvable",
+      "backToPrograms": "Retour aux programmes",
+      "sections": {
+        "basicInfo": "Informations de base",
+        "location": "Lieu et sport",
+        "locationDescription": "Sélectionnez où se déroule le programme",
+        "schedule": "Horaire",
+        "capacity": "Capacité",
+        "pricing": "Tarification",
+        "eligibility": "Admissibilité",
+        "eligibilityDescription": "Définir les restrictions d'âge et de niveau (optionnel)",
+        "cancellationPolicy": "Politique d'annulation",
+        "cancellationPolicyDescription": "Configurer les règles de remboursement",
+        "options": "Options"
+      },
+      "fields": {
+        "name": "Nom du programme",
+        "type": "Type",
+        "description": "Description",
+        "facility": "Installation",
+        "sport": "Sport",
+        "startDate": "Date de début",
+        "endDate": "Date de fin",
+        "registrationOpensAt": "Ouverture des inscriptions",
+        "registrationDeadline": "Date limite d'inscription",
+        "minParticipants": "Participants minimum",
+        "maxParticipants": "Participants maximum",
+        "price": "Prix (CAD)",
+        "allowInstallments": "Autoriser les paiements échelonnés",
+        "installmentDescription": "Permettre aux participants de payer en plusieurs versements",
+        "installmentCount": "Nombre de versements",
+        "deposit": "Montant du dépôt",
+        "waitlistEnabled": "Activer la liste d'attente",
+        "waitlistDescription": "Permettre aux joueurs de rejoindre une liste d'attente lorsque le programme est complet",
+        "waitlistLimit": "Limite de la liste d'attente",
+        "autoBlockCourts": "Bloquer automatiquement les terrains",
+        "autoBlockDescription": "Réserver automatiquement les terrains pour les séances du programme",
+        "ageMin": "Âge minimum",
+        "ageMax": "Âge maximum",
+        "skillLevelMin": "Niveau minimum",
+        "skillLevelMax": "Niveau maximum",
+        "fullRefundDays": "Remboursement complet (jours avant début)",
+        "partialRefundDays": "Remboursement partiel (jours avant début)",
+        "partialRefundPercent": "Pourcentage de remboursement partiel",
+        "noRefundAfterStart": "Pas de remboursement après le début",
+        "noRefundAfterStartDescription": "Désactiver les remboursements une fois le programme commencé",
+        "prorateBySessionsAttended": "Calculer au prorata des séances",
+        "prorateBySessionsAttendedDescription": "Calculer le remboursement selon les séances assistées"
+      },
+      "placeholders": {
+        "name": "ex. : Clinique de tennis d'été",
+        "description": "Décrivez ce que les participants apprendront...",
+        "price": "0,00",
+        "maxParticipants": "Illimité",
+        "selectFacility": "Sélectionner une installation",
+        "selectSport": "Sélectionner un sport",
+        "noLimit": "Pas de limite",
+        "noMinimum": "Pas de minimum",
+        "noMaximum": "Pas de maximum",
+        "anyLevel": "Tous niveaux",
+        "deposit": "0,00"
+      },
+      "types": {
+        "program": "Programme (multi-séances)",
+        "lesson": "Leçon (séance unique)"
+      },
+      "installments": {
+        "2": "2 paiements",
+        "3": "3 paiements",
+        "4": "4 paiements"
+      },
+      "skillLevels": {
+        "beginner": "Débutant",
+        "intermediate": "Intermédiaire",
+        "advanced": "Avancé",
+        "expert": "Expert"
+      },
+      "actions": {
+        "cancel": "Annuler",
+        "save": "Enregistrer les modifications"
+      },
+      "errors": {
+        "failedToLoad": "Échec du chargement du programme",
+        "failedToUpdate": "Échec de la mise à jour du programme",
+        "somethingWentWrong": "Une erreur s'est produite"
+      }
+    },
+    "sessions": {
+      "title": "Séances",
+      "manageSessions": "Gérer les séances",
+      "addSession": "Ajouter une séance",
+      "noSessions": "Aucune séance planifiée pour le moment",
+      "stats": {
+        "active": "actives"
+      },
+      "table": {
+        "session": "Séance",
+        "date": "Date",
+        "time": "Heure",
+        "location": "Lieu",
+        "status": "Statut",
+        "actions": "Actions"
+      },
+      "form": {
+        "date": "Date",
+        "startTime": "Heure de début",
+        "endTime": "Heure de fin",
+        "courts": "Terrains",
+        "locationOverride": "Lieu alternatif",
+        "locationOverridePlaceholder": "ex. : Hors site au parc de la ville",
+        "notes": "Notes",
+        "noFacilityWarning": "Assignez une installation au programme pour sélectionner des terrains",
+        "noCourts": "Aucun terrain disponible à cette installation"
+      },
+      "cancelled": "Annulé",
+      "delete": "Supprimer",
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "courtNumber": "Terrain {number}",
+      "actions": {
+        "cancel": "Annuler la séance",
+        "delete": "Supprimer la séance",
+        "confirmCancelTitle": "Annuler la séance",
+        "confirmCancelDescription": "Êtes-vous sûr de vouloir annuler la séance {number}? Cela libérera la réservation du terrain si applicable.",
+        "confirmDeleteTitle": "Supprimer la séance",
+        "confirmDeleteDescription": "Êtes-vous sûr de vouloir supprimer la séance {number}? Cette action est irréversible."
+      },
+      "errors": {
+        "failedToAdd": "Échec de l'ajout de la séance",
+        "failedToCancel": "Échec de l'annulation de la séance",
+        "failedToDelete": "Échec de la suppression de la séance",
+        "endTimeBeforeStart": "L'heure de fin doit être après l'heure de début",
+        "overlappingSession": "Chevauche la séance #{number} ({start} - {end})"
+      }
+    },
+    "registrations": {
+      "title": "Inscriptions",
+      "manageRegistrations": "Gérer les inscriptions",
+      "noRegistrations": "Aucune inscription pour le moment",
+      "stats": {
+        "confirmed": "Confirmées",
+        "total": "Total",
+        "revenue": "Revenus"
+      },
+      "table": {
+        "player": "Joueur",
+        "status": "Statut",
+        "paymentPlan": "Plan de paiement",
+        "amountPaid": "Montant payé",
+        "registeredAt": "Inscrit le",
+        "actions": "Actions",
+        "of": "de"
+      },
+      "status": {
+        "confirmed": "Confirmée",
+        "pending": "En attente",
+        "cancelled": "Annulée",
+        "refunded": "Remboursée"
+      },
+      "paymentPlan": {
+        "upfront": "Paiement unique",
+        "installments": "Versements"
+      },
+      "unknownPlayer": "Joueur inconnu",
+      "actions": {
+        "approve": "Approuver",
+        "cancel": "Annuler l'inscription",
+        "confirmApproveTitle": "Approuver l'inscription",
+        "confirmApproveDescription": "Êtes-vous sûr de vouloir approuver l'inscription de {name}?",
+        "confirmCancelTitle": "Annuler l'inscription",
+        "confirmCancelDescription": "Êtes-vous sûr de vouloir annuler l'inscription de {name}? Cette action est irréversible."
+      },
+      "errors": {
+        "failedToUpdate": "Échec de la mise à jour de l'inscription"
+      }
+    },
+    "waitlist": {
+      "title": "Liste d'attente",
+      "manageWaitlist": "Gérer la liste d'attente",
+      "noWaitlist": "Personne sur la liste d'attente",
+      "stats": {
+        "promoted": "Promus",
+        "waiting": "En attente",
+        "total": "Total"
+      },
+      "table": {
+        "position": "Position",
+        "player": "Joueur",
+        "joinedAt": "Rejoint le",
+        "promotedAt": "Promu le",
+        "expiresAt": "Expire le",
+        "actions": "Actions",
+        "expires": "Expire"
+      },
+      "actions": {
+        "promote": "Promouvoir",
+        "remove": "Retirer",
+        "confirmPromoteTitle": "Promouvoir le joueur",
+        "confirmPromoteDescription": "Êtes-vous sûr de vouloir promouvoir {name} de la liste d'attente? Il recevra un courriel pour compléter son inscription."
+      },
+      "errors": {
+        "failedToPromote": "Échec de la promotion du joueur de la liste d'attente"
+      },
+      "peopleOnWaitlist": "{count} personnes sur la liste d'attente"
+    },
+    "instructors": {
+      "title": "Instructeurs",
+      "description": "Gérez les entraîneurs et instructeurs pour vos programmes",
+      "backToPrograms": "Retour aux programmes",
+      "addInstructor": "Ajouter un instructeur",
+      "stats": {
+        "total": "Total des instructeurs",
+        "active": "Actifs",
+        "external": "Externes/Invités"
+      },
+      "empty": {
+        "noInstructors": "Aucun instructeur pour le moment",
+        "addFirst": "Ajoutez des instructeurs pour les assigner à vos programmes.",
+        "addInstructor": "Ajouter un instructeur"
+      },
+      "badges": {
+        "inactive": "Inactif",
+        "external": "Externe"
+      },
+      "activePrograms": "programmes actifs",
+      "new": {
+        "title": "Ajouter un instructeur",
+        "description": "Ajoutez un nouvel instructeur ou entraîneur à votre organisation.",
+        "backToInstructors": "Retour aux instructeurs",
+        "sections": {
+          "details": "Détails de l'instructeur"
+        },
+        "fields": {
+          "name": "Nom",
+          "email": "Courriel",
+          "phone": "Téléphone",
+          "bio": "Biographie",
+          "hourlyRate": "Taux horaire (CAD)",
+          "specializations": "Spécialisations",
+          "isExternal": "Instructeur externe"
+        },
+        "placeholders": {
+          "name": "ex. : Jean Dupont",
+          "email": "instructeur@exemple.com",
+          "phone": "(555) 123-4567",
+          "bio": "Brève expérience et formation...",
+          "hourlyRate": "0,00",
+          "specializations": "Tennis, Entraînement jeunesse, Débutants (séparés par des virgules)"
+        },
+        "descriptions": {
+          "specializations": "Séparez plusieurs spécialisations par des virgules",
+          "isExternal": "Cet instructeur n'est pas membre de votre organisation"
+        },
+        "actions": {
+          "cancel": "Annuler",
+          "add": "Ajouter l'instructeur"
+        },
+        "errors": {
+          "failedToCreate": "Échec de la création de l'instructeur",
+          "somethingWentWrong": "Une erreur s'est produite"
+        }
+      },
+      "detail": {
+        "title": "Détails de l'instructeur - Rallia",
+        "description": "Afficher et gérer les détails de l'instructeur.",
+        "contactInformation": "Informations de contact",
+        "noContactInformation": "Aucune information de contact",
+        "details": "Détails",
+        "hourlyRateSuffix": "/heure",
+        "assignedPrograms": "Programmes assignés",
+        "notAssigned": "Aucun programme assigné pour le moment"
+      },
+      "edit": {
+        "title": "Modifier l'instructeur",
+        "description": "Mettre à jour les détails et les paramètres de l'instructeur.",
+        "backToInstructor": "Retour à l'instructeur",
+        "instructorNotFound": "Instructeur introuvable",
+        "backToInstructors": "Retour aux instructeurs",
+        "sections": {
+          "details": "Détails de l'instructeur"
+        },
+        "fields": {
+          "name": "Nom",
+          "email": "Courriel",
+          "phone": "Téléphone",
+          "bio": "Biographie",
+          "hourlyRate": "Taux horaire (CAD)",
+          "specializations": "Spécialisations",
+          "isActive": "Actif"
+        },
+        "placeholders": {
+          "name": "ex. : Jean Dupont",
+          "email": "instructeur@exemple.com",
+          "phone": "(555) 123-4567",
+          "bio": "Brève expérience et formation...",
+          "hourlyRate": "0,00",
+          "specializations": "Tennis, Entraînement jeunesse, Débutants (séparés par des virgules)"
+        },
+        "descriptions": {
+          "specializations": "Séparez plusieurs spécialisations par des virgules",
+          "isActive": "Les instructeurs actifs peuvent être assignés aux programmes"
+        },
+        "actions": {
+          "cancel": "Annuler",
+          "save": "Enregistrer les modifications"
+        },
+        "errors": {
+          "failedToLoad": "Échec du chargement de l'instructeur",
+          "failedToUpdate": "Échec de la mise à jour de l'instructeur",
+          "somethingWentWrong": "Une erreur s'est produite"
+        }
+      }
+    },
+    "manageInstructors": {
+      "title": "Gérer les instructeurs",
+      "backToProgram": "Retour au programme",
+      "addInstructor": "Ajouter un instructeur",
+      "assignedInstructors": "Instructeurs assignés",
+      "noInstructorsAssigned": "Aucun instructeur assigné à ce programme",
+      "instructorCount": "{count, plural, one {# instructeur assigné} other {# instructeurs assignés}}",
+      "addFirst": "Ajouter votre premier instructeur",
+      "primary": "Principal",
+      "setPrimary": "Définir comme instructeur principal",
+      "remove": "Retirer du programme",
+      "readOnlyNotice": "Ce programme est terminé ou annulé. Les affectations d'instructeurs ne peuvent pas être modifiées.",
+      "addInstructorDialog": {
+        "title": "Ajouter des instructeurs",
+        "description": "Sélectionnez les instructeurs à assigner à ce programme.",
+        "noAvailable": "Tous les instructeurs sont déjà assignés à ce programme.",
+        "createNew": "Créer un nouvel instructeur",
+        "add": "Ajouter {count, plural, one {# instructeur} other {# instructeurs}}"
+      },
+      "errors": {
+        "failedToLoad": "Échec du chargement des instructeurs",
+        "failedToAdd": "Échec de l'ajout des instructeurs",
+        "failedToRemove": "Échec du retrait de l'instructeur",
+        "failedToUpdate": "Échec de la mise à jour de l'affectation de l'instructeur"
+      }
     }
   }
 }

@@ -135,7 +135,15 @@ export type ExtendedNotificationTypeEnum =
   | 'booking_reminder'
   | 'booking_cancelled_by_org'
   | 'membership_approved'
-  | 'org_announcement';
+  | 'org_announcement'
+  // Program notifications
+  | 'program_registration_confirmed'
+  | 'program_registration_cancelled'
+  | 'program_session_reminder'
+  | 'program_session_cancelled'
+  | 'program_waitlist_promoted'
+  | 'program_payment_due'
+  | 'program_payment_received';
 
 // Organization notification types (subset for org-specific features)
 export type OrgNotificationTypeEnum =
@@ -156,7 +164,15 @@ export type OrgNotificationTypeEnum =
   | 'booking_reminder'
   | 'booking_cancelled_by_org'
   | 'membership_approved'
-  | 'org_announcement';
+  | 'org_announcement'
+  // Program notifications (staff)
+  | 'program_registration_confirmed'
+  | 'program_registration_cancelled'
+  | 'program_session_reminder'
+  | 'program_session_cancelled'
+  | 'program_waitlist_promoted'
+  | 'program_payment_due'
+  | 'program_payment_received';
 
 // Extended delivery status (added by migration)
 export type ExtendedDeliveryStatusEnum =
@@ -180,6 +196,20 @@ export type PlayAttributeEnum = DbEnum<'play_attribute_enum'>;
 
 // Skill Level
 export type SkillLevel = DbEnum<'skill_level'>;
+
+// Programs & Lessons (added by migration, available after supabase types regeneration)
+// Manual type definitions until types are regenerated
+export type ProgramTypeEnum = 'program' | 'lesson';
+export type ProgramStatusEnum = 'draft' | 'published' | 'cancelled' | 'completed';
+export type RegistrationStatusEnum = 'pending' | 'confirmed' | 'cancelled' | 'refunded';
+export type PaymentPlanEnum = 'full' | 'installment';
+export type RegistrationPaymentStatusEnum =
+  | 'pending'
+  | 'succeeded'
+  | 'failed'
+  | 'refunded'
+  | 'cancelled';
+export type BookingTypeEnum = 'player' | 'program_session' | 'maintenance';
 
 // Match (non-suffixed variants)
 export type MatchType = DbEnum<'match_type_enum'>;
@@ -236,6 +266,173 @@ export type FacilityFile = TableRow<'facility_file'>;
 // Court
 export type Court = TableRow<'court'>;
 export type CourtSport = TableRow<'court_sport'>;
+
+// Programs & Lessons (manual definitions until supabase types regenerated)
+export interface InstructorProfile {
+  id: string;
+  organization_id: string;
+  organization_member_id: string | null;
+  display_name: string;
+  bio: string | null;
+  avatar_url: string | null;
+  email: string | null;
+  phone: string | null;
+  hourly_rate_cents: number | null;
+  currency: string;
+  certifications: Record<string, unknown>[];
+  specializations: string[];
+  is_external: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Program {
+  id: string;
+  organization_id: string;
+  facility_id: string | null;
+  sport_id: string | null;
+  type: ProgramTypeEnum;
+  status: ProgramStatusEnum;
+  name: string;
+  description: string | null;
+  start_date: string;
+  end_date: string | null;
+  registration_opens_at: string | null;
+  registration_deadline: string | null;
+  min_participants: number;
+  max_participants: number | null;
+  current_participants: number;
+  price_cents: number;
+  currency: string;
+  allow_installments: boolean;
+  installment_count: number;
+  deposit_cents: number | null;
+  auto_block_courts: boolean;
+  waitlist_enabled: boolean;
+  waitlist_limit: number | null;
+  age_min: number | null;
+  age_max: number | null;
+  skill_level_min: string | null;
+  skill_level_max: string | null;
+  cancellation_policy: ProgramCancellationPolicy;
+  cover_image_url: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  published_at: string | null;
+  cancelled_at: string | null;
+}
+
+export interface ProgramCancellationPolicy {
+  full_refund_days_before_start: number;
+  partial_refund_days_before_start: number;
+  partial_refund_percent: number;
+  no_refund_after_start: boolean;
+  prorate_by_sessions_attended: boolean;
+}
+
+export interface ProgramSession {
+  id: string;
+  program_id: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  location_override: string | null;
+  notes: string | null;
+  is_cancelled: boolean;
+  cancelled_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProgramSessionCourt {
+  id: string;
+  session_id: string;
+  court_id: string;
+  booking_id: string | null;
+  created_at: string;
+}
+
+export interface ProgramInstructor {
+  id: string;
+  program_id: string;
+  instructor_id: string;
+  is_primary: boolean;
+  created_at: string;
+}
+
+export interface ProgramRegistration {
+  id: string;
+  program_id: string;
+  player_id: string;
+  registered_by: string;
+  status: RegistrationStatusEnum;
+  payment_plan: PaymentPlanEnum;
+  total_amount_cents: number;
+  paid_amount_cents: number;
+  refund_amount_cents: number;
+  currency: string;
+  stripe_customer_id: string | null;
+  notes: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  registered_at: string;
+  confirmed_at: string | null;
+  cancelled_at: string | null;
+  refunded_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RegistrationPayment {
+  id: string;
+  registration_id: string;
+  amount_cents: number;
+  currency: string;
+  installment_number: number;
+  total_installments: number;
+  stripe_payment_intent_id: string | null;
+  stripe_customer_id: string | null;
+  stripe_charge_id: string | null;
+  status: RegistrationPaymentStatusEnum;
+  due_date: string;
+  paid_at: string | null;
+  failed_at: string | null;
+  failure_reason: string | null;
+  refund_amount_cents: number;
+  refunded_at: string | null;
+  retry_count: number;
+  next_retry_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProgramWaitlist {
+  id: string;
+  program_id: string;
+  player_id: string;
+  added_by: string;
+  position: number;
+  promoted_at: string | null;
+  promotion_expires_at: string | null;
+  registration_id: string | null;
+  notification_sent_at: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SessionAttendance {
+  id: string;
+  session_id: string;
+  registration_id: string;
+  attended: boolean | null;
+  marked_at: string | null;
+  marked_by: string | null;
+  notes: string | null;
+  created_at: string;
+}
 
 // Match
 export type Match = TableRow<'match'>;

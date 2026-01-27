@@ -1,5 +1,6 @@
 'use client';
 
+import { BackButton } from '@/components/back-button';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,7 +28,6 @@ import { cn } from '@/lib/utils';
 import {
   AlertCircle,
   AlertTriangle,
-  ArrowLeft,
   Calendar,
   CheckCircle2,
   Clock,
@@ -401,12 +401,7 @@ export default function FacilityAvailabilityPage() {
     <div className="flex flex-col w-full gap-8 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex items-start gap-4">
-        <Link
-          href={`/dashboard/facilities/${facilityId}`}
-          className="p-2 hover:bg-muted rounded-md transition-colors mt-1"
-        >
-          <ArrowLeft className="size-5" />
-        </Link>
+        <BackButton className="p-2 hover:bg-muted rounded-md transition-colors mt-1" />
         <div>
           <h1 className="text-3xl font-bold mb-0">{t('title')}</h1>
           <p className="text-muted-foreground">{facilityName}</p>

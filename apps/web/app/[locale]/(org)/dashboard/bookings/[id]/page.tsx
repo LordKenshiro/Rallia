@@ -15,8 +15,8 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Link } from '@/i18n/navigation';
+import { BackButton } from '@/components/back-button';
 import {
-  ArrowLeft,
   Calendar,
   CheckCircle,
   Clock,
@@ -297,12 +297,9 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
     return (
       <div className="flex flex-col items-center justify-center py-16">
         <p className="text-muted-foreground mb-4">{error || 'Booking not found'}</p>
-        <Button asChild variant="outline">
-          <Link href="/dashboard/bookings">
-            <ArrowLeft className="mr-2 size-4" />
-            {t('detail.backToList')}
-          </Link>
-        </Button>
+        <BackButton asButton variant="outline">
+          {t('detail.backToList')}
+        </BackButton>
       </div>
     );
   }
@@ -316,11 +313,7 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button asChild variant="outline" size="icon">
-            <Link href="/dashboard/bookings">
-              <ArrowLeft className="size-4" />
-            </Link>
-          </Button>
+          <BackButton className="p-2 hover:bg-muted rounded-md transition-colors" />
           <div>
             <h1 className="text-3xl font-bold mb-0">{t('detail.title')}</h1>
             <p className="text-muted-foreground mb-0">
@@ -370,7 +363,7 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
             <div className="flex justify-between">
               <span className="text-muted-foreground">{t('detail.date')}</span>
               <span className="font-medium">
-                {new Date(booking.booking_date).toLocaleDateString(undefined, {
+                {new Date(booking.booking_date + 'T00:00:00').toLocaleDateString(undefined, {
                   weekday: 'long',
                   year: 'numeric',
                   month: 'long',
@@ -535,8 +528,8 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
       <Dialog open={cancelDialog} onOpenChange={setCancelDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('cancel.title')}</DialogTitle>
-            <DialogDescription>{t('cancel.description')}</DialogDescription>
+            <DialogTitle className="mb-0">{t('cancel.title')}</DialogTitle>
+            <DialogDescription className="mb-0">{t('cancel.description')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">

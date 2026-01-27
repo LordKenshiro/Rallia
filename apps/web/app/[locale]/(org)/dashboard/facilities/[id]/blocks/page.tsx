@@ -1,8 +1,17 @@
 'use client';
 
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -13,8 +22,9 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Link, useRouter } from '@/i18n/navigation';
+import { BackButton } from '@/components/back-button';
 import { createClient } from '@/lib/supabase/client';
-import { AlertTriangle, ArrowLeft, Calendar, Loader2, Plus, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Calendar, CalendarX, Loader2, Plus, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
@@ -40,6 +50,28 @@ interface Block {
   court?: Court | null;
 }
 
+interface ConflictingBooking {
+  id: string;
+  booking_date: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+  court_name: string | null;
+  court_number: number | null;
+  player_name: string | null;
+}
+
+interface OverlappingBlock {
+  id: string;
+  block_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  block_type: string;
+  reason: string | null;
+  court_name: string | null;
+  court_number: number | null;
+}
+
 const BLOCK_TYPES: BlockType[] = ['manual', 'maintenance', 'holiday', 'weather', 'private_event'];
 
 export default function BlockManagementPage() {
@@ -52,6 +84,8 @@ export default function BlockManagementPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [conflictingBookings, setConflictingBookings] = useState<ConflictingBooking[]>([]);
+  const [overlappingBlocks, setOverlappingBlocks] = useState<OverlappingBlock[]>([]);
   const [facilityName, setFacilityName] = useState('');
   const [courts, setCourts] = useState<Court[]>([]);
   const [blocks, setBlocks] = useState<Block[]>([]);
@@ -138,45 +172,62 @@ export default function BlockManagementPage() {
     setBlockType('manual');
     setReason('');
     setShowForm(false);
+    setError(null);
+    setConflictingBookings([]);
+    setOverlappingBlocks([]);
   };
 
   const handleCreate = async () => {
     if (!blockDate) {
-      setError('Please select a date');
+      setError(t('form.dateRequired'));
       return;
     }
 
     setSaving(true);
     setError(null);
+    setConflictingBookings([]);
+    setOverlappingBlocks([]);
 
     try {
-      const supabase = createClient();
+      const response = await fetch(`/api/facilities/${facilityId}/blocks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          court_id: courtId === 'all' ? null : courtId,
+          block_date: blockDate,
+          start_time: allDay ? null : startTime + ':00',
+          end_time: allDay ? null : endTime + ':00',
+          block_type: blockType,
+          reason: reason || null,
+        }),
+      });
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const data = await response.json();
 
-      const newBlock = {
-        facility_id: facilityId,
-        court_id: courtId === 'all' ? null : courtId,
-        block_date: blockDate,
-        start_time: allDay ? null : startTime + ':00',
-        end_time: allDay ? null : endTime + ':00',
-        block_type: blockType,
-        reason: reason || null,
-        created_by: user?.id || null,
-      };
-
-      const { error: insertError } = await supabase.from('availability_block').insert(newBlock);
-
-      if (insertError) throw insertError;
+      if (!response.ok) {
+        // Handle overlapping blocks error
+        if (data.code === 'BLOCK_OVERLAP' && data.overlappingBlocks) {
+          setOverlappingBlocks(data.overlappingBlocks);
+          setError(t('form.overlapError'));
+          return;
+        }
+        // Handle booking conflict error
+        if (data.code === 'BOOKING_CONFLICT' && data.conflicts) {
+          setConflictingBookings(data.conflicts);
+          setError(t('form.conflictError'));
+          return;
+        }
+        throw new Error(data.error || 'Failed to create block');
+      }
 
       resetForm();
       await fetchData();
       router.refresh();
     } catch (err) {
       console.error('Error creating block:', err);
-      setError(t('form.error'));
+      setError(err instanceof Error ? err.message : t('form.error'));
     } finally {
       setSaving(false);
     }
@@ -186,23 +237,33 @@ export default function BlockManagementPage() {
     setDeleting(blockId);
 
     try {
-      const supabase = createClient();
+      const response = await fetch(`/api/facilities/${facilityId}/blocks?blockId=${blockId}`, {
+        method: 'DELETE',
+      });
 
-      const { error: deleteError } = await supabase
-        .from('availability_block')
-        .delete()
-        .eq('id', blockId);
-
-      if (deleteError) throw deleteError;
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete block');
+      }
 
       await fetchData();
       router.refresh();
     } catch (err) {
       console.error('Error deleting block:', err);
-      setError(t('form.deleteError'));
+      setError(err instanceof Error ? err.message : t('form.deleteError'));
     } finally {
       setDeleting(null);
     }
+  };
+
+  const formatBookingTime = (start: string, end: string) => {
+    return `${start.substring(0, 5)} - ${end.substring(0, 5)}`;
+  };
+
+  const getBookingCourtDisplay = (booking: ConflictingBooking) => {
+    if (booking.court_name) return booking.court_name;
+    if (booking.court_number) return `Court ${booking.court_number}`;
+    return t('list.unknownCourt');
   };
 
   const getCourtName = (court: Court | null | undefined) => {
@@ -228,41 +289,28 @@ export default function BlockManagementPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-4">
-          <Link
-            href={`/dashboard/facilities/${facilityId}`}
-            className="p-2 hover:bg-muted rounded-md transition-colors mt-1"
-          >
-            <ArrowLeft className="size-5" />
-          </Link>
+          <BackButton className="p-2 hover:bg-muted rounded-md transition-colors mt-1" />
           <div>
             <h1 className="text-3xl font-bold mb-0">{t('title')}</h1>
             <p className="text-muted-foreground">{facilityName}</p>
           </div>
         </div>
-        {!showForm && (
-          <Button onClick={() => setShowForm(true)}>
-            <Plus className="mr-2 size-4" />
-            {t('addBlock')}
-          </Button>
-        )}
+        <Button onClick={() => setShowForm(true)}>
+          <Plus className="mr-2 size-4" />
+          {t('addBlock')}
+        </Button>
       </div>
 
-      {/* Create Block Form */}
-      {showForm && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>{t('form.title')}</CardTitle>
-                <CardDescription>{t('description')}</CardDescription>
-              </div>
-              <Button variant="ghost" size="icon" onClick={resetForm}>
-                <X className="size-4" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Create Block Modal */}
+      <Dialog open={showForm} onOpenChange={open => !open && resetForm()}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t('form.title')}</DialogTitle>
+            <DialogDescription>{t('description')}</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Court Selection */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">{t('form.courtLabel')}</label>
@@ -352,20 +400,100 @@ export default function BlockManagementPage() {
               />
             </div>
 
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {/* Overlapping Blocks Alert */}
+            {overlappingBlocks.length > 0 && (
+              <Alert variant="destructive">
+                <CalendarX className="size-4" />
+                <AlertTitle>{t('form.overlapTitle')}</AlertTitle>
+                <AlertDescription>
+                  <p className="mb-3">{t('form.overlapDescription')}</p>
+                  <div className="space-y-2">
+                    {overlappingBlocks.map(block => (
+                      <div
+                        key={block.id}
+                        className="flex items-center justify-between p-2 bg-destructive/10 rounded-md"
+                      >
+                        <div className="flex-1">
+                          <div className="text-sm font-medium">
+                            {block.court_name ||
+                              (block.court_number
+                                ? `Court ${block.court_number}`
+                                : t('list.allCourts'))}{' '}
+                            •{' '}
+                            {block.start_time && block.end_time
+                              ? formatBookingTime(block.start_time, block.end_time)
+                              : t('list.allDay')}
+                          </div>
+                          <div className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Badge variant="outline" className="text-xs">
+                              {t(`types.${block.block_type}`)}
+                            </Badge>
+                            {block.reason && <span>• {block.reason}</span>}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs mt-3 text-muted-foreground">{t('form.overlapHint')}</p>
+                </AlertDescription>
+              </Alert>
+            )}
 
-            <div className="flex gap-4">
-              <Button onClick={handleCreate} disabled={saving || !blockDate}>
-                {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
-                {saving ? t('form.creating') : t('form.createButton')}
-              </Button>
-              <Button variant="outline" onClick={resetForm}>
-                {t('form.cancelButton')}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            {/* Conflicting Bookings Alert */}
+            {conflictingBookings.length > 0 && (
+              <Alert variant="destructive">
+                <CalendarX className="size-4" />
+                <AlertTitle>{t('form.conflictTitle')}</AlertTitle>
+                <AlertDescription>
+                  <p className="mb-3">{t('form.conflictDescription')}</p>
+                  <div className="space-y-2">
+                    {conflictingBookings.map(booking => (
+                      <div
+                        key={booking.id}
+                        className="flex items-center justify-between p-2 bg-destructive/10 rounded-md"
+                      >
+                        <div className="flex-1">
+                          <div className="text-sm font-medium">
+                            {getBookingCourtDisplay(booking)} •{' '}
+                            {formatBookingTime(booking.start_time, booking.end_time)}
+                          </div>
+                          <div className="text-xs text-muted-foreground flex items-center gap-1">
+                            {booking.player_name || t('form.unknownPlayer')} •{' '}
+                            <Badge variant="outline" className="text-xs">
+                              {booking.status}
+                            </Badge>
+                          </div>
+                        </div>
+                        <Link
+                          href={`/dashboard/bookings/${booking.id}`}
+                          className="text-xs text-primary hover:underline ml-2"
+                        >
+                          {t('form.viewBooking')}
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs mt-3 text-muted-foreground">{t('form.conflictHint')}</p>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {error && !conflictingBookings.length && !overlappingBlocks.length && (
+              <p className="text-sm text-red-500">{error}</p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={resetForm}>
+              {t('form.cancelButton')}
+            </Button>
+            <Button onClick={handleCreate} disabled={saving || !blockDate}>
+              {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
+              {saving ? t('form.creating') : t('form.createButton')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Blocks List */}
       <Card>
@@ -386,12 +514,10 @@ export default function BlockManagementPage() {
               </div>
               <h3 className="text-lg font-semibold mb-2">{t('emptyState.title')}</h3>
               <p className="text-muted-foreground mb-6">{t('emptyState.description')}</p>
-              {!showForm && (
-                <Button onClick={() => setShowForm(true)}>
-                  <Plus className="mr-2 size-4" />
-                  {t('emptyState.addButton')}
-                </Button>
-              )}
+              <Button onClick={() => setShowForm(true)}>
+                <Plus className="mr-2 size-4" />
+                {t('emptyState.addButton')}
+              </Button>
             </div>
           ) : (
             <div className="divide-y">
@@ -403,8 +529,8 @@ export default function BlockManagementPage() {
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <p className="font-medium">
-                          {new Date(block.block_date).toLocaleDateString(undefined, {
+                        <p className="font-medium mb-0">
+                          {new Date(block.block_date + 'T00:00:00').toLocaleDateString(undefined, {
                             weekday: 'short',
                             month: 'short',
                             day: 'numeric',
@@ -413,7 +539,7 @@ export default function BlockManagementPage() {
                         </p>
                         <Badge variant="outline">{t(`types.${block.block_type}`)}</Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-muted-foreground mb-0">
                         {getCourtName(block.court)} • {formatTime(block.start_time, block.end_time)}
                         {block.reason && ` • ${block.reason}`}
                       </p>

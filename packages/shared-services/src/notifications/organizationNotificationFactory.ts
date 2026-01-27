@@ -121,6 +121,14 @@ const ORG_TITLE_TEMPLATES: Record<OrgNotificationTypeEnum, string> = {
   booking_cancelled_by_org: 'Booking Cancelled',
   membership_approved: 'Welcome!',
   org_announcement: 'Announcement',
+  // Program notifications
+  program_registration_confirmed: 'Registration Confirmed',
+  program_registration_cancelled: 'Registration Cancelled',
+  program_session_reminder: 'Session Reminder',
+  program_session_cancelled: 'Session Cancelled',
+  program_waitlist_promoted: 'Waitlist Promoted',
+  program_payment_due: 'Payment Due',
+  program_payment_received: 'Payment Received',
 };
 
 /**
@@ -147,6 +155,21 @@ const ORG_BODY_TEMPLATES: Record<OrgNotificationTypeEnum, string> = {
   booking_cancelled_by_org: 'Your booking for {courtName} on {bookingDate} has been cancelled',
   membership_approved: 'Your membership has been approved. Welcome to the team!',
   org_announcement: '{message}',
+  // Program notifications
+  program_registration_confirmed:
+    '{playerName} has been confirmed for {programName}. Session starts {sessionDate}.',
+  program_registration_cancelled:
+    '{playerName} has cancelled their registration for {programName}.',
+  program_session_reminder:
+    'Reminder: {programName} session is {sessionDate} at {startTime}. {registeredCount} participants registered.',
+  program_session_cancelled:
+    'The {programName} session on {sessionDate} has been cancelled. All registered participants have been notified.',
+  program_waitlist_promoted:
+    '{playerName} has been promoted from the waitlist and is now registered for {programName}.',
+  program_payment_due:
+    'Payment for {programName} is due from {playerName}. Amount: {amountCents} {currency}.',
+  program_payment_received:
+    'Payment received from {playerName} for {programName}. Amount: {amountCents} {currency}.',
 };
 
 /**

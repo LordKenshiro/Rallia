@@ -6,8 +6,10 @@ import { FacilityImagesSection } from '@/components/facility-images-section';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from '@/i18n/navigation';
+import { getSelectedOrganization } from '@/lib/supabase/get-selected-organization';
 import { createClient } from '@/lib/supabase/server';
-import { ArrowLeft, Building2, Calendar, Clock, Globe, MapPin, Users } from 'lucide-react';
+import { BackButton } from '@/components/back-button';
+import { Building2, Calendar, Clock, Globe, MapPin, Users } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
@@ -40,17 +42,21 @@ export default async function FacilityDetailPage({ params }: PageProps) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Get user's organization
-  const { data: membership } = await supabase
-    .from('organization_member')
-    .select('organization_id, role')
-    .eq('user_id', user!.id)
-    .is('left_at', null)
-    .single();
+  // Get selected organization (respects user's selection from org switcher)
+  const organization = await getSelectedOrganization(user!.id);
 
-  if (!membership) {
+  if (!organization) {
     notFound();
   }
+
+  // Get user's role in the organization
+  const { data: membership } = await supabase
+    .from('organization_member')
+    .select('role')
+    .eq('user_id', user!.id)
+    .eq('organization_id', organization.id)
+    .is('left_at', null)
+    .single();
 
   // Fetch facility with courts and contacts
   const { data: facility, error } = await supabase
@@ -125,7 +131,7 @@ export default async function FacilityDetailPage({ params }: PageProps) {
     `
     )
     .eq('id', id)
-    .eq('organization_id', membership.organization_id)
+    .eq('organization_id', organization.id)
     .single();
 
   if (error || !facility) {
@@ -136,19 +142,16 @@ export default async function FacilityDetailPage({ params }: PageProps) {
   const activeCourts = courts.filter(c => c.is_active);
 
   // Check if user can edit (owner or admin)
-  const canEdit = ['owner', 'admin'].includes(membership.role);
+  const canEdit = membership ? ['owner', 'admin'].includes(membership.role) : false;
 
   return (
     <div className="flex flex-col w-full gap-8">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-4">
-          <Link
-            href="/dashboard/facilities"
-            className="p-2 hover:bg-muted rounded-md transition-colors mt-1"
-          >
-            <ArrowLeft className="size-5" />
-          </Link>
+          <BackButton className="p-2 hover:bg-muted rounded-md transition-colors mt-1 inline-flex items-center">
+            <span className="sr-only">Back</span>
+          </BackButton>
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold m-0">{facility.name}</h1>

@@ -129,6 +129,7 @@ export type Database = {
           approved_at: string | null;
           approved_by: string | null;
           booking_date: string;
+          booking_type: Database['public']['Enums']['booking_type_enum'];
           cancellation_reason: string | null;
           cancelled_at: string | null;
           cancelled_by: string | null;
@@ -138,6 +139,7 @@ export type Database = {
           currency: string | null;
           end_time: string;
           id: string;
+          metadata: Json | null;
           notes: string | null;
           organization_id: string | null;
           payment_method: Database['public']['Enums']['payment_method'] | null;
@@ -158,6 +160,7 @@ export type Database = {
           approved_at?: string | null;
           approved_by?: string | null;
           booking_date: string;
+          booking_type?: Database['public']['Enums']['booking_type_enum'];
           cancellation_reason?: string | null;
           cancelled_at?: string | null;
           cancelled_by?: string | null;
@@ -167,6 +170,7 @@ export type Database = {
           currency?: string | null;
           end_time: string;
           id?: string;
+          metadata?: Json | null;
           notes?: string | null;
           organization_id?: string | null;
           payment_method?: Database['public']['Enums']['payment_method'] | null;
@@ -187,6 +191,7 @@ export type Database = {
           approved_at?: string | null;
           approved_by?: string | null;
           booking_date?: string;
+          booking_type?: Database['public']['Enums']['booking_type_enum'];
           cancellation_reason?: string | null;
           cancelled_at?: string | null;
           cancelled_by?: string | null;
@@ -196,6 +201,7 @@ export type Database = {
           currency?: string | null;
           end_time?: string;
           id?: string;
+          metadata?: Json | null;
           notes?: string | null;
           organization_id?: string | null;
           payment_method?: Database['public']['Enums']['payment_method'] | null;
@@ -1075,6 +1081,78 @@ export type Database = {
             columns: ['uploaded_by'];
             isOneToOne: false;
             referencedRelation: 'profile';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      instructor_profile: {
+        Row: {
+          avatar_url: string | null;
+          bio: string | null;
+          certifications: Json | null;
+          created_at: string;
+          currency: string | null;
+          display_name: string;
+          email: string | null;
+          hourly_rate_cents: number | null;
+          id: string;
+          is_active: boolean;
+          is_external: boolean;
+          organization_id: string;
+          organization_member_id: string | null;
+          phone: string | null;
+          specializations: Json | null;
+          updated_at: string;
+        };
+        Insert: {
+          avatar_url?: string | null;
+          bio?: string | null;
+          certifications?: Json | null;
+          created_at?: string;
+          currency?: string | null;
+          display_name: string;
+          email?: string | null;
+          hourly_rate_cents?: number | null;
+          id?: string;
+          is_active?: boolean;
+          is_external?: boolean;
+          organization_id: string;
+          organization_member_id?: string | null;
+          phone?: string | null;
+          specializations?: Json | null;
+          updated_at?: string;
+        };
+        Update: {
+          avatar_url?: string | null;
+          bio?: string | null;
+          certifications?: Json | null;
+          created_at?: string;
+          currency?: string | null;
+          display_name?: string;
+          email?: string | null;
+          hourly_rate_cents?: number | null;
+          id?: string;
+          is_active?: boolean;
+          is_external?: boolean;
+          organization_id?: string;
+          organization_member_id?: string | null;
+          phone?: string | null;
+          specializations?: Json | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'instructor_profile_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organization';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'instructor_profile_organization_member_id_fkey';
+            columns: ['organization_member_id'];
+            isOneToOne: false;
+            referencedRelation: 'organization_member';
             referencedColumns: ['id'];
           },
         ];
@@ -3439,6 +3517,439 @@ export type Database = {
         };
         Relationships: [];
       };
+      program: {
+        Row: {
+          age_max: number | null;
+          age_min: number | null;
+          allow_installments: boolean;
+          auto_block_courts: boolean;
+          cancellation_policy: Json | null;
+          cancelled_at: string | null;
+          cover_image_url: string | null;
+          created_at: string;
+          currency: string;
+          current_participants: number;
+          deposit_cents: number | null;
+          description: string | null;
+          end_date: string | null;
+          facility_id: string | null;
+          id: string;
+          installment_count: number | null;
+          max_participants: number | null;
+          metadata: Json | null;
+          min_participants: number | null;
+          name: string;
+          organization_id: string;
+          price_cents: number;
+          published_at: string | null;
+          registration_deadline: string | null;
+          registration_opens_at: string | null;
+          skill_level_max: string | null;
+          skill_level_min: string | null;
+          sport_id: string | null;
+          start_date: string;
+          status: Database['public']['Enums']['program_status_enum'];
+          type: Database['public']['Enums']['program_type_enum'];
+          updated_at: string;
+          waitlist_enabled: boolean;
+          waitlist_limit: number | null;
+        };
+        Insert: {
+          age_max?: number | null;
+          age_min?: number | null;
+          allow_installments?: boolean;
+          auto_block_courts?: boolean;
+          cancellation_policy?: Json | null;
+          cancelled_at?: string | null;
+          cover_image_url?: string | null;
+          created_at?: string;
+          currency?: string;
+          current_participants?: number;
+          deposit_cents?: number | null;
+          description?: string | null;
+          end_date?: string | null;
+          facility_id?: string | null;
+          id?: string;
+          installment_count?: number | null;
+          max_participants?: number | null;
+          metadata?: Json | null;
+          min_participants?: number | null;
+          name: string;
+          organization_id: string;
+          price_cents: number;
+          published_at?: string | null;
+          registration_deadline?: string | null;
+          registration_opens_at?: string | null;
+          skill_level_max?: string | null;
+          skill_level_min?: string | null;
+          sport_id?: string | null;
+          start_date: string;
+          status?: Database['public']['Enums']['program_status_enum'];
+          type?: Database['public']['Enums']['program_type_enum'];
+          updated_at?: string;
+          waitlist_enabled?: boolean;
+          waitlist_limit?: number | null;
+        };
+        Update: {
+          age_max?: number | null;
+          age_min?: number | null;
+          allow_installments?: boolean;
+          auto_block_courts?: boolean;
+          cancellation_policy?: Json | null;
+          cancelled_at?: string | null;
+          cover_image_url?: string | null;
+          created_at?: string;
+          currency?: string;
+          current_participants?: number;
+          deposit_cents?: number | null;
+          description?: string | null;
+          end_date?: string | null;
+          facility_id?: string | null;
+          id?: string;
+          installment_count?: number | null;
+          max_participants?: number | null;
+          metadata?: Json | null;
+          min_participants?: number | null;
+          name?: string;
+          organization_id?: string;
+          price_cents?: number;
+          published_at?: string | null;
+          registration_deadline?: string | null;
+          registration_opens_at?: string | null;
+          skill_level_max?: string | null;
+          skill_level_min?: string | null;
+          sport_id?: string | null;
+          start_date?: string;
+          status?: Database['public']['Enums']['program_status_enum'];
+          type?: Database['public']['Enums']['program_type_enum'];
+          updated_at?: string;
+          waitlist_enabled?: boolean;
+          waitlist_limit?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'program_facility_id_fkey';
+            columns: ['facility_id'];
+            isOneToOne: false;
+            referencedRelation: 'facility';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'program_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organization';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'program_sport_id_fkey';
+            columns: ['sport_id'];
+            isOneToOne: false;
+            referencedRelation: 'sport';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      program_instructor: {
+        Row: {
+          created_at: string;
+          id: string;
+          instructor_id: string;
+          is_primary: boolean;
+          program_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          instructor_id: string;
+          is_primary?: boolean;
+          program_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          instructor_id?: string;
+          is_primary?: boolean;
+          program_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'program_instructor_instructor_id_fkey';
+            columns: ['instructor_id'];
+            isOneToOne: false;
+            referencedRelation: 'instructor_profile';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'program_instructor_program_id_fkey';
+            columns: ['program_id'];
+            isOneToOne: false;
+            referencedRelation: 'program';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      program_registration: {
+        Row: {
+          cancelled_at: string | null;
+          confirmed_at: string | null;
+          created_at: string;
+          currency: string;
+          emergency_contact_name: string | null;
+          emergency_contact_phone: string | null;
+          id: string;
+          notes: string | null;
+          paid_amount_cents: number;
+          payment_plan: Database['public']['Enums']['payment_plan_enum'];
+          player_id: string;
+          program_id: string;
+          refund_amount_cents: number;
+          refunded_at: string | null;
+          registered_at: string;
+          registered_by: string;
+          status: Database['public']['Enums']['registration_status_enum'];
+          stripe_customer_id: string | null;
+          total_amount_cents: number;
+          updated_at: string;
+        };
+        Insert: {
+          cancelled_at?: string | null;
+          confirmed_at?: string | null;
+          created_at?: string;
+          currency?: string;
+          emergency_contact_name?: string | null;
+          emergency_contact_phone?: string | null;
+          id?: string;
+          notes?: string | null;
+          paid_amount_cents?: number;
+          payment_plan?: Database['public']['Enums']['payment_plan_enum'];
+          player_id: string;
+          program_id: string;
+          refund_amount_cents?: number;
+          refunded_at?: string | null;
+          registered_at?: string;
+          registered_by: string;
+          status?: Database['public']['Enums']['registration_status_enum'];
+          stripe_customer_id?: string | null;
+          total_amount_cents: number;
+          updated_at?: string;
+        };
+        Update: {
+          cancelled_at?: string | null;
+          confirmed_at?: string | null;
+          created_at?: string;
+          currency?: string;
+          emergency_contact_name?: string | null;
+          emergency_contact_phone?: string | null;
+          id?: string;
+          notes?: string | null;
+          paid_amount_cents?: number;
+          payment_plan?: Database['public']['Enums']['payment_plan_enum'];
+          player_id?: string;
+          program_id?: string;
+          refund_amount_cents?: number;
+          refunded_at?: string | null;
+          registered_at?: string;
+          registered_by?: string;
+          status?: Database['public']['Enums']['registration_status_enum'];
+          stripe_customer_id?: string | null;
+          total_amount_cents?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'program_registration_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'program_registration_program_id_fkey';
+            columns: ['program_id'];
+            isOneToOne: false;
+            referencedRelation: 'program';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'program_registration_registered_by_fkey';
+            columns: ['registered_by'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      program_session: {
+        Row: {
+          cancelled_at: string | null;
+          created_at: string;
+          date: string;
+          end_time: string;
+          id: string;
+          is_cancelled: boolean;
+          location_override: string | null;
+          notes: string | null;
+          program_id: string;
+          start_time: string;
+          updated_at: string;
+        };
+        Insert: {
+          cancelled_at?: string | null;
+          created_at?: string;
+          date: string;
+          end_time: string;
+          id?: string;
+          is_cancelled?: boolean;
+          location_override?: string | null;
+          notes?: string | null;
+          program_id: string;
+          start_time: string;
+          updated_at?: string;
+        };
+        Update: {
+          cancelled_at?: string | null;
+          created_at?: string;
+          date?: string;
+          end_time?: string;
+          id?: string;
+          is_cancelled?: boolean;
+          location_override?: string | null;
+          notes?: string | null;
+          program_id?: string;
+          start_time?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'program_session_program_id_fkey';
+            columns: ['program_id'];
+            isOneToOne: false;
+            referencedRelation: 'program';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      program_session_court: {
+        Row: {
+          booking_id: string | null;
+          court_id: string;
+          created_at: string;
+          id: string;
+          session_id: string;
+        };
+        Insert: {
+          booking_id?: string | null;
+          court_id: string;
+          created_at?: string;
+          id?: string;
+          session_id: string;
+        };
+        Update: {
+          booking_id?: string | null;
+          court_id?: string;
+          created_at?: string;
+          id?: string;
+          session_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'program_session_court_booking_id_fkey';
+            columns: ['booking_id'];
+            isOneToOne: false;
+            referencedRelation: 'booking';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'program_session_court_court_id_fkey';
+            columns: ['court_id'];
+            isOneToOne: false;
+            referencedRelation: 'court';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'program_session_court_session_id_fkey';
+            columns: ['session_id'];
+            isOneToOne: false;
+            referencedRelation: 'program_session';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      program_waitlist: {
+        Row: {
+          added_by: string;
+          created_at: string;
+          id: string;
+          notes: string | null;
+          notification_sent_at: string | null;
+          player_id: string;
+          position: number;
+          program_id: string;
+          promoted_at: string | null;
+          promotion_expires_at: string | null;
+          registration_id: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          added_by: string;
+          created_at?: string;
+          id?: string;
+          notes?: string | null;
+          notification_sent_at?: string | null;
+          player_id: string;
+          position: number;
+          program_id: string;
+          promoted_at?: string | null;
+          promotion_expires_at?: string | null;
+          registration_id?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          added_by?: string;
+          created_at?: string;
+          id?: string;
+          notes?: string | null;
+          notification_sent_at?: string | null;
+          player_id?: string;
+          position?: number;
+          program_id?: string;
+          promoted_at?: string | null;
+          promotion_expires_at?: string | null;
+          registration_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'program_waitlist_added_by_fkey';
+            columns: ['added_by'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'program_waitlist_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'program_waitlist_program_id_fkey';
+            columns: ['program_id'];
+            isOneToOne: false;
+            referencedRelation: 'program';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'program_waitlist_registration_id_fkey';
+            columns: ['registration_id'];
+            isOneToOne: false;
+            referencedRelation: 'program_registration';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       rating_proof: {
         Row: {
           created_at: string;
@@ -3731,6 +4242,83 @@ export type Database = {
           },
         ];
       };
+      registration_payment: {
+        Row: {
+          amount_cents: number;
+          created_at: string;
+          currency: string;
+          due_date: string;
+          failed_at: string | null;
+          failure_reason: string | null;
+          id: string;
+          installment_number: number;
+          next_retry_at: string | null;
+          paid_at: string | null;
+          refund_amount_cents: number | null;
+          refunded_at: string | null;
+          registration_id: string;
+          retry_count: number;
+          status: Database['public']['Enums']['registration_payment_status_enum'];
+          stripe_charge_id: string | null;
+          stripe_customer_id: string | null;
+          stripe_payment_intent_id: string | null;
+          total_installments: number;
+          updated_at: string;
+        };
+        Insert: {
+          amount_cents: number;
+          created_at?: string;
+          currency?: string;
+          due_date: string;
+          failed_at?: string | null;
+          failure_reason?: string | null;
+          id?: string;
+          installment_number?: number;
+          next_retry_at?: string | null;
+          paid_at?: string | null;
+          refund_amount_cents?: number | null;
+          refunded_at?: string | null;
+          registration_id: string;
+          retry_count?: number;
+          status?: Database['public']['Enums']['registration_payment_status_enum'];
+          stripe_charge_id?: string | null;
+          stripe_customer_id?: string | null;
+          stripe_payment_intent_id?: string | null;
+          total_installments?: number;
+          updated_at?: string;
+        };
+        Update: {
+          amount_cents?: number;
+          created_at?: string;
+          currency?: string;
+          due_date?: string;
+          failed_at?: string | null;
+          failure_reason?: string | null;
+          id?: string;
+          installment_number?: number;
+          next_retry_at?: string | null;
+          paid_at?: string | null;
+          refund_amount_cents?: number | null;
+          refunded_at?: string | null;
+          registration_id?: string;
+          retry_count?: number;
+          status?: Database['public']['Enums']['registration_payment_status_enum'];
+          stripe_charge_id?: string | null;
+          stripe_customer_id?: string | null;
+          stripe_payment_intent_id?: string | null;
+          total_installments?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'registration_payment_registration_id_fkey';
+            columns: ['registration_id'];
+            isOneToOne: false;
+            referencedRelation: 'program_registration';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       report: {
         Row: {
           created_at: string | null;
@@ -3891,6 +4479,61 @@ export type Database = {
             columns: ['player_id'];
             isOneToOne: false;
             referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      session_attendance: {
+        Row: {
+          attended: boolean | null;
+          created_at: string;
+          id: string;
+          marked_at: string | null;
+          marked_by: string | null;
+          notes: string | null;
+          registration_id: string;
+          session_id: string;
+        };
+        Insert: {
+          attended?: boolean | null;
+          created_at?: string;
+          id?: string;
+          marked_at?: string | null;
+          marked_by?: string | null;
+          notes?: string | null;
+          registration_id: string;
+          session_id: string;
+        };
+        Update: {
+          attended?: boolean | null;
+          created_at?: string;
+          id?: string;
+          marked_at?: string | null;
+          marked_by?: string | null;
+          notes?: string | null;
+          registration_id?: string;
+          session_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'session_attendance_marked_by_fkey';
+            columns: ['marked_by'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'session_attendance_registration_id_fkey';
+            columns: ['registration_id'];
+            isOneToOne: false;
+            referencedRelation: 'program_registration';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'session_attendance_session_id_fkey';
+            columns: ['session_id'];
+            isOneToOne: false;
+            referencedRelation: 'program_session';
             referencedColumns: ['id'];
           },
         ];
@@ -4692,6 +5335,7 @@ export type Database = {
         | 'completed'
         | 'no_show'
         | 'awaiting_approval';
+      booking_type_enum: 'player' | 'program_session' | 'maintenance';
       cancellation_reason_enum: 'weather' | 'court_unavailable' | 'emergency' | 'other';
       conversation_type: 'direct' | 'group' | 'match' | 'announcement';
       cost_split_type_enum: 'host_pays' | 'split_equal' | 'custom';
@@ -4826,6 +5470,7 @@ export type Database = {
       organization_type: 'club' | 'facility' | 'league' | 'academy' | 'association';
       organization_type_enum: 'club' | 'municipality' | 'city' | 'association';
       payment_method: 'credit_card' | 'debit_card' | 'paypal' | 'cash' | 'bank_transfer';
+      payment_plan_enum: 'full' | 'installment';
       payment_status: 'pending' | 'completed' | 'failed' | 'refunded';
       period_enum: 'morning' | 'afternoon' | 'evening';
       play_attribute_enum:
@@ -4838,6 +5483,8 @@ export type Database = {
       play_style_enum: 'counterpuncher' | 'aggressive_baseliner' | 'serve_and_volley' | 'all_court';
       playing_hand: 'left' | 'right' | 'both';
       playing_hand_enum: 'right' | 'left' | 'both';
+      program_status_enum: 'draft' | 'published' | 'cancelled' | 'completed';
+      program_type_enum: 'program' | 'lesson';
       proof_status_enum: 'pending' | 'approved' | 'rejected';
       proof_type_enum: 'external_link' | 'file';
       rating_certification_method_enum: 'external_rating' | 'proof' | 'referrals';
@@ -4849,6 +5496,13 @@ export type Database = {
         | 'admin_verified'
         | 'reference_verified';
       rating_system_code_enum: 'ntrp' | 'utr' | 'self_tennis' | 'dupr' | 'self_pickle';
+      registration_payment_status_enum:
+        | 'pending'
+        | 'succeeded'
+        | 'failed'
+        | 'refunded'
+        | 'cancelled';
+      registration_status_enum: 'pending' | 'confirmed' | 'cancelled' | 'refunded';
       report_reason: 'inappropriate_behavior' | 'harassment' | 'spam' | 'cheating' | 'other';
       report_status: 'pending' | 'under_review' | 'resolved' | 'dismissed';
       reputation_event_type:
@@ -5042,6 +5696,7 @@ export const Constants = {
         'no_show',
         'awaiting_approval',
       ],
+      booking_type_enum: ['player', 'program_session', 'maintenance'],
       cancellation_reason_enum: ['weather', 'court_unavailable', 'emergency', 'other'],
       conversation_type: ['direct', 'group', 'match', 'announcement'],
       cost_split_type_enum: ['host_pays', 'split_equal', 'custom'],
@@ -5166,6 +5821,7 @@ export const Constants = {
       organization_type: ['club', 'facility', 'league', 'academy', 'association'],
       organization_type_enum: ['club', 'municipality', 'city', 'association'],
       payment_method: ['credit_card', 'debit_card', 'paypal', 'cash', 'bank_transfer'],
+      payment_plan_enum: ['full', 'installment'],
       payment_status: ['pending', 'completed', 'failed', 'refunded'],
       period_enum: ['morning', 'afternoon', 'evening'],
       play_attribute_enum: [
@@ -5179,6 +5835,8 @@ export const Constants = {
       play_style_enum: ['counterpuncher', 'aggressive_baseliner', 'serve_and_volley', 'all_court'],
       playing_hand: ['left', 'right', 'both'],
       playing_hand_enum: ['right', 'left', 'both'],
+      program_status_enum: ['draft', 'published', 'cancelled', 'completed'],
+      program_type_enum: ['program', 'lesson'],
       proof_status_enum: ['pending', 'approved', 'rejected'],
       proof_type_enum: ['external_link', 'file'],
       rating_certification_method_enum: ['external_rating', 'proof', 'referrals'],
@@ -5191,6 +5849,8 @@ export const Constants = {
         'reference_verified',
       ],
       rating_system_code_enum: ['ntrp', 'utr', 'self_tennis', 'dupr', 'self_pickle'],
+      registration_payment_status_enum: ['pending', 'succeeded', 'failed', 'refunded', 'cancelled'],
+      registration_status_enum: ['pending', 'confirmed', 'cancelled', 'refunded'],
       report_reason: ['inappropriate_behavior', 'harassment', 'spam', 'cheating', 'other'],
       report_status: ['pending', 'under_review', 'resolved', 'dismissed'],
       reputation_event_type: [

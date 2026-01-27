@@ -335,6 +335,14 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   booking_cancelled_by_org: 'calendar-clear-outline',
   membership_approved: 'checkmark-done-outline',
   org_announcement: 'megaphone-outline',
+  // Program notifications
+  program_registration_confirmed: 'checkmark-circle-outline',
+  program_registration_cancelled: 'close-circle-outline',
+  program_session_reminder: 'alarm-outline',
+  program_session_cancelled: 'calendar-clear-outline',
+  program_waitlist_promoted: 'arrow-up-circle-outline',
+  program_payment_due: 'card-outline',
+  program_payment_received: 'checkmark-done-circle-outline',
 };
 
 /**
@@ -385,6 +393,14 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   booking_cancelled_by_org: '#F44336', // Red
   membership_approved: '#4CAF50', // Green
   org_announcement: '#2196F3', // Blue
+  // Program notifications
+  program_registration_confirmed: '#4CAF50', // Green
+  program_registration_cancelled: '#F44336', // Red
+  program_session_reminder: '#FF9800', // Orange
+  program_session_cancelled: '#F44336', // Red
+  program_waitlist_promoted: '#4DB8A8', // Teal
+  program_payment_due: '#FF9800', // Orange
+  program_payment_received: '#4CAF50', // Green
 };
 
 /**
@@ -431,6 +447,14 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   booking_cancelled_by_org: 'Booking Cancelled',
   membership_approved: 'Membership Approved',
   org_announcement: 'Announcement',
+  // Program notifications
+  program_registration_confirmed: 'Registration Confirmed',
+  program_registration_cancelled: 'Registration Cancelled',
+  program_session_reminder: 'Session Reminder',
+  program_session_cancelled: 'Session Cancelled',
+  program_waitlist_promoted: 'Waitlist Promoted',
+  program_payment_due: 'Payment Due',
+  program_payment_received: 'Payment Received',
 };
 
 /**
@@ -485,6 +509,14 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   booking_cancelled_by_org: 'organization',
   membership_approved: 'organization',
   org_announcement: 'organization',
+  // Program notifications
+  program_registration_confirmed: 'organization',
+  program_registration_cancelled: 'organization',
+  program_session_reminder: 'organization',
+  program_session_cancelled: 'organization',
+  program_waitlist_promoted: 'organization',
+  program_payment_due: 'organization',
+  program_payment_received: 'organization',
 };
 
 /**
@@ -578,6 +610,14 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   booking_cancelled_by_org: { email: true, push: false, sms: true }, // SMS for cancellations
   membership_approved: { email: true, push: false, sms: false },
   org_announcement: { email: true, push: false, sms: false },
+  // Program notifications
+  program_registration_confirmed: { email: true, push: true, sms: false },
+  program_registration_cancelled: { email: true, push: true, sms: true }, // SMS for cancellations
+  program_session_reminder: { email: false, push: true, sms: true }, // SMS for reminders
+  program_session_cancelled: { email: true, push: true, sms: true }, // SMS for cancellations
+  program_waitlist_promoted: { email: true, push: true, sms: false },
+  program_payment_due: { email: true, push: true, sms: false },
+  program_payment_received: { email: true, push: false, sms: false },
 };
 
 // ============================================

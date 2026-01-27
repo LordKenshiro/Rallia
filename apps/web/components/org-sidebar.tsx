@@ -24,6 +24,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Globe,
+  GraduationCap,
   LayoutDashboard,
   LogOut,
   MapPin,
@@ -91,6 +92,12 @@ export function OrgSidebar() {
       href: '/dashboard/bookings',
       label: t('nav.bookings'),
       icon: CalendarCheck,
+      exactMatch: false,
+    },
+    {
+      href: '/dashboard/programs',
+      label: t('nav.programs'),
+      icon: GraduationCap,
       exactMatch: false,
     },
     {

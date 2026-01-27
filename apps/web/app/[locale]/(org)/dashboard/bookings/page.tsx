@@ -314,6 +314,11 @@ export default function BookingsPage() {
     }
   }, [selectedOrganization, fetchBookings]);
 
+  // Reset court filter when facility filter changes
+  useEffect(() => {
+    setCourtFilter('all');
+  }, [facilityFilter]);
+
   const getPlayerName = (booking: Booking): string => {
     // Player info not loaded in simplified query - show player ID or placeholder
     if (booking.player_id) {
@@ -617,8 +622,12 @@ export default function BookingsPage() {
               </Select>
 
               {/* Court Filter */}
-              <Select value={courtFilter} onValueChange={setCourtFilter}>
-                <SelectTrigger>
+              <Select
+                value={courtFilter}
+                onValueChange={setCourtFilter}
+                disabled={facilityFilter === 'all'}
+              >
+                <SelectTrigger disabled={facilityFilter === 'all'}>
                   <SelectValue placeholder={t('filters.allCourts')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -776,7 +785,9 @@ export default function BookingsPage() {
                           aria-label={`Select booking ${booking.id}`}
                         />
                       </TableCell>
-                      <TableCell>{new Date(booking.booking_date).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        {new Date(booking.booking_date + 'T00:00:00').toLocaleDateString()}
+                      </TableCell>
                       <TableCell>
                         {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
                       </TableCell>

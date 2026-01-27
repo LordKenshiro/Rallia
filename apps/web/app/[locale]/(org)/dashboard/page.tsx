@@ -397,7 +397,7 @@ export default async function DashboardPage() {
                   <Link
                     key={booking.id}
                     href={`/dashboard/bookings/${booking.id}`}
-                    className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors group"
+                    className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors group mb-0"
                   >
                     <div className="flex flex-col items-center justify-center bg-primary/10 rounded-lg px-3 py-2 min-w-[70px]">
                       <span className="text-sm font-semibold text-primary">
@@ -408,10 +408,10 @@ export default async function DashboardPage() {
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">
+                      <p className="font-medium truncate mb-0">
                         {booking.court?.name || `Court ${booking.court?.court_number}`}
                       </p>
-                      <p className="text-sm text-muted-foreground truncate">{guestName}</p>
+                      <p className="text-sm text-muted-foreground truncate mb-0">{guestName}</p>
                     </div>
                     <ArrowRight className="size-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
                   </Link>

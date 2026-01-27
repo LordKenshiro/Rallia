@@ -348,6 +348,15 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
   booking_cancelled_by_org: 'high',
   membership_approved: 'normal',
   org_announcement: 'normal',
+
+  // Program notifications
+  program_registration_confirmed: 'normal',
+  program_registration_cancelled: 'high',
+  program_session_reminder: 'high',
+  program_session_cancelled: 'high',
+  program_waitlist_promoted: 'normal',
+  program_payment_due: 'high',
+  program_payment_received: 'normal',
 };
 
 /**
@@ -398,6 +407,15 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   booking_cancelled_by_org: 'Booking Cancelled',
   membership_approved: 'Membership Approved',
   org_announcement: 'Announcement',
+
+  // Program notifications
+  program_registration_confirmed: 'Registration Confirmed',
+  program_registration_cancelled: 'Registration Cancelled',
+  program_session_reminder: 'Session Reminder',
+  program_session_cancelled: 'Session Cancelled',
+  program_waitlist_promoted: "You're In!",
+  program_payment_due: 'Payment Due',
+  program_payment_received: 'Payment Received',
 };
 
 /**
@@ -461,6 +479,21 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
     'Your booking for {resourceName} on {bookingDate} has been cancelled by the organization.',
   membership_approved: 'Your membership at {organizationName} has been approved!',
   org_announcement: '{organizationName}: {message}',
+
+  // Program notifications
+  program_registration_confirmed:
+    'Your registration for {programName} has been confirmed. See you at the first session!',
+  program_registration_cancelled:
+    'Your registration for {programName} has been cancelled. Contact the organization if this was unexpected.',
+  program_session_reminder:
+    'Reminder: Your {programName} session is coming up on {sessionDate} at {startTime}.',
+  program_session_cancelled:
+    'Your {programName} session on {sessionDate} has been cancelled. Check the program for updates.',
+  program_waitlist_promoted:
+    "Great news! A spot opened up in {programName} and you've been promoted from the waitlist.",
+  program_payment_due:
+    'Payment for {programName} is due. Please complete payment to secure your spot.',
+  program_payment_received: 'Payment for {programName} has been received. Thank you!',
 };
 
 /**

@@ -3555,9 +3555,20 @@
       "noSlots": "No slots configured for this day",
       "clickToBook": "Book Now",
       "clickToView": "View Booking",
+      "manageBlocks": "Manage Blocks",
+      "deleteBlock": "Delete Block",
+      "allDay": "All Day",
       "slotBlocked": "This slot is blocked",
+      "deleteBlockConfirm": {
+        "title": "Delete Block",
+        "description": "Are you sure you want to delete this block? This will make the time slot available for booking again.",
+        "cancel": "Cancel",
+        "confirm": "Delete",
+        "deleting": "Deleting..."
+      },
       "price": "Price",
       "currentTime": "Current time",
+      "currentTimeAtFacility": "Current time at facility",
       "monthView": {
         "bookings": "bookings",
         "noBookings": "No bookings",
@@ -3593,7 +3604,8 @@
       "type": "Type",
       "actions": "Actions",
       "allCourts": "All Courts",
-      "allDay": "All Day"
+      "allDay": "All Day",
+      "unknownCourt": "Unknown court"
     },
     "types": {
       "manual": "Manual Block",
@@ -3633,7 +3645,18 @@
       "deleteSuccess": "Block deleted successfully",
       "error": "Failed to create block",
       "updateError": "Failed to update block",
-      "deleteError": "Failed to delete block"
+      "deleteError": "Failed to delete block",
+      "dateRequired": "Please select a date",
+      "conflictError": "Cannot create block due to existing bookings",
+      "conflictTitle": "Conflicting Bookings Found",
+      "conflictDescription": "The following bookings would be affected by this block. You must cancel these bookings before creating the block.",
+      "conflictHint": "Tip: Cancel the conflicting bookings first, then create the block.",
+      "viewBooking": "View",
+      "unknownPlayer": "Unknown player",
+      "overlapError": "Cannot create block due to overlapping blocks",
+      "overlapTitle": "Overlapping Blocks Found",
+      "overlapDescription": "The following blocks already cover this time period. Delete or modify them first.",
+      "overlapHint": "Tip: Delete the existing blocks or choose a different time range."
     },
     "confirmDelete": {
       "title": "Delete Block",
@@ -3649,6 +3672,7 @@
       "facilities": "Facilities",
       "availability": "Availability",
       "bookings": "Bookings",
+      "programs": "Programs",
       "analytics": "Analytics",
       "members": "Members",
       "settings": "Settings",
@@ -4511,6 +4535,498 @@
       "exportData": "Export Data",
       "exportCSV": "Export to CSV",
       "exportPDF": "Export to PDF"
+    }
+  },
+  "programs": {
+    "title": "Programs & Lessons",
+    "description": "Create and manage clinics, camps, and lessons",
+    "newProgram": "New Program",
+    "stats": {
+      "totalPrograms": "Total Programs",
+      "active": "Active",
+      "totalParticipants": "Total Participants",
+      "drafts": "Drafts",
+      "sessions": "sessions"
+    },
+    "empty": {
+      "noPrograms": "No programs yet",
+      "createFirst": "Create your first program to start offering clinics, camps, or lessons.",
+      "createProgram": "Create Program"
+    },
+    "status": {
+      "published": "Published",
+      "draft": "Draft",
+      "cancelled": "Cancelled",
+      "completed": "Completed"
+    },
+    "type": {
+      "program": "Program",
+      "lesson": "Lesson"
+    },
+    "detail": {
+      "backToPrograms": "Back to Programs",
+      "edit": "Edit",
+      "publish": "Publish",
+      "tabs": {
+        "sessions": "Sessions",
+        "registrations": "Registrations",
+        "waitlist": "Waitlist",
+        "instructors": "Instructors"
+      },
+      "stats": {
+        "startDate": "Start Date",
+        "participants": "Participants",
+        "price": "Price",
+        "sessions": "Sessions",
+        "totalSessions": "total"
+      },
+      "noSessions": "No sessions scheduled yet",
+      "noRegistrations": "No registrations yet",
+      "noWaitlist": "No one on the waitlist",
+      "noInstructors": "No instructors assigned yet",
+      "upcomingSessions": "upcoming sessions",
+      "confirmedParticipants": "confirmed participants",
+      "peopleWaiting": "people waiting",
+      "coachesAssigned": "Coaches assigned to this program",
+      "leadInstructor": "Lead Instructor",
+      "manageSessions": "Manage Sessions",
+      "manageRegistrations": "Manage Registrations",
+      "manageWaitlist": "Manage Waitlist",
+      "manageInstructors": "Manage Instructors",
+      "viewAllSessions": "View all {count} sessions"
+    },
+    "new": {
+      "title": "Create New Program",
+      "description": "Set up a new clinic, camp, or lesson for your organization.",
+      "backToPrograms": "Back to Programs",
+      "sections": {
+        "basicInfo": "Basic Information",
+        "location": "Location & Sport",
+        "locationDescription": "Select where the program takes place",
+        "schedule": "Schedule",
+        "capacity": "Capacity",
+        "pricing": "Pricing",
+        "eligibility": "Eligibility",
+        "eligibilityDescription": "Set age and skill level restrictions (optional)",
+        "cancellationPolicy": "Cancellation Policy",
+        "cancellationPolicyDescription": "Configure refund rules for cancellations",
+        "options": "Options"
+      },
+      "fields": {
+        "name": "Program Name",
+        "type": "Type",
+        "description": "Description",
+        "facility": "Facility",
+        "sport": "Sport",
+        "startDate": "Start Date",
+        "endDate": "End Date",
+        "registrationOpensAt": "Registration Opens",
+        "registrationDeadline": "Registration Deadline",
+        "minParticipants": "Min Participants",
+        "maxParticipants": "Max Participants",
+        "price": "Price (CAD)",
+        "allowInstallments": "Allow Installment Payments",
+        "installmentDescription": "Let participants pay in multiple installments",
+        "installmentCount": "Number of Installments",
+        "deposit": "Deposit Amount",
+        "waitlistEnabled": "Enable Waitlist",
+        "waitlistDescription": "Allow players to join a waitlist when program is full",
+        "waitlistLimit": "Waitlist Limit",
+        "autoBlockCourts": "Auto-Block Courts",
+        "autoBlockDescription": "Automatically reserve courts for program sessions",
+        "ageMin": "Minimum Age",
+        "ageMax": "Maximum Age",
+        "skillLevelMin": "Minimum Skill Level",
+        "skillLevelMax": "Maximum Skill Level",
+        "fullRefundDays": "Full Refund (days before start)",
+        "partialRefundDays": "Partial Refund (days before start)",
+        "partialRefundPercent": "Partial Refund Percentage",
+        "noRefundAfterStart": "No Refund After Start",
+        "noRefundAfterStartDescription": "Disable refunds once the program has started",
+        "prorateBySessionsAttended": "Prorate by Sessions",
+        "prorateBySessionsAttendedDescription": "Calculate refund based on sessions attended"
+      },
+      "placeholders": {
+        "name": "e.g., Summer Tennis Clinic",
+        "description": "Describe what participants will learn...",
+        "price": "0.00",
+        "maxParticipants": "Unlimited",
+        "selectFacility": "Select a facility",
+        "selectSport": "Select a sport",
+        "noLimit": "No limit",
+        "noMinimum": "No minimum",
+        "noMaximum": "No maximum",
+        "anyLevel": "Any level",
+        "deposit": "0.00"
+      },
+      "types": {
+        "program": "Program (multi-session)",
+        "lesson": "Lesson (single session)"
+      },
+      "installments": {
+        "2": "2 payments",
+        "3": "3 payments",
+        "4": "4 payments"
+      },
+      "skillLevels": {
+        "beginner": "Beginner",
+        "intermediate": "Intermediate",
+        "advanced": "Advanced",
+        "expert": "Expert"
+      },
+      "actions": {
+        "cancel": "Cancel",
+        "create": "Create Program"
+      },
+      "errors": {
+        "failedToCreate": "Failed to create program",
+        "somethingWentWrong": "Something went wrong"
+      }
+    },
+    "edit": {
+      "title": "Edit Program",
+      "description": "Update program details and settings.",
+      "backToProgram": "Back to Program",
+      "cannotEdit": "Cannot Edit Program",
+      "cannotEditDescription": "This program is {status} and cannot be edited.",
+      "programNotFound": "Program not found",
+      "backToPrograms": "Back to Programs",
+      "sections": {
+        "basicInfo": "Basic Information",
+        "location": "Location & Sport",
+        "locationDescription": "Select where the program takes place",
+        "schedule": "Schedule",
+        "capacity": "Capacity",
+        "pricing": "Pricing",
+        "eligibility": "Eligibility",
+        "eligibilityDescription": "Set age and skill level restrictions (optional)",
+        "cancellationPolicy": "Cancellation Policy",
+        "cancellationPolicyDescription": "Configure refund rules for cancellations",
+        "options": "Options"
+      },
+      "fields": {
+        "name": "Program Name",
+        "type": "Type",
+        "description": "Description",
+        "facility": "Facility",
+        "sport": "Sport",
+        "startDate": "Start Date",
+        "endDate": "End Date",
+        "registrationOpensAt": "Registration Opens",
+        "registrationDeadline": "Registration Deadline",
+        "minParticipants": "Min Participants",
+        "maxParticipants": "Max Participants",
+        "price": "Price (CAD)",
+        "allowInstallments": "Allow Installment Payments",
+        "installmentDescription": "Let participants pay in multiple installments",
+        "installmentCount": "Number of Installments",
+        "deposit": "Deposit Amount",
+        "waitlistEnabled": "Enable Waitlist",
+        "waitlistDescription": "Allow players to join a waitlist when program is full",
+        "waitlistLimit": "Waitlist Limit",
+        "autoBlockCourts": "Auto-Block Courts",
+        "autoBlockDescription": "Automatically reserve courts for program sessions",
+        "ageMin": "Minimum Age",
+        "ageMax": "Maximum Age",
+        "skillLevelMin": "Minimum Skill Level",
+        "skillLevelMax": "Maximum Skill Level",
+        "fullRefundDays": "Full Refund (days before start)",
+        "partialRefundDays": "Partial Refund (days before start)",
+        "partialRefundPercent": "Partial Refund Percentage",
+        "noRefundAfterStart": "No Refund After Start",
+        "noRefundAfterStartDescription": "Disable refunds once the program has started",
+        "prorateBySessionsAttended": "Prorate by Sessions",
+        "prorateBySessionsAttendedDescription": "Calculate refund based on sessions attended"
+      },
+      "placeholders": {
+        "name": "e.g., Summer Tennis Clinic",
+        "description": "Describe what participants will learn...",
+        "price": "0.00",
+        "maxParticipants": "Unlimited",
+        "selectFacility": "Select a facility",
+        "selectSport": "Select a sport",
+        "noLimit": "No limit",
+        "noMinimum": "No minimum",
+        "noMaximum": "No maximum",
+        "anyLevel": "Any level",
+        "deposit": "0.00"
+      },
+      "types": {
+        "program": "Program (multi-session)",
+        "lesson": "Lesson (single session)"
+      },
+      "installments": {
+        "2": "2 payments",
+        "3": "3 payments",
+        "4": "4 payments"
+      },
+      "skillLevels": {
+        "beginner": "Beginner",
+        "intermediate": "Intermediate",
+        "advanced": "Advanced",
+        "expert": "Expert"
+      },
+      "actions": {
+        "cancel": "Cancel",
+        "save": "Save Changes"
+      },
+      "errors": {
+        "failedToLoad": "Failed to load program",
+        "failedToUpdate": "Failed to update program",
+        "somethingWentWrong": "Something went wrong"
+      }
+    },
+    "sessions": {
+      "title": "Sessions",
+      "manageSessions": "Manage Sessions",
+      "addSession": "Add Session",
+      "noSessions": "No sessions scheduled yet",
+      "stats": {
+        "active": "active"
+      },
+      "table": {
+        "session": "Session",
+        "date": "Date",
+        "time": "Time",
+        "location": "Location",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "form": {
+        "date": "Date",
+        "startTime": "Start Time",
+        "endTime": "End Time",
+        "courts": "Courts",
+        "locationOverride": "Location Override",
+        "locationOverridePlaceholder": "e.g., Off-site at City Park",
+        "notes": "Notes",
+        "noFacilityWarning": "Assign a facility to the program to select courts",
+        "noCourts": "No courts available at this facility"
+      },
+      "cancelled": "Cancelled",
+      "delete": "Delete",
+      "save": "Save",
+      "cancel": "Cancel",
+      "courtNumber": "Court {number}",
+      "actions": {
+        "cancel": "Cancel Session",
+        "delete": "Delete Session",
+        "confirmCancelTitle": "Cancel Session",
+        "confirmCancelDescription": "Are you sure you want to cancel session {number}? This will release the court booking if any.",
+        "confirmDeleteTitle": "Delete Session",
+        "confirmDeleteDescription": "Are you sure you want to delete session {number}? This action cannot be undone."
+      },
+      "errors": {
+        "failedToAdd": "Failed to add session",
+        "failedToCancel": "Failed to cancel session",
+        "failedToDelete": "Failed to delete session",
+        "endTimeBeforeStart": "End time must be after start time",
+        "overlappingSession": "Overlaps with session #{number} ({start} - {end})"
+      }
+    },
+    "registrations": {
+      "title": "Registrations",
+      "manageRegistrations": "Manage Registrations",
+      "noRegistrations": "No registrations yet",
+      "stats": {
+        "confirmed": "Confirmed",
+        "total": "Total",
+        "revenue": "Revenue"
+      },
+      "table": {
+        "player": "Player",
+        "status": "Status",
+        "paymentPlan": "Payment Plan",
+        "amountPaid": "Amount Paid",
+        "registeredAt": "Registered At",
+        "actions": "Actions",
+        "of": "of"
+      },
+      "status": {
+        "confirmed": "Confirmed",
+        "pending": "Pending",
+        "cancelled": "Cancelled",
+        "refunded": "Refunded"
+      },
+      "paymentPlan": {
+        "upfront": "Upfront",
+        "installments": "Installments"
+      },
+      "unknownPlayer": "Unknown Player",
+      "actions": {
+        "approve": "Approve",
+        "cancel": "Cancel Registration",
+        "confirmApproveTitle": "Approve Registration",
+        "confirmApproveDescription": "Are you sure you want to approve {name}'s registration?",
+        "confirmCancelTitle": "Cancel Registration",
+        "confirmCancelDescription": "Are you sure you want to cancel {name}'s registration? This cannot be undone."
+      },
+      "errors": {
+        "failedToUpdate": "Failed to update registration"
+      }
+    },
+    "waitlist": {
+      "title": "Waitlist",
+      "manageWaitlist": "Manage Waitlist",
+      "noWaitlist": "No one on the waitlist",
+      "stats": {
+        "promoted": "Promoted",
+        "waiting": "Waiting",
+        "total": "Total"
+      },
+      "table": {
+        "position": "Position",
+        "player": "Player",
+        "joinedAt": "Joined At",
+        "promotedAt": "Promoted At",
+        "expiresAt": "Expires At",
+        "actions": "Actions",
+        "expires": "Expires"
+      },
+      "actions": {
+        "promote": "Promote",
+        "remove": "Remove",
+        "confirmPromoteTitle": "Promote Player",
+        "confirmPromoteDescription": "Are you sure you want to promote {name} from the waitlist? They will receive an email to complete their registration."
+      },
+      "errors": {
+        "failedToPromote": "Failed to promote player from waitlist"
+      },
+      "peopleOnWaitlist": "{count} people on waitlist"
+    },
+    "instructors": {
+      "title": "Instructors",
+      "description": "Manage coaches and instructors for your programs",
+      "backToPrograms": "Back to Programs",
+      "addInstructor": "Add Instructor",
+      "stats": {
+        "total": "Total Instructors",
+        "active": "Active",
+        "external": "External/Guest"
+      },
+      "empty": {
+        "noInstructors": "No instructors yet",
+        "addFirst": "Add instructors to assign them to your programs.",
+        "addInstructor": "Add Instructor"
+      },
+      "badges": {
+        "inactive": "Inactive",
+        "external": "External"
+      },
+      "activePrograms": "active programs",
+      "new": {
+        "title": "Add Instructor",
+        "description": "Add a new instructor or coach to your organization.",
+        "backToInstructors": "Back to Instructors",
+        "sections": {
+          "details": "Instructor Details"
+        },
+        "fields": {
+          "name": "Name",
+          "email": "Email",
+          "phone": "Phone",
+          "bio": "Bio",
+          "hourlyRate": "Hourly Rate (CAD)",
+          "specializations": "Specializations",
+          "isExternal": "External Instructor"
+        },
+        "placeholders": {
+          "name": "e.g., John Smith",
+          "email": "instructor@example.com",
+          "phone": "(555) 123-4567",
+          "bio": "Brief background and experience...",
+          "hourlyRate": "0.00",
+          "specializations": "Tennis, Youth coaching, Beginners (comma separated)"
+        },
+        "descriptions": {
+          "specializations": "Separate multiple specializations with commas",
+          "isExternal": "This instructor is not a member of your organization"
+        },
+        "actions": {
+          "cancel": "Cancel",
+          "add": "Add Instructor"
+        },
+        "errors": {
+          "failedToCreate": "Failed to create instructor",
+          "somethingWentWrong": "Something went wrong"
+        }
+      },
+      "detail": {
+        "title": "Instructor Details - Rallia",
+        "description": "View and manage instructor details.",
+        "contactInformation": "Contact Information",
+        "noContactInformation": "No contact information",
+        "details": "Details",
+        "hourlyRateSuffix": "/hour",
+        "assignedPrograms": "Assigned Programs",
+        "notAssigned": "Not assigned to any programs yet"
+      },
+      "edit": {
+        "title": "Edit Instructor",
+        "description": "Update instructor details and settings.",
+        "backToInstructor": "Back to Instructor",
+        "instructorNotFound": "Instructor not found",
+        "backToInstructors": "Back to Instructors",
+        "sections": {
+          "details": "Instructor Details"
+        },
+        "fields": {
+          "name": "Name",
+          "email": "Email",
+          "phone": "Phone",
+          "bio": "Bio",
+          "hourlyRate": "Hourly Rate (CAD)",
+          "specializations": "Specializations",
+          "isActive": "Active"
+        },
+        "placeholders": {
+          "name": "e.g., John Smith",
+          "email": "instructor@example.com",
+          "phone": "(555) 123-4567",
+          "bio": "Brief background and experience...",
+          "hourlyRate": "0.00",
+          "specializations": "Tennis, Youth coaching, Beginners (comma separated)"
+        },
+        "descriptions": {
+          "specializations": "Separate multiple specializations with commas",
+          "isActive": "Active instructors can be assigned to programs"
+        },
+        "actions": {
+          "cancel": "Cancel",
+          "save": "Save Changes"
+        },
+        "errors": {
+          "failedToLoad": "Failed to load instructor",
+          "failedToUpdate": "Failed to update instructor",
+          "somethingWentWrong": "Something went wrong"
+        }
+      }
+    },
+    "manageInstructors": {
+      "title": "Manage Instructors",
+      "backToProgram": "Back to Program",
+      "addInstructor": "Add Instructor",
+      "assignedInstructors": "Assigned Instructors",
+      "noInstructorsAssigned": "No instructors assigned to this program",
+      "instructorCount": "{count, plural, one {# instructor assigned} other {# instructors assigned}}",
+      "addFirst": "Add your first instructor",
+      "primary": "Lead",
+      "setPrimary": "Set as lead instructor",
+      "remove": "Remove from program",
+      "readOnlyNotice": "This program is completed or cancelled. Instructor assignments cannot be modified.",
+      "addInstructorDialog": {
+        "title": "Add Instructors",
+        "description": "Select instructors to assign to this program.",
+        "noAvailable": "All instructors are already assigned to this program.",
+        "createNew": "Create New Instructor",
+        "add": "Add {count, plural, one {# instructor} other {# instructors}}"
+      },
+      "errors": {
+        "failedToLoad": "Failed to load instructors",
+        "failedToAdd": "Failed to add instructors",
+        "failedToRemove": "Failed to remove instructor",
+        "failedToUpdate": "Failed to update instructor assignment"
+      }
     }
   }
 }

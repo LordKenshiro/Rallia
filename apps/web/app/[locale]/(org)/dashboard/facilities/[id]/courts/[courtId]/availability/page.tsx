@@ -14,6 +14,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Link, useRouter } from '@/i18n/navigation';
+import { BackButton } from '@/components/back-button';
 import {
   adjustEndTimeToValidMultiple,
   calculateSlotCount,
@@ -27,7 +28,6 @@ import { cn } from '@/lib/utils';
 import {
   AlertCircle,
   AlertTriangle,
-  ArrowLeft,
   Calendar,
   CheckCircle2,
   Clock,
@@ -456,12 +456,7 @@ export default function CourtAvailabilityPage() {
     <div className="flex flex-col w-full gap-8 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex items-start gap-4">
-        <Link
-          href={`/dashboard/facilities/${facilityId}/courts/${courtId}`}
-          className="p-2 hover:bg-muted rounded-md transition-colors mt-1"
-        >
-          <ArrowLeft className="size-5" />
-        </Link>
+        <BackButton className="p-2 hover:bg-muted rounded-md transition-colors mt-1" />
         <div>
           <p className="text-sm text-muted-foreground mb-1">{facilityName}</p>
           <h1 className="text-3xl font-bold mb-0">{t('courtOverride.title')}</h1>

@@ -15,13 +15,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { useOrganization } from '@/components/organization-context';
 import { Link, useRouter } from '@/i18n/navigation';
+import { BackButton } from '@/components/back-button';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, CalendarCheck, Loader2, Repeat } from 'lucide-react';
+import { CalendarCheck, Loader2, Repeat } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 interface Facility {
   id: string;
@@ -45,6 +47,7 @@ export default function NewBookingPage() {
   const t = useTranslations('bookings');
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { selectedOrganization, isLoading: orgLoading } = useOrganization();
 
   // Pre-filled values from calendar
   const prefilledCourtId = searchParams.get('courtId');
@@ -70,6 +73,10 @@ export default function NewBookingPage() {
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card'>('cash');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
+  // Track previous values to detect user-initiated changes vs. prefilled values
+  const prevFacilityRef = useRef<string | null>(null);
+  const prevCourtRef = useRef<string | null>(null);
+  const prevDateRef = useRef<string | null>(null);
 
   // Recurring booking state
   const [isRecurring, setIsRecurring] = useState(false);
@@ -81,34 +88,17 @@ export default function NewBookingPage() {
   const [recurringEndDate, setRecurringEndDate] = useState('');
 
   const fetchInitialData = useCallback(async () => {
+    if (!selectedOrganization) {
+      return;
+    }
+
     const supabase = createClient();
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
-    const { data: membership } = await supabase
-      .from('organization_member')
-      .select('organization_id')
-      .eq('user_id', user.id)
-      .is('left_at', null)
-      .single();
-
-    if (!membership) {
-      setLoading(false);
-      return;
-    }
 
     // Fetch facilities
     const { data: facilitiesData } = await supabase
       .from('facility')
       .select('id, name')
-      .eq('organization_id', membership.organization_id)
+      .eq('organization_id', selectedOrganization.id)
       .is('archived_at', null)
       .order('name');
 
@@ -141,7 +131,7 @@ export default function NewBookingPage() {
     }
 
     setLoading(false);
-  }, [prefilledCourtId, prefilledDate]);
+  }, [selectedOrganization, prefilledCourtId, prefilledDate]);
 
   const fetchAvailableSlots = useCallback(async () => {
     if (!selectedCourt || !selectedDate) {
@@ -187,22 +177,38 @@ export default function NewBookingPage() {
   }, [selectedCourt, selectedDate, prefilledStartTime]);
 
   useEffect(() => {
-    fetchInitialData();
-  }, [fetchInitialData]);
+    if (!orgLoading) {
+      fetchInitialData();
+    }
+  }, [fetchInitialData, orgLoading]);
 
   useEffect(() => {
     fetchAvailableSlots();
   }, [fetchAvailableSlots]);
 
-  // Reset court when facility changes
+  // Reset court when facility changes (but not during initial load with prefilled values)
   useEffect(() => {
-    setSelectedCourt('');
-    setSelectedSlot('');
+    // Only reset if facility changed from a non-empty previous value (user interaction)
+    // Don't reset if previous was empty/null (initial load with prefilled values)
+    if (prevFacilityRef.current && prevFacilityRef.current !== selectedFacility) {
+      setSelectedCourt('');
+      setSelectedSlot('');
+    }
+    prevFacilityRef.current = selectedFacility;
   }, [selectedFacility]);
 
-  // Reset slot when court or date changes
+  // Reset slot when court or date changes (but not during initial load with prefilled values)
   useEffect(() => {
-    setSelectedSlot('');
+    // Only reset if court/date changed from non-empty previous values (user interaction)
+    const courtChanged = prevCourtRef.current && prevCourtRef.current !== selectedCourt;
+    const dateChanged = prevDateRef.current && prevDateRef.current !== selectedDate;
+
+    if (courtChanged || dateChanged) {
+      setSelectedSlot('');
+    }
+
+    prevCourtRef.current = selectedCourt;
+    prevDateRef.current = selectedDate;
   }, [selectedCourt, selectedDate]);
 
   const formatTime = (time: string): string => {
@@ -356,7 +362,7 @@ export default function NewBookingPage() {
     return `${year}-${month}-${day}`;
   })();
 
-  if (loading) {
+  if (loading || orgLoading) {
     return (
       <div className="flex items-center justify-center py-16">
         <Loader2 className="size-8 animate-spin text-muted-foreground" />
@@ -368,11 +374,7 @@ export default function NewBookingPage() {
     <div className="flex flex-col w-full gap-6 max-w-2xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button asChild variant="outline" size="icon">
-          <Link href="/dashboard/bookings">
-            <ArrowLeft className="size-4" />
-          </Link>
-        </Button>
+        <BackButton className="p-2 hover:bg-muted rounded-md transition-colors" />
         <div>
           <h1 className="text-3xl font-bold mb-0">{t('manual.title')}</h1>
           <p className="text-muted-foreground">{t('manual.description')}</p>

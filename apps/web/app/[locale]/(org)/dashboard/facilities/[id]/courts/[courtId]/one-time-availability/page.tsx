@@ -3,6 +3,14 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -20,8 +28,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Link, useRouter } from '@/i18n/navigation';
+import { BackButton } from '@/components/back-button';
 import { createClient } from '@/lib/supabase/client';
-import { ArrowLeft, CalendarDays, Clock, Loader2, Plus, Trash2 } from 'lucide-react';
+import { CalendarDays, Clock, Loader2, Plus, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
@@ -66,7 +75,7 @@ export default function OneTimeAvailabilityPage() {
     price_cents: null,
     reason: null,
   });
-  const [isAddingSlot, setIsAddingSlot] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     const supabase = createClient();
@@ -194,7 +203,7 @@ export default function OneTimeAvailabilityPage() {
 
       // Refresh data
       await fetchData();
-      setIsAddingSlot(false);
+      setIsModalOpen(false);
       setSelectedDate('');
       setNewSlot({
         start_time: '09:00',
@@ -234,6 +243,22 @@ export default function OneTimeAvailabilityPage() {
     }
   };
 
+  const handleModalClose = (open: boolean) => {
+    setIsModalOpen(open);
+    if (!open) {
+      // Reset form when modal closes
+      setSelectedDate('');
+      setNewSlot({
+        start_time: '09:00',
+        end_time: '17:00',
+        slot_duration_minutes: 60,
+        price_cents: null,
+        reason: null,
+      });
+      setError(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -245,18 +270,21 @@ export default function OneTimeAvailabilityPage() {
   return (
     <div className="flex flex-col w-full gap-8 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-start gap-4">
-        <Link
-          href={`/dashboard/facilities/${facilityId}/courts/${courtId}`}
-          className="p-2 hover:bg-muted rounded-md transition-colors mt-1"
-        >
-          <ArrowLeft className="size-5" />
-        </Link>
-        <div>
-          <p className="text-sm text-muted-foreground mb-1">{facilityName}</p>
-          <h1 className="text-3xl font-bold mb-0">{tOneTime('title')}</h1>
-          <p className="text-muted-foreground">{courtName}</p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-4 flex-1">
+          <BackButton className="p-2 hover:bg-muted rounded-md transition-colors mt-1 inline-flex items-center">
+            <span className="sr-only">Back</span>
+          </BackButton>
+          <div>
+            <p className="text-sm text-muted-foreground mb-1">{facilityName}</p>
+            <h1 className="text-3xl font-bold mb-0">{tOneTime('title')}</h1>
+            <p className="text-muted-foreground mb-0">{courtName}</p>
+          </div>
         </div>
+        <Button onClick={() => setIsModalOpen(true)} variant="default">
+          <Plus className="size-4 mr-2" />
+          {tOneTime('addNewSlot')}
+        </Button>
       </div>
 
       {/* Description Card */}
@@ -269,138 +297,126 @@ export default function OneTimeAvailabilityPage() {
           <CardDescription>{tOneTime('description')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">{tOneTime('hint')}</p>
+          <p className="text-sm text-muted-foreground mb-0">{tOneTime('hint')}</p>
         </CardContent>
       </Card>
 
-      {/* Add New Slot Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Plus className="size-5" />
-            {tOneTime('addSlot')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {!isAddingSlot ? (
-            <Button onClick={() => setIsAddingSlot(true)} variant="outline" className="w-full">
-              <Plus className="size-4 mr-2" />
-              {tOneTime('addNewSlot')}
-            </Button>
-          ) : (
-            <div className="space-y-4 p-4 border rounded-lg">
-              {/* Date Picker */}
+      {/* Add Slot Modal */}
+      <Dialog open={isModalOpen} onOpenChange={handleModalClose}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="size-5" />
+              {tOneTime('addSlot')}
+            </DialogTitle>
+            <DialogDescription>{tOneTime('description')}</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Date Picker */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{tOneTime('selectDate')}</label>
+              <Input
+                type="date"
+                value={selectedDate}
+                onChange={e => setSelectedDate(e.target.value)}
+                min={(() => {
+                  const d = new Date();
+                  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                })()}
+              />
+            </div>
+
+            {/* Time Range */}
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">{tOneTime('selectDate')}</label>
+                <label className="text-sm font-medium">{t('weeklySchedule.openTime')}</label>
                 <Input
-                  type="date"
-                  value={selectedDate}
-                  onChange={e => setSelectedDate(e.target.value)}
-                  min={(() => {
-                    const d = new Date();
-                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                  })()}
+                  type="time"
+                  value={newSlot.start_time}
+                  onChange={e => setNewSlot(prev => ({ ...prev, start_time: e.target.value }))}
                 />
               </div>
-
-              {/* Time Range */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t('weeklySchedule.openTime')}</label>
-                  <Input
-                    type="time"
-                    value={newSlot.start_time}
-                    onChange={e => setNewSlot(prev => ({ ...prev, start_time: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t('weeklySchedule.closeTime')}</label>
-                  <Input
-                    type="time"
-                    value={newSlot.end_time}
-                    onChange={e => setNewSlot(prev => ({ ...prev, end_time: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              {/* Slot Duration */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">{t('facilityTemplate.slotDuration')}</label>
-                <Select
-                  value={newSlot.slot_duration_minutes.toString()}
-                  onValueChange={v =>
-                    setNewSlot(prev => ({ ...prev, slot_duration_minutes: parseInt(v) }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SLOT_DURATIONS.map(duration => (
-                      <SelectItem key={duration} value={duration.toString()}>
-                        {tDurations(duration.toString() as '30' | '60' | '90' | '120')}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Price */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">{t('facilityTemplate.defaultPrice')}</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                    $
-                  </span>
-                  <Input
-                    type="number"
-                    value={newSlot.price_cents ? (newSlot.price_cents / 100).toFixed(2) : ''}
-                    onChange={e =>
-                      setNewSlot(prev => ({
-                        ...prev,
-                        price_cents: e.target.value
-                          ? Math.round(parseFloat(e.target.value) * 100)
-                          : null,
-                      }))
-                    }
-                    className="pl-7"
-                    min={0}
-                    step={0.01}
-                    placeholder="0.00"
-                  />
-                </div>
-              </div>
-
-              {/* Reason/Note */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">{tOneTime('reason')}</label>
+                <label className="text-sm font-medium">{t('weeklySchedule.closeTime')}</label>
                 <Input
-                  value={newSlot.reason || ''}
-                  onChange={e => setNewSlot(prev => ({ ...prev, reason: e.target.value || null }))}
-                  placeholder={tOneTime('reasonPlaceholder')}
+                  type="time"
+                  value={newSlot.end_time}
+                  onChange={e => setNewSlot(prev => ({ ...prev, end_time: e.target.value }))}
                 />
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-3">
-                <Button onClick={handleAddSlot} disabled={saving || !selectedDate}>
-                  {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
-                  {tOneTime('save')}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsAddingSlot(false);
-                    setSelectedDate('');
-                  }}
-                >
-                  {tOneTime('cancel')}
-                </Button>
               </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+
+            {/* Slot Duration */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t('facilityTemplate.slotDuration')}</label>
+              <Select
+                value={newSlot.slot_duration_minutes.toString()}
+                onValueChange={v =>
+                  setNewSlot(prev => ({ ...prev, slot_duration_minutes: parseInt(v) }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SLOT_DURATIONS.map(duration => (
+                    <SelectItem key={duration} value={duration.toString()}>
+                      {tDurations(duration.toString() as '30' | '60' | '90' | '120')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Price */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t('facilityTemplate.defaultPrice')}</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  $
+                </span>
+                <Input
+                  type="number"
+                  value={newSlot.price_cents ? (newSlot.price_cents / 100).toFixed(2) : ''}
+                  onChange={e =>
+                    setNewSlot(prev => ({
+                      ...prev,
+                      price_cents: e.target.value
+                        ? Math.round(parseFloat(e.target.value) * 100)
+                        : null,
+                    }))
+                  }
+                  className="pl-7"
+                  min={0}
+                  step={0.01}
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            {/* Reason/Note */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{tOneTime('reason')}</label>
+              <Input
+                value={newSlot.reason || ''}
+                onChange={e => setNewSlot(prev => ({ ...prev, reason: e.target.value || null }))}
+                placeholder={tOneTime('reasonPlaceholder')}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => handleModalClose(false)}>
+              {tOneTime('cancel')}
+            </Button>
+            <Button onClick={handleAddSlot} disabled={saving || !selectedDate}>
+              {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
+              {tOneTime('save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Existing Slots Table */}
       <Card>
@@ -434,12 +450,15 @@ export default function OneTimeAvailabilityPage() {
                   <TableRow key={slot.id}>
                     <TableCell>
                       <Badge variant="outline">
-                        {new Date(slot.availability_date).toLocaleDateString(undefined, {
-                          weekday: 'short',
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                        })}
+                        {new Date(slot.availability_date + 'T00:00:00').toLocaleDateString(
+                          undefined,
+                          {
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          }
+                        )}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -483,16 +502,6 @@ export default function OneTimeAvailabilityPage() {
           <p className="text-sm text-red-600">{error}</p>
         </div>
       )}
-
-      {/* Back Button */}
-      <div>
-        <Button variant="outline" asChild>
-          <Link href={`/dashboard/facilities/${facilityId}/courts/${courtId}`}>
-            <ArrowLeft className="size-4 mr-2" />
-            {tOneTime('backToCourt')}
-          </Link>
-        </Button>
-      </div>
     </div>
   );
 }
