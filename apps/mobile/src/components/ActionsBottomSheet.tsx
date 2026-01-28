@@ -303,6 +303,8 @@ export const ActionsBottomSheet: React.FC = () => {
     refreshProfile,
     editMatchData,
     clearEditMatch,
+    shouldOpenMatchCreation,
+    clearMatchCreationFlag,
   } = useActionsSheet();
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
   const { theme } = useTheme();
@@ -317,6 +319,31 @@ export const ActionsBottomSheet: React.FC = () => {
 
   // Animation value for slide transition
   const slideProgress = useSharedValue(0);
+
+  // Effect to automatically open match creation wizard when flag is set
+  useEffect(() => {
+    if (shouldOpenMatchCreation && contentMode === 'actions' && !showWizard && !isEditMode) {
+      // Clear the flag first
+      clearMatchCreationFlag();
+      // Then trigger the wizard with a small delay to ensure sheet is fully presented
+      setTimeout(() => {
+        setShowWizard(true);
+        // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
+        slideProgress.value = withSpring(1, {
+          damping: 80,
+          stiffness: 600,
+          overshootClamping: false,
+        });
+      }, 100);
+    }
+  }, [
+    shouldOpenMatchCreation,
+    contentMode,
+    showWizard,
+    isEditMode,
+    clearMatchCreationFlag,
+    slideProgress,
+  ]);
 
   // Theme-aware colors from design system
   const themeColors = isDark ? darkTheme : lightTheme;

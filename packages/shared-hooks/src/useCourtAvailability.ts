@@ -30,6 +30,8 @@ export interface UseCourtAvailabilityOptions {
   externalProviderId: string | null;
   /** Booking URL template with placeholders */
   bookingUrlTemplate: string | null;
+  /** Facility timezone (IANA format, e.g., "America/Toronto") for accurate future slot filtering */
+  facilityTimezone?: string | null;
   /** Dates to fetch availability for (defaults to today and tomorrow) */
   dates?: string[];
   /** Enable/disable the query (default: true) */
@@ -344,6 +346,7 @@ export function useCourtAvailability(
     dataProviderType,
     externalProviderId,
     bookingUrlTemplate: _bookingUrlTemplate,
+    facilityTimezone,
     dates = getDefaultDates(),
     enabled = true,
     maxSlots = 20, // Increased to show more slots for date-sectioned display
@@ -387,8 +390,9 @@ export function useCourtAvailability(
   });
 
   // Get future slots, group by time, then limit to maxSlots
+  // Use facility timezone to correctly filter slots based on current time at the facility
   const rawSlots = query.data ?? [];
-  const futureSlots = filterFutureSlots(rawSlots).sort(
+  const futureSlots = filterFutureSlots(rawSlots, facilityTimezone).sort(
     (a, b) => a.datetime.getTime() - b.datetime.getTime()
   );
 

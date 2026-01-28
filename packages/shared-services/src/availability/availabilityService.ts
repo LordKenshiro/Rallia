@@ -203,12 +203,83 @@ export async function fetchTodayAvailability(
 // =============================================================================
 
 /**
+ * Get the current date and time in a specific timezone as a comparable string.
+ * Returns format: "YYYY-MM-DD HH:MM:SS" for easy string comparison.
+ *
+ * @param timezone - IANA timezone identifier (e.g., "America/Toronto")
+ * @returns Current datetime string in the specified timezone
+ */
+function getCurrentDateTimeInTimezone(timezone: string): string {
+  const now = new Date();
+
+  const dateFormatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+
+  const timeFormatter = new Intl.DateTimeFormat('en-GB', {
+    timeZone: timezone,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+
+  // en-CA gives YYYY-MM-DD, en-GB gives HH:MM:SS in 24h format
+  return `${dateFormatter.format(now)} ${timeFormatter.format(now)}`;
+}
+
+/**
+ * Extract the date and time string from a slot's datetime for comparison.
+ * The slot's datetime was created by parsing "YYYY-MM-DDTHH:MM:SS" as local time,
+ * but it actually represents the facility's local time.
+ *
+ * @param slotDatetime - The slot's datetime (created from facility-local time string)
+ * @returns DateTime string in "YYYY-MM-DD HH:MM:SS" format
+ */
+function getSlotDateTimeString(slotDatetime: Date): string {
+  // Extract the date/time components as they were stored
+  // This works because the slot was created by parsing a string without timezone,
+  // so JavaScript stored it as-if it were local time, preserving the original values
+  const year = slotDatetime.getFullYear();
+  const month = String(slotDatetime.getMonth() + 1).padStart(2, '0');
+  const day = String(slotDatetime.getDate()).padStart(2, '0');
+  const hours = String(slotDatetime.getHours()).padStart(2, '0');
+  const minutes = String(slotDatetime.getMinutes()).padStart(2, '0');
+  const seconds = String(slotDatetime.getSeconds()).padStart(2, '0');
+
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+/**
  * Filter slots to only future times.
  *
+ * When facilityTimezone is provided, the comparison is done based on the
+ * current time at the facility's location. This is important when users
+ * are in a different timezone than the facility they're viewing.
+ *
  * @param slots - Array of availability slots
- * @returns Slots that start after now
+ * @param facilityTimezone - Optional IANA timezone identifier (e.g., "America/Toronto")
+ * @returns Slots that start after now (in facility timezone if provided)
  */
-export function filterFutureSlots(slots: AvailabilitySlot[]): AvailabilitySlot[] {
+export function filterFutureSlots(
+  slots: AvailabilitySlot[],
+  facilityTimezone?: string | null
+): AvailabilitySlot[] {
+  if (facilityTimezone) {
+    // Compare based on the current time at the facility's location
+    const nowAtFacility = getCurrentDateTimeInTimezone(facilityTimezone);
+
+    return slots.filter(slot => {
+      // The slot's datetime represents facility-local time
+      const slotDateTime = getSlotDateTimeString(slot.datetime);
+      return slotDateTime > nowAtFacility;
+    });
+  }
+
+  // Fallback: simple comparison (works when user and facility are in same timezone)
   const now = new Date();
   return slots.filter(slot => slot.datetime > now);
 }

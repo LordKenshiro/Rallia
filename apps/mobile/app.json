@@ -101,6 +101,13 @@
           "color": "#4DB8A8",
           "mode": "production"
         }
+      ],
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.mathisl971.rallia-app",
+          "enableGooglePay": false
+        }
       ]
     ],
     "extra": {

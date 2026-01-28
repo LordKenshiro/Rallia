@@ -4,15 +4,61 @@
  */
 
 import { supabase } from '../supabase';
-import type { FacilitySearchResult, FacilitiesPage } from '@rallia/shared-types';
+import type {
+  FacilitySearchResult,
+  FacilitiesPage,
+  Facility,
+  FacilityContact,
+  Court,
+} from '@rallia/shared-types';
 
 const DEFAULT_PAGE_SIZE = 20;
+
+// Filter types for facility search
+export type FacilityTypeFilter =
+  | 'park'
+  | 'club'
+  | 'indoor_center'
+  | 'private'
+  | 'other'
+  | 'community_club'
+  | 'municipal'
+  | 'university'
+  | 'school'
+  | 'community_center';
+
+export type SurfaceTypeFilter =
+  | 'hard'
+  | 'clay'
+  | 'grass'
+  | 'synthetic'
+  | 'carpet'
+  | 'concrete'
+  | 'asphalt';
+
+export type CourtTypeFilter = 'indoor' | 'outdoor';
+
+export type LightingFilter = 'all' | 'with_lights' | 'no_lights';
+
+export type MembershipFilter = 'all' | 'public' | 'members_only';
 
 export interface SearchFacilitiesParams {
   sportId: string;
   latitude: number;
   longitude: number;
   searchQuery?: string;
+  /** Maximum distance in kilometers */
+  maxDistanceKm?: number;
+  /** Filter by facility types */
+  facilityTypes?: FacilityTypeFilter[];
+  /** Filter by court surface types */
+  surfaceTypes?: SurfaceTypeFilter[];
+  /** Filter by court types (indoor/outdoor) */
+  courtTypes?: CourtTypeFilter[];
+  /** Filter by court lighting (true = has lights, false = no lights) */
+  hasLighting?: boolean;
+  /** Filter by membership requirement (true = members only, false = public) */
+  membershipRequired?: boolean;
   limit?: number;
   offset?: number;
 }
@@ -22,6 +68,24 @@ export interface GetFacilityByIdParams {
   sportId: string;
   latitude?: number;
   longitude?: number;
+}
+
+export interface GetFacilityWithDetailsParams {
+  facilityId: string;
+  sportId: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface FacilityWithDetails extends FacilitySearchResult {
+  /** Full facility record */
+  facilityData: Facility;
+  /** Courts that support the selected sport */
+  courts: Court[];
+  /** Facility contacts (general and reservation) */
+  contacts: FacilityContact[];
+  /** Whether the organization can accept payments (Stripe charges_enabled) */
+  paymentsEnabled: boolean;
 }
 
 /**
@@ -141,6 +205,7 @@ export async function getFacilityById(
 /**
  * Search facilities nearby, sorted by distance from user location.
  * Uses PostGIS RPC function for distance calculations.
+ * Supports filtering by distance, facility type, surface type, and court type.
  */
 export async function searchFacilitiesNearby(
   params: SearchFacilitiesParams
@@ -150,24 +215,54 @@ export async function searchFacilitiesNearby(
     latitude,
     longitude,
     searchQuery,
+    maxDistanceKm,
+    facilityTypes,
+    surfaceTypes,
+    courtTypes,
+    hasLighting,
+    membershipRequired,
     limit = DEFAULT_PAGE_SIZE,
     offset = 0,
   } = params;
 
-  const { data, error } = await supabase.rpc('search_facilities_nearby', {
-    p_sport_id: sportId,
-    p_latitude: latitude,
-    p_longitude: longitude,
-    p_search_query: searchQuery || null,
-    p_limit: limit + 1, // Fetch one extra to check if more exist
-    p_offset: offset,
-  });
+  // Fetch facilities and total count in parallel
+  const [facilitiesResult, countResult] = await Promise.all([
+    supabase.rpc('search_facilities_nearby', {
+      p_sport_id: sportId,
+      p_latitude: latitude,
+      p_longitude: longitude,
+      p_search_query: searchQuery || null,
+      p_max_distance_km: maxDistanceKm || null,
+      p_facility_types: facilityTypes?.length ? facilityTypes : null,
+      p_surface_types: surfaceTypes?.length ? surfaceTypes : null,
+      p_court_types: courtTypes?.length ? courtTypes : null,
+      p_has_lighting: hasLighting ?? null,
+      p_membership_required: membershipRequired ?? null,
+      p_limit: limit + 1, // Fetch one extra to check if more exist
+      p_offset: offset,
+    }),
+    // Only fetch count on first page (offset === 0) to avoid unnecessary queries
+    offset === 0
+      ? supabase.rpc('search_facilities_nearby_count', {
+          p_sport_id: sportId,
+          p_latitude: latitude,
+          p_longitude: longitude,
+          p_search_query: searchQuery || null,
+          p_max_distance_km: maxDistanceKm || null,
+          p_facility_types: facilityTypes?.length ? facilityTypes : null,
+          p_surface_types: surfaceTypes?.length ? surfaceTypes : null,
+          p_court_types: courtTypes?.length ? courtTypes : null,
+          p_has_lighting: hasLighting ?? null,
+          p_membership_required: membershipRequired ?? null,
+        })
+      : Promise.resolve({ data: null, error: null }),
+  ]);
 
-  if (error) {
-    throw new Error(`Failed to search facilities: ${error.message}`);
+  if (facilitiesResult.error) {
+    throw new Error(`Failed to search facilities: ${facilitiesResult.error.message}`);
   }
 
-  const facilities = (data ?? []) as FacilitySearchResult[];
+  const facilities = (facilitiesResult.data ?? []) as FacilitySearchResult[];
   const hasMore = facilities.length > limit;
 
   // Remove the extra item used for pagination check
@@ -179,6 +274,91 @@ export async function searchFacilitiesNearby(
     facilities,
     hasMore,
     nextOffset: hasMore ? offset + limit : null,
+    totalCount: countResult.data ?? undefined,
+  };
+}
+
+/**
+ * Get facility with detailed information including courts and contacts.
+ * Used for the FacilityDetail screen.
+ */
+export async function getFacilityWithDetails(
+  params: GetFacilityWithDetailsParams
+): Promise<FacilityWithDetails | null> {
+  const { facilityId, sportId, latitude, longitude } = params;
+
+  // First get the basic facility search result (includes distance calculation)
+  const facilitySearchResult = await getFacilityById({
+    facilityId,
+    sportId,
+    latitude,
+    longitude,
+  });
+
+  if (!facilitySearchResult) {
+    return null;
+  }
+
+  // Fetch full facility data
+  const { data: facilityData, error: facilityError } = await supabase
+    .from('facility')
+    .select('*')
+    .eq('id', facilityId)
+    .single();
+
+  if (facilityError || !facilityData) {
+    return null;
+  }
+
+  // Fetch courts that support the selected sport
+  const { data: courtsData, error: courtsError } = await supabase
+    .from('court')
+    .select(
+      `
+      *,
+      court_sports:court_sport!inner (
+        sport_id
+      )
+    `
+    )
+    .eq('facility_id', facilityId)
+    .eq('is_active', true)
+    .eq('court_sport.sport_id', sportId)
+    .order('court_number', { ascending: true });
+
+  // Fetch contacts (general and reservation)
+  const { data: contactsData, error: contactsError } = await supabase
+    .from('facility_contact')
+    .select('*')
+    .eq('facility_id', facilityId)
+    .in('contact_type', ['general', 'reservation'])
+    .order('is_primary', { ascending: false });
+
+  // Fetch Stripe account status for the organization
+  const facility = facilityData as Facility;
+  const organizationId = facility.organization_id;
+  let paymentsEnabled = false;
+
+  if (organizationId) {
+    const { data: stripeAccount } = await supabase
+      .from('organization_stripe_account')
+      .select('charges_enabled')
+      .eq('organization_id', organizationId)
+      .single();
+
+    paymentsEnabled = stripeAccount?.charges_enabled === true;
+  }
+
+  // Handle any court errors gracefully - return empty array
+  const courts = courtsError ? [] : (courtsData as unknown as Court[]) || [];
+  const contacts = contactsError ? [] : (contactsData as FacilityContact[]) || [];
+
+  return {
+    ...facilitySearchResult,
+    facilityData: facility,
+    courts,
+    contacts,
+    paymentsEnabled,
   };
 }
 
@@ -187,6 +367,7 @@ export async function searchFacilitiesNearby(
  */
 export const facilityService = {
   getFacilityById,
+  getFacilityWithDetails,
   searchFacilitiesNearby,
 };
 

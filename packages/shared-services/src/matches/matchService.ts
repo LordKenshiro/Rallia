@@ -2814,6 +2814,8 @@ export interface SearchPublicMatchesParams {
   specificDate?: string | null;
   /** The viewing user's gender for eligibility filtering */
   userGender?: string | null;
+  /** Filter by specific facility ID - when set, only returns matches at that facility */
+  facilityId?: string | null;
   limit?: number;
   offset?: number;
 }
@@ -2852,6 +2854,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     courtStatus = 'all',
     specificDate,
     userGender,
+    facilityId,
     limit = 20,
     offset = 0,
   } = params;
@@ -2880,6 +2883,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     p_limit: limit + 1, // Fetch one extra to check if more exist
     p_offset: offset,
     p_user_gender: userGender || null, // Pass user's gender for eligibility filtering
+    p_facility_id: facilityId || null, // Filter by specific facility
   });
 
   if (rpcError) {

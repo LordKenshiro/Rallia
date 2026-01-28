@@ -719,6 +719,7 @@ export interface FacilitiesPage {
   facilities: FacilitySearchResult[];
   hasMore: boolean;
   nextOffset: number | null;
+  totalCount?: number; // Total number of facilities matching the search criteria
 }
 
 /** Court with facility info */

@@ -75,7 +75,8 @@
       "inMinutes": "Dans {minutes} min",
       "inHours": "Dans {hours}h",
       "inHoursMinutes": "Dans {hours}h {minutes}m",
-      "timeSeparator": " • "
+      "timeSeparator": " • ",
+      "slots": "créneau(s)"
     },
     "locale": "fr-CA"
   },
@@ -5029,6 +5030,195 @@
         "failedToRemove": "Échec du retrait de l'instructeur",
         "failedToUpdate": "Échec de la mise à jour de l'affectation de l'instructeur"
       }
+    }
+  },
+  "facilitiesTab": {
+    "title": "Installations",
+    "searchPlaceholder": "Rechercher des installations...",
+    "filters": {
+      "reset": "Réinitialiser",
+      "distance": {
+        "label": "Distance",
+        "all": "Toute distance"
+      },
+      "facilityType": {
+        "label": "Type de lieu",
+        "all": "Tous les types",
+        "park": "Parc",
+        "club": "Club",
+        "indoor_center": "Centre intérieur",
+        "municipal": "Municipal",
+        "community_center": "Centre communautaire",
+        "university": "Université",
+        "school": "École",
+        "private": "Privé",
+        "community_club": "Club communautaire",
+        "other": "Autre"
+      },
+      "surfaceType": {
+        "label": "Surface",
+        "all": "Toutes les surfaces",
+        "hard": "Dur",
+        "clay": "Terre battue",
+        "grass": "Gazon",
+        "synthetic": "Synthétique",
+        "carpet": "Moquette",
+        "concrete": "Béton",
+        "asphalt": "Asphalte"
+      },
+      "courtType": {
+        "label": "Type de terrain",
+        "all": "Tous les terrains",
+        "indoor": "Intérieur",
+        "outdoor": "Extérieur",
+        "covered": "Couvert"
+      },
+      "lighting": {
+        "label": "Éclairage",
+        "all": "Tout éclairage",
+        "with_lights": "Avec lumières",
+        "no_lights": "Sans lumières"
+      },
+      "membership": {
+        "label": "Accès",
+        "all": "Tout accès",
+        "public": "Public",
+        "members_only": "Membres seulement"
+      }
+    },
+    "empty": {
+      "title": "Aucune installation trouvée",
+      "description": "Aucune installation ne correspond à votre recherche. Essayez d'ajuster vos filtres.",
+      "noLocation": "Activez la localisation pour trouver des installations à proximité"
+    },
+    "results": {
+      "count": "{count} installations",
+      "countSingular": "1 installation"
+    },
+    "favorites": {
+      "title": "Favoris",
+      "addedToFavorites": "Ajouté aux favoris",
+      "removedFromFavorites": "Retiré des favoris",
+      "maxReached": "Maximum de 3 favoris atteint"
+    }
+  },
+  "facilityDetail": {
+    "tabs": {
+      "info": "Info",
+      "availability": "Disponibilité",
+      "matches": "Parties"
+    },
+    "about": "À propos",
+    "locationContact": "Emplacement et contact",
+    "courts": "Terrains",
+    "noCourts": "Aucun terrain disponible pour ce sport",
+    "contact": "Contact",
+    "address": "Adresse",
+    "call": "Appeler",
+    "email": "Courriel",
+    "website": "Site web",
+    "facilityTypes": {
+      "park": "Parc",
+      "club": "Club",
+      "indoor_center": "Centre intérieur",
+      "private": "Privé",
+      "municipal": "Municipal",
+      "university": "Université",
+      "school": "École",
+      "community_center": "Centre communautaire",
+      "community_club": "Club communautaire",
+      "other": "Autre"
+    },
+    "membersOnly": "Membres seulement",
+    "publicAccess": "Accès public",
+    "distanceAway": "à {distance}",
+    "copied": "Copié dans le presse-papiers",
+    "copyAddress": "Copier l'adresse",
+    "copyPhone": "Copier le téléphone",
+    "multiSport": "Multi-sport",
+    "showAllCourts": "Afficher les {count} terrains",
+    "hideCourts": "Masquer les terrains",
+    "noAvailability": {
+      "title": "Aucune disponibilité",
+      "description": "Aucun créneau horaire disponible pour les dates sélectionnées. Réessayez plus tard.",
+      "tryLater": "Revenez plus tard pour de nouvelles disponibilités",
+      "tryDifferentDate": "Essayez une autre date"
+    },
+    "loadingAvailability": "Chargement des créneaux disponibles...",
+    "courtsAvailable": "{count} terrains disponibles",
+    "paymentsNotAvailable": "Cette installation n'a pas encore configuré les paiements en ligne. Veuillez les contacter directement pour réserver des créneaux payants.",
+    "paidSlotsDisabled": "Certains terrains payants ne sont pas disponibles pour la réservation en ligne. Contactez l'installation directement.",
+    "contactFacilityToBook": "Contacter l'installation pour réserver",
+    "unavailable": "Indisponible",
+    "freeCourtsOnly": "Terrains gratuits seulement",
+    "indoor": "Intérieur",
+    "outdoor": "Extérieur",
+    "lighted": "Éclairé",
+    "openInMaps": "Ouvrir dans Plans",
+    "noMatches": {
+      "title": "Aucune partie à venir",
+      "description": "Aucune partie publique n'est prévue à cette installation."
+    },
+    "loadingMatches": "Chargement des parties...",
+    "upcomingMatches": "Parties à venir",
+    "createMatchHint": "Créez une partie pour jouer ici",
+    "timeOfDay": {
+      "morning": "Matin",
+      "afternoon": "Après-midi",
+      "evening": "Soir"
+    },
+    "filters": {
+      "allTimes": "Tous les créneaux"
+    },
+    "free": "Gratuit",
+    "bookNow": "Réserver",
+    "external": "Externe",
+    "limited": "Limité",
+    "lastSpot": "Dernière place!",
+    "noSlotsForFilter": "Aucun créneau disponible pour cette période",
+    "showAllSlots": "Voir tous les créneaux",
+    "checkExternalBooking": "Voir les réservations externes",
+    "matchFilters": {
+      "all": "Toutes",
+      "open": "Ouvertes",
+      "almostFull": "Presque complètes",
+      "courtBooked": "Terrain réservé"
+    },
+    "stats": {
+      "openMatches": "Ouvertes",
+      "courtsBooked": "Réservés",
+      "players": "Joueurs"
+    },
+    "noMatchesForFilter": {
+      "title": "Aucune partie trouvée",
+      "description": "Aucune partie ne correspond au filtre sélectionné. Essayez un autre filtre ou revenez plus tard."
+    },
+    "showAllMatches": "Voir toutes les parties",
+    "beTheFirst": "Soyez le premier!"
+  },
+  "booking": {
+    "selectSlot": "Sélectionner un créneau",
+    "selectCourt": "Sélectionner un terrain",
+    "confirmBooking": "Confirmer la réservation",
+    "bookNow": "Réserver",
+    "price": "Prix",
+    "date": "Date",
+    "time": "Heure",
+    "court": "Terrain",
+    "total": "Total",
+    "processing": "Traitement...",
+    "paidCourtsUnavailable": "{count} terrain(s) payant(s) indisponible(s) pour la réservation en ligne",
+    "available": "Disponible",
+    "duration": "{hours}h",
+    "success": {
+      "title": "Réservation confirmée",
+      "description": "Votre terrain a été réservé avec succès."
+    },
+    "external": {
+      "title": "Réservation externe",
+      "description": "Ce terrain est réservé via un fournisseur externe.",
+      "openSite": "Ouvrir le site de réservation",
+      "instructions": "Complétez votre réservation sur le site de l'installation."
     }
   }
 }

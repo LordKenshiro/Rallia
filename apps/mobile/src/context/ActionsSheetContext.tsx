@@ -39,6 +39,9 @@ interface ActionsSheetContextType {
   /** Open the Actions bottom sheet in edit mode with pre-filled match data */
   openSheetForEdit: (match: MatchDetailData) => void;
 
+  /** Open the Actions bottom sheet directly to match creation (skips actions menu) */
+  openSheetForMatchCreation: () => void;
+
   /** Close the Actions bottom sheet */
   closeSheet: () => void;
 
@@ -62,6 +65,12 @@ interface ActionsSheetContextType {
 
   /** Clear the edit match data (call when closing sheet or completing edit) */
   clearEditMatch: () => void;
+
+  /** Flag to indicate we should open directly to match creation wizard */
+  shouldOpenMatchCreation: boolean;
+
+  /** Clear the shouldOpenMatchCreation flag after it's been consumed */
+  clearMatchCreationFlag: () => void;
 }
 
 // =============================================================================
@@ -88,6 +97,9 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
 
   // Edit match state - holds match data when editing
   const [editMatchData, setEditMatchData] = useState<MatchDetailData | null>(null);
+
+  // Flag to open directly to match creation wizard
+  const [shouldOpenMatchCreation, setShouldOpenMatchCreation] = useState(false);
 
   // Refetch profile when auth state changes
   // Refetch profile when auth state changes
@@ -137,15 +149,44 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
    */
   const openSheetForEdit = useCallback((match: MatchDetailData) => {
     setEditMatchData(match);
+    setShouldOpenMatchCreation(false);
     setContentMode('actions'); // Always show actions mode when editing
     sheetRef.current?.present();
   }, []);
+
+  /**
+   * Open the sheet directly to match creation wizard (skips actions menu)
+   */
+  const openSheetForMatchCreation = useCallback(() => {
+    const mode = computeInitialMode();
+
+    // If user is not authenticated or not onboarded, show the appropriate screen first
+    if (mode !== 'actions') {
+      setContentMode(mode);
+      setShouldOpenMatchCreation(false);
+      sheetRef.current?.present();
+      return;
+    }
+
+    // User is authenticated and onboarded - open directly to match creation
+    setEditMatchData(null);
+    setShouldOpenMatchCreation(true);
+    setContentMode('actions');
+    sheetRef.current?.present();
+  }, [computeInitialMode]);
 
   /**
    * Clear the edit match data
    */
   const clearEditMatch = useCallback(() => {
     setEditMatchData(null);
+  }, []);
+
+  /**
+   * Clear the shouldOpenMatchCreation flag (called by ActionsBottomSheet after consuming it)
+   */
+  const clearMatchCreationFlag = useCallback(() => {
+    setShouldOpenMatchCreation(false);
   }, []);
 
   /**
@@ -176,6 +217,7 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
   const contextValue: ActionsSheetContextType = {
     openSheet,
     openSheetForEdit,
+    openSheetForMatchCreation,
     closeSheet,
     contentMode,
     setContentMode,
@@ -184,6 +226,8 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
     refreshProfile,
     editMatchData,
     clearEditMatch,
+    shouldOpenMatchCreation,
+    clearMatchCreationFlag,
   };
 
   return (

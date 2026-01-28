@@ -295,6 +295,7 @@ const FacilityItem: React.FC<FacilityItemProps> = ({
     dataProviderType: facility.data_provider_type,
     externalProviderId: facility.external_provider_id,
     bookingUrlTemplate: facility.booking_url_template,
+    facilityTimezone: facility.timezone,
   });
 
   // Determine if slot is actionable (has booking URL or is a local slot)

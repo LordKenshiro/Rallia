@@ -33,7 +33,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 // Screens
 import Home from '../screens/Home';
 import Map from '../screens/Map';
-import Match from '../screens/Match';
 import Community from '../screens/Community';
 import Chat from '../screens/Chat';
 import ChatConversation from '../screens/ChatConversation';
@@ -70,6 +69,7 @@ import type {
 } from './types';
 import PublicMatches from '../features/matches/screens/PublicMatches';
 import PlayerMatches from '../features/matches/screens/PlayerMatches';
+import { FacilitiesDirectory, FacilityDetail } from '../features/facilities';
 
 // =============================================================================
 // TYPED NAVIGATORS
@@ -343,19 +343,30 @@ function HomeStack() {
 }
 
 /**
- * Courts Stack - Facility discovery
- * Note: Currently uses Map component as placeholder for FacilitiesDirectory
+ * Courts Stack - Facility discovery and booking
  */
 function CourtsStack() {
   const mainScreenOptions = useMainScreenOptions();
+  const { colors } = useThemeStyles();
+  const { t } = useTranslation();
+  const sharedOptions = getSharedScreenOptions(colors);
+
   return (
     <CourtsStackNavigator.Navigator id="CourtsStack" screenOptions={fastAnimationOptions}>
       <CourtsStackNavigator.Screen
         name="FacilitiesDirectory"
-        component={Match} // Placeholder - will be FacilitiesDirectory
+        component={FacilitiesDirectory}
         options={mainScreenOptions}
       />
-      {/* Future screens: FacilityDetail */}
+      <CourtsStackNavigator.Screen
+        name="FacilityDetail"
+        component={FacilityDetail}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('facilitiesTab.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
     </CourtsStackNavigator.Navigator>
   );
 }
@@ -559,7 +570,7 @@ function BottomTabs() {
         name="Courts"
         component={CourtsStack}
         options={{
-          tabBarIcon: ({ color, size }) => <Ionicons name="tennisball" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Ionicons name="business" size={size} color={color} />,
         }}
       />
       <Tab.Screen

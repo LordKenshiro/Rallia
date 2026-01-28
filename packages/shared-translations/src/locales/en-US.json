@@ -36,7 +36,8 @@
       "inMinutes": "In {minutes} min",
       "inHours": "In {hours}h",
       "inHoursMinutes": "In {hours}h {minutes}m",
-      "timeSeparator": " • "
+      "timeSeparator": " • ",
+      "slots": "slot(s)"
     },
     "refresh": "Refresh",
     "submit": "Submit",
@@ -5027,6 +5028,195 @@
         "failedToRemove": "Failed to remove instructor",
         "failedToUpdate": "Failed to update instructor assignment"
       }
+    }
+  },
+  "facilitiesTab": {
+    "title": "Facilities",
+    "searchPlaceholder": "Search facilities...",
+    "filters": {
+      "reset": "Reset",
+      "distance": {
+        "label": "Distance",
+        "all": "Any distance"
+      },
+      "facilityType": {
+        "label": "Venue Type",
+        "all": "All types",
+        "park": "Park",
+        "club": "Club",
+        "indoor_center": "Indoor Center",
+        "municipal": "Municipal",
+        "community_center": "Community Center",
+        "university": "University",
+        "school": "School",
+        "private": "Private",
+        "community_club": "Community Club",
+        "other": "Other"
+      },
+      "surfaceType": {
+        "label": "Surface",
+        "all": "All surfaces",
+        "hard": "Hard Court",
+        "clay": "Clay",
+        "grass": "Grass",
+        "synthetic": "Synthetic",
+        "carpet": "Carpet",
+        "concrete": "Concrete",
+        "asphalt": "Asphalt"
+      },
+      "courtType": {
+        "label": "Court Type",
+        "all": "All courts",
+        "indoor": "Indoor",
+        "outdoor": "Outdoor",
+        "covered": "Covered"
+      },
+      "lighting": {
+        "label": "Lighting",
+        "all": "Any lighting",
+        "with_lights": "With Lights",
+        "no_lights": "No Lights"
+      },
+      "membership": {
+        "label": "Access",
+        "all": "Any access",
+        "public": "Public",
+        "members_only": "Members Only"
+      }
+    },
+    "empty": {
+      "title": "No Facilities Found",
+      "description": "No facilities match your search. Try adjusting your filters.",
+      "noLocation": "Enable location to find facilities nearby"
+    },
+    "results": {
+      "count": "{count} facilities",
+      "countSingular": "1 facility"
+    },
+    "favorites": {
+      "title": "Favorites",
+      "addedToFavorites": "Added to favorites",
+      "removedFromFavorites": "Removed from favorites",
+      "maxReached": "Maximum 3 favorites reached"
+    }
+  },
+  "facilityDetail": {
+    "tabs": {
+      "info": "Info",
+      "availability": "Availability",
+      "matches": "Matches"
+    },
+    "about": "About",
+    "locationContact": "Location & Contact",
+    "courts": "Courts",
+    "noCourts": "No courts available for this sport",
+    "contact": "Contact",
+    "address": "Address",
+    "call": "Call",
+    "email": "Email",
+    "website": "Website",
+    "facilityTypes": {
+      "park": "Park",
+      "club": "Club",
+      "indoor_center": "Indoor Center",
+      "private": "Private",
+      "municipal": "Municipal",
+      "university": "University",
+      "school": "School",
+      "community_center": "Community Center",
+      "community_club": "Community Club",
+      "other": "Other"
+    },
+    "membersOnly": "Members Only",
+    "publicAccess": "Public Access",
+    "distanceAway": "{distance} away",
+    "copied": "Copied to clipboard",
+    "copyAddress": "Copy address",
+    "copyPhone": "Copy phone",
+    "multiSport": "Multi-sport",
+    "showAllCourts": "Show all {count} courts",
+    "hideCourts": "Hide courts",
+    "noAvailability": {
+      "title": "No Availability",
+      "description": "No time slots are available for the selected dates. Try checking back later.",
+      "tryLater": "Check back later for new openings",
+      "tryDifferentDate": "Try a different date"
+    },
+    "loadingAvailability": "Loading available time slots...",
+    "courtsAvailable": "{count} courts available",
+    "paymentsNotAvailable": "This facility hasn't set up online payments yet. Please contact them directly to book paid slots.",
+    "paidSlotsDisabled": "Some paid courts are unavailable for online booking. Contact the facility directly.",
+    "contactFacilityToBook": "Contact facility to book",
+    "unavailable": "Unavailable",
+    "freeCourtsOnly": "Free courts only",
+    "indoor": "Indoor",
+    "outdoor": "Outdoor",
+    "lighted": "Lighted",
+    "openInMaps": "Open in Maps",
+    "noMatches": {
+      "title": "No Upcoming Matches",
+      "description": "No public matches are scheduled at this facility."
+    },
+    "loadingMatches": "Loading matches...",
+    "upcomingMatches": "Upcoming Matches",
+    "createMatchHint": "Create a match to play here",
+    "timeOfDay": {
+      "morning": "Morning",
+      "afternoon": "Afternoon",
+      "evening": "Evening"
+    },
+    "filters": {
+      "allTimes": "All Times"
+    },
+    "free": "Free",
+    "bookNow": "Book now",
+    "external": "External",
+    "limited": "Limited",
+    "lastSpot": "Last spot!",
+    "noSlotsForFilter": "No slots available for this time period",
+    "showAllSlots": "Show all slots",
+    "checkExternalBooking": "Check External Booking",
+    "matchFilters": {
+      "all": "All",
+      "open": "Open",
+      "almostFull": "Almost Full",
+      "courtBooked": "Court Booked"
+    },
+    "stats": {
+      "openMatches": "Open",
+      "courtsBooked": "Booked",
+      "players": "Players"
+    },
+    "noMatchesForFilter": {
+      "title": "No Matches Found",
+      "description": "No matches match the selected filter. Try a different filter or check back later."
+    },
+    "showAllMatches": "Show All Matches",
+    "beTheFirst": "Be the first!"
+  },
+  "booking": {
+    "selectSlot": "Select Time Slot",
+    "selectCourt": "Select Court",
+    "confirmBooking": "Confirm Booking",
+    "bookNow": "Book Now",
+    "price": "Price",
+    "date": "Date",
+    "time": "Time",
+    "court": "Court",
+    "total": "Total",
+    "processing": "Processing...",
+    "paidCourtsUnavailable": "{count} paid court(s) unavailable for online booking",
+    "available": "Available",
+    "duration": "{hours}h",
+    "success": {
+      "title": "Booking Confirmed",
+      "description": "Your court has been booked successfully."
+    },
+    "external": {
+      "title": "External Booking",
+      "description": "This court is booked through an external provider.",
+      "openSite": "Open Booking Site",
+      "instructions": "Complete your booking on the facility's website."
     }
   }
 }

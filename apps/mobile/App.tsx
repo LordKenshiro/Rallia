@@ -50,6 +50,7 @@ import {
   LocationModeProvider,
 } from './src/context';
 import { usePushNotifications } from './src/hooks';
+import { StripeProvider } from '@stripe/stripe-react-native';
 
 // Import NativeWind global styles
 import './global.css';
@@ -272,9 +273,16 @@ export default function App() {
                               <MatchDetailSheetProvider>
                                 <PlayerInviteSheetProvider>
                                   <FeedbackSheetProvider>
-                                    <BottomSheetModalProvider>
-                                      <AppContent />
-                                    </BottomSheetModalProvider>
+                                    <StripeProvider
+                                      publishableKey={
+                                        process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
+                                      }
+                                      merchantIdentifier="merchant.com.rallia"
+                                    >
+                                      <BottomSheetModalProvider>
+                                        <AppContent />
+                                      </BottomSheetModalProvider>
+                                    </StripeProvider>
                                   </FeedbackSheetProvider>
                                 </PlayerInviteSheetProvider>
                               </MatchDetailSheetProvider>
@@ -282,7 +290,7 @@ export default function App() {
                           </AuthenticatedProviders>
                         </AuthProvider>
                       </OverlayProvider>
-                    </DeepLinkProvider>       
+                    </DeepLinkProvider>
                   </ToastProvider>
                 </NetworkProvider>
               </ThemeProvider>

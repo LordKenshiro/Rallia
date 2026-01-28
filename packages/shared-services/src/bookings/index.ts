@@ -17,3 +17,6 @@ export * from './policy';
 
 // Status functions
 export * from './status';
+
+// Mobile booking service (calls web API from mobile app)
+export * from './mobileBookingService';

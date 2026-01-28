@@ -2,24 +2,56 @@
  * POST /api/bookings/create
  *
  * Creates a new booking with optional payment processing.
+ * Supports both cookie-based auth (web) and Bearer token auth (mobile).
  */
 
 import { createClient } from '@/lib/supabase/server';
 import { createBooking } from '@/lib/bookings';
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types';
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    // Check for Bearer token (mobile app)
+    const authHeader = request.headers.get('Authorization');
+    const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
-    // Get authenticated user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    let supabase;
+    let user;
 
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (bearerToken) {
+      // Mobile app: Create client with the access token
+      supabase = createSupabaseClient<Database>(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+        {
+          global: {
+            headers: {
+              Authorization: `Bearer ${bearerToken}`,
+            },
+          },
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+          },
+        }
+      );
+
+      // Verify the token and get user
+      const { data, error: authError } = await supabase.auth.getUser(bearerToken);
+      if (authError || !data.user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      user = data.user;
+    } else {
+      // Web app: Use cookie-based auth
+      supabase = await createClient();
+      const { data, error: authError } = await supabase.auth.getUser();
+      if (authError || !data.user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      user = data.user;
     }
 
     // Get request body
@@ -119,26 +151,7 @@ export async function POST(request: NextRequest) {
       // For guest bookings, player_id will be null - guest info stored in notes
     }
 
-    // Get Stripe account for the organization (if payment is needed)
-    let stripeAccountId: string | undefined;
-    if (!skipPayment) {
-      const { data: stripeAccount } = await supabase
-        .from('organization_stripe_account')
-        .select('stripe_account_id, charges_enabled')
-        .eq('organization_id', organizationId)
-        .single();
-
-      if (!stripeAccount || !stripeAccount.charges_enabled) {
-        return NextResponse.json(
-          { error: 'This organization cannot accept payments yet' },
-          { status: 400 }
-        );
-      }
-
-      stripeAccountId = stripeAccount.stripe_account_id;
-    }
-
-    // Get the price for the slot
+    // Get the price for the slot first (needed to determine if payment is required)
     const { data: slots, error: slotsError } = await supabase.rpc('get_available_slots', {
       p_court_id: courtId,
       p_date: bookingDate,
@@ -170,7 +183,41 @@ export async function POST(request: NextRequest) {
     const requiresApproval = settings?.require_booking_approval || false;
 
     // For staff-created bookings with skipPayment, skip payment requirement check
-    const shouldSkipPayment = skipPayment || (isStaffBooking && skipPayment !== false);
+    // Also skip payment for free slots (price_cents = 0)
+    const slotPriceCents = matchingSlot.price_cents ?? 0;
+    const isFreeSlot = slotPriceCents === 0;
+    const shouldSkipPayment =
+      skipPayment || isFreeSlot || (isStaffBooking && skipPayment !== false);
+
+    console.log('[Booking] Slot price check:', {
+      slotPriceCents,
+      isFreeSlot,
+      shouldSkipPayment,
+      skipPayment,
+      isStaffBooking,
+    });
+
+    // Get Stripe account for the organization (only if payment is needed)
+    let stripeAccountId: string | undefined;
+    if (!shouldSkipPayment) {
+      const { data: stripeAccount } = await supabase
+        .from('organization_stripe_account')
+        .select('stripe_account_id, charges_enabled')
+        .eq('organization_id', organizationId)
+        .single();
+
+      if (!stripeAccount || !stripeAccount.charges_enabled) {
+        const priceDisplay = (slotPriceCents / 100).toFixed(2);
+        return NextResponse.json(
+          {
+            error: `This slot costs $${priceDisplay} but the organization hasn't set up payments yet. Please contact the facility or choose a free slot.`,
+          },
+          { status: 400 }
+        );
+      }
+
+      stripeAccountId = stripeAccount.stripe_account_id;
+    }
 
     // Build notes for guest bookings
     let bookingNotes = notes || '';
