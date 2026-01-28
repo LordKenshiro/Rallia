@@ -215,13 +215,9 @@ function ConversationItemComponent({
           {/* Unread badge */}
           {hasUnread && (
             <View style={[styles.unreadBadge, { backgroundColor: primary[500] }]}>
-              {conversation.unread_count > 99 ? (
-                <Text style={styles.unreadText}>99+</Text>
-              ) : (
-                conversation.unread_count > 0 && (
-                  <Text style={styles.unreadText}>{conversation.unread_count}</Text>
-                )
-              )}
+              <Text style={styles.unreadText}>
+                {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
+              </Text>
             </View>
           )}
         </View>
@@ -310,16 +306,16 @@ const styles = StyleSheet.create({
     marginRight: spacingPixels[2],
   },
   unreadBadge: {
-    minWidth: 10,
-    height: 10,
-    borderRadius: 5,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 0,
+    paddingHorizontal: 6,
   },
   unreadText: {
     color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
   },
 });

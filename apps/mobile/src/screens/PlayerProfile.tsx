@@ -64,11 +64,21 @@ interface SportWithRating {
 }
 
 interface PlayerSportPreferences {
+  playerSportId: string | null;
   preferred_match_duration: string | null;
   preferred_match_type: string | null;
   preferred_play_style: string | null;
   preferred_court: string | null;
   is_primary: boolean;
+  playAttributes: string[] | null;
+}
+
+interface FavoriteFacility {
+  id: string;
+  facility: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 type PeriodKey = 'morning' | 'afternoon' | 'evening';
@@ -111,6 +121,7 @@ const PlayerProfile = () => {
   const [blockLoading, setBlockLoading] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
   const [isOnline, setIsOnline] = useState(false);
+  const [favoriteFacilities, setFavoriteFacilities] = useState<FavoriteFacility[]>([]);
 
   // Fetch player data on mount
   useEffect(() => {
@@ -427,12 +438,70 @@ const PlayerProfile = () => {
           preferred_court: string | null;
           is_primary: boolean;
         };
+
+        // Fetch play style and attributes from junction tables (like SportProfile does)
+        const [playStyleResult, playAttributesResult, favoritesResult] = await Promise.all([
+          supabase
+            .from('player_sport_play_style')
+            .select(`
+              play_style:play_style_id (
+                id,
+                name,
+                description
+              )
+            `)
+            .eq('player_sport_id', spData.id)
+            .maybeSingle(),
+          supabase
+            .from('player_sport_play_attribute')
+            .select(`
+              play_attribute:play_attribute_id (
+                id,
+                name,
+                description,
+                category
+              )
+            `)
+            .eq('player_sport_id', spData.id),
+          // Fetch favorite facilities for this player
+          supabase
+            .from('player_favorite_facility')
+            .select(`
+              id,
+              facility:facility_id (
+                id,
+                name
+              )
+            `)
+            .eq('player_id', playerId),
+        ]);
+
+        // Extract play style name
+        const playStyleName = (playStyleResult.data?.play_style as { name?: string } | null)?.name || null;
+        
+        // Extract play attribute names
+        const playAttributeNames = playAttributesResult.data
+          ?.map(item => (item.play_attribute as { name?: string } | null)?.name)
+          .filter((name): name is string => !!name) || null;
+
+        // Set favorite facilities
+        if (favoritesResult.data) {
+          // Map the data to ensure proper typing (facility comes as array from Supabase)
+          const mappedFacilities = favoritesResult.data.map((item: { id: string; facility: { id: string; name: string }[] | null }) => ({
+            id: item.id,
+            facility: Array.isArray(item.facility) && item.facility.length > 0 ? item.facility[0] : null,
+          }));
+          setFavoriteFacilities(mappedFacilities);
+        }
+
         setSportPreferences({
+          playerSportId: spData.id,
           preferred_match_duration: spData.preferred_match_duration,
           preferred_match_type: spData.preferred_match_type,
-          preferred_play_style: spData.preferred_play_style,
+          preferred_play_style: playStyleName,
           preferred_court: spData.preferred_court,
           is_primary: spData.is_primary || false,
+          playAttributes: playAttributeNames && playAttributeNames.length > 0 ? playAttributeNames : null,
         });
       }
 
@@ -565,6 +634,20 @@ const PlayerProfile = () => {
 
     // Fallback: capitalize first letter of each word
     return style.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const formatPlayAttribute = (attr: string): string => {
+    // Use translation keys for play attributes
+    const translationKey = `profile.preferences.playAttributes.${attr}`;
+    const translated = t(translationKey as TranslationKey);
+
+    // If translation exists (not the same as key), use it
+    if (translated !== translationKey) {
+      return translated;
+    }
+
+    // Fallback: capitalize first letter of each word
+    return attr.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   const getDayLabel = (day: string): string => {
@@ -942,18 +1025,32 @@ const PlayerProfile = () => {
                 </Text>
               </View>
 
-              {/* Facility */}
+              {/* Favorite Facilities */}
               <View style={[styles.preferenceRow, { borderBottomColor: colors.border }]}>
                 <Text style={[styles.preferenceLabel, { color: colors.textMuted }]}>
-                  {t('profile.fields.facility')}
+                  {t('profile.fields.favoriteFacilities')}
                 </Text>
-                <Text style={[styles.preferenceValue, { color: colors.text }]}>
-                  {sportPreferences.preferred_court || t('profile.notSet')}
-                </Text>
+                <View style={styles.facilitiesContainer}>
+                  {favoriteFacilities.length > 0 ? (
+                    favoriteFacilities.map((fav) => (
+                      <Text
+                        key={fav.id}
+                        style={[styles.facilityText, { color: colors.text }]}
+                        numberOfLines={1}
+                      >
+                        {fav.facility?.name || t('profile.notSet')}
+                      </Text>
+                    ))
+                  ) : (
+                    <Text style={[styles.preferenceValue, { color: colors.text }]}>
+                      {t('profile.notSet')}
+                    </Text>
+                  )}
+                </View>
               </View>
 
               {/* Playing Style */}
-              <View style={styles.preferenceRow}>
+              <View style={[styles.preferenceRow, { borderBottomWidth: 0 }]}>
                 <Text style={[styles.preferenceLabel, { color: colors.textMuted }]}>
                   {t('profile.fields.playingStyle')}
                 </Text>
@@ -961,6 +1058,30 @@ const PlayerProfile = () => {
                   {formatPlayingStyle(sportPreferences.preferred_play_style)}
                 </Text>
               </View>
+
+              {/* Play Attributes */}
+              {sportPreferences.playAttributes && sportPreferences.playAttributes.length > 0 && (
+                <View style={[styles.playAttributesContainer, { borderTopColor: colors.border }]}>
+                  <Text style={[styles.playAttributesTitle, { color: colors.textMuted }]}>
+                    {t('profile.fields.playAttributes')}
+                  </Text>
+                  <View style={styles.attributeTags}>
+                    {sportPreferences.playAttributes.map((attr: string, index: number) => (
+                      <View
+                        key={index}
+                        style={[
+                          styles.attributeTag,
+                          { backgroundColor: colors.primaryForeground },
+                        ]}
+                      >
+                        <Text style={[styles.attributeTagText, { color: colors.primary }]}>
+                          {formatPlayAttribute(attr)}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
             </View>
           </View>
         )}
@@ -997,11 +1118,6 @@ const PlayerProfile = () => {
                 <TouchableOpacity style={[styles.ratingActionButton, { borderColor: colors.border }]}>
                   <Text style={[styles.ratingActionText, { color: colors.primary }]}>
                     {t('profile.rating.references', { count: primarySport.referencesCount || 0 })}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.ratingActionButton, { borderColor: colors.border }]}>
-                  <Text style={[styles.ratingActionText, { color: colors.primary }]}>
-                    {t('profile.rating.peerRating', { count: primarySport.peerEvaluationCount || 0 })}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.ratingActionButton, { borderColor: colors.border }]}>
@@ -1355,6 +1471,24 @@ const styles = StyleSheet.create({
   attributeTagText: {
     fontSize: fontSizePixels.xs,
     fontWeight: fontWeightNumeric.medium,
+  },
+  facilitiesContainer: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  facilityText: {
+    fontSize: fontSizePixels.sm,
+    fontWeight: fontWeightNumeric.semibold,
+    textAlign: 'right',
+  },
+  playAttributesContainer: {
+    marginTop: spacingPixels[3],
+    paddingTop: spacingPixels[3],
+    borderTopWidth: 1,
+  },
+  playAttributesTitle: {
+    fontSize: fontSizePixels.xs,
+    marginBottom: spacingPixels[2],
   },
   ratingHeader: {
     flexDirection: 'row',

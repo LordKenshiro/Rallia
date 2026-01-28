@@ -990,7 +990,9 @@
     "participants_plural": "{{count}} participants",
     "agreement": {
       "welcome": "Welcome to",
+      "welcomeDirect": "Starting conversation with",
       "description": "This is a group chat - all members of this community will see your messages",
+      "descriptionDirect": "This is a private conversation. Please be respectful and follow our community guidelines.",
       "chatRules": "Chat rules",
       "warning": "Content will be removed and users banned for violations of our community guidelines",
       "agree": "I agree"
