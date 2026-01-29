@@ -1,16 +1,11 @@
 /**
  * ChatAgreementModal Component
  * Shows chat community guidelines when user enters a conversation for the first time
+ * Adapts content based on chat type (direct vs group)
  */
 
 import React from 'react';
-import {
-  View,
-  Modal,
-  StyleSheet,
-  Image,
-  ScrollView,
-} from 'react-native';
+import { View, Modal, StyleSheet, Image, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text, Button } from '@rallia/shared-components';
@@ -21,15 +16,17 @@ import { useTranslation } from 'react-i18next';
 interface ChatAgreementModalProps {
   visible: boolean;
   onAgree: () => void;
-  groupName?: string;
-  groupImageUrl?: string | null;
+  chatName?: string;
+  chatImageUrl?: string | null;
+  isDirectChat?: boolean;
 }
 
 export const ChatAgreementModal: React.FC<ChatAgreementModalProps> = ({
   visible,
   onAgree,
-  groupName = 'this group',
-  groupImageUrl,
+  chatName = 'this chat',
+  chatImageUrl,
+  isDirectChat = false,
 }) => {
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
@@ -40,45 +37,46 @@ export const ChatAgreementModal: React.FC<ChatAgreementModalProps> = ({
     t('chat.rules.noDisrespect', 'No disrespect!'),
   ];
 
+  // Different description based on chat type
+  const description = isDirectChat
+    ? t(
+        'chat.agreement.descriptionDirect',
+        'This is a private conversation. Please be respectful and follow our community guidelines.'
+      )
+    : t(
+        'chat.agreement.description',
+        'This is a group chat - all members of this community will see your messages'
+      );
+
+  // Different icon based on chat type
+  const iconName = isDirectChat ? 'chatbubble' : 'people';
+
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      statusBarTranslucent
-    >
+    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
       <View style={styles.overlay}>
         <View style={[styles.container, { backgroundColor: colors.card }]}>
-          <ScrollView 
-            contentContainerStyle={styles.content}
-            showsVerticalScrollIndicator={false}
-          >
-            {/* Group Image */}
+          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            {/* Chat Image */}
             <View style={styles.imageContainer}>
-              {groupImageUrl ? (
-                <Image
-                  source={{ uri: groupImageUrl }}
-                  style={styles.groupImage}
-                />
+              {chatImageUrl ? (
+                <Image source={{ uri: chatImageUrl }} style={styles.chatImage} />
               ) : (
                 <View style={[styles.placeholderImage, { backgroundColor: primary[100] }]}>
-                  <Ionicons name="people" size={40} color={primary[500]} />
+                  <Ionicons name={iconName} size={40} color={primary[500]} />
                 </View>
               )}
             </View>
 
             {/* Welcome Text */}
             <Text style={[styles.welcomeText, { color: colors.textMuted }]}>
-              {t('chat.agreement.welcome', 'Welcome to')}
+              {isDirectChat
+                ? t('chat.agreement.welcomeDirect', 'Starting conversation with')
+                : t('chat.agreement.welcome', 'Welcome to')}
             </Text>
-            <Text style={[styles.groupName, { color: colors.text }]}>
-              {groupName}
-            </Text>
+            <Text style={[styles.chatName, { color: colors.text }]}>{chatName}</Text>
 
             {/* Description */}
-            <Text style={[styles.description, { color: colors.textMuted }]}>
-              {t('chat.agreement.description', 'This is a group chat - all members of this community will see your messages')}
-            </Text>
+            <Text style={[styles.description, { color: colors.textMuted }]}>{description}</Text>
 
             {/* Rules Section */}
             <View style={styles.rulesSection}>
@@ -88,30 +86,22 @@ export const ChatAgreementModal: React.FC<ChatAgreementModalProps> = ({
 
               {rules.map((rule, index) => (
                 <View key={index} style={styles.ruleRow}>
-                  <Ionicons 
-                    name="close" 
-                    size={18} 
-                    color="#EF4444" 
-                    style={styles.ruleIcon}
-                  />
-                  <Text style={[styles.ruleText, { color: colors.text }]}>
-                    {rule}
-                  </Text>
+                  <Ionicons name="close" size={18} color="#EF4444" style={styles.ruleIcon} />
+                  <Text style={[styles.ruleText, { color: colors.text }]}>{rule}</Text>
                 </View>
               ))}
 
               {/* Warning Text */}
               <Text style={[styles.warningText, { color: colors.textMuted }]}>
-                {t('chat.agreement.warning', 'Content will be removed and users banned for violations of our community guidelines')}
+                {t(
+                  'chat.agreement.warning',
+                  'Content will be removed and users banned for violations of our community guidelines'
+                )}
               </Text>
             </View>
 
             {/* Agree Button */}
-            <Button
-              onPress={onAgree}
-              variant="primary"
-              fullWidth
-            >
+            <Button onPress={onAgree} variant="primary" fullWidth>
               {t('chat.agreement.agree', 'I agree')}
             </Button>
           </ScrollView>
@@ -142,7 +132,7 @@ const styles = StyleSheet.create({
   imageContainer: {
     marginBottom: spacingPixels[4],
   },
-  groupImage: {
+  chatImage: {
     width: 80,
     height: 80,
     borderRadius: 40,
@@ -158,7 +148,7 @@ const styles = StyleSheet.create({
     fontSize: fontSizePixels.base,
     marginBottom: spacingPixels[1],
   },
-  groupName: {
+  chatName: {
     fontSize: fontSizePixels.lg,
     fontWeight: '700',
     textAlign: 'center',

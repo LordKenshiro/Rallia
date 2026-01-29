@@ -23,6 +23,7 @@ import { formatDate as formatDateUtil, formatDateMonthYear } from '../utils/date
 import PersonalInformationOverlay from '../features/onboarding/components/overlays/PersonalInformationOverlay';
 import PlayerInformationOverlay from '../features/onboarding/components/overlays/PlayerInformationOverlay';
 import PlayerAvailabilitiesOverlay from '../features/onboarding/components/overlays/PlayerAvailabilitiesOverlay';
+import ImagePickerSheet from '../components/ImagePickerSheet';
 import type { Profile, Player, Sport } from '@rallia/shared-types';
 import {
   spacingPixels,
@@ -74,12 +75,21 @@ const UserProfile = () => {
   const [player, setPlayer] = useState<Player | null>(null);
   const [sports, setSports] = useState<SportWithRating[]>([]);
   const [availabilities, setAvailabilities] = useState<AvailabilityGrid>({});
+  const [pendingReferenceRequestsCount, setPendingReferenceRequestsCount] = useState(0);
   const [showPersonalInfoOverlay, setShowPersonalInfoOverlay] = useState(false);
   const [showPlayerInfoOverlay, setShowPlayerInfoOverlay] = useState(false);
   const [showAvailabilitiesOverlay, setShowAvailabilitiesOverlay] = useState(false);
 
   // Use custom hook for image picker (for profile picture editing)
-  const { image: newProfileImage, pickImage } = useImagePicker();
+  const {
+    image: newProfileImage,
+    showPicker,
+    openPicker,
+    closePicker,
+    pickFromCamera,
+    pickFromGallery,
+    permissions,
+  } = useImagePicker();
 
   // Player reputation data
   const { display: reputationDisplay, loading: reputationLoading } = usePlayerReputation(
@@ -190,6 +200,7 @@ const UserProfile = () => {
         playerSportsResult,
         ratingsResult,
         availResult,
+        referenceRequestsResult,
       ] = await Promise.all([
         // Fetch profile data
         withTimeout(
@@ -256,6 +267,18 @@ const UserProfile = () => {
               .eq('is_active', true))(),
           15000,
           'Failed to load availability - connection timeout'
+        ),
+
+        // Fetch pending reference requests count (where user is referee)
+        withTimeout(
+          (async () =>
+            supabase
+              .from('rating_reference_request')
+              .select('id', { count: 'exact', head: true })
+              .eq('referee_id', user.id)
+              .eq('status', 'pending'))(),
+          15000,
+          'Failed to load reference requests - connection timeout'
         ),
       ]);
 
@@ -347,6 +370,11 @@ const UserProfile = () => {
       });
 
       setAvailabilities(availGrid);
+
+      // Process pending reference requests count
+      if (!referenceRequestsResult.error) {
+        setPendingReferenceRequestsCount(referenceRequestsResult.count || 0);
+      }
     } catch (error) {
       Logger.error('Failed to fetch user profile data', error as Error);
       Alert.alert(t('alerts.error'), getNetworkErrorMessage(error));
@@ -614,7 +642,7 @@ const UserProfile = () => {
               { borderColor: colors.primary, backgroundColor: colors.inputBackground },
             ]}
             activeOpacity={0.8}
-            onPress={pickImage}
+            onPress={openPicker}
             disabled={uploadingImage}
           >
             {profile?.profile_picture_url || newProfileImage ? (
@@ -948,6 +976,61 @@ const UserProfile = () => {
           </View>
         </View>
 
+        {/* Reference Requests Section - Only show if there are pending requests */}
+        {pendingReferenceRequestsCount > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+                {t('referenceRequest.incomingTitle')}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.card, { backgroundColor: colors.card }]}
+              onPress={() => navigation.navigate('IncomingReferenceRequests')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.referenceRequestRow}>
+                <View style={styles.referenceRequestLeft}>
+                  <View
+                    style={[
+                      styles.referenceRequestIcon,
+                      { backgroundColor: isDark ? primary[900] : primary[100] },
+                    ]}
+                  >
+                    <Ionicons
+                      name="person-add"
+                      size={20}
+                      color={isDark ? primary[100] : primary[600]}
+                    />
+                  </View>
+                  <View style={styles.referenceRequestTextContainer}>
+                    <Text style={[styles.referenceRequestTitle, { color: colors.text }]}>
+                      {t('referenceRequest.pendingRequests')}
+                    </Text>
+                    <Text style={[styles.referenceRequestSubtitle, { color: colors.textMuted }]}>
+                      {t('referenceRequest.helpCertifyRatings')}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.referenceRequestRight}>
+                  <View style={[styles.referenceRequestBadge, { backgroundColor: colors.primary }]}>
+                    <Text
+                      style={[
+                        styles.referenceRequestBadgeText,
+                        { color: colors.primaryForeground },
+                      ]}
+                    >
+                      {pendingReferenceRequestsCount}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+                </View>
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Bottom Spacing */}
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -955,9 +1038,9 @@ const UserProfile = () => {
       {/* Personal Information Edit Overlay */}
       <PersonalInformationOverlay
         visible={showPersonalInfoOverlay}
-        onClose={() => {
-          setShowPersonalInfoOverlay(false);
-          // Refresh data after closing to show updated info
+        onClose={() => setShowPersonalInfoOverlay(false)}
+        onSave={() => {
+          // Only refresh data when save is successful
           fetchUserProfileData();
         }}
         mode="edit"
@@ -976,9 +1059,9 @@ const UserProfile = () => {
       {/* Player Information Edit Overlay */}
       <PlayerInformationOverlay
         visible={showPlayerInfoOverlay}
-        onClose={() => {
-          setShowPlayerInfoOverlay(false);
-          // Refresh data after closing to show updated info
+        onClose={() => setShowPlayerInfoOverlay(false)}
+        onSave={() => {
+          // Only refresh data when save is successful
           fetchUserProfileData();
         }}
         initialData={{
@@ -996,6 +1079,20 @@ const UserProfile = () => {
         mode="edit"
         initialData={convertToUIFormat(availabilities)}
         onSave={handleSaveAvailabilities}
+      />
+
+      {/* Image Picker Sheet */}
+      <ImagePickerSheet
+        visible={showPicker}
+        onClose={closePicker}
+        onTakePhoto={pickFromCamera}
+        onChooseFromGallery={pickFromGallery}
+        title={t('profile.profilePicture')}
+        cameraLabel={t('profile.takePhoto')}
+        galleryLabel={t('profile.chooseFromGallery')}
+        cancelLabel={t('common.cancel')}
+        cameraDisabled={!permissions.camera}
+        galleryDisabled={!permissions.library}
       />
     </SafeAreaView>
   );
@@ -1246,6 +1343,53 @@ const styles = StyleSheet.create({
     marginTop: spacingPixels[2],
     fontSize: fontSizePixels.xs,
     fontWeight: fontWeightNumeric.semibold,
+  },
+  // Reference Request Styles
+  referenceRequestRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  referenceRequestLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    flex: 1,
+  },
+  referenceRequestIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radiusPixels.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  referenceRequestTextContainer: {
+    flex: 1,
+  },
+  referenceRequestTitle: {
+    fontSize: fontSizePixels.base,
+    fontWeight: fontWeightNumeric.semibold,
+  },
+  referenceRequestSubtitle: {
+    fontSize: fontSizePixels.sm,
+    marginTop: spacingPixels[0.5],
+  },
+  referenceRequestRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+  },
+  referenceRequestBadge: {
+    minWidth: 24,
+    height: 24,
+    borderRadius: radiusPixels.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[2],
+  },
+  referenceRequestBadgeText: {
+    fontSize: fontSizePixels.sm,
+    fontWeight: fontWeightNumeric.bold,
   },
 });
 

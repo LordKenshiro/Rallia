@@ -11,7 +11,14 @@
  */
 
 import React, { useEffect } from 'react';
-import { View, TouchableOpacity, StyleProp, ViewStyle, GestureResponderEvent } from 'react-native';
+import {
+  View,
+  TouchableOpacity,
+  StyleProp,
+  ViewStyle,
+  GestureResponderEvent,
+  Text as RNText,
+} from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,8 +29,8 @@ import {
   SettingsButton,
   SportSelector,
 } from '@rallia/shared-components';
-import { useUnreadNotificationCount, useProfile } from '@rallia/shared-hooks';
 import { useActionsSheet, useSport, useOverlay } from '../context';
+import { useUnreadNotificationCount, useProfile, useTotalUnreadCount } from '@rallia/shared-hooks';
 import { useAuth, useThemeStyles, useTranslation } from '../hooks';
 import { useTheme } from '@rallia/shared-hooks';
 import { useAppNavigation } from './hooks';
@@ -41,6 +48,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 import UserProfile from '../screens/UserProfile';
 import SportProfile from '../screens/SportProfile';
 import RatingProofs from '../screens/RatingProofs';
+import IncomingReferenceRequests from '../screens/IncomingReferenceRequests';
 import Notifications from '../screens/Notifications';
 import NotificationPreferencesScreen from '../screens/NotificationPreferencesScreen';
 import PermissionsScreen from '../screens/PermissionsScreen';
@@ -539,6 +547,54 @@ function ActionsPlaceholder() {
 // BOTTOM TABS
 // =============================================================================
 
+/**
+ * Chat tab icon with unread message badge
+ */
+function ChatTabIcon({ color, size }: { color: string; size: number }) {
+  const { session } = useAuth();
+  const { data: unreadCount } = useTotalUnreadCount(session?.user?.id);
+  const { colors } = useThemeStyles();
+
+  const count = unreadCount ?? 0;
+  const showBadge = count > 0;
+  const displayCount = count > 99 ? '99+' : count.toString();
+
+  return (
+    <View
+      style={{ width: size + 12, height: size + 8, alignItems: 'center', justifyContent: 'center' }}
+    >
+      <Ionicons name="chatbubbles" size={size} color={color} />
+      {showBadge && (
+        <View
+          style={{
+            position: 'absolute',
+            top: -2,
+            right: -2,
+            backgroundColor: colors.error,
+            borderRadius: 10,
+            minWidth: count > 99 ? 24 : count > 9 ? 20 : 16,
+            height: 16,
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingHorizontal: 4,
+          }}
+        >
+          <RNText
+            style={{
+              color: '#FFFFFF',
+              fontSize: count > 99 ? 8 : count > 9 ? 9 : 10,
+              fontWeight: '700',
+              textAlign: 'center',
+            }}
+          >
+            {displayCount}
+          </RNText>
+        </View>
+      )}
+    </View>
+  );
+}
+
 function BottomTabs() {
   const { colors } = useThemeStyles();
   return (
@@ -601,9 +657,7 @@ function BottomTabs() {
         name="Chat"
         component={ChatStack}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <ChatTabIcon color={color} size={size} />,
         }}
       />
     </Tab.Navigator>
@@ -764,6 +818,16 @@ export default function AppNavigator() {
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('screens.ratingProofs'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="IncomingReferenceRequests"
+        component={IncomingReferenceRequests}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('referenceRequest.screenTitle'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />

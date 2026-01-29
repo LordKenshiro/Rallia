@@ -39,6 +39,11 @@ import {
   neutral,
   status,
 } from '@rallia/design-system';
+import {
+  ProofGallerySection,
+  CertificationBadge,
+  type BadgeStatus,
+} from '../features/ratings/components';
 
 // Types
 type PlayerProfileRouteProp = RouteProp<RootStackParamList, 'PlayerProfile'>;
@@ -52,15 +57,32 @@ interface SportWithRating {
   isPrimary: boolean;
   ratingLabel?: string;
   ratingValue?: number | null;
+  ratingScoreId?: string; // The actual rating_score id (for current level)
   isCertified?: boolean;
+  badgeStatus?: BadgeStatus;
+  playerRatingScoreId?: string;
+  referencesCount?: number;
+  peerEvaluationCount?: number;
+  totalProofsCount?: number; // All proofs for this sport
+  currentLevelProofsCount?: number; // Proofs matching current rating level
 }
 
 interface PlayerSportPreferences {
+  playerSportId: string | null;
   preferred_match_duration: string | null;
   preferred_match_type: string | null;
   preferred_play_style: string | null;
   preferred_court: string | null;
   is_primary: boolean;
+  playAttributes: string[] | null;
+}
+
+interface FavoriteFacility {
+  id: string;
+  facility: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 type PeriodKey = 'morning' | 'afternoon' | 'evening';
@@ -107,6 +129,7 @@ const PlayerProfile = () => {
   const [blockLoading, setBlockLoading] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
   const [isOnline, setIsOnline] = useState(false);
+  const [favoriteFacilities, setFavoriteFacilities] = useState<FavoriteFacility[]>([]);
 
   // Fetch player data on mount
   useEffect(() => {
@@ -201,18 +224,25 @@ const PlayerProfile = () => {
           'Failed to load player sports'
         ),
 
-        // Fetch player's ratings
+        // Fetch player's ratings with certification badge data
         withTimeout(
           (async () =>
             supabase
               .from('player_rating_score')
               .select(
                 `
-                *,
-                rating_score!player_rating_scores_rating_score_id_fkey (
+                id,
+                rating_score_id,
+                is_certified,
+                badge_status,
+                referrals_count,
+                approved_proofs_count,
+                peer_evaluation_count,
+                rating_score:rating_score_id (
+                  id,
                   label,
                   value,
-                  rating_system (
+                  rating_system:rating_system_id (
                     sport_id
                   )
                 )
@@ -307,10 +337,55 @@ const PlayerProfile = () => {
       // Map ratings
       const ratingsMap = new Map<
         string,
-        { label: string; value: number | null; isCertified: boolean }
+        {
+          label: string;
+          value: number | null;
+          ratingScoreId: string;
+          isCertified: boolean;
+          badgeStatus: BadgeStatus;
+          playerRatingScoreId: string;
+          referencesCount: number;
+          peerEvaluationCount: number;
+          totalProofsCount: number;
+          currentLevelProofsCount: number;
+        }
       >();
-      (ratingsData || []).forEach(rating => {
+
+      // Fetch proofs for all ratings in parallel (with rating_score_id for current-level filtering)
+      const ratingsWithProofsCounts = await Promise.all(
+        (ratingsData || []).map(async rating => {
+          let totalProofsCount = 0;
+          let currentLevelProofsCount = 0;
+
+          // Get the current rating_score_id from the rating
+          const ratingScore = rating.rating_score as { id?: string } | null;
+          const currentRatingScoreId = ratingScore?.id || rating.rating_score_id;
+
+          if (rating.id) {
+            // Fetch all proofs with their rating_score_id
+            const { data: proofs, error: proofsError } = await supabase
+              .from('rating_proof')
+              .select('rating_score_id')
+              .eq('player_rating_score_id', rating.id)
+              .eq('is_active', true);
+
+            if (!proofsError && proofs) {
+              // Total count: all proofs
+              totalProofsCount = proofs.length;
+
+              // Current-level count: proofs matching current rating_score_id
+              currentLevelProofsCount = proofs.filter(
+                p => p.rating_score_id === currentRatingScoreId
+              ).length;
+            }
+          }
+          return { ...rating, totalProofsCount, currentLevelProofsCount, currentRatingScoreId };
+        })
+      );
+
+      ratingsWithProofsCounts.forEach(rating => {
         const ratingScore = rating.rating_score as {
+          id?: string;
           label?: string;
           value?: number | null;
           rating_system?: { sport_id?: string };
@@ -319,12 +394,38 @@ const PlayerProfile = () => {
         const sportIdFromRating = ratingSystemData?.sport_id;
         const displayLabel = ratingScore?.label || '';
         const displayValue = ratingScore?.value ?? null;
+        const ratingScoreId = ratingScore?.id || rating.currentRatingScoreId || '';
+
+        // Determine badge status based on counts:
+        // - certified (green): 3+ references OR 2+ current-level proofs
+        // - disputed (red): badge_status is 'disputed'
+        // - self_declared (yellow): default when criteria not met
+        // NOTE: Only CURRENT-LEVEL proofs count for certification
+        const rawBadgeStatus = rating.badge_status as string | undefined;
+        const referralsCount = rating.referrals_count || 0;
+        const currentLevelProofsCount = rating.currentLevelProofsCount || 0;
+        const totalProofsCount = rating.totalProofsCount || 0;
+        const peerEvalCount = rating.peer_evaluation_count || 0;
+
+        let badgeStatus: BadgeStatus = 'self_declared';
+        if (rawBadgeStatus === 'disputed') {
+          badgeStatus = 'disputed';
+        } else if (referralsCount >= 3 || currentLevelProofsCount >= 2) {
+          badgeStatus = 'certified';
+        }
 
         if (sportIdFromRating && !ratingsMap.has(sportIdFromRating)) {
           ratingsMap.set(sportIdFromRating, {
             label: displayLabel,
             value: displayValue,
-            isCertified: rating.is_certified || false,
+            ratingScoreId,
+            isCertified: badgeStatus === 'certified',
+            badgeStatus,
+            playerRatingScoreId: rating.id,
+            referencesCount: referralsCount,
+            peerEvaluationCount: peerEvalCount,
+            totalProofsCount,
+            currentLevelProofsCount,
           });
         }
       });
@@ -342,7 +443,14 @@ const PlayerProfile = () => {
             isPrimary: sportInfo?.isPrimary || false,
             ratingLabel: ratingInfo?.label,
             ratingValue: ratingInfo?.value,
+            ratingScoreId: ratingInfo?.ratingScoreId,
             isCertified: ratingInfo?.isCertified,
+            badgeStatus: ratingInfo?.badgeStatus,
+            playerRatingScoreId: ratingInfo?.playerRatingScoreId,
+            referencesCount: ratingInfo?.referencesCount,
+            peerEvaluationCount: ratingInfo?.peerEvaluationCount,
+            totalProofsCount: ratingInfo?.totalProofsCount,
+            currentLevelProofsCount: ratingInfo?.currentLevelProofsCount,
           };
         });
 
@@ -359,12 +467,82 @@ const PlayerProfile = () => {
           preferred_court: string | null;
           is_primary: boolean;
         };
+
+        // Fetch play style and attributes from junction tables (like SportProfile does)
+        const [playStyleResult, playAttributesResult, favoritesResult] = await Promise.all([
+          supabase
+            .from('player_sport_play_style')
+            .select(
+              `
+              play_style:play_style_id (
+                id,
+                name,
+                description
+              )
+            `
+            )
+            .eq('player_sport_id', spData.id)
+            .maybeSingle(),
+          supabase
+            .from('player_sport_play_attribute')
+            .select(
+              `
+              play_attribute:play_attribute_id (
+                id,
+                name,
+                description,
+                category
+              )
+            `
+            )
+            .eq('player_sport_id', spData.id),
+          // Fetch favorite facilities for this player
+          supabase
+            .from('player_favorite_facility')
+            .select(
+              `
+              id,
+              facility:facility_id (
+                id,
+                name
+              )
+            `
+            )
+            .eq('player_id', playerId),
+        ]);
+
+        // Extract play style name
+        const playStyleName =
+          (playStyleResult.data?.play_style as { name?: string } | null)?.name || null;
+
+        // Extract play attribute names
+        const playAttributeNames =
+          playAttributesResult.data
+            ?.map(item => (item.play_attribute as { name?: string } | null)?.name)
+            .filter((name): name is string => !!name) || null;
+
+        // Set favorite facilities
+        if (favoritesResult.data) {
+          // Map the data to ensure proper typing (facility comes as array from Supabase)
+          const mappedFacilities = favoritesResult.data.map(
+            (item: { id: string; facility: { id: string; name: string }[] | null }) => ({
+              id: item.id,
+              facility:
+                Array.isArray(item.facility) && item.facility.length > 0 ? item.facility[0] : null,
+            })
+          );
+          setFavoriteFacilities(mappedFacilities);
+        }
+
         setSportPreferences({
+          playerSportId: spData.id,
           preferred_match_duration: spData.preferred_match_duration,
           preferred_match_type: spData.preferred_match_type,
-          preferred_play_style: spData.preferred_play_style,
+          preferred_play_style: playStyleName,
           preferred_court: spData.preferred_court,
           is_primary: spData.is_primary || false,
+          playAttributes:
+            playAttributeNames && playAttributeNames.length > 0 ? playAttributeNames : null,
         });
       }
 
@@ -502,6 +680,20 @@ const PlayerProfile = () => {
 
     // Fallback: capitalize first letter of each word
     return style.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const formatPlayAttribute = (attr: string): string => {
+    // Use translation keys for play attributes
+    const translationKey = `profile.preferences.playAttributes.${attr}`;
+    const translated = t(translationKey as TranslationKey);
+
+    // If translation exists (not the same as key), use it
+    if (translated !== translationKey) {
+      return translated;
+    }
+
+    // Fallback: capitalize first letter of each word
+    return attr.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   const getDayLabel = (day: string): string => {
@@ -932,18 +1124,32 @@ const PlayerProfile = () => {
                 </Text>
               </View>
 
-              {/* Facility */}
+              {/* Favorite Facilities */}
               <View style={[styles.preferenceRow, { borderBottomColor: colors.border }]}>
                 <Text style={[styles.preferenceLabel, { color: colors.textMuted }]}>
-                  {t('profile.fields.facility')}
+                  {t('profile.fields.favoriteFacilities')}
                 </Text>
-                <Text style={[styles.preferenceValue, { color: colors.text }]}>
-                  {sportPreferences.preferred_court || t('profile.notSet')}
-                </Text>
+                <View style={styles.facilitiesContainer}>
+                  {favoriteFacilities.length > 0 ? (
+                    favoriteFacilities.map(fav => (
+                      <Text
+                        key={fav.id}
+                        style={[styles.facilityText, { color: colors.text }]}
+                        numberOfLines={1}
+                      >
+                        {fav.facility?.name || t('profile.notSet')}
+                      </Text>
+                    ))
+                  ) : (
+                    <Text style={[styles.preferenceValue, { color: colors.text }]}>
+                      {t('profile.notSet')}
+                    </Text>
+                  )}
+                </View>
               </View>
 
               {/* Playing Style */}
-              <View style={styles.preferenceRow}>
+              <View style={[styles.preferenceRow, { borderBottomWidth: 0 }]}>
                 <Text style={[styles.preferenceLabel, { color: colors.textMuted }]}>
                   {t('profile.fields.playingStyle')}
                 </Text>
@@ -951,6 +1157,27 @@ const PlayerProfile = () => {
                   {formatPlayingStyle(sportPreferences.preferred_play_style)}
                 </Text>
               </View>
+
+              {/* Play Attributes */}
+              {sportPreferences.playAttributes && sportPreferences.playAttributes.length > 0 && (
+                <View style={[styles.playAttributesContainer, { borderTopColor: colors.border }]}>
+                  <Text style={[styles.playAttributesTitle, { color: colors.textMuted }]}>
+                    {t('profile.fields.playAttributes')}
+                  </Text>
+                  <View style={styles.attributeTags}>
+                    {sportPreferences.playAttributes.map((attr: string, index: number) => (
+                      <View
+                        key={index}
+                        style={[styles.attributeTag, { backgroundColor: colors.primaryForeground }]}
+                      >
+                        <Text style={[styles.attributeTagText, { color: colors.primary }]}>
+                          {formatPlayAttribute(attr)}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
             </View>
           </View>
         )}
@@ -976,14 +1203,10 @@ const PlayerProfile = () => {
                     {primarySport.ratingLabel || '-'}
                   </Text>
                 </View>
-                {primarySport.isCertified && (
-                  <View style={[styles.certifiedBadge, { backgroundColor: '#d1fae5' }]}>
-                    <Ionicons name="checkmark-circle" size={14} color={status.success.DEFAULT} />
-                    <Text style={[styles.certifiedText, { color: status.success.DEFAULT }]}>
-                      Certified
-                    </Text>
-                  </View>
-                )}
+                <CertificationBadge
+                  status={primarySport.badgeStatus || 'self_declared'}
+                  size="md"
+                />
               </View>
               <Text style={[styles.ratingDescription, { color: colors.textMuted }]}>
                 {getRatingDescription(primarySport.ratingValue)}
@@ -995,25 +1218,26 @@ const PlayerProfile = () => {
                   style={[styles.ratingActionButton, { borderColor: colors.border }]}
                 >
                   <Text style={[styles.ratingActionText, { color: colors.primary }]}>
-                    0 References
+                    {t('profile.rating.references', { count: primarySport.referencesCount || 0 })}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.ratingActionButton, { borderColor: colors.border }]}
                 >
                   <Text style={[styles.ratingActionText, { color: colors.primary }]}>
-                    0 Peer Ratings
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.ratingActionButton, { borderColor: colors.border }]}
-                >
-                  <Text style={[styles.ratingActionText, { color: colors.primary }]}>
-                    0 Rating Proof
+                    {t('profile.rating.ratingProof', { count: primarySport.totalProofsCount || 0 })}
                   </Text>
                 </TouchableOpacity>
               </View>
             </View>
+
+            {/* Rating Proofs Gallery */}
+            {primarySport.playerRatingScoreId && (
+              <ProofGallerySection
+                playerRatingScoreId={primarySport.playerRatingScoreId}
+                sportName={primarySport.display_name}
+              />
+            )}
           </View>
         )}
 
@@ -1355,6 +1579,24 @@ const styles = StyleSheet.create({
   attributeTagText: {
     fontSize: fontSizePixels.xs,
     fontWeight: fontWeightNumeric.medium,
+  },
+  facilitiesContainer: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  facilityText: {
+    fontSize: fontSizePixels.sm,
+    fontWeight: fontWeightNumeric.semibold,
+    textAlign: 'right',
+  },
+  playAttributesContainer: {
+    marginTop: spacingPixels[3],
+    paddingTop: spacingPixels[3],
+    borderTopWidth: 1,
+  },
+  playAttributesTitle: {
+    fontSize: fontSizePixels.xs,
+    marginBottom: spacingPixels[2],
   },
   ratingHeader: {
     flexDirection: 'row',

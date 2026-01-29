@@ -34,6 +34,7 @@ interface PersonalInformationOverlayProps {
   onClose: () => void;
   onBack?: () => void;
   onContinue?: () => void;
+  onSave?: () => void; // Called only when data is successfully saved (edit mode)
   currentStep?: number;
   totalSteps?: number;
   mode?: 'onboarding' | 'edit'; // New prop to distinguish context
@@ -54,6 +55,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
   onClose,
   onBack,
   onContinue,
+  onSave,
   currentStep = 1,
   totalSteps = 8,
   mode = 'onboarding', // Default to onboarding mode
@@ -340,6 +342,9 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
             t('onboarding.successMessages.personalInfoUpdated' as TranslationKey)
           );
         }
+
+        // Notify parent that data was saved successfully
+        onSave?.();
 
         // Close modal automatically after brief delay
         setTimeout(() => {

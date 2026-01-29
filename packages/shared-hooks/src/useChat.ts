@@ -276,12 +276,14 @@ export function useMarkMessagesAsRead() {
     mutationFn: ({ conversationId, playerId }: { conversationId: string; playerId: string }) =>
       markMessagesAsRead(conversationId, playerId),
     onSuccess: (_, variables) => {
-      // Invalidate unread counts
+      // Invalidate and refetch unread counts immediately
       queryClient.invalidateQueries({
         queryKey: chatKeys.unreadCount(variables.playerId),
+        refetchType: 'all',
       });
       queryClient.invalidateQueries({
         queryKey: chatKeys.playerConversations(variables.playerId),
+        refetchType: 'all',
       });
     },
   });
@@ -480,7 +482,7 @@ export function useTotalUnreadCount(playerId: string | undefined) {
     queryKey: chatKeys.unreadCount(playerId || ''),
     queryFn: () => getTotalUnreadCount(playerId!),
     enabled: !!playerId,
-    staleTime: 30 * 1000,
+    staleTime: 5 * 1000, // 5 seconds - quick refresh for accurate badge count
   });
 }
 

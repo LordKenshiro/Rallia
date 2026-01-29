@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Platform, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Logger } from '@rallia/shared-services';
@@ -9,25 +9,43 @@ export interface ImagePickerResult {
   error?: string;
 }
 
+export interface ImagePickerPermissions {
+  camera: boolean;
+  library: boolean;
+}
+
 /**
  * Custom hook for handling image selection with permissions
  * Supports both camera and gallery, with platform-specific handling
+ *
+ * Now supports a custom UI sheet via showPicker state and action callbacks.
+ * Components can use:
+ * - showPicker / setShowPicker: to control sheet visibility
+ * - pickFromCamera / pickFromGallery: to trigger the actual selection
+ * - permissions: to conditionally disable camera/gallery options
  */
 export const useImagePicker = () => {
   const [image, setImage] = useState<string | null>(null);
+  const [showPicker, setShowPicker] = useState(false);
+  const [permissions, setPermissions] = useState<ImagePickerPermissions>({
+    camera: false,
+    library: false,
+  });
   const { t } = useTranslation();
 
-  const requestPermissions = async () => {
+  const requestPermissions = useCallback(async () => {
     const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
     const { status: libraryStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-    return {
+    const perms = {
       camera: cameraStatus === 'granted',
       library: libraryStatus === 'granted',
     };
-  };
+    setPermissions(perms);
+    return perms;
+  }, []);
 
-  const pickImageFromCamera = async (): Promise<ImagePickerResult> => {
+  const pickFromCamera = useCallback(async (): Promise<ImagePickerResult> => {
     try {
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ['images'],
@@ -47,9 +65,9 @@ export const useImagePicker = () => {
       Logger.error('Failed to pick image from camera', error as Error, { source: 'camera' });
       return { uri: null, error: 'Failed to capture image' };
     }
-  };
+  }, []);
 
-  const pickImageFromGallery = async (): Promise<ImagePickerResult> => {
+  const pickFromGallery = useCallback(async (): Promise<ImagePickerResult> => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
@@ -69,46 +87,73 @@ export const useImagePicker = () => {
       Logger.error('Failed to pick image from gallery', error as Error, { source: 'gallery' });
       return { uri: null, error: 'Failed to select image' };
     }
-  };
+  }, []);
 
-  const pickImage = async () => {
-    // Web: directly launch image picker
+  /**
+   * Opens the image picker sheet (custom UI)
+   * Call this to show the ImagePickerSheet component
+   */
+  const openPicker = useCallback(async () => {
+    // Web: directly launch image picker (no sheet needed)
     if (Platform.OS === 'web') {
-      return await pickImageFromGallery();
+      return await pickFromGallery();
     }
 
-    // Mobile: request permissions first
-    const permissions = await requestPermissions();
+    // Mobile: request permissions and show sheet
+    const perms = await requestPermissions();
 
-    if (!permissions.camera && !permissions.library) {
+    if (!perms.camera && !perms.library) {
       Alert.alert(t('alerts.error'), t('errors.permissionsDenied'), [{ text: t('common.ok') }]);
       return { uri: null, error: t('errors.permissionsDenied') };
     }
 
-    // Show options dialog
+    // Show the custom picker sheet
+    setShowPicker(true);
+    return { uri: null }; // Actual result will come from pickFromCamera/pickFromGallery
+  }, [requestPermissions, pickFromGallery, t]);
+
+  /**
+   * Legacy pickImage function that uses native Alert
+   * @deprecated Use openPicker() with ImagePickerSheet component instead
+   */
+  const pickImage = useCallback(async () => {
+    // Web: directly launch image picker
+    if (Platform.OS === 'web') {
+      return await pickFromGallery();
+    }
+
+    // Mobile: request permissions first
+    const perms = await requestPermissions();
+
+    if (!perms.camera && !perms.library) {
+      Alert.alert(t('alerts.error'), t('errors.permissionsDenied'), [{ text: t('common.ok') }]);
+      return { uri: null, error: t('errors.permissionsDenied') };
+    }
+
+    // Show options dialog (legacy native Alert)
     return new Promise<ImagePickerResult>(resolve => {
       Alert.alert(t('profile.profilePicture'), t('common.select'), [
         {
           text: t('profile.changePhoto'),
           onPress: async () => {
-            if (!permissions.camera) {
+            if (!perms.camera) {
               Alert.alert(t('alerts.error'), t('errors.permissionsDenied'));
               resolve({ uri: null, error: t('errors.permissionsDenied') });
               return;
             }
-            const result = await pickImageFromCamera();
+            const result = await pickFromCamera();
             resolve(result);
           },
         },
         {
           text: t('common.select'),
           onPress: async () => {
-            if (!permissions.library) {
+            if (!perms.library) {
               Alert.alert(t('alerts.error'), t('errors.permissionsDenied'));
               resolve({ uri: null, error: t('errors.permissionsDenied') });
               return;
             }
-            const result = await pickImageFromGallery();
+            const result = await pickFromGallery();
             resolve(result);
           },
         },
@@ -119,15 +164,28 @@ export const useImagePicker = () => {
         },
       ]);
     });
-  };
+  }, [requestPermissions, pickFromCamera, pickFromGallery, t]);
 
-  const clearImage = () => {
+  const clearImage = useCallback(() => {
     setImage(null);
-  };
+  }, []);
+
+  const closePicker = useCallback(() => {
+    setShowPicker(false);
+  }, []);
 
   return {
     image,
+    // Legacy API (still works, uses native Alert)
     pickImage,
+    // New API (custom UI sheet)
+    showPicker,
+    openPicker,
+    closePicker,
+    pickFromCamera,
+    pickFromGallery,
+    permissions,
+    // Utility
     clearImage,
     setImage, // Allow manual setting
   };

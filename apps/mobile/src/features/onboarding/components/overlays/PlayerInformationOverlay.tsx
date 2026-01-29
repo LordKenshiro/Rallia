@@ -21,6 +21,7 @@ import type { TranslationKey } from '@rallia/shared-translations';
 interface PlayerInformationOverlayProps {
   visible: boolean;
   onClose: () => void;
+  onSave?: () => void; // Called only when data is successfully saved
   initialData?: {
     username?: string;
     bio?: string;
@@ -32,6 +33,7 @@ interface PlayerInformationOverlayProps {
 const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
   visible,
   onClose,
+  onSave,
   initialData,
 }) => {
   const { colors } = useThemeStyles();
@@ -173,6 +175,9 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
           t('onboarding.successMessages.playerInfoUpdated' as TranslationKey)
         );
       }
+
+      // Notify parent that data was saved successfully
+      onSave?.();
 
       // Close modal automatically after brief delay
       setTimeout(() => {

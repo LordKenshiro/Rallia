@@ -12,6 +12,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 
 import { useThemeStyles, useAuth, useProfile, useTranslation, type TranslationKey } from '../hooks';
+import { lightHaptic } from '@rallia/shared-utils';
 import {
   useConversation,
   useMessages,
@@ -134,6 +135,13 @@ export default function ChatConversationScreen() {
   // Fetch conversation details
   const { data: conversation, isLoading: isLoadingConversation } = useConversation(conversationId);
 
+  // Get current participant's mute status (needed early for haptic feedback)
+  const isMuted = useMemo(() => {
+    if (!conversation?.participants || !playerId) return false;
+    const currentParticipant = conversation.participants.find(p => p.player_id === playerId);
+    return currentParticipant?.is_muted ?? false;
+  }, [conversation, playerId]);
+
   // Fetch messages with infinite scroll
   const {
     data: messagesData,
@@ -165,7 +173,19 @@ export default function ChatConversationScreen() {
   );
 
   // Real-time subscriptions for messages (including edits and deletes)
-  useChatRealtime(conversationId, playerId);
+  // Includes haptic feedback for incoming messages (respecting mute status)
+  useChatRealtime(conversationId, playerId, {
+    onNewMessage: message => {
+      // Only trigger haptic for messages from other users, and only if not muted
+      if (message.sender_id !== playerId && !isMuted) {
+        lightHaptic();
+      }
+      // Mark messages as read since user is viewing the conversation
+      if (playerId && conversationId) {
+        markAsReadMutation.mutate({ conversationId, playerId });
+      }
+    },
+  });
 
   // Real-time subscription for reactions
   useReactionsRealtime(conversationId);
@@ -306,13 +326,6 @@ export default function ChatConversationScreen() {
 
   // Favorite status for direct chats
   const { isFavorite, toggleFavorite } = useFavoriteStatus(playerId, otherUserId);
-
-  // Get current participant's mute status
-  const isMuted = useMemo(() => {
-    if (!conversation?.participants || !playerId) return false;
-    const currentParticipant = conversation.participants.find(p => p.player_id === playerId);
-    return currentParticipant?.is_muted ?? false;
-  }, [conversation, playerId]);
 
   const handleBack = useCallback(() => {
     navigation.goBack();
@@ -695,8 +708,9 @@ export default function ChatConversationScreen() {
       <ChatAgreementModal
         visible={showAgreementModal}
         onAgree={handleAgreeToRules}
-        groupName={headerTitle}
-        groupImageUrl={headerImage}
+        chatName={headerTitle}
+        chatImageUrl={headerImage}
+        isDirectChat={isDirectChat}
       />
 
       {/* Message Actions Sheet */}
