@@ -219,7 +219,6 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
     loadingProvider: socialAuthLoadingProvider,
     signInWithGoogle,
     signInWithApple,
-    signInWithFacebook,
     isAppleSignInAvailable,
   } = useSocialAuth();
 
@@ -256,10 +255,6 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
   const handleAppleSignIn = useCallback(() => {
     handleSocialAuthResult(signInWithApple);
   }, [handleSocialAuthResult, signInWithApple]);
-
-  const handleFacebookSignIn = useCallback(() => {
-    handleSocialAuthResult(signInWithFacebook);
-  }, [handleSocialAuthResult, signInWithFacebook]);
 
   // Navigate to next step
   const goToNextStep = useCallback(async () => {
@@ -355,7 +350,6 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
                 isActive={currentStep === 1}
                 onGoogleSignIn={handleGoogleSignIn}
                 onAppleSignIn={handleAppleSignIn}
-                onFacebookSignIn={handleFacebookSignIn}
                 socialAuthLoading={socialAuthLoading}
                 socialAuthLoadingProvider={socialAuthLoadingProvider}
                 isAppleSignInAvailable={isAppleSignInAvailable}

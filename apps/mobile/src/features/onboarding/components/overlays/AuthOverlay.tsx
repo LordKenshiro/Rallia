@@ -97,12 +97,6 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
     // TODO: Implement Apple authentication
   };
 
-  const handleFacebookSignIn = () => {
-    lightHaptic();
-    Logger.logUserAction('oauth_signin_initiated', { provider: 'facebook' });
-    // TODO: Implement Facebook authentication
-  };
-
   const handleEmailContinue = async () => {
     mediumHaptic();
     setIsLoading(true);
@@ -341,14 +335,6 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
                 activeOpacity={0.8}
               >
                 <Ionicons name="logo-apple" size={24} color={colors.buttonTextActive} />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.socialButton, { backgroundColor: colors.buttonActive }]}
-                onPress={handleFacebookSignIn}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="logo-facebook" size={24} color={colors.buttonTextActive} />
               </TouchableOpacity>
             </View>
 

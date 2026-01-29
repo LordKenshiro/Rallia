@@ -68,18 +68,6 @@
         }
       ],
       [
-        "react-native-fbsdk-next",
-        {
-          "appID": "YOUR_FACEBOOK_APP_ID",
-          "clientToken": "YOUR_FACEBOOK_CLIENT_TOKEN",
-          "displayName": "Rallia",
-          "scheme": "fbYOUR_FACEBOOK_APP_ID",
-          "advertiserIDCollectionEnabled": false,
-          "autoLogAppEventsEnabled": false,
-          "isAutoInitEnabled": true
-        }
-      ],
-      [
         "expo-build-properties",
         {
           "ios": {

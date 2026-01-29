@@ -1,7 +1,7 @@
 /**
  * useSocialAuth Hook
  *
- * Handles native social authentication for Google, Apple, and Facebook.
+ * Handles native social authentication for Google and Apple.
  * Integrates with Supabase Auth for session management.
  *
  * NOTE: This requires a development build (not Expo Go) because it uses
@@ -21,7 +21,7 @@ import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils'
 // TYPES
 // =============================================================================
 
-export type SocialProvider = 'google' | 'apple' | 'facebook';
+export type SocialProvider = 'google' | 'apple';
 
 export interface SocialAuthResult {
   success: boolean;
@@ -38,7 +38,6 @@ interface UseSocialAuthReturn {
   // Actions
   signInWithGoogle: () => Promise<SocialAuthResult>;
   signInWithApple: () => Promise<SocialAuthResult>;
-  signInWithFacebook: () => Promise<SocialAuthResult>;
 
   // Utilities
   isAppleSignInAvailable: boolean;
@@ -64,9 +63,6 @@ function isExpoGo(): boolean {
 const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '';
 const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '';
 
-// Configure Facebook
-const FACEBOOK_APP_ID = process.env.EXPO_PUBLIC_FACEBOOK_APP_ID || '';
-
 // Lazy-loaded native modules (only available in dev builds, not Expo Go)
 let GoogleSignin: typeof import('@react-native-google-signin/google-signin').GoogleSignin | null =
   null;
@@ -78,9 +74,6 @@ let isSuccessResponse:
 let isErrorWithCode:
   | typeof import('@react-native-google-signin/google-signin').isErrorWithCode
   | null = null;
-let LoginManager: typeof import('react-native-fbsdk-next').LoginManager | null = null;
-let AccessToken: typeof import('react-native-fbsdk-next').AccessToken | null = null;
-let Settings: typeof import('react-native-fbsdk-next').Settings | null = null;
 
 let nativeModulesInitialized = false;
 
@@ -94,8 +87,10 @@ async function initializeNativeModules(): Promise<boolean> {
     return false;
   }
 
+  let googleInitialized = false;
+
+  // Initialize Google Sign-In
   try {
-    // Dynamically import Google Sign-In
     const googleModule = await import('@react-native-google-signin/google-signin');
     GoogleSignin = googleModule.GoogleSignin;
     statusCodes = googleModule.statusCodes;
@@ -111,25 +106,17 @@ async function initializeNativeModules(): Promise<boolean> {
       offlineAccess: !!GOOGLE_WEB_CLIENT_ID, // Only enable if webClientId is available
     });
 
-    // Dynamically import Facebook SDK
-    const fbModule = await import('react-native-fbsdk-next');
-    LoginManager = fbModule.LoginManager;
-    AccessToken = fbModule.AccessToken;
-    Settings = fbModule.Settings;
-
-    // Initialize Facebook SDK
-    if (FACEBOOK_APP_ID) {
-      Settings.initializeSDK();
-      Settings.setAppID(FACEBOOK_APP_ID);
-    }
-
-    nativeModulesInitialized = true;
-    Logger.debug('Native social auth modules initialized successfully');
-    return true;
+    googleInitialized = true;
+    Logger.debug('Google Sign-In initialized successfully');
   } catch (error) {
-    Logger.error('Failed to initialize native social auth modules', error as Error);
-    return false;
+    Logger.error('Failed to initialize Google Sign-In', error as Error);
   }
+
+  nativeModulesInitialized = googleInitialized;
+  Logger.debug('Native social auth modules initialization complete', {
+    google: googleInitialized,
+  });
+  return nativeModulesInitialized;
 }
 
 // =============================================================================
@@ -374,89 +361,12 @@ export function useSocialAuth(): UseSocialAuthReturn {
     }
   }, []);
 
-  /**
-   * Sign in with Facebook using native SDK
-   */
-  const signInWithFacebook = useCallback(async (): Promise<SocialAuthResult> => {
-    // Check for Expo Go
-    if (!isNativeBuild) {
-      showExpoGoWarning('Facebook');
-      return { success: false, needsOnboarding: false };
-    }
-
-    if (!LoginManager || !AccessToken) {
-      setErrorMessage('Facebook Sign-In not initialized');
-      return { success: false, needsOnboarding: false };
-    }
-
-    lightHaptic();
-    setIsLoading(true);
-    setLoadingProvider('facebook');
-    setErrorMessage('');
-
-    try {
-      Logger.logUserAction('social_signin_initiated', { provider: 'facebook' });
-
-      // Initiate Facebook login
-      const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
-
-      if (result.isCancelled) {
-        Logger.debug('Facebook sign-in cancelled by user');
-        setIsLoading(false);
-        setLoadingProvider(null);
-        return { success: false, needsOnboarding: false };
-      }
-
-      // Get the access token
-      const accessTokenData = await AccessToken.getCurrentAccessToken();
-
-      if (!accessTokenData?.accessToken) {
-        throw new Error('No access token received from Facebook');
-      }
-
-      Logger.debug('Facebook sign-in successful, authenticating with Supabase');
-
-      // Sign in to Supabase with the Facebook access token
-      const { data, error } = await supabase.auth.signInWithIdToken({
-        provider: 'facebook',
-        token: accessTokenData.accessToken,
-      });
-
-      if (error) {
-        Logger.error('Supabase Facebook auth failed', error);
-        throw error;
-      }
-
-      if (!data.user) {
-        throw new Error('No user returned from Supabase');
-      }
-
-      Logger.info('Facebook sign-in completed successfully', { userId: data.user.id });
-      successHaptic();
-
-      const needsOnboarding = await checkOnboardingStatus(data.user.id);
-
-      setIsLoading(false);
-      setLoadingProvider(null);
-      return { success: true, needsOnboarding };
-    } catch (error) {
-      setIsLoading(false);
-      setLoadingProvider(null);
-
-      setErrorMessage((error as Error).message || 'Facebook sign-in failed');
-      Logger.error('Facebook sign-in error', error as Error);
-      warningHaptic();
-      return { success: false, needsOnboarding: false, error: error as Error };
-    }
-  }, [isNativeBuild, showExpoGoWarning]);
-
   return {
     isLoading,
     loadingProvider,
     errorMessage,
     signInWithGoogle,
     signInWithApple,
-    signInWithFacebook,
     isAppleSignInAvailable,
     isNativeBuild,
   };
