@@ -12,7 +12,7 @@ import Stripe from 'https://esm.sh/stripe@14';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'x-service-key, x-client-info, apikey, content-type',
 };
 
 interface PaymentRecord {
@@ -34,15 +34,28 @@ Deno.serve(async req => {
   }
 
   try {
-    // Verify authorization
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('Missing authorization header');
+    // Verify service role key authentication via custom x-service-key header
+    // Note: We use a custom header because Authorization: Bearer gets stripped by some proxies
+    const serviceKey = req.headers.get('x-service-key');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+    if (!serviceKey) {
+      return new Response(JSON.stringify({ error: 'Missing x-service-key header' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401,
+      });
+    }
+
+    if (serviceKey !== supabaseServiceKey) {
+      console.warn('Invalid service role key provided');
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401,
+      });
     }
 
     // Initialize clients
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY')!;
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);

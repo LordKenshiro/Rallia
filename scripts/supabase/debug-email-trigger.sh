@@ -197,7 +197,7 @@ EOF
   RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
     -X POST \
     -H "Content-Type: application/json" \
-    -H "Authorization: Bearer $SERVICE_KEY" \
+    -H "x-service-key: $SERVICE_KEY" \
     -d "$TEST_PAYLOAD" \
     "$EDGE_FUNCTION_URL" 2>&1)
 

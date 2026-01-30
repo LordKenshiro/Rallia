@@ -43,6 +43,25 @@ ON CONFLICT (id) DO UPDATE SET
   file_size_limit = 524288000,
   allowed_mime_types = ARRAY['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm', 'video/3gpp'];
 
+-- Drop existing policies if they exist, then recreate
+-- rating-proof-images policies
+DROP POLICY IF EXISTS "Users can upload their own proof images" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update their own proof images" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete their own proof images" ON storage.objects;
+DROP POLICY IF EXISTS "Anyone can view proof images" ON storage.objects;
+
+-- rating-proof-documents policies
+DROP POLICY IF EXISTS "Users can upload their own proof documents" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update their own proof documents" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete their own proof documents" ON storage.objects;
+DROP POLICY IF EXISTS "Anyone can view proof documents" ON storage.objects;
+
+-- rating-proof-videos policies
+DROP POLICY IF EXISTS "Users can upload their own proof videos" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update their own proof videos" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete their own proof videos" ON storage.objects;
+DROP POLICY IF EXISTS "Anyone can view proof videos" ON storage.objects;
+
 -- Create storage policies for rating-proof-images bucket
 CREATE POLICY "Users can upload their own proof images"
 ON storage.objects FOR INSERT

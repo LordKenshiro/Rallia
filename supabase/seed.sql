@@ -5,7 +5,7 @@
 -- Setup Vault secrets for Edge Functions (required for triggers to work)
 -- ============================================================================
 -- These secrets are used by database triggers to call Edge Functions with
--- standard Bearer authentication (Authorization: Bearer <token>).
+-- x-service-key custom header authentication (x-service-key: <token>).
 --
 -- For local development:
 --   - supabase_functions_url: Uses host.docker.internal so Postgres container can reach host
