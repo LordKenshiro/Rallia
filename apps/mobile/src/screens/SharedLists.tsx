@@ -33,8 +33,13 @@ import {
   useSharedListsRealtime,
   type SharedContactList,
 } from '@rallia/shared-hooks';
-import { useThemeStyles, useAuth, useTranslation, type TranslationKey } from '../hooks';
-import { useActionsSheet } from '../context';
+import {
+  useThemeStyles,
+  useAuth,
+  useTranslation,
+  useRequireOnboarding,
+  type TranslationKey,
+} from '../hooks';
 import type { CommunityStackParamList } from '../navigation/types';
 import { CreateListModal, SharedListCard, ShareMatchModal } from '../features/shared-lists';
 
@@ -44,8 +49,8 @@ const SharedLists: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
-  const { openSheet } = useActionsSheet();
   const { t } = useTranslation();
+  const { guardAction } = useRequireOnboarding();
   const playerId = session?.user?.id;
 
   // State
@@ -78,15 +83,11 @@ const SharedLists: React.FC = () => {
 
   // Create list handler
   const handleCreateList = useCallback(() => {
+    if (!guardAction()) return;
     lightHaptic();
-    if (!playerId) {
-      // Not authenticated: open auth sheet
-      openSheet();
-      return;
-    }
     setEditingList(null);
     setShowCreateModal(true);
-  }, [playerId, openSheet]);
+  }, [guardAction]);
 
   // Edit list handler
   const handleEditList = useCallback((list: SharedContactList) => {
@@ -243,12 +244,8 @@ const SharedLists: React.FC = () => {
           },
         ]}
         onPress={() => {
-          if (!playerId) {
-            // Not authenticated: open auth sheet
-            openSheet();
-          } else {
-            setShowShareModal(true);
-          }
+          if (!guardAction()) return;
+          setShowShareModal(true);
         }}
         activeOpacity={0.8}
       >

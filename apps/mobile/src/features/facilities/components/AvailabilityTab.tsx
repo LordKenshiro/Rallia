@@ -20,8 +20,7 @@ import type { Court } from '@rallia/shared-types';
 import type { FacilityWithDetails } from '@rallia/shared-services';
 import { lightHaptic } from '@rallia/shared-utils';
 
-import { useAuth, useActionsSheet } from '../../../context';
-import type { TranslationKey, TranslationOptions } from '../../../hooks';
+import { useRequireOnboarding, type TranslationKey, type TranslationOptions } from '../../../hooks';
 import AvailabilitySlotCard from './AvailabilitySlotCard';
 import DatePickerBar from './DatePickerBar';
 import TimeOfDaySection, { groupSlotsByTimeOfDay } from './TimeOfDaySection';
@@ -386,9 +385,8 @@ export default function AvailabilityTab({
   isDark,
   t,
 }: AvailabilityTabProps) {
-  // Auth state and actions sheet
-  const { isAuthenticated } = useAuth();
-  const { openSheet: openAuthSheet } = useActionsSheet();
+  // Guard for auth and onboarding
+  const { guardAction } = useRequireOnboarding();
 
   // Selected date and time filter
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
@@ -500,8 +498,8 @@ export default function AvailabilityTab({
 
       lightHaptic();
 
-      if (slot.isLocalSlot && !isAuthenticated) {
-        openAuthSheet();
+      // For local slots, require auth and onboarding
+      if (slot.isLocalSlot && !guardAction()) {
         return;
       }
 
@@ -513,7 +511,7 @@ export default function AvailabilityTab({
         setShowExternalSheet(true);
       }
     },
-    [isAuthenticated, openAuthSheet, isSlotDisabled]
+    [guardAction, isSlotDisabled]
   );
 
   // Close sheets

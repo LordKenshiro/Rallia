@@ -56,6 +56,9 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
   const [sameMatchTypeForAll, setSameMatchTypeForAll] = useState(true);
   const [sameMatchDurationForAll, setSameMatchDurationForAll] = useState(true);
 
+  // Local state for smooth slider display - updates instantly while dragging
+  const [sliderValue, setSliderValue] = useState(formData.maxTravelDistance);
+
   // When "Same for all sports" is toggled ON, sync both sports to the tennis value
   const handleSameMatchTypeToggle = () => {
     selectionHaptic();
@@ -173,15 +176,16 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
       </Text>
       <View style={styles.sliderContainer}>
         <Text size="lg" weight="bold" color={colors.text} style={styles.sliderValue}>
-          {formData.maxTravelDistance} km
+          {sliderValue} km
         </Text>
         <Slider
           style={styles.slider}
           minimumValue={1}
           maximumValue={50}
           step={1}
-          value={formData.maxTravelDistance}
-          onValueChange={value => onUpdateFormData({ maxTravelDistance: value })}
+          value={sliderValue}
+          onValueChange={setSliderValue}
+          onSlidingComplete={value => onUpdateFormData({ maxTravelDistance: value })}
           minimumTrackTintColor={colors.buttonActive}
           maximumTrackTintColor={colors.buttonInactive}
           thumbTintColor={colors.buttonActive}

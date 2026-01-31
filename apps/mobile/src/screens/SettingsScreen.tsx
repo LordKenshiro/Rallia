@@ -47,6 +47,9 @@ const SettingsScreen: React.FC = () => {
   const { isAuthenticated, loading: authLoading, signOut } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
 
+  // User is fully onboarded only if authenticated AND onboarding is complete
+  const isOnboarded = isAuthenticated && profile?.onboarding_completed;
+
   const [isChangingLocale, setIsChangingLocale] = useState(false);
   const { theme, themePreference, setThemePreference } = useTheme();
   const isDark = theme === 'dark';
@@ -166,8 +169,8 @@ const SettingsScreen: React.FC = () => {
         style={[styles.scrollContent, { backgroundColor: colors.background }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Edit Profile */}
-        {isAuthenticated && (
+        {/* Edit Profile - Only show when fully onboarded */}
+        {isOnboarded && (
           <View style={[styles.profileGroup, { backgroundColor: colors.background }]}>
             <View style={[styles.profileSection, { backgroundColor: colors.background }]}>
               {profile?.profile_picture_url ? (
@@ -216,8 +219,8 @@ const SettingsScreen: React.FC = () => {
           </View>
         )}
 
-        {/* Settings Items - Auth required */}
-        {isAuthenticated && (
+        {/* Settings Items - Only show when fully onboarded */}
+        {isOnboarded && (
           <View style={[styles.settingsGroup, { backgroundColor: colors.background }]}>
             <SettingsItem
               icon="notifications-outline"

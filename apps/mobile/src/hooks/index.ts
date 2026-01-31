@@ -3,6 +3,7 @@
  */
 export * from './useAuth';
 export * from './useNavigateToPlayerProfile';
+export * from './useRequireOnboarding';
 export * from './useImagePicker';
 export * from './usePermissions';
 export * from './useTranslation';

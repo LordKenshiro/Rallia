@@ -23,7 +23,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Text, SkeletonConversation } from '@rallia/shared-components';
 import { lightHaptic, selectionHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useAuth, useTranslation } from '../hooks';
+import { useThemeStyles, useAuth, useTranslation, useRequireOnboarding } from '../hooks';
 import { useActionsSheet } from '../context';
 import SignInPrompt from '../components/SignInPrompt';
 import { spacingPixels, fontSizePixels, primary, neutral } from '@rallia/design-system';
@@ -56,6 +56,7 @@ const Chat = () => {
   const { session, isAuthenticated, loading: isLoadingAuth } = useAuth();
   const { t } = useTranslation();
   const { openSheet } = useActionsSheet();
+  const { guardAction, isReady: isOnboarded } = useRequireOnboarding();
   const playerId = session?.user?.id;
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<TabKey>('direct');
@@ -180,9 +181,10 @@ const Chat = () => {
 
   // Handle new group button press
   const handleNewGroupPress = useCallback(() => {
+    if (!guardAction()) return;
     lightHaptic();
     setShowCreateGroupModal(true);
-  }, []);
+  }, [guardAction]);
 
   // Handle group creation success - navigate to the new chat
   const handleGroupCreated = useCallback(
@@ -371,6 +373,20 @@ const Chat = () => {
         description={t('chat.signInPrompt')}
         buttonText={t('auth.signIn')}
         onSignIn={openSheet}
+      />
+    );
+  }
+
+  // Show onboarding prompt if authenticated but not onboarded
+  if (!isOnboarded) {
+    return (
+      <SignInPrompt
+        variant="chat"
+        title={t('chat.onboardingRequired')}
+        description={t('chat.onboardingPrompt')}
+        buttonText={t('chat.completeOnboarding')}
+        onSignIn={openSheet}
+        icon="person-add"
       />
     );
   }

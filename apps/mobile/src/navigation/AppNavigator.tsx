@@ -31,7 +31,7 @@ import {
 } from '@rallia/shared-components';
 import { useActionsSheet, useSport, useOverlay } from '../context';
 import { useUnreadNotificationCount, useProfile, useTotalUnreadCount } from '@rallia/shared-hooks';
-import { useAuth, useThemeStyles, useTranslation } from '../hooks';
+import { useAuth, useThemeStyles, useTranslation, useRequireOnboarding } from '../hooks';
 import { useTheme } from '@rallia/shared-hooks';
 import { useAppNavigation } from './hooks';
 import { spacingPixels, fontSizePixels, fontWeightNumeric } from '@rallia/design-system';
@@ -196,22 +196,21 @@ const getSharedScreenOptions = (colors: ReturnType<typeof useThemeStyles>['color
 });
 
 /**
- * Profile picture button with auth-aware behavior
- * - If authenticated: navigates to UserProfile
- * - If not authenticated: opens auth sheet
+ * Profile picture button with auth and onboarding-aware behavior
+ * - If authenticated and onboarded: navigates to UserProfile
+ * - If not authenticated or not onboarded: opens auth/onboarding sheet
  */
 function ProfilePictureButtonWithAuth() {
   const navigation = useAppNavigation();
-  const { session } = useAuth();
-  const { openSheet } = useActionsSheet();
+  const { isReady, guardAction } = useRequireOnboarding();
 
   const handlePress = () => {
-    if (session?.user) {
-      // Authenticated: navigate to profile
+    if (isReady) {
+      // Authenticated and onboarded: navigate to profile
       navigation.navigate('UserProfile', {});
     } else {
-      // Not authenticated: open auth sheet
-      openSheet();
+      // Not authenticated or not onboarded: open auth/onboarding sheet
+      guardAction();
     }
   };
 

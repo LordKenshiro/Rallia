@@ -31,6 +31,7 @@ import {
   useAuth,
   useTranslation,
   useNavigateToPlayerProfile,
+  useRequireOnboarding,
   type TranslationKey,
 } from '../hooks';
 import {
@@ -86,6 +87,7 @@ export default function CommunityDetailScreen() {
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
   const { t } = useTranslation();
+  const { guardAction } = useRequireOnboarding();
   const playerId = session?.user?.id;
   const navigateToPlayerProfile = useNavigateToPlayerProfile();
 
@@ -146,14 +148,14 @@ export default function CommunityDetailScreen() {
   const rejectMemberMutation = useRejectCommunityMember();
 
   const handleOpenChat = useCallback(() => {
-    if (community?.conversation_id) {
-      lightHaptic();
-      navigation.navigate('Chat', {
-        conversationId: community.conversation_id,
-        title: community.name,
-      });
-    }
-  }, [community, navigation]);
+    if (!community?.conversation_id) return;
+    if (!guardAction()) return;
+    lightHaptic();
+    navigation.navigate('Chat', {
+      conversationId: community.conversation_id,
+      title: community.name,
+    });
+  }, [community, guardAction, navigation]);
 
   const handleLeaveCommunity = useCallback(() => {
     Alert.alert(t('community.leaveCommunity'), t('community.confirmations.leave'), [
@@ -209,6 +211,7 @@ export default function CommunityDetailScreen() {
 
   // Add Game flow handlers
   const handleAddGame = useCallback(() => {
+    if (!guardAction()) return;
     mediumHaptic();
     // Check if user has seen the intro before
     if (hasSeenAddScoreIntro === false) {
@@ -218,7 +221,7 @@ export default function CommunityDetailScreen() {
       // User has dismissed intro before - go directly to match type
       setShowMatchTypeModal(true);
     }
-  }, [hasSeenAddScoreIntro]);
+  }, [guardAction, hasSeenAddScoreIntro]);
 
   const handleAddScoreIntroComplete = useCallback(() => {
     setShowAddScoreIntro(false);

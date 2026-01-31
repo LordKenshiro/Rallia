@@ -149,6 +149,9 @@
     "timeAgo": "{time} ago",
     "signInRequired": "Sign In Required",
     "signInPrompt": "Please sign in to view your notifications",
+    "onboardingRequired": "Complete Your Profile",
+    "onboardingPrompt": "Finish setting up your profile to receive and view notifications",
+    "completeOnboarding": "Complete Profile",
     "time": {
       "justNow": "Just now",
       "today": "Today",
@@ -895,7 +898,7 @@
     "genderValues": {
       "male": "Male",
       "female": "Female",
-      "other": "Non-binary",
+      "other": "Other",
       "preferNotToSay": "Prefer not to say"
     },
     "hand": {
@@ -1379,6 +1382,9 @@
     "inbox": "Inbox",
     "signInRequired": "Sign in to view messages",
     "signInPrompt": "Sign in to see your conversations and connect with other players.",
+    "onboardingRequired": "Complete Your Profile",
+    "onboardingPrompt": "Finish setting up your profile to start chatting with other players.",
+    "completeOnboarding": "Complete Profile",
     "search": "Search players",
     "searchConversations": "Search conversations",
     "newGroup": "New group",
@@ -2755,6 +2761,8 @@
     "welcomeBack": "Welcome back! 👋",
     "yourMatches": "🎾 Your Games",
     "signInPrompt": "Please sign in to create and access your games",
+    "onboardingPrompt": "Complete your profile to create and access your games",
+    "completeProfile": "Complete Profile",
     "user": "User",
     "subtitle": "The best way to find your next tennis or pickleball partner",
     "soonAndNearby": "Soon & Nearby",

@@ -24,8 +24,13 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Text, Skeleton } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useAuth, useTranslation, type TranslationKey } from '../hooks';
-import { useActionsSheet } from '../context';
+import {
+  useThemeStyles,
+  useAuth,
+  useTranslation,
+  useRequireOnboarding,
+  type TranslationKey,
+} from '../hooks';
 import {
   usePublicCommunities,
   usePlayerCommunities,
@@ -199,8 +204,8 @@ export default function CommunitiesScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
-  const { openSheet } = useActionsSheet();
   const { t } = useTranslation();
+  const { guardAction } = useRequireOnboarding();
   const playerId = session?.user?.id;
 
   const [activeTab, setActiveTab] = useState<TabType>('discover');
@@ -259,15 +264,11 @@ export default function CommunitiesScreen() {
       coverImageUrl?: string,
       isPublic: boolean = true
     ) => {
-      if (!playerId) {
-        // Not authenticated: open auth sheet
-        openSheet();
-        return;
-      }
+      if (!guardAction()) return;
 
       try {
         const newCommunity = await createCommunityMutation.mutateAsync({
-          playerId,
+          playerId: playerId!,
           input: { name, description, cover_image_url: coverImageUrl, is_public: isPublic },
         });
         setShowCreateModal(false);
@@ -277,19 +278,15 @@ export default function CommunitiesScreen() {
         Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create community');
       }
     },
-    [playerId, createCommunityMutation, navigation, openSheet]
+    [guardAction, playerId, createCommunityMutation, navigation]
   );
 
   const handleRequestToJoin = useCallback(
     async (communityId: string, communityName: string) => {
-      if (!playerId) {
-        // Not authenticated: open auth sheet
-        openSheet();
-        return;
-      }
+      if (!guardAction()) return;
 
       try {
-        await requestToJoinMutation.mutateAsync({ communityId, playerId });
+        await requestToJoinMutation.mutateAsync({ communityId, playerId: playerId! });
         Alert.alert(
           'Request Sent',
           `Your request to join "${communityName}" has been sent. A moderator will review it.`
@@ -301,7 +298,7 @@ export default function CommunitiesScreen() {
         );
       }
     },
-    [playerId, requestToJoinMutation, openSheet]
+    [guardAction, playerId, requestToJoinMutation]
   );
 
   const handleCommunityPress = useCallback(
@@ -326,14 +323,13 @@ export default function CommunitiesScreen() {
   const handleTabChange = useCallback(
     (tab: TabType) => {
       lightHaptic();
-      // If trying to access "My Communities" without auth, open auth sheet
-      if (tab === 'my-communities' && !playerId) {
-        openSheet();
+      // If trying to access "My Communities" without auth/onboarding, open auth sheet
+      if (tab === 'my-communities' && !guardAction()) {
         return;
       }
       setActiveTab(tab);
     },
-    [playerId, openSheet]
+    [guardAction]
   );
 
   const renderCommunityItem = useCallback(
@@ -383,12 +379,8 @@ export default function CommunitiesScreen() {
           <TouchableOpacity
             style={[styles.createButton, { backgroundColor: colors.primary }]}
             onPress={() => {
-              if (!playerId) {
-                // Not authenticated: open auth sheet
-                openSheet();
-              } else {
-                setShowCreateModal(true);
-              }
+              if (!guardAction()) return;
+              setShowCreateModal(true);
             }}
           >
             <Ionicons name="add" size={20} color="#FFFFFF" />
@@ -410,7 +402,7 @@ export default function CommunitiesScreen() {
         )}
       </View>
     ),
-    [colors, activeTab, handleTabChange, t, openSheet, playerId]
+    [colors, activeTab, handleTabChange, t, guardAction]
   );
 
   const renderTabs = useMemo(
@@ -558,12 +550,8 @@ export default function CommunitiesScreen() {
           style={[styles.fabSecondary, { backgroundColor: colors.cardBackground }]}
           onPress={() => {
             lightHaptic();
-            if (!playerId) {
-              // Not authenticated: open auth sheet
-              openSheet();
-            } else {
-              setShowQRScanner(true);
-            }
+            if (!guardAction()) return;
+            setShowQRScanner(true);
           }}
           activeOpacity={0.8}
         >
@@ -574,12 +562,8 @@ export default function CommunitiesScreen() {
         <TouchableOpacity
           style={[styles.fab, { backgroundColor: colors.primary }]}
           onPress={() => {
-            if (!playerId) {
-              // Not authenticated: open auth sheet
-              openSheet();
-            } else {
-              setShowCreateModal(true);
-            }
+            if (!guardAction()) return;
+            setShowCreateModal(true);
           }}
           activeOpacity={0.8}
         >

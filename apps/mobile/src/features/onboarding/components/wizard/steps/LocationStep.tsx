@@ -47,6 +47,8 @@ interface LocationStepProps {
   colors: ThemeColors;
   t: (key: TranslationKey) => string;
   isDark: boolean;
+  /** Show error state on city field (only after user attempted to continue with empty city) */
+  showCityError?: boolean;
 }
 
 export const LocationStep: React.FC<LocationStepProps> = ({
@@ -55,6 +57,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
   colors,
   t,
   isDark,
+  showCityError = false,
 }) => {
   const [addressQuery, setAddressQuery] = useState(formData.address || '');
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -290,7 +293,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
             styles.input,
             {
               backgroundColor: colors.inputBackground,
-              borderColor: !formData.city.trim() ? colors.error : colors.inputBorder,
+              borderColor: showCityError ? colors.error : colors.inputBorder,
               color: colors.text,
             },
           ]}

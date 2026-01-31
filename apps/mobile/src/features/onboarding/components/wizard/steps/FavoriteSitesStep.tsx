@@ -376,6 +376,14 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
         {t('onboarding.favoriteSitesStep.subtitle' as TranslationKey)}
       </Text>
 
+      {/* Optional hint - at top so users see it before scrolling */}
+      <View style={styles.hintContainer}>
+        <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />
+        <Text size="xs" color={colors.textMuted} style={styles.hintText}>
+          {t('onboarding.favoriteSitesStep.hint' as TranslationKey)}
+        </Text>
+      </View>
+
       {/* Selection counter */}
       <View style={styles.counterContainer}>
         <Text
@@ -457,14 +465,6 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
         ) : (
           renderEmptyState()
         )}
-      </View>
-
-      {/* Optional hint */}
-      <View style={styles.hintContainer}>
-        <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />
-        <Text size="xs" color={colors.textMuted} style={styles.hintText}>
-          {t('onboarding.favoriteSitesStep.hint' as TranslationKey)}
-        </Text>
       </View>
     </BottomSheetScrollView>
   );
@@ -588,7 +588,7 @@ const styles = StyleSheet.create({
   hintContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginTop: spacingPixels[6],
+    marginBottom: spacingPixels[4],
     paddingHorizontal: spacingPixels[2],
     gap: spacingPixels[2],
   },

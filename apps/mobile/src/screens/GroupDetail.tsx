@@ -29,6 +29,7 @@ import {
   useAuth,
   useTranslation,
   useNavigateToPlayerProfile,
+  useRequireOnboarding,
   type TranslationKey,
 } from '../hooks';
 import {
@@ -80,6 +81,7 @@ export default function GroupDetailScreen() {
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
   const { t } = useTranslation();
+  const { guardAction } = useRequireOnboarding();
   const playerId = session?.user?.id;
   const navigateToPlayerProfile = useNavigateToPlayerProfile();
 
@@ -135,16 +137,17 @@ export default function GroupDetailScreen() {
   const deleteGroupMutation = useDeleteGroup();
 
   const handleOpenChat = useCallback(() => {
-    if (group?.conversation_id) {
-      lightHaptic();
-      navigation.navigate('Chat', {
-        conversationId: group.conversation_id,
-        title: group.name,
-      });
-    }
-  }, [group, navigation]);
+    if (!group?.conversation_id) return;
+    if (!guardAction()) return;
+    lightHaptic();
+    navigation.navigate('Chat', {
+      conversationId: group.conversation_id,
+      title: group.name,
+    });
+  }, [group, guardAction, navigation]);
 
   const handleAddGame = useCallback(() => {
+    if (!guardAction()) return;
     mediumHaptic();
     // Check if user has seen the intro before
     if (hasSeenAddScoreIntro === false) {
@@ -154,7 +157,7 @@ export default function GroupDetailScreen() {
       // User has dismissed intro before - go directly to match type
       setShowMatchTypeModal(true);
     }
-  }, [hasSeenAddScoreIntro]);
+  }, [guardAction, hasSeenAddScoreIntro]);
 
   const handleAddScoreIntroComplete = useCallback(() => {
     setShowAddScoreIntro(false);

@@ -273,6 +273,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   // Track the last uploaded profile picture URL to clean up old uploads
   const [lastUploadedProfileUrl, setLastUploadedProfileUrl] = useState<string | null>(null);
+  // Show city error only after user attempted to continue on location step (not on first load)
+  const [locationStepShowErrors, setLocationStepShowErrors] = useState(false);
 
   // Profile hook to refetch profile when onboarding completes
   const { refetch: refetchProfile } = useProfile();
@@ -379,6 +381,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     });
   }, [currentStepIndex, translateX]);
 
+  // Reset location step error state when leaving the step
+  useEffect(() => {
+    if (currentStepId !== 'location') {
+      setLocationStepShowErrors(false);
+    }
+  }, [currentStepId]);
+
   // Validate and save current step data
   const validateAndSaveStep = useCallback(async (): Promise<boolean> => {
     switch (currentStepId) {
@@ -463,6 +472,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       case 'location': {
         // City is mandatory
         if (!formData.city.trim()) {
+          setLocationStepShowErrors(true);
           Alert.alert(
             t('alerts.error' as TranslationKey),
             t('onboarding.validation.cityRequired' as TranslationKey)
@@ -928,6 +938,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             colors={colors}
             t={t}
             isDark={isDark}
+            showCityError={locationStepShowErrors && !formData.city.trim()}
           />
         );
       case 'sports':

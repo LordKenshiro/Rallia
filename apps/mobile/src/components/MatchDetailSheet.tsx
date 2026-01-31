@@ -59,7 +59,12 @@ import { useMatchDetailSheet } from '../context/MatchDetailSheetContext';
 import { useActionsSheet } from '../context/ActionsSheetContext';
 import { usePlayerInviteSheet } from '../context/PlayerInviteSheetContext';
 import { useFeedbackSheet } from '../context/FeedbackSheetContext';
-import { useTranslation, usePermissions, useAuth, useProfile, type TranslationKey } from '../hooks';
+import {
+  useTranslation,
+  usePermissions,
+  useRequireOnboarding,
+  type TranslationKey,
+} from '../hooks';
 import { useTheme, usePlayer, useMatchActions } from '@rallia/shared-hooks';
 import { getMatchChat } from '@rallia/shared-services';
 import { shareMatch } from '../utils';
@@ -589,11 +594,10 @@ const CheckInButton: React.FC<CheckInButtonProps> = ({
 
 export const MatchDetailSheet: React.FC = () => {
   const { sheetRef, closeSheet, selectedMatch, updateSelectedMatch } = useMatchDetailSheet();
-  const { openSheet: openAuthSheet, openSheetForEdit } = useActionsSheet();
+  const { openSheetForEdit } = useActionsSheet();
   const { openSheet: openInviteSheet } = usePlayerInviteSheet();
   const { openSheet: openFeedbackSheet } = useFeedbackSheet();
-  const { session } = useAuth();
-  const { profile } = useProfile();
+  const { guardAction } = useRequireOnboarding();
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
   const { player } = usePlayer();
@@ -607,13 +611,10 @@ export const MatchDetailSheet: React.FC = () => {
   const handleParticipantProfilePress = useCallback(
     (targetPlayerId: string) => {
       closeSheet();
-      if (!session?.user || !profile?.onboarding_completed) {
-        openAuthSheet();
-        return;
-      }
+      if (!guardAction()) return;
       navigateToPlayerProfileFromOutside(targetPlayerId);
     },
-    [closeSheet, session?.user, profile?.onboarding_completed, openAuthSheet]
+    [closeSheet, guardAction]
   );
 
   // Confirmation modal states
@@ -928,6 +929,12 @@ export const MatchDetailSheet: React.FC = () => {
   const handleOpenChat = useCallback(() => {
     if (!matchConversationId || !selectedMatch) return;
 
+    // Guard action: require auth and onboarding to access chat
+    if (!guardAction()) {
+      closeSheet();
+      return;
+    }
+
     lightHaptic();
     closeSheet();
 
@@ -952,26 +959,20 @@ export const MatchDetailSheet: React.FC = () => {
         });
       }
     }, 100);
-  }, [matchConversationId, selectedMatch, closeSheet, locale, t]);
-
-  // Helper to redirect to auth sheet if user is not authenticated
-  const requireAuth = useCallback((): boolean => {
-    if (!playerId) {
-      // Close detail sheet and open auth sheet
-      closeSheet();
-      openAuthSheet();
-      return false;
-    }
-    return true;
-  }, [playerId, closeSheet, openAuthSheet]);
+  }, [matchConversationId, selectedMatch, guardAction, closeSheet, locale, t]);
 
   // Handle join match
   const handleJoinMatch = useCallback(() => {
     if (!selectedMatch) return;
-    if (!requireAuth()) return;
+    // Guard action: if user is not authenticated or not onboarded,
+    // close this sheet and open auth/onboarding sheet
+    if (!guardAction()) {
+      closeSheet();
+      return;
+    }
     mediumHaptic();
     joinMatch(playerId!);
-  }, [selectedMatch, requireAuth, playerId, joinMatch]);
+  }, [selectedMatch, guardAction, closeSheet, playerId, joinMatch]);
 
   // Handle leave match - opens confirmation modal
   const handleLeaveMatch = useCallback(() => {

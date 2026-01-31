@@ -149,6 +149,9 @@
     "timeAgo": "il y a {time}",
     "signInRequired": "Connexion requise",
     "signInPrompt": "Veuillez vous connecter pour voir vos notifications",
+    "onboardingRequired": "Complétez votre profil",
+    "onboardingPrompt": "Terminez la configuration de votre profil pour recevoir et voir vos notifications",
+    "completeOnboarding": "Compléter le profil",
     "time": {
       "justNow": "À l'instant",
       "today": "Aujourd'hui",
@@ -895,7 +898,7 @@
     "genderValues": {
       "male": "Homme",
       "female": "Femme",
-      "other": "Non-binaire",
+      "other": "Autre",
       "preferNotToSay": "Préfère ne pas dire"
     },
     "hand": {
@@ -1379,6 +1382,9 @@
     "inbox": "Boîte de réception",
     "signInRequired": "Connectez-vous pour voir vos messages",
     "signInPrompt": "Connectez-vous pour voir vos conversations et vous connecter avec d'autres joueurs.",
+    "onboardingRequired": "Complétez votre profil",
+    "onboardingPrompt": "Terminez la configuration de votre profil pour discuter avec d'autres joueurs.",
+    "completeOnboarding": "Compléter le profil",
     "search": "Rechercher des joueurs",
     "searchConversations": "Rechercher des conversations",
     "newGroup": "Nouveau groupe",
@@ -2755,6 +2761,8 @@
     "welcomeBack": "Bon retour! 👋",
     "yourMatches": "🎾 Vos parties",
     "signInPrompt": "Veuillez vous connecter pour créer et accéder à vos parties",
+    "onboardingPrompt": "Complétez votre profil pour créer et accéder à vos parties",
+    "completeProfile": "Compléter le profil",
     "user": "Utilisateur",
     "subtitle": "La meilleure façon de trouver votre prochain partenaire de tennis ou de pickleball",
     "soonAndNearby": "Bientôt et à proximité",

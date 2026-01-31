@@ -24,8 +24,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Text, Skeleton } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useAuth, useTranslation } from '../hooks';
-import { useActionsSheet } from '../context';
+import { useThemeStyles, useAuth, useTranslation, useRequireOnboarding } from '../hooks';
 import {
   usePlayerGroups,
   useCreateGroup,
@@ -150,8 +149,8 @@ export default function GroupsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
-  const { openSheet } = useActionsSheet();
   const { t } = useTranslation();
+  const { guardAction } = useRequireOnboarding();
   const playerId = session?.user?.id;
 
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -166,15 +165,11 @@ export default function GroupsScreen() {
 
   const handleCreateGroup = useCallback(
     async (name: string, description?: string, coverImageUrl?: string) => {
-      if (!playerId) {
-        // Not authenticated: open auth sheet
-        openSheet();
-        return;
-      }
+      if (!guardAction()) return;
 
       try {
         const newGroup = await createGroupMutation.mutateAsync({
-          playerId,
+          playerId: playerId!,
           input: { name, description, cover_image_url: coverImageUrl },
         });
         setShowCreateModal(false);
@@ -187,7 +182,7 @@ export default function GroupsScreen() {
         );
       }
     },
-    [playerId, createGroupMutation, navigation, t, openSheet]
+    [guardAction, playerId, createGroupMutation, navigation, t]
   );
 
   const handleGroupJoined = useCallback(
@@ -241,12 +236,8 @@ export default function GroupsScreen() {
           <TouchableOpacity
             style={[styles.createButton, { backgroundColor: colors.primary }]}
             onPress={() => {
-              if (!playerId) {
-                // Not authenticated: open auth sheet
-                openSheet();
-              } else {
-                setShowCreateModal(true);
-              }
+              if (!guardAction()) return;
+              setShowCreateModal(true);
             }}
           >
             <Ionicons name="add" size={20} color="#FFFFFF" />
@@ -260,12 +251,8 @@ export default function GroupsScreen() {
               { backgroundColor: colors.cardBackground, borderColor: colors.border },
             ]}
             onPress={() => {
-              if (!playerId) {
-                // Not authenticated: open auth sheet
-                openSheet();
-              } else {
-                setShowScannerModal(true);
-              }
+              if (!guardAction()) return;
+              setShowScannerModal(true);
             }}
           >
             <Ionicons name="qr-code-outline" size={20} color={colors.primary} />
@@ -276,7 +263,7 @@ export default function GroupsScreen() {
         </View>
       </View>
     ),
-    [colors, t, playerId, openSheet]
+    [colors, t, guardAction]
   );
 
   if (isLoading) {
@@ -386,12 +373,8 @@ export default function GroupsScreen() {
           <TouchableOpacity
             style={[styles.fabSecondary, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}
             onPress={() => {
-              if (!playerId) {
-                // Not authenticated: open auth sheet
-                openSheet();
-              } else {
-                setShowScannerModal(true);
-              }
+              if (!guardAction()) return;
+              setShowScannerModal(true);
             }}
             activeOpacity={0.8}
           >
@@ -402,12 +385,8 @@ export default function GroupsScreen() {
           <TouchableOpacity
             style={[styles.fab, { backgroundColor: colors.primary }]}
             onPress={() => {
-              if (!playerId) {
-                // Not authenticated: open auth sheet
-                openSheet();
-              } else {
-                setShowCreateModal(true);
-              }
+              if (!guardAction()) return;
+              setShowCreateModal(true);
             }}
             activeOpacity={0.8}
           >

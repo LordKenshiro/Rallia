@@ -14,7 +14,6 @@ import {
   Modal,
   Image,
   Pressable,
-  ScrollView,
   Keyboard,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -146,6 +145,24 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
       onUpdateFormData({ phoneNumber: fullNumber });
     },
     [onUpdateFormData]
+  );
+
+  const getGenderLabel = useCallback(
+    (value: string, fallbackLabel: string) => {
+      switch (value) {
+        case 'male':
+          return t('profile.genderValues.male');
+        case 'female':
+          return t('profile.genderValues.female');
+        case 'other':
+          return t('profile.genderValues.other');
+        case 'prefer_not_to_say':
+          return t('profile.genderValues.preferNotToSay');
+        default:
+          return fallbackLabel;
+      }
+    },
+    [t]
   );
 
   // Get the current date value for the picker
@@ -405,7 +422,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
         />
       )}
 
-      {/* Gender - Horizontal Scrollable Options */}
+      {/* Gender - Full-width Options */}
       <View style={styles.inputContainer}>
         <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
           {t('onboarding.personalInfoStep.gender' as TranslationKey)}{' '}
@@ -413,11 +430,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
             {t('onboarding.personalInfoStep.required' as TranslationKey)}
           </Text>
         </Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.genderRow}
-        >
+        <View style={styles.genderRow}>
           {genderOptions.map(option => {
             const isSelected = formData.gender === option.value;
             return (
@@ -441,12 +454,12 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
                   weight={isSelected ? 'semibold' : 'regular'}
                   color={isSelected ? colors.buttonTextActive : colors.text}
                 >
-                  {option.label}
+                  {getGenderLabel(option.value, option.label)}
                 </Text>
               </TouchableOpacity>
             );
           })}
-        </ScrollView>
+        </View>
       </View>
 
       {/* Phone Number */}
@@ -539,14 +552,13 @@ const styles = StyleSheet.create({
   genderRow: {
     flexDirection: 'row',
     gap: spacingPixels[2],
-    paddingRight: spacingPixels[2],
   },
   genderOption: {
+    flex: 1,
     paddingVertical: spacingPixels[3],
     paddingHorizontal: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
-    minWidth: 70,
     alignItems: 'center',
   },
   modalOverlay: {

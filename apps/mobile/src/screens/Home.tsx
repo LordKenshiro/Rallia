@@ -54,6 +54,9 @@ const Home = () => {
   const { profile } = useProfile();
   const { setOnHomeScreen } = useOverlay();
   const { openSheet } = useActionsSheet();
+
+  // User is fully onboarded only if authenticated AND onboarding is complete
+  const isOnboarded = !!session?.user && profile?.onboarding_completed;
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
   const { colors } = useThemeStyles();
   const { t, locale } = useTranslation();
@@ -322,8 +325,8 @@ const Home = () => {
 
   // Render "My Matches" section with horizontal scroll
   const renderMyMatchesSection = useCallback(() => {
-    // Only show for authenticated users
-    if (!session) return null;
+    // Only show for fully onboarded users
+    if (!isOnboarded) return null;
 
     return (
       <View style={styles.myMatchesSection}>
@@ -447,7 +450,7 @@ const Home = () => {
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    session,
+    isOnboarded,
     colors.text,
     colors.primary,
     colors.textMuted,
@@ -466,6 +469,7 @@ const Home = () => {
     const headerComponents = [];
 
     if (!session) {
+      // Not signed in: show sign-in prompt
       headerComponents.push(
         <View
           key="sign-in"
@@ -486,8 +490,30 @@ const Home = () => {
           </Button>
         </View>
       );
+    } else if (!isOnboarded) {
+      // Signed in but not onboarded: show complete profile prompt
+      headerComponents.push(
+        <View
+          key="complete-profile"
+          style={[
+            styles.matchesSection,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <Heading level={3}>{t('home.yourMatches')}</Heading>
+          <Text size="sm" color={colors.textMuted} style={styles.sectionSubtitle}>
+            {t('home.onboardingPrompt')}
+          </Text>
+          <Button variant="primary" onPress={openSheet} style={styles.signInButton}>
+            {t('home.completeProfile')}
+          </Button>
+        </View>
+      );
     } else {
-      // Show welcome message for logged-in users
+      // Fully onboarded: show welcome and My Matches
       if (showWelcome) {
         headerComponents.push(
           <Animated.View
@@ -510,7 +536,7 @@ const Home = () => {
         );
       }
 
-      // Add "My Matches" section for authenticated users
+      // Add "My Matches" section for fully onboarded users
       headerComponents.push(<View key="my-matches">{renderMyMatchesSection()}</View>);
     }
 
@@ -522,6 +548,7 @@ const Home = () => {
     return <View>{headerComponents}</View>;
   }, [
     session,
+    isOnboarded,
     showWelcome,
     showNearbySection,
     colors.card,

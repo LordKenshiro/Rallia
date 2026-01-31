@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { useTheme, useMatch } from '@rallia/shared-hooks';
-import { useAuth } from '../hooks';
+import { useAuth, useRequireOnboarding } from '../hooks';
 import { useTranslation, type TranslationOptions } from '../hooks/useTranslation';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { useActionsSheet, useMatchDetailSheet } from '../context';
@@ -287,6 +287,7 @@ const Notifications: React.FC = () => {
   const { t, locale } = useTranslation();
   const { openSheet } = useActionsSheet();
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
+  const { isReady: isOnboarded } = useRequireOnboarding();
   const isDark = theme === 'dark';
 
   // State for handling match detail opening
@@ -467,6 +468,20 @@ const Notifications: React.FC = () => {
         description={t('notifications.signInPrompt')}
         buttonText={t('auth.signIn')}
         onSignIn={openSheet}
+      />
+    );
+  }
+
+  // Show onboarding prompt if authenticated but not onboarded
+  if (!isOnboarded && !isLoadingAuth) {
+    return (
+      <SignInPrompt
+        variant="notifications"
+        title={t('notifications.onboardingRequired')}
+        description={t('notifications.onboardingPrompt')}
+        buttonText={t('notifications.completeOnboarding')}
+        onSignIn={openSheet}
+        icon="person-add"
       />
     );
   }
