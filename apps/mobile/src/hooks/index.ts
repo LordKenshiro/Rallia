@@ -2,6 +2,7 @@
  * Central export for all custom hooks
  */
 export * from './useAuth';
+export * from './useNavigateToPlayerProfile';
 export * from './useImagePicker';
 export * from './usePermissions';
 export * from './useTranslation';

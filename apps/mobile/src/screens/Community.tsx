@@ -14,7 +14,13 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
-import { useAuth, useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
+import {
+  useAuth,
+  useThemeStyles,
+  useTranslation,
+  useNavigateToPlayerProfile,
+  type TranslationKey,
+} from '../hooks';
 import { useSport } from '../context';
 import { spacingPixels } from '@rallia/design-system';
 import { primary, neutral } from '@rallia/design-system';
@@ -122,15 +128,12 @@ const Community = () => {
     [handleShareLists, handleGroups, handleCommunities, handleTournaments, t]
   );
 
+  const navigateToPlayerProfile = useNavigateToPlayerProfile();
   const handlePlayerPress = useCallback(
     (player: PlayerSearchResult) => {
-      // Navigate to player profile screen with selected sport
-      navigation.navigate('PlayerProfile', {
-        playerId: player.id,
-        sportId: selectedSport?.id,
-      });
+      navigateToPlayerProfile(player.id, selectedSport?.id);
     },
-    [navigation, selectedSport?.id]
+    [navigateToPlayerProfile, selectedSport?.id]
   );
 
   // Render action buttons row

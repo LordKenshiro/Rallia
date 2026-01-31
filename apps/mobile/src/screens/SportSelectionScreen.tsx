@@ -591,7 +591,7 @@ export function SportSelectionScreen() {
               />
               <Text size="sm" color={isDark ? primary[300] : primary[700]} style={styles.hintText}>
                 {t('sportSelectionOverlay.selectionHint', {
-                  sport: orderedSelection[0].display_name,
+                  sport: orderedSelection[0].display_name.toLowerCase(),
                 })}
               </Text>
             </View>

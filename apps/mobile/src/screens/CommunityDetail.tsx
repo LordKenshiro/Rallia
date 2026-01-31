@@ -26,7 +26,13 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { Text } from '@rallia/shared-components';
 import { lightHaptic, mediumHaptic, selectionHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useAuth, useTranslation, type TranslationKey } from '../hooks';
+import {
+  useThemeStyles,
+  useAuth,
+  useTranslation,
+  useNavigateToPlayerProfile,
+  type TranslationKey,
+} from '../hooks';
 import {
   useCommunityWithMembers,
   useIsCommunityModerator,
@@ -81,6 +87,7 @@ export default function CommunityDetailScreen() {
   const { session } = useAuth();
   const { t } = useTranslation();
   const playerId = session?.user?.id;
+  const navigateToPlayerProfile = useNavigateToPlayerProfile();
 
   const [activeTab, setActiveTab] = useState<TabKey>('home');
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
@@ -855,9 +862,7 @@ export default function CommunityDetailScreen() {
                                 ]}
                                 onPress={() =>
                                   participant.player_id &&
-                                  navigation.navigate('PlayerProfile', {
-                                    playerId: participant.player_id,
-                                  })
+                                  navigateToPlayerProfile(participant.player_id)
                                 }
                                 activeOpacity={0.7}
                               >
@@ -949,9 +954,7 @@ export default function CommunityDetailScreen() {
                                 ]}
                                 onPress={() =>
                                   participant.player_id &&
-                                  navigation.navigate('PlayerProfile', {
-                                    playerId: participant.player_id,
-                                  })
+                                  navigateToPlayerProfile(participant.player_id)
                                 }
                                 activeOpacity={0.7}
                               >
@@ -1058,9 +1061,7 @@ export default function CommunityDetailScreen() {
                         borderBottomColor: colors.border,
                       },
                     ]}
-                    onPress={() =>
-                      navigation.navigate('PlayerProfile', { playerId: entry.player_id })
-                    }
+                    onPress={() => navigateToPlayerProfile(entry.player_id)}
                   >
                     <View style={styles.leaderboardRank}>
                       {index < 3 ? (
@@ -1184,7 +1185,7 @@ export default function CommunityDetailScreen() {
                       onPress={() => {
                         // Navigate to player profile if actor exists
                         if (activity.actor?.id) {
-                          navigation.navigate('PlayerProfile', { playerId: activity.actor.id });
+                          navigateToPlayerProfile(activity.actor.id);
                         }
                       }}
                       activeOpacity={0.7}
@@ -1499,7 +1500,7 @@ export default function CommunityDetailScreen() {
         onMemberRemoved={() => refetch()}
         onPlayerPress={memberId => {
           setShowMemberListModal(false);
-          navigation.navigate('PlayerProfile', { playerId: memberId });
+          navigateToPlayerProfile(memberId);
         }}
       />
 
@@ -1558,7 +1559,7 @@ export default function CommunityDetailScreen() {
                       style={styles.requestHeader}
                       onPress={() => {
                         setShowPendingRequestsModal(false);
-                        navigation.navigate('PlayerProfile', { playerId: request.player_id });
+                        navigateToPlayerProfile(request.player_id);
                       }}
                     >
                       <View
@@ -1704,7 +1705,7 @@ export default function CommunityDetailScreen() {
         }}
         onPlayerPress={playerId => {
           setShowRecentGamesModal(false);
-          navigation.navigate('PlayerProfile', { playerId });
+          navigateToPlayerProfile(playerId);
         }}
       />
     </SafeAreaView>

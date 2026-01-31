@@ -126,29 +126,17 @@ export function SportStep({ onContinue, isActive = true }: SportStepProps) {
         keyboardShouldPersistTaps="handled"
       >
         {/* Header Section */}
-        <Animated.View
-          entering={FadeInDown.delay(50).springify()}
-          style={styles.headerSection}
-        >
+        <Animated.View entering={FadeInDown.delay(50).springify()} style={styles.headerSection}>
           <View
             style={[
               styles.iconContainer,
               { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)' },
             ]}
           >
-            <Ionicons
-              name="tennisball"
-              size={36}
-              color={isDark ? primary[400] : primary[600]}
-            />
+            <Ionicons name="tennisball" size={36} color={isDark ? primary[400] : primary[600]} />
           </View>
 
-          <Text
-            size="xl"
-            weight="bold"
-            color={colors.foreground}
-            style={styles.title}
-          >
+          <Text size="xl" weight="bold" color={colors.foreground} style={styles.title}>
             {t('sportSelectionOverlay.title')}
           </Text>
 
@@ -240,10 +228,7 @@ export function SportStep({ onContinue, isActive = true }: SportStepProps) {
         </View>
 
         {/* Bottom Section */}
-        <Animated.View
-          entering={FadeInUp.delay(400).springify()}
-          style={styles.bottomSection}
-        >
+        <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.bottomSection}>
           {orderedSelection.length > 1 && (
             <View
               style={[
@@ -261,7 +246,7 @@ export function SportStep({ onContinue, isActive = true }: SportStepProps) {
               />
               <Text size="sm" color={isDark ? primary[300] : primary[700]} style={styles.hintText}>
                 {t('sportSelectionOverlay.selectionHint', {
-                  sport: orderedSelection[0].display_name,
+                  sport: orderedSelection[0].display_name.toLowerCase(),
                 })}
               </Text>
             </View>

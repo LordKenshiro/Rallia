@@ -111,6 +111,9 @@
     "enterAllDigits": "Veuillez entrer les 6 chiffres",
     "authFailed": "L'authentification a échoué. Veuillez réessayer."
   },
+  "splash": {
+    "slogan": "Ta prochaine partie t'attend."
+  },
   "navigation": {
     "home": "Accueil",
     "matches": "Parties",

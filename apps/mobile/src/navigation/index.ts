@@ -55,6 +55,17 @@ export function navigateToCommunityScreen<T extends keyof CommunityStackParamLis
   }
 }
 
+/**
+ * Navigate to PlayerProfile from outside the NavigationContainer.
+ * Use in components like MatchDetailSheet that render outside the navigation tree.
+ * Caller is responsible for auth/onboarding checks (open auth sheet if not signed in or not onboarded).
+ */
+export function navigateToPlayerProfileFromOutside(playerId: string, sportId?: string) {
+  if (navigationRef.isReady()) {
+    navigationRef.navigate('PlayerProfile', { playerId, sportId });
+  }
+}
+
 // Main navigator
 export { default as AppNavigator } from './AppNavigator';
 

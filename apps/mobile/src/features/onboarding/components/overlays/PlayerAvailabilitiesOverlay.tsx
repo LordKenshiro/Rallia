@@ -57,6 +57,17 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
   const days: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const timeSlots: TimeSlot[] = ['AM', 'PM', 'EVE'];
 
+  // Map short day labels to translation keys (monday, tuesday, ...)
+  const dayTranslationKey: Record<DayOfWeek, string> = {
+    Mon: 'monday',
+    Tue: 'tuesday',
+    Wed: 'wednesday',
+    Thu: 'thursday',
+    Fri: 'friday',
+    Sat: 'saturday',
+    Sun: 'sunday',
+  };
+
   // Default availabilities for onboarding mode (all unselected)
   const defaultAvailabilities: WeeklyAvailability = {
     Mon: { AM: false, PM: false, EVE: false },
@@ -243,24 +254,14 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
         <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Availability Grid */}
           <View style={styles.gridContainer}>
-            {/* Header Row */}
-            <View style={styles.row}>
-              <View style={styles.dayCell} />
-              {timeSlots.map(slot => (
-                <View key={slot} style={styles.headerCell}>
-                  <Text style={[styles.headerText, { color: colors.textMuted }]}>
-                    {t(`onboarding.availabilityStep.${slot.toLowerCase()}` as TranslationKey)}
-                  </Text>
-                </View>
-              ))}
-            </View>
-
             {/* Day Rows */}
             {days.map(day => (
               <View key={day} style={styles.row}>
                 <View style={styles.dayCell}>
                   <Text style={[styles.dayText, { color: colors.text }]}>
-                    {t(`onboarding.availabilityStep.days.${day.toLowerCase()}` as TranslationKey)}
+                    {t(
+                      `onboarding.availabilityStep.days.${dayTranslationKey[day]}` as TranslationKey
+                    )}
                   </Text>
                 </View>
                 {timeSlots.map(slot => (

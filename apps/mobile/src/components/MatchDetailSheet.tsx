@@ -59,19 +59,19 @@ import { useMatchDetailSheet } from '../context/MatchDetailSheetContext';
 import { useActionsSheet } from '../context/ActionsSheetContext';
 import { usePlayerInviteSheet } from '../context/PlayerInviteSheetContext';
 import { useFeedbackSheet } from '../context/FeedbackSheetContext';
-import { useTranslation, usePermissions, type TranslationKey } from '../hooks';
+import { useTranslation, usePermissions, useAuth, useProfile, type TranslationKey } from '../hooks';
 import { useTheme, usePlayer, useMatchActions } from '@rallia/shared-hooks';
 import { getMatchChat } from '@rallia/shared-services';
 import { shareMatch } from '../utils';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import { ConfirmationModal } from './ConfirmationModal';
 import { RequesterDetailsModal } from './RequesterDetailsModal';
+import { navigationRef, navigateToPlayerProfileFromOutside } from '../navigation';
 import type {
   PlayerWithProfile,
   MatchParticipantWithPlayer,
   OpponentForFeedback,
 } from '@rallia/shared-types';
-import { navigationRef } from '../navigation';
 
 // Use base.white from design system for consistency
 
@@ -107,47 +107,6 @@ function getMatchTier(courtStatus: string | null, creatorReputationScore?: numbe
  * - readyToPlay: secondary (coral/red) - court ready, energetic
  * - regular: primary (teal) - standard matches
  */
-const TIER_PALETTES = {
-  // Most Wanted - accent palette (amber/gold - premium, highly desirable)
-  mostWanted: {
-    light: {
-      background: accent[50],
-      accentStart: accent[500],
-      accentEnd: accent[400],
-    },
-    dark: {
-      background: '#3d2b10',
-      accentStart: accent[400],
-      accentEnd: accent[300],
-    },
-  },
-  // Ready to Play - secondary palette (coral/red tones)
-  readyToPlay: {
-    light: {
-      background: secondary[50],
-      accentStart: secondary[500],
-      accentEnd: secondary[400],
-    },
-    dark: {
-      background: secondary[900],
-      accentStart: secondary[400],
-      accentEnd: secondary[300],
-    },
-  },
-  // Regular - primary palette (teal/mint - fresh, standard)
-  regular: {
-    light: {
-      background: primary[50],
-      accentStart: primary[500],
-      accentEnd: primary[400],
-    },
-    dark: {
-      background: primary[950],
-      accentStart: primary[400],
-      accentEnd: primary[300],
-    },
-  },
-} as const;
 
 // =============================================================================
 // TYPES
@@ -633,6 +592,8 @@ export const MatchDetailSheet: React.FC = () => {
   const { openSheet: openAuthSheet, openSheetForEdit } = useActionsSheet();
   const { openSheet: openInviteSheet } = usePlayerInviteSheet();
   const { openSheet: openFeedbackSheet } = useFeedbackSheet();
+  const { session } = useAuth();
+  const { profile } = useProfile();
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
   const { player } = usePlayer();
@@ -640,6 +601,20 @@ export const MatchDetailSheet: React.FC = () => {
   const isDark = theme === 'dark';
   const toast = useToast();
   const playerId = player?.id;
+
+  // Navigate to player profile or open auth sheet if not signed in / onboarding incomplete.
+  // Uses navigateToPlayerProfileFromOutside (same pattern as ActionsBottomSheet) because this sheet is rendered outside NavigationContainer.
+  const handleParticipantProfilePress = useCallback(
+    (targetPlayerId: string) => {
+      closeSheet();
+      if (!session?.user || !profile?.onboarding_completed) {
+        openAuthSheet();
+        return;
+      }
+      navigateToPlayerProfileFromOutside(targetPlayerId);
+    },
+    [closeSheet, session?.user, profile?.onboarding_completed, openAuthSheet]
+  );
 
   // Confirmation modal states
   const [showLeaveModal, setShowLeaveModal] = useState(false);
@@ -714,7 +689,6 @@ export const MatchDetailSheet: React.FC = () => {
     isCancellingRequest,
     isKicking,
     isCancellingInvite,
-    isResendingInvite,
     isCheckingIn,
   } = useMatchActions(selectedMatch?.id, {
     onJoinSuccess: result => {
@@ -1334,7 +1308,6 @@ export const MatchDetailSheet: React.FC = () => {
   // Determine match tier and get tier-specific accent colors
   const creatorReputationScore = match.created_by_player?.reputation_score;
   const tier = getMatchTier(match.court_status, creatorReputationScore);
-  const tierPaletteColors = TIER_PALETTES[tier][isDark ? 'dark' : 'light'];
 
   // Tier-aware accent colors
   const tierAccent = (() => {
@@ -2343,9 +2316,8 @@ export const MatchDetailSheet: React.FC = () => {
                 <View style={styles.participantAvatarWithAction}>
                   <TouchableOpacity
                     onPress={() => {
-                      if (!p.isEmpty && p.playerId && navigationRef.isReady()) {
-                        closeSheet();
-                        navigationRef.navigate('PlayerProfile', { playerId: p.playerId });
+                      if (!p.isEmpty && p.playerId) {
+                        handleParticipantProfilePress(p.playerId);
                       }
                     }}
                     activeOpacity={p.isEmpty ? 1 : 0.7}

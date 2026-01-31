@@ -1298,18 +1298,6 @@ const PlayerProfile = () => {
 
           <View style={[styles.card, { backgroundColor: colors.card }]}>
             <View style={styles.availabilityGrid}>
-              {/* Header Row */}
-              <View style={styles.availabilityRow}>
-                <View style={styles.dayCell} />
-                {['AM', 'PM', 'EVE'].map(slot => (
-                  <View key={slot} style={styles.headerCell}>
-                    <Text size="xs" weight="semibold" color={colors.textMuted}>
-                      {slot}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-
               {/* Day Rows */}
               {Object.keys(availabilities).map(day => (
                 <View key={day} style={styles.availabilityRow}>

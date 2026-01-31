@@ -111,6 +111,9 @@
     "enterAllDigits": "Please enter all 6 digits",
     "authFailed": "Authentication failed. Please try again."
   },
+  "splash": {
+    "slogan": "Play More, Plan Less."
+  },
   "navigation": {
     "home": "Home",
     "matches": "Games",

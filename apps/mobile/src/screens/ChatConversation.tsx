@@ -11,7 +11,14 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 
-import { useThemeStyles, useAuth, useProfile, useTranslation, type TranslationKey } from '../hooks';
+import {
+  useThemeStyles,
+  useAuth,
+  useProfile,
+  useTranslation,
+  useNavigateToPlayerProfile,
+  type TranslationKey,
+} from '../hooks';
 import { lightHaptic } from '@rallia/shared-utils';
 import {
   useConversation,
@@ -331,14 +338,22 @@ export default function ChatConversationScreen() {
     navigation.goBack();
   }, [navigation]);
 
+  const navigateToPlayerProfile = useNavigateToPlayerProfile();
   // Navigate to player profile (direct chat) or group info (group chat) when tapping header
   const handleTitlePress = useCallback(() => {
     if (isDirectChat && otherUserId) {
-      navigation.navigate('PlayerProfile', { playerId: otherUserId });
+      navigateToPlayerProfile(otherUserId);
     } else if (conversation?.conversation_type === 'group') {
       navigation.navigate('GroupChatInfo', { conversationId });
     }
-  }, [isDirectChat, otherUserId, conversation, conversationId, navigation]);
+  }, [
+    isDirectChat,
+    otherUserId,
+    conversation,
+    conversationId,
+    navigation,
+    navigateToPlayerProfile,
+  ]);
 
   // Header menu handlers
   const handleSearchPress = useCallback(() => {

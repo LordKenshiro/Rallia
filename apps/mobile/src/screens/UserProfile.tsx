@@ -16,7 +16,7 @@ import { supabase, Logger } from '@rallia/shared-services';
 import { usePlayerReputation } from '@rallia/shared-hooks';
 import { ReputationBadge } from '../components/ReputationBadge';
 import { replaceImage } from '../services/imageUpload';
-import { useImagePicker, useThemeStyles, useTranslation } from '../hooks';
+import { useImagePicker, useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { formatDate as formatDateUtil, formatDateMonthYear } from '../utils/dateFormatting';
@@ -550,16 +550,18 @@ const UserProfile = () => {
   };
 
   const getDayLabel = (day: string): string => {
-    const dayMap: { [key: string]: string } = {
-      monday: 'Mon',
-      tuesday: 'Tue',
-      wednesday: 'Wed',
-      thursday: 'Thu',
-      friday: 'Fri',
-      saturday: 'Sat',
-      sunday: 'Sun',
-    };
-    return dayMap[day] || day;
+    const key = `onboarding.availabilityStep.days.${day}` as TranslationKey;
+    const translated = t(key);
+    return translated !== key ? translated : day;
+  };
+
+  const getPeriodLabel = (period: PeriodKey): string => {
+    const keyMap = {
+      morning: 'onboarding.availabilityStep.am',
+      afternoon: 'onboarding.availabilityStep.pm',
+      evening: 'onboarding.availabilityStep.eve',
+    } as const;
+    return t(keyMap[period] as TranslationKey);
   };
 
   if (loading) {
@@ -922,18 +924,6 @@ const UserProfile = () => {
           <View style={[styles.card, { backgroundColor: colors.card }]}>
             {/* Availability Grid - Same as PlayerAvailabilitiesOverlay */}
             <View style={styles.gridContainer}>
-              {/* Header Row */}
-              <View style={styles.gridRow}>
-                <View style={styles.dayCell} />
-                {['AM', 'PM', 'EVE'].map(slot => (
-                  <View key={slot} style={styles.headerCell}>
-                    <Text size="xs" weight="semibold" color={colors.textMuted}>
-                      {slot}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-
               {/* Day Rows */}
               {Object.keys(availabilities).map(day => (
                 <View key={day} style={styles.gridRow}>
@@ -965,7 +955,7 @@ const UserProfile = () => {
                               : colors.textMuted
                           }
                         >
-                          {period === 'morning' ? 'AM' : period === 'afternoon' ? 'PM' : 'EVE'}
+                          {getPeriodLabel(period)}
                         </Text>
                       </View>
                     </View>

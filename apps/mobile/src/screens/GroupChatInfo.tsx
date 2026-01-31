@@ -33,6 +33,7 @@ import {
   useGroupMemberManagement,
   useGroupEditActions,
   useTranslation,
+  useNavigateToPlayerProfile,
   type TranslationKey,
 } from '../hooks';
 import type { RootStackParamList } from '../navigation/types';
@@ -146,12 +147,12 @@ export default function GroupChatInfoScreen() {
     // Alert removed - would use Alert.alert here
   }, []);
 
-  // Navigate to member profile
+  const navigateToPlayerProfile = useNavigateToPlayerProfile();
   const handleMemberPress = useCallback(
     (memberId: string) => {
-      navigation.navigate('PlayerProfile', { playerId: memberId });
+      navigateToPlayerProfile(memberId);
     },
-    [navigation]
+    [navigateToPlayerProfile]
   );
 
   // Render member item

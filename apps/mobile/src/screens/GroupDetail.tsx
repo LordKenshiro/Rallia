@@ -24,7 +24,13 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { Text } from '@rallia/shared-components';
 import { lightHaptic, selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useAuth, useTranslation, type TranslationKey } from '../hooks';
+import {
+  useThemeStyles,
+  useAuth,
+  useTranslation,
+  useNavigateToPlayerProfile,
+  type TranslationKey,
+} from '../hooks';
 import {
   useGroupWithMembers,
   useGroupStats,
@@ -75,6 +81,7 @@ export default function GroupDetailScreen() {
   const { session } = useAuth();
   const { t } = useTranslation();
   const playerId = session?.user?.id;
+  const navigateToPlayerProfile = useNavigateToPlayerProfile();
 
   const [activeTab, setActiveTab] = useState<TabKey>('home');
   const [showEditModal, setShowEditModal] = useState(false);
@@ -737,9 +744,7 @@ export default function GroupDetailScreen() {
                                 ]}
                                 onPress={() =>
                                   participant.player_id &&
-                                  navigation.navigate('PlayerProfile', {
-                                    playerId: participant.player_id,
-                                  })
+                                  navigateToPlayerProfile(participant.player_id)
                                 }
                                 activeOpacity={0.7}
                               >
@@ -835,9 +840,7 @@ export default function GroupDetailScreen() {
                                 ]}
                                 onPress={() =>
                                   participant.player_id &&
-                                  navigation.navigate('PlayerProfile', {
-                                    playerId: participant.player_id,
-                                  })
+                                  navigateToPlayerProfile(participant.player_id)
                                 }
                                 activeOpacity={0.7}
                               >
@@ -1147,9 +1150,8 @@ export default function GroupDetailScreen() {
                         { backgroundColor: colors.cardBackground, borderColor: colors.border },
                       ]}
                       onPress={() => {
-                        // Navigate to player profile if actor exists
                         if (activity.actor?.id) {
-                          navigation.navigate('PlayerProfile', { playerId: activity.actor.id });
+                          navigateToPlayerProfile(activity.actor.id);
                         }
                       }}
                       activeOpacity={0.7}
@@ -1411,7 +1413,7 @@ export default function GroupDetailScreen() {
         onMemberRemoved={() => refetch()}
         onPlayerPress={playerId => {
           setShowMemberListModal(false);
-          navigation.navigate('PlayerProfile', { playerId });
+          navigateToPlayerProfile(playerId);
         }}
       />
 
@@ -1443,7 +1445,7 @@ export default function GroupDetailScreen() {
         }}
         onPlayerPress={playerId => {
           setShowRecentGamesModal(false);
-          navigation.navigate('PlayerProfile', { playerId });
+          navigateToPlayerProfile(playerId);
         }}
       />
 

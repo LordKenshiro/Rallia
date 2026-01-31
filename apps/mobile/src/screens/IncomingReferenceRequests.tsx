@@ -24,13 +24,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Text } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
-import { useThemeStyles, useTranslation } from '../hooks';
+import { useThemeStyles, useTranslation, useNavigateToPlayerProfile } from '../hooks';
 import { lightHaptic } from '@rallia/shared-utils';
-import type { RootStackParamList } from '../navigation/types';
 import {
   spacingPixels,
   radiusPixels,
@@ -40,8 +37,6 @@ import {
 } from '@rallia/design-system';
 import { CertificationBadge } from '../features/ratings/components';
 import { RespondToReferenceOverlay } from '../features/ratings/components';
-
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 interface ReferenceRequest {
   id: string;
@@ -68,7 +63,6 @@ interface ReferenceRequest {
 }
 
 const IncomingReferenceRequests: React.FC = () => {
-  const navigation = useNavigation<NavigationProp>();
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
 
@@ -215,9 +209,10 @@ const IncomingReferenceRequests: React.FC = () => {
     setShowRespondOverlay(true);
   };
 
+  const navigateToPlayerProfile = useNavigateToPlayerProfile();
   const handleViewRequesterProfile = (requesterId: string) => {
     lightHaptic();
-    navigation.navigate('PlayerProfile', { playerId: requesterId });
+    navigateToPlayerProfile(requesterId);
   };
 
   const handleResponseComplete = () => {

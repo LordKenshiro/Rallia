@@ -1,9 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Animated, Dimensions, Easing } from 'react-native';
 import RalliaLogoDark from '../../assets/images/logo-dark.svg';
 import RalliaLogoLight from '../../assets/images/logo-light.svg';
 import { ANIMATION_DELAYS } from '../constants';
-import { useThemeStyles } from '../hooks';
+import { useThemeStyles, useTranslation } from '../hooks';
 import { primary } from '@rallia/design-system';
 
 const { width } = Dimensions.get('window');
@@ -21,21 +21,26 @@ interface SplashOverlayProps {
  */
 export function SplashOverlay({ onAnimationComplete }: SplashOverlayProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const [isVisible, setIsVisible] = useState(true);
 
-  // Logo animations
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-  const logoScale = useRef(new Animated.Value(0.6)).current;
-  const logoTranslateY = useRef(new Animated.Value(20)).current;
+  // Logo animations (useState lazy init keeps stable refs without accessing refs during render)
+  const [logoOpacity] = useState(() => new Animated.Value(0));
+  const [logoScale] = useState(() => new Animated.Value(0.6));
+  const [logoTranslateY] = useState(() => new Animated.Value(20));
+
+  // Slogan animation (slightly delayed after logo)
+  const [sloganOpacity] = useState(() => new Animated.Value(0));
+  const [sloganTranslateY] = useState(() => new Animated.Value(12));
 
   // Background circle animations
-  const circle1Scale = useRef(new Animated.Value(0.8)).current;
-  const circle1Opacity = useRef(new Animated.Value(0)).current;
-  const circle2Scale = useRef(new Animated.Value(0.8)).current;
-  const circle2Opacity = useRef(new Animated.Value(0)).current;
+  const [circle1Scale] = useState(() => new Animated.Value(0.8));
+  const [circle1Opacity] = useState(() => new Animated.Value(0));
+  const [circle2Scale] = useState(() => new Animated.Value(0.8));
+  const [circle2Opacity] = useState(() => new Animated.Value(0));
 
   // Exit animation
-  const exitOpacity = useRef(new Animated.Value(1)).current;
+  const [exitOpacity] = useState(() => new Animated.Value(1));
 
   useEffect(() => {
     // All entrance animations run in parallel with staggered delays
@@ -94,6 +99,24 @@ export function SplashOverlay({ onAnimationComplete }: SplashOverlayProps) {
           }),
         ]),
       ]),
+      // Slogan: fade in after logo
+      Animated.sequence([
+        Animated.delay(350),
+        Animated.parallel([
+          Animated.timing(sloganOpacity, {
+            toValue: 1,
+            duration: 350,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.spring(sloganTranslateY, {
+            toValue: 0,
+            tension: 60,
+            friction: 8,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]),
     ]).start();
 
     // Exit animation after splash duration
@@ -115,6 +138,8 @@ export function SplashOverlay({ onAnimationComplete }: SplashOverlayProps) {
     logoOpacity,
     logoScale,
     logoTranslateY,
+    sloganOpacity,
+    sloganTranslateY,
     circle1Scale,
     circle1Opacity,
     circle2Scale,
@@ -161,7 +186,7 @@ export function SplashOverlay({ onAnimationComplete }: SplashOverlayProps) {
         ]}
       />
 
-      {/* Logo with bounce entrance */}
+      {/* Logo and slogan (centered block) */}
       <Animated.View
         style={[
           styles.logoContainer,
@@ -176,6 +201,18 @@ export function SplashOverlay({ onAnimationComplete }: SplashOverlayProps) {
         ) : (
           <RalliaLogoDark width={200} height={80} />
         )}
+        <Animated.Text
+          style={[
+            styles.slogan,
+            {
+              color: colors.textSecondary,
+              opacity: sloganOpacity,
+              transform: [{ translateY: sloganTranslateY }],
+            },
+          ]}
+        >
+          {t('splash.slogan')}
+        </Animated.Text>
       </Animated.View>
     </Animated.View>
   );
@@ -192,6 +229,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
+  },
+  slogan: {
+    marginTop: 48,
+    textAlign: 'center',
+    fontSize: 17,
+    letterSpacing: 0.3,
   },
   circle1: {
     position: 'absolute',
