@@ -14,8 +14,9 @@ import Constants from 'expo-constants';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import { supabase } from '../../../lib/supabase';
-import { ProfileService, Logger } from '@rallia/shared-services';
+import { Logger } from '@rallia/shared-services';
 import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
+import { checkOnboardingStatus, getFriendlyErrorMessage } from '../utils';
 
 // =============================================================================
 // TYPES
@@ -98,12 +99,18 @@ async function initializeNativeModules(): Promise<boolean> {
     isErrorWithCode = googleModule.isErrorWithCode;
 
     // Configure Google Sign-In
-    // Note: offlineAccess requires a valid webClientId - only enable if provided
+    // For iOS, we prioritize the native client ID and disable offline access to avoid token audience issues
     GoogleSignin.configure({
-      webClientId: GOOGLE_WEB_CLIENT_ID || undefined,
-      iosClientId: GOOGLE_IOS_CLIENT_ID,
+      ...(Platform.OS === 'ios'
+        ? {
+            iosClientId: GOOGLE_IOS_CLIENT_ID,
+            offlineAccess: false, // Disable to ensure iOS client ID is used in token
+          }
+        : {
+            webClientId: GOOGLE_WEB_CLIENT_ID || undefined,
+            offlineAccess: !!GOOGLE_WEB_CLIENT_ID,
+          }),
       scopes: ['email', 'profile'],
-      offlineAccess: !!GOOGLE_WEB_CLIENT_ID, // Only enable if webClientId is available
     });
 
     googleInitialized = true;
@@ -117,35 +124,6 @@ async function initializeNativeModules(): Promise<boolean> {
     google: googleInitialized,
   });
   return nativeModulesInitialized;
-}
-
-// =============================================================================
-// HELPER FUNCTIONS
-// =============================================================================
-
-/**
- * Check onboarding status after successful authentication
- */
-async function checkOnboardingStatus(userId: string): Promise<boolean> {
-  try {
-    const { data: profile, error } = await ProfileService.getProfile(userId);
-
-    if (error) {
-      const errorCode = (error as { code?: string })?.code;
-      // PGRST116 = no rows found, meaning new user
-      if (errorCode === 'PGRST116') {
-        Logger.debug('No profile found - new user needs onboarding', { userId });
-        return true;
-      }
-      Logger.error('Failed to fetch profile for onboarding check', error as Error);
-      return true; // Default to needing onboarding on error
-    }
-
-    return !profile?.onboarding_completed;
-  } catch (error) {
-    Logger.error('Error checking onboarding status', error as Error);
-    return true;
-  }
 }
 
 // =============================================================================
@@ -252,23 +230,33 @@ export function useSocialAuth(): UseSocialAuthReturn {
       setIsLoading(false);
       setLoadingProvider(null);
 
+      // Handle Google Sign-In specific error codes
       if (isErrorWithCode && isErrorWithCode(error) && statusCodes) {
         switch (error.code) {
           case statusCodes.SIGN_IN_CANCELLED:
             Logger.debug('Google sign-in cancelled by user');
             return { success: false, needsOnboarding: false };
           case statusCodes.IN_PROGRESS:
-            setErrorMessage('Sign-in already in progress');
+            setErrorMessage('A sign-in is already in progress.');
             break;
-          case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
-            setErrorMessage('Google Play Services not available');
-            Alert.alert('Error', 'Google Play Services is required for Google Sign-In');
+          case statusCodes.PLAY_SERVICES_NOT_AVAILABLE: {
+            const playServicesError =
+              'Google Play Services is required. Please update it and try again.';
+            setErrorMessage(playServicesError);
+            Alert.alert('Error', playServicesError);
             break;
-          default:
-            setErrorMessage('Google sign-in failed');
+          }
+          default: {
+            const friendlyError = getFriendlyErrorMessage(error);
+            setErrorMessage(friendlyError);
+            Alert.alert('Error', friendlyError);
+          }
         }
       } else {
-        setErrorMessage((error as Error).message || 'Google sign-in failed');
+        // Use friendly error message utility for all other errors
+        const friendlyError = getFriendlyErrorMessage(error);
+        setErrorMessage(friendlyError);
+        Alert.alert('Error', friendlyError);
       }
 
       Logger.error('Google sign-in error', error as Error);
@@ -349,12 +337,16 @@ export function useSocialAuth(): UseSocialAuthReturn {
 
       const appleError = error as { code?: string };
 
+      // Handle user cancellation silently
       if (appleError.code === 'ERR_REQUEST_CANCELED') {
         Logger.debug('Apple sign-in cancelled by user');
         return { success: false, needsOnboarding: false };
       }
 
-      setErrorMessage((error as Error).message || 'Apple sign-in failed');
+      // Use friendly error message utility
+      const friendlyError = getFriendlyErrorMessage(error);
+      setErrorMessage(friendlyError);
+      Alert.alert('Error', friendlyError);
       Logger.error('Apple sign-in error', error as Error);
       warningHaptic();
       return { success: false, needsOnboarding: false, error: error as Error };

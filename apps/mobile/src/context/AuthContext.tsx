@@ -8,6 +8,8 @@
  * - Single source of truth for auth state across the app
  * - AppState listener for proper token refresh handling
  * - Session validation to detect deleted users
+ * - Session expiry detection with callback
+ * - Retry logic with exponential backoff for network resilience
  * - Proper cleanup on unmount
  */
 
@@ -17,11 +19,13 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useRef,
   PropsWithChildren,
 } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import { supabase } from '../lib/supabase';
-import type { Session, AuthError, Provider } from '@supabase/supabase-js';
+import type { Session, AuthError, Provider, User } from '@supabase/supabase-js';
+import { Logger } from '@rallia/shared-services';
 
 /** Supported OAuth providers */
 export type OAuthProvider = 'google' | 'apple' | 'facebook' | 'azure';
@@ -30,6 +34,8 @@ export type OAuthProvider = 'google' | 'apple' | 'facebook' | 'azure';
 export type AuthResult = {
   success: boolean;
   error?: AuthError | Error;
+  /** User returned from successful auth operations (verifyOtp) */
+  user?: User;
 };
 
 /** Options for OAuth sign-in */
@@ -45,6 +51,86 @@ export type EmailOtpOptions = {
   shouldCreateUser?: boolean;
 };
 
+// =============================================================================
+// RETRY LOGIC WITH EXPONENTIAL BACKOFF
+// =============================================================================
+
+interface RetryOptions {
+  maxRetries?: number;
+  baseDelayMs?: number;
+  maxDelayMs?: number;
+}
+
+const DEFAULT_RETRY_OPTIONS: Required<RetryOptions> = {
+  maxRetries: 3,
+  baseDelayMs: 1000,
+  maxDelayMs: 10000,
+};
+
+/**
+ * Check if an error is a network/transient error that should be retried
+ */
+function isRetryableError(error: unknown): boolean {
+  if (!error) return false;
+
+  const errorMessage =
+    error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+
+  const retryablePatterns = [
+    'network request failed',
+    'failed to fetch',
+    'networkerror',
+    'timeout',
+    'econnreset',
+    'econnrefused',
+    'enotfound',
+    'socket hang up',
+    'aborted',
+    'connection refused',
+    'no internet',
+    'offline',
+  ];
+
+  return retryablePatterns.some(pattern => errorMessage.includes(pattern));
+}
+
+/**
+ * Execute an async function with retry logic and exponential backoff
+ */
+async function withRetry<T>(fn: () => Promise<T>, options: RetryOptions = {}): Promise<T> {
+  const { maxRetries, baseDelayMs, maxDelayMs } = { ...DEFAULT_RETRY_OPTIONS, ...options };
+
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+
+      // Don't retry on last attempt or non-retryable errors
+      if (attempt === maxRetries || !isRetryableError(error)) {
+        throw error;
+      }
+
+      // Calculate delay with exponential backoff + jitter
+      const exponentialDelay = baseDelayMs * Math.pow(2, attempt);
+      const jitter = Math.random() * 1000;
+      const delay = Math.min(exponentialDelay + jitter, maxDelayMs);
+
+      Logger.debug(`Auth operation failed, retrying in ${Math.round(delay)}ms`, {
+        attempt: attempt + 1,
+        maxRetries,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError;
+}
+
 /** Auth context value type */
 export type AuthContextType = {
   // State
@@ -52,6 +138,10 @@ export type AuthContextType = {
   loading: boolean;
   isAuthenticated: boolean;
   user: Session['user'] | null;
+  /** Whether the session expired (user was previously logged in) */
+  sessionExpired: boolean;
+  /** Clear the session expired flag */
+  clearSessionExpired: () => void;
 
   // Auth methods
   signInWithProvider: (
@@ -75,6 +165,17 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionExpired, setSessionExpired] = useState(false);
+
+  // Track previous session to detect expiry
+  const previousSessionRef = useRef<Session | null>(null);
+
+  /**
+   * Clear the session expired flag (after user acknowledges or re-authenticates)
+   */
+  const clearSessionExpired = useCallback(() => {
+    setSessionExpired(false);
+  }, []);
 
   useEffect(() => {
     let isSubscribed = true;
@@ -90,7 +191,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         } = await supabase.auth.getSession();
 
         if (error) {
-          console.error('Error fetching session:', error);
+          Logger.error('Error fetching session', error);
         }
 
         if (initialSession && isSubscribed) {
@@ -101,8 +202,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
           } = await supabase.auth.getUser();
 
           if (userError || !user) {
-            console.warn(
-              '⚠️ Invalid session detected (user deleted from database). Clearing session...'
+            Logger.warn(
+              'Invalid session detected (user deleted from database). Clearing session...'
             );
             try {
               await supabase.auth.signOut();
@@ -115,13 +216,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
           } else {
             if (isSubscribed) {
               setSession(initialSession);
+              previousSessionRef.current = initialSession;
             }
           }
         } else if (isSubscribed) {
           setSession(null);
         }
       } catch (error) {
-        console.error('Error initializing session:', error);
+        Logger.error('Error initializing session', error as Error);
         if (isSubscribed) {
           setSession(null);
         }
@@ -138,9 +240,25 @@ export function AuthProvider({ children }: PropsWithChildren) {
     // Subscribe to auth state changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      console.log('Auth state change:', _event);
+    } = supabase.auth.onAuthStateChange((event, newSession) => {
+      Logger.debug('Auth state change', { event });
+
+      // Detect session expiry: user was logged in but session is now null
+      // and it wasn't a manual sign out
+      if (event === 'SIGNED_OUT' && previousSessionRef.current !== null && newSession === null) {
+        // Check if this was due to token expiry (not manual sign out)
+        // Manual sign out sets previousSessionRef to null before the event
+        Logger.warn('Session expired - user was signed out');
+        setSessionExpired(true);
+      }
+
+      // Track token refresh
+      if (event === 'TOKEN_REFRESHED') {
+        Logger.debug('Auth token refreshed successfully');
+      }
+
       setSession(newSession);
+      previousSessionRef.current = newSession;
     });
 
     return () => {
@@ -216,26 +334,31 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   /**
    * Send an OTP code to the user's email
+   * Includes retry logic for network resilience
    */
   const signInWithEmail = useCallback(
     async (email: string, options?: EmailOtpOptions): Promise<AuthResult> => {
       try {
-        const { error } = await supabase.auth.signInWithOtp({
-          email,
-          options: {
-            emailRedirectTo: options?.emailRedirectTo,
-            shouldCreateUser: options?.shouldCreateUser ?? true,
-          },
-        });
+        const { error } = await withRetry(
+          () =>
+            supabase.auth.signInWithOtp({
+              email,
+              options: {
+                emailRedirectTo: options?.emailRedirectTo,
+                shouldCreateUser: options?.shouldCreateUser ?? true,
+              },
+            }),
+          { maxRetries: 2 }
+        );
 
         if (error) {
-          console.error('Email OTP send error:', error);
+          Logger.error('Email OTP send error', error);
           return { success: false, error };
         }
 
         return { success: true };
       } catch (error) {
-        console.error('Unexpected email OTP send error:', error);
+        Logger.error('Unexpected email OTP send error', error as Error);
         return {
           success: false,
           error: error instanceof Error ? error : new Error('Unknown error'),
@@ -247,23 +370,32 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   /**
    * Verify an OTP code sent to the user's email
+   * Returns the authenticated user on success
+   * Includes retry logic for network resilience
    */
   const verifyOtp = useCallback(async (email: string, token: string): Promise<AuthResult> => {
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        email,
-        token,
-        type: 'email',
-      });
+      const { data, error } = await withRetry(
+        () =>
+          supabase.auth.verifyOtp({
+            email,
+            token,
+            type: 'email',
+          }),
+        { maxRetries: 2 }
+      );
 
       if (error) {
-        console.error('OTP verification error:', error);
         return { success: false, error };
       }
 
-      return { success: true };
+      // Return the user from successful verification
+      return {
+        success: true,
+        user: data.user ?? undefined,
+      };
     } catch (error) {
-      console.error('Unexpected OTP verification error:', error);
+      Logger.error('Unexpected OTP verification error', error as Error);
       return {
         success: false,
         error: error instanceof Error ? error : new Error('Unknown error'),
@@ -276,14 +408,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
    */
   const signOut = useCallback(async (): Promise<AuthResult> => {
     try {
+      // Clear previous session ref first to prevent expiry detection
+      previousSessionRef.current = null;
+      // Clear any existing session expired flag
+      setSessionExpired(false);
+
       const { error } = await supabase.auth.signOut();
       if (error) {
-        console.error('Error signing out:', error);
+        Logger.error('Error signing out', error);
         return { success: false, error };
       }
       return { success: true };
     } catch (error) {
-      console.error('Unexpected sign out error:', error);
+      Logger.error('Unexpected sign out error', error as Error);
       return {
         success: false,
         error: error instanceof Error ? error : new Error('Unknown error'),
@@ -297,6 +434,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
     loading,
     isAuthenticated: !!session,
     user: session?.user ?? null,
+    sessionExpired,
+    clearSessionExpired,
 
     // Auth methods
     signInWithProvider,

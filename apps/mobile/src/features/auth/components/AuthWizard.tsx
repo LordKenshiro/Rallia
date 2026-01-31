@@ -18,7 +18,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import type { TranslationKey } from '@rallia/shared-translations';
@@ -198,6 +198,7 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
   isDark,
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
+  const toast = useToast();
 
   const {
     email,
@@ -206,12 +207,20 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
     setCode,
     isLoading,
     errorMessage,
+    resendCooldown,
+    canResend,
     handleEmailSubmit,
     handleResendCode,
     handleVerifyCode,
     resetState,
     isEmailValid,
-  } = useAuthWizard();
+  } = useAuthWizard({
+    // Use toast for all messages instead of Alert modals
+    onVerificationError: message => toast.error(message),
+    onError: message => toast.error(message),
+    onSuccess: message => toast.success(message),
+    onWarning: message => toast.warning(message),
+  });
 
   // Social auth hook
   const {
@@ -366,6 +375,8 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
                 errorMessage={currentStep === 2 ? errorMessage : ''}
                 onVerify={goToNextStep}
                 onResendCode={handleResendCode}
+                resendCooldown={resendCooldown}
+                canResend={canResend}
                 colors={colors}
                 t={t}
                 isDark={isDark}

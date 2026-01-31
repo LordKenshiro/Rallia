@@ -5,7 +5,7 @@
  */
 import './src/lib/supabase';
 
-import { useEffect, useState, useCallback, type PropsWithChildren } from 'react';
+import { useEffect, useState, useCallback, useRef, type PropsWithChildren } from 'react';
 import { Linking } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -28,7 +28,7 @@ import {
   useNotificationRealtime,
   usePendingFeedbackCheck,
 } from '@rallia/shared-hooks';
-import { ErrorBoundary, ToastProvider, NetworkProvider } from '@rallia/shared-components';
+import { ErrorBoundary, ToastProvider, NetworkProvider, useToast } from '@rallia/shared-components';
 import { Logger } from './src/services/logger';
 import {
   AuthProvider,
@@ -195,6 +195,41 @@ function HomeLocationSync({ userId }: { userId: string | undefined }) {
 }
 
 /**
+ * SessionExpiryHandler - Shows toast when session expires unexpectedly.
+ * Monitors the sessionExpired flag from AuthContext and notifies the user.
+ * Must be rendered inside both AuthProvider and ToastProvider.
+ */
+function SessionExpiryHandler() {
+  const { sessionExpired, clearSessionExpired } = useAuth();
+  const { isSplashComplete } = useOverlay();
+  const toast = useToast();
+  const hasShownToastRef = useRef(false);
+
+  useEffect(() => {
+    // Only show toast once after splash is complete and session has expired
+    if (sessionExpired && isSplashComplete && !hasShownToastRef.current) {
+      hasShownToastRef.current = true;
+
+      // Show toast after a brief delay to ensure UI is ready
+      const timer = setTimeout(() => {
+        Logger.info('Session expired - showing notification to user');
+        toast.warning('Your session has expired. Please sign in again.');
+        clearSessionExpired();
+      }, 500);
+
+      return () => clearTimeout(timer);
+    }
+
+    // Reset the flag when session expired flag is cleared
+    if (!sessionExpired) {
+      hasShownToastRef.current = false;
+    }
+  }, [sessionExpired, isSplashComplete, clearSessionExpired, toast]);
+
+  return null;
+}
+
+/**
  * PendingFeedbackHandler - Opens FeedbackSheet for pending feedback on app launch.
  * Checks for matches in the 48h feedback window where user hasn't completed feedback.
  */
@@ -242,6 +277,8 @@ function AppContent() {
       <FeedbackSheet />
       {/* Pending Feedback Handler - auto-opens FeedbackSheet on app launch if needed */}
       <PendingFeedbackHandler />
+      {/* Session Expiry Handler - shows toast when session expires */}
+      <SessionExpiryHandler />
       {/* Splash overlay - renders on top of everything */}
       <SplashOverlay onAnimationComplete={() => setSplashComplete(true)} />
     </>

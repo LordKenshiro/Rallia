@@ -9,8 +9,11 @@ import {
   Alert,
   ActivityIndicator,
   Pressable,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { Overlay } from '@rallia/shared-components';
 import { lightHaptic, mediumHaptic, successHaptic } from '@rallia/shared-utils';
 import { ProfileService, Logger } from '@rallia/shared-services';
@@ -85,16 +88,221 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
 
   const isEmailValid = isValidEmail(email);
 
-  const handleGoogleSignIn = () => {
+  // Configure Google Sign-In on mount
+  useEffect(() => {
+    GoogleSignin.configure({
+      webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+      iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    });
+  }, []);
+
+  const handleGoogleSignIn = async () => {
     lightHaptic();
     Logger.logUserAction('oauth_signin_initiated', { provider: 'google' });
-    // TODO: Implement Google authentication
+    setIsLoading(true);
+    setErrorMessage('');
+
+    try {
+      // Check Google Play Services availability (Android only)
+      await GoogleSignin.hasPlayServices();
+
+      // Sign in with Google
+      const userInfo = await GoogleSignin.signIn();
+
+      if (!userInfo.data?.idToken) {
+        throw new Error('No ID token received from Google');
+      }
+
+      Logger.debug('Google sign-in successful, authenticating with Supabase');
+
+      // Import supabase client
+      const { supabase } = await import('@rallia/shared-services');
+
+      // Sign in to Supabase with the Google ID token
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: userInfo.data.idToken,
+      });
+
+      if (error) {
+        Logger.error('Supabase Google auth error', error);
+        setErrorMessage(error.message);
+        Alert.alert(t('alerts.error'), error.message);
+        setIsLoading(false);
+        return;
+      }
+
+      Logger.info('Google authentication successful', { userId: data.user?.id });
+
+      // Handle post-authentication flow (check if returning user)
+      await handlePostAuthFlow(data.user?.id);
+    } catch (error: unknown) {
+      const err = error as { code?: string; message?: string };
+      Logger.error('Google sign-in error', error instanceof Error ? error : undefined);
+
+      if (err.code === 'SIGN_IN_CANCELLED') {
+        // User cancelled the sign-in
+        Logger.debug('User cancelled Google sign-in');
+      } else {
+        const errorMsg = err.message || 'Failed to sign in with Google';
+        setErrorMessage(errorMsg);
+        Alert.alert(t('alerts.error'), errorMsg);
+      }
+      setIsLoading(false);
+    }
   };
 
-  const handleAppleSignIn = () => {
+  const handleAppleSignIn = async () => {
     lightHaptic();
     Logger.logUserAction('oauth_signin_initiated', { provider: 'apple' });
-    // TODO: Implement Apple authentication
+
+    // Check if Apple Authentication is available (iOS only)
+    if (Platform.OS !== 'ios') {
+      Alert.alert(t('alerts.error'), 'Apple Sign-In is only available on iOS devices');
+      return;
+    }
+
+    const isAvailable = await AppleAuthentication.isAvailableAsync();
+    if (!isAvailable) {
+      Alert.alert(t('alerts.error'), 'Apple Sign-In is not available on this device');
+      return;
+    }
+
+    setIsLoading(true);
+    setErrorMessage('');
+
+    try {
+      // Sign in with Apple
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      if (!credential.identityToken) {
+        throw new Error('No identity token received from Apple');
+      }
+
+      Logger.debug('Apple sign-in successful, authenticating with Supabase');
+
+      // Import supabase client
+      const { supabase } = await import('@rallia/shared-services');
+
+      // Sign in to Supabase with the Apple ID token
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'apple',
+        token: credential.identityToken,
+      });
+
+      if (error) {
+        Logger.error('Supabase Apple auth error', error);
+        setErrorMessage(error.message);
+        Alert.alert(t('alerts.error'), error.message);
+        setIsLoading(false);
+        return;
+      }
+
+      Logger.info('Apple authentication successful', { userId: data.user?.id });
+
+      // Apple only provides full name on first sign-in, save it to user metadata if available
+      if (credential.fullName) {
+        const fullName =
+          `${credential.fullName.givenName || ''} ${credential.fullName.familyName || ''}`.trim();
+        if (fullName) {
+          Logger.debug('Saving Apple user full name to metadata', { fullName });
+          try {
+            await supabase.auth.updateUser({
+              data: { full_name: fullName },
+            });
+          } catch (updateError) {
+            Logger.error('Failed to update user metadata with Apple name', updateError as Error);
+          }
+        }
+      }
+
+      // Handle post-authentication flow (check if returning user)
+      await handlePostAuthFlow(data.user?.id);
+    } catch (error: unknown) {
+      const err = error as { code?: string; message?: string };
+      Logger.error('Apple sign-in error', error instanceof Error ? error : undefined);
+
+      if (err.code === 'ERR_REQUEST_CANCELED') {
+        // User cancelled the sign-in
+        Logger.debug('User cancelled Apple sign-in');
+      } else {
+        const errorMsg = err.message || 'Failed to sign in with Apple';
+        setErrorMessage(errorMsg);
+        Alert.alert(t('alerts.error'), errorMsg);
+      }
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * Handle post-authentication flow - check if returning user
+   */
+  const handlePostAuthFlow = async (userId?: string) => {
+    if (!userId) {
+      Logger.error('No user ID after OAuth verification', new Error('Missing userId'));
+      setErrorMessage('Authentication failed - please try again');
+      Alert.alert(t('common.error'), t('auth.authFailed'));
+      setIsLoading(false);
+      return;
+    }
+
+    Logger.info('User authenticated successfully via OAuth', { userId });
+
+    // Check if this is a returning user (profile exists with completed onboarding)
+    const { data: profile, error: profileError } = await ProfileService.getProfile(userId);
+
+    if (profileError) {
+      // PGRST116 means no profile found - this is expected for new users
+      const errorCode = (profileError as { code?: string })?.code;
+      const isNoRowsError = errorCode === 'PGRST116';
+      if (isNoRowsError) {
+        Logger.debug('No profile found - treating as new user', { userId });
+      } else {
+        Logger.error('Failed to fetch profile', profileError as Error, { userId });
+      }
+      // If there's an error fetching profile, treat as new user to be safe
+      successHaptic();
+      setIsLoading(false);
+      if (onAuthSuccess) {
+        onAuthSuccess();
+      }
+      return;
+    }
+
+    // Check if onboarding is already completed
+    if (profile && profile.onboarding_completed) {
+      Logger.logNavigation('returning_user_skip_onboarding', {
+        userId,
+        onboardingCompleted: true,
+      });
+      successHaptic();
+      setIsLoading(false);
+
+      // Close auth overlay and navigate directly to app (skip onboarding)
+      if (onReturningUser) {
+        onReturningUser();
+      } else {
+        // Fallback: just close the overlay
+        onClose();
+      }
+    } else {
+      Logger.logNavigation('new_user_start_onboarding', {
+        userId,
+        onboardingCompleted: false,
+      });
+      successHaptic();
+      setIsLoading(false);
+
+      // Proceed to next step (Personal Information)
+      if (onAuthSuccess) {
+        onAuthSuccess();
+      }
+    }
   };
 
   const handleEmailContinue = async () => {
@@ -322,20 +530,38 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({
             {/* Social Sign In Buttons */}
             <View style={styles.socialButtons}>
               <TouchableOpacity
-                style={[styles.socialButton, { backgroundColor: colors.buttonActive }]}
+                style={[
+                  styles.socialButton,
+                  { backgroundColor: isLoading ? colors.buttonInactive : colors.buttonActive },
+                ]}
                 onPress={handleGoogleSignIn}
                 activeOpacity={0.8}
+                disabled={isLoading}
               >
-                <Ionicons name="logo-google" size={24} color={colors.buttonTextActive} />
+                {isLoading ? (
+                  <ActivityIndicator color={colors.buttonTextActive} size="small" />
+                ) : (
+                  <Ionicons name="logo-google" size={24} color={colors.buttonTextActive} />
+                )}
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[styles.socialButton, { backgroundColor: colors.buttonActive }]}
-                onPress={handleAppleSignIn}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="logo-apple" size={24} color={colors.buttonTextActive} />
-              </TouchableOpacity>
+              {Platform.OS === 'ios' && (
+                <TouchableOpacity
+                  style={[
+                    styles.socialButton,
+                    { backgroundColor: isLoading ? colors.buttonInactive : colors.buttonActive },
+                  ]}
+                  onPress={handleAppleSignIn}
+                  activeOpacity={0.8}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <ActivityIndicator color={colors.buttonTextActive} size="small" />
+                  ) : (
+                    <Ionicons name="logo-apple" size={24} color={colors.buttonTextActive} />
+                  )}
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* OR Divider */}
