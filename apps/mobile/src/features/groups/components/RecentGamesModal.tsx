@@ -4,40 +4,26 @@
  */
 
 import React, { useCallback, useMemo } from 'react';
-import {
-  View,
-  Modal,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Image,
-  Dimensions,
-} from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import type { GroupMatch } from '@rallia/shared-hooks';
+import { spacingPixels, radiusPixels } from '@rallia/design-system';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+export function RecentGamesActionSheet({ payload }: SheetProps<'recent-games'>) {
+  const matches = (payload?.matches ?? []) as GroupMatch[];
+  const onMatchPress = payload?.onMatchPress;
+  const onPlayerPress = payload?.onPlayerPress;
 
-interface RecentGamesModalProps {
-  visible: boolean;
-  onClose: () => void;
-  matches: GroupMatch[];
-  onMatchPress: (match: GroupMatch) => void;
-  onPlayerPress?: (playerId: string) => void;
-}
-
-export function RecentGamesModal({
-  visible,
-  onClose,
-  matches,
-  onMatchPress,
-  onPlayerPress,
-}: RecentGamesModalProps) {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
+
+  const handleClose = useCallback(() => {
+    SheetManager.hide('recent-games');
+  }, []);
 
   const formatMatchDate = useCallback(
     (dateStr: string) => {
@@ -72,7 +58,7 @@ export function RecentGamesModal({
             styles.matchCard,
             { backgroundColor: colors.cardBackground, borderColor: colors.border },
           ]}
-          onPress={() => onMatchPress(groupMatch)}
+          onPress={() => onMatchPress?.(groupMatch)}
           activeOpacity={0.7}
         >
           {/* Header: Sport & Date + Badge */}
@@ -275,65 +261,56 @@ export function RecentGamesModal({
       );
     }
 
-    return matches.map(renderMatchCard);
+    return matches.map((m: GroupMatch) => renderMatchCard(m));
   }, [matches, renderMatchCard, colors, t]);
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <TouchableOpacity style={styles.overlayBackground} onPress={onClose} activeOpacity={1} />
-
-        <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-          {/* Handle */}
-          <View style={[styles.handle, { backgroundColor: colors.border }]} />
-
-          {/* Header */}
-          <View style={styles.header}>
-            <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-              {t('groups.recentGames.title')}
-            </Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={colors.text} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Content */}
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {content}
-          </ScrollView>
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+    >
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text weight="semibold" size="lg" style={{ color: colors.text }}>
+            {t('groups.recentGames.title')}
+          </Text>
+          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+            <Ionicons name="close" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
         </View>
+
+        {/* Content */}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {content}
+        </ScrollView>
       </View>
-    </Modal>
+    </ActionSheet>
   );
 }
 
+// Keep old export for backwards compatibility during migration
+export const RecentGamesModal = RecentGamesActionSheet;
+
 const styles = StyleSheet.create({
-  overlay: {
+  sheetBackground: {
     flex: 1,
-    justifyContent: 'flex-end',
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
   },
-  overlayBackground: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    minHeight: SCREEN_HEIGHT * 0.5,
-    maxHeight: SCREEN_HEIGHT * 0.85,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 34,
-  },
-  handle: {
-    width: 36,
+  handleIndicator: {
+    width: spacingPixels[10],
     height: 4,
-    borderRadius: 2,
+    borderRadius: 4,
     alignSelf: 'center',
-    marginTop: 8,
-    marginBottom: 8,
+  },
+  container: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -351,8 +328,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
-    gap: 12,
+    padding: spacingPixels[4],
+    gap: spacingPixels[3],
   },
   matchCard: {
     borderRadius: 12,

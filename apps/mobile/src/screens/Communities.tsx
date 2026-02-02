@@ -24,6 +24,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Text, Skeleton } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
+import { getSafeAreaEdges } from '../utils';
 import {
   useThemeStyles,
   useAuth,
@@ -34,7 +35,6 @@ import {
 import {
   usePublicCommunities,
   usePlayerCommunities,
-  useCreateCommunity,
   useRequestToJoinCommunity,
   usePlayerCommunitiesRealtime,
   usePublicCommunitiesRealtime,
@@ -42,7 +42,8 @@ import {
 } from '@rallia/shared-hooks';
 import type { RootStackParamList, CommunityStackParamList } from '../navigation/types';
 import type { CompositeNavigationProp } from '@react-navigation/native';
-import { CreateCommunityModal, CommunityQRScannerModal } from '../features/communities';
+import { CommunityQRScannerModal } from '../features/communities';
+import { SheetManager } from 'react-native-actions-sheet';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_GAP = 12;
@@ -209,7 +210,6 @@ export default function CommunitiesScreen() {
   const playerId = session?.user?.id;
 
   const [activeTab, setActiveTab] = useState<TabType>('discover');
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
 
   // Switch to discover tab if user signs out while on "My Communities"
@@ -242,7 +242,6 @@ export default function CommunitiesScreen() {
   usePublicCommunitiesRealtime(playerId);
 
   // Mutations
-  const createCommunityMutation = useCreateCommunity();
   const requestToJoinMutation = useRequestToJoinCommunity();
 
   const isLoading = activeTab === 'discover' ? isLoadingPublic : isLoadingMy;
@@ -257,29 +256,11 @@ export default function CommunitiesScreen() {
     }
   }, [activeTab, refetchPublic, refetchMy]);
 
-  const handleCreateCommunity = useCallback(
-    async (
-      name: string,
-      description?: string,
-      coverImageUrl?: string,
-      isPublic: boolean = true
-    ) => {
-      if (!guardAction()) return;
-
-      try {
-        const newCommunity = await createCommunityMutation.mutateAsync({
-          playerId: playerId!,
-          input: { name, description, cover_image_url: coverImageUrl, is_public: isPublic },
-        });
-        setShowCreateModal(false);
-        // Navigate to the new community
-        navigation.navigate('CommunityDetail', { communityId: newCommunity.id });
-      } catch (error) {
-        Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create community');
-      }
-    },
-    [guardAction, playerId, createCommunityMutation, navigation]
-  );
+  const handleOpenCreateCommunityActionSheet = useCallback(() => {
+    lightHaptic();
+    if (!guardAction() || !playerId) return;
+    SheetManager.show('create-community', { payload: { playerId } });
+  }, [guardAction, playerId]);
 
   const handleRequestToJoin = useCallback(
     async (communityId: string, communityName: string) => {
@@ -378,10 +359,7 @@ export default function CommunitiesScreen() {
         {activeTab === 'discover' && (
           <TouchableOpacity
             style={[styles.createButton, { backgroundColor: colors.primary }]}
-            onPress={() => {
-              if (!guardAction()) return;
-              setShowCreateModal(true);
-            }}
+            onPress={handleOpenCreateCommunityActionSheet}
           >
             <Ionicons name="add" size={20} color="#FFFFFF" />
             <Text weight="semibold" style={styles.createButtonText}>
@@ -402,7 +380,7 @@ export default function CommunitiesScreen() {
         )}
       </View>
     ),
-    [colors, activeTab, handleTabChange, t, guardAction]
+    [colors, activeTab, handleTabChange, t, handleOpenCreateCommunityActionSheet]
   );
 
   const renderTabs = useMemo(
@@ -472,7 +450,7 @@ export default function CommunitiesScreen() {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['bottom']}
+        edges={getSafeAreaEdges(['bottom'])}
       >
         {/* Only show tabs when authenticated */}
         {playerId && renderTabs}
@@ -515,7 +493,7 @@ export default function CommunitiesScreen() {
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['bottom']}
+      edges={getSafeAreaEdges(['bottom'])}
     >
       {/* Only show tabs when authenticated (to switch between Discover and My Communities) */}
       {playerId && renderTabs}
@@ -561,23 +539,12 @@ export default function CommunitiesScreen() {
         {/* Create Community Button */}
         <TouchableOpacity
           style={[styles.fab, { backgroundColor: colors.primary }]}
-          onPress={() => {
-            if (!guardAction()) return;
-            setShowCreateModal(true);
-          }}
+          onPress={handleOpenCreateCommunityActionSheet}
           activeOpacity={0.8}
         >
           <Ionicons name="add" size={28} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
-
-      {/* Create Community Modal */}
-      <CreateCommunityModal
-        visible={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSubmit={handleCreateCommunity}
-        isLoading={createCommunityMutation.isPending}
-      />
 
       {/* QR Scanner Modal */}
       {playerId && (

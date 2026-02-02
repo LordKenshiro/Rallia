@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: spacingPixels[4],
-    paddingBottom: spacingPixels[8],
+    paddingBottom: spacingPixels[4],
   },
   header: {
     alignItems: 'center',

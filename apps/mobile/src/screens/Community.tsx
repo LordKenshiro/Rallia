@@ -7,7 +7,14 @@
  */
 
 import React, { useMemo, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  ScrollView,
+  useWindowDimensions,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -42,6 +49,7 @@ interface ActionButton {
 }
 
 const Community = () => {
+  const { width: windowWidth } = useWindowDimensions();
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
   const { selectedSport } = useSport();
@@ -88,14 +96,14 @@ const Community = () => {
     navigation.navigate('Communities');
   }, [navigation]);
 
-  const handleTournaments = useCallback(() => {
-    lightHaptic();
-    // TODO: Implement tournaments functionality
-    Alert.alert(
-      t('community.tournaments' as TranslationKey),
-      t('community.tournamentsComingSoon' as TranslationKey)
-    );
-  }, [t]);
+  // const handleTournaments = useCallback(() => {
+  //   lightHaptic();
+  //   // TODO: Implement tournaments functionality
+  //   Alert.alert(
+  //     t('community.tournaments' as TranslationKey),
+  //     t('community.tournamentsComingSoon' as TranslationKey)
+  //   );
+  // }, [t]);
 
   // Action buttons configuration
   const actionButtons: ActionButton[] = useMemo(
@@ -118,14 +126,14 @@ const Community = () => {
         label: t('community.communities' as TranslationKey),
         onPress: handleCommunities,
       },
-      {
-        id: 'tournaments',
-        icon: 'trophy-outline',
-        label: t('community.tournaments' as TranslationKey),
-        onPress: handleTournaments,
-      },
+      // {
+      //   id: 'tournaments',
+      //   icon: 'trophy-outline',
+      //   label: t('community.tournaments' as TranslationKey),
+      //   onPress: handleTournaments,
+      // },
     ],
-    [handleShareLists, handleGroups, handleCommunities, handleTournaments, t]
+    [handleShareLists, handleGroups, handleCommunities, t]
   );
 
   const navigateToPlayerProfile = useNavigateToPlayerProfile();
@@ -142,7 +150,7 @@ const Community = () => {
       horizontal
       showsHorizontalScrollIndicator={false}
       style={styles.actionButtonsScrollView}
-      contentContainerStyle={styles.actionButtonsContainer}
+      contentContainerStyle={[styles.actionButtonsContainer, { minWidth: windowWidth }]}
     >
       {actionButtons.map(button => (
         <TouchableOpacity
@@ -169,7 +177,6 @@ const Community = () => {
 
       {/* Find a Partner Section Header */}
       <View style={styles.sectionHeader}>
-        <Ionicons name="tennisball-outline" size={20} color={colors.primary} />
         <Text size="lg" weight="bold" color={colors.text} style={styles.sectionTitle}>
           {t('community.findPartner' as TranslationKey)}
         </Text>
@@ -198,6 +205,7 @@ const styles = StyleSheet.create({
   },
   actionButtonsContainer: {
     flexDirection: 'row',
+    justifyContent: 'center',
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[3],
     paddingBottom: spacingPixels[2],

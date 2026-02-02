@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
 import { useThemeStyles, useNavigateToPlayerProfile } from '../hooks';
+import { getSafeAreaEdges } from '../utils';
 import {
   spacingPixels,
   fontSizePixels,
@@ -260,7 +261,7 @@ export default function PlayedMatchDetailScreen() {
         <View style={styles.headerOverlay} />
 
         {/* Back button */}
-        <SafeAreaView edges={['top']} style={styles.headerContent}>
+        <SafeAreaView edges={getSafeAreaEdges(['top'])} style={styles.headerContent}>
           <TouchableOpacity style={styles.backButton} onPress={handleBack}>
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>

@@ -9,7 +9,6 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  TextInput,
   FlatList,
   Image,
   ActivityIndicator,
@@ -19,6 +18,7 @@ import { Text, Button } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
 import { useAddScore } from './AddScoreContext';
 import { ContactPickerModal } from './ContactPickerModal';
+import { SearchBar } from '../../../../components/SearchBar';
 import type { SelectedPlayer } from './types';
 import { supabase } from '../../../../lib/supabase';
 
@@ -218,28 +218,13 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
       )}
 
       {/* Search input */}
-      <View
-        style={[
-          styles.searchContainer,
-          { backgroundColor: colors.cardBackground, borderColor: colors.border },
-        ]}
-      >
-        <Ionicons name="search" size={20} color={colors.textMuted} />
-        <TextInput
-          style={[styles.searchInput, { color: colors.text }]}
-          placeholder={t('addScore.findOpponent.searchPlaceholder' as TranslationKey)}
-          placeholderTextColor={colors.textMuted}
-          value={searchQuery}
-          onChangeText={handleSearch}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => handleSearch('')}>
-            <Ionicons name="close-circle" size={20} color={colors.textMuted} />
-          </TouchableOpacity>
-        )}
-      </View>
+      <SearchBar
+        value={searchQuery}
+        onChangeText={handleSearch}
+        placeholder={t('addScore.findOpponent.searchPlaceholder' as TranslationKey)}
+        colors={colors}
+        style={styles.searchBarWrapper}
+      />
 
       {/* Selected players - shown below search bar */}
       {selectedPlayers.length > 0 && (
@@ -310,7 +295,7 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
       ) : searchQuery.length < 2 ? (
         <View style={styles.emptyState}>
           <View style={styles.emptyIcon}>
-            <Ionicons name="search" size={64} color={colors.textMuted} />
+            <Ionicons name="search-outline" size={64} color={colors.textMuted} />
           </View>
           <Text style={{ color: colors.textSecondary, textAlign: 'center' }}>
             {t('addScore.findOpponent.searchHint' as TranslationKey)}
@@ -375,19 +360,8 @@ const styles = StyleSheet.create({
   subtitle: {
     marginBottom: 16,
   },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
+  searchBarWrapper: {
     marginBottom: 16,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 12,
-    fontSize: 16,
   },
   addFromContactsButton: {
     flexDirection: 'row',

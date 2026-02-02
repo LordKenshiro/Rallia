@@ -26,6 +26,7 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { Text } from '@rallia/shared-components';
 import { lightHaptic, mediumHaptic, selectionHaptic } from '@rallia/shared-utils';
+import { getSafeAreaEdges } from '../utils';
 import {
   useThemeStyles,
   useAuth,
@@ -50,22 +51,13 @@ import {
   useMostRecentGroupMatch,
   useGroupMatches,
 } from '@rallia/shared-hooks';
+import type { GroupMatch } from '@rallia/shared-hooks';
 import type { GroupWithMembers } from '@rallia/shared-services';
+import { SheetManager } from 'react-native-actions-sheet';
 import type { RootStackParamList } from '../navigation/types';
 import { primary } from '@rallia/design-system';
-import {
-  MemberListModal,
-  GroupOptionsModal,
-  InviteLinkModal,
-  RecentGamesModal,
-} from '../features/groups';
 import { AddCommunityMemberModal, EditCommunityModal } from '../features/communities';
-import {
-  AddScoreIntroModal,
-  MatchTypeModal,
-  AddScoreModal,
-  type MatchType,
-} from '../features/matches';
+import { AddScoreIntroModal, AddScoreModal, type MatchType } from '../features/matches';
 
 const HEADER_HEIGHT = 140;
 
@@ -92,13 +84,7 @@ export default function CommunityDetailScreen() {
   const navigateToPlayerProfile = useNavigateToPlayerProfile();
 
   const [activeTab, setActiveTab] = useState<TabKey>('home');
-  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
-  const [showMemberListModal, setShowMemberListModal] = useState(false);
-  const [showOptionsModal, setShowOptionsModal] = useState(false);
-  const [showInviteLinkModal, setShowInviteLinkModal] = useState(false);
   const [showPendingRequestsModal, setShowPendingRequestsModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showRecentGamesModal, setShowRecentGamesModal] = useState(false);
   const [leaderboardPeriod, setLeaderboardPeriod] = useState<30 | 90 | 180 | 0>(30);
 
   // Add Score flow state
@@ -151,7 +137,7 @@ export default function CommunityDetailScreen() {
     if (!community?.conversation_id) return;
     if (!guardAction()) return;
     lightHaptic();
-    navigation.navigate('Chat', {
+    navigation.navigate('ChatConversation', {
       conversationId: community.conversation_id,
       title: community.name,
     });
@@ -205,45 +191,7 @@ export default function CommunityDetailScreen() {
     ]);
   }, [communityId, playerId, deleteCommunityMutation, navigation, t]);
 
-  const handleShowOptions = useCallback(() => {
-    setShowOptionsModal(true);
-  }, []);
-
-  // Add Game flow handlers
-  const handleAddGame = useCallback(() => {
-    if (!guardAction()) return;
-    mediumHaptic();
-    // Check if user has seen the intro before
-    if (hasSeenAddScoreIntro === false) {
-      // First time - show the intro
-      setShowAddScoreIntro(true);
-    } else {
-      // User has dismissed intro before - go directly to match type
-      setShowMatchTypeModal(true);
-    }
-  }, [guardAction, hasSeenAddScoreIntro]);
-
-  const handleAddScoreIntroComplete = useCallback(() => {
-    setShowAddScoreIntro(false);
-    setShowMatchTypeModal(true);
-  }, []);
-
-  const handleMatchTypeSelect = useCallback((type: MatchType) => {
-    selectionHaptic();
-    setSelectedMatchType(type);
-    setShowMatchTypeModal(false);
-    setShowAddScoreModal(true);
-  }, []);
-
-  const handleAddScoreSuccess = useCallback(
-    (_matchId: string) => {
-      setShowAddScoreModal(false);
-      refetch();
-    },
-    [refetch]
-  );
-
-  // Build options for the menu modal
+  // Build options for the menu modal (must be before handleShowOptions)
   const menuOptions = useMemo(() => {
     const isCreator = community?.created_by === playerId;
     const options: {
@@ -254,15 +202,22 @@ export default function CommunityDetailScreen() {
       destructive?: boolean;
     }[] = [];
 
-    // Share invite link - available to all members
     options.push({
       id: 'invite',
       label: t('community.options.shareInviteLink' as TranslationKey),
       icon: 'link-outline',
-      onPress: () => setShowInviteLinkModal(true),
+      onPress: () =>
+        SheetManager.show('invite-link', {
+          payload: {
+            groupId: communityId,
+            groupName: community?.name ?? '',
+            currentUserId: playerId ?? '',
+            isModerator: isModerator ?? false,
+            type: 'community',
+          },
+        }),
     });
 
-    // View pending requests (moderators only)
     if (isModerator && pendingRequests && pendingRequests.length > 0) {
       options.push({
         id: 'requests',
@@ -274,12 +229,15 @@ export default function CommunityDetailScreen() {
       });
     }
 
-    if (isModerator) {
+    if (isModerator && community) {
       options.push({
         id: 'edit',
         label: t('community.options.editCommunity' as TranslationKey),
         icon: 'create-outline',
-        onPress: () => setShowEditModal(true),
+        onPress: () =>
+          SheetManager.show('edit-community', {
+            payload: { community, onSuccess: () => refetch() },
+          }),
       });
     }
 
@@ -304,13 +262,54 @@ export default function CommunityDetailScreen() {
     return options;
   }, [
     community,
+    communityId,
     playerId,
     isModerator,
     pendingRequests,
+    refetch,
     handleLeaveCommunity,
     handleDeleteCommunity,
     t,
   ]);
+
+  const handleShowOptions = useCallback(() => {
+    SheetManager.show('group-options', {
+      payload: { options: menuOptions, title: 'Community Options' },
+    });
+  }, [menuOptions]);
+
+  const handleMatchTypeSelect = useCallback((type: MatchType) => {
+    selectionHaptic();
+    setSelectedMatchType(type);
+    setShowAddScoreModal(true);
+  }, []);
+
+  // Add Game flow handlers
+  const handleAddGame = useCallback(() => {
+    if (!guardAction()) return;
+    mediumHaptic();
+    // Check if user has seen the intro before
+    if (hasSeenAddScoreIntro === false) {
+      // First time - show the intro
+      setShowAddScoreIntro(true);
+    } else {
+      // User has dismissed intro before - go directly to match type
+      SheetManager.show('match-type', { payload: { onSelect: handleMatchTypeSelect } });
+    }
+  }, [guardAction, hasSeenAddScoreIntro, handleMatchTypeSelect]);
+
+  const handleAddScoreIntroComplete = useCallback(() => {
+    setShowAddScoreIntro(false);
+    SheetManager.show('match-type', { payload: { onSelect: handleMatchTypeSelect } });
+  }, [handleMatchTypeSelect]);
+
+  const handleAddScoreSuccess = useCallback(
+    (_matchId: string) => {
+      setShowAddScoreModal(false);
+      refetch();
+    },
+    [refetch]
+  );
 
   const renderTabContent = () => {
     // Calculate activity ring segments for Last 7 days
@@ -749,7 +748,23 @@ export default function CommunityDetailScreen() {
                     {t('groups.recentGames.title' as TranslationKey)}
                   </Text>
                 </View>
-                <TouchableOpacity onPress={() => setShowRecentGamesModal(true)}>
+                <TouchableOpacity
+                  onPress={() =>
+                    SheetManager.show('recent-games', {
+                      payload: {
+                        matches: allMatches || [],
+                        onMatchPress: (match: unknown) => {
+                          SheetManager.hide('recent-games');
+                          navigation.navigate('PlayedMatchDetail', { match: match as GroupMatch });
+                        },
+                        onPlayerPress: (playerId: string) => {
+                          SheetManager.hide('recent-games');
+                          navigateToPlayerProfile(playerId);
+                        },
+                      },
+                    })
+                  }
+                >
                   <Text size="sm" style={{ color: colors.primary }}>
                     {t('community.detail.viewAll' as TranslationKey)}
                   </Text>
@@ -1258,7 +1273,7 @@ export default function CommunityDetailScreen() {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['top']}
+        edges={getSafeAreaEdges(['top'])}
       >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -1271,7 +1286,7 @@ export default function CommunityDetailScreen() {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['top']}
+        edges={getSafeAreaEdges(['top'])}
       >
         <View style={styles.errorContainer}>
           <Ionicons name="warning-outline" size={64} color={colors.textMuted} />
@@ -1358,7 +1373,24 @@ export default function CommunityDetailScreen() {
           </View>
 
           {/* Members Row */}
-          <TouchableOpacity style={styles.membersRow} onPress={() => setShowMemberListModal(true)}>
+          <TouchableOpacity
+            style={styles.membersRow}
+            onPress={() =>
+              community &&
+              SheetManager.show('member-list', {
+                payload: {
+                  group: community as unknown as GroupWithMembers,
+                  currentUserId: playerId ?? '',
+                  isModerator: isModerator ?? false,
+                  onMemberRemoved: () => refetch(),
+                  onPlayerPress: (memberId: string) => {
+                    SheetManager.hide('member-list');
+                    navigateToPlayerProfile(memberId);
+                  },
+                },
+              })
+            }
+          >
             <Text size="sm" style={{ color: colors.textSecondary }}>
               {t('common.memberCount', { count: community.member_count })}
             </Text>
@@ -1403,7 +1435,15 @@ export default function CommunityDetailScreen() {
           <View style={styles.actionButtonsRow}>
             <TouchableOpacity
               style={[styles.addMemberButton, { borderColor: colors.primary, flex: 1 }]}
-              onPress={() => setShowAddMemberModal(true)}
+              onPress={() =>
+                SheetManager.show('add-community-member', {
+                  payload: {
+                    communityId,
+                    currentMemberIds: community?.members.map(m => m.player_id) ?? [],
+                    onSuccess: () => refetch(),
+                  },
+                })
+              }
             >
               <Ionicons name="person-add" size={18} color={colors.primary} />
               <Text weight="semibold" style={{ color: colors.primary, marginLeft: 8 }}>
@@ -1469,64 +1509,6 @@ export default function CommunityDetailScreen() {
           </Text>
         </TouchableOpacity>
       ) : null}
-
-      {/* Add Member Modal */}
-      <AddCommunityMemberModal
-        visible={showAddMemberModal}
-        onClose={() => setShowAddMemberModal(false)}
-        communityId={communityId}
-        currentMemberIds={community.members.map(m => m.player_id)}
-        onSuccess={() => {
-          setShowAddMemberModal(false);
-          refetch();
-        }}
-      />
-
-      {/* Edit Community Modal */}
-      <EditCommunityModal
-        visible={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        community={community}
-        onSuccess={() => {
-          setShowEditModal(false);
-          refetch();
-        }}
-      />
-
-      {/* Member List Modal */}
-      <MemberListModal
-        visible={showMemberListModal}
-        onClose={() => setShowMemberListModal(false)}
-        group={community as unknown as GroupWithMembers}
-        currentUserId={playerId || ''}
-        isModerator={isModerator || false}
-        onMemberRemoved={() => refetch()}
-        onPlayerPress={memberId => {
-          setShowMemberListModal(false);
-          navigateToPlayerProfile(memberId);
-        }}
-      />
-
-      {/* Options Modal */}
-      <GroupOptionsModal
-        visible={showOptionsModal}
-        onClose={() => setShowOptionsModal(false)}
-        options={menuOptions}
-        title="Community Options"
-      />
-
-      {/* Invite Link Modal */}
-      {community && (
-        <InviteLinkModal
-          visible={showInviteLinkModal}
-          onClose={() => setShowInviteLinkModal(false)}
-          groupId={communityId}
-          groupName={community.name}
-          currentUserId={playerId || ''}
-          isModerator={isModerator || false}
-          type="community"
-        />
-      )}
 
       {/* Pending Requests Modal */}
       <Modal
@@ -1684,32 +1666,12 @@ export default function CommunityDetailScreen() {
         }}
       />
 
-      <MatchTypeModal
-        visible={showMatchTypeModal}
-        onClose={() => setShowMatchTypeModal(false)}
-        onSelect={handleMatchTypeSelect}
-      />
-
       <AddScoreModal
         visible={showAddScoreModal}
         onClose={() => setShowAddScoreModal(false)}
         onSuccess={handleAddScoreSuccess}
         matchType={selectedMatchType}
         networkId={communityId}
-      />
-
-      <RecentGamesModal
-        visible={showRecentGamesModal}
-        onClose={() => setShowRecentGamesModal(false)}
-        matches={allMatches || []}
-        onMatchPress={match => {
-          setShowRecentGamesModal(false);
-          navigation.navigate('PlayedMatchDetail', { match });
-        }}
-        onPlayerPress={playerId => {
-          setShowRecentGamesModal(false);
-          navigateToPlayerProfile(playerId);
-        }}
       />
     </SafeAreaView>
   );

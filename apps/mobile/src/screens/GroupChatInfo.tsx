@@ -26,6 +26,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 
 import { Text, Skeleton, SkeletonAvatar } from '@rallia/shared-components';
+import { getSafeAreaEdges } from '../utils';
 import {
   useThemeStyles,
   useAuth,
@@ -38,7 +39,7 @@ import {
 } from '../hooks';
 import type { RootStackParamList } from '../navigation/types';
 import { spacingPixels, fontSizePixels, primary, status, neutral } from '@rallia/design-system';
-import { AddMembersToGroupModal } from '../features/chat';
+import { SheetManager } from 'react-native-actions-sheet';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type GroupChatInfoRouteProp = RouteProp<RootStackParamList, 'GroupChatInfo'>;
@@ -97,9 +98,6 @@ export default function GroupChatInfoScreen() {
 
   const {
     isUpdating: isMemberUpdating,
-    showAddMemberModal,
-    setShowAddMemberModal,
-    handleAddMember,
     handleMembersAdded,
     handleRemoveMember,
     handleMemberLongPress,
@@ -210,7 +208,7 @@ export default function GroupChatInfoScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
         <View style={styles.loadingContainer}>
           {/* Group Chat Info Skeleton */}
           <View style={{ alignItems: 'center', paddingVertical: 24 }}>
@@ -280,7 +278,7 @@ export default function GroupChatInfoScreen() {
 
   if (!conversation) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
         <View style={styles.loadingContainer}>
           <Text style={{ color: colors.text }}>Conversation not found</Text>
         </View>
@@ -291,7 +289,7 @@ export default function GroupChatInfoScreen() {
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['top']}
+      edges={getSafeAreaEdges(['top'])}
     >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
@@ -373,7 +371,18 @@ export default function GroupChatInfoScreen() {
         {/* Actions */}
         <View style={[styles.section, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
           {/* Add Members */}
-          <TouchableOpacity style={styles.sectionRow} onPress={handleAddMember}>
+          <TouchableOpacity
+            style={styles.sectionRow}
+            onPress={() => {
+              SheetManager.show('add-members-to-group', {
+                payload: {
+                  existingMemberIds: participants.map(p => p.player_id),
+                  currentUserId: playerId,
+                  onMembersSelected: handleMembersAdded,
+                },
+              });
+            }}
+          >
             <View style={[styles.sectionIcon, { backgroundColor: primary[100] }]}>
               <Ionicons name="person-add" size={20} color={primary[500]} />
             </View>
@@ -406,7 +415,7 @@ export default function GroupChatInfoScreen() {
             {t('common.memberCount', { count: memberCount })}
           </Text>
           <TouchableOpacity>
-            <Ionicons name="search" size={20} color={colors.textMuted} />
+            <Ionicons name="search-outline" size={20} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
@@ -451,15 +460,6 @@ export default function GroupChatInfoScreen() {
           <ActivityIndicator size="large" color={primary[500]} />
         </View>
       )}
-
-      {/* Add Members Modal */}
-      <AddMembersToGroupModal
-        visible={showAddMemberModal}
-        onClose={() => setShowAddMemberModal(false)}
-        onMembersSelected={handleMembersAdded}
-        existingMemberIds={participants.map(p => p.player_id)}
-        currentUserId={playerId}
-      />
     </SafeAreaView>
   );
 }

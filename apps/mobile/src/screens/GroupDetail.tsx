@@ -24,6 +24,7 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { Text } from '@rallia/shared-components';
 import { lightHaptic, selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
+import { getSafeAreaEdges } from '../utils';
 import {
   useThemeStyles,
   useAuth,
@@ -45,20 +46,13 @@ import {
   useGroupRealtime,
   useScoreConfirmationsRealtime,
   type GroupActivity as GroupActivityType,
+  type GroupMatch,
 } from '@rallia/shared-hooks';
 import type { RootStackParamList } from '../navigation/types';
+import { SheetManager } from 'react-native-actions-sheet';
 import { primary } from '@rallia/design-system';
 import {
-  EditGroupModal,
-  AddMemberModal,
-  MemberListModal,
-  GroupOptionsModal,
-  InviteLinkModal,
-  RecentGamesModal,
-} from '../features/groups';
-import {
   AddScoreIntroModal,
-  MatchTypeModal,
   AddScoreModal,
   PendingScoresSection,
   type MatchType,
@@ -86,16 +80,9 @@ export default function GroupDetailScreen() {
   const navigateToPlayerProfile = useNavigateToPlayerProfile();
 
   const [activeTab, setActiveTab] = useState<TabKey>('home');
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
-  const [showMemberListModal, setShowMemberListModal] = useState(false);
-  const [showOptionsModal, setShowOptionsModal] = useState(false);
-  const [showInviteLinkModal, setShowInviteLinkModal] = useState(false);
-  const [showRecentGamesModal, setShowRecentGamesModal] = useState(false);
   const [leaderboardPeriod, setLeaderboardPeriod] = useState<30 | 90 | 180 | 0>(30);
   // Add Score flow state
   const [showAddScoreIntro, setShowAddScoreIntro] = useState(false);
-  const [showMatchTypeModal, setShowMatchTypeModal] = useState(false);
   const [showAddScoreModal, setShowAddScoreModal] = useState(false);
   const [selectedMatchType, setSelectedMatchType] = useState<MatchType>('single');
   const [hasSeenAddScoreIntro, setHasSeenAddScoreIntro] = useState<boolean | null>(null);
@@ -140,11 +127,17 @@ export default function GroupDetailScreen() {
     if (!group?.conversation_id) return;
     if (!guardAction()) return;
     lightHaptic();
-    navigation.navigate('Chat', {
+    navigation.navigate('ChatConversation', {
       conversationId: group.conversation_id,
       title: group.name,
     });
   }, [group, guardAction, navigation]);
+
+  const handleMatchTypeSelect = useCallback((type: MatchType) => {
+    selectionHaptic();
+    setSelectedMatchType(type);
+    setShowAddScoreModal(true);
+  }, []);
 
   const handleAddGame = useCallback(() => {
     if (!guardAction()) return;
@@ -155,21 +148,14 @@ export default function GroupDetailScreen() {
       setShowAddScoreIntro(true);
     } else {
       // User has dismissed intro before - go directly to match type
-      setShowMatchTypeModal(true);
+      SheetManager.show('match-type', { payload: { onSelect: handleMatchTypeSelect } });
     }
-  }, [guardAction, hasSeenAddScoreIntro]);
+  }, [guardAction, hasSeenAddScoreIntro, handleMatchTypeSelect]);
 
   const handleAddScoreIntroComplete = useCallback(() => {
     setShowAddScoreIntro(false);
-    setShowMatchTypeModal(true);
-  }, []);
-
-  const handleMatchTypeSelect = useCallback((type: MatchType) => {
-    selectionHaptic();
-    setSelectedMatchType(type);
-    setShowMatchTypeModal(false);
-    setShowAddScoreModal(true);
-  }, []);
+    SheetManager.show('match-type', { payload: { onSelect: handleMatchTypeSelect } });
+  }, [handleMatchTypeSelect]);
 
   const handleAddScoreSuccess = useCallback(
     (_matchId: string) => {
@@ -227,11 +213,7 @@ export default function GroupDetailScreen() {
     ]);
   }, [groupId, playerId, deleteGroupMutation, navigation, t]);
 
-  const handleShowOptions = useCallback(() => {
-    setShowOptionsModal(true);
-  }, []);
-
-  // Build options for the menu modal
+  // Build options for the menu modal (must be before handleShowOptions)
   const menuOptions = useMemo(() => {
     const isCreator = group?.created_by === playerId;
     const options: {
@@ -247,15 +229,26 @@ export default function GroupDetailScreen() {
       id: 'invite',
       label: t('groups.options.shareInviteLink' as TranslationKey),
       icon: 'link-outline',
-      onPress: () => setShowInviteLinkModal(true),
+      onPress: () =>
+        SheetManager.show('invite-link', {
+          payload: {
+            groupId,
+            groupName: group?.name ?? '',
+            currentUserId: playerId ?? '',
+            isModerator: isModerator ?? false,
+          },
+        }),
     });
 
-    if (isModerator) {
+    if (isModerator && group) {
       options.push({
         id: 'edit',
         label: t('groups.options.editGroup' as TranslationKey),
         icon: 'create-outline',
-        onPress: () => setShowEditModal(true),
+        onPress: () =>
+          SheetManager.show('edit-group', {
+            payload: { group, onSuccess: () => refetch() },
+          }),
       });
     }
 
@@ -278,7 +271,13 @@ export default function GroupDetailScreen() {
     }
 
     return options;
-  }, [group, playerId, isModerator, handleLeaveGroup, handleDeleteGroup, t]);
+  }, [group, groupId, playerId, isModerator, refetch, handleLeaveGroup, handleDeleteGroup, t]);
+
+  const handleShowOptions = useCallback(() => {
+    SheetManager.show('group-options', {
+      payload: { options: menuOptions, title: 'Group Options' },
+    });
+  }, [menuOptions]);
 
   // Format activity time
   const formatActivityTime = useCallback(
@@ -631,7 +630,23 @@ export default function GroupDetailScreen() {
                     {t('groups.recentGames.title' as TranslationKey)}
                   </Text>
                 </View>
-                <TouchableOpacity onPress={() => setShowRecentGamesModal(true)}>
+                <TouchableOpacity
+                  onPress={() =>
+                    SheetManager.show('recent-games', {
+                      payload: {
+                        matches: allMatches || [],
+                        onMatchPress: (match: unknown) => {
+                          SheetManager.hide('recent-games');
+                          navigation.navigate('PlayedMatchDetail', { match: match as GroupMatch });
+                        },
+                        onPlayerPress: (playerId: string) => {
+                          SheetManager.hide('recent-games');
+                          navigateToPlayerProfile(playerId);
+                        },
+                      },
+                    })
+                  }
+                >
                   <Text size="sm" style={{ color: colors.primary }}>
                     {t('groups.recentGames.viewAll' as TranslationKey)}
                   </Text>
@@ -1200,7 +1215,7 @@ export default function GroupDetailScreen() {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['top']}
+        edges={getSafeAreaEdges(['top'])}
       >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -1213,7 +1228,7 @@ export default function GroupDetailScreen() {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['top']}
+        edges={getSafeAreaEdges(['top'])}
       >
         <View style={styles.errorContainer}>
           <Ionicons name="warning-outline" size={64} color={colors.textMuted} />
@@ -1271,7 +1286,24 @@ export default function GroupDetailScreen() {
           </Text>
 
           {/* Members Row */}
-          <TouchableOpacity style={styles.membersRow} onPress={() => setShowMemberListModal(true)}>
+          <TouchableOpacity
+            style={styles.membersRow}
+            onPress={() =>
+              group &&
+              SheetManager.show('member-list', {
+                payload: {
+                  group,
+                  currentUserId: playerId ?? '',
+                  isModerator: isModerator ?? false,
+                  onMemberRemoved: () => refetch(),
+                  onPlayerPress: (playerId: string) => {
+                    SheetManager.hide('member-list');
+                    navigateToPlayerProfile(playerId);
+                  },
+                },
+              })
+            }
+          >
             <Text size="sm" style={{ color: colors.textSecondary }}>
               {t('common.memberCount', { count: group.member_count })}
             </Text>
@@ -1317,7 +1349,15 @@ export default function GroupDetailScreen() {
             {group.member_count < group.max_members && (
               <TouchableOpacity
                 style={[styles.addMemberButton, { borderColor: colors.primary, flex: 1 }]}
-                onPress={() => setShowAddMemberModal(true)}
+                onPress={() =>
+                  SheetManager.show('add-member', {
+                    payload: {
+                      groupId,
+                      currentMemberIds: group?.members.map(m => m.player_id) ?? [],
+                      onSuccess: () => refetch(),
+                    },
+                  })
+                }
               >
                 <Ionicons name="person-add" size={18} color={colors.primary} />
                 <Text weight="semibold" style={{ color: colors.primary, marginLeft: 8 }}>
@@ -1385,73 +1425,6 @@ export default function GroupDetailScreen() {
         </TouchableOpacity>
       ) : null}
 
-      {/* Modals */}
-      <EditGroupModal
-        visible={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        group={group}
-        onSuccess={() => {
-          setShowEditModal(false);
-          refetch();
-        }}
-      />
-
-      <AddMemberModal
-        visible={showAddMemberModal}
-        onClose={() => setShowAddMemberModal(false)}
-        groupId={groupId}
-        currentMemberIds={group.members.map(m => m.player_id)}
-        onSuccess={() => {
-          setShowAddMemberModal(false);
-          refetch();
-        }}
-      />
-
-      <MemberListModal
-        visible={showMemberListModal}
-        onClose={() => setShowMemberListModal(false)}
-        group={group}
-        currentUserId={playerId || ''}
-        isModerator={isModerator || false}
-        onMemberRemoved={() => refetch()}
-        onPlayerPress={playerId => {
-          setShowMemberListModal(false);
-          navigateToPlayerProfile(playerId);
-        }}
-      />
-
-      <GroupOptionsModal
-        visible={showOptionsModal}
-        onClose={() => setShowOptionsModal(false)}
-        options={menuOptions}
-        title="Group Options"
-      />
-
-      {group && (
-        <InviteLinkModal
-          visible={showInviteLinkModal}
-          onClose={() => setShowInviteLinkModal(false)}
-          groupId={groupId}
-          groupName={group.name}
-          currentUserId={playerId || ''}
-          isModerator={isModerator || false}
-        />
-      )}
-
-      <RecentGamesModal
-        visible={showRecentGamesModal}
-        onClose={() => setShowRecentGamesModal(false)}
-        matches={allMatches || []}
-        onMatchPress={match => {
-          setShowRecentGamesModal(false);
-          navigation.navigate('PlayedMatchDetail', { match });
-        }}
-        onPlayerPress={playerId => {
-          setShowRecentGamesModal(false);
-          navigateToPlayerProfile(playerId);
-        }}
-      />
-
       {/* Add Score Flow Modals */}
       <AddScoreIntroModal
         visible={showAddScoreIntro}
@@ -1466,12 +1439,6 @@ export default function GroupDetailScreen() {
           }
           handleAddScoreIntroComplete();
         }}
-      />
-
-      <MatchTypeModal
-        visible={showMatchTypeModal}
-        onClose={() => setShowMatchTypeModal(false)}
-        onSelect={handleMatchTypeSelect}
       />
 
       <AddScoreModal

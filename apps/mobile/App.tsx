@@ -16,8 +16,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AppNavigator from './src/navigation/AppNavigator';
 import { navigationRef } from './src/navigation';
 import { ActionsBottomSheet } from './src/components/ActionsBottomSheet';
-import { MatchDetailSheet } from './src/components/MatchDetailSheet';
-import { PlayerInviteSheet } from './src/components/PlayerInviteSheet';
 import { FeedbackSheet } from './src/components/FeedbackSheet';
 import { SplashOverlay } from './src/components/SplashOverlay';
 import {
@@ -51,6 +49,8 @@ import {
 } from './src/context';
 import { usePushNotifications } from './src/hooks';
 import { StripeProvider } from '@stripe/stripe-react-native';
+import { SheetProvider } from 'react-native-actions-sheet';
+import { Sheets } from './src/context/sheets';
 
 // Import NativeWind global styles
 import './global.css';
@@ -265,14 +265,13 @@ function AppContent() {
     <>
       <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
       <NavigationContainer ref={navigationRef}>
-        <AppNavigator />
+        <SheetProvider>
+          <Sheets />
+          <AppNavigator />
+        </SheetProvider>
       </NavigationContainer>
       {/* Actions Bottom Sheet - renders above navigation */}
       <ActionsBottomSheet />
-      {/* Match Detail Bottom Sheet - shows when match card is pressed */}
-      <MatchDetailSheet />
-      {/* Player Invite Bottom Sheet - shows when host invites players */}
-      <PlayerInviteSheet />
       {/* Feedback Bottom Sheet - shows when providing post-match feedback */}
       <FeedbackSheet />
       {/* Pending Feedback Handler - auto-opens FeedbackSheet on app launch if needed */}

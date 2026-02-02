@@ -1348,6 +1348,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacingPixels[6],
+    paddingBottom: spacingPixels[4],
     position: 'relative',
   },
   successCloseButton: {

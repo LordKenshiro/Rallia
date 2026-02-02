@@ -21,11 +21,10 @@ import type { FacilityWithDetails } from '@rallia/shared-services';
 import { lightHaptic } from '@rallia/shared-utils';
 
 import { useRequireOnboarding, type TranslationKey, type TranslationOptions } from '../../../hooks';
+import { SheetManager } from 'react-native-actions-sheet';
 import AvailabilitySlotCard from './AvailabilitySlotCard';
 import DatePickerBar from './DatePickerBar';
 import TimeOfDaySection, { groupSlotsByTimeOfDay } from './TimeOfDaySection';
-import CourtBookingSheet from './CourtBookingSheet';
-import ExternalBookingSheet from './ExternalBookingSheet';
 
 // =============================================================================
 // TYPES
@@ -394,8 +393,6 @@ export default function AvailabilityTab({
 
   // Selected slot for booking
   const [selectedSlot, setSelectedSlot] = useState<FormattedSlot | null>(null);
-  const [showBookingSheet, setShowBookingSheet] = useState(false);
-  const [showExternalSheet, setShowExternalSheet] = useState(false);
 
   // Check if payments are enabled for this facility
   const paymentsEnabled = facility.paymentsEnabled ?? false;
@@ -506,24 +503,17 @@ export default function AvailabilityTab({
       setSelectedSlot(slot);
 
       if (slot.isLocalSlot) {
-        setShowBookingSheet(true);
+        SheetManager.show('court-booking', {
+          payload: { facility, slot, courts },
+        });
       } else {
-        setShowExternalSheet(true);
+        SheetManager.show('external-booking', {
+          payload: { facility, slot },
+        });
       }
     },
-    [guardAction, isSlotDisabled]
+    [guardAction, isSlotDisabled, facility, courts]
   );
-
-  // Close sheets
-  const handleCloseBookingSheet = useCallback(() => {
-    setShowBookingSheet(false);
-    setSelectedSlot(null);
-  }, []);
-
-  const handleCloseExternalSheet = useCallback(() => {
-    setShowExternalSheet(false);
-    setSelectedSlot(null);
-  }, []);
 
   // Group slots by date (using sport-filtered slots)
   const dateItems = useMemo(() => {
@@ -713,31 +703,6 @@ export default function AvailabilityTab({
           </View>
         )}
       </View>
-
-      {/* Court Booking Sheet (local slots) */}
-      {selectedSlot && (
-        <CourtBookingSheet
-          visible={showBookingSheet}
-          onClose={handleCloseBookingSheet}
-          facility={facility}
-          slot={selectedSlot}
-          courts={courts}
-          colors={colors}
-          t={t}
-        />
-      )}
-
-      {/* External Booking Sheet */}
-      {selectedSlot && showExternalSheet && (
-        <ExternalBookingSheet
-          visible={showExternalSheet}
-          onClose={handleCloseExternalSheet}
-          facility={facility}
-          slot={selectedSlot}
-          colors={colors}
-          t={t}
-        />
-      )}
     </View>
   );
 }

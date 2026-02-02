@@ -5,139 +5,107 @@
  * Allows user to confirm they successfully booked a court.
  */
 
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Modal } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
-import type { TranslationKey } from '../../../hooks/useTranslation';
-
-// =============================================================================
-// TYPES
-// =============================================================================
-
-interface BookingConfirmationSheetProps {
-  /** Whether the sheet is visible */
-  visible: boolean;
-  /** Called when user confirms booking */
-  onConfirm: () => void;
-  /** Called when user cancels/dismisses */
-  onCancel: () => void;
-  /** Theme colors */
-  colors: {
-    text: string;
-    textSecondary: string;
-    textMuted: string;
-    border: string;
-    buttonActive: string;
-    buttonInactive: string;
-    buttonTextActive: string;
-    cardBackground: string;
-    background: string;
-  };
-  /** Translation function */
-  t: (key: TranslationKey) => string;
-  /** Whether dark mode is active */
-  isDark: boolean;
-}
+import { useThemeStyles, useTranslation, type TranslationKey } from '../../../hooks';
 
 // =============================================================================
 // COMPONENT
 // =============================================================================
 
-export const BookingConfirmationSheet: React.FC<BookingConfirmationSheetProps> = ({
-  visible,
-  onConfirm,
-  onCancel,
-  colors,
-  t,
-}) => {
-  const handleConfirm = () => {
-    successHaptic();
-    onConfirm();
-  };
+export function BookingConfirmationActionSheet({ payload }: SheetProps<'booking-confirmation'>) {
+  const onConfirm = payload?.onConfirm;
+  const onCancel = payload?.onCancel;
 
-  const handleCancel = () => {
+  const { colors } = useThemeStyles();
+  const { t } = useTranslation();
+
+  const handleConfirm = useCallback(() => {
+    successHaptic();
+    onConfirm?.();
+    SheetManager.hide('booking-confirmation');
+  }, [onConfirm]);
+
+  const handleCancel = useCallback(() => {
     lightHaptic();
-    onCancel();
-  };
+    onCancel?.();
+    SheetManager.hide('booking-confirmation');
+  }, [onCancel]);
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleCancel}>
-      <View style={styles.overlay}>
-        <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
-          {/* Icon */}
-          <View style={[styles.iconContainer, { backgroundColor: `${colors.buttonActive}15` }]}>
-            <Ionicons name="calendar-outline" size={32} color={colors.buttonActive} />
-          </View>
+    <ActionSheet
+      gestureEnabled={false}
+      closable={false}
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
+      indicatorStyle={{ display: 'none' }}
+    >
+      <View style={styles.container}>
+        {/* Icon */}
+        <View style={[styles.iconContainer, { backgroundColor: `${colors.buttonActive}15` }]}>
+          <Ionicons name="calendar-outline" size={32} color={colors.buttonActive} />
+        </View>
 
-          {/* Title */}
-          <Text size="lg" weight="bold" color={colors.text} style={styles.title}>
-            {t('matchCreation.booking.bookingConfirmTitle' as TranslationKey)}
-          </Text>
+        {/* Title */}
+        <Text size="lg" weight="bold" color={colors.text} style={styles.title}>
+          {t('matchCreation.booking.bookingConfirmTitle' as TranslationKey)}
+        </Text>
 
-          {/* Description */}
-          <Text size="base" color={colors.textMuted} style={styles.description}>
-            {t('matchCreation.booking.bookingConfirmMessage' as TranslationKey)}
-          </Text>
+        {/* Description */}
+        <Text size="base" color={colors.textMuted} style={styles.description}>
+          {t('matchCreation.booking.bookingConfirmMessage' as TranslationKey)}
+        </Text>
 
-          {/* Buttons */}
-          <View style={styles.buttons}>
-            {/* Confirm Button */}
-            <TouchableOpacity
-              style={[
-                styles.button,
-                styles.confirmButton,
-                { backgroundColor: colors.buttonActive },
-              ]}
-              onPress={handleConfirm}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="checkmark-circle" size={20} color={colors.buttonTextActive} />
-              <Text size="base" weight="semibold" color={colors.buttonTextActive}>
-                {t('matchCreation.booking.iBookedThisCourt' as TranslationKey)}
-              </Text>
-            </TouchableOpacity>
+        {/* Buttons */}
+        <View style={styles.buttons}>
+          {/* Confirm Button */}
+          <TouchableOpacity
+            style={[styles.button, styles.confirmButton, { backgroundColor: colors.buttonActive }]}
+            onPress={handleConfirm}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="checkmark-circle" size={20} color={colors.buttonTextActive} />
+            <Text size="base" weight="semibold" color={colors.buttonTextActive}>
+              {t('matchCreation.booking.iBookedThisCourt' as TranslationKey)}
+            </Text>
+          </TouchableOpacity>
 
-            {/* Cancel Button */}
-            <TouchableOpacity
-              style={[
-                styles.button,
-                styles.cancelButton,
-                { backgroundColor: colors.buttonInactive },
-              ]}
-              onPress={handleCancel}
-              activeOpacity={0.8}
-            >
-              <Text size="base" weight="medium" color={colors.textSecondary}>
-                {t('matchCreation.booking.notYet' as TranslationKey)}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          {/* Cancel Button */}
+          <TouchableOpacity
+            style={[styles.button, styles.cancelButton, { backgroundColor: colors.buttonInactive }]}
+            onPress={handleCancel}
+            activeOpacity={0.8}
+          >
+            <Text size="base" weight="medium" color={colors.textSecondary}>
+              {t('matchCreation.booking.notYet' as TranslationKey)}
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
-    </Modal>
+    </ActionSheet>
   );
-};
+}
+
+// Keep old export for backwards compatibility during migration
+export const BookingConfirmationSheet = BookingConfirmationActionSheet;
 
 // =============================================================================
 // STYLES
 // =============================================================================
 
 const styles = StyleSheet.create({
-  overlay: {
+  sheetBackground: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacingPixels[4],
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
   },
   container: {
-    width: '100%',
-    maxWidth: 340,
-    borderRadius: radiusPixels['2xl'],
     padding: spacingPixels[6],
+    paddingBottom: spacingPixels[4],
     alignItems: 'center',
   },
   iconContainer: {

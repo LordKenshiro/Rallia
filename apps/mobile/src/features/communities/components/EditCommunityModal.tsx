@@ -6,18 +6,15 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
-  Modal,
   TouchableOpacity,
   StyleSheet,
   TextInput,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
   Alert,
   Image,
-  ScrollView,
   Switch,
 } from 'react-native';
+import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -25,39 +22,30 @@ import { Text } from '@rallia/shared-components';
 import { useThemeStyles, useAuth, useTranslation } from '../../../hooks';
 import { useUpdateCommunity, type Community } from '@rallia/shared-hooks';
 import { uploadImage, replaceImage } from '../../../services/imageUpload';
-import { primary } from '@rallia/design-system';
+import { primary, radiusPixels, spacingPixels } from '@rallia/design-system';
 
-interface EditCommunityModalProps {
-  visible: boolean;
-  onClose: () => void;
-  community: Community;
-  onSuccess: () => void;
-}
+export function EditCommunityActionSheet({ payload }: SheetProps<'edit-community'>) {
+  const community = payload?.community as Community;
+  const onSuccess = payload?.onSuccess;
 
-export function EditCommunityModal({
-  visible,
-  onClose,
-  community,
-  onSuccess,
-}: EditCommunityModalProps) {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
   const { session } = useAuth();
   const playerId = session?.user?.id;
 
-  const [name, setName] = useState(community.name);
-  const [description, setDescription] = useState(community.description || '');
-  const [isPublic, setIsPublic] = useState(community.is_public ?? true);
-  const [coverImage, setCoverImage] = useState<string | null>(community.cover_image_url || null);
+  const [name, setName] = useState(community?.name ?? '');
+  const [description, setDescription] = useState(community?.description || '');
+  const [isPublic, setIsPublic] = useState(community?.is_public ?? true);
+  const [coverImage, setCoverImage] = useState<string | null>(community?.cover_image_url || null);
   const [newCoverImage, setNewCoverImage] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const updateCommunityMutation = useUpdateCommunity();
 
-  // Reset form when modal opens
+  // Reset form when community changes
   useEffect(() => {
-    if (visible) {
+    if (community) {
       setName(community.name);
       setDescription(community.description || '');
       setIsPublic(community.is_public ?? true);
@@ -65,13 +53,13 @@ export function EditCommunityModal({
       setNewCoverImage(null);
       setError(null);
     }
-  }, [visible, community]);
+  }, [community]);
 
   const handleClose = useCallback(() => {
     setError(null);
     setNewCoverImage(null);
-    onClose();
-  }, [onClose]);
+    SheetManager.hide('edit-community');
+  }, []);
 
   const handlePickImage = useCallback(async () => {
     try {
@@ -172,7 +160,7 @@ export function EditCommunityModal({
           ...(coverImageUrl !== undefined && { cover_image_url: coverImageUrl || undefined }),
         },
       });
-      onSuccess();
+      onSuccess?.();
     } catch (err) {
       console.error('[EditCommunityModal] Error updating community:', err);
       Alert.alert(
@@ -204,216 +192,219 @@ export function EditCommunityModal({
   const displayImage = newCoverImage || coverImage;
   const isSubmitting = updateCommunityMutation.isPending || isUploadingImage;
 
+  if (!community) return null;
+
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
-      <KeyboardAvoidingView
-        style={styles.overlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={handleClose} />
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+    >
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <Text weight="semibold" size="lg" style={{ color: colors.text }}>
+            {t('community.editCommunity')}
+          </Text>
+          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+            <Ionicons name="close" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
 
-        <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
-          {/* Header */}
-          <View style={[styles.header, { borderBottomColor: colors.border }]}>
-            <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-              {t('community.editCommunity')}
+        {/* Content */}
+        <ScrollView
+          style={styles.scrollContent}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Cover Image Picker */}
+          <View style={styles.inputGroup}>
+            <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
+              {t('community.communityImageLabel')}
             </Text>
-            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={colors.text} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Content */}
-          <ScrollView style={styles.scrollContent} contentContainerStyle={styles.content}>
-            {/* Cover Image Picker */}
-            <View style={styles.inputGroup}>
-              <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
-                {t('community.communityImageLabel')}
-              </Text>
-              {displayImage ? (
-                <View style={styles.imagePreviewContainer}>
-                  <Image source={{ uri: displayImage }} style={styles.imagePreview} />
-                  <TouchableOpacity
-                    style={[styles.removeImageButton, { backgroundColor: colors.cardBackground }]}
-                    onPress={handleRemoveImage}
-                  >
-                    <Ionicons name="close" size={20} color={colors.text} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.changeImageButton, { backgroundColor: colors.primary }]}
-                    onPress={handlePickImage}
-                  >
-                    <Ionicons name="camera" size={16} color="#FFFFFF" />
-                    <Text size="xs" weight="semibold" style={{ color: '#FFFFFF', marginLeft: 4 }}>
-                      {t('common.change')}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
+            {displayImage ? (
+              <View style={styles.imagePreviewContainer}>
+                <Image source={{ uri: displayImage }} style={styles.imagePreview} />
                 <TouchableOpacity
-                  style={[
-                    styles.imagePicker,
-                    {
-                      backgroundColor: isDark ? primary[900] : primary[100],
-                      borderColor: colors.border,
-                    },
-                  ]}
+                  style={[styles.removeImageButton, { backgroundColor: colors.cardBackground }]}
+                  onPress={handleRemoveImage}
+                >
+                  <Ionicons name="close" size={20} color={colors.text} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.changeImageButton, { backgroundColor: colors.primary }]}
                   onPress={handlePickImage}
                 >
-                  <View
-                    style={[styles.imagePickerIcon, { backgroundColor: colors.cardBackground }]}
-                  >
-                    <Ionicons name="camera" size={24} color={colors.primary} />
-                  </View>
-                  <Text size="sm" style={{ color: colors.textSecondary, marginTop: 8 }}>
-                    {t('community.addCoverImage')}
+                  <Ionicons name="camera" size={16} color="#FFFFFF" />
+                  <Text size="xs" weight="semibold" style={{ color: '#FFFFFF', marginLeft: 4 }}>
+                    {t('common.change')}
                   </Text>
                 </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Community Name */}
-            <View style={styles.inputGroup}>
-              <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
-                {t('community.communityName')} *
-              </Text>
-              <TextInput
+              </View>
+            ) : (
+              <TouchableOpacity
                 style={[
-                  styles.input,
+                  styles.imagePicker,
                   {
-                    backgroundColor: colors.inputBackground,
-                    color: colors.text,
-                    borderColor: error ? '#FF3B30' : colors.border,
-                  },
-                ]}
-                placeholder={t('community.enterCommunityName')}
-                placeholderTextColor={colors.textMuted}
-                value={name}
-                onChangeText={setName}
-                maxLength={50}
-              />
-              {error && (
-                <Text size="xs" style={{ color: '#FF3B30', marginTop: 4 }}>
-                  {error}
-                </Text>
-              )}
-            </View>
-
-            {/* Description */}
-            <View style={styles.inputGroup}>
-              <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
-                {t('community.descriptionOptional')}
-              </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  styles.textArea,
-                  {
-                    backgroundColor: colors.inputBackground,
-                    color: colors.text,
+                    backgroundColor: isDark ? primary[900] : primary[100],
                     borderColor: colors.border,
                   },
                 ]}
-                placeholder={t('community.descriptionPlaceholder')}
-                placeholderTextColor={colors.textMuted}
-                value={description}
-                onChangeText={setDescription}
-                maxLength={200}
-                multiline
-                numberOfLines={3}
-                textAlignVertical="top"
-              />
-              <Text size="xs" style={{ color: colors.textMuted, marginTop: 4, textAlign: 'right' }}>
-                {description.length}/200
-              </Text>
-            </View>
-
-            {/* Visibility Toggle */}
-            <View
-              style={[
-                styles.visibilityToggle,
-                { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', borderColor: colors.border },
-              ]}
-            >
-              <View style={styles.visibilityInfo}>
-                <View
-                  style={[
-                    styles.visibilityIcon,
-                    { backgroundColor: isPublic ? '#E8F5E9' : '#FFF3E0' },
-                  ]}
-                >
-                  <Ionicons
-                    name={isPublic ? 'globe-outline' : 'lock-closed-outline'}
-                    size={20}
-                    color={isPublic ? '#2E7D32' : '#EF6C00'}
-                  />
+                onPress={handlePickImage}
+              >
+                <View style={[styles.imagePickerIcon, { backgroundColor: colors.cardBackground }]}>
+                  <Ionicons name="camera" size={24} color={colors.primary} />
                 </View>
-                <View style={styles.visibilityText}>
-                  <Text weight="semibold" style={{ color: colors.text }}>
-                    {isPublic ? t('community.publicCommunity') : t('community.privateCommunity')}
-                  </Text>
-                  <Text size="xs" style={{ color: colors.textSecondary, marginTop: 2 }}>
-                    {isPublic
-                      ? t('community.publicDescription')
-                      : t('community.privateDescription')}
-                  </Text>
-                </View>
-              </View>
-              <Switch
-                value={isPublic}
-                onValueChange={setIsPublic}
-                trackColor={{ false: colors.border, true: colors.primary }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
-          </ScrollView>
-
-          {/* Footer */}
-          <View style={[styles.footer, { borderTopColor: colors.border }]}>
-            <TouchableOpacity
-              style={[styles.cancelButton, { borderColor: colors.border }]}
-              onPress={handleClose}
-              disabled={isSubmitting}
-            >
-              <Text style={{ color: colors.text }}>{t('common.cancel')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.submitButton,
-                { backgroundColor: colors.primary },
-                (!hasChanges || isSubmitting) && { opacity: 0.7 },
-              ]}
-              onPress={handleSubmit}
-              disabled={!hasChanges || isSubmitting || !name.trim()}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text weight="semibold" style={{ color: '#FFFFFF' }}>
-                  {t('common.saveChanges')}
+                <Text size="sm" style={{ color: colors.textSecondary, marginTop: 8 }}>
+                  {t('community.addCoverImage')}
                 </Text>
-              )}
-            </TouchableOpacity>
+              </TouchableOpacity>
+            )}
           </View>
+
+          {/* Community Name */}
+          <View style={styles.inputGroup}>
+            <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
+              {t('community.communityName')} *
+            </Text>
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.inputBackground,
+                  color: colors.text,
+                  borderColor: error ? '#FF3B30' : colors.border,
+                },
+              ]}
+              placeholder={t('community.enterCommunityName')}
+              placeholderTextColor={colors.textMuted}
+              value={name}
+              onChangeText={setName}
+              maxLength={50}
+            />
+            {error && (
+              <Text size="xs" style={{ color: '#FF3B30', marginTop: 4 }}>
+                {error}
+              </Text>
+            )}
+          </View>
+
+          {/* Description */}
+          <View style={styles.inputGroup}>
+            <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
+              {t('community.descriptionOptional')}
+            </Text>
+            <TextInput
+              style={[
+                styles.input,
+                styles.textArea,
+                {
+                  backgroundColor: colors.inputBackground,
+                  color: colors.text,
+                  borderColor: colors.border,
+                },
+              ]}
+              placeholder={t('community.descriptionPlaceholder')}
+              placeholderTextColor={colors.textMuted}
+              value={description}
+              onChangeText={setDescription}
+              maxLength={200}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+            <Text size="xs" style={{ color: colors.textMuted, marginTop: 4, textAlign: 'right' }}>
+              {description.length}/200
+            </Text>
+          </View>
+
+          {/* Visibility Toggle */}
+          <View
+            style={[
+              styles.visibilityToggle,
+              { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', borderColor: colors.border },
+            ]}
+          >
+            <View style={styles.visibilityInfo}>
+              <View
+                style={[
+                  styles.visibilityIcon,
+                  { backgroundColor: isPublic ? '#E8F5E9' : '#FFF3E0' },
+                ]}
+              >
+                <Ionicons
+                  name={isPublic ? 'globe-outline' : 'lock-closed-outline'}
+                  size={20}
+                  color={isPublic ? '#2E7D32' : '#EF6C00'}
+                />
+              </View>
+              <View style={styles.visibilityText}>
+                <Text weight="semibold" style={{ color: colors.text }}>
+                  {isPublic ? t('community.publicCommunity') : t('community.privateCommunity')}
+                </Text>
+                <Text size="xs" style={{ color: colors.textSecondary, marginTop: 2 }}>
+                  {isPublic ? t('community.publicDescription') : t('community.privateDescription')}
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={isPublic}
+              onValueChange={setIsPublic}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+        </ScrollView>
+
+        {/* Footer */}
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
+          <TouchableOpacity
+            style={[styles.cancelButton, { borderColor: colors.border }]}
+            onPress={handleClose}
+            disabled={isSubmitting}
+          >
+            <Text style={{ color: colors.text }}>{t('common.cancel')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              { backgroundColor: colors.primary },
+              (!hasChanges || isSubmitting) && { opacity: 0.7 },
+            ]}
+            onPress={handleSubmit}
+            disabled={!hasChanges || isSubmitting || !name.trim()}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator size="small" color={colors.buttonTextActive} />
+            ) : (
+              <Text size="lg" weight="semibold" color={colors.buttonTextActive}>
+                {t('common.saveChanges')}
+              </Text>
+            )}
+          </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
-    </Modal>
+      </View>
+    </ActionSheet>
   );
 }
 
+// Keep old export for backwards compatibility during migration
+export const EditCommunityModal = EditCommunityActionSheet;
+
 const styles = StyleSheet.create({
-  overlay: {
+  sheetBackground: {
     flex: 1,
-    justifyContent: 'flex-end',
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
   },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
   },
   container: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '85%',
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -426,7 +417,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   scrollContent: {
-    maxHeight: 450,
+    flex: 1,
   },
   content: {
     padding: 16,
@@ -523,21 +514,26 @@ const styles = StyleSheet.create({
   },
   footer: {
     flexDirection: 'row',
-    padding: 16,
-    gap: 12,
+    padding: spacingPixels[4],
     borderTopWidth: 1,
+    paddingBottom: spacingPixels[4],
+    gap: spacingPixels[3],
   },
   cancelButton: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
     borderWidth: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   submitButton: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    gap: spacingPixels[2],
   },
 });

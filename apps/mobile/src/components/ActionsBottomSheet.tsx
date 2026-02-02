@@ -675,7 +675,7 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingHorizontal: spacingPixels[6],
     paddingTop: spacingPixels[2],
-    paddingBottom: spacingPixels[8],
+    paddingBottom: spacingPixels[4],
   },
   actionsList: {
     paddingTop: spacingPixels[2],

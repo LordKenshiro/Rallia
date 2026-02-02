@@ -19,14 +19,15 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
-  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { SheetManager } from 'react-native-actions-sheet';
 import { Text } from '@rallia/shared-components';
+import { getSafeAreaEdges } from '../utils';
 import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
 import { primary, neutral } from '@rallia/design-system';
 import {
@@ -37,7 +38,8 @@ import {
 } from '@rallia/shared-hooks';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
 import type { CommunityStackParamList } from '../navigation/types';
-import { AddContactModal, ContactCard, ImportContactsModal } from '../features/shared-lists';
+import { ContactCard } from '../features/shared-lists';
+import { SearchBar } from '../components/SearchBar';
 
 type RouteParams = {
   SharedListDetail: {
@@ -54,9 +56,6 @@ const SharedListDetail: React.FC = () => {
   const { listId, listName } = route.params;
 
   // State
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [editingContact, setEditingContact] = useState<SharedContact | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Queries and mutations
@@ -92,20 +91,21 @@ const SharedListDetail: React.FC = () => {
 
   // Add contact manually
   const handleAddManually = useCallback(() => {
-    setEditingContact(null);
-    setShowAddModal(true);
-  }, []);
+    SheetManager.show('add-contact', { payload: { listId, editingContact: null } });
+  }, [listId]);
 
   // Import from phone book
   const handleImportFromPhoneBook = useCallback(() => {
-    setShowImportModal(true);
-  }, []);
+    SheetManager.show('import-contacts', { payload: { listId, existingContacts: contacts } });
+  }, [listId, contacts]);
 
   // Edit contact
-  const handleEditContact = useCallback((contact: SharedContact) => {
-    setEditingContact(contact);
-    setShowAddModal(true);
-  }, []);
+  const handleEditContact = useCallback(
+    (contact: SharedContact) => {
+      SheetManager.show('add-contact', { payload: { listId, editingContact: contact } });
+    },
+    [listId]
+  );
 
   // Delete contact
   const handleDeleteContact = useCallback(
@@ -135,18 +135,6 @@ const SharedListDetail: React.FC = () => {
     },
     [deleteContactMutation, listId, t]
   );
-
-  // Modal close handlers
-  const handleAddModalClose = useCallback(() => {
-    setShowAddModal(false);
-    setEditingContact(null);
-    // No need to manually refetch - React Query + Realtime handles it
-  }, []);
-
-  const handleImportModalClose = useCallback(() => {
-    setShowImportModal(false);
-    // No need to manually refetch - React Query + Realtime handles it
-  }, []);
 
   // Render contact item
   const renderContactItem = useCallback(
@@ -208,7 +196,7 @@ const SharedListDetail: React.FC = () => {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['bottom']}
+        edges={getSafeAreaEdges(['bottom'])}
       >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -220,29 +208,17 @@ const SharedListDetail: React.FC = () => {
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['bottom']}
+      edges={getSafeAreaEdges(['bottom'])}
     >
       {/* Header with Search and Add Buttons */}
       {contacts.length > 0 && (
         <View style={styles.header}>
           {/* Search Bar */}
-          <View style={[styles.searchContainer, { backgroundColor: colors.inputBackground }]}>
-            <Ionicons name="search-outline" size={18} color={colors.textMuted} />
-            <TextInput
-              style={[styles.searchInput, { color: colors.text }]}
-              placeholder={t('sharedLists.searchContacts' as TranslationKey)}
-              placeholderTextColor={colors.textMuted}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Ionicons name="close-circle" size={18} color={colors.textMuted} />
-              </TouchableOpacity>
-            )}
-          </View>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder={t('sharedLists.searchContacts' as TranslationKey)}
+          />
 
           {/* Count and Buttons Row */}
           <View style={styles.headerRow}>
@@ -294,26 +270,6 @@ const SharedListDetail: React.FC = () => {
           />
         }
       />
-
-      {/* Add/Edit Contact Modal */}
-      <AddContactModal
-        visible={showAddModal}
-        listId={listId}
-        editingContact={editingContact}
-        colors={colors}
-        isDark={isDark}
-        onClose={handleAddModalClose}
-      />
-
-      {/* Import from Phone Book Modal */}
-      <ImportContactsModal
-        visible={showImportModal}
-        listId={listId}
-        existingContacts={contacts}
-        colors={colors}
-        isDark={isDark}
-        onClose={handleImportModalClose}
-      />
     </SafeAreaView>
   );
 };
@@ -331,19 +287,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[3],
     gap: spacingPixels[3],
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: radiusPixels.lg,
-    paddingHorizontal: spacingPixels[3],
-    height: 40,
-    gap: spacingPixels[2],
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: fontSizePixels.sm,
-    paddingVertical: 0,
   },
   headerRow: {
     flexDirection: 'row',

@@ -26,6 +26,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
+import { getSafeAreaEdges } from '../utils';
 import { useThemeStyles, useTranslation, useNavigateToPlayerProfile } from '../hooks';
 import { lightHaptic } from '@rallia/shared-utils';
 import {
@@ -376,7 +377,7 @@ const IncomingReferenceRequests: React.FC = () => {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['bottom']}
+        edges={getSafeAreaEdges(['bottom'])}
       >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -391,7 +392,7 @@ const IncomingReferenceRequests: React.FC = () => {
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['bottom']}
+      edges={getSafeAreaEdges(['bottom'])}
     >
       {/* Header info */}
       <View style={[styles.headerInfo, { backgroundColor: colors.card }]}>

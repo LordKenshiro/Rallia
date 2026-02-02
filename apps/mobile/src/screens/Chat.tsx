@@ -12,21 +12,28 @@ import {
   StyleSheet,
   FlatList,
   RefreshControl,
-  TextInput,
   TouchableOpacity,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text, SkeletonConversation } from '@rallia/shared-components';
 import { lightHaptic, selectionHaptic } from '@rallia/shared-utils';
+import { getSafeAreaEdges } from '../utils';
 import { useThemeStyles, useAuth, useTranslation, useRequireOnboarding } from '../hooks';
 import { useActionsSheet } from '../context';
 import SignInPrompt from '../components/SignInPrompt';
-import { spacingPixels, fontSizePixels, primary, neutral } from '@rallia/design-system';
+import { SearchBar } from '../components/SearchBar';
+import {
+  spacingPixels,
+  fontSizePixels,
+  fontWeightNumeric,
+  primary,
+  neutral,
+  radiusPixels,
+} from '@rallia/design-system';
 import {
   usePlayerConversations,
   useConversationsRealtime,
@@ -37,10 +44,9 @@ import {
   useBlockedUserIds,
   type ConversationPreview,
 } from '@rallia/shared-hooks';
-import { ConversationItem, ConversationActionsSheet, CreateGroupChatModal } from '../features/chat';
-import type { ChatStackParamList } from '../navigation/types';
-
-type NavigationProp = NativeStackNavigationProp<ChatStackParamList>;
+import { ConversationItem } from '../features/chat';
+import { SheetManager } from 'react-native-actions-sheet';
+import { useAppNavigation, useChatNavigation } from '../navigation/hooks';
 
 type TabKey = 'direct' | 'groups' | 'matches';
 
@@ -52,7 +58,9 @@ const TAB_CONFIGS: { key: TabKey; icon: keyof typeof Ionicons.glyphMap }[] = [
 
 const Chat = () => {
   const { colors, isDark } = useThemeStyles();
-  const navigation = useNavigation<NavigationProp>();
+  const insets = useSafeAreaInsets();
+  const rootNavigation = useAppNavigation();
+  const chatNavigation = useChatNavigation();
   const { session, isAuthenticated, loading: isLoadingAuth } = useAuth();
   const { t } = useTranslation();
   const { openSheet } = useActionsSheet();
@@ -61,14 +69,10 @@ const Chat = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<TabKey>('direct');
 
-  // State for conversation actions sheet
+  // Track selected conversation for action handlers
   const [selectedConversation, setSelectedConversation] = useState<ConversationPreview | null>(
     null
   );
-  const [showActionsSheet, setShowActionsSheet] = useState(false);
-
-  // State for create group chat modal
-  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
 
   const {
     data: conversations,
@@ -176,73 +180,76 @@ const Chat = () => {
   // Navigate to archived chats
   const handleArchivedPress = useCallback(() => {
     lightHaptic();
-    navigation.navigate('ArchivedChats');
-  }, [navigation]);
+    chatNavigation.navigate('ArchivedChats');
+  }, [chatNavigation]);
 
   // Handle new group button press
   const handleNewGroupPress = useCallback(() => {
     if (!guardAction()) return;
     lightHaptic();
-    setShowCreateGroupModal(true);
-  }, [guardAction]);
-
-  // Handle group creation success - navigate to the new chat
-  const handleGroupCreated = useCallback(
-    (conversationId: string) => {
-      // Refetch conversations to include the new group
-      refetch();
-      // Navigate to the new conversation
-      navigation.navigate('ChatScreen', {
-        conversationId,
-        title: undefined, // Will be loaded from conversation
-      });
-    },
-    [refetch, navigation]
-  );
+    SheetManager.show('create-group-chat', {
+      payload: {
+        onSuccess: (conversationId: string) => {
+          // Refetch conversations to include the new group
+          refetch();
+          // Navigate to the new conversation
+          rootNavigation.navigate('ChatConversation', {
+            conversationId,
+            title: undefined, // Will be loaded from conversation
+          });
+        },
+      },
+    });
+  }, [guardAction, refetch, rootNavigation]);
 
   const handleConversationPress = useCallback(
     (conversation: ConversationPreview) => {
       lightHaptic();
-      navigation.navigate('ChatScreen', {
+      rootNavigation.navigate('ChatConversation', {
         conversationId: conversation.id,
         title: conversation.title || undefined,
       });
     },
-    [navigation]
+    [rootNavigation]
   );
 
-  const handleConversationLongPress = useCallback((conversation: ConversationPreview) => {
-    selectionHaptic();
-    setSelectedConversation(conversation);
-    setShowActionsSheet(true);
-  }, []);
+  const handleConversationLongPress = useCallback(
+    (conversation: ConversationPreview) => {
+      selectionHaptic();
+      setSelectedConversation(conversation);
 
-  const handleTogglePin = useCallback(() => {
-    if (!selectedConversation || !playerId) return;
-    togglePin({
-      conversationId: selectedConversation.id,
-      playerId,
-      isPinned: !selectedConversation.is_pinned,
-    });
-  }, [selectedConversation, playerId, togglePin]);
-
-  const handleToggleMute = useCallback(() => {
-    if (!selectedConversation || !playerId) return;
-    toggleMute({
-      conversationId: selectedConversation.id,
-      playerId,
-      isMuted: !selectedConversation.is_muted,
-    });
-  }, [selectedConversation, playerId, toggleMute]);
-
-  const handleToggleArchive = useCallback(() => {
-    if (!selectedConversation || !playerId) return;
-    toggleArchive({
-      conversationId: selectedConversation.id,
-      playerId,
-      isArchived: !selectedConversation.is_archived,
-    });
-  }, [selectedConversation, playerId, toggleArchive]);
+      SheetManager.show('conversation-actions', {
+        payload: {
+          conversation,
+          onTogglePin: () => {
+            if (!playerId) return;
+            togglePin({
+              conversationId: conversation.id,
+              playerId,
+              isPinned: !conversation.is_pinned,
+            });
+          },
+          onToggleMute: () => {
+            if (!playerId) return;
+            toggleMute({
+              conversationId: conversation.id,
+              playerId,
+              isMuted: !conversation.is_muted,
+            });
+          },
+          onToggleArchive: () => {
+            if (!playerId) return;
+            toggleArchive({
+              conversationId: conversation.id,
+              playerId,
+              isArchived: !conversation.is_archived,
+            });
+          },
+        },
+      });
+    },
+    [playerId, togglePin, toggleMute, toggleArchive]
+  );
 
   const renderItem = useCallback(
     ({ item }: { item: ConversationPreview }) => {
@@ -394,45 +401,28 @@ const Chat = () => {
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['top']}
+      edges={getSafeAreaEdges(['top'])}
     >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('chat.inbox')}</Text>
+        <Text style={[styles.headerTitle, { color: colors.headerForeground }]}>
+          {t('chat.inbox')}
+        </Text>
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.headerButton}>
-            <Ionicons name="create-outline" size={24} color={colors.text} />
+            <Ionicons name="create-outline" size={24} color={colors.headerForeground} />
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Search bar */}
       <View style={styles.searchContainer}>
-        <View
-          style={[
-            styles.searchInputContainer,
-            { backgroundColor: isDark ? colors.card : '#F0F0F0' },
-          ]}
-        >
-          <Ionicons name="search" size={20} color={colors.textMuted} />
-          <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
-            placeholder={t('chat.searchConversations')}
-            placeholderTextColor={colors.textMuted}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color={colors.textMuted} />
-            </TouchableOpacity>
-          )}
-        </View>
-        <TouchableOpacity style={styles.newGroupButton} onPress={handleNewGroupPress}>
-          <Text style={[styles.newGroupText, { color: primary[500] }]}>{t('chat.newGroup')}</Text>
-        </TouchableOpacity>
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder={t('chat.searchConversations')}
+          style={styles.searchBar}
+        />
       </View>
 
       {/* Tab Bar */}
@@ -524,25 +514,20 @@ const Chat = () => {
         />
       )}
 
-      {/* Conversation Actions Sheet */}
-      <ConversationActionsSheet
-        visible={showActionsSheet}
-        conversation={selectedConversation}
-        onClose={() => {
-          setShowActionsSheet(false);
-          setSelectedConversation(null);
-        }}
-        onTogglePin={handleTogglePin}
-        onToggleMute={handleToggleMute}
-        onToggleArchive={handleToggleArchive}
-      />
-
-      {/* Create Group Chat Modal */}
-      <CreateGroupChatModal
-        visible={showCreateGroupModal}
-        onClose={() => setShowCreateGroupModal(false)}
-        onSuccess={handleGroupCreated}
-      />
+      {/* New group FAB */}
+      <TouchableOpacity
+        style={[
+          styles.fab,
+          {
+            backgroundColor: primary[500],
+            bottom: Platform.OS === 'android' ? insets.bottom + 8 : 8,
+          },
+        ]}
+        onPress={handleNewGroupPress}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="add" size={28} color="#fff" />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 };
@@ -561,11 +546,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[2],
+    paddingTop: spacingPixels[4],
+    paddingBottom: spacingPixels[2],
   },
   headerTitle: {
-    fontSize: fontSizePixels['2xl'],
-    fontWeight: '700',
+    fontSize: fontSizePixels.lg,
+    fontWeight: String(fontWeightNumeric.semibold) as '600',
   },
   headerActions: {
     flexDirection: 'row',
@@ -574,31 +560,25 @@ const styles = StyleSheet.create({
     padding: spacingPixels[0],
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingHorizontal: spacingPixels[4],
     paddingBottom: spacingPixels[2],
   },
-  searchInputContainer: {
-    flex: 1,
-    flexDirection: 'row',
+  searchBar: {
+    width: '100%',
+  },
+  fab: {
+    position: 'absolute',
+    right: spacingPixels[4],
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
-    borderRadius: 10,
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[2],
-    marginRight: spacingPixels[3],
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: spacingPixels[2],
-    fontSize: fontSizePixels.base,
-  },
-  newGroupButton: {
-    paddingVertical: spacingPixels[2],
-  },
-  newGroupText: {
-    fontSize: fontSizePixels.base,
-    fontWeight: '500',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
   loadingContainer: {
     flex: 1,

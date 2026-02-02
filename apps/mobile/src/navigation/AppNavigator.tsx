@@ -65,6 +65,7 @@ import CommunityDetail from '../screens/CommunityDetail';
 
 // Components
 import { ThemeLogo } from '../components/ThemeLogo';
+import { MatchDetailSheet } from '../components/MatchDetailSheet';
 
 // Types
 import type {
@@ -439,6 +440,9 @@ function CommunityStack() {
  */
 function ChatStack() {
   const mainScreenOptions = useMainScreenOptions();
+  const { colors } = useThemeStyles();
+  const { t } = useTranslation();
+  const sharedOptions = getSharedScreenOptions(colors);
   return (
     <ChatStackNavigator.Navigator id="ChatStack" screenOptions={fastAnimationOptions}>
       <ChatStackNavigator.Screen
@@ -447,18 +451,13 @@ function ChatStack() {
         options={mainScreenOptions}
       />
       <ChatStackNavigator.Screen
-        name="ChatScreen"
-        component={ChatConversation}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <ChatStackNavigator.Screen
         name="ArchivedChats"
         component={ArchivedChats}
-        options={{
-          headerShown: false,
-        }}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('chat.archivedChats.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
       />
     </ChatStackNavigator.Navigator>
   );
@@ -540,6 +539,20 @@ function CenterTabButton({
  */
 function ActionsPlaceholder() {
   return null;
+}
+
+/**
+ * Main screen wrapper: tabs + MatchDetailSheet.
+ * MatchDetailSheet is rendered inside the navigation tree so it can use useNavigation()
+ * for Chat and PlayerProfile without ref-based helpers.
+ */
+function MainWithSheets() {
+  return (
+    <>
+      <BottomTabs />
+      <MatchDetailSheet />
+    </>
+  );
 }
 
 // =============================================================================
@@ -729,7 +742,7 @@ export default function AppNavigator() {
       )}
 
       {/* Main app entry - only rendered after sport selection is complete */}
-      <RootStack.Screen name="Main" component={BottomTabs} options={{ headerShown: false }} />
+      <RootStack.Screen name="Main" component={MainWithSheets} options={{ headerShown: false }} />
 
       {/* Shared screens - full screen, tabs hidden */}
       <RootStack.Screen
@@ -868,7 +881,7 @@ export default function AppNavigator() {
       />
 
       <RootStack.Screen
-        name="Chat"
+        name="ChatConversation"
         component={ChatConversation}
         options={{
           headerShown: false,

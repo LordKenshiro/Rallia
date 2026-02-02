@@ -4,14 +4,13 @@
  */
 
 import React, { useCallback, useMemo } from 'react';
-import { View, StyleSheet, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, FlatList, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text, SkeletonConversation } from '@rallia/shared-components';
 import { useThemeStyles, useAuth, useTranslation, type TranslationKey } from '../hooks';
+import { getSafeAreaEdges } from '../utils';
 import { spacingPixels, fontSizePixels, primary } from '@rallia/design-system';
 import {
   usePlayerConversations,
@@ -21,22 +20,20 @@ import {
   useBlockedUserIds,
   type ConversationPreview,
 } from '@rallia/shared-hooks';
-import { ConversationItem, ConversationActionsSheet } from '../features/chat';
-import type { ChatStackParamList } from '../navigation/types';
-
-type NavigationProp = NativeStackNavigationProp<ChatStackParamList>;
+import { ConversationItem } from '../features/chat';
+import { SheetManager } from 'react-native-actions-sheet';
+import { useAppNavigation } from '../navigation/hooks';
 
 const ArchivedChats = () => {
   const { colors } = useThemeStyles();
-  const navigation = useNavigation<NavigationProp>();
+  const navigation = useAppNavigation();
   const { session } = useAuth();
   const { t } = useTranslation();
   const playerId = session?.user?.id;
 
-  // State for conversation actions sheet
+  // Track selected conversation for reference
   const [selectedConversation, setSelectedConversation] =
     React.useState<ConversationPreview | null>(null);
-  const [showActionsSheet, setShowActionsSheet] = React.useState(false);
 
   const {
     data: conversations,
@@ -61,7 +58,7 @@ const ArchivedChats = () => {
 
   const handleConversationPress = useCallback(
     (conversation: ConversationPreview) => {
-      navigation.navigate('ChatScreen', {
+      navigation.navigate('ChatConversation', {
         conversationId: conversation.id,
         title: conversation.title || undefined,
       });
@@ -69,37 +66,42 @@ const ArchivedChats = () => {
     [navigation]
   );
 
-  const handleConversationLongPress = useCallback((conversation: ConversationPreview) => {
-    setSelectedConversation(conversation);
-    setShowActionsSheet(true);
-  }, []);
+  const handleConversationLongPress = useCallback(
+    (conversation: ConversationPreview) => {
+      setSelectedConversation(conversation);
 
-  const handleTogglePin = useCallback(() => {
-    if (!selectedConversation || !playerId) return;
-    togglePin({
-      conversationId: selectedConversation.id,
-      playerId,
-      isPinned: !selectedConversation.is_pinned,
-    });
-  }, [selectedConversation, playerId, togglePin]);
-
-  const handleToggleMute = useCallback(() => {
-    if (!selectedConversation || !playerId) return;
-    toggleMute({
-      conversationId: selectedConversation.id,
-      playerId,
-      isMuted: !selectedConversation.is_muted,
-    });
-  }, [selectedConversation, playerId, toggleMute]);
-
-  const handleToggleArchive = useCallback(() => {
-    if (!selectedConversation || !playerId) return;
-    toggleArchive({
-      conversationId: selectedConversation.id,
-      playerId,
-      isArchived: !selectedConversation.is_archived,
-    });
-  }, [selectedConversation, playerId, toggleArchive]);
+      SheetManager.show('conversation-actions', {
+        payload: {
+          conversation,
+          onTogglePin: () => {
+            if (!playerId) return;
+            togglePin({
+              conversationId: conversation.id,
+              playerId,
+              isPinned: !conversation.is_pinned,
+            });
+          },
+          onToggleMute: () => {
+            if (!playerId) return;
+            toggleMute({
+              conversationId: conversation.id,
+              playerId,
+              isMuted: !conversation.is_muted,
+            });
+          },
+          onToggleArchive: () => {
+            if (!playerId) return;
+            toggleArchive({
+              conversationId: conversation.id,
+              playerId,
+              isArchived: !conversation.is_archived,
+            });
+          },
+        },
+      });
+    },
+    [playerId, togglePin, toggleMute, toggleArchive]
+  );
 
   const renderItem = useCallback(
     ({ item }: { item: ConversationPreview }) => {
@@ -148,20 +150,8 @@ const ArchivedChats = () => {
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['top']}
+      edges={getSafeAreaEdges(['bottom'])}
     >
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          {t('chat.archivedChats.title' as TranslationKey)}
-        </Text>
-        <View style={styles.headerSpacer} />
-      </View>
-
-      {/* Content */}
       {isLoading ? (
         <View style={styles.loadingContainer}>
           {[...Array(5)].map((_, index) => (
@@ -188,19 +178,6 @@ const ArchivedChats = () => {
           }
         />
       )}
-
-      {/* Conversation Actions Sheet */}
-      <ConversationActionsSheet
-        visible={showActionsSheet}
-        conversation={selectedConversation}
-        onClose={() => {
-          setShowActionsSheet(false);
-          setSelectedConversation(null);
-        }}
-        onTogglePin={handleTogglePin}
-        onToggleMute={handleToggleMute}
-        onToggleArchive={handleToggleArchive}
-      />
     </SafeAreaView>
   );
 };
@@ -208,24 +185,6 @@ const ArchivedChats = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
-  },
-  backButton: {
-    padding: spacingPixels[1],
-    marginRight: spacingPixels[2],
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: fontSizePixels.xl,
-    fontWeight: '600',
-  },
-  headerSpacer: {
-    width: 32, // Balance the back button
   },
   loadingContainer: {
     flex: 1,

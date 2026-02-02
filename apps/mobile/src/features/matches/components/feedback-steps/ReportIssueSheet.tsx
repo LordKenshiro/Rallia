@@ -333,16 +333,16 @@ const styles = StyleSheet.create({
   },
   footer: {
     padding: spacingPixels[4],
-    paddingBottom: spacingPixels[8],
     borderTopWidth: 1,
+    paddingBottom: spacingPixels[4],
   },
   submitButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacingPixels[4],
-    paddingHorizontal: spacingPixels[6],
     borderRadius: radiusPixels.lg,
+    gap: spacingPixels[2],
   },
 });
 

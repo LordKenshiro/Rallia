@@ -2,18 +2,12 @@
  * CourtBookingSheet Component
  * Bottom sheet for booking a local (org-managed) court slot.
  * Integrates with Stripe for payment.
- * UI follows MatchDetailSheet patterns for consistency.
+ * UI follows UserProfile sheets (PlayerInformationOverlay, PlayerAvailabilitiesOverlay) for consistency.
  */
 
-import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import {
-  BottomSheetModal,
-  BottomSheetScrollView,
-  BottomSheetBackdrop,
-  BottomSheetView,
-} from '@gorhom/bottom-sheet';
-import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
+import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
 import { useStripe } from '@stripe/stripe-react-native';
@@ -23,26 +17,7 @@ import type { Court } from '@rallia/shared-types';
 import type { FacilityWithDetails } from '@rallia/shared-services';
 import { createMobileBooking, Logger } from '@rallia/shared-services';
 import { lightHaptic, mediumHaptic, selectionHaptic } from '@rallia/shared-utils';
-import type { TranslationKey, TranslationOptions } from '../../../hooks';
-
-interface CourtBookingSheetProps {
-  visible: boolean;
-  onClose: () => void;
-  facility: FacilityWithDetails;
-  slot: FormattedSlot;
-  courts: Court[];
-  colors: {
-    card: string;
-    text: string;
-    textMuted: string;
-    primary: string;
-    border: string;
-    background: string;
-    error: string;
-  };
-  isDark?: boolean;
-  t: (key: TranslationKey, options?: TranslationOptions) => string;
-}
+import { useThemeStyles, useTranslation, type TranslationKey } from '../../../hooks';
 
 /**
  * Extended theme colors for the booking sheet
@@ -94,19 +69,15 @@ function convertTo24Hour(time12h: string): string {
   return `${hours.toString().padStart(2, '0')}:${minutes}:00`;
 }
 
-export default function CourtBookingSheet({
-  visible,
-  onClose,
-  facility,
-  slot,
-  courts,
-  colors,
-  isDark = false,
-  t,
-}: CourtBookingSheetProps) {
+export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>) {
+  const facility = payload?.facility as FacilityWithDetails;
+  const slot = payload?.slot as FormattedSlot;
+  const courts = (payload?.courts ?? []) as Court[];
+
+  const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const toast = useToast();
-  const sheetRef = useRef<BottomSheetModal>(null);
 
   // State
   const [isLoading, setIsLoading] = useState(false);
@@ -116,7 +87,7 @@ export default function CourtBookingSheet({
   const themeColors = useMemo<ThemeColors>(
     () => ({
       background: colors.background,
-      card: colors.card,
+      card: colors.cardBackground,
       text: colors.text,
       textMuted: colors.textMuted,
       primary: colors.primary,
@@ -127,31 +98,11 @@ export default function CourtBookingSheet({
     [colors, isDark]
   );
 
-  // Single snap point at 90% - matches MatchDetailSheet
-  const snapPoints = useMemo(() => ['90%'], []);
-
-  // Sync visible prop with sheet presentation
-  useEffect(() => {
-    if (visible) {
-      sheetRef.current?.present();
-    } else {
-      sheetRef.current?.dismiss();
-    }
-  }, [visible]);
-
-  // Custom backdrop with opacity
-  const renderBackdrop = useCallback(
-    (props: BottomSheetBackdropProps) => (
-      <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.5} />
-    ),
-    []
-  );
-
   // Handle sheet dismiss with haptic
-  const handleSheetDismiss = useCallback(() => {
+  const handleClose = useCallback(() => {
     selectionHaptic();
-    onClose();
-  }, [onClose]);
+    SheetManager.hide('court-booking');
+  }, []);
 
   // Get available court options from the slot (memoized to prevent hook dependency issues)
   const courtOptions: CourtOption[] = useMemo(() => slot.courtOptions || [], [slot.courtOptions]);
@@ -215,36 +166,16 @@ export default function CourtBookingSheet({
 
   const [selectedCourt, setSelectedCourt] = useState<Court | null>(null);
 
-  // Reset and set initial selected court when sheet opens or available courts change
+  // Set initial selected court when available courts change (sheet opened or payload updated)
   useEffect(() => {
-    if (!visible) {
-      // Reset when sheet closes
-      setSelectedCourt(null);
-      return;
-    }
-
-    // When sheet opens, select the first available court if only one is available
-    // or keep current selection if it's still valid
     if (availableCourts.length === 0) {
       setSelectedCourt(null);
     } else if (availableCourts.length === 1) {
-      // Auto-select if only one court available
       setSelectedCourt(availableCourts[0]);
     } else {
-      // Multiple courts available - check if current selection is still valid
-      if (selectedCourt && !availableCourts.find(c => c.id === selectedCourt.id)) {
-        // Current selection is no longer valid, clear it
-        setSelectedCourt(null);
-      } else if (!selectedCourt) {
-        // No selection yet, but multiple available - don't auto-select
-        setSelectedCourt(null);
-      }
-      // Otherwise keep current selection if it's valid
+      setSelectedCourt(prev => (prev && availableCourts.some(c => c.id === prev.id) ? prev : null));
     }
-    // Note: selectedCourt intentionally excluded - we only want to run this effect when
-    // visibility or available courts change, not when selection changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, availableCourts]);
+  }, [availableCourts]);
 
   // Handle court selection
   const handleSelectCourt = useCallback((court: Court) => {
@@ -341,7 +272,7 @@ export default function CourtBookingSheet({
 
       // Close sheet after short delay
       setTimeout(() => {
-        sheetRef.current?.dismiss();
+        SheetManager.hide('court-booking');
         setBookingSuccess(false);
       }, 1500);
     } catch (error) {
@@ -373,47 +304,29 @@ export default function CourtBookingSheet({
   // Check if price is free
   const isFree = displayPrice === 0 || displayPrice === undefined;
 
+  if (!facility || !slot) return null;
+
   return (
-    <BottomSheetModal
-      ref={sheetRef}
-      index={0}
-      snapPoints={snapPoints}
-      backdropComponent={renderBackdrop}
-      enablePanDownToClose
-      handleIndicatorStyle={[styles.handleIndicator, { backgroundColor: themeColors.border }]}
-      backgroundStyle={[styles.sheetBackground, { backgroundColor: themeColors.background }]}
-      bottomInset={0}
-      onDismiss={handleSheetDismiss}
-      keyboardBehavior="interactive"
-      keyboardBlurBehavior="restore"
-      android_keyboardInputMode="adjustResize"
-      enableDismissOnClose
-      animateOnMount
-      enableHandlePanningGesture
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: themeColors.border }]}
     >
-      <BottomSheetView style={styles.sheetContent}>
-        {/* Header - matches MatchDetailSheet pattern */}
+      <View style={styles.modalContent}>
+        {/* Header - centered title, close button absolute right (matches UserProfile sheets) */}
         <View style={[styles.header, { borderBottomColor: themeColors.border }]}>
-          <View style={styles.headerTop}>
-            <View style={styles.headerTitleSection}>
-              <Text size="lg" weight="bold" color={themeColors.text}>
-                {t('booking.confirmBooking')}
-              </Text>
-            </View>
-            <View style={styles.headerRight}>
-              <TouchableOpacity
-                style={[styles.closeButton, { backgroundColor: themeColors.card }]}
-                onPress={handleSheetDismiss}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons name="close" size={20} color={themeColors.textMuted} />
-              </TouchableOpacity>
-            </View>
+          <View style={styles.headerCenter}>
+            <Text weight="semibold" size="lg" style={{ color: themeColors.text }}>
+              {t('booking.confirmBooking')}
+            </Text>
           </View>
+          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+            <Ionicons name="close" size={24} color={themeColors.textMuted} />
+          </TouchableOpacity>
         </View>
 
         {/* Scrollable Content */}
-        <BottomSheetScrollView
+        <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -573,103 +486,94 @@ export default function CourtBookingSheet({
               </View>
             </View>
           )}
+        </ScrollView>
 
-          {/* Sticky Footer - matches MatchDetailSheet pattern */}
-          <View
+        {/* Sticky Footer - outside ScrollView (matches UserProfile sheets) */}
+        <View style={[styles.footer, { borderTopColor: themeColors.border }]}>
+          <TouchableOpacity
             style={[
-              styles.stickyFooter,
-              { backgroundColor: themeColors.background, borderTopColor: themeColors.border },
+              styles.submitButton,
+              {
+                backgroundColor: selectedCourt ? themeColors.primary : themeColors.textMuted,
+                opacity: isLoading || bookingSuccess ? 0.7 : 1,
+              },
             ]}
+            onPress={handleBook}
+            disabled={!selectedCourt || isLoading || bookingSuccess}
+            activeOpacity={0.8}
           >
-            <View style={styles.actionButtonsContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.bookButton,
-                  {
-                    backgroundColor: selectedCourt ? themeColors.primary : themeColors.textMuted,
-                    opacity: isLoading || bookingSuccess ? 0.7 : 1,
-                  },
-                ]}
-                onPress={handleBook}
-                disabled={!selectedCourt || isLoading || bookingSuccess}
-                activeOpacity={0.8}
-              >
-                {isLoading ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : bookingSuccess ? (
-                  <>
-                    <Ionicons name="checkmark-circle" size={20} color="#fff" />
-                    <Text size="base" weight="semibold" color="#fff">
-                      {t('booking.success.title')}
-                    </Text>
-                  </>
-                ) : (
-                  <>
-                    <Text size="base" weight="semibold" color="#fff">
-                      {t('booking.bookNow')}
-                    </Text>
-                    {displayPrice !== undefined && displayPrice > 0 && (
-                      <Text size="base" weight="bold" color="#fff">
-                        {' '}
-                        • {formatPrice(displayPrice)}
-                      </Text>
-                    )}
-                  </>
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : bookingSuccess ? (
+              <>
+                <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                <Text size="lg" weight="semibold" color="#fff">
+                  {t('booking.success.title')}
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text size="lg" weight="semibold" color="#fff">
+                  {t('booking.bookNow')}
+                </Text>
+                {displayPrice !== undefined && displayPrice > 0 && (
+                  <Text size="base" weight="bold" color="#fff">
+                    {' '}
+                    • {formatPrice(displayPrice)}
+                  </Text>
                 )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </BottomSheetScrollView>
-      </BottomSheetView>
-    </BottomSheetModal>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </ActionSheet>
   );
 }
+
+// Keep old export for backwards compatibility during migration
+export default CourtBookingActionSheet;
 
 const styles = StyleSheet.create({
   // Sheet base styles
   sheetBackground: {
+    flex: 1,
     borderTopLeftRadius: radiusPixels['2xl'],
     borderTopRightRadius: radiusPixels['2xl'],
   },
   handleIndicator: {
     width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
   },
-  sheetContent: {
+  modalContent: {
     flex: 1,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: spacingPixels[10],
+    padding: spacingPixels[4],
+    paddingBottom: spacingPixels[4],
   },
 
-  // Header - matches MatchDetailSheet
+  // Header - centered title, close absolute right (matches UserProfile sheets)
   header: {
-    paddingHorizontal: spacingPixels[5],
-    paddingTop: spacingPixels[2],
-    paddingBottom: spacingPixels[4],
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  headerTop: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacingPixels[4],
+    borderBottomWidth: 1,
+    position: 'relative',
   },
-  headerTitleSection: {
-    flex: 1,
-    marginRight: spacingPixels[3],
-  },
-  headerRight: {
-    flexDirection: 'row',
+  headerCenter: {
     alignItems: 'center',
   },
   closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: spacingPixels[1],
+    position: 'absolute',
+    right: spacingPixels[4],
   },
 
   // Sections - matches MatchDetailSheet
@@ -739,20 +643,13 @@ const styles = StyleSheet.create({
     marginTop: spacingPixels[3],
   },
 
-  // Sticky Footer - matches MatchDetailSheet
-  stickyFooter: {
-    flexDirection: 'row',
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[4],
-    paddingBottom: spacingPixels[10],
-    gap: spacingPixels[2],
-    borderTopWidth: StyleSheet.hairlineWidth,
-    alignItems: 'center',
+  // Footer - sticky at bottom (matches MatchCreationWizard)
+  footer: {
+    padding: spacingPixels[4],
+    borderTopWidth: 1,
+    paddingBottom: spacingPixels[4],
   },
-  actionButtonsContainer: {
-    flex: 1,
-  },
-  bookButton: {
+  submitButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

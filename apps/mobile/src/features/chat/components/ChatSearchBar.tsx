@@ -10,7 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation } from '../../../hooks';
-import { spacingPixels, fontSizePixels, primary, neutral } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, fontSizePixels, primary } from '@rallia/design-system';
 import { useSearchMessages } from '@rallia/shared-hooks';
 
 interface ChatSearchBarProps {
@@ -101,15 +101,18 @@ function ChatSearchBarComponent({
 
   return (
     <View style={[styles.container, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
-      {/* Search Input */}
+      {/* Search Input - same look as WhereStep search bars */}
       <View style={styles.inputContainer}>
         <View
           style={[
             styles.inputWrapper,
-            { backgroundColor: isDark ? colors.background : neutral[100] },
+            {
+              borderColor: colors.border,
+              backgroundColor: colors.buttonInactive,
+            },
           ]}
         >
-          <Ionicons name="search" size={18} color={colors.textMuted} style={styles.searchIcon} />
+          <Ionicons name="search-outline" size={20} color={colors.textMuted} />
           <TextInput
             style={[styles.input, { color: colors.text }]}
             placeholder={t('chat.searchInChat.placeholder')}
@@ -120,7 +123,10 @@ function ChatSearchBarComponent({
             returnKeyType="search"
           />
           {query.length > 0 && (
-            <TouchableOpacity onPress={handleClear} style={styles.clearButton}>
+            <TouchableOpacity
+              onPress={handleClear}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
               <Ionicons name="close-circle" size={18} color={colors.textMuted} />
             </TouchableOpacity>
           )}
@@ -201,20 +207,15 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 10,
-    paddingHorizontal: spacingPixels[3],
-    height: 40,
-  },
-  searchIcon: {
-    marginRight: spacingPixels[2],
+    padding: spacingPixels[3],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+    gap: spacingPixels[2],
   },
   input: {
     flex: 1,
-    fontSize: fontSizePixels.base,
-    height: 40,
-  },
-  clearButton: {
-    padding: spacingPixels[1],
+    fontSize: 16,
+    paddingVertical: spacingPixels[1],
   },
   navigationContainer: {
     flexDirection: 'row',

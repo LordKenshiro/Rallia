@@ -29,6 +29,7 @@ import {
   useCourtAvailability,
 } from '@rallia/shared-hooks';
 import { useThemeStyles, useTranslation, useEffectiveLocation } from '../../../hooks';
+import { getSafeAreaEdges } from '../../../utils';
 import { useSport } from '../../../context';
 import { useCourtsRoute } from '../../../navigation/hooks';
 import {
@@ -273,7 +274,7 @@ export default function FacilityDetail() {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['bottom']}
+        edges={getSafeAreaEdges(['bottom'])}
       >
         <View style={styles.loadingContainer}>
           {/* Header skeleton */}
@@ -351,7 +352,7 @@ export default function FacilityDetail() {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['bottom']}
+        edges={getSafeAreaEdges(['bottom'])}
       >
         <View style={styles.emptyContainer}>
           <View

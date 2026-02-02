@@ -581,7 +581,7 @@ const styles = StyleSheet.create({
     gap: spacingPixels[3],
     paddingHorizontal: spacingPixels[5],
     paddingTop: spacingPixels[3],
-    paddingBottom: spacingPixels[5],
+    paddingBottom: spacingPixels[4],
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: 'transparent', // Will be set dynamically
   },

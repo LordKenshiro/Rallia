@@ -10,21 +10,15 @@
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
-import {
-  View,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  Alert,
-  RefreshControl,
-  TextInput,
-} from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { SheetManager } from 'react-native-actions-sheet';
 import { Text, Skeleton, SkeletonCard } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
+import { getSafeAreaEdges } from '../utils';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { primary } from '@rallia/design-system';
 import {
@@ -41,7 +35,8 @@ import {
   type TranslationKey,
 } from '../hooks';
 import type { CommunityStackParamList } from '../navigation/types';
-import { CreateListModal, SharedListCard, ShareMatchModal } from '../features/shared-lists';
+import { SharedListCard } from '../features/shared-lists';
+import { SearchBar } from '../components/SearchBar';
 
 type NavigationProp = NativeStackNavigationProp<CommunityStackParamList>;
 
@@ -54,9 +49,6 @@ const SharedLists: React.FC = () => {
   const playerId = session?.user?.id;
 
   // State
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [editingList, setEditingList] = useState<SharedContactList | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Queries and mutations
@@ -85,15 +77,13 @@ const SharedLists: React.FC = () => {
   const handleCreateList = useCallback(() => {
     if (!guardAction()) return;
     lightHaptic();
-    setEditingList(null);
-    setShowCreateModal(true);
+    SheetManager.show('create-list', { payload: { editingList: null } });
   }, [guardAction]);
 
   // Edit list handler
   const handleEditList = useCallback((list: SharedContactList) => {
     lightHaptic();
-    setEditingList(list);
-    setShowCreateModal(true);
+    SheetManager.show('create-list', { payload: { editingList: list } });
   }, []);
 
   // Delete list handler
@@ -132,13 +122,6 @@ const SharedLists: React.FC = () => {
     },
     [navigation]
   );
-
-  // Modal close handler
-  const handleModalClose = useCallback(() => {
-    setShowCreateModal(false);
-    setEditingList(null);
-    // No need to manually refetch - React Query + Realtime handles it
-  }, []);
 
   // Render list item
   const renderListItem = useCallback(
@@ -187,7 +170,7 @@ const SharedLists: React.FC = () => {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['bottom']}
+        edges={getSafeAreaEdges(['bottom'])}
       >
         <View style={styles.loadingContainer}>
           {/* Share Match CTA Skeleton */}
@@ -232,7 +215,7 @@ const SharedLists: React.FC = () => {
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['bottom']}
+      edges={getSafeAreaEdges(['bottom'])}
     >
       {/* Share Match CTA - Always visible at top */}
       <TouchableOpacity
@@ -245,7 +228,9 @@ const SharedLists: React.FC = () => {
         ]}
         onPress={() => {
           if (!guardAction()) return;
-          setShowShareModal(true);
+          if (playerId) {
+            SheetManager.show('share-match', { payload: { playerId } });
+          }
         }}
         activeOpacity={0.8}
       >
@@ -287,33 +272,11 @@ const SharedLists: React.FC = () => {
       {/* Search Bar - only show when there are lists */}
       {lists.length > 0 && (
         <View style={styles.searchContainer}>
-          <View
-            style={[
-              styles.searchInputContainer,
-              { backgroundColor: colors.inputBackground || (isDark ? '#2C2C2E' : '#F2F2F7') },
-            ]}
-          >
-            <Ionicons
-              name="search-outline"
-              size={20}
-              color={colors.textMuted}
-              style={styles.searchIcon}
-            />
-            <TextInput
-              style={[styles.searchInput, { color: colors.text }]}
-              placeholder={t('sharedLists.searchLists')}
-              placeholderTextColor={colors.textMuted}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Ionicons name="close-circle" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-            )}
-          </View>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder={t('sharedLists.searchLists')}
+          />
         </View>
       )}
 
@@ -333,26 +296,6 @@ const SharedLists: React.FC = () => {
           />
         }
       />
-
-      {/* Create/Edit Modal */}
-      <CreateListModal
-        visible={showCreateModal}
-        editingList={editingList}
-        colors={colors}
-        isDark={isDark}
-        onClose={handleModalClose}
-      />
-
-      {/* Share Match Modal */}
-      {session?.user?.id && (
-        <ShareMatchModal
-          visible={showShareModal}
-          playerId={session.user.id}
-          colors={colors}
-          isDark={isDark}
-          onClose={() => setShowShareModal(false)}
-        />
-      )}
     </SafeAreaView>
   );
 };
@@ -404,21 +347,6 @@ const styles = StyleSheet.create({
   searchContainer: {
     paddingHorizontal: spacingPixels[4],
     paddingBottom: spacingPixels[2],
-  },
-  searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: radiusPixels.lg,
-    paddingHorizontal: spacingPixels[3],
-    height: 40,
-  },
-  searchIcon: {
-    marginRight: spacingPixels[2],
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    paddingVertical: 0,
   },
   listContent: {
     paddingHorizontal: spacingPixels[4],

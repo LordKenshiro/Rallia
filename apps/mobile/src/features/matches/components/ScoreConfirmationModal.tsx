@@ -6,17 +6,8 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  Modal,
-  TouchableOpacity,
-  Image,
-  TextInput,
-  SafeAreaView,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Image, TextInput } from 'react-native';
+import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button, useToast } from '@rallia/shared-components';
 import { successHaptic, warningHaptic, lightHaptic } from '@rallia/shared-utils';
@@ -26,24 +17,23 @@ import {
   useDisputeMatchScore,
   type PendingScoreConfirmation,
 } from '@rallia/shared-hooks';
+import { spacingPixels, radiusPixels } from '@rallia/design-system';
 
-interface ScoreConfirmationModalProps {
-  visible: boolean;
-  onClose: () => void;
-  confirmation: PendingScoreConfirmation | null;
-  playerId: string;
-}
+export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-confirmation'>) {
+  const confirmation = payload?.confirmation as PendingScoreConfirmation | null;
+  const playerId = payload?.playerId ?? '';
 
-export function ScoreConfirmationModal({
-  visible,
-  onClose,
-  confirmation,
-  playerId,
-}: ScoreConfirmationModalProps) {
   const { colors, isDark } = useThemeStyles();
   const toast = useToast();
   const [showDisputeReason, setShowDisputeReason] = useState(false);
   const [disputeReason, setDisputeReason] = useState('');
+
+  const handleClose = useCallback(() => {
+    lightHaptic();
+    setShowDisputeReason(false);
+    setDisputeReason('');
+    SheetManager.hide('score-confirmation');
+  }, []);
 
   const confirmMutation = useConfirmMatchScore();
   const disputeMutation = useDisputeMatchScore();
@@ -61,11 +51,11 @@ export function ScoreConfirmationModal({
       });
       successHaptic();
       toast.success('The match score has been confirmed.');
-      onClose();
+      handleClose();
     } catch (error) {
       toast.error('Failed to confirm score. Please try again.');
     }
-  }, [confirmation, playerId, confirmMutation, onClose, toast]);
+  }, [confirmation, playerId, confirmMutation, handleClose, toast]);
 
   const handleDispute = useCallback(async () => {
     if (!confirmation) return;
@@ -86,18 +76,19 @@ export function ScoreConfirmationModal({
       toast.warning('Score disputed. Please contact your opponent to resolve the issue.');
       setShowDisputeReason(false);
       setDisputeReason('');
-      onClose();
+      handleClose();
     } catch (error) {
       toast.error('Failed to dispute score. Please try again.');
     }
-  }, [confirmation, playerId, disputeMutation, showDisputeReason, disputeReason, onClose, toast]);
-
-  const handleClose = useCallback(() => {
-    lightHaptic();
-    setShowDisputeReason(false);
-    setDisputeReason('');
-    onClose();
-  }, [onClose]);
+  }, [
+    confirmation,
+    playerId,
+    disputeMutation,
+    showDisputeReason,
+    disputeReason,
+    handleClose,
+    toast,
+  ]);
 
   if (!confirmation) return null;
 
@@ -118,272 +109,272 @@ export function ScoreConfirmationModal({
     Math.floor(((deadline.getTime() - now.getTime()) % (1000 * 60 * 60)) / (1000 * 60))
   );
 
+  if (!confirmation) return null;
+
   return (
-    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={handleClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.overlay}
-      >
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
-          <SafeAreaView style={styles.safeArea}>
-            {/* Header */}
-            <View style={styles.header}>
-              <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-                Confirm Score
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+    >
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text weight="semibold" size="lg" style={{ color: colors.text }}>
+            Confirm Score
+          </Text>
+          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+            <Ionicons name="close" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Content */}
+        <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+          {/* Submitter info */}
+          <View
+            style={[
+              styles.submitterCard,
+              { backgroundColor: colors.cardBackground, borderColor: colors.border },
+            ]}
+          >
+            <View
+              style={[styles.submitterAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}
+            >
+              {confirmation.submitted_by_avatar ? (
+                <Image
+                  source={{ uri: confirmation.submitted_by_avatar }}
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <Ionicons name="person" size={24} color={colors.textMuted} />
+              )}
+            </View>
+            <View style={styles.submitterInfo}>
+              <Text weight="medium" style={{ color: colors.text }}>
+                {confirmation.submitted_by_name}
               </Text>
-              <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-                <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
+              <Text size="sm" style={{ color: colors.textSecondary }}>
+                submitted a match score
+              </Text>
+            </View>
+          </View>
+
+          {/* Match details */}
+          <View
+            style={[
+              styles.matchCard,
+              { backgroundColor: colors.cardBackground, borderColor: colors.border },
+            ]}
+          >
+            {/* Sport & Date */}
+            <View style={styles.matchHeader}>
+              <View style={styles.sportBadge}>
+                {confirmation.sport_icon_url ? (
+                  <Image source={{ uri: confirmation.sport_icon_url }} style={styles.sportIcon} />
+                ) : (
+                  <Ionicons name="tennisball" size={16} color={colors.primary} />
+                )}
+                <Text size="sm" weight="medium" style={{ color: colors.text, marginLeft: 4 }}>
+                  {confirmation.sport_name}
+                </Text>
+              </View>
+              <Text size="sm" style={{ color: colors.textSecondary }}>
+                {matchDate}
+              </Text>
             </View>
 
-            {/* Content */}
-            <View style={styles.content}>
-              {/* Submitter info */}
-              <View
-                style={[
-                  styles.submitterCard,
-                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.submitterAvatar,
-                    { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
-                  ]}
+            {/* Score display */}
+            <View style={styles.scoreContainer}>
+              <View style={styles.teamColumn}>
+                <Text size="sm" style={{ color: colors.textSecondary }}>
+                  {confirmation.player_team === 1 ? 'You' : confirmation.opponent_name}
+                </Text>
+                <Text
+                  size="3xl"
+                  weight="bold"
+                  style={{
+                    color: confirmation.winning_team === 1 ? colors.primary : colors.text,
+                  }}
                 >
-                  {confirmation.submitted_by_avatar ? (
-                    <Image
-                      source={{ uri: confirmation.submitted_by_avatar }}
-                      style={styles.avatarImage}
-                    />
-                  ) : (
-                    <Ionicons name="person" size={24} color={colors.textMuted} />
-                  )}
-                </View>
-                <View style={styles.submitterInfo}>
-                  <Text weight="medium" style={{ color: colors.text }}>
-                    {confirmation.submitted_by_name}
-                  </Text>
-                  <Text size="sm" style={{ color: colors.textSecondary }}>
-                    submitted a match score
-                  </Text>
-                </View>
-              </View>
-
-              {/* Match details */}
-              <View
-                style={[
-                  styles.matchCard,
-                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                ]}
-              >
-                {/* Sport & Date */}
-                <View style={styles.matchHeader}>
-                  <View style={styles.sportBadge}>
-                    {confirmation.sport_icon_url ? (
-                      <Image
-                        source={{ uri: confirmation.sport_icon_url }}
-                        style={styles.sportIcon}
-                      />
-                    ) : (
-                      <Ionicons name="tennisball" size={16} color={colors.primary} />
-                    )}
-                    <Text size="sm" weight="medium" style={{ color: colors.text, marginLeft: 4 }}>
-                      {confirmation.sport_name}
-                    </Text>
-                  </View>
-                  <Text size="sm" style={{ color: colors.textSecondary }}>
-                    {matchDate}
-                  </Text>
-                </View>
-
-                {/* Score display */}
-                <View style={styles.scoreContainer}>
-                  <View style={styles.teamColumn}>
-                    <Text size="sm" style={{ color: colors.textSecondary }}>
-                      {confirmation.player_team === 1 ? 'You' : confirmation.opponent_name}
-                    </Text>
-                    <Text
-                      size="3xl"
-                      weight="bold"
-                      style={{
-                        color: confirmation.winning_team === 1 ? colors.primary : colors.text,
-                      }}
-                    >
-                      {confirmation.team1_score}
-                    </Text>
-                    {confirmation.winning_team === 1 && (
-                      <View style={[styles.winnerBadge, { backgroundColor: colors.primary }]}>
-                        <Ionicons name="trophy" size={12} color="#fff" />
-                        <Text size="xs" weight="medium" style={{ color: '#fff', marginLeft: 2 }}>
-                          Winner
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-
-                  <View style={styles.vsContainer}>
-                    <Text size="lg" weight="medium" style={{ color: colors.textMuted }}>
-                      vs
-                    </Text>
-                  </View>
-
-                  <View style={styles.teamColumn}>
-                    <Text size="sm" style={{ color: colors.textSecondary }}>
-                      {confirmation.player_team === 2 ? 'You' : confirmation.opponent_name}
-                    </Text>
-                    <Text
-                      size="3xl"
-                      weight="bold"
-                      style={{
-                        color: confirmation.winning_team === 2 ? colors.primary : colors.text,
-                      }}
-                    >
-                      {confirmation.team2_score}
-                    </Text>
-                    {confirmation.winning_team === 2 && (
-                      <View style={[styles.winnerBadge, { backgroundColor: colors.primary }]}>
-                        <Ionicons name="trophy" size={12} color="#fff" />
-                        <Text size="xs" weight="medium" style={{ color: '#fff', marginLeft: 2 }}>
-                          Winner
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-
-                {/* Group info if any */}
-                {confirmation.network_name && (
-                  <View style={[styles.groupInfo, { borderTopColor: colors.border }]}>
-                    <Ionicons name="people" size={14} color={colors.textSecondary} />
-                    <Text size="sm" style={{ color: colors.textSecondary, marginLeft: 4 }}>
-                      Posted to {confirmation.network_name}
+                  {confirmation.team1_score}
+                </Text>
+                {confirmation.winning_team === 1 && (
+                  <View style={[styles.winnerBadge, { backgroundColor: colors.primary }]}>
+                    <Ionicons name="trophy" size={12} color="#fff" />
+                    <Text size="xs" weight="medium" style={{ color: '#fff', marginLeft: 2 }}>
+                      Winner
                     </Text>
                   </View>
                 )}
               </View>
 
-              {/* Deadline warning */}
-              <View
-                style={[
-                  styles.deadlineCard,
-                  { backgroundColor: isDark ? '#3A2A00' : '#FFF9E6', borderColor: '#FFB800' },
-                ]}
-              >
-                <Ionicons name="time-outline" size={20} color="#FFB800" />
-                <View style={styles.deadlineInfo}>
-                  <Text size="sm" weight="medium" style={{ color: isDark ? '#FFD54F' : '#8B6914' }}>
-                    {hoursRemaining}h {minutesRemaining}m remaining to respond
-                  </Text>
-                  <Text size="xs" style={{ color: isDark ? '#C4A84D' : '#A67F00' }}>
-                    Score will be auto-confirmed after deadline
-                  </Text>
-                </View>
+              <View style={styles.vsContainer}>
+                <Text size="lg" weight="medium" style={{ color: colors.textMuted }}>
+                  vs
+                </Text>
               </View>
 
-              {/* Dispute reason input */}
-              {showDisputeReason && (
-                <View style={styles.disputeReasonContainer}>
-                  <Text size="sm" weight="medium" style={{ color: colors.text, marginBottom: 8 }}>
-                    Why are you disputing this score? (optional)
-                  </Text>
-                  <TextInput
-                    style={[
-                      styles.disputeInput,
-                      {
-                        backgroundColor: colors.cardBackground,
-                        borderColor: colors.border,
-                        color: colors.text,
-                      },
-                    ]}
-                    placeholder="Enter reason..."
-                    placeholderTextColor={colors.textMuted}
-                    value={disputeReason}
-                    onChangeText={setDisputeReason}
-                    multiline
-                    numberOfLines={3}
-                  />
-                </View>
-              )}
+              <View style={styles.teamColumn}>
+                <Text size="sm" style={{ color: colors.textSecondary }}>
+                  {confirmation.player_team === 2 ? 'You' : confirmation.opponent_name}
+                </Text>
+                <Text
+                  size="3xl"
+                  weight="bold"
+                  style={{
+                    color: confirmation.winning_team === 2 ? colors.primary : colors.text,
+                  }}
+                >
+                  {confirmation.team2_score}
+                </Text>
+                {confirmation.winning_team === 2 && (
+                  <View style={[styles.winnerBadge, { backgroundColor: colors.primary }]}>
+                    <Ionicons name="trophy" size={12} color="#fff" />
+                    <Text size="xs" weight="medium" style={{ color: '#fff', marginLeft: 2 }}>
+                      Winner
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
 
-            {/* Action buttons */}
-            <View style={styles.actions}>
-              {!showDisputeReason ? (
-                <>
-                  <Button
-                    variant="outline"
-                    onPress={handleDispute}
-                    disabled={isLoading}
-                    style={styles.disputeButton}
-                  >
-                    Dispute
-                  </Button>
-                  <Button
-                    variant="primary"
-                    onPress={handleConfirm}
-                    disabled={isLoading}
-                    style={styles.confirmButton}
-                  >
-                    {isLoading ? 'Processing...' : 'Confirm Score'}
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button
-                    variant="outline"
-                    onPress={() => setShowDisputeReason(false)}
-                    disabled={isLoading}
-                    style={styles.disputeButton}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="primary"
-                    onPress={handleDispute}
-                    disabled={isLoading}
-                    style={[styles.confirmButton, { backgroundColor: '#DC3545' }]}
-                  >
-                    {isLoading ? 'Processing...' : 'Submit Dispute'}
-                  </Button>
-                </>
-              )}
+            {/* Group info if any */}
+            {confirmation.network_name && (
+              <View style={[styles.groupInfo, { borderTopColor: colors.border }]}>
+                <Ionicons name="people" size={14} color={colors.textSecondary} />
+                <Text size="sm" style={{ color: colors.textSecondary, marginLeft: 4 }}>
+                  Posted to {confirmation.network_name}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Deadline warning */}
+          <View
+            style={[
+              styles.deadlineCard,
+              { backgroundColor: isDark ? '#3A2A00' : '#FFF9E6', borderColor: '#FFB800' },
+            ]}
+          >
+            <Ionicons name="time-outline" size={20} color="#FFB800" />
+            <View style={styles.deadlineInfo}>
+              <Text size="sm" weight="medium" style={{ color: isDark ? '#FFD54F' : '#8B6914' }}>
+                {hoursRemaining}h {minutesRemaining}m remaining to respond
+              </Text>
+              <Text size="xs" style={{ color: isDark ? '#C4A84D' : '#A67F00' }}>
+                Score will be auto-confirmed after deadline
+              </Text>
             </View>
-          </SafeAreaView>
+          </View>
+
+          {/* Dispute reason input */}
+          {showDisputeReason && (
+            <View style={styles.disputeReasonContainer}>
+              <Text size="sm" weight="medium" style={{ color: colors.text, marginBottom: 8 }}>
+                Why are you disputing this score? (optional)
+              </Text>
+              <TextInput
+                style={[
+                  styles.disputeInput,
+                  {
+                    backgroundColor: colors.cardBackground,
+                    borderColor: colors.border,
+                    color: colors.text,
+                  },
+                ]}
+                placeholder="Enter reason..."
+                placeholderTextColor={colors.textMuted}
+                value={disputeReason}
+                onChangeText={setDisputeReason}
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Action buttons */}
+        <View style={styles.actions}>
+          {!showDisputeReason ? (
+            <>
+              <Button
+                variant="outline"
+                onPress={handleDispute}
+                disabled={isLoading}
+                style={styles.disputeButton}
+              >
+                Dispute
+              </Button>
+              <Button
+                variant="primary"
+                onPress={handleConfirm}
+                disabled={isLoading}
+                style={styles.confirmButton}
+              >
+                {isLoading ? 'Processing...' : 'Confirm Score'}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                onPress={() => setShowDisputeReason(false)}
+                disabled={isLoading}
+                style={styles.disputeButton}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onPress={handleDispute}
+                disabled={isLoading}
+                style={[styles.confirmButton, { backgroundColor: '#DC3545' }]}
+              >
+                {isLoading ? 'Processing...' : 'Submit Dispute'}
+              </Button>
+            </>
+          )}
         </View>
-      </KeyboardAvoidingView>
-    </Modal>
+      </View>
+    </ActionSheet>
   );
 }
 
+// Keep old export for backwards compatibility during migration
+export const ScoreConfirmationModal = ScoreConfirmationActionSheet;
+
 const styles = StyleSheet.create({
-  overlay: {
+  sheetBackground: {
     flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
+  },
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
   },
   container: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '90%',
-  },
-  safeArea: {
     flex: 1,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: spacingPixels[5],
+    paddingVertical: spacingPixels[4],
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.1)',
   },
   closeButton: {
-    padding: 4,
+    padding: spacingPixels[1],
   },
   content: {
-    padding: 20,
+    flex: 1,
+  },
+  contentContainer: {
+    padding: spacingPixels[5],
   },
   submitterCard: {
     flexDirection: 'row',

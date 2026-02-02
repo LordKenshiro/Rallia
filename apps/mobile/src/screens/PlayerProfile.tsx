@@ -737,7 +737,7 @@ const PlayerProfile = () => {
         ? `${(profile as unknown as { first_name?: string }).first_name || ''} ${(profile as unknown as { last_name?: string }).last_name || ''}`.trim() ||
           'Player'
         : 'Chat';
-      navigation.navigate('Chat', {
+      navigation.navigate('ChatConversation', {
         conversationId: conversation.id,
         title: playerName,
       });

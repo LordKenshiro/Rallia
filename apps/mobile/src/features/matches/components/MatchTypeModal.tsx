@@ -4,23 +4,29 @@
  * Bottom sheet modal to select Single or Double match type.
  */
 
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Modal, Pressable } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../../../hooks';
+import { spacingPixels, radiusPixels } from '@rallia/design-system';
 
 export type MatchType = 'single' | 'double';
 
-interface MatchTypeModalProps {
-  visible: boolean;
-  onClose: () => void;
-  onSelect: (type: MatchType) => void;
-}
+export function MatchTypeActionSheet({ payload }: SheetProps<'match-type'>) {
+  const onSelect = payload?.onSelect;
 
-export function MatchTypeModal({ visible, onClose, onSelect }: MatchTypeModalProps) {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
+
+  const handleSelect = useCallback(
+    (type: MatchType) => {
+      onSelect?.(type);
+      SheetManager.hide('match-type');
+    },
+    [onSelect]
+  );
 
   const options: { type: MatchType; labelKey: string; icon: string }[] = [
     { type: 'single', labelKey: 'match.format.singles', icon: 'person' },
@@ -28,65 +34,64 @@ export function MatchTypeModal({ visible, onClose, onSelect }: MatchTypeModalPro
   ];
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
-          {/* Handle bar */}
-          <View style={[styles.handleBar, { backgroundColor: colors.border }]} />
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetPanel, { backgroundColor: colors.cardBackground }]}
+      indicatorStyle={[styles.handleBar, { backgroundColor: colors.border }]}
+    >
+      <View style={styles.container}>
+        {/* Title */}
+        <Text weight="semibold" size="lg" style={[styles.title, { color: colors.text }]}>
+          {t('match.pickMatchType' as TranslationKey)}
+        </Text>
 
-          {/* Title */}
-          <Text weight="semibold" size="lg" style={[styles.title, { color: colors.text }]}>
-            {t('match.pickMatchType' as TranslationKey)}
-          </Text>
-
-          {/* Options */}
-          <View style={styles.options}>
-            {options.map(option => (
-              <TouchableOpacity
-                key={option.type}
-                style={[
-                  styles.optionButton,
-                  {
-                    backgroundColor: colors.background,
-                    borderColor: colors.border,
-                  },
-                ]}
-                onPress={() => {
-                  onSelect(option.type);
-                  onClose();
-                }}
-                activeOpacity={0.7}
+        {/* Options */}
+        <View style={styles.options}>
+          {options.map(option => (
+            <TouchableOpacity
+              key={option.type}
+              style={[
+                styles.optionButton,
+                {
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                },
+              ]}
+              onPress={() => handleSelect(option.type)}
+              activeOpacity={0.7}
+            >
+              <View
+                style={[styles.iconContainer, { backgroundColor: isDark ? '#2C2C2E' : '#F0F0F0' }]}
               >
-                <View
-                  style={[
-                    styles.iconContainer,
-                    { backgroundColor: isDark ? '#2C2C2E' : '#F0F0F0' },
-                  ]}
-                >
-                  <Ionicons
-                    name={option.icon as keyof typeof Ionicons.glyphMap}
-                    size={24}
-                    color={colors.textSecondary}
-                  />
-                </View>
-                <Text weight="medium" size="base" style={{ color: colors.text, marginLeft: 16 }}>
-                  {t(option.labelKey as TranslationKey)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Cancel button */}
-          <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-            <Text weight="medium" size="base" style={{ color: colors.textSecondary }}>
-              {t('common.cancel')}
-            </Text>
-          </TouchableOpacity>
+                <Ionicons
+                  name={option.icon as keyof typeof Ionicons.glyphMap}
+                  size={24}
+                  color={colors.textSecondary}
+                />
+              </View>
+              <Text weight="medium" size="base" style={{ color: colors.text, marginLeft: 16 }}>
+                {t(option.labelKey as TranslationKey)}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
-      </Pressable>
-    </Modal>
+
+        {/* Cancel button */}
+        <TouchableOpacity
+          style={styles.cancelButton}
+          onPress={() => SheetManager.hide('match-type')}
+        >
+          <Text weight="medium" size="base" style={{ color: colors.textSecondary }}>
+            {t('common.cancel')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </ActionSheet>
   );
 }
+
+// Keep old export for backwards compatibility during migration
+export const MatchTypeModal = MatchTypeActionSheet;
 
 const styles = StyleSheet.create({
   overlay: {
@@ -94,16 +99,22 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
+  sheetPanel: {
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
+    paddingBottom: spacingPixels[4],
+    paddingTop: 12,
+  },
   container: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingBottom: 40,
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
+    paddingBottom: spacingPixels[4],
     paddingTop: 12,
   },
   handleBar: {
-    width: 40,
+    width: spacingPixels[10],
     height: 4,
-    borderRadius: 2,
+    borderRadius: 4,
     alignSelf: 'center',
     marginBottom: 20,
   },
@@ -112,8 +123,8 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   options: {
-    paddingHorizontal: 24,
-    gap: 12,
+    paddingHorizontal: spacingPixels[6],
+    gap: spacingPixels[3],
   },
   optionButton: {
     flexDirection: 'row',

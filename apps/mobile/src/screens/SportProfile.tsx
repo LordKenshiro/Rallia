@@ -50,12 +50,7 @@ const getCertificationColors = (status: 'self_declared' | 'certified' | 'dispute
 
 import { mediumHaptic, selectionHaptic } from '@rallia/shared-utils';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
-import TennisRatingOverlay from '../features/onboarding/components/overlays/TennisRatingOverlay';
-import PickleballRatingOverlay from '../features/onboarding/components/overlays/PickleballRatingOverlay';
-import PeerRatingRequestOverlay from '../features/sport-profile/components/PeerRatingRequestOverlay';
-import ReferenceRequestOverlay from '../features/sport-profile/components/ReferenceRequestOverlay';
-import { TennisPreferencesOverlay } from '../features/sport-profile/components/TennisPreferencesOverlay';
-import { PickleballPreferencesOverlay } from '../features/sport-profile/components/PickleballPreferencesOverlay';
+import { SheetManager } from 'react-native-actions-sheet';
 import { CertificationSection } from '../features/ratings/components';
 
 type SportProfileRouteProp = RouteProp<RootStackParamList, 'SportProfile'>;
@@ -121,11 +116,6 @@ const SportProfile = () => {
     playingStyle: null,
     playAttributes: null,
   });
-  const [showTennisRatingOverlay, setShowTennisRatingOverlay] = useState(false);
-  const [showPickleballRatingOverlay, setShowPickleballRatingOverlay] = useState(false);
-  const [showPeerRatingRequestOverlay, setShowPeerRatingRequestOverlay] = useState(false);
-  const [showReferenceRequestOverlay, setShowReferenceRequestOverlay] = useState(false);
-  const [showPreferencesOverlay, setShowPreferencesOverlay] = useState(false);
 
   // Fetch user's favorite facilities
   const {
@@ -566,8 +556,8 @@ const SportProfile = () => {
       Logger.info('rating_save_complete', { ratingScoreId, sportId, sourceType: 'self_reported' });
 
       // Close overlays first
-      setShowTennisRatingOverlay(false);
-      setShowPickleballRatingOverlay(false);
+      SheetManager.hide('tennis-rating');
+      SheetManager.hide('pickleball-rating');
 
       // Clear current rating state to force refresh
       setRatingInfo(null);
@@ -803,8 +793,6 @@ const SportProfile = () => {
 
       // For now, just show a success message
       toast.success(t('alerts.peerRatingRequestsSent', { count: selectedPlayerIds.length }));
-
-      setShowPeerRatingRequestOverlay(false);
     } catch (error) {
       Logger.error('Failed to send peer rating requests', error as Error, {
         count: selectedPlayerIds.length,
@@ -812,6 +800,17 @@ const SportProfile = () => {
       });
       toast.error(t('alerts.failedToSendPeerRatingRequests'));
     }
+  };
+
+  // Helper to open peer rating request sheet
+  const openPeerRatingRequestSheet = () => {
+    SheetManager.show('peer-rating-request', {
+      payload: {
+        currentUserId: userId,
+        sportId,
+        onSendRequests: handleSendPeerRatingRequests,
+      },
+    });
   };
 
   const handleSendReferenceRequests = async (selectedPlayerIds: string[]) => {
@@ -850,7 +849,7 @@ const SportProfile = () => {
         toast.success(t('alerts.referenceRequestsSent', { count: selectedPlayerIds.length }));
       }
 
-      setShowReferenceRequestOverlay(false);
+      SheetManager.hide('reference-request');
     } catch (error) {
       Logger.error('Failed to send reference requests', error as Error, {
         count: selectedPlayerIds.length,
@@ -956,7 +955,11 @@ const SportProfile = () => {
       }));
 
       // Close overlay
-      setShowPreferencesOverlay(false);
+      SheetManager.hide('tennis-preferences');
+      SheetManager.hide('pickleball-preferences');
+
+      // Refetch favorites
+      refetchFavorites();
 
       // Show success message
       toast.success(t('alerts.preferencesUpdated'));
@@ -1139,9 +1142,21 @@ const SportProfile = () => {
                 onPress={() => {
                   // Determine which overlay to show based on sport name
                   if (sportName.toLowerCase() === 'tennis') {
-                    setShowTennisRatingOverlay(true);
+                    SheetManager.show('tennis-rating', {
+                      payload: {
+                        mode: 'edit',
+                        initialRating: ratingInfo?.ratingScoreId,
+                        onSave: handleSaveRating,
+                      },
+                    });
                   } else if (sportName.toLowerCase() === 'pickleball') {
-                    setShowPickleballRatingOverlay(true);
+                    SheetManager.show('pickleball-rating', {
+                      payload: {
+                        mode: 'edit',
+                        initialRating: ratingInfo?.ratingScoreId,
+                        onSave: handleSaveRating,
+                      },
+                    });
                   }
                 }}
               >
@@ -1272,7 +1287,18 @@ const SportProfile = () => {
                     peerEvaluationCount={peerEvaluationCount}
                     ratingSystemName={ratingInfo.ratingTypeName}
                     isOwnProfile={true}
-                    onRequestReference={() => setShowReferenceRequestOverlay(true)}
+                    onRequestReference={() => {
+                      SheetManager.show('reference-request', {
+                        payload: {
+                          currentUserId: userId,
+                          sportId,
+                          currentUserRatingScore: ratingInfo?.scoreValue,
+                          currentUserRatingScoreId: playerRatingScoreId || undefined,
+                          ratingSystemCode: ratingInfo?.ratingTypeName?.toUpperCase(),
+                          onSendRequests: handleSendReferenceRequests,
+                        },
+                      });
+                    }}
                     onManageProofs={handleManageProofs}
                     canRequestReferences={
                       ratingInfo.ratingTypeName?.toUpperCase() === 'NTRP'
@@ -1316,7 +1342,47 @@ const SportProfile = () => {
                 style={styles.editIconButton}
                 onPress={() => {
                   selectionHaptic();
-                  setShowPreferencesOverlay(true);
+                  if (sportName.toLowerCase() === 'tennis') {
+                    SheetManager.show('tennis-preferences', {
+                      payload: {
+                        onSave: handleSavePreferences,
+                        initialPreferences: {
+                          matchDuration: preferences.matchDuration || undefined,
+                          matchType: preferences.matchType || undefined,
+                          court: preferences.facilityName || undefined,
+                          playStyle: preferences.playingStyle || undefined,
+                          playAttributes: preferences.playAttributes || undefined,
+                        },
+                        playStyleOptions,
+                        playAttributesByCategory,
+                        loadingPlayOptions,
+                        playerId: userId,
+                        sportId,
+                        latitude: location?.latitude ?? null,
+                        longitude: location?.longitude ?? null,
+                      },
+                    });
+                  } else if (sportName.toLowerCase() === 'pickleball') {
+                    SheetManager.show('pickleball-preferences', {
+                      payload: {
+                        onSave: handleSavePreferences,
+                        initialPreferences: {
+                          matchDuration: preferences.matchDuration || undefined,
+                          matchType: preferences.matchType || undefined,
+                          court: preferences.facilityName || undefined,
+                          playStyle: preferences.playingStyle || undefined,
+                          playAttributes: preferences.playAttributes || undefined,
+                        },
+                        playStyleOptions,
+                        playAttributesByCategory,
+                        loadingPlayOptions,
+                        playerId: userId,
+                        sportId,
+                        latitude: location?.latitude ?? null,
+                        longitude: location?.longitude ?? null,
+                      },
+                    });
+                  }
                 }}
               >
                 <Ionicons name="create-outline" size={20} color={colors.primary} />
@@ -1410,97 +1476,6 @@ const SportProfile = () => {
         {/* Bottom Spacing */}
         <View style={{ height: 40 }} />
       </ScrollView>
-
-      {/* Tennis Rating Edit Overlay */}
-      <TennisRatingOverlay
-        visible={showTennisRatingOverlay}
-        onClose={() => setShowTennisRatingOverlay(false)}
-        mode="edit"
-        initialRating={ratingInfo?.ratingScoreId}
-        onSave={handleSaveRating}
-      />
-
-      {/* Pickleball Rating Edit Overlay */}
-      <PickleballRatingOverlay
-        visible={showPickleballRatingOverlay}
-        onClose={() => setShowPickleballRatingOverlay(false)}
-        mode="edit"
-        initialRating={ratingInfo?.ratingScoreId}
-        onSave={handleSaveRating}
-      />
-
-      {/* Peer Rating Request Overlay */}
-      <PeerRatingRequestOverlay
-        visible={showPeerRatingRequestOverlay}
-        onClose={() => setShowPeerRatingRequestOverlay(false)}
-        currentUserId={userId}
-        sportId={sportId}
-        onSendRequests={handleSendPeerRatingRequests}
-      />
-
-      {/* Reference Request Overlay */}
-      <ReferenceRequestOverlay
-        visible={showReferenceRequestOverlay}
-        onClose={() => setShowReferenceRequestOverlay(false)}
-        currentUserId={userId}
-        sportId={sportId}
-        currentUserRatingScore={ratingInfo?.scoreValue}
-        currentUserRatingScoreId={playerRatingScoreId || undefined}
-        ratingSystemCode={ratingInfo?.ratingTypeName?.toUpperCase()}
-        onSendRequests={handleSendReferenceRequests}
-      />
-
-      {/* Tennis Preferences Overlay */}
-      {sportName.toLowerCase() === 'tennis' && (
-        <TennisPreferencesOverlay
-          visible={showPreferencesOverlay}
-          onClose={() => {
-            setShowPreferencesOverlay(false);
-            refetchFavorites();
-          }}
-          onSave={handleSavePreferences}
-          initialPreferences={{
-            matchDuration: preferences.matchDuration || undefined,
-            matchType: preferences.matchType || undefined,
-            court: preferences.facilityName || undefined,
-            playStyle: preferences.playingStyle || undefined,
-            playAttributes: preferences.playAttributes || undefined,
-          }}
-          playStyleOptions={playStyleOptions}
-          playAttributesByCategory={playAttributesByCategory}
-          loadingPlayOptions={loadingPlayOptions}
-          playerId={userId}
-          sportId={sportId}
-          latitude={location?.latitude ?? null}
-          longitude={location?.longitude ?? null}
-        />
-      )}
-
-      {/* Pickleball Preferences Overlay */}
-      {sportName.toLowerCase() === 'pickleball' && (
-        <PickleballPreferencesOverlay
-          visible={showPreferencesOverlay}
-          onClose={() => {
-            setShowPreferencesOverlay(false);
-            refetchFavorites();
-          }}
-          onSave={handleSavePreferences}
-          initialPreferences={{
-            matchDuration: preferences.matchDuration || undefined,
-            matchType: preferences.matchType || undefined,
-            court: preferences.facilityName || undefined,
-            playStyle: preferences.playingStyle || undefined,
-            playAttributes: preferences.playAttributes || undefined,
-          }}
-          playStyleOptions={playStyleOptions}
-          playAttributesByCategory={playAttributesByCategory}
-          loadingPlayOptions={loadingPlayOptions}
-          playerId={userId}
-          sportId={sportId}
-          latitude={location?.latitude ?? null}
-          longitude={location?.longitude ?? null}
-        />
-      )}
     </SafeAreaView>
   );
 };

@@ -3,37 +3,26 @@
  * Modal for importing contacts from the device phone book
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   StyleSheet,
-  Modal,
   TouchableOpacity,
-  TextInput,
-  FlatList,
   ActivityIndicator,
   Alert,
   Linking,
+  FlatList,
 } from 'react-native';
+import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import * as Contacts from 'expo-contacts';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
 import { selectionHaptic, lightHaptic } from '@rallia/shared-utils';
-import { useTranslation } from '../../../hooks';
-import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
+import { useThemeStyles, useTranslation } from '../../../hooks';
+import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { SearchBar } from '../../../components/SearchBar';
 import { primary, neutral } from '@rallia/design-system';
 import { bulkCreateSharedContacts, type SharedContact } from '@rallia/shared-services';
-
-interface ThemeColors {
-  background: string;
-  cardBackground: string;
-  text: string;
-  textSecondary: string;
-  textMuted: string;
-  border: string;
-  primary: string;
-  inputBackground: string;
-}
 
 interface DeviceContact {
   id: string;
@@ -43,25 +32,14 @@ interface DeviceContact {
   selected: boolean;
 }
 
-interface ImportContactsModalProps {
-  visible: boolean;
-  listId: string;
-  existingContacts: SharedContact[];
-  colors: ThemeColors;
-  isDark: boolean;
-  onClose: (refreshNeeded?: boolean) => void;
-}
+export function ImportContactsActionSheet({ payload }: SheetProps<'import-contacts'>) {
+  const listId = payload?.listId ?? '';
+  const existingContacts = payload?.existingContacts ?? [];
 
-const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
-  visible,
-  listId,
-  existingContacts,
-  colors,
-  isDark,
-  onClose,
-}) => {
+  const { colors, isDark } = useThemeStyles();
   const toast = useToast();
   const { t } = useTranslation();
+
   const [contacts, setContacts] = useState<DeviceContact[]>([]);
   const [filteredContacts, setFilteredContacts] = useState<DeviceContact[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -69,16 +47,12 @@ const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
   const [isImporting, setIsImporting] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState<Contacts.PermissionStatus | null>(null);
 
-  // Get existing contact identifiers for duplicate detection - memoized
-  const existingIdentifiers = React.useMemo(
-    () =>
-      new Set([
-        ...existingContacts.map(c => c.device_contact_id).filter(Boolean),
-        ...existingContacts.map(c => c.phone?.replace(/\D/g, '')).filter(Boolean),
-        ...existingContacts.map(c => c.email?.toLowerCase()).filter(Boolean),
-      ]),
-    [existingContacts]
-  );
+  // Track if contacts have been loaded to prevent multiple loads
+  const hasLoadedRef = useRef(false);
+
+  // Store existingContacts in a ref to avoid dependency issues
+  const existingContactsRef = useRef(existingContacts);
+  existingContactsRef.current = existingContacts;
 
   // Request permission and load contacts
   const loadContacts = useCallback(async () => {
@@ -96,6 +70,14 @@ const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
         fields: [Contacts.Fields.Name, Contacts.Fields.PhoneNumbers, Contacts.Fields.Emails],
         sort: Contacts.SortTypes.FirstName,
       });
+
+      // Get existing contact identifiers for duplicate detection
+      const currentExistingContacts = existingContactsRef.current;
+      const existingIdentifiers = new Set([
+        ...currentExistingContacts.map(c => c.device_contact_id).filter(Boolean),
+        ...currentExistingContacts.map(c => c.phone?.replace(/\D/g, '')).filter(Boolean),
+        ...currentExistingContacts.map(c => c.email?.toLowerCase()).filter(Boolean),
+      ]);
 
       // Transform and filter contacts
       const transformedContacts: DeviceContact[] = data
@@ -130,16 +112,15 @@ const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
     } finally {
       setIsLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [existingIdentifiers]);
+  }, [t]);
 
-  // Load contacts when modal opens
+  // Load contacts once when sheet mounts
   useEffect(() => {
-    if (visible) {
+    if (!hasLoadedRef.current) {
+      hasLoadedRef.current = true;
       loadContacts();
-      setSearchQuery('');
     }
-  }, [visible, loadContacts]);
+  }, [loadContacts]);
 
   // Filter contacts by search query
   useEffect(() => {
@@ -157,6 +138,11 @@ const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
       );
     }
   }, [searchQuery, contacts]);
+
+  const handleClose = useCallback(() => {
+    setSearchQuery('');
+    SheetManager.hide('import-contacts');
+  }, []);
 
   // Toggle contact selection
   const toggleContact = useCallback((contactId: string) => {
@@ -183,7 +169,7 @@ const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
   const selectedCount = contacts.filter(c => c.selected).length;
 
   // Import selected contacts
-  const handleImport = async () => {
+  const handleImport = useCallback(async () => {
     const selectedContacts = contacts.filter(c => c.selected);
     if (selectedContacts.length === 0) {
       toast.warning(t('sharedLists.import.selectAtLeastOne'));
@@ -206,52 +192,57 @@ const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
       toast.success(
         t('sharedLists.import.importSuccess').replace('{count}', String(selectedContacts.length))
       );
-      onClose(true);
+      SheetManager.hide('import-contacts');
     } catch (error) {
       console.error('Failed to import contacts:', error);
       toast.error(t('sharedLists.import.failedToImport'));
     } finally {
       setIsImporting(false);
     }
-  };
+  }, [contacts, listId, toast, t]);
 
   // Open settings for permission
-  const handleOpenSettings = () => {
+  const handleOpenSettings = useCallback(() => {
     Linking.openSettings();
-  };
+  }, []);
 
   // Render contact item
-  const renderContact = ({ item }: { item: DeviceContact }) => (
-    <TouchableOpacity
-      style={[
-        styles.contactItem,
-        { backgroundColor: item.selected ? (isDark ? primary[900] : primary[50]) : 'transparent' },
-      ]}
-      onPress={() => toggleContact(item.id)}
-      activeOpacity={0.7}
-    >
-      <View style={[styles.checkbox, item.selected && styles.checkboxSelected]}>
-        {item.selected && <Ionicons name="checkmark" size={14} color="#fff" />}
-      </View>
-      <View style={styles.contactInfo}>
-        <Text size="base" weight="medium" color={colors.text} numberOfLines={1}>
-          {item.name}
-        </Text>
-        <Text size="sm" color={colors.textSecondary} numberOfLines={1}>
-          {[item.phone, item.email].filter(Boolean).join(' • ')}
-        </Text>
-      </View>
-    </TouchableOpacity>
+  const renderContact = useCallback(
+    ({ item }: { item: DeviceContact }) => (
+      <TouchableOpacity
+        style={[
+          styles.contactItem,
+          {
+            backgroundColor: item.selected ? (isDark ? primary[900] : primary[50]) : 'transparent',
+          },
+        ]}
+        onPress={() => toggleContact(item.id)}
+        activeOpacity={0.7}
+      >
+        <View style={[styles.checkbox, item.selected && styles.checkboxSelected]}>
+          {item.selected && <Ionicons name="checkmark" size={14} color="#fff" />}
+        </View>
+        <View style={styles.contactInfo}>
+          <Text size="base" weight="medium" style={{ color: colors.text }} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text size="sm" style={{ color: colors.textSecondary }} numberOfLines={1}>
+            {[item.phone, item.email].filter(Boolean).join(' • ')}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    ),
+    [colors, isDark, toggleContact]
   );
 
   // Render permission denied state
   const renderPermissionDenied = () => (
     <View style={styles.centerContainer}>
       <Ionicons name="lock-closed-outline" size={64} color={colors.textMuted} />
-      <Text size="lg" weight="semibold" color={colors.text} style={styles.centerTitle}>
+      <Text size="lg" weight="semibold" style={[styles.centerTitle, { color: colors.text }]}>
         {t('sharedLists.import.contactsAccessRequired')}
       </Text>
-      <Text size="sm" color={colors.textSecondary} style={styles.centerDescription}>
+      <Text size="sm" style={[styles.centerDescription, { color: colors.textSecondary }]}>
         {t('sharedLists.import.grantAccessMessage')}
       </Text>
       <TouchableOpacity
@@ -260,7 +251,7 @@ const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
         activeOpacity={0.8}
       >
         <Ionicons name="settings-outline" size={20} color="#fff" />
-        <Text size="sm" weight="semibold" color="#fff">
+        <Text size="sm" weight="semibold" style={{ color: '#fff' }}>
           {t('common.openSettings')}
         </Text>
       </TouchableOpacity>
@@ -274,12 +265,12 @@ const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
     return (
       <View style={styles.centerContainer}>
         <Ionicons name="people-outline" size={64} color={colors.textMuted} />
-        <Text size="lg" weight="semibold" color={colors.text} style={styles.centerTitle}>
+        <Text size="lg" weight="semibold" style={[styles.centerTitle, { color: colors.text }]}>
           {searchQuery
             ? t('sharedLists.import.noResults')
             : t('sharedLists.import.noContactsAvailable')}
         </Text>
-        <Text size="sm" color={colors.textSecondary} style={styles.centerDescription}>
+        <Text size="sm" style={[styles.centerDescription, { color: colors.textSecondary }]}>
           {searchQuery
             ? t('sharedLists.import.tryDifferentSearch')
             : t('sharedLists.import.allContactsInList')}
@@ -289,129 +280,144 @@ const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={() => onClose()}
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[
+        styles.sheetBackground,
+        styles.container,
+        { backgroundColor: colors.cardBackground },
+      ]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => onClose()} disabled={isImporting}>
-            <Text size="base" color={colors.primary}>
-              {t('common.cancel')}
-            </Text>
-          </TouchableOpacity>
-          <Text size="lg" weight="semibold" color={colors.text}>
+      {/* Header */}
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View style={styles.headerCenter}>
+          <Text weight="semibold" size="lg" style={{ color: colors.text }}>
             {t('sharedLists.contacts.importFromPhone')}
           </Text>
-          <TouchableOpacity onPress={handleImport} disabled={isImporting || selectedCount === 0}>
-            {isImporting ? (
-              <ActivityIndicator size="small" color={colors.primary} />
-            ) : (
-              <Text
-                size="base"
-                weight="semibold"
-                color={selectedCount > 0 ? colors.primary : colors.textMuted}
+        </View>
+        <TouchableOpacity onPress={handleClose} style={styles.closeButton} disabled={isImporting}>
+          <Ionicons name="close" size={24} color={colors.textMuted} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Content */}
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text size="sm" style={[styles.loadingText, { color: colors.textSecondary }]}>
+            {t('sharedLists.import.loadingContacts')}
+          </Text>
+        </View>
+      ) : permissionStatus !== 'granted' ? (
+        renderPermissionDenied()
+      ) : (
+        <>
+          {/* Search */}
+          <View style={styles.searchContainer}>
+            <SearchBar
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder={t('sharedLists.import.searchContacts')}
+              colors={colors}
+            />
+          </View>
+
+          {/* Select All */}
+          {filteredContacts.length > 0 && (
+            <TouchableOpacity
+              style={[styles.selectAllRow, { borderBottomColor: colors.border }]}
+              onPress={toggleSelectAll}
+              activeOpacity={0.7}
+            >
+              <View
+                style={[
+                  styles.checkbox,
+                  filteredContacts.every(c => c.selected) && styles.checkboxSelected,
+                ]}
               >
+                {filteredContacts.every(c => c.selected) && (
+                  <Ionicons name="checkmark" size={14} color="#fff" />
+                )}
+              </View>
+              <Text size="sm" weight="medium" style={{ color: colors.text }}>
+                {t('sharedLists.import.selectAll')} ({filteredContacts.length})
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Contacts List */}
+          <FlatList
+            data={filteredContacts}
+            keyExtractor={item => item.id}
+            renderItem={renderContact}
+            contentContainerStyle={[
+              styles.listContent,
+              filteredContacts.length === 0 && styles.emptyListContent,
+            ]}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={renderEmpty}
+          />
+        </>
+      )}
+
+      {/* Footer */}
+      {permissionStatus === 'granted' && !isLoading && (
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              { backgroundColor: colors.primary },
+              (isImporting || selectedCount === 0) && { opacity: 0.7 },
+            ]}
+            onPress={handleImport}
+            disabled={isImporting || selectedCount === 0}
+          >
+            {isImporting ? (
+              <ActivityIndicator size="small" color={colors.buttonTextActive} />
+            ) : (
+              <Text size="lg" weight="semibold" color={colors.buttonTextActive}>
                 {t('sharedLists.import.import')}
                 {selectedCount > 0 ? ` (${selectedCount})` : ''}
               </Text>
             )}
           </TouchableOpacity>
         </View>
-
-        {/* Content */}
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text size="sm" color={colors.textSecondary} style={styles.loadingText}>
-              {t('sharedLists.import.loadingContacts')}
-            </Text>
-          </View>
-        ) : permissionStatus !== 'granted' ? (
-          renderPermissionDenied()
-        ) : (
-          <>
-            {/* Search */}
-            <View style={styles.searchContainer}>
-              <View
-                style={[
-                  styles.searchInput,
-                  { backgroundColor: colors.inputBackground, borderColor: colors.border },
-                ]}
-              >
-                <Ionicons name="search" size={20} color={colors.textMuted} />
-                <TextInput
-                  style={[styles.searchTextInput, { color: colors.text }]}
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  placeholder={t('sharedLists.import.searchContacts')}
-                  placeholderTextColor={colors.textMuted}
-                  autoCapitalize="none"
-                />
-                {searchQuery ? (
-                  <TouchableOpacity onPress={() => setSearchQuery('')}>
-                    <Ionicons name="close-circle" size={20} color={colors.textMuted} />
-                  </TouchableOpacity>
-                ) : null}
-              </View>
-            </View>
-
-            {/* Select All */}
-            {filteredContacts.length > 0 && (
-              <TouchableOpacity
-                style={[styles.selectAllRow, { borderBottomColor: colors.border }]}
-                onPress={toggleSelectAll}
-                activeOpacity={0.7}
-              >
-                <View
-                  style={[
-                    styles.checkbox,
-                    filteredContacts.every(c => c.selected) && styles.checkboxSelected,
-                  ]}
-                >
-                  {filteredContacts.every(c => c.selected) && (
-                    <Ionicons name="checkmark" size={14} color="#fff" />
-                  )}
-                </View>
-                <Text size="sm" weight="medium" color={colors.text}>
-                  {t('sharedLists.import.selectAll')} ({filteredContacts.length})
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            {/* Contacts List */}
-            <FlatList
-              data={filteredContacts}
-              keyExtractor={item => item.id}
-              renderItem={renderContact}
-              contentContainerStyle={[
-                styles.listContent,
-                filteredContacts.length === 0 && styles.emptyListContent,
-              ]}
-              showsVerticalScrollIndicator={false}
-              ListEmptyComponent={renderEmpty}
-            />
-          </>
-        )}
-      </View>
-    </Modal>
+      )}
+    </ActionSheet>
   );
-};
+}
 
 const styles = StyleSheet.create({
+  sheetBackground: {
+    flex: 1,
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
+  },
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
+  },
   container: {
     flex: 1,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
+    justifyContent: 'center',
+    padding: 16,
     borderBottomWidth: 1,
+    position: 'relative',
+  },
+  headerCenter: {
+    alignItems: 'center',
+  },
+  closeButton: {
+    padding: 4,
+    position: 'absolute',
+    right: 16,
   },
   loadingContainer: {
     flex: 1,
@@ -424,19 +430,6 @@ const styles = StyleSheet.create({
   searchContainer: {
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[3],
-  },
-  searchInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: radiusPixels.md,
-    paddingHorizontal: spacingPixels[3],
-    gap: spacingPixels[2],
-  },
-  searchTextInput: {
-    flex: 1,
-    paddingVertical: spacingPixels[2.5],
-    fontSize: fontSizePixels.base,
   },
   selectAllRow: {
     flexDirection: 'row',
@@ -502,6 +495,20 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.lg,
     gap: spacingPixels[2],
   },
+  footer: {
+    padding: spacingPixels[4],
+    borderTopWidth: 1,
+    paddingBottom: spacingPixels[4],
+  },
+  submitButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    gap: spacingPixels[2],
+  },
 });
 
-export default ImportContactsModal;
+// Keep default export for backwards compatibility during migration
+export default ImportContactsActionSheet;

@@ -6,7 +6,6 @@
 import React, { useCallback, useState } from 'react';
 import {
   View,
-  Modal,
   TouchableOpacity,
   StyleSheet,
   Share,
@@ -14,6 +13,7 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
+import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 
@@ -24,30 +24,25 @@ import {
   useResetGroupInviteCode,
   getGroupInviteLink,
 } from '@rallia/shared-hooks';
+import { spacingPixels, radiusPixels } from '@rallia/design-system';
 
-interface InviteLinkModalProps {
-  visible: boolean;
-  onClose: () => void;
-  groupId: string;
-  groupName: string;
-  currentUserId: string;
-  isModerator: boolean;
-  type?: 'group' | 'community';
-}
+export function InviteLinkActionSheet({ payload }: SheetProps<'invite-link'>) {
+  const groupId = payload?.groupId ?? '';
+  const groupName = payload?.groupName ?? '';
+  const currentUserId = payload?.currentUserId ?? '';
+  const isModerator = payload?.isModerator ?? false;
+  const type = payload?.type ?? 'group';
 
-export function InviteLinkModal({
-  visible,
-  onClose,
-  groupId,
-  groupName,
-  currentUserId,
-  isModerator,
-  type = 'group',
-}: InviteLinkModalProps) {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
+
+  const handleClose = useCallback(() => {
+    setCopied(false);
+    setShowQRCode(false);
+    SheetManager.hide('invite-link');
+  }, []);
 
   // Use proper terminology based on type
   const typeLabel = type === 'community' ? t('groups.community') : t('groups.group');
@@ -134,207 +129,206 @@ export function InviteLinkModal({
   }, [groupId, currentUserId, resetInviteCodeMutation, refetch, t]);
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+    >
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <Text weight="semibold" size="lg" style={{ color: colors.text }}>
+            {t('groups.inviteTo', { type: typeLabelCapitalized })}
+          </Text>
+          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+            <Ionicons name="close" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
 
-        <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
-          {/* Header */}
-          <View style={[styles.header, { borderBottomColor: colors.border }]}>
-            <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-              {t('groups.inviteTo', { type: typeLabelCapitalized })}
-            </Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={colors.text} />
-            </TouchableOpacity>
-          </View>
+        <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={{ color: colors.textSecondary, marginTop: 12 }}>
+                {t('groups.generatingInviteLink')}
+              </Text>
+            </View>
+          ) : (
+            <>
+              {/* Description */}
+              <Text style={{ color: colors.textSecondary, textAlign: 'center', marginBottom: 24 }}>
+                {t('groups.shareInviteDescription', { typeLabel })}
+              </Text>
 
-          <View style={styles.content}>
-            {isLoading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={colors.primary} />
-                <Text style={{ color: colors.textSecondary, marginTop: 12 }}>
-                  {t('groups.generatingInviteLink')}
-                </Text>
-              </View>
-            ) : (
-              <>
-                {/* Description */}
-                <Text
-                  style={{ color: colors.textSecondary, textAlign: 'center', marginBottom: 24 }}
+              {/* Toggle between Code and QR */}
+              <View style={styles.toggleContainer}>
+                <TouchableOpacity
+                  style={[
+                    styles.toggleButton,
+                    !showQRCode && { backgroundColor: colors.primary },
+                    { borderTopLeftRadius: 8, borderBottomLeftRadius: 8 },
+                  ]}
+                  onPress={() => setShowQRCode(false)}
                 >
-                  {t('groups.shareInviteDescription', { typeLabel })}
-                </Text>
+                  <Text
+                    size="sm"
+                    weight="medium"
+                    style={{ color: !showQRCode ? '#FFFFFF' : colors.textSecondary }}
+                  >
+                    {t('groups.code')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.toggleButton,
+                    showQRCode && { backgroundColor: colors.primary },
+                    { borderTopRightRadius: 8, borderBottomRightRadius: 8 },
+                  ]}
+                  onPress={() => setShowQRCode(true)}
+                >
+                  <Text
+                    size="sm"
+                    weight="medium"
+                    style={{ color: showQRCode ? '#FFFFFF' : colors.textSecondary }}
+                  >
+                    {t('groups.qrCode')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
-                {/* Toggle between Code and QR */}
-                <View style={styles.toggleContainer}>
-                  <TouchableOpacity
-                    style={[
-                      styles.toggleButton,
-                      !showQRCode && { backgroundColor: colors.primary },
-                      { borderTopLeftRadius: 8, borderBottomLeftRadius: 8 },
-                    ]}
-                    onPress={() => setShowQRCode(false)}
-                  >
-                    <Text
-                      size="sm"
-                      weight="medium"
-                      style={{ color: !showQRCode ? '#FFFFFF' : colors.textSecondary }}
-                    >
-                      {t('groups.code')}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.toggleButton,
-                      showQRCode && { backgroundColor: colors.primary },
-                      { borderTopRightRadius: 8, borderBottomRightRadius: 8 },
-                    ]}
-                    onPress={() => setShowQRCode(true)}
-                  >
-                    <Text
-                      size="sm"
-                      weight="medium"
-                      style={{ color: showQRCode ? '#FFFFFF' : colors.textSecondary }}
-                    >
-                      {t('groups.qrCode')}
-                    </Text>
-                  </TouchableOpacity>
+              {showQRCode ? (
+                /* QR Code Display */
+                <View
+                  style={[styles.qrContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}
+                >
+                  <Image source={{ uri: qrCodeUrl }} style={styles.qrImage} resizeMode="contain" />
+                  <Text size="xs" style={{ color: colors.textMuted, marginTop: 8 }}>
+                    {t('groups.scanToJoin', { typeLabel })}
+                  </Text>
                 </View>
-
-                {showQRCode ? (
-                  /* QR Code Display */
-                  <View
-                    style={[
-                      styles.qrContainer,
-                      { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' },
-                    ]}
-                  >
-                    <Image
-                      source={{ uri: qrCodeUrl }}
-                      style={styles.qrImage}
-                      resizeMode="contain"
-                    />
-                    <Text size="xs" style={{ color: colors.textMuted, marginTop: 8 }}>
-                      {t('groups.scanToJoin', { typeLabel })}
-                    </Text>
-                  </View>
-                ) : (
-                  /* Invite Code Display */
-                  <View
-                    style={[
-                      styles.codeContainer,
-                      { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' },
-                    ]}
-                  >
-                    <Text size="xs" style={{ color: colors.textMuted, marginBottom: 4 }}>
-                      {t('groups.inviteCode')}
-                    </Text>
-                    <TouchableOpacity onPress={handleCopyCode} activeOpacity={0.7}>
-                      <Text
-                        weight="bold"
-                        size="xl"
-                        style={{ color: colors.primary, letterSpacing: 4 }}
-                      >
-                        {inviteCode}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-
-                {/* Link Display */}
+              ) : (
+                /* Invite Code Display */
                 <View
                   style={[
-                    styles.linkContainer,
-                    { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', borderColor: colors.border },
+                    styles.codeContainer,
+                    { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' },
                   ]}
                 >
-                  <Text numberOfLines={1} style={{ color: colors.text, flex: 1 }}>
-                    {inviteLink}
+                  <Text size="xs" style={{ color: colors.textMuted, marginBottom: 4 }}>
+                    {t('groups.inviteCode')}
                   </Text>
-                  <TouchableOpacity
-                    onPress={handleCopyLink}
-                    style={[
-                      styles.copyButton,
-                      { backgroundColor: copied ? colors.primary : isDark ? '#3A3A3C' : '#E5E5EA' },
-                    ]}
-                  >
-                    <Ionicons
-                      name={copied ? 'checkmark' : 'copy-outline'}
-                      size={18}
-                      color={copied ? '#FFFFFF' : colors.text}
-                    />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Action Buttons */}
-                <View style={styles.actions}>
-                  <TouchableOpacity
-                    style={[styles.actionButton, { backgroundColor: colors.primary }]}
-                    onPress={handleShare}
-                  >
-                    <Ionicons name="share-outline" size={20} color="#FFFFFF" />
-                    <Text weight="semibold" style={{ color: '#FFFFFF', marginLeft: 8 }}>
-                      {t('groups.shareInvite')}
+                  <TouchableOpacity onPress={handleCopyCode} activeOpacity={0.7}>
+                    <Text
+                      weight="bold"
+                      size="xl"
+                      style={{ color: colors.primary, letterSpacing: 4 }}
+                    >
+                      {inviteCode}
                     </Text>
                   </TouchableOpacity>
-
-                  {isModerator && (
-                    <TouchableOpacity
-                      style={[styles.resetButton, { borderColor: colors.border }]}
-                      onPress={handleResetCode}
-                      disabled={resetInviteCodeMutation.isPending}
-                    >
-                      <Ionicons name="refresh-outline" size={18} color={colors.textSecondary} />
-                      <Text size="sm" style={{ color: colors.textSecondary, marginLeft: 6 }}>
-                        {t('groups.resetCode')}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
                 </View>
+              )}
 
-                {/* Info */}
-                <View style={styles.infoSection}>
-                  <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />
-                  <Text size="xs" style={{ color: colors.textMuted, marginLeft: 6, flex: 1 }}>
-                    {t('groups.inviteLinkInfo')}
+              {/* Link Display */}
+              <View
+                style={[
+                  styles.linkContainer,
+                  { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', borderColor: colors.border },
+                ]}
+              >
+                <Text numberOfLines={1} style={{ color: colors.text, flex: 1 }}>
+                  {inviteLink}
+                </Text>
+                <TouchableOpacity
+                  onPress={handleCopyLink}
+                  style={[
+                    styles.copyButton,
+                    { backgroundColor: copied ? colors.primary : isDark ? '#3A3A3C' : '#E5E5EA' },
+                  ]}
+                >
+                  <Ionicons
+                    name={copied ? 'checkmark' : 'copy-outline'}
+                    size={18}
+                    color={copied ? '#FFFFFF' : colors.text}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Action Buttons */}
+              <View style={styles.actions}>
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: colors.primary }]}
+                  onPress={handleShare}
+                >
+                  <Ionicons name="share-outline" size={20} color="#FFFFFF" />
+                  <Text weight="semibold" style={{ color: '#FFFFFF', marginLeft: 8 }}>
+                    {t('groups.shareInvite')}
                   </Text>
-                </View>
-              </>
-            )}
-          </View>
-        </View>
+                </TouchableOpacity>
+
+                {isModerator && (
+                  <TouchableOpacity
+                    style={[styles.resetButton, { borderColor: colors.border }]}
+                    onPress={handleResetCode}
+                    disabled={resetInviteCodeMutation.isPending}
+                  >
+                    <Ionicons name="refresh-outline" size={18} color={colors.textSecondary} />
+                    <Text size="sm" style={{ color: colors.textSecondary, marginLeft: 6 }}>
+                      {t('groups.resetCode')}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Info */}
+              <View style={styles.infoSection}>
+                <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />
+                <Text size="xs" style={{ color: colors.textMuted, marginLeft: 6, flex: 1 }}>
+                  {t('groups.inviteLinkInfo')}
+                </Text>
+              </View>
+            </>
+          )}
+        </ScrollView>
       </View>
-    </Modal>
+    </ActionSheet>
   );
 }
 
+// Keep old export for backwards compatibility during migration
+export const InviteLinkModal = InviteLinkActionSheet;
+
 const styles = StyleSheet.create({
-  overlay: {
+  sheetBackground: {
     flex: 1,
-    justifyContent: 'flex-end',
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
   },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
   },
   container: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    padding: spacingPixels[4],
     borderBottomWidth: 1,
   },
   closeButton: {
-    padding: 4,
+    padding: spacingPixels[1],
   },
   content: {
-    padding: 24,
-    paddingBottom: 40,
+    flex: 1,
+  },
+  contentContainer: {
+    padding: spacingPixels[6],
+    paddingBottom: spacingPixels[4],
   },
   loadingContainer: {
     alignItems: 'center',

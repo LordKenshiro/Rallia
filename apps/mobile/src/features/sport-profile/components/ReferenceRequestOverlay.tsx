@@ -1,20 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  TextInput,
   Image,
   ActivityIndicator,
-  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Overlay, Text } from '@rallia/shared-components';
+import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import { Text } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
 import { selectionHaptic, mediumHaptic } from '../../../utils/haptics';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import { CertificationBadge } from '../../ratings/components';
+import { radiusPixels, spacingPixels } from '@rallia/design-system';
+import { SearchBar } from '../../../components/SearchBar';
 
 interface ReferenceRequestOverlayProps {
   visible: boolean;
@@ -66,16 +67,14 @@ const MIN_LEVEL_THRESHOLDS: Record<string, number> = {
   DUPR: 3.5,
 };
 
-const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
-  visible,
-  onClose,
-  currentUserId,
-  sportId,
-  currentUserRatingScore,
-  currentUserRatingScoreId: _currentUserRatingScoreId,
-  ratingSystemCode,
-  onSendRequests,
-}) => {
+export function ReferenceRequestActionSheet({ payload }: SheetProps<'reference-request'>) {
+  const currentUserId = payload?.currentUserId || '';
+  const sportId = payload?.sportId || '';
+  const onClose = () => SheetManager.hide('reference-request');
+  const currentUserRatingScore = payload?.currentUserRatingScore;
+  const currentUserRatingScoreId = payload?.currentUserRatingScoreId;
+  const ratingSystemCode = payload?.ratingSystemCode;
+  const onSendRequests = payload?.onSendRequests;
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
   const [players, setPlayers] = useState<Player[]>([]);
@@ -85,16 +84,10 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
 
-  // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
-
   useEffect(() => {
-    if (visible) {
-      fetchCertifiedPlayers();
-    }
+    fetchCertifiedPlayers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, currentUserId, sportId]);
+  }, [currentUserId, sportId]);
 
   useEffect(() => {
     // Filter players based on search query
@@ -111,27 +104,6 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
       setFilteredPlayers(filtered);
     }
   }, [searchQuery, players]);
-
-  // Trigger animations when overlay becomes visible
-  useEffect(() => {
-    if (visible) {
-      fadeAnim.setValue(0);
-      slideAnim.setValue(50);
-
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible, fadeAnim, slideAnim]);
 
   // Get minimum level threshold for current rating system
   const getMinLevelThreshold = (): number => {
@@ -295,14 +267,15 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
   };
 
   const handleSendRequests = async () => {
-    if (selectedPlayers.size === 0) return;
+    if (selectedPlayers.size === 0 || sending || !userCanRequest) return;
 
     mediumHaptic();
     setSending(true);
     try {
-      await onSendRequests(Array.from(selectedPlayers));
+      await onSendRequests?.(Array.from(selectedPlayers));
       setSelectedPlayers(new Set());
       setSearchQuery('');
+      SheetManager.hide('reference-request');
     } catch (error) {
       Logger.error('Failed to send reference requests', error as Error, {
         count: selectedPlayers.size,
@@ -382,63 +355,63 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
   const minLevel = getMinLevelThreshold();
 
   return (
-    <Overlay
-      visible={visible}
-      onClose={onClose}
-      type="bottom"
-      showBackButton={false}
-      showCloseButton={true}
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
-      <Animated.View
-        style={[
-          styles.container,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
-          },
-        ]}
-      >
-        {/* Title */}
-        <Text style={[styles.title, { color: colors.text }]}>
-          {t('profile.certification.referenceRequest.title')}
-        </Text>
-        <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-          {t('profile.certification.referenceRequest.description')}
-        </Text>
-
-        {/* Minimum Level Warning (if user doesn't meet threshold) */}
-        {!userCanRequest && (
-          <View style={[styles.warningBox, { backgroundColor: '#FFF8E1' }]}>
-            <Ionicons name="information-circle" size={20} color={colors.warning} />
-            <Text style={[styles.warningText, { color: '#F57C00' }]}>
-              {t('profile.certification.referenceRequest.minimumLevelRequired', {
-                level: minLevel,
-              })}
+      <View style={styles.modalContent}>
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={styles.headerCenter}>
+            <Text
+              weight="semibold"
+              size="lg"
+              style={{ color: colors.text }}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {t('profile.certification.referenceRequest.title')}
             </Text>
           </View>
-        )}
-
-        {/* Search Bar */}
-        <View style={[styles.searchContainer, { backgroundColor: colors.inputBackground }]}>
-          <Ionicons name="search" size={20} color={colors.textMuted} style={styles.searchIcon} />
-          <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
-            placeholder={t('profile.certification.referenceRequest.searchPlaceholder')}
-            placeholderTextColor={colors.textMuted}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
-              <Ionicons name="close-circle" size={20} color={colors.textMuted} />
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Ionicons name="close" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
         </View>
 
-        {/* Players List */}
-        <ScrollView style={styles.playersList} showsVerticalScrollIndicator={false}>
+        {/* Scrollable Content */}
+        <ScrollView
+          style={styles.scrollContent}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={[styles.subtitle, { color: colors.textMuted }]}>
+            {t('profile.certification.referenceRequest.description')}
+          </Text>
+
+          {/* Minimum Level Warning (if user doesn't meet threshold) */}
+          {!userCanRequest && (
+            <View style={[styles.warningBox, { backgroundColor: '#FFF8E1' }]}>
+              <Ionicons name="information-circle" size={20} color={colors.warning} />
+              <Text style={[styles.warningText, { color: '#F57C00' }]}>
+                {t('profile.certification.referenceRequest.minimumLevelRequired', {
+                  level: minLevel,
+                })}
+              </Text>
+            </View>
+          )}
+
+          {/* Search Bar */}
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder={t('profile.certification.referenceRequest.searchPlaceholder')}
+            colors={colors}
+            style={styles.searchContainer}
+          />
+
+          {/* Players List */}
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
@@ -465,52 +438,127 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
           )}
         </ScrollView>
 
-        {/* Send Requests Button */}
-        <TouchableOpacity
-          style={[
-            styles.sendButton,
-            { backgroundColor: colors.primary },
-            (selectedPlayers.size === 0 || sending || !userCanRequest) && [
-              styles.sendButtonDisabled,
-              { backgroundColor: colors.buttonInactive },
-            ],
-          ]}
-          onPress={handleSendRequests}
-          disabled={selectedPlayers.size === 0 || sending || !userCanRequest}
-          activeOpacity={0.8}
-        >
-          {sending ? (
-            <ActivityIndicator color={colors.primaryForeground} />
-          ) : (
-            <Text style={[styles.sendButtonText, { color: colors.primaryForeground }]}>
-              {t('profile.certification.referenceRequest.sendRequest')}
-              {selectedPlayers.size > 0
-                ? ` (${t('profile.certification.referenceRequest.selectedCount', { count: selectedPlayers.size })})`
-                : ''}
-            </Text>
-          )}
-        </TouchableOpacity>
-      </Animated.View>
-    </Overlay>
+        {/* Sticky Footer */}
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              { backgroundColor: colors.primary },
+              (selectedPlayers.size === 0 || sending || !userCanRequest) && { opacity: 0.6 },
+            ]}
+            onPress={handleSendRequests}
+            disabled={selectedPlayers.size === 0 || sending || !userCanRequest}
+            activeOpacity={0.8}
+          >
+            {sending ? (
+              <ActivityIndicator color={colors.primaryForeground} />
+            ) : (
+              <Text weight="semibold" style={{ color: colors.primaryForeground }}>
+                {t('profile.certification.referenceRequest.sendRequest')}
+                {selectedPlayers.size > 0
+                  ? ` (${t('profile.certification.referenceRequest.selectedCount', { count: selectedPlayers.size })})`
+                  : ''}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </ActionSheet>
   );
+}
+
+// Keep old export for backwards compatibility during migration
+const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
+  visible,
+  onClose,
+  currentUserId,
+  sportId,
+  currentUserRatingScore,
+  currentUserRatingScoreId,
+  ratingSystemCode,
+  onSendRequests,
+}) => {
+  useEffect(() => {
+    if (visible) {
+      SheetManager.show('reference-request', {
+        payload: {
+          currentUserId,
+          sportId,
+          currentUserRatingScore,
+          currentUserRatingScoreId,
+          ratingSystemCode,
+          onSendRequests,
+        },
+      });
+    }
+  }, [
+    visible,
+    currentUserId,
+    sportId,
+    currentUserRatingScore,
+    currentUserRatingScoreId,
+    ratingSystemCode,
+    onSendRequests,
+  ]);
+
+  useEffect(() => {
+    if (!visible) {
+      SheetManager.hide('reference-request');
+    }
+  }, [visible]);
+
+  return null;
 };
 
+export default ReferenceRequestOverlay;
+
 const styles = StyleSheet.create({
-  container: {
-    paddingVertical: 20,
-    maxHeight: '90%',
+  sheetBackground: {
+    flex: 1,
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 8,
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
+  },
+  modalContent: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacingPixels[4],
+    borderBottomWidth: 1,
+    position: 'relative',
+    minHeight: 56,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[12],
+  },
+  closeButton: {
+    padding: spacingPixels[1],
+    position: 'absolute',
+    right: spacingPixels[4],
+    zIndex: 1,
+  },
+  scrollContent: {
+    flex: 1,
+  },
+  content: {
+    padding: spacingPixels[4],
+    paddingBottom: spacingPixels[6],
   },
   subtitle: {
     fontSize: 14,
     textAlign: 'center',
-    marginBottom: 20,
-    paddingHorizontal: 20,
+    marginBottom: spacingPixels[5],
+    paddingHorizontal: spacingPixels[4],
     lineHeight: 20,
   },
   warningBox: {
@@ -526,25 +574,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    marginBottom: 16,
-    height: 48,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-  },
-  clearButton: {
-    padding: 4,
-  },
-  playersList: {
-    maxHeight: 400,
     marginBottom: 16,
   },
   playersGrid: {
@@ -606,28 +635,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  sendButton: {
-    borderRadius: 12,
-    paddingVertical: 16,
+  footer: {
+    padding: spacingPixels[4],
+    borderTopWidth: 1,
+  },
+  submitButton: {
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  sendButtonDisabled: {
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  sendButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    justifyContent: 'center',
+    padding: 14,
+    borderRadius: radiusPixels.lg,
   },
   loadingContainer: {
     flex: 1,
@@ -657,5 +674,3 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
 });
-
-export default ReferenceRequestOverlay;

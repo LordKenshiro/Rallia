@@ -291,7 +291,7 @@ export const FavoriteFacilitiesSelector: React.FC<FavoriteFacilitiesSelectorProp
             onPress={handleToggleDropdown}
             activeOpacity={0.8}
           >
-            <Ionicons name="search" size={18} color={colors.textMuted} />
+            <Ionicons name="search-outline" size={20} color={colors.textMuted} />
             <TextInput
               style={[styles.searchInput, { color: colors.text }]}
               placeholder={
@@ -430,8 +430,7 @@ const styles = StyleSheet.create({
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[3],
+    padding: spacingPixels[3],
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
     gap: spacingPixels[2],
@@ -439,7 +438,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    paddingVertical: 0,
+    paddingVertical: spacingPixels[1],
   },
   dropdownContainer: {
     marginTop: spacingPixels[2],

@@ -16,7 +16,6 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import {
@@ -28,6 +27,7 @@ import {
 import { usePlayerSearch, useInviteToMatch } from '@rallia/shared-hooks';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import type { TranslationKey, TranslationOptions } from '../../../hooks/useTranslation';
+import { SearchBar } from '../../../components/SearchBar';
 
 // =============================================================================
 // TYPES
@@ -433,31 +433,13 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
       />
 
       {/* Search input */}
-      <View
-        style={[
-          styles.searchInputContainer,
-          { borderColor: colors.border, backgroundColor: colors.buttonInactive },
-        ]}
-      >
-        <Ionicons name="search-outline" size={20} color={colors.textMuted} />
-        <BottomSheetTextInput
-          style={[styles.searchInput, { color: colors.text }]}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder={t('matchCreation.invite.searchPlaceholder' as TranslationKey)}
-          placeholderTextColor={colors.textMuted}
-          autoCorrect={false}
-          autoCapitalize="none"
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity
-            onPress={() => setSearchQuery('')}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="close-circle" size={18} color={colors.textMuted} />
-          </TouchableOpacity>
-        )}
-      </View>
+      <SearchBar
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholder={t('matchCreation.invite.searchPlaceholder' as TranslationKey)}
+        colors={colors}
+        style={styles.searchBarWrapper}
+      />
 
       {/* Player list */}
       <FlatList
@@ -574,20 +556,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  searchBarWrapper: {
     marginHorizontal: spacingPixels[4],
     marginBottom: spacingPixels[3],
-    padding: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-    gap: spacingPixels[2],
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    paddingVertical: spacingPixels[1],
   },
   listContent: {
     paddingHorizontal: spacingPixels[4],

@@ -496,7 +496,7 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
           )}
         </View>
 
-        <Text size="base" weight="semibold" color={colors.text}>
+        <Text size="lg" weight="semibold" color={colors.text}>
           {t('matchFeedback.title' as TranslationKey)}
         </Text>
 
@@ -648,8 +648,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
+    padding: spacingPixels[4],
     borderBottomWidth: 1,
   },
   headerLeft: {
@@ -720,6 +719,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacingPixels[6],
+    paddingBottom: spacingPixels[4],
   },
   loadingText: {
     textAlign: 'center',

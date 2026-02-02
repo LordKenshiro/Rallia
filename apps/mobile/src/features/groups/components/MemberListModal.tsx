@@ -3,17 +3,9 @@
  * Modal showing all group members with management options
  */
 
-import React, { useCallback, useState, useMemo, useEffect } from 'react';
-import {
-  View,
-  Modal,
-  TouchableOpacity,
-  StyleSheet,
-  FlatList,
-  Alert,
-  Image,
-  TextInput,
-} from 'react-native';
+import React, { useCallback, useState, useMemo } from 'react';
+import { View, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
+import ActionSheet, { SheetManager, SheetProps, FlatList } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text, useToast } from '@rallia/shared-components';
@@ -25,17 +17,8 @@ import {
   type GroupWithMembers,
   type GroupMember,
 } from '@rallia/shared-hooks';
-import { MemberOptionsModal } from './MemberOptionsModal';
-
-interface MemberListModalProps {
-  visible: boolean;
-  onClose: () => void;
-  group: GroupWithMembers;
-  currentUserId: string;
-  isModerator: boolean;
-  onMemberRemoved: () => void;
-  onPlayerPress?: (playerId: string) => void;
-}
+import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { SearchBar } from '../../../components/SearchBar';
 
 /**
  * Format a date as relative time or date string for join dates
@@ -81,31 +64,24 @@ function formatLastActive(
   };
 }
 
-export function MemberListModal({
-  visible,
-  onClose,
-  group,
-  currentUserId,
-  isModerator,
-  onMemberRemoved,
-  onPlayerPress,
-}: MemberListModalProps) {
+export function MemberListActionSheet({ payload }: SheetProps<'member-list'>) {
+  const group = payload?.group as GroupWithMembers;
+  const currentUserId = payload?.currentUserId ?? '';
+  const isModerator = payload?.isModerator ?? false;
+  const onMemberRemoved = payload?.onMemberRemoved;
+  const onPlayerPress = payload?.onPlayerPress;
+
   const { colors, isDark } = useThemeStyles();
   const toast = useToast();
   const { t } = useTranslation();
 
   const [selectedMember, setSelectedMember] = useState<GroupMember | null>(null);
-  const [showMemberOptions, setShowMemberOptions] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Clear search when modal closes
-  // This effect resets search state when modal closes - standard modal cleanup pattern
-  useEffect(() => {
-    if (!visible) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional reset of modal state on close
-      setSearchQuery('');
-    }
-  }, [visible]);
+  const handleClose = useCallback(() => {
+    setSearchQuery('');
+    SheetManager.hide('member-list');
+  }, []);
 
   // Filter members based on search query
   const filteredMembers = useMemo(() => {
@@ -123,135 +99,135 @@ export function MemberListModal({
   const promoteMemberMutation = usePromoteMember();
   const demoteMemberMutation = useDemoteMember();
 
-  const handleMemberOptions = useCallback((member: GroupMember) => {
-    setSelectedMember(member);
-    setShowMemberOptions(true);
-  }, []);
+  const handleMemberOptions = useCallback(
+    (member: GroupMember) => {
+      setSelectedMember(member);
+      // Show member options sheet
+      const memberInfo = {
+        name:
+          member.player?.profile?.display_name ||
+          `${member.player?.profile?.first_name || ''} ${member.player?.profile?.last_name || ''}`.trim() ||
+          'Unknown',
+        role: member.role as 'member' | 'moderator',
+        isCreator: group.created_by === member.player_id,
+        profilePictureUrl: member.player?.profile?.profile_picture_url,
+        playerId: member.player_id,
+      };
 
-  // Build options for the selected member
-  const memberOptions = useMemo(() => {
-    if (!selectedMember) return [];
+      const isCreator = group.created_by === member.player_id;
+      const isSelf = member.player_id === currentUserId;
+      const memberIsModerator = member.role === 'moderator';
 
-    const isCreator = group.created_by === selectedMember.player_id;
-    const isSelf = selectedMember.player_id === currentUserId;
-    const memberIsModerator = selectedMember.role === 'moderator';
+      const options: Array<{
+        id: string;
+        label: string;
+        icon: string;
+        onPress: () => void;
+        destructive?: boolean;
+      }> = [];
 
-    const options: {
-      id: string;
-      label: string;
-      icon: keyof typeof Ionicons.glyphMap;
-      onPress: () => void;
-      destructive?: boolean;
-    }[] = [];
+      if (isModerator && !isSelf && !isCreator) {
+        if (!memberIsModerator) {
+          options.push({
+            id: 'promote',
+            label: t('groups.promoteToModerator'),
+            icon: 'arrow-up-circle-outline',
+            onPress: async () => {
+              try {
+                await promoteMemberMutation.mutateAsync({
+                  groupId: group.id,
+                  moderatorId: currentUserId,
+                  playerIdToPromote: member.player_id,
+                });
+                toast.success(t('groups.memberPromoted'));
+                onMemberRemoved?.();
+              } catch (error) {
+                toast.error(error instanceof Error ? error.message : t('groups.failedToPromote'));
+              }
+            },
+          });
+        } else {
+          options.push({
+            id: 'demote',
+            label: t('groups.demoteToMember'),
+            icon: 'arrow-down-circle-outline',
+            onPress: async () => {
+              try {
+                await demoteMemberMutation.mutateAsync({
+                  groupId: group.id,
+                  moderatorId: currentUserId,
+                  playerIdToDemote: member.player_id,
+                });
+                toast.success(t('groups.moderatorDemoted'));
+                onMemberRemoved?.();
+              } catch (error) {
+                toast.error(error instanceof Error ? error.message : t('groups.failedToDemote'));
+              }
+            },
+          });
+        }
 
-    // Only moderators can manage members
-    if (isModerator && !isSelf && !isCreator) {
-      if (!memberIsModerator) {
         options.push({
-          id: 'promote',
-          label: t('groups.promoteToModerator'),
-          icon: 'arrow-up-circle-outline',
-          onPress: async () => {
-            try {
-              await promoteMemberMutation.mutateAsync({
-                groupId: group.id,
-                moderatorId: currentUserId,
-                playerIdToPromote: selectedMember.player_id,
-              });
-              toast.success(t('groups.memberPromoted'));
-              onMemberRemoved();
-            } catch (error) {
-              toast.error(error instanceof Error ? error.message : t('groups.failedToPromote'));
-            }
-          },
-        });
-      } else {
-        options.push({
-          id: 'demote',
-          label: t('groups.demoteToMember'),
-          icon: 'arrow-down-circle-outline',
-          onPress: async () => {
-            try {
-              await demoteMemberMutation.mutateAsync({
-                groupId: group.id,
-                moderatorId: currentUserId,
-                playerIdToDemote: selectedMember.player_id,
-              });
-              toast.success(t('groups.moderatorDemoted'));
-              onMemberRemoved();
-            } catch (error) {
-              toast.error(error instanceof Error ? error.message : t('groups.failedToDemote'));
-            }
+          id: 'remove',
+          label: t('groups.removeFromGroup'),
+          icon: 'person-remove-outline',
+          destructive: true,
+          onPress: () => {
+            Alert.alert(
+              t('groups.removeMember'),
+              t('groups.removeMemberConfirm', {
+                name: member.player?.profile?.first_name || t('groups.thisMember'),
+              }),
+              [
+                { text: t('common.cancel'), style: 'cancel' },
+                {
+                  text: t('common.remove'),
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      await removeGroupMemberMutation.mutateAsync({
+                        groupId: group.id,
+                        moderatorId: currentUserId,
+                        playerIdToRemove: member.player_id,
+                      });
+                      toast.success(t('groups.memberRemoved'));
+                      onMemberRemoved?.();
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error ? error.message : t('groups.failedToRemoveMember')
+                      );
+                    }
+                  },
+                },
+              ]
+            );
           },
         });
       }
 
-      options.push({
-        id: 'remove',
-        label: t('groups.removeFromGroup'),
-        icon: 'person-remove-outline',
-        destructive: true,
-        onPress: () => {
-          Alert.alert(
-            t('groups.removeMember'),
-            t('groups.removeMemberConfirm', {
-              name: selectedMember.player?.profile?.first_name || t('groups.thisMember'),
-            }),
-            [
-              { text: t('common.cancel'), style: 'cancel' },
-              {
-                text: t('common.remove'),
-                style: 'destructive',
-                onPress: async () => {
-                  try {
-                    await removeGroupMemberMutation.mutateAsync({
-                      groupId: group.id,
-                      moderatorId: currentUserId,
-                      playerIdToRemove: selectedMember.player_id,
-                    });
-                    toast.success(t('groups.memberRemoved'));
-                    onMemberRemoved();
-                  } catch (error) {
-                    toast.error(
-                      error instanceof Error ? error.message : t('groups.failedToRemoveMember')
-                    );
-                  }
-                },
-              },
-            ]
-          );
+      SheetManager.show('member-options', {
+        payload: {
+          member: memberInfo,
+          options,
+          onAvatarPress: (playerId: string) => {
+            onPlayerPress?.(playerId);
+          },
         },
       });
-    }
-
-    return options;
-  }, [
-    selectedMember,
-    group,
-    currentUserId,
-    isModerator,
-    removeGroupMemberMutation,
-    promoteMemberMutation,
-    demoteMemberMutation,
-    onMemberRemoved,
-    toast,
-    t,
-  ]);
-
-  // Get member info for the options modal
-  const selectedMemberInfo = useMemo(() => {
-    if (!selectedMember) return null;
-    return {
-      name:
-        selectedMember.player?.profile?.display_name ||
-        `${selectedMember.player?.profile?.first_name || ''} ${selectedMember.player?.profile?.last_name || ''}`.trim() ||
-        'Unknown',
-      role: selectedMember.role,
-      isCreator: group.created_by === selectedMember.player_id,
-      profilePictureUrl: selectedMember.player?.profile?.profile_picture_url,
-      playerId: selectedMember.player_id,
-    };
-  }, [selectedMember, group]);
+    },
+    [
+      group,
+      currentUserId,
+      isModerator,
+      promoteMemberMutation,
+      demoteMemberMutation,
+      removeGroupMemberMutation,
+      onMemberRemoved,
+      onPlayerPress,
+      toast,
+      t,
+    ]
+  );
 
   const renderMemberItem = useCallback(
     ({ item }: { item: GroupMember }) => {
@@ -335,100 +311,67 @@ export function MemberListModal({
     [colors, isDark, group, currentUserId, isModerator, handleMemberOptions, t]
   );
 
+  if (!group) return null;
+
   return (
-    <>
-      <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-        <View style={styles.overlay}>
-          <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+    >
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <Text weight="semibold" size="lg" style={{ color: colors.text }}>
+            {t('groups.members')} ({group.member_count})
+          </Text>
+          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+            <Ionicons name="close" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
 
-          <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
-            {/* Header */}
-            <View style={[styles.header, { borderBottomColor: colors.border }]}>
-              <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-                {t('groups.members')} ({group.member_count})
-              </Text>
-              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-
-            {/* Search Bar - show when 10+ members */}
-            {group.member_count >= 10 && (
-              <View style={[styles.searchContainer, { borderBottomColor: colors.border }]}>
-                <View
-                  style={[
-                    styles.searchInputContainer,
-                    { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' },
-                  ]}
-                >
-                  <Ionicons
-                    name="search-outline"
-                    size={18}
-                    color={colors.textMuted}
-                    style={styles.searchIcon}
-                  />
-                  <TextInput
-                    style={[styles.searchInput, { color: colors.text }]}
-                    placeholder={t('groups.searchMembers')}
-                    placeholderTextColor={colors.textMuted}
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                  {searchQuery.length > 0 && (
-                    <TouchableOpacity onPress={() => setSearchQuery('')}>
-                      <Ionicons name="close-circle" size={18} color={colors.textMuted} />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-            )}
-
-            {/* Member List */}
-            <FlatList
-              data={filteredMembers}
-              renderItem={renderMemberItem}
-              keyExtractor={item => item.id}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.listContent}
+        {/* Search Bar - show when 10+ members */}
+        {group.member_count >= 10 && (
+          <View style={[styles.searchContainer, { borderBottomColor: colors.border }]}>
+            <SearchBar
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder={t('groups.searchMembers')}
+              colors={colors}
             />
           </View>
-        </View>
-      </Modal>
+        )}
 
-      {/* Member Options Modal */}
-      <MemberOptionsModal
-        visible={showMemberOptions}
-        onClose={() => {
-          setShowMemberOptions(false);
-          setSelectedMember(null);
-        }}
-        member={selectedMemberInfo}
-        options={memberOptions}
-        onAvatarPress={playerId => {
-          setShowMemberOptions(false);
-          setSelectedMember(null);
-          onPlayerPress?.(playerId);
-        }}
-      />
-    </>
+        {/* Member List */}
+        <FlatList
+          data={filteredMembers}
+          renderItem={renderMemberItem}
+          keyExtractor={item => item.id}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+        />
+      </View>
+    </ActionSheet>
   );
 }
 
+// Keep old export for backwards compatibility during migration
+export const MemberListModal = MemberListActionSheet;
+
 const styles = StyleSheet.create({
-  overlay: {
+  sheetBackground: {
     flex: 1,
-    justifyContent: 'flex-end',
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
   },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
   },
   container: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '70%',
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -441,33 +384,18 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   searchContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
     borderBottomWidth: 1,
   },
-  searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    height: 36,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    paddingVertical: 0,
-  },
   listContent: {
-    paddingBottom: 24,
+    paddingBottom: spacingPixels[4],
   },
   memberItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
     borderBottomWidth: 1,
   },
   avatarContainer: {

@@ -18,6 +18,7 @@ import type { FacilitySearchResult } from '@rallia/shared-types';
 import type { TranslationKey } from '@rallia/shared-translations';
 import type { OnboardingFormData } from '../../../hooks/useOnboardingWizard';
 import { useUserLocation } from '../../../../../hooks/useUserLocation';
+import { SearchBar } from '../../../../../components/SearchBar';
 
 // =============================================================================
 // TYPES
@@ -416,31 +417,13 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
         <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
           {t('onboarding.favoriteSitesStep.searchLabel' as TranslationKey)}
         </Text>
-        <View
-          style={[
-            styles.searchInputContainer,
-            { borderColor: colors.border, backgroundColor: colors.buttonInactive },
-          ]}
-        >
-          <Ionicons name="search-outline" size={20} color={colors.textMuted} />
-          <BottomSheetTextInput
-            style={[styles.searchInput, { color: colors.text }]}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder={t('onboarding.favoriteSitesStep.searchPlaceholder' as TranslationKey)}
-            placeholderTextColor={colors.textMuted}
-            autoCorrect={false}
-            autoCapitalize="none"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity
-              onPress={() => setSearchQuery('')}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons name="close-circle" size={18} color={colors.textMuted} />
-            </TouchableOpacity>
-          )}
-        </View>
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder={t('onboarding.favoriteSitesStep.searchPlaceholder' as TranslationKey)}
+          colors={colors}
+          InputComponent={BottomSheetTextInput}
+        />
       </View>
 
       {/* Facility list */}
@@ -524,20 +507,6 @@ const styles = StyleSheet.create({
   },
   label: {
     marginBottom: spacingPixels[2],
-  },
-  searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[2],
-    borderRadius: radiusPixels.md,
-    borderWidth: 1,
-    gap: spacingPixels[2],
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    paddingVertical: spacingPixels[1],
   },
   facilityListSection: {
     minHeight: 200,

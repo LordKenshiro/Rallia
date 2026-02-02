@@ -12,27 +12,24 @@ import {
   TouchableWithoutFeedback,
   StyleSheet,
   RefreshControl,
-  Alert,
   Image,
   Dimensions,
   Animated,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { SheetManager } from 'react-native-actions-sheet';
 
 import { Text, Skeleton } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
+import { getSafeAreaEdges } from '../utils';
 import { useThemeStyles, useAuth, useTranslation, useRequireOnboarding } from '../hooks';
-import {
-  usePlayerGroups,
-  useCreateGroup,
-  usePlayerGroupsRealtime,
-  type Group,
-} from '@rallia/shared-hooks';
+import { usePlayerGroups, usePlayerGroupsRealtime, type Group } from '@rallia/shared-hooks';
 import type { RootStackParamList } from '../navigation/types';
-import { CreateGroupModal, QRScannerModal } from '../features/groups';
+import { QRScannerModal } from '../features/groups';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_GAP = 12;
@@ -153,37 +150,12 @@ export default function GroupsScreen() {
   const { guardAction } = useRequireOnboarding();
   const playerId = session?.user?.id;
 
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showScannerModal, setShowScannerModal] = useState(false);
 
   const { data: groups, isLoading, isRefetching, refetch } = usePlayerGroups(playerId);
 
   // Subscribe to real-time updates for player's groups
   usePlayerGroupsRealtime(playerId);
-
-  const createGroupMutation = useCreateGroup();
-
-  const handleCreateGroup = useCallback(
-    async (name: string, description?: string, coverImageUrl?: string) => {
-      if (!guardAction()) return;
-
-      try {
-        const newGroup = await createGroupMutation.mutateAsync({
-          playerId: playerId!,
-          input: { name, description, cover_image_url: coverImageUrl },
-        });
-        setShowCreateModal(false);
-        // Navigate to the new group
-        navigation.navigate('GroupDetail', { groupId: newGroup.id });
-      } catch (error) {
-        Alert.alert(
-          t('common.error'),
-          error instanceof Error ? error.message : t('groups.errors.failedToCreate')
-        );
-      }
-    },
-    [guardAction, playerId, createGroupMutation, navigation, t]
-  );
 
   const handleGroupJoined = useCallback(
     (groupId: string, groupName: string) => {
@@ -236,8 +208,8 @@ export default function GroupsScreen() {
           <TouchableOpacity
             style={[styles.createButton, { backgroundColor: colors.primary }]}
             onPress={() => {
-              if (!guardAction()) return;
-              setShowCreateModal(true);
+              if (!guardAction() || !playerId) return;
+              SheetManager.show('create-group', { payload: { playerId } });
             }}
           >
             <Ionicons name="add" size={20} color="#FFFFFF" />
@@ -263,14 +235,14 @@ export default function GroupsScreen() {
         </View>
       </View>
     ),
-    [colors, t, guardAction]
+    [colors, t, guardAction, playerId]
   );
 
   if (isLoading) {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['bottom']}
+        edges={getSafeAreaEdges(['bottom'])}
       >
         <View style={styles.loadingContainer}>
           {/* Header skeleton */}
@@ -338,7 +310,7 @@ export default function GroupsScreen() {
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['bottom']}
+      edges={getSafeAreaEdges(['bottom'])}
     >
       <FlatList
         data={groups}
@@ -385,8 +357,8 @@ export default function GroupsScreen() {
           <TouchableOpacity
             style={[styles.fab, { backgroundColor: colors.primary }]}
             onPress={() => {
-              if (!guardAction()) return;
-              setShowCreateModal(true);
+              if (!guardAction() || !playerId) return;
+              SheetManager.show('create-group', { payload: { playerId } });
             }}
             activeOpacity={0.8}
           >
@@ -394,14 +366,6 @@ export default function GroupsScreen() {
           </TouchableOpacity>
         </View>
       )}
-
-      {/* Create Group Modal */}
-      <CreateGroupModal
-        visible={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSubmit={handleCreateGroup}
-        isLoading={createGroupMutation.isPending}
-      />
 
       {/* QR Scanner Modal */}
       {playerId && (

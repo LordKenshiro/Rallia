@@ -7,12 +7,9 @@ import { Text, Button, Skeleton, useToast } from '@rallia/shared-components';
 import { lightHaptic, warningHaptic } from '@rallia/shared-utils';
 import { supabase, Logger } from '@rallia/shared-services';
 import { RatingProofWithFile, RatingProofsScreenParams } from '@rallia/shared-types';
-import AddRatingProofOverlay from '../features/ratings/components/AddRatingProofOverlay';
-import ExternalLinkProofOverlay from '../features/ratings/components/ExternalLinkProofOverlay';
-import ImageProofOverlay from '../features/ratings/components/ImageProofOverlay';
-import VideoProofOverlay from '../features/ratings/components/VideoProofOverlay';
-import DocumentProofOverlay from '../features/ratings/components/DocumentProofOverlay';
+import { SheetManager } from 'react-native-actions-sheet';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
+import { getSafeAreaEdges } from '../utils';
 import { useThemeStyles, useTranslation } from '../hooks';
 import { formatDateShort } from '../utils/dateFormatting';
 import {
@@ -49,16 +46,15 @@ const RatingProofs: React.FC = () => {
   const [proofs, setProofs] = useState<RatingProofWithRatingScore[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter] = useState<'all' | 'approved' | 'pending' | 'rejected'>('all');
-  const [showAddProofOverlay, setShowAddProofOverlay] = useState(false);
-  const [showExternalLinkOverlay, setShowExternalLinkOverlay] = useState(false);
-  const [showImageOverlay, setShowImageOverlay] = useState(false);
-  const [showVideoOverlay, setShowVideoOverlay] = useState(false);
-  const [showDocumentOverlay, setShowDocumentOverlay] = useState(false);
 
   // Define handleAddProof before useLayoutEffect that uses it
   const handleAddProof = useCallback(() => {
     lightHaptic();
-    setShowAddProofOverlay(true);
+    SheetManager.show('add-rating-proof', {
+      payload: {
+        onSelectProofType: handleSelectProofType,
+      },
+    });
   }, []);
 
   // Configure header right button for add action
@@ -141,23 +137,46 @@ const RatingProofs: React.FC = () => {
 
   const handleSelectProofType = (type: 'external_link' | 'video' | 'image' | 'document') => {
     Logger.logUserAction('select_proof_type', { type, playerRatingScoreId });
-    setShowAddProofOverlay(false);
+    SheetManager.hide('add-rating-proof');
 
-    // Open the corresponding overlay based on type
-    switch (type) {
-      case 'external_link':
-        setShowExternalLinkOverlay(true);
-        break;
-      case 'video':
-        setShowVideoOverlay(true);
-        break;
-      case 'image':
-        setShowImageOverlay(true);
-        break;
-      case 'document':
-        setShowDocumentOverlay(true);
-        break;
-    }
+    // Wait for the sheet to close before opening the next one
+    setTimeout(() => {
+      // Open the corresponding overlay based on type
+      switch (type) {
+        case 'external_link':
+          SheetManager.show('external-link-proof', {
+            payload: {
+              onSuccess: handleProofSuccess,
+              playerRatingScoreId,
+            },
+          });
+          break;
+        case 'video':
+          SheetManager.show('video-proof', {
+            payload: {
+              onSuccess: handleProofSuccess,
+              playerRatingScoreId,
+            },
+          });
+          break;
+        case 'image':
+          SheetManager.show('image-proof', {
+            payload: {
+              onSuccess: handleProofSuccess,
+              playerRatingScoreId,
+            },
+          });
+          break;
+        case 'document':
+          SheetManager.show('document-proof', {
+            payload: {
+              onSuccess: handleProofSuccess,
+              playerRatingScoreId,
+            },
+          });
+          break;
+      }
+    }, 300); // Wait for sheet close animation to complete
   };
 
   const handleProofSuccess = () => {
@@ -353,7 +372,7 @@ const RatingProofs: React.FC = () => {
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['bottom']}
+      edges={getSafeAreaEdges(['bottom'])}
     >
       {/* Content */}
       {loading ? (
@@ -422,45 +441,6 @@ const RatingProofs: React.FC = () => {
           />
         </View>
       )}
-
-      {/* Add Proof Overlay */}
-      <AddRatingProofOverlay
-        visible={showAddProofOverlay}
-        onClose={() => setShowAddProofOverlay(false)}
-        onSelectProofType={handleSelectProofType}
-      />
-
-      {/* External Link Proof Overlay */}
-      <ExternalLinkProofOverlay
-        visible={showExternalLinkOverlay}
-        onClose={() => setShowExternalLinkOverlay(false)}
-        onSuccess={handleProofSuccess}
-        playerRatingScoreId={playerRatingScoreId}
-      />
-
-      {/* Image Proof Overlay */}
-      <ImageProofOverlay
-        visible={showImageOverlay}
-        onClose={() => setShowImageOverlay(false)}
-        onSuccess={handleProofSuccess}
-        playerRatingScoreId={playerRatingScoreId}
-      />
-
-      {/* Video Proof Overlay */}
-      <VideoProofOverlay
-        visible={showVideoOverlay}
-        onClose={() => setShowVideoOverlay(false)}
-        onSuccess={handleProofSuccess}
-        playerRatingScoreId={playerRatingScoreId}
-      />
-
-      {/* Document Proof Overlay */}
-      <DocumentProofOverlay
-        visible={showDocumentOverlay}
-        onClose={() => setShowDocumentOverlay(false)}
-        onSuccess={handleProofSuccess}
-        playerRatingScoreId={playerRatingScoreId}
-      />
     </SafeAreaView>
   );
 };

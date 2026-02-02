@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { SheetManager } from 'react-native-actions-sheet';
 import { useAppNavigation } from '../navigation/hooks';
 import { Text, Skeleton, SkeletonAvatar, useToast } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
@@ -20,10 +21,6 @@ import { useImagePicker, useThemeStyles, useTranslation, type TranslationKey } f
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { formatDate as formatDateUtil, formatDateMonthYear } from '../utils/dateFormatting';
-import PersonalInformationOverlay from '../features/onboarding/components/overlays/PersonalInformationOverlay';
-import PlayerInformationOverlay from '../features/onboarding/components/overlays/PlayerInformationOverlay';
-import PlayerAvailabilitiesOverlay from '../features/onboarding/components/overlays/PlayerAvailabilitiesOverlay';
-import ImagePickerSheet from '../components/ImagePickerSheet';
 import type { Profile, Player, Sport } from '@rallia/shared-types';
 import {
   spacingPixels,
@@ -76,20 +73,13 @@ const UserProfile = () => {
   const [sports, setSports] = useState<SportWithRating[]>([]);
   const [availabilities, setAvailabilities] = useState<AvailabilityGrid>({});
   const [pendingReferenceRequestsCount, setPendingReferenceRequestsCount] = useState(0);
-  const [showPersonalInfoOverlay, setShowPersonalInfoOverlay] = useState(false);
-  const [showPlayerInfoOverlay, setShowPlayerInfoOverlay] = useState(false);
-  const [showAvailabilitiesOverlay, setShowAvailabilitiesOverlay] = useState(false);
 
   // Use custom hook for image picker (for profile picture editing)
-  const {
-    image: newProfileImage,
-    showPicker,
-    openPicker,
-    closePicker,
-    pickFromCamera,
-    pickFromGallery,
-    permissions,
-  } = useImagePicker();
+  const { image: newProfileImage, openPicker } = useImagePicker({
+    title: t('profile.profilePicture'),
+    cameraLabel: t('profile.takePhoto'),
+    galleryLabel: t('profile.chooseFromGallery'),
+  });
 
   // Player reputation data
   const { display: reputationDisplay, loading: reputationLoading } = usePlayerReputation(
@@ -509,7 +499,7 @@ const UserProfile = () => {
       await fetchUserProfileData();
 
       // Close the overlay
-      setShowAvailabilitiesOverlay(false);
+      SheetManager.hide('player-availabilities');
 
       toast.success(t('alerts.availabilitiesUpdated'));
     } catch (error) {
@@ -708,7 +698,26 @@ const UserProfile = () => {
             </Text>
             <TouchableOpacity
               style={styles.editIconButton}
-              onPress={() => setShowPersonalInfoOverlay(true)}
+              onPress={() => {
+                SheetManager.show('personal-information', {
+                  payload: {
+                    mode: 'edit',
+                    initialData: {
+                      firstName: profile?.first_name || '',
+                      lastName: profile?.last_name || '',
+                      username: profile?.display_name || '',
+                      email: profile?.email || '',
+                      dateOfBirth: profile?.birth_date || '',
+                      gender: player?.gender || '',
+                      phoneNumber: profile?.phone || '',
+                      profilePictureUrl: profile?.profile_picture_url || undefined,
+                    },
+                    onSave: () => {
+                      fetchUserProfileData();
+                    },
+                  },
+                });
+              }}
             >
               <Ionicons name="create-outline" size={20} color={colors.primary} />
             </TouchableOpacity>
@@ -773,7 +782,21 @@ const UserProfile = () => {
             </Text>
             <TouchableOpacity
               style={styles.editIconButton}
-              onPress={() => setShowPlayerInfoOverlay(true)}
+              onPress={() => {
+                SheetManager.show('player-information', {
+                  payload: {
+                    initialData: {
+                      username: profile?.display_name || '',
+                      bio: profile?.bio || '',
+                      preferredPlayingHand: player?.playing_hand || '',
+                      maximumTravelDistance: player?.max_travel_distance || 5,
+                    },
+                    onSave: () => {
+                      fetchUserProfileData();
+                    },
+                  },
+                });
+              }}
             >
               <Ionicons name="create-outline" size={20} color={colors.primary} />
             </TouchableOpacity>
@@ -915,7 +938,15 @@ const UserProfile = () => {
             </Text>
             <TouchableOpacity
               style={styles.editIconButton}
-              onPress={() => setShowAvailabilitiesOverlay(true)}
+              onPress={() => {
+                SheetManager.show('player-availabilities', {
+                  payload: {
+                    mode: 'edit',
+                    initialData: convertToUIFormat(availabilities),
+                    onSave: handleSaveAvailabilities,
+                  },
+                });
+              }}
             >
               <Ionicons name="create-outline" size={20} color={colors.primary} />
             </TouchableOpacity>
@@ -1024,66 +1055,6 @@ const UserProfile = () => {
         {/* Bottom Spacing */}
         <View style={{ height: 40 }} />
       </ScrollView>
-
-      {/* Personal Information Edit Overlay */}
-      <PersonalInformationOverlay
-        visible={showPersonalInfoOverlay}
-        onClose={() => setShowPersonalInfoOverlay(false)}
-        onSave={() => {
-          // Only refresh data when save is successful
-          fetchUserProfileData();
-        }}
-        mode="edit"
-        initialData={{
-          firstName: profile?.first_name || '',
-          lastName: profile?.last_name || '',
-          username: profile?.display_name || '',
-          email: profile?.email || '',
-          dateOfBirth: profile?.birth_date || '',
-          gender: player?.gender || '',
-          phoneNumber: profile?.phone || '',
-          profilePictureUrl: profile?.profile_picture_url || undefined,
-        }}
-      />
-
-      {/* Player Information Edit Overlay */}
-      <PlayerInformationOverlay
-        visible={showPlayerInfoOverlay}
-        onClose={() => setShowPlayerInfoOverlay(false)}
-        onSave={() => {
-          // Only refresh data when save is successful
-          fetchUserProfileData();
-        }}
-        initialData={{
-          username: profile?.display_name || '',
-          bio: profile?.bio || '',
-          preferredPlayingHand: player?.playing_hand || '',
-          maximumTravelDistance: player?.max_travel_distance || 5,
-        }}
-      />
-
-      {/* Player Availabilities Edit Overlay */}
-      <PlayerAvailabilitiesOverlay
-        visible={showAvailabilitiesOverlay}
-        onClose={() => setShowAvailabilitiesOverlay(false)}
-        mode="edit"
-        initialData={convertToUIFormat(availabilities)}
-        onSave={handleSaveAvailabilities}
-      />
-
-      {/* Image Picker Sheet */}
-      <ImagePickerSheet
-        visible={showPicker}
-        onClose={closePicker}
-        onTakePhoto={pickFromCamera}
-        onChooseFromGallery={pickFromGallery}
-        title={t('profile.profilePicture')}
-        cameraLabel={t('profile.takePhoto')}
-        galleryLabel={t('profile.chooseFromGallery')}
-        cancelLabel={t('common.cancel')}
-        cameraDisabled={!permissions.camera}
-        galleryDisabled={!permissions.library}
-      />
     </SafeAreaView>
   );
 };

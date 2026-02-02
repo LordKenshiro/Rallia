@@ -4,7 +4,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, StyleSheet, KeyboardAvoidingView, Platform, Alert, Keyboard } from 'react-native';
 import { Skeleton, SkeletonAvatar, useToast } from '@rallia/shared-components';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -47,22 +47,16 @@ import {
   ChatHeader,
   MessageList,
   MessageInput,
-  ChatAgreementModal,
   TypingIndicator,
-  MessageActionsSheet,
-  EditMessageModal,
   ChatSearchBar,
   BlockedUserModal,
-  ReportUserModal,
 } from '../features/chat';
+import { SheetManager } from 'react-native-actions-sheet';
 import type { MessageListRef } from '../features/chat';
-import type { RootStackParamList, ChatStackParamList } from '../navigation/types';
+import type { RootStackParamList } from '../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-// Support both Root Stack 'Chat' and Chat Stack 'ChatScreen' routes
-type ChatRouteProp =
-  | RouteProp<RootStackParamList, 'Chat'>
-  | RouteProp<ChatStackParamList, 'ChatScreen'>;
+type ChatRouteProp = RouteProp<RootStackParamList, 'ChatConversation'>;
 
 interface NetworkInfo {
   id: string;
@@ -93,23 +87,12 @@ export default function ChatConversationScreen() {
   // Reply state
   const [replyToMessage, setReplyToMessage] = useState<MessageWithSender | null>(null);
 
-  // Message actions sheet state
-  const [selectedMessage, setSelectedMessage] = useState<MessageWithSender | null>(null);
-  const [selectedMessageY, setSelectedMessageY] = useState<number | undefined>(undefined);
-  const [showMessageActions, setShowMessageActions] = useState(false);
-
-  // Edit message modal state
-  const [editingMessage, setEditingMessage] = useState<MessageWithSender | null>(null);
-  const [showEditModal, setShowEditModal] = useState(false);
-
   // Search bar state
   const [showSearchBar, setShowSearchBar] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [highlightedMessageIds, setHighlightedMessageIds] = useState<string[]>([]);
   const [currentHighlightedId, setCurrentHighlightedId] = useState<string | undefined>();
-
-  // Report modal state
-  const [showReportModal, setShowReportModal] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   // Ref for MessageList to scroll to messages
   const messageListRef = React.useRef<MessageListRef>(null);
@@ -117,27 +100,29 @@ export default function ChatConversationScreen() {
   // Check if user has agreed to chat rules
   const { data: hasAgreed, isLoading: isLoadingAgreement } = useChatAgreement(playerId);
   const agreeToChatRulesMutation = useAgreeToChatRules();
-  const [showAgreementModal, setShowAgreementModal] = useState(false);
 
   // Mute mutation
   const { mutate: toggleMuteMutation } = useToggleMuteConversation();
 
+  // Handle agreeing to chat rules
+  const handleAgreeToRules = useCallback(() => {
+    if (!playerId) return;
+    agreeToChatRulesMutation.mutate(playerId);
+  }, [playerId, agreeToChatRulesMutation]);
+
   // Show agreement modal if user hasn't agreed yet
   useEffect(() => {
     if (!isLoadingAgreement && hasAgreed === false) {
-      setShowAgreementModal(true);
+      SheetManager.show('chat-agreement', {
+        payload: {
+          chatName: routeTitle,
+          chatImageUrl: null,
+          isDirectChat: false,
+          onAgree: handleAgreeToRules,
+        },
+      });
     }
-  }, [hasAgreed, isLoadingAgreement]);
-
-  const handleAgreeToRules = useCallback(() => {
-    if (!playerId) return;
-
-    agreeToChatRulesMutation.mutate(playerId, {
-      onSuccess: () => {
-        setShowAgreementModal(false);
-      },
-    });
-  }, [playerId, agreeToChatRulesMutation]);
+  }, [hasAgreed, isLoadingAgreement, routeTitle, handleAgreeToRules]);
 
   // Fetch conversation details
   const { data: conversation, isLoading: isLoadingConversation } = useConversation(conversationId);
@@ -204,6 +189,22 @@ export default function ChatConversationScreen() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId, playerId]);
+
+  // Avoid bottom safe area spacer when keyboard is open (removes gap between input and keyboard)
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setIsKeyboardVisible(true)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setIsKeyboardVisible(false)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   // Fetch network info for group chats (for cover image)
   useEffect(() => {
@@ -398,15 +399,22 @@ export default function ChatConversationScreen() {
   }, [unblockUser]);
 
   const handleReport = useCallback(() => {
-    if (!isDirectChat || !otherUserId) {
+    if (!isDirectChat || !otherUserId || !playerId) {
       Alert.alert(
         t('chat.alerts.cannotReport' as TranslationKey),
         t('chat.alerts.cannotReportMessage' as TranslationKey)
       );
       return;
     }
-    setShowReportModal(true);
-  }, [isDirectChat, otherUserId, t]);
+    SheetManager.show('report-user', {
+      payload: {
+        reporterId: playerId,
+        reportedId: otherUserId,
+        reportedName: headerTitle,
+        conversationId,
+      },
+    });
+  }, [isDirectChat, otherUserId, playerId, t, headerTitle, conversationId]);
 
   const handleClearChat = useCallback(() => {
     if (!playerId) return;
@@ -512,71 +520,77 @@ export default function ChatConversationScreen() {
   }, []);
 
   // Handle long press on message (show actions sheet)
-  const handleLongPressMessage = useCallback((message: MessageWithSender, pageY?: number) => {
-    setSelectedMessage(message);
-    setSelectedMessageY(pageY);
-    setShowMessageActions(true);
-  }, []);
+  const handleLongPressMessage = useCallback(
+    (message: MessageWithSender, pageY?: number) => {
+      const handleReply = () => {
+        setReplyToMessage(message);
+      };
 
-  // Handle message actions sheet close
-  const handleCloseMessageActions = useCallback(() => {
-    setShowMessageActions(false);
-    setSelectedMessage(null);
-    setSelectedMessageY(undefined);
-  }, []);
+      const handleEdit = () => {
+        // Show edit message sheet after a brief delay
+        setTimeout(() => {
+          SheetManager.show('edit-message', {
+            payload: {
+              message,
+              onSave: async (newContent: string) => {
+                if (!playerId || !conversationId) return;
+                try {
+                  await editMessageMutation.mutateAsync({
+                    messageId: message.id,
+                    senderId: playerId,
+                    newContent,
+                    conversationId,
+                  });
+                  refetchMessages();
+                } catch (error) {
+                  console.error('Error editing message:', error);
+                }
+              },
+              isSaving: editMessageMutation.isPending,
+            },
+          });
+        }, 350);
+      };
 
-  // Handle edit message - open edit modal
-  const handleEditMessage = useCallback(() => {
-    if (selectedMessage) {
-      setEditingMessage(selectedMessage);
-      setShowEditModal(true);
-    }
-    setShowMessageActions(false);
-  }, [selectedMessage]);
+      const handleDelete = async () => {
+        if (!playerId) return;
+        try {
+          await deleteMessage(message.id, playerId);
+          refetchMessages();
+        } catch (error) {
+          console.error('Error deleting message:', error);
+        }
+      };
 
-  // Handle save edited message
-  const handleSaveEditedMessage = useCallback(
-    async (newContent: string) => {
-      if (!editingMessage || !playerId || !conversationId) return;
+      const handleReact = (emoji: string) => {
+        if (!playerId) return;
+        toggleReactionMutation.mutate(
+          { messageId: message.id, playerId, emoji, conversationId },
+          { onSuccess: () => fetchReactions() }
+        );
+      };
 
-      try {
-        await editMessageMutation.mutateAsync({
-          messageId: editingMessage.id,
-          senderId: playerId,
-          newContent: newContent,
-          conversationId: conversationId,
-        });
-        refetchMessages();
-      } catch (error) {
-        console.error('Error editing message:', error);
-      }
-
-      setShowEditModal(false);
-      setEditingMessage(null);
+      SheetManager.show('message-actions', {
+        payload: {
+          message,
+          isOwnMessage: message.sender_id === playerId,
+          messageY: pageY,
+          onReply: handleReply,
+          onEdit: handleEdit,
+          onDelete: handleDelete,
+          onReact: handleReact,
+        },
+      });
     },
-    [editingMessage, playerId, conversationId, editMessageMutation, refetchMessages]
+    [
+      playerId,
+      conversationId,
+      editMessageMutation,
+      refetchMessages,
+      toggleReactionMutation,
+      fetchReactions,
+    ]
   );
-
-  // Handle close edit modal
-  const handleCloseEditModal = useCallback(() => {
-    setShowEditModal(false);
-    setEditingMessage(null);
-  }, []);
-
-  // Handle delete message
-  const handleDeleteMessage = useCallback(async () => {
-    if (!selectedMessage || !playerId) return;
-
-    try {
-      await deleteMessage(selectedMessage.id, playerId);
-      refetchMessages();
-    } catch (error) {
-      console.error('Error deleting message:', error);
-    }
-
-    setShowMessageActions(false);
-    setSelectedMessage(null);
-  }, [selectedMessage, playerId, refetchMessages]);
 
   const handleLoadMore = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
@@ -646,7 +660,7 @@ export default function ChatConversationScreen() {
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
+      keyboardVerticalOffset={0}
     >
       <ChatHeader
         title={headerTitle}
@@ -713,63 +727,16 @@ export default function ChatConversationScreen() {
           replyToMessage={replyToMessage}
           onCancelReply={handleCancelReply}
           onTypingChange={handleTypingChange}
+          keyboardVisible={isKeyboardVisible}
         />
       )}
 
-      {/* Bottom safe area spacer for devices with home indicator */}
-      <View style={{ height: insets.bottom }} />
-
-      {/* Chat Agreement Modal - only shows once for first-time users */}
-      <ChatAgreementModal
-        visible={showAgreementModal}
-        onAgree={handleAgreeToRules}
-        chatName={headerTitle}
-        chatImageUrl={headerImage}
-        isDirectChat={isDirectChat}
-      />
-
-      {/* Message Actions Sheet */}
-      <MessageActionsSheet
-        visible={showMessageActions}
-        message={selectedMessage}
-        isOwnMessage={selectedMessage?.sender_id === playerId}
-        onClose={handleCloseMessageActions}
-        onReply={() => {
-          if (selectedMessage) {
-            handleReplyToMessage(selectedMessage);
-          }
-          handleCloseMessageActions();
+      {/* Bottom safe area spacer when keyboard is closed (skip when keyboard open to avoid gap above keyboard) */}
+      <View
+        style={{
+          height: isKeyboardVisible ? 0 : Platform.OS === 'ios' ? 0 : insets.bottom,
         }}
-        onEdit={handleEditMessage}
-        onDelete={handleDeleteMessage}
-        onReact={emoji => {
-          if (selectedMessage) {
-            handleReact(selectedMessage.id, emoji);
-          }
-        }}
-        messageY={selectedMessageY}
       />
-
-      {/* Edit Message Modal */}
-      <EditMessageModal
-        visible={showEditModal}
-        message={editingMessage}
-        onClose={handleCloseEditModal}
-        onSave={handleSaveEditedMessage}
-        isSaving={editMessageMutation.isPending}
-      />
-
-      {/* Report User Modal */}
-      {isDirectChat && otherUserId && playerId && (
-        <ReportUserModal
-          visible={showReportModal}
-          onClose={() => setShowReportModal(false)}
-          reporterId={playerId}
-          reportedId={otherUserId}
-          reportedName={headerTitle}
-          conversationId={conversationId}
-        />
-      )}
     </KeyboardAvoidingView>
   );
 }

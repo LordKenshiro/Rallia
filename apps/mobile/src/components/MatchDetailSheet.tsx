@@ -71,7 +71,7 @@ import { shareMatch } from '../utils';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import { ConfirmationModal } from './ConfirmationModal';
 import { RequesterDetailsModal } from './RequesterDetailsModal';
-import { navigationRef, navigateToPlayerProfileFromOutside } from '../navigation';
+import { useAppNavigation } from '../navigation';
 import type {
   PlayerWithProfile,
   MatchParticipantWithPlayer,
@@ -605,16 +605,16 @@ export const MatchDetailSheet: React.FC = () => {
   const isDark = theme === 'dark';
   const toast = useToast();
   const playerId = player?.id;
+  const navigation = useAppNavigation();
 
   // Navigate to player profile or open auth sheet if not signed in / onboarding incomplete.
-  // Uses navigateToPlayerProfileFromOutside (same pattern as ActionsBottomSheet) because this sheet is rendered outside NavigationContainer.
   const handleParticipantProfilePress = useCallback(
     (targetPlayerId: string) => {
       closeSheet();
       if (!guardAction()) return;
-      navigateToPlayerProfileFromOutside(targetPlayerId);
+      navigation.navigate('PlayerProfile', { playerId: targetPlayerId });
     },
-    [closeSheet, guardAction]
+    [closeSheet, guardAction, navigation]
   );
 
   // Confirmation modal states
@@ -939,27 +939,27 @@ export const MatchDetailSheet: React.FC = () => {
     closeSheet();
 
     // Generate chat title from match info (sport name + date)
+    const dateResult = formatIntuitiveDateInTimezone(
+      selectedMatch.match_date,
+      selectedMatch.timezone,
+      locale
+    );
+    const dateLabel = dateResult.translationKey
+      ? t(dateResult.translationKey as TranslationKey)
+      : dateResult.label;
     const chatTitle = selectedMatch.sport?.name
-      ? `${selectedMatch.sport.name} - ${formatIntuitiveDateInTimezone(selectedMatch.match_date, selectedMatch.timezone, locale)}`
+      ? `${selectedMatch.sport.name} - ${dateLabel}`
       : t('matchDetail.title' as TranslationKey);
 
-    // Use setTimeout to ensure navigation happens after sheet close animation
-    // Navigate through the Chat tab to the specific conversation
+    // Short delay so navigation runs after sheet close animation.
+    // Navigate to the Chat conversation screen (full screen, no tabs)
     setTimeout(() => {
-      if (navigationRef.isReady()) {
-        navigationRef.navigate('Main', {
-          screen: 'Chat',
-          params: {
-            screen: 'ChatScreen',
-            params: {
-              conversationId: matchConversationId,
-              title: chatTitle,
-            },
-          },
-        });
-      }
+      navigation.navigate('ChatConversation', {
+        conversationId: matchConversationId,
+        title: chatTitle,
+      });
     }, 100);
-  }, [matchConversationId, selectedMatch, guardAction, closeSheet, locale, t]);
+  }, [matchConversationId, selectedMatch, guardAction, closeSheet, locale, t, navigation]);
 
   // Handle join match
   const handleJoinMatch = useCallback(() => {
@@ -3074,7 +3074,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: spacingPixels[10],
+    paddingBottom: spacingPixels[4],
   },
   pendingBanner: {
     flexDirection: 'row',
@@ -3411,7 +3411,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[4],
-    paddingBottom: spacingPixels[6],
+    paddingBottom: spacingPixels[8],
     gap: spacingPixels[2],
     borderTopWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',

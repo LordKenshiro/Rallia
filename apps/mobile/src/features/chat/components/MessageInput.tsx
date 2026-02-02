@@ -19,6 +19,8 @@ interface MessageInputProps {
   replyToMessage?: MessageWithSender | null;
   onCancelReply?: () => void;
   onTypingChange?: (isTyping: boolean) => void;
+  /** When true, bottom padding is reduced to avoid gap above keyboard (safe area already accounted for by system). */
+  keyboardVisible?: boolean;
 }
 
 function MessageInputComponent({
@@ -28,6 +30,7 @@ function MessageInputComponent({
   replyToMessage,
   onCancelReply,
   onTypingChange,
+  keyboardVisible = false,
 }: MessageInputProps) {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
@@ -115,7 +118,11 @@ function MessageInputComponent({
     <View
       style={[
         styles.container,
-        { backgroundColor: isDark ? colors.background : '#FFFFFF', borderTopColor: colors.border },
+        {
+          backgroundColor: isDark ? colors.background : '#FFFFFF',
+          borderTopColor: colors.border,
+          paddingBottom: keyboardVisible ? spacingPixels[2] : spacingPixels[4],
+        },
       ]}
     >
       {/* Reply Banner */}
@@ -183,7 +190,8 @@ export const MessageInput = memo(MessageInputComponent);
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[2],
+    paddingTop: spacingPixels[2],
+    paddingBottom: spacingPixels[6],
     borderTopWidth: 1,
   },
   replyBanner: {

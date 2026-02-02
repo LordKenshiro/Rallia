@@ -397,15 +397,18 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
 
   const renderHeader = () => (
     <View>
-      {/* Search Bar */}
+      {/* Search Bar - same look as WhereStep */}
       <View style={styles.searchContainer}>
-        <View style={[styles.searchInputContainer, { backgroundColor: colors.inputBackground }]}>
-          <Ionicons
-            name="search-outline"
-            size={20}
-            color={colors.textMuted}
-            style={styles.searchIcon}
-          />
+        <View
+          style={[
+            styles.searchInputContainer,
+            {
+              borderColor: colors.border,
+              backgroundColor: colors.inputBackground ?? colors.cardBackground,
+            },
+          ]}
+        >
+          <Ionicons name="search-outline" size={20} color={colors.textMuted} />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
             placeholder={t('playerDirectory.searchPlaceholder')}
@@ -416,21 +419,19 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
             autoCorrect={false}
             returnKeyType="search"
           />
-          {/* Debounce/Loading indicator */}
           {(isTyping || (isFetching && searchQuery.length > 0)) && (
             <ActivityIndicator size="small" color={colors.primary} style={styles.searchLoader} />
           )}
           {searchQuery.length > 0 && !isTyping && !isFetching && (
-            <Ionicons
-              name="close-circle"
-              size={20}
-              color={colors.textMuted}
+            <TouchableOpacity
               onPress={() => {
                 setSearchQuery('');
                 setIsTyping(false);
               }}
-              style={styles.clearIcon}
-            />
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
           )}
         </View>
       </View>
@@ -574,20 +575,15 @@ const styles = StyleSheet.create({
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    padding: spacingPixels[3],
     borderRadius: radiusPixels.lg,
-    paddingHorizontal: spacingPixels[3],
-    height: 44,
-  },
-  searchIcon: {
-    marginRight: spacingPixels[2],
+    borderWidth: 1,
+    gap: spacingPixels[2],
   },
   searchInput: {
     flex: 1,
-    fontSize: fontSizePixels.base,
-    paddingVertical: 0,
-  },
-  clearIcon: {
-    marginLeft: spacingPixels[2],
+    fontSize: 16,
+    paddingVertical: spacingPixels[1],
   },
   searchLoader: {
     marginLeft: spacingPixels[2],

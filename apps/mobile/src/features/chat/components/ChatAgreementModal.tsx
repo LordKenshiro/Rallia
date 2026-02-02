@@ -4,8 +4,9 @@
  * Adapts content based on chat type (direct vs group)
  */
 
-import React from 'react';
-import { View, Modal, StyleSheet, Image, ScrollView } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, StyleSheet, Image } from 'react-native';
+import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text, Button } from '@rallia/shared-components';
@@ -13,23 +14,19 @@ import { useThemeStyles } from '../../../hooks';
 import { spacingPixels, fontSizePixels, radiusPixels, primary } from '@rallia/design-system';
 import { useTranslation } from 'react-i18next';
 
-interface ChatAgreementModalProps {
-  visible: boolean;
-  onAgree: () => void;
-  chatName?: string;
-  chatImageUrl?: string | null;
-  isDirectChat?: boolean;
-}
+export function ChatAgreementActionSheet({ payload }: SheetProps<'chat-agreement'>) {
+  const chatName = payload?.chatName ?? 'this chat';
+  const chatImageUrl = payload?.chatImageUrl;
+  const isDirectChat = payload?.isDirectChat ?? false;
+  const onAgree = payload?.onAgree;
 
-export const ChatAgreementModal: React.FC<ChatAgreementModalProps> = ({
-  visible,
-  onAgree,
-  chatName = 'this chat',
-  chatImageUrl,
-  isDirectChat = false,
-}) => {
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
+
+  const handleAgree = useCallback(() => {
+    onAgree?.();
+    SheetManager.hide('chat-agreement');
+  }, [onAgree]);
 
   const rules = [
     t('chat.rules.noHarassment', 'No harassment, hate speech, sexual language'),
@@ -52,78 +49,82 @@ export const ChatAgreementModal: React.FC<ChatAgreementModalProps> = ({
   const iconName = isDirectChat ? 'chatbubble' : 'people';
 
   return (
-    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
-      <View style={styles.overlay}>
-        <View style={[styles.container, { backgroundColor: colors.card }]}>
-          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-            {/* Chat Image */}
-            <View style={styles.imageContainer}>
-              {chatImageUrl ? (
-                <Image source={{ uri: chatImageUrl }} style={styles.chatImage} />
-              ) : (
-                <View style={[styles.placeholderImage, { backgroundColor: primary[100] }]}>
-                  <Ionicons name={iconName} size={40} color={primary[500]} />
-                </View>
-              )}
-            </View>
+    <ActionSheet
+      gestureEnabled={false}
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
+      indicatorStyle={{ display: 'none' }}
+      closable={false}
+    >
+      <View style={styles.container}>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Chat Image */}
+          <View style={styles.imageContainer}>
+            {chatImageUrl ? (
+              <Image source={{ uri: chatImageUrl }} style={styles.chatImage} />
+            ) : (
+              <View style={[styles.placeholderImage, { backgroundColor: primary[100] }]}>
+                <Ionicons name={iconName} size={40} color={primary[500]} />
+              </View>
+            )}
+          </View>
 
-            {/* Welcome Text */}
-            <Text style={[styles.welcomeText, { color: colors.textMuted }]}>
-              {isDirectChat
-                ? t('chat.agreement.welcomeDirect', 'Starting conversation with')
-                : t('chat.agreement.welcome', 'Welcome to')}
+          {/* Welcome Text */}
+          <Text style={[styles.welcomeText, { color: colors.textMuted }]}>
+            {isDirectChat
+              ? t('chat.agreement.welcomeDirect', 'Starting conversation with')
+              : t('chat.agreement.welcome', 'Welcome to')}
+          </Text>
+          <Text style={[styles.chatName, { color: colors.text }]}>{chatName}</Text>
+
+          {/* Description */}
+          <Text style={[styles.description, { color: colors.textMuted }]}>{description}</Text>
+
+          {/* Rules Section */}
+          <View style={styles.rulesSection}>
+            <Text style={[styles.rulesTitle, { color: colors.text }]}>
+              {t('chat.agreement.chatRules', 'Chat rules')}
             </Text>
-            <Text style={[styles.chatName, { color: colors.text }]}>{chatName}</Text>
 
-            {/* Description */}
-            <Text style={[styles.description, { color: colors.textMuted }]}>{description}</Text>
+            {rules.map((rule, index) => (
+              <View key={index} style={styles.ruleRow}>
+                <Ionicons name="close" size={18} color="#EF4444" style={styles.ruleIcon} />
+                <Text style={[styles.ruleText, { color: colors.text }]}>{rule}</Text>
+              </View>
+            ))}
 
-            {/* Rules Section */}
-            <View style={styles.rulesSection}>
-              <Text style={[styles.rulesTitle, { color: colors.text }]}>
-                {t('chat.agreement.chatRules', 'Chat rules')}
-              </Text>
+            {/* Warning Text */}
+            <Text style={[styles.warningText, { color: colors.textMuted }]}>
+              {t(
+                'chat.agreement.warning',
+                'Content will be removed and users banned for violations of our community guidelines'
+              )}
+            </Text>
+          </View>
 
-              {rules.map((rule, index) => (
-                <View key={index} style={styles.ruleRow}>
-                  <Ionicons name="close" size={18} color="#EF4444" style={styles.ruleIcon} />
-                  <Text style={[styles.ruleText, { color: colors.text }]}>{rule}</Text>
-                </View>
-              ))}
-
-              {/* Warning Text */}
-              <Text style={[styles.warningText, { color: colors.textMuted }]}>
-                {t(
-                  'chat.agreement.warning',
-                  'Content will be removed and users banned for violations of our community guidelines'
-                )}
-              </Text>
-            </View>
-
-            {/* Agree Button */}
-            <Button onPress={onAgree} variant="primary" fullWidth>
-              {t('chat.agreement.agree', 'I agree')}
-            </Button>
-          </ScrollView>
-        </View>
+          {/* Agree Button */}
+          <Button onPress={handleAgree} variant="primary" fullWidth>
+            {t('chat.agreement.agree', 'I agree')}
+          </Button>
+        </ScrollView>
       </View>
-    </Modal>
+    </ActionSheet>
   );
-};
+}
+
+// Keep old export for backwards compatibility during migration
+export const ChatAgreementModal = ChatAgreementActionSheet;
 
 const styles = StyleSheet.create({
-  overlay: {
+  sheetBackground: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacingPixels[4],
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
   },
   container: {
-    width: '100%',
-    maxWidth: 340,
-    borderRadius: radiusPixels.xl,
-    maxHeight: '80%',
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[4],
+    paddingBottom: spacingPixels[4],
   },
   content: {
     padding: spacingPixels[6],
@@ -190,4 +191,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ChatAgreementModal;
+export default ChatAgreementActionSheet;

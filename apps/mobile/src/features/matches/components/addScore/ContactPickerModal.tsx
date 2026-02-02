@@ -10,7 +10,6 @@ import {
   StyleSheet,
   Modal,
   TouchableOpacity,
-  TextInput,
   FlatList,
   ActivityIndicator,
   Linking,
@@ -21,6 +20,7 @@ import * as Contacts from 'expo-contacts';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
+import { SearchBar } from '../../../../components/SearchBar';
 import type { SelectedPlayer } from './types';
 
 interface DeviceContact {
@@ -254,22 +254,13 @@ export function ContactPickerModal({
 
         {/* Search */}
         {permissionStatus === 'granted' && (
-          <View style={[styles.searchContainer, { backgroundColor: colors.cardBackground }]}>
-            <Ionicons name="search" size={20} color={colors.textMuted} />
-            <TextInput
-              style={[styles.searchInput, { color: colors.text }]}
-              placeholder={t('addScore.contactPicker.searchPlaceholder' as TranslationKey)}
-              placeholderTextColor={colors.textMuted}
+          <View style={styles.searchContainer}>
+            <SearchBar
               value={searchQuery}
               onChangeText={setSearchQuery}
-              autoCapitalize="none"
-              autoCorrect={false}
+              placeholder={t('addScore.contactPicker.searchPlaceholder' as TranslationKey)}
+              colors={colors}
             />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Ionicons name="close-circle" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-            )}
           </View>
         )}
 
@@ -293,17 +284,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     margin: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 16,
   },
   centerContainer: {
     flex: 1,

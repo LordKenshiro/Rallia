@@ -1,41 +1,30 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
   TouchableOpacity,
   Platform,
-  Animated,
   TextInput,
   ActivityIndicator,
   Alert,
   ToastAndroid,
+  ScrollView,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
-import { Overlay, Button, Heading, Text } from '@rallia/shared-components';
+import { Ionicons } from '@expo/vector-icons';
+import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import { Button, Heading, Text } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
 import { supabase, Logger } from '@rallia/shared-services';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, usePlayer, useProfile, useTranslation } from '../../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
+import { radiusPixels, spacingPixels } from '@rallia/design-system';
 
-interface PlayerInformationOverlayProps {
-  visible: boolean;
-  onClose: () => void;
-  onSave?: () => void; // Called only when data is successfully saved
-  initialData?: {
-    username?: string;
-    bio?: string;
-    preferredPlayingHand?: string;
-    maximumTravelDistance?: number;
-  };
-}
-
-const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
-  visible,
-  onClose,
-  onSave,
-  initialData,
-}) => {
+export function PlayerInformationActionSheet({ payload }: SheetProps<'player-information'>) {
+  const onSave = payload?.onSave;
+  const initialData = payload?.initialData;
+  const onClose = () => SheetManager.hide('player-information');
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
   const { refetch: refetchPlayer } = usePlayer();
@@ -50,10 +39,6 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
   );
   const [isSaving, setIsSaving] = useState(false);
 
-  // Animation values - using useMemo to create stable Animated.Value instances
-  const fadeAnim = useMemo(() => new Animated.Value(0), []);
-  const slideAnim = useMemo(() => new Animated.Value(50), []);
-
   // Update local state when initialData changes
   // This pattern syncs controlled props to local state - React 18+ batches these updates automatically
   useEffect(() => {
@@ -65,27 +50,6 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
       setMaximumTravelDistance(initialData.maximumTravelDistance || 5);
     }
   }, [initialData]);
-
-  // Trigger animations when overlay becomes visible
-  useEffect(() => {
-    if (visible) {
-      fadeAnim.setValue(0);
-      slideAnim.setValue(50);
-
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible, fadeAnim, slideAnim]);
 
   const handleSave = async () => {
     if (isSaving) return;
@@ -181,7 +145,7 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
 
       // Close modal automatically after brief delay
       setTimeout(() => {
-        onClose();
+        SheetManager.hide('player-information');
       }, 500);
     } catch (error) {
       Logger.error('Unexpected error updating player information', error as Error);
@@ -196,209 +160,262 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
   const isFormValid = username.trim() !== '';
 
   return (
-    <Overlay visible={visible} onClose={onClose} type="bottom" showBackButton={false}>
-      <Animated.View
-        style={[
-          styles.container,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
-          },
-        ]}
-      >
-        {/* Title */}
-        <Heading level={2} style={[styles.title, { color: colors.text }]}>
-          Update your player information
-        </Heading>
-
-        {/* Username Input */}
-        <View style={styles.inputContainer}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Username</Text>
-          <View
-            style={[
-              styles.inputWithIcon,
-              { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
-            ]}
-          >
-            <TextInput
-              placeholder="Enter your username"
-              placeholderTextColor={colors.textMuted}
-              value={username}
-              onChangeText={setUsername}
-              maxLength={20}
-              style={[styles.inputField, { color: colors.text }]}
-            />
-          </View>
-        </View>
-
-        {/* Bio Input */}
-        <View style={styles.inputContainer}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Bio</Text>
-          <View
-            style={[
-              styles.inputWithIcon,
-              styles.bioInput,
-              { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
-            ]}
-          >
-            <TextInput
-              placeholder="Tell us about yourself..."
-              placeholderTextColor={colors.textMuted}
-              value={bio}
-              onChangeText={setBio}
-              multiline
-              numberOfLines={4}
-              maxLength={300}
-              style={[styles.inputField, styles.bioInputField, { color: colors.text }]}
-              textAlignVertical="top"
-            />
-          </View>
-        </View>
-
-        {/* Preferred Playing Hand */}
-        <View style={styles.inputContainer}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Preferred Playing Hand</Text>
-          <View style={[styles.handButtonsContainer, { backgroundColor: colors.inputBackground }]}>
-            <TouchableOpacity
-              style={[
-                styles.handButton,
-                styles.leftButton,
-                preferredPlayingHand === 'left' && [
-                  styles.handButtonActive,
-                  { backgroundColor: colors.primary },
-                ],
-              ]}
-              onPress={() => {
-                lightHaptic();
-                setPreferredPlayingHand('left');
-              }}
-            >
-              <Text
-                style={
-                  preferredPlayingHand === 'left'
-                    ? [
-                        styles.handButtonText,
-                        styles.handButtonTextActive,
-                        { color: colors.primaryForeground },
-                      ]
-                    : [styles.handButtonText, { color: colors.textMuted }]
-                }
-              >
-                Left
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.handButton,
-                styles.middleButton,
-                preferredPlayingHand === 'right' && [
-                  styles.handButtonActive,
-                  { backgroundColor: colors.primary },
-                ],
-              ]}
-              onPress={() => {
-                lightHaptic();
-                setPreferredPlayingHand('right');
-              }}
-            >
-              <Text
-                style={
-                  preferredPlayingHand === 'right'
-                    ? [
-                        styles.handButtonText,
-                        styles.handButtonTextActive,
-                        { color: colors.primaryForeground },
-                      ]
-                    : [styles.handButtonText, { color: colors.textMuted }]
-                }
-              >
-                Right
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.handButton,
-                styles.rightButton,
-                preferredPlayingHand === 'both' && [
-                  styles.handButtonActive,
-                  { backgroundColor: colors.primary },
-                ],
-              ]}
-              onPress={() => {
-                lightHaptic();
-                setPreferredPlayingHand('both');
-              }}
-            >
-              <Text
-                style={
-                  preferredPlayingHand === 'both'
-                    ? [
-                        styles.handButtonText,
-                        styles.handButtonTextActive,
-                        { color: colors.primaryForeground },
-                      ]
-                    : [styles.handButtonText, { color: colors.textMuted }]
-                }
-              >
-                Both
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Maximum Travel Distance */}
-        <View style={styles.inputContainer}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Maximum Travel Distance</Text>
-          <View
-            style={[
-              styles.sliderContainer,
-              { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
-            ]}
-          >
-            <Text style={[styles.sliderValue, { color: colors.text }]}>
-              {maximumTravelDistance} km
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+    >
+      <View style={styles.modalContent}>
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={styles.headerCenter}>
+            <Text weight="semibold" size="lg" style={{ color: colors.text }}>
+              Update your player information
             </Text>
-            <Slider
-              style={styles.slider}
-              minimumValue={1}
-              maximumValue={50}
-              step={1}
-              value={maximumTravelDistance}
-              onValueChange={setMaximumTravelDistance}
-              minimumTrackTintColor={colors.primary}
-              maximumTrackTintColor={colors.divider}
-              thumbTintColor={colors.primary}
-            />
           </View>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Ionicons name="close" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
         </View>
 
-        {/* Save Button */}
-        <Button
-          variant="primary"
-          onPress={handleSave}
-          disabled={!isFormValid || isSaving}
-          style={styles.saveButton}
+        {/* Scrollable Content */}
+        <ScrollView
+          style={styles.scrollContent}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          {isSaving ? <ActivityIndicator size="small" color={colors.primaryForeground} /> : 'Save'}
-        </Button>
-      </Animated.View>
-    </Overlay>
+          {/* Username Input */}
+          <View style={styles.inputContainer}>
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Username</Text>
+            <View
+              style={[
+                styles.inputWithIcon,
+                { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
+              ]}
+            >
+              <TextInput
+                placeholder="Enter your username"
+                placeholderTextColor={colors.textMuted}
+                value={username}
+                onChangeText={setUsername}
+                maxLength={20}
+                style={[styles.inputField, { color: colors.text }]}
+              />
+            </View>
+          </View>
+
+          {/* Bio Input */}
+          <View style={styles.inputContainer}>
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Bio</Text>
+            <View
+              style={[
+                styles.inputWithIcon,
+                styles.bioInput,
+                { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
+              ]}
+            >
+              <TextInput
+                placeholder="Tell us about yourself..."
+                placeholderTextColor={colors.textMuted}
+                value={bio}
+                onChangeText={setBio}
+                multiline
+                numberOfLines={4}
+                maxLength={300}
+                style={[styles.inputField, styles.bioInputField, { color: colors.text }]}
+                textAlignVertical="top"
+              />
+            </View>
+          </View>
+
+          {/* Preferred Playing Hand */}
+          <View style={styles.inputContainer}>
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Preferred Playing Hand</Text>
+            <View
+              style={[styles.handButtonsContainer, { backgroundColor: colors.inputBackground }]}
+            >
+              <TouchableOpacity
+                style={[
+                  styles.handButton,
+                  styles.leftButton,
+                  preferredPlayingHand === 'left' && [
+                    styles.handButtonActive,
+                    { backgroundColor: colors.primary },
+                  ],
+                ]}
+                onPress={() => {
+                  lightHaptic();
+                  setPreferredPlayingHand('left');
+                }}
+              >
+                <Text
+                  style={
+                    preferredPlayingHand === 'left'
+                      ? [
+                          styles.handButtonText,
+                          styles.handButtonTextActive,
+                          { color: colors.primaryForeground },
+                        ]
+                      : [styles.handButtonText, { color: colors.textMuted }]
+                  }
+                >
+                  Left
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.handButton,
+                  styles.middleButton,
+                  preferredPlayingHand === 'right' && [
+                    styles.handButtonActive,
+                    { backgroundColor: colors.primary },
+                  ],
+                ]}
+                onPress={() => {
+                  lightHaptic();
+                  setPreferredPlayingHand('right');
+                }}
+              >
+                <Text
+                  style={
+                    preferredPlayingHand === 'right'
+                      ? [
+                          styles.handButtonText,
+                          styles.handButtonTextActive,
+                          { color: colors.primaryForeground },
+                        ]
+                      : [styles.handButtonText, { color: colors.textMuted }]
+                  }
+                >
+                  Right
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.handButton,
+                  styles.rightButton,
+                  preferredPlayingHand === 'both' && [
+                    styles.handButtonActive,
+                    { backgroundColor: colors.primary },
+                  ],
+                ]}
+                onPress={() => {
+                  lightHaptic();
+                  setPreferredPlayingHand('both');
+                }}
+              >
+                <Text
+                  style={
+                    preferredPlayingHand === 'both'
+                      ? [
+                          styles.handButtonText,
+                          styles.handButtonTextActive,
+                          { color: colors.primaryForeground },
+                        ]
+                      : [styles.handButtonText, { color: colors.textMuted }]
+                  }
+                >
+                  Both
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Maximum Travel Distance */}
+          <View style={styles.inputContainer}>
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Maximum Travel Distance</Text>
+            <View
+              style={[
+                styles.sliderContainer,
+                { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
+              ]}
+            >
+              <Text style={[styles.sliderValue, { color: colors.text }]}>
+                {maximumTravelDistance} km
+              </Text>
+              <Slider
+                style={styles.slider}
+                minimumValue={1}
+                maximumValue={50}
+                step={1}
+                value={maximumTravelDistance}
+                onValueChange={setMaximumTravelDistance}
+                minimumTrackTintColor={colors.primary}
+                maximumTrackTintColor={colors.divider}
+                thumbTintColor={colors.primary}
+              />
+            </View>
+          </View>
+        </ScrollView>
+
+        {/* Sticky Footer */}
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              { backgroundColor: colors.primary },
+              (!isFormValid || isSaving) && { opacity: 0.6 },
+            ]}
+            onPress={handleSave}
+            disabled={!isFormValid || isSaving}
+            activeOpacity={0.8}
+          >
+            {isSaving ? (
+              <ActivityIndicator size="small" color={colors.primaryForeground} />
+            ) : (
+              <Text weight="semibold" style={{ color: colors.primaryForeground }}>
+                Save
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </ActionSheet>
   );
-};
+}
+
+export default PlayerInformationActionSheet;
 
 const styles = StyleSheet.create({
-  container: {
-    paddingVertical: 20,
-    paddingBottom: 30,
+  sheetBackground: {
+    flex: 1,
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 20,
-    lineHeight: 28,
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
+  },
+  modalContent: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacingPixels[4],
+    borderBottomWidth: 1,
+    position: 'relative',
+  },
+  headerCenter: {
+    alignItems: 'center',
+  },
+  closeButton: {
+    padding: spacingPixels[1],
+    position: 'absolute',
+    right: spacingPixels[4],
+  },
+  scrollContent: {
+    flex: 1,
+  },
+  content: {
+    padding: spacingPixels[4],
+    paddingBottom: spacingPixels[6],
   },
   inputContainer: {
     marginBottom: 20,
@@ -471,10 +488,15 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 40,
   },
-  saveButton: {
-    marginTop: 10,
-    backgroundColor: COLORS.accent, // Coral/pink color
+  footer: {
+    padding: spacingPixels[4],
+    borderTopWidth: 1,
+  },
+  submitButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 14,
+    borderRadius: radiusPixels.lg,
   },
 });
-
-export default PlayerInformationOverlay;

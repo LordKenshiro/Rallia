@@ -1,23 +1,22 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Animated,
   ActivityIndicator,
   Linking,
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Overlay } from '@rallia/shared-components';
+import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import { Text } from '@rallia/shared-components';
 import DatabaseService, { OnboardingService, SportService, Logger } from '@rallia/shared-services';
 import type { OnboardingRating } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../../../hooks';
-import { primary } from '@rallia/design-system';
+import { primary, radiusPixels, spacingPixels } from '@rallia/design-system';
 import type { TranslationKey } from '@rallia/shared-translations';
 
 interface PickleballRatingOverlayProps {
@@ -66,17 +65,15 @@ const getDuprDescriptionKey = (scoreValue: number): string => {
   return `onboarding.ratingStep.duprDescriptions.${scoreValue.toFixed(1).replace('.', '_')}`;
 };
 
-const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
-  visible,
-  onClose,
-  onBack,
-  onContinue,
-  currentStep = 1,
-  totalSteps = 8,
-  mode = 'onboarding',
-  initialRating,
-  onSave,
-}) => {
+export function PickleballRatingActionSheet({ payload }: SheetProps<'pickleball-rating'>) {
+  const mode = payload?.mode || 'onboarding';
+  const onClose = () => SheetManager.hide('pickleball-rating');
+  const onBack = payload?.onBack;
+  const onContinue = payload?.onContinue;
+  const onSave = payload?.onSave;
+  const currentStep = payload?.currentStep || 1;
+  const totalSteps = payload?.totalSteps || 8;
+  const initialRating = payload?.initialRating;
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
   const [selectedRating, setSelectedRating] = useState<string | null>(initialRating || null);
@@ -84,15 +81,9 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
-
-  // Load ratings from database when overlay becomes visible
+  // Load ratings from database when component mounts
   useEffect(() => {
     const loadRatings = async () => {
-      if (!visible) return;
-
       setIsLoading(true);
       try {
         const { data, error } = await DatabaseService.RatingScore.getRatingScoresBySport(
@@ -134,29 +125,14 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
     };
 
     loadRatings();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible]);
+  }, [t]);
 
-  // Trigger animations when overlay becomes visible
+  // Update selected rating when initialRating changes
   useEffect(() => {
-    if (visible) {
-      fadeAnim.setValue(0);
-      slideAnim.setValue(50);
-
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
+    if (initialRating) {
+      setSelectedRating(initialRating);
     }
-  }, [visible, fadeAnim, slideAnim]);
+  }, [initialRating]);
 
   // Helper function to get skill category from DUPR score value
   const getSkillCategory = (scoreValue: number): string => {
@@ -182,6 +158,7 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
     // Edit mode: use the onSave callback
     if (mode === 'edit' && onSave) {
       onSave(selectedRating);
+      SheetManager.hide('pickleball-rating');
       return;
     }
 
@@ -239,7 +216,7 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
         }
 
         Logger.debug('pickleball_rating_saved', { ratingData });
-        onContinue(selectedRating);
+        onContinue?.(selectedRating);
       } catch (error) {
         Logger.error('Unexpected error saving pickleball rating', error as Error);
         setIsSaving(false);
@@ -253,63 +230,73 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
   };
 
   return (
-    <Overlay
-      visible={visible}
-      onClose={onClose}
-      onBack={onBack}
-      type="bottom"
-      showBackButton={false}
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
-      <Animated.View
-        style={[
-          styles.container,
-          {
-            flex: 1,
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
-          },
-        ]}
-      >
-        {/* Progress Indicator - only show in onboarding mode */}
-        {mode === 'onboarding' && (
-          <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
-        )}
-
-        {/* Back Button */}
-        <TouchableOpacity style={styles.backButton} onPress={onBack || onClose} activeOpacity={0.7}>
-          <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
-        </TouchableOpacity>
-
-        {/* Title */}
-        <Text style={[styles.title, { color: colors.text }]}>
-          {mode === 'edit'
-            ? t('onboarding.ratingOverlay.editPickleballTitle' as TranslationKey)
-            : t('onboarding.ratingOverlay.title' as TranslationKey)}
-        </Text>
-
-        {/* Sport Badge */}
-        <View style={[styles.sportBadge, { backgroundColor: colors.primary }]}>
-          <Text style={[styles.sportBadgeText, { color: colors.primaryForeground }]}>
-            {t('onboarding.pickleball' as TranslationKey)}
-          </Text>
+      <View style={styles.modalContent}>
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={styles.headerCenter}>
+            <Text
+              weight="semibold"
+              size="lg"
+              style={{ color: colors.text }}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {mode === 'edit'
+                ? t('onboarding.ratingOverlay.editPickleballTitle' as TranslationKey)
+                : t('onboarding.ratingOverlay.title' as TranslationKey)}
+            </Text>
+          </View>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Ionicons name="close" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
         </View>
 
-        {/* Subtitle with DUPR link */}
-        <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-          {mode === 'edit' ? (
-            <Text
-              style={[styles.link, { color: colors.primary }]}
-              onPress={() => Linking.openURL('https://mydupr.com/')}
-            >
-              {t('onboarding.ratingOverlay.learnMoreDupr' as TranslationKey)}
-            </Text>
-          ) : (
-            t('onboarding.ratingOverlay.pickleballSubtitle' as TranslationKey)
+        {/* Scrollable Content */}
+        <ScrollView
+          style={styles.scrollContent}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Progress Indicator - only show in onboarding mode */}
+          {mode === 'onboarding' && (
+            <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
           )}
-        </Text>
 
-        {/* Rating Options */}
-        <ScrollView style={styles.ratingList} showsVerticalScrollIndicator={false}>
+          {/* Back Button - Only show in onboarding mode */}
+          {mode === 'onboarding' && onBack && (
+            <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.7}>
+              <Ionicons name="arrow-back" size={24} color={colors.text} />
+            </TouchableOpacity>
+          )}
+
+          {/* Sport Badge */}
+          <View style={[styles.sportBadge, { backgroundColor: colors.primary }]}>
+            <Text style={[styles.sportBadgeText, { color: colors.primaryForeground }]}>
+              {t('onboarding.pickleball' as TranslationKey)}
+            </Text>
+          </View>
+
+          {/* Subtitle with DUPR link */}
+          <Text style={[styles.subtitle, { color: colors.textMuted }]}>
+            {mode === 'edit' ? (
+              <Text
+                style={[styles.link, { color: colors.primary }]}
+                onPress={() => Linking.openURL('https://mydupr.com/')}
+              >
+                {t('onboarding.ratingOverlay.learnMoreDupr' as TranslationKey)}
+              </Text>
+            ) : (
+              t('onboarding.ratingOverlay.pickleballSubtitle' as TranslationKey)
+            )}
+          </Text>
+
+          {/* Rating Options */}
           {isLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
@@ -383,61 +370,119 @@ const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
           )}
         </ScrollView>
 
-        {/* Continue/Save Button */}
-        <TouchableOpacity
-          style={[
-            styles.continueButton,
-            { backgroundColor: colors.primary },
-            (!selectedRating || isSaving) && [
-              styles.continueButtonDisabled,
-              { backgroundColor: colors.buttonInactive },
-            ],
-          ]}
-          onPress={handleContinue}
-          activeOpacity={selectedRating && !isSaving ? 0.8 : 1}
-          disabled={!selectedRating || isSaving}
-        >
-          {isSaving ? (
-            <ActivityIndicator size="small" color={colors.primaryForeground} />
-          ) : (
-            <Text
-              style={[
-                styles.continueButtonText,
-                { color: colors.primaryForeground },
-                !selectedRating && [styles.continueButtonTextDisabled, { color: colors.textMuted }],
-              ]}
-            >
-              {mode === 'edit'
-                ? t('onboarding.ratingOverlay.save' as TranslationKey)
-                : t('onboarding.ratingOverlay.continue' as TranslationKey)}
-            </Text>
-          )}
-        </TouchableOpacity>
-      </Animated.View>
-    </Overlay>
+        {/* Sticky Footer */}
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              { backgroundColor: colors.primary },
+              (!selectedRating || isSaving) && { opacity: 0.6 },
+            ]}
+            onPress={handleContinue}
+            disabled={!selectedRating || isSaving}
+            activeOpacity={0.8}
+          >
+            {isSaving ? (
+              <ActivityIndicator size="small" color={colors.primaryForeground} />
+            ) : (
+              <Text weight="semibold" style={{ color: colors.primaryForeground }}>
+                {mode === 'edit'
+                  ? t('onboarding.ratingOverlay.save' as TranslationKey)
+                  : t('onboarding.ratingOverlay.continue' as TranslationKey)}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </ActionSheet>
   );
+}
+
+// Keep old export for backwards compatibility during migration
+const PickleballRatingOverlay: React.FC<PickleballRatingOverlayProps> = ({
+  visible,
+  onClose,
+  onBack,
+  onContinue,
+  currentStep,
+  totalSteps,
+  mode,
+  initialRating,
+  onSave,
+}) => {
+  useEffect(() => {
+    if (visible) {
+      SheetManager.show('pickleball-rating', {
+        payload: {
+          mode,
+          initialRating,
+          onSave,
+          onContinue,
+          onBack,
+          currentStep,
+          totalSteps,
+        },
+      });
+    }
+  }, [visible, mode, initialRating, onSave, onContinue, onBack, currentStep, totalSteps]);
+
+  useEffect(() => {
+    if (!visible) {
+      SheetManager.hide('pickleball-rating');
+    }
+  }, [visible]);
+
+  return null;
 };
 
+export default PickleballRatingOverlay;
+
 const styles = StyleSheet.create({
-  container: {
+  sheetBackground: {
     flex: 1,
-    paddingVertical: 20,
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
+  },
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
+  },
+  modalContent: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacingPixels[4],
+    borderBottomWidth: 1,
+    position: 'relative',
+    minHeight: 56,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[12],
+  },
+  closeButton: {
+    padding: spacingPixels[1],
+    position: 'absolute',
+    right: spacingPixels[4],
+    zIndex: 1,
+  },
+  scrollContent: {
+    flex: 1,
+  },
+  content: {
+    padding: spacingPixels[4],
+    paddingBottom: spacingPixels[6],
   },
   backButton: {
-    position: 'absolute',
-    top: 20,
-    left: 0,
-    padding: 10,
-    zIndex: 10,
-  },
-  backButtonText: {
-    fontSize: 24,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 15,
+    alignSelf: 'flex-start',
+    padding: spacingPixels[2],
+    marginBottom: spacingPixels[2],
   },
   sportBadge: {
     paddingHorizontal: 20,
@@ -452,10 +497,6 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    marginBottom: 15,
-  },
-  ratingList: {
-    flex: 1,
     marginBottom: 15,
   },
   ratingGrid: {
@@ -510,31 +551,16 @@ const styles = StyleSheet.create({
   ratingDescriptionSelected: {
     // color applied inline
   },
-  continueButton: {
-    borderRadius: 10,
-    paddingVertical: 16,
-    justifyContent: 'center',
+  footer: {
+    padding: spacingPixels[4],
+    borderTopWidth: 1,
+  },
+  submitButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
-    shadowColor: 'rgba(0, 0, 0, 0.2)',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  continueButtonDisabled: {
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  continueButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  continueButtonTextDisabled: {
-    // color applied inline
+    justifyContent: 'center',
+    padding: 14,
+    borderRadius: radiusPixels.lg,
   },
   loadingContainer: {
     flex: 1,
@@ -552,5 +578,3 @@ const styles = StyleSheet.create({
     // color will be set dynamically
   },
 });
-
-export default PickleballRatingOverlay;

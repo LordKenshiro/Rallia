@@ -6,15 +6,16 @@ import {
   Platform,
   Image,
   Modal,
-  Animated,
   Alert,
   TextInput,
   ActivityIndicator,
   ToastAndroid,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Overlay, Select, Button, Heading, Text, PhoneInput } from '@rallia/shared-components';
+import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import { Select, Button, Heading, Text, PhoneInput } from '@rallia/shared-components';
 import { useImagePicker, useThemeStyles, useTranslation } from '../../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { COLORS } from '@rallia/shared-constants';
@@ -28,39 +29,17 @@ import { OnboardingService, supabase, Logger } from '@rallia/shared-services';
 import { uploadImage, replaceImage } from '../../../../services/imageUpload';
 import type { GenderEnum, GenderType } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
+import { radiusPixels, spacingPixels } from '@rallia/design-system';
 
-interface PersonalInformationOverlayProps {
-  visible: boolean;
-  onClose: () => void;
-  onBack?: () => void;
-  onContinue?: () => void;
-  onSave?: () => void; // Called only when data is successfully saved (edit mode)
-  currentStep?: number;
-  totalSteps?: number;
-  mode?: 'onboarding' | 'edit'; // New prop to distinguish context
-  initialData?: {
-    firstName?: string;
-    lastName?: string;
-    username?: string;
-    email?: string;
-    dateOfBirth?: string;
-    gender?: string;
-    phoneNumber?: string;
-    profilePictureUrl?: string; // Used in edit mode to delete old image when replacing
-  };
-}
-
-const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
-  visible,
-  onClose,
-  onBack,
-  onContinue,
-  onSave,
-  currentStep = 1,
-  totalSteps = 8,
-  mode = 'onboarding', // Default to onboarding mode
-  initialData,
-}) => {
+export function PersonalInformationActionSheet({ payload }: SheetProps<'personal-information'>) {
+  const mode = payload?.mode || 'onboarding';
+  const onClose = () => SheetManager.hide('personal-information');
+  const onBack = payload?.onBack;
+  const onContinue = payload?.onContinue;
+  const onSave = payload?.onSave;
+  const currentStep = payload?.currentStep || 1;
+  const totalSteps = payload?.totalSteps || 8;
+  const initialData = payload?.initialData;
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
   const [firstName, setFirstName] = useState(initialData?.firstName || '');
@@ -82,10 +61,6 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
 
   // Track saving state
   const [isSaving, setIsSaving] = useState(false);
-
-  // Animation values - using useMemo to create stable Animated.Value instances
-  const fadeAnim = useMemo(() => new Animated.Value(0), []);
-  const slideAnim = useMemo(() => new Animated.Value(50), []);
 
   // Fetch gender options from database
   useEffect(() => {
@@ -117,31 +92,8 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
       }
     };
 
-    if (visible) {
-      fetchGenderOptions();
-    }
-  }, [visible]);
-
-  // Trigger animations when overlay becomes visible
-  useEffect(() => {
-    if (visible) {
-      fadeAnim.setValue(0);
-      slideAnim.setValue(50);
-
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible, fadeAnim, slideAnim]);
+    fetchGenderOptions();
+  }, []);
 
   // Validation handlers using utility functions
   const handleFirstNameChange = (text: string) => {
@@ -348,7 +300,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
 
         // Close modal automatically after brief delay
         setTimeout(() => {
-          onClose();
+          SheetManager.hide('personal-information');
         }, 500);
       } else {
         // Onboarding mode: Save new personal information
@@ -424,113 +376,72 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
     phoneNumber.trim() !== '';
 
   return (
-    <Overlay
-      visible={visible}
-      onClose={onClose}
-      onBack={onBack}
-      type="bottom"
-      showBackButton={false}
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
-      <Animated.View
-        style={[
-          styles.container,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
-          },
-        ]}
-      >
-        {/* Progress Indicator - Only show in onboarding mode */}
-        {mode === 'onboarding' && (
-          <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
-        )}
-
-        {/* Title */}
-        <Heading level={2} style={[styles.title, { color: colors.text }]}>
-          {mode === 'onboarding' ? 'Tell us about yourself' : 'Update your personal information'}
-        </Heading>
-
-        {/* Profile Picture Upload - Only show in onboarding mode */}
-        {mode === 'onboarding' && (
-          <TouchableOpacity
-            style={[
-              styles.profilePicContainer,
-              { borderColor: colors.primary, backgroundColor: colors.inputBackground },
-            ]}
-            activeOpacity={0.8}
-            onPress={() => {
-              lightHaptic();
-              pickImage();
-            }}
-          >
-            {profileImage ? (
-              <Image source={{ uri: profileImage }} style={styles.profileImage} />
-            ) : (
-              <Ionicons name="camera" size={32} color={colors.primary} />
-            )}
+      <View style={styles.modalContent}>
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={styles.headerCenter}>
+            <Text weight="semibold" size="lg" style={{ color: colors.text }}>
+              {mode === 'onboarding'
+                ? 'Tell us about yourself'
+                : 'Update your personal information'}
+            </Text>
+          </View>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Ionicons name="close" size={24} color={colors.textMuted} />
           </TouchableOpacity>
-        )}
-
-        {/* First Name Input */}
-        <View style={styles.customInputContainer}>
-          <Text style={[styles.customInputLabel, { color: colors.text }]}>
-            First Name <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
-          </Text>
-          <TextInput
-            placeholder="Enter your first name"
-            placeholderTextColor={colors.textMuted}
-            value={firstName}
-            onChangeText={handleFirstNameChange}
-            style={[
-              styles.inputWithIcon,
-              styles.inputField,
-              {
-                backgroundColor: colors.inputBackground,
-                borderColor: colors.inputBackground,
-                color: colors.text,
-              },
-            ]}
-          />
         </View>
 
-        {/* Last Name Input */}
-        <View style={styles.customInputContainer}>
-          <Text style={[styles.customInputLabel, { color: colors.text }]}>
-            Last Name <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
-          </Text>
-          <TextInput
-            placeholder="Enter your last name"
-            placeholderTextColor={colors.textMuted}
-            value={lastName}
-            onChangeText={handleLastNameChange}
-            style={[
-              styles.inputWithIcon,
-              styles.inputField,
-              {
-                backgroundColor: colors.inputBackground,
-                borderColor: colors.inputBackground,
-                color: colors.text,
-              },
-            ]}
-          />
-        </View>
+        {/* Scrollable Content */}
+        <ScrollView
+          style={styles.scrollContent}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Progress Indicator - Only show in onboarding mode */}
+          {mode === 'onboarding' && (
+            <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
+          )}
 
-        {/* Email Input - Only show in edit mode, read-only */}
-        {mode === 'edit' && (
+          {/* Profile Picture Upload - Only show in onboarding mode */}
+          {mode === 'onboarding' && (
+            <TouchableOpacity
+              style={[
+                styles.profilePicContainer,
+                { borderColor: colors.primary, backgroundColor: colors.inputBackground },
+              ]}
+              activeOpacity={0.8}
+              onPress={() => {
+                lightHaptic();
+                pickImage();
+              }}
+            >
+              {profileImage ? (
+                <Image source={{ uri: profileImage }} style={styles.profileImage} />
+              ) : (
+                <Ionicons name="camera" size={32} color={colors.primary} />
+              )}
+            </TouchableOpacity>
+          )}
+
+          {/* First Name Input */}
           <View style={styles.customInputContainer}>
             <Text style={[styles.customInputLabel, { color: colors.text }]}>
-              Email <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
+              First Name <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
             </Text>
             <TextInput
-              placeholder="Email"
+              placeholder="Enter your first name"
               placeholderTextColor={colors.textMuted}
-              value={email}
-              onChangeText={() => {}} // Read-only, no-op
-              editable={false}
+              value={firstName}
+              onChangeText={handleFirstNameChange}
               style={[
                 styles.inputWithIcon,
                 styles.inputField,
-                styles.customInputDisabled,
                 {
                   backgroundColor: colors.inputBackground,
                   borderColor: colors.inputBackground,
@@ -538,218 +449,300 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
                 },
               ]}
             />
-            <Text style={[styles.customHelperText, { color: colors.textMuted }]}>
-              This information cannot be modified
-            </Text>
           </View>
-        )}
 
-        {/* Username Input - Light green background for both modes */}
-        <View style={styles.customInputContainer}>
+          {/* Last Name Input */}
+          <View style={styles.customInputContainer}>
+            <Text style={[styles.customInputLabel, { color: colors.text }]}>
+              Last Name <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
+            </Text>
+            <TextInput
+              placeholder="Enter your last name"
+              placeholderTextColor={colors.textMuted}
+              value={lastName}
+              onChangeText={handleLastNameChange}
+              style={[
+                styles.inputWithIcon,
+                styles.inputField,
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.inputBackground,
+                  color: colors.text,
+                },
+              ]}
+            />
+          </View>
+
+          {/* Email Input - Only show in edit mode, read-only */}
+          {mode === 'edit' && (
+            <View style={styles.customInputContainer}>
+              <Text style={[styles.customInputLabel, { color: colors.text }]}>
+                Email <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
+              </Text>
+              <TextInput
+                placeholder="Email"
+                placeholderTextColor={colors.textMuted}
+                value={email}
+                onChangeText={() => {}} // Read-only, no-op
+                editable={false}
+                style={[
+                  styles.inputWithIcon,
+                  styles.inputField,
+                  styles.customInputDisabled,
+                  {
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.inputBackground,
+                    color: colors.text,
+                  },
+                ]}
+              />
+              <Text style={[styles.customHelperText, { color: colors.textMuted }]}>
+                This information cannot be modified
+              </Text>
+            </View>
+          )}
+
+          {/* Username Input - Light green background for both modes */}
+          <View style={styles.customInputContainer}>
+            <Text style={[styles.customInputLabel, { color: colors.text }]}>
+              Username <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
+            </Text>
+            <TextInput
+              placeholder="Choose a username"
+              placeholderTextColor={colors.textMuted}
+              value={username}
+              onChangeText={handleUsernameChange}
+              maxLength={10}
+              style={[
+                styles.inputWithIcon,
+                styles.inputField,
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.inputBackground,
+                  color: colors.text,
+                },
+              ]}
+            />
+            <View style={styles.inputFooter}>
+              <Text style={[styles.customHelperText, { color: colors.textMuted }]}>
+                Max 10 characters, no spaces
+              </Text>
+              <Text style={[styles.charCount, { color: colors.textMuted }]}>
+                {username.length}/10
+              </Text>
+            </View>
+          </View>
+
+          {/* Date of Birth Input - Light green background for both modes */}
           <Text style={[styles.customInputLabel, { color: colors.text }]}>
-            Username <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
+            Date of Birth <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
           </Text>
-          <TextInput
-            placeholder="Choose a username"
-            placeholderTextColor={colors.textMuted}
-            value={username}
-            onChangeText={handleUsernameChange}
-            maxLength={10}
-            style={[
-              styles.inputWithIcon,
-              styles.inputField,
-              {
-                backgroundColor: colors.inputBackground,
-                borderColor: colors.inputBackground,
-                color: colors.text,
-              },
-            ]}
-          />
-          <View style={styles.inputFooter}>
-            <Text style={[styles.customHelperText, { color: colors.textMuted }]}>
-              Max 10 characters, no spaces
-            </Text>
-            <Text style={[styles.charCount, { color: colors.textMuted }]}>
-              {username.length}/10
-            </Text>
-          </View>
-        </View>
+          {Platform.OS === 'web' ? (
+            <View
+              style={[
+                styles.inputWithIcon,
+                { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
+              ]}
+            >
+              <input
+                type="date"
+                style={{
+                  flex: 1,
+                  fontSize: 16,
+                  border: 'none',
+                  outline: 'none',
+                  backgroundColor: 'transparent',
+                  color: colors.text,
+                  fontFamily: 'inherit',
+                }}
+                value={dateOfBirth ? dateOfBirth.toISOString().split('T')[0] : ''}
+                onChange={e => {
+                  const selectedDate = e.target.value ? new Date(e.target.value) : null;
+                  if (selectedDate) {
+                    setDateOfBirth(selectedDate);
+                  }
+                }}
+                max={new Date().toISOString().split('T')[0]}
+                min="1900-01-01"
+                placeholder="Date of Birth"
+              />
+              <Ionicons
+                name="calendar-outline"
+                size={20}
+                color={colors.textMuted}
+                style={styles.inputIcon}
+              />
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[
+                styles.inputWithIcon,
+                { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
+              ]}
+              onPress={() => setShowDatePicker(true)}
+              activeOpacity={0.8}
+            >
+              <Text color={dateOfBirth ? colors.text : colors.textMuted} style={{ flex: 1 }}>
+                {dateOfBirth ? formatDate(dateOfBirth) : 'Date of Birth'}
+              </Text>
+              <Ionicons
+                name="calendar-outline"
+                size={20}
+                color={colors.textMuted}
+                style={styles.inputIcon}
+              />
+            </TouchableOpacity>
+          )}
 
-        {/* Date of Birth Input - Light green background for both modes */}
-        <Text style={[styles.customInputLabel, { color: colors.text }]}>
-          Date of Birth <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
-        </Text>
-        {Platform.OS === 'web' ? (
-          <View
-            style={[
-              styles.inputWithIcon,
-              { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
-            ]}
-          >
-            <input
-              type="date"
-              style={{
-                flex: 1,
-                fontSize: 16,
-                border: 'none',
-                outline: 'none',
-                backgroundColor: 'transparent',
-                color: colors.text,
-                fontFamily: 'inherit',
-              }}
-              value={dateOfBirth ? dateOfBirth.toISOString().split('T')[0] : ''}
-              onChange={e => {
-                const selectedDate = e.target.value ? new Date(e.target.value) : null;
-                if (selectedDate) {
-                  setDateOfBirth(selectedDate);
-                }
-              }}
-              max={new Date().toISOString().split('T')[0]}
-              min="1900-01-01"
-              placeholder="Date of Birth"
+          {/* Date Picker - iOS Modal */}
+          {showDatePicker && Platform.OS === 'ios' && (
+            <Modal
+              transparent
+              animationType="slide"
+              visible={showDatePicker}
+              onRequestClose={() => setShowDatePicker(false)}
+            >
+              <View style={styles.modalOverlay}>
+                <View style={[styles.datePickerContainer, { backgroundColor: colors.card }]}>
+                  <View style={[styles.datePickerHeader, { borderBottomColor: colors.border }]}>
+                    <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                      <Text style={[styles.datePickerButton, { color: colors.primary }]}>Done</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <DateTimePicker
+                    value={dateOfBirth || new Date(2000, 0, 1)}
+                    mode="date"
+                    display="spinner"
+                    onChange={handleDateChange}
+                    maximumDate={new Date()}
+                    minimumDate={new Date(1900, 0, 1)}
+                    style={styles.datePicker}
+                  />
+                </View>
+              </View>
+            </Modal>
+          )}
+
+          {/* Date Picker - Android */}
+          {showDatePicker && Platform.OS === 'android' && (
+            <DateTimePicker
+              value={dateOfBirth || new Date(2000, 0, 1)}
+              mode="date"
+              display="default"
+              onChange={handleDateChange}
+              maximumDate={new Date()}
+              minimumDate={new Date(1900, 0, 1)}
             />
-            <Ionicons
-              name="calendar-outline"
-              size={20}
-              color={colors.textMuted}
-              style={styles.inputIcon}
+          )}
+
+          {/* Gender Picker - Light green background for both modes */}
+          <View style={styles.customInputContainer}>
+            <Text style={[styles.customInputLabel, { color: colors.text }]}>
+              Gender <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
+            </Text>
+            <Select
+              placeholder="Select your gender"
+              value={gender}
+              onChange={setGender}
+              options={genderOptions}
+              containerStyle={styles.inlineInputContainer}
+              selectStyle={[
+                styles.genderSelectStyle,
+                { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
+              ]}
             />
           </View>
-        ) : (
+
+          {/* Phone Number Input - Light green background for both modes */}
+          <View style={styles.customInputContainer}>
+            <PhoneInput
+              value={phoneNumber}
+              onChangePhone={handlePhoneNumberChange}
+              label="Phone Number"
+              placeholder="Enter phone number"
+              required
+              maxLength={15}
+              showCharCount
+              colors={{
+                text: colors.text,
+                textMuted: colors.textMuted,
+                textSecondary: colors.textSecondary,
+                background: colors.background,
+                inputBackground: colors.inputBackground,
+                inputBorder: colors.inputBackground,
+                primary: colors.primary,
+                error: colors.error,
+                card: colors.card,
+              }}
+            />
+          </View>
+        </ScrollView>
+
+        {/* Sticky Footer */}
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
           <TouchableOpacity
             style={[
-              styles.inputWithIcon,
-              { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
+              styles.submitButton,
+              { backgroundColor: colors.primary },
+              (!isFormValid || isSaving) && { opacity: 0.6 },
             ]}
-            onPress={() => setShowDatePicker(true)}
+            onPress={handleContinue}
+            disabled={!isFormValid || isSaving}
             activeOpacity={0.8}
           >
-            <Text color={dateOfBirth ? colors.text : colors.textMuted} style={{ flex: 1 }}>
-              {dateOfBirth ? formatDate(dateOfBirth) : 'Date of Birth'}
-            </Text>
-            <Ionicons
-              name="calendar-outline"
-              size={20}
-              color={colors.textMuted}
-              style={styles.inputIcon}
-            />
+            {isSaving ? (
+              <ActivityIndicator size="small" color={colors.primaryForeground} />
+            ) : (
+              <Text weight="semibold" style={{ color: colors.primaryForeground }}>
+                {mode === 'onboarding' ? 'Continue' : 'Save'}
+              </Text>
+            )}
           </TouchableOpacity>
-        )}
-
-        {/* Date Picker - iOS Modal */}
-        {showDatePicker && Platform.OS === 'ios' && (
-          <Modal
-            transparent
-            animationType="slide"
-            visible={showDatePicker}
-            onRequestClose={() => setShowDatePicker(false)}
-          >
-            <View style={styles.modalOverlay}>
-              <View style={[styles.datePickerContainer, { backgroundColor: colors.card }]}>
-                <View style={[styles.datePickerHeader, { borderBottomColor: colors.border }]}>
-                  <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                    <Text style={[styles.datePickerButton, { color: colors.primary }]}>Done</Text>
-                  </TouchableOpacity>
-                </View>
-                <DateTimePicker
-                  value={dateOfBirth || new Date(2000, 0, 1)}
-                  mode="date"
-                  display="spinner"
-                  onChange={handleDateChange}
-                  maximumDate={new Date()}
-                  minimumDate={new Date(1900, 0, 1)}
-                  style={styles.datePicker}
-                />
-              </View>
-            </View>
-          </Modal>
-        )}
-
-        {/* Date Picker - Android */}
-        {showDatePicker && Platform.OS === 'android' && (
-          <DateTimePicker
-            value={dateOfBirth || new Date(2000, 0, 1)}
-            mode="date"
-            display="default"
-            onChange={handleDateChange}
-            maximumDate={new Date()}
-            minimumDate={new Date(1900, 0, 1)}
-          />
-        )}
-
-        {/* Gender Picker - Light green background for both modes */}
-        <View style={styles.customInputContainer}>
-          <Text style={[styles.customInputLabel, { color: colors.text }]}>
-            Gender <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
-          </Text>
-          <Select
-            placeholder="Select your gender"
-            value={gender}
-            onChange={setGender}
-            options={genderOptions}
-            containerStyle={styles.inlineInputContainer}
-            selectStyle={[
-              styles.genderSelectStyle,
-              { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
-            ]}
-          />
         </View>
-
-        {/* Phone Number Input - Light green background for both modes */}
-        <View style={styles.customInputContainer}>
-          <PhoneInput
-            value={phoneNumber}
-            onChangePhone={handlePhoneNumberChange}
-            label="Phone Number"
-            placeholder="Enter phone number"
-            required
-            maxLength={15}
-            showCharCount
-            colors={{
-              text: colors.text,
-              textMuted: colors.textMuted,
-              textSecondary: colors.textSecondary,
-              background: colors.background,
-              inputBackground: colors.inputBackground,
-              inputBorder: colors.inputBackground,
-              primary: colors.primary,
-              error: colors.error,
-              card: colors.card,
-            }}
-          />
-        </View>
-
-        {/* Continue/Save Button */}
-        <Button
-          variant="primary"
-          onPress={handleContinue}
-          disabled={!isFormValid || isSaving}
-          style={mode === 'edit' ? styles.saveButtonContainer : styles.continueButton}
-        >
-          {isSaving ? (
-            <ActivityIndicator size="small" color={colors.primaryForeground} />
-          ) : mode === 'onboarding' ? (
-            'Continue'
-          ) : (
-            'Save'
-          )}
-        </Button>
-      </Animated.View>
-    </Overlay>
+      </View>
+    </ActionSheet>
   );
-};
+}
+
+export default PersonalInformationActionSheet;
 
 const styles = StyleSheet.create({
-  container: {
-    paddingVertical: 20,
-    paddingBottom: 30, // Extra padding at bottom to ensure content is scrollable
+  sheetBackground: {
+    flex: 1,
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 20, // Reduced from 25 to save space
-    lineHeight: 32,
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
+  },
+  modalContent: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacingPixels[4],
+    borderBottomWidth: 1,
+    position: 'relative',
+  },
+  headerCenter: {
+    alignItems: 'center',
+  },
+  closeButton: {
+    padding: spacingPixels[1],
+    position: 'absolute',
+    right: spacingPixels[4],
+  },
+  scrollContent: {
+    flex: 1,
+  },
+  content: {
+    padding: spacingPixels[4],
+    paddingBottom: spacingPixels[6],
   },
   profilePicContainer: {
     width: 80,
@@ -768,13 +761,16 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 40,
   },
-  continueButton: {
-    backgroundColor: COLORS.buttonPrimary,
-    marginTop: 10,
+  footer: {
+    padding: spacingPixels[4],
+    borderTopWidth: 1,
   },
-  saveButtonContainer: {
-    marginTop: 10,
-    backgroundColor: COLORS.accent, // Coral/pink color for Save button in edit mode
+  submitButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 14,
+    borderRadius: radiusPixels.lg,
   },
   // Custom input styles for edit mode with light green background
   customInputContainer: {
@@ -859,5 +855,3 @@ const styles = StyleSheet.create({
     height: 200,
   },
 });
-
-export default PersonalInformationOverlay;

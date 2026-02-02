@@ -395,13 +395,13 @@ export function CommunityQRScannerModal({
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
         <View style={[styles.header, { backgroundColor: 'rgba(0,0,0,0.7)' }]}>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={28} color="#FFFFFF" />
-          </TouchableOpacity>
+          <View style={styles.headerSpacer} />
           <Text weight="semibold" size="lg" style={styles.headerTitle}>
             {t('community.qrScanner.title')}
           </Text>
-          <View style={styles.headerSpacer} />
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Ionicons name="close" size={28} color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
 
         {/* Content */}

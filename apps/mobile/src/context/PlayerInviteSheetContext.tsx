@@ -6,8 +6,8 @@
  * It wraps the PlayerInviteStep component in a modal presentation.
  */
 
-import React, { createContext, useContext, useRef, useCallback, useState, ReactNode } from 'react';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import React, { createContext, useContext, useCallback, useState, ReactNode } from 'react';
+import { SheetManager } from 'react-native-actions-sheet';
 
 // =============================================================================
 // TYPES
@@ -16,7 +16,7 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 /**
  * Data needed to open the player invite sheet
  */
-interface PlayerInviteData {
+export interface PlayerInviteData {
   /** Match ID to invite players to */
   matchId: string;
   /** Sport ID to filter players by */
@@ -36,9 +36,6 @@ interface PlayerInviteSheetContextType {
 
   /** The current invite data (null when sheet is closed) */
   inviteData: PlayerInviteData | null;
-
-  /** Reference to the bottom sheet for direct control if needed */
-  sheetRef: React.RefObject<BottomSheetModal | null>;
 }
 
 // =============================================================================
@@ -58,7 +55,6 @@ interface PlayerInviteSheetProviderProps {
 export const PlayerInviteSheetProvider: React.FC<PlayerInviteSheetProviderProps> = ({
   children,
 }) => {
-  const sheetRef = useRef<BottomSheetModal>(null);
   const [inviteData, setInviteData] = useState<PlayerInviteData | null>(null);
 
   /**
@@ -66,8 +62,9 @@ export const PlayerInviteSheetProvider: React.FC<PlayerInviteSheetProviderProps>
    */
   const openSheet = useCallback(
     (matchId: string, sportId: string, hostId: string, excludePlayerIds: string[]) => {
-      setInviteData({ matchId, sportId, hostId, excludePlayerIds });
-      sheetRef.current?.present();
+      const data = { matchId, sportId, hostId, excludePlayerIds };
+      setInviteData(data);
+      SheetManager.show('player-invite', { payload: data });
     },
     []
   );
@@ -76,7 +73,7 @@ export const PlayerInviteSheetProvider: React.FC<PlayerInviteSheetProviderProps>
    * Close the sheet and clear the invite data
    */
   const closeSheet = useCallback(() => {
-    sheetRef.current?.dismiss();
+    SheetManager.hide('player-invite');
     // Clear invite data after a delay to allow dismiss animation
     setTimeout(() => {
       setInviteData(null);
@@ -87,7 +84,6 @@ export const PlayerInviteSheetProvider: React.FC<PlayerInviteSheetProviderProps>
     openSheet,
     closeSheet,
     inviteData,
-    sheetRef,
   };
 
   return (

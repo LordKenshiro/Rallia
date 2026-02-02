@@ -8,28 +8,32 @@
  * a linked conversation and adds members to both.
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
-  Modal,
   TouchableOpacity,
   StyleSheet,
   TextInput,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
   Image,
   Alert,
-  SafeAreaView,
 } from 'react-native';
+import { SearchBar } from '../../../components/SearchBar';
+import ActionSheet, {
+  SheetManager,
+  SheetProps,
+  FlatList,
+  ScrollView,
+} from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
-import { Text, Button } from '@rallia/shared-components';
+import { Text } from '@rallia/shared-components';
 import { useThemeStyles, useAuth, useTranslation } from '../../../hooks';
 import { uploadImage } from '../../../services/imageUpload';
-import { primary, spacingPixels, fontSizePixels } from '@rallia/design-system';
+import { primary, spacingPixels, fontSizePixels, radiusPixels } from '@rallia/design-system';
+
+const BASE_WHITE = '#ffffff';
 import { supabase } from '../../../lib/supabase';
 
 interface SelectedMember {
@@ -40,15 +44,11 @@ interface SelectedMember {
   profilePictureUrl?: string | null;
 }
 
-interface CreateGroupChatModalProps {
-  visible: boolean;
-  onClose: () => void;
-  onSuccess?: (conversationId: string) => void;
-}
-
 type Step = 'select-members' | 'group-details';
 
-export function CreateGroupChatModal({ visible, onClose, onSuccess }: CreateGroupChatModalProps) {
+export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group-chat'>) {
+  const onSuccess = payload?.onSuccess;
+
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
   const { session } = useAuth();
@@ -56,6 +56,23 @@ export function CreateGroupChatModal({ visible, onClose, onSuccess }: CreateGrou
 
   // Step state
   const [step, setStep] = useState<Step>('select-members');
+
+  // Reset modal state
+  const resetModal = useCallback(() => {
+    setStep('select-members');
+    setSearchQuery('');
+    setSelectedMembers([]);
+    setGroupName('');
+    setGroupImage(null);
+    setError(null);
+    setHasLoadedPlayers(false);
+    setAllPlayers([]);
+  }, []);
+
+  const handleClose = useCallback(() => {
+    resetModal();
+    SheetManager.hide('create-group-chat');
+  }, [resetModal]);
 
   // Step 1: Member selection
   const [searchQuery, setSearchQuery] = useState('');
@@ -69,10 +86,12 @@ export function CreateGroupChatModal({ visible, onClose, onSuccess }: CreateGrou
   const [groupImage, setGroupImage] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mediaPermissionStatus, setMediaPermissionStatus] =
+    useState<ImagePicker.PermissionStatus | null>(null);
 
   // Load all active players when modal opens
   const loadPlayers = useCallback(async () => {
-    if (hasLoadedPlayers || isLoadingPlayers) return;
+    if (hasLoadedPlayers || isLoadingPlayers || !currentUserId) return;
 
     setIsLoadingPlayers(true);
     try {
@@ -127,12 +146,19 @@ export function CreateGroupChatModal({ visible, onClose, onSuccess }: CreateGrou
     }
   }, [currentUserId, hasLoadedPlayers, isLoadingPlayers]);
 
-  // Load players when modal becomes visible
-  React.useEffect(() => {
-    if (visible && !hasLoadedPlayers) {
+  // Load players when component mounts and user is authenticated
+  useEffect(() => {
+    if (!hasLoadedPlayers && currentUserId) {
       loadPlayers();
     }
-  }, [visible, hasLoadedPlayers, loadPlayers]);
+  }, [hasLoadedPlayers, loadPlayers, currentUserId]);
+
+  // Pre-check media library permissions when component mounts
+  useEffect(() => {
+    ImagePicker.getMediaLibraryPermissionsAsync().then(({ status }) => {
+      setMediaPermissionStatus(status);
+    });
+  }, []);
 
   // Filter players based on search
   const filteredPlayers = useMemo(() => {
@@ -153,21 +179,6 @@ export function CreateGroupChatModal({ visible, onClose, onSuccess }: CreateGrou
       );
     });
   }, [allPlayers, searchQuery]);
-
-  // Reset modal state
-  const resetModal = useCallback(() => {
-    setStep('select-members');
-    setSearchQuery('');
-    setSelectedMembers([]);
-    setGroupName('');
-    setGroupImage(null);
-    setError(null);
-  }, []);
-
-  const handleClose = useCallback(() => {
-    resetModal();
-    onClose();
-  }, [resetModal, onClose]);
 
   // Member selection handlers
   const handleSelectMember = useCallback((player: SelectedMember) => {
@@ -194,10 +205,17 @@ export function CreateGroupChatModal({ visible, onClose, onSuccess }: CreateGrou
   // Image picker
   const handlePickImage = useCallback(async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(t('common.permissionRequired'), t('chat.photoAccessRequired'));
-        return;
+      // Use cached permission status if available, otherwise check
+      let hasPermission = mediaPermissionStatus === 'granted';
+
+      if (!hasPermission) {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        setMediaPermissionStatus(status);
+        if (status !== 'granted') {
+          Alert.alert(t('common.permissionRequired'), t('chat.photoAccessRequired'));
+          return;
+        }
+        hasPermission = true;
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -214,7 +232,7 @@ export function CreateGroupChatModal({ visible, onClose, onSuccess }: CreateGrou
       console.error('Error picking image:', err);
       Alert.alert(t('common.error'), t('chat.failedToPickImage'));
     }
-  }, [t]);
+  }, [t, mediaPermissionStatus]);
 
   const handleRemoveImage = useCallback(() => {
     setGroupImage(null);
@@ -382,253 +400,292 @@ export function CreateGroupChatModal({ visible, onClose, onSuccess }: CreateGrou
   // Render Step 1: Select Members
   const renderSelectMembersStep = () => (
     <View style={styles.stepContainer}>
-      {/* Title */}
-      <Text weight="bold" size="xl" style={[styles.stepTitle, { color: colors.text }]}>
-        {t('chat.selectMembers')}
-      </Text>
-
       {/* Search input */}
-      <View
-        style={[
-          styles.searchContainer,
-          { backgroundColor: isDark ? colors.card : '#F0F0F0', borderColor: colors.border },
-        ]}
-      >
-        <Ionicons name="search" size={20} color={colors.textMuted} />
-        <TextInput
-          style={[styles.searchInput, { color: colors.text }]}
-          placeholder={t('chat.searchPlayers')}
-          placeholderTextColor={colors.textMuted}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Ionicons name="close-circle" size={20} color={colors.textMuted} />
-          </TouchableOpacity>
-        )}
-      </View>
+      <SearchBar
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholder={t('chat.searchPlayers')}
+        colors={colors}
+        style={styles.searchContainer}
+      />
 
       {/* Selected members chips */}
       {renderSelectedChips()}
 
       {/* Player list */}
-      {isLoadingPlayers ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={primary[500]} />
-          <Text style={{ color: colors.textMuted, marginTop: 12 }}>{t('chat.loadingPlayers')}</Text>
-        </View>
-      ) : filteredPlayers.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="people-outline" size={48} color={colors.textMuted} />
-          <Text style={{ color: colors.textMuted, marginTop: 12, textAlign: 'center' }}>
-            {searchQuery
-              ? t('chat.noPlayersFoundMatching', { query: searchQuery })
-              : t('chat.noPlayersAvailable')}
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={filteredPlayers}
-          keyExtractor={item => item.id}
-          renderItem={renderPlayerItem}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
-
-      {/* Continue button */}
-      <View style={styles.bottomButtonContainer}>
-        <Button
-          variant="primary"
-          onPress={handleContinueToDetails}
-          disabled={selectedMembers.length === 0}
-          style={[selectedMembers.length === 0 && styles.disabledButton]}
-        >
-          {t('chat.continueSelected', { count: selectedMembers.length })}
-        </Button>
+      <View style={styles.listContainer}>
+        {isLoadingPlayers ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={primary[500]} />
+            <Text style={{ color: colors.textMuted, marginTop: 12 }}>
+              {t('chat.loadingPlayers')}
+            </Text>
+          </View>
+        ) : filteredPlayers.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="people-outline" size={48} color={colors.textMuted} />
+            <Text style={{ color: colors.textMuted, marginTop: 12, textAlign: 'center' }}>
+              {searchQuery
+                ? t('chat.noPlayersFoundMatching', { query: searchQuery })
+                : t('chat.noPlayersAvailable')}
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredPlayers}
+            keyExtractor={item => item.id}
+            renderItem={renderPlayerItem}
+            style={styles.flatList}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
       </View>
+    </View>
+  );
+
+  // Navigation button colors (match MatchCreationWizard)
+  const buttonActive = isDark ? primary[500] : primary[600];
+  const buttonTextActive = BASE_WHITE;
+
+  // Render Step 1 Footer
+  const renderSelectMembersFooter = () => (
+    <View style={[styles.footer, { borderTopColor: colors.border }]}>
+      <TouchableOpacity
+        style={[
+          styles.navButton,
+          { backgroundColor: buttonActive },
+          selectedMembers.length === 0 && styles.navButtonDisabled,
+        ]}
+        onPress={handleContinueToDetails}
+        disabled={selectedMembers.length === 0}
+        activeOpacity={0.8}
+      >
+        <Text size="lg" weight="semibold" color={buttonTextActive}>
+          {t('chat.continueSelected', { count: selectedMembers.length })}
+        </Text>
+        <Ionicons name="arrow-forward" size={20} color={buttonTextActive} />
+      </TouchableOpacity>
     </View>
   );
 
   // Render Step 2: Group Details
   const renderGroupDetailsStep = () => (
-    <View style={styles.stepContainer}>
-      {/* Back button + Title */}
-      <View style={styles.detailsHeader}>
-        <TouchableOpacity onPress={handleBackToMembers} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text weight="bold" size="xl" style={{ color: colors.text }}>
-          {t('chat.groupDetails')}
-        </Text>
-      </View>
-
-      {/* Group Image */}
-      <View style={styles.imageSection}>
-        {groupImage ? (
-          <View style={styles.imagePreviewContainer}>
-            <Image source={{ uri: groupImage }} style={styles.groupImagePreview} />
-            <TouchableOpacity
-              style={[styles.removeImageButton, { backgroundColor: colors.cardBackground }]}
-              onPress={handleRemoveImage}
-            >
-              <Ionicons name="close" size={20} color={colors.text} />
+    <ScrollView
+      style={styles.stepContainer}
+      contentContainerStyle={styles.scrollContent}
+      keyboardShouldPersistTaps="handled"
+    >
+      {/* Group Image & Name Section */}
+      <View style={styles.groupInfoSection}>
+        {/* Group Image */}
+        <View style={styles.imageContainer}>
+          {groupImage ? (
+            <TouchableOpacity onPress={handlePickImage} activeOpacity={0.8}>
+              <Image source={{ uri: groupImage }} style={styles.groupImagePreview} />
+              <View style={[styles.editImageBadge, { backgroundColor: primary[500] }]}>
+                <Ionicons name="camera" size={14} color="#fff" />
+              </View>
             </TouchableOpacity>
+          ) : (
             <TouchableOpacity
-              style={[styles.changeImageButton, { backgroundColor: primary[500] }]}
+              style={[styles.imagePicker, { backgroundColor: isDark ? colors.card : '#F5F5F5' }]}
               onPress={handlePickImage}
+              activeOpacity={0.7}
             >
-              <Ionicons name="camera" size={16} color="#fff" />
+              <Ionicons name="camera" size={28} color={colors.textMuted} />
             </TouchableOpacity>
-          </View>
-        ) : (
-          <TouchableOpacity
+          )}
+        </View>
+
+        {/* Group Name Input */}
+        <View style={styles.nameInputContainer}>
+          <TextInput
             style={[
-              styles.imagePicker,
-              { backgroundColor: isDark ? primary[900] : primary[100], borderColor: colors.border },
+              styles.nameInput,
+              {
+                backgroundColor: isDark ? colors.card : '#F5F5F5',
+                color: colors.text,
+                borderColor: error ? '#EF4444' : 'transparent',
+              },
             ]}
-            onPress={handlePickImage}
-          >
-            <View style={[styles.imagePickerIcon, { backgroundColor: colors.cardBackground }]}>
-              <Ionicons name="camera" size={24} color={primary[500]} />
-            </View>
-            <Text size="sm" style={{ color: colors.textMuted, marginTop: 8 }}>
-              {t('chat.addPhoto')}
+            placeholder={t('chat.enterGroupName')}
+            placeholderTextColor={colors.textMuted}
+            value={groupName}
+            onChangeText={text => {
+              setGroupName(text);
+              setError(null);
+            }}
+            maxLength={50}
+          />
+          {error && (
+            <Text size="xs" style={{ color: '#EF4444', marginTop: 4 }}>
+              {error}
             </Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Group Name Input */}
-      <View style={styles.inputSection}>
-        <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
-          {t('chat.groupName')} *
-        </Text>
-        <TextInput
-          style={[
-            styles.nameInput,
-            {
-              backgroundColor: isDark ? colors.card : '#F0F0F0',
-              color: colors.text,
-              borderColor: error ? '#EF4444' : colors.border,
-            },
-          ]}
-          placeholder={t('chat.enterGroupName')}
-          placeholderTextColor={colors.textMuted}
-          value={groupName}
-          onChangeText={text => {
-            setGroupName(text);
-            setError(null);
-          }}
-          maxLength={50}
-        />
-        {error && (
-          <Text size="sm" style={{ color: '#EF4444', marginTop: 4 }}>
-            {error}
-          </Text>
-        )}
-      </View>
-
-      {/* Members preview */}
-      <View style={styles.membersPreview}>
-        <Text size="sm" weight="medium" style={{ color: colors.text, marginBottom: 8 }}>
-          {t('chat.members')} ({selectedMembers.length + 1})
-        </Text>
-        <View style={styles.memberAvatars}>
-          {/* Current user */}
-          <View style={[styles.memberAvatar, { backgroundColor: primary[500] }]}>
-            <Ionicons name="person" size={16} color="#fff" />
-          </View>
-          {/* Selected members (show first 5) */}
-          {selectedMembers.slice(0, 5).map(member => (
-            <View
-              key={member.id}
-              style={[styles.memberAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}
-            >
-              {member.profilePictureUrl ? (
-                <Image
-                  source={{ uri: member.profilePictureUrl }}
-                  style={styles.memberAvatarImage}
-                />
-              ) : (
-                <Ionicons name="person" size={16} color={colors.textMuted} />
-              )}
-            </View>
-          ))}
-          {selectedMembers.length > 5 && (
-            <View style={[styles.memberAvatar, { backgroundColor: colors.border }]}>
-              <Text size="xs" weight="bold" style={{ color: colors.text }}>
-                +{selectedMembers.length - 5}
-              </Text>
-            </View>
           )}
         </View>
       </View>
 
-      {/* Create button */}
-      <View style={styles.bottomButtonContainer}>
-        <Button
-          variant="primary"
-          onPress={handleCreateGroup}
-          disabled={isCreating || !groupName.trim()}
-          style={[(isCreating || !groupName.trim()) && styles.disabledButton]}
+      {/* Members Section */}
+      <View style={styles.membersSection}>
+        <Text
+          size="sm"
+          weight="semibold"
+          style={{ color: colors.textMuted, marginBottom: spacingPixels[3] }}
         >
-          {isCreating ? <ActivityIndicator size="small" color="#fff" /> : t('chat.createGroup')}
-        </Button>
+          {t('chat.members').toUpperCase()} ({selectedMembers.length + 1})
+        </Text>
+        <View style={[styles.membersCard, { backgroundColor: isDark ? colors.card : '#F5F5F5' }]}>
+          {/* Current user (You) */}
+          <View style={styles.memberRow}>
+            <View style={[styles.memberAvatarLarge, { backgroundColor: primary[500] }]}>
+              <Ionicons name="person" size={20} color="#fff" />
+            </View>
+            <View style={styles.memberInfo}>
+              <Text weight="medium" style={{ color: colors.text }}>
+                {t('chat.you')}
+              </Text>
+              <Text size="xs" style={{ color: colors.textMuted }}>
+                {t('chat.admin')}
+              </Text>
+            </View>
+          </View>
+
+          {/* Selected members */}
+          {selectedMembers.map(member => {
+            const displayName =
+              member.displayName || `${member.firstName} ${member.lastName || ''}`.trim();
+            return (
+              <View key={member.id} style={styles.memberRow}>
+                <View
+                  style={[
+                    styles.memberAvatarLarge,
+                    { backgroundColor: isDark ? '#3A3A3C' : '#E5E5EA' },
+                  ]}
+                >
+                  {member.profilePictureUrl ? (
+                    <Image
+                      source={{ uri: member.profilePictureUrl }}
+                      style={styles.memberAvatarImage}
+                    />
+                  ) : (
+                    <Ionicons name="person" size={20} color={colors.textMuted} />
+                  )}
+                </View>
+                <View style={styles.memberInfo}>
+                  <Text weight="medium" style={{ color: colors.text }}>
+                    {displayName}
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
+        </View>
       </View>
+    </ScrollView>
+  );
+
+  // Render Step 2 Footer
+  const renderGroupDetailsFooter = () => (
+    <View style={[styles.footer, { borderTopColor: colors.border }]}>
+      <TouchableOpacity
+        style={[
+          styles.navButton,
+          { backgroundColor: buttonActive },
+          (isCreating || !groupName.trim()) && styles.navButtonDisabled,
+        ]}
+        onPress={handleCreateGroup}
+        disabled={isCreating || !groupName.trim()}
+        activeOpacity={0.8}
+      >
+        {isCreating ? (
+          <ActivityIndicator color={buttonTextActive} />
+        ) : (
+          <>
+            <Text size="lg" weight="semibold" color={buttonTextActive}>
+              {t('chat.createGroup')}
+            </Text>
+            <Ionicons name="checkmark" size={20} color={buttonTextActive} />
+          </>
+        )}
+      </TouchableOpacity>
     </View>
   );
 
-  return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
-      <KeyboardAvoidingView
-        style={styles.overlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-          {/* Header */}
-          <View style={[styles.header, { borderBottomColor: colors.border }]}>
-            <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-              {t('chat.newGroup')}
-            </Text>
-            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={colors.text} />
-            </TouchableOpacity>
-          </View>
+  // Handler for when sheet opens - ensure players are loaded
+  const handleSheetOpen = useCallback(() => {
+    if (!hasLoadedPlayers && currentUserId) {
+      loadPlayers();
+    }
+  }, [hasLoadedPlayers, currentUserId, loadPlayers]);
 
-          {/* Content */}
-          {step === 'select-members' ? renderSelectMembersStep() : renderGroupDetailsStep()}
-        </SafeAreaView>
-      </KeyboardAvoidingView>
-    </Modal>
+  return (
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+    >
+      <View style={styles.modalContent}>
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          {step === 'group-details' ? (
+            <TouchableOpacity onPress={handleBackToMembers} style={styles.backButton}>
+              <Ionicons name="chevron-back" size={24} color={colors.primary} />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.headerPlaceholder} />
+          )}
+          <Text weight="semibold" size="lg" style={{ color: colors.text }}>
+            {step === 'select-members' ? t('chat.selectMembers') : t('chat.groupDetails')}
+          </Text>
+          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+            <Ionicons name="close" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Content */}
+        {step === 'select-members' ? renderSelectMembersStep() : renderGroupDetailsStep()}
+
+        {/* Sticky Footer */}
+        {step === 'select-members' ? renderSelectMembersFooter() : renderGroupDetailsFooter()}
+      </View>
+    </ActionSheet>
   );
 }
 
+// Keep old export for backwards compatibility during migration
+export const CreateGroupChatModal = CreateGroupChatActionSheet;
+
 const styles = StyleSheet.create({
-  overlay: {
+  sheetBackground: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
   },
-  container: {
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
+  },
+  modalContent: {
     flex: 1,
-    marginTop: 50,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: spacingPixels[4],
     paddingHorizontal: spacingPixels[4],
     borderBottomWidth: 1,
   },
+  backButton: {
+    padding: spacingPixels[1],
+  },
+  headerPlaceholder: {
+    width: 32,
+  },
   closeButton: {
-    position: 'absolute',
-    right: spacingPixels[4],
     padding: spacingPixels[1],
   },
   stepContainer: {
@@ -636,22 +693,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[4],
   },
-  stepTitle: {
-    marginBottom: spacingPixels[4],
+  scrollContent: {
+    paddingBottom: spacingPixels[4],
+  },
+  listContainer: {
+    flex: 1,
+  },
+  flatList: {
+    flex: 1,
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[2],
-    borderRadius: 12,
-    borderWidth: 1,
     marginBottom: spacingPixels[3],
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: spacingPixels[2],
-    fontSize: fontSizePixels.base,
   },
   selectedChipsRow: {
     flexDirection: 'row',
@@ -706,7 +758,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[8],
   },
   listContent: {
-    paddingBottom: 100,
+    paddingBottom: spacingPixels[4],
   },
   playerItem: {
     flexDirection: 'row',
@@ -733,108 +785,95 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: spacingPixels[3],
   },
-  bottomButtonContainer: {
-    paddingVertical: spacingPixels[4],
-    paddingBottom: spacingPixels[6],
+  footer: {
+    padding: spacingPixels[4],
+    borderTopWidth: 1,
+    paddingBottom: spacingPixels[4],
   },
-  disabledButton: {
-    opacity: 0.5,
-  },
-  // Step 2 styles
-  detailsHeader: {
+  navButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacingPixels[4],
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    gap: spacingPixels[2],
   },
-  backButton: {
-    marginRight: spacingPixels[3],
-    padding: spacingPixels[1],
+  navButtonDisabled: {
+    opacity: 0.6,
   },
-  imageSection: {
+  // Step 2 styles
+  groupInfoSection: {
+    flexDirection: 'row',
     alignItems: 'center',
     marginBottom: spacingPixels[6],
+    gap: spacingPixels[4],
   },
-  imagePicker: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderStyle: 'dashed',
-  },
-  imagePickerIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imagePreviewContainer: {
+  imageContainer: {
     position: 'relative',
   },
-  groupImagePreview: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-  },
-  removeImageButton: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  imagePicker: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
   },
-  changeImageButton: {
+  groupImagePreview: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  editImageBadge: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  inputSection: {
-    marginBottom: spacingPixels[4],
+  nameInputContainer: {
+    flex: 1,
   },
   nameInput: {
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[3],
     borderRadius: 12,
     borderWidth: 1,
-    fontSize: fontSizePixels.base,
+    fontSize: fontSizePixels.lg,
+    fontWeight: '600',
   },
-  membersPreview: {
-    marginBottom: spacingPixels[4],
+  membersSection: {
+    flex: 1,
   },
-  memberAvatars: {
+  membersCard: {
+    borderRadius: radiusPixels.xl,
+    overflow: 'hidden',
+  },
+  memberRow: {
     flexDirection: 'row',
-    gap: -8,
+    alignItems: 'center',
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
   },
-  memberAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  memberAvatarLarge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#fff',
     overflow: 'hidden',
   },
   memberAvatarImage: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+  },
+  memberInfo: {
+    flex: 1,
+    marginLeft: spacingPixels[3],
   },
 });
 
-export default CreateGroupChatModal;
+export default CreateGroupChatActionSheet;
