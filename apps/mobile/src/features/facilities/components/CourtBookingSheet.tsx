@@ -11,8 +11,9 @@ import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
 import { useStripe } from '@stripe/stripe-react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
-import type { FormattedSlot, CourtOption } from '@rallia/shared-hooks';
+import { courtAvailabilityKeys, type FormattedSlot, type CourtOption } from '@rallia/shared-hooks';
 import type { Court } from '@rallia/shared-types';
 import type { FacilityWithDetails } from '@rallia/shared-services';
 import { createMobileBooking, Logger } from '@rallia/shared-services';
@@ -73,11 +74,15 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
   const facility = payload?.facility as FacilityWithDetails;
   const slot = payload?.slot as FormattedSlot;
   const courts = (payload?.courts ?? []) as Court[];
+  const onSuccess = payload?.onSuccess as
+    | ((data: { facilityId: string; courtId: string; courtNumber: number | null }) => void)
+    | undefined;
 
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const toast = useToast();
+  const queryClient = useQueryClient();
 
   // State
   const [isLoading, setIsLoading] = useState(false);
@@ -222,8 +227,11 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
     setIsLoading(true);
 
     try {
-      // Format date from slot
-      const bookingDate = slot.datetime.toISOString().split('T')[0];
+      // Use local calendar date so evening slots (e.g. 8pm–11pm) don't send tomorrow's UTC date
+      const y = slot.datetime.getFullYear();
+      const m = String(slot.datetime.getMonth() + 1).padStart(2, '0');
+      const d = String(slot.datetime.getDate()).padStart(2, '0');
+      const bookingDate = `${y}-${m}-${d}`;
       // Convert 12-hour display times to 24-hour format (HH:MM:SS)
       const startTime = convertTo24Hour(slot.time);
       const endTime = convertTo24Hour(slot.endTime);
@@ -270,6 +278,18 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
       setBookingSuccess(true);
       toast.success(t('booking.success.title'));
 
+      // Call onSuccess callback with booking data
+      if (onSuccess) {
+        onSuccess({
+          facilityId: facility.id,
+          courtId: selectedCourt.id,
+          courtNumber: selectedCourt.court_number ?? null,
+        });
+      }
+
+      // Invalidate court availability so the list refetches and the booked slot is removed
+      queryClient.invalidateQueries({ queryKey: courtAvailabilityKeys.facility(facility.id) });
+
       // Close sheet after short delay
       setTimeout(() => {
         SheetManager.hide('court-booking');
@@ -285,9 +305,12 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
     selectedCourt,
     slot,
     displayPrice,
+    facility.id,
     facility.paymentsEnabled,
     initPaymentSheet,
     presentPaymentSheet,
+    onSuccess,
+    queryClient,
     t,
     toast,
   ]);

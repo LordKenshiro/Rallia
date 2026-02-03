@@ -6,6 +6,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { BookingValidationResult } from './types';
+import { normalizeTimeForComparison } from './timeUtils';
 
 /**
  * Validate that a slot is available for booking
@@ -58,10 +59,13 @@ export async function validateBookingSlot(
     };
   }
 
-  // Find the matching slot
+  // Find the matching slot (normalize times so "9:00:00" and "09:00:00" match)
+  const normStart = normalizeTimeForComparison(params.startTime);
+  const normEnd = normalizeTimeForComparison(params.endTime);
   const matchingSlot = availableSlots?.find(
     (slot: { start_time: string; end_time: string }) =>
-      slot.start_time === params.startTime && slot.end_time === params.endTime
+      normalizeTimeForComparison(slot.start_time) === normStart &&
+      normalizeTimeForComparison(slot.end_time) === normEnd
   );
 
   if (!matchingSlot) {

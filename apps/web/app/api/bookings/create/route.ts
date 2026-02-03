@@ -7,6 +7,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createBooking } from '@/lib/bookings';
+import { normalizeTimeForComparison } from '@rallia/shared-services';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types';
@@ -161,9 +162,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to check availability' }, { status: 500 });
     }
 
+    const normStart = normalizeTimeForComparison(startTime);
+    const normEnd = normalizeTimeForComparison(endTime);
     const matchingSlot = slots?.find(
       (slot: { start_time: string; end_time: string }) =>
-        slot.start_time === startTime && slot.end_time === endTime
+        normalizeTimeForComparison(slot.start_time) === normStart &&
+        normalizeTimeForComparison(slot.end_time) === normEnd
     );
 
     if (!matchingSlot) {

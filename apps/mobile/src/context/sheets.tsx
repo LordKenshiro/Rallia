@@ -279,6 +279,12 @@ declare module 'react-native-actions-sheet' {
         facility: unknown;
         slot: unknown;
         courts: unknown[];
+        /** Callback when booking is successfully completed */
+        onSuccess?: (data: {
+          facilityId: string;
+          courtId: string;
+          courtNumber: number | null;
+        }) => void;
       };
     }>;
     'image-picker': SheetDefinition<{

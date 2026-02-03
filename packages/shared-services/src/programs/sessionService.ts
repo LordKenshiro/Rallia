@@ -7,6 +7,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ProgramSession } from '@rallia/shared-types';
+import { normalizeTimeForComparison } from '../bookings/timeUtils';
 import type {
   CreateSessionParams,
   UpdateSessionParams,
@@ -958,9 +959,12 @@ export async function checkCourtsAvailability(
       continue;
     }
 
+    const normStart = normalizeTimeForComparison(startTime);
+    const normEnd = normalizeTimeForComparison(endTime);
     const matchingSlot = availableSlots?.find(
       (slot: { start_time: string; end_time: string }) =>
-        slot.start_time === startTime && slot.end_time === endTime
+        normalizeTimeForComparison(slot.start_time) === normStart &&
+        normalizeTimeForComparison(slot.end_time) === normEnd
     );
 
     results.push({ courtId, available: !!matchingSlot });

@@ -25,7 +25,11 @@ import { Text } from '@rallia/shared-components';
 import { SearchBar } from '../../../../components/SearchBar';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
-import { getOrCreateCourt, parseCourtNumber } from '@rallia/shared-services';
+import {
+  getOrCreateCourt,
+  parseCourtNumber,
+  getFacilityWithDetails,
+} from '@rallia/shared-services';
 import {
   useFacilitySearch,
   usePreferredFacility,
@@ -680,6 +684,9 @@ export const WhereStep: React.FC<WhereStepProps> = ({
     slot: FormattedSlot;
   } | null>(null);
 
+  // Get user location (needed for fetching facility details)
+  const { location, loading: locationLoading, error: locationError } = useUserLocation();
+
   // Track if edit mode initialization has been done
   const hasInitializedFromEdit = useRef(false);
 
@@ -725,22 +732,19 @@ export const WhereStep: React.FC<WhereStepProps> = ({
     }
   }, [editMatch]);
 
-  // Handle local slot confirmation - select slot directly without external URL
-  const handleLocalSlotConfirm = useCallback(
-    (facility: FacilitySearchResult, slot: FormattedSlot, selectedCourt?: CourtOption) => {
+  // Handle court booking success - called when booking sheet completes
+  const handleCourtBookingSuccess = useCallback(
+    (
+      facility: FacilitySearchResult,
+      slot: FormattedSlot,
+      data: { facilityId: string; courtId: string; courtNumber: number | null }
+    ) => {
       // Update form with facility
-      setValue('facilityId', facility.id);
-      setValue('courtStatus', 'to_book'); // Local slots are marked as "to book" (in-app booking coming later)
+      setValue('facilityId', data.facilityId);
+      setValue('courtId', data.courtId);
+      setValue('courtStatus', 'booked');
       setSelectedFacility(facility);
-
-      // Link the court if available
-      const courtId = selectedCourt?.courtId || slot.courtId;
-      if (courtId) {
-        setValue('courtId', courtId);
-        const courtNum =
-          selectedCourt?.courtNumber ?? parseCourtNumber(selectedCourt?.courtName || '');
-        setBookedCourtNumber(courtNum);
-      }
+      setBookedCourtNumber(data.courtNumber);
 
       // Extract slot data for auto-filling date/time/duration
       const matchDate = formatDateLocal(slot.datetime);
@@ -772,27 +776,40 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   // Handle slot press - different behavior for local vs external slots
   const handleSlotPress = useCallback(
     async (facility: FacilitySearchResult, slot: FormattedSlot) => {
-      // === LOCAL SLOT: Select directly (no external booking) ===
+      // === LOCAL SLOT: Open court booking sheet ===
       if (slot.isLocalSlot) {
         lightHaptic();
 
-        // If multiple courts available at this time, show court selection
-        if (slot.courtOptions.length > 1) {
-          setCourtSelectionData({ facility, slot });
-          SheetManager.show('court-selection', {
+        try {
+          // Fetch full facility details needed for booking sheet
+          const facilityDetails = await getFacilityWithDetails({
+            facilityId: facility.id,
+            sportId: sportId || '',
+            latitude: location?.latitude,
+            longitude: location?.longitude,
+          });
+
+          if (!facilityDetails) {
+            console.warn('[WhereStep] Failed to fetch facility details');
+            return;
+          }
+
+          // Open court booking sheet with full facility data
+          SheetManager.show('court-booking', {
             payload: {
-              courts: slot.courtOptions ?? [],
-              timeLabel: slot.time ?? '',
-              onSelect: (court: unknown) => handleCourtSelect(court as CourtOption),
-              onCancel: handleCourtSelectionCancel,
+              facility: facilityDetails,
+              slot,
+              courts: facilityDetails.courts,
+              onSuccess: (data: {
+                facilityId: string;
+                courtId: string;
+                courtNumber: number | null;
+              }) => handleCourtBookingSuccess(facility, slot, data),
             },
           });
-          return;
+        } catch (error) {
+          console.error('[WhereStep] Error fetching facility details:', error);
         }
-
-        // Single court - auto-select and update form
-        const selectedCourt = slot.courtOptions[0];
-        handleLocalSlotConfirm(facility, slot, selectedCourt);
         return;
       }
 
@@ -828,24 +845,18 @@ export const WhereStep: React.FC<WhereStepProps> = ({
         setPendingBookingSlot(null);
       }
     },
-    [handleLocalSlotConfirm]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sportId, location, handleCourtBookingSuccess]
   );
 
-  // Handle court selection from modal
+  // Handle court selection from modal (external slots only - local slots use court-booking sheet)
   const handleCourtSelect = useCallback(
     async (court: CourtOption) => {
       if (!courtSelectionData) return;
 
       const { facility, slot } = courtSelectionData;
 
-      // === LOCAL SLOT: Confirm directly without external URL ===
-      if (slot.isLocalSlot || court.isLocalSlot) {
-        handleLocalSlotConfirm(facility, slot, court);
-        setCourtSelectionData(null);
-        return;
-      }
-
-      // === EXTERNAL SLOT: Open booking URL ===
+      // External slots: Open booking URL
       if (!court.bookingUrl) {
         setCourtSelectionData(null);
         return;
@@ -864,7 +875,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
 
       setCourtSelectionData(null);
     },
-    [courtSelectionData, handleLocalSlotConfirm]
+    [courtSelectionData]
   );
 
   // Handle court selection cancel
@@ -981,9 +992,6 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       setHasSelectedPlace(true);
     }
   }, [locationType, locationName, hasSelectedPlace]);
-
-  // Get user location
-  const { location, loading: locationLoading, error: locationError } = useUserLocation();
 
   // Facility search hook
   const {

@@ -20,3 +20,6 @@ export * from './status';
 
 // Mobile booking service (calls web API from mobile app)
 export * from './mobileBookingService';
+
+// Time normalization for slot comparison
+export * from './timeUtils';
