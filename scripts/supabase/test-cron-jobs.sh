@@ -34,15 +34,15 @@ echo ""
 
 # Test 2: Check Vault secrets
 echo -e "${YELLOW}[Test 2] Checking Vault secrets...${NC}"
-SECRETS=$(psql "$DB_URL" -t -c "SELECT COUNT(*) FROM vault.decrypted_secrets WHERE name IN ('supabase_functions_url', 'service_role_key');" 2>/dev/null | tr -d ' ')
+SECRETS=$(psql "$DB_URL" -t -c "SELECT COUNT(*) FROM vault.decrypted_secrets WHERE name IN ('supabase_functions_url', 'anon_key');" 2>/dev/null | tr -d ' ')
 
 if [ "$SECRETS" -eq 2 ]; then
-  echo -e "${GREEN}✓ Both Vault secrets are configured${NC}"
+  echo -e "${GREEN}✓ Vault secrets for Edge Functions are configured (supabase_functions_url, anon_key)${NC}"
 else
   echo -e "${RED}✗ Missing Vault secrets (found $SECRETS of 2)${NC}"
   echo "Run these to add missing secrets:"
   echo "  SELECT vault.create_secret('<url>', 'supabase_functions_url');"
-  echo "  SELECT vault.create_secret('<key>', 'service_role_key');"
+  echo "  SELECT vault.create_secret('<anon_key>', 'anon_key');"
 fi
 
 echo ""
@@ -54,7 +54,7 @@ SELECT net.http_post(
   url := (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'supabase_functions_url' LIMIT 1) || '/functions/v1/close-matches',
   headers := jsonb_build_object(
     'Content-Type', 'application/json',
-    'x-service-key', (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'service_role_key' LIMIT 1)
+    'Authorization', 'Bearer ' || (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'anon_key' LIMIT 1)
   ),
   body := jsonb_build_object('triggered_at', now()::text),
   timeout_milliseconds := 60000
@@ -84,7 +84,7 @@ SELECT net.http_post(
   url := (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'supabase_functions_url' LIMIT 1) || '/functions/v1/send-feedback-reminders',
   headers := jsonb_build_object(
     'Content-Type', 'application/json',
-    'x-service-key', (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'service_role_key' LIMIT 1)
+    'Authorization', 'Bearer ' || (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'anon_key' LIMIT 1)
   ),
   body := jsonb_build_object('triggered_at', now()::text),
   timeout_milliseconds := 60000

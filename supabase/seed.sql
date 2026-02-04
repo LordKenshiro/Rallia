@@ -4,26 +4,30 @@
 -- ============================================================================
 -- Setup Vault secrets for Edge Functions (required for triggers to work)
 -- ============================================================================
--- These secrets are used by database triggers to call Edge Functions with
--- x-service-key custom header authentication (x-service-key: <token>).
+-- These secrets are used by database triggers and cron jobs to call Edge
+-- Functions with standard Bearer auth (Authorization: Bearer <publishable_key>).
 --
 -- For local development:
 --   - supabase_functions_url: Uses host.docker.internal so Postgres container can reach host
---   - service_role_key: The JWT service role key (not the short-form sb_secret_... key)
+--   - service_role_key: The JWT service role key (for server-side Supabase client use)
+--   - anon_key: The JWT anon/publishable key; triggers and cron send this in Bearer header
 --
--- The JWT token can be found by running:
---   docker exec supabase_edge_runtime_<project> env | grep SUPABASE_SERVICE_ROLE_KEY
+-- JWT tokens can be found by running:
+--   docker exec supabase_edge_runtime_<project> env | grep SUPABASE_
 -- ============================================================================
 DO $$
 DECLARE
   local_service_role_key TEXT := 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU';
+  local_anon_key TEXT := 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJe5xjztHsZOlhAW7GtblmOx4FQw-s16E';
   local_functions_url TEXT := 'http://host.docker.internal:54321';
   existing_url_id UUID;
   existing_key_id UUID;
+  existing_anon_id UUID;
 BEGIN
   -- Check if secrets already exist
   SELECT id INTO existing_url_id FROM vault.secrets WHERE name = 'supabase_functions_url';
   SELECT id INTO existing_key_id FROM vault.secrets WHERE name = 'service_role_key';
+  SELECT id INTO existing_anon_id FROM vault.secrets WHERE name = 'anon_key';
 
   -- Create or update supabase_functions_url
   IF existing_url_id IS NULL THEN
@@ -42,6 +46,15 @@ BEGIN
     PERFORM vault.update_secret(existing_key_id, local_service_role_key, 'service_role_key');
     RAISE NOTICE 'Updated vault secret: service_role_key';
   END IF;
+
+  -- Create or update anon_key (publishable key for Bearer auth to Edge Functions)
+  IF existing_anon_id IS NULL THEN
+    PERFORM vault.create_secret(local_anon_key, 'anon_key');
+    RAISE NOTICE 'Created vault secret: anon_key';
+  ELSE
+    PERFORM vault.update_secret(existing_anon_id, local_anon_key, 'anon_key');
+    RAISE NOTICE 'Updated vault secret: anon_key';
+  END IF;
 END $$;
 
 -- Verify vault secrets are configured
@@ -49,7 +62,7 @@ SELECT
   name,
   CASE WHEN decrypted_secret IS NOT NULL THEN '✓ Configured' ELSE '✗ Missing' END as status
 FROM vault.decrypted_secrets 
-WHERE name IN ('supabase_functions_url', 'service_role_key')
+WHERE name IN ('supabase_functions_url', 'service_role_key', 'anon_key')
 ORDER BY name;
 
 -- ============================================================================

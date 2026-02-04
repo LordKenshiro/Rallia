@@ -52,7 +52,7 @@ SECRETS=$(psql "$DB_URL" -t -c "
       ELSE 'MISSING'
     END
   FROM vault.decrypted_secrets 
-  WHERE name IN ('supabase_functions_url', 'service_role_key')
+  WHERE name IN ('supabase_functions_url', 'service_role_key', 'anon_key')
   ORDER BY name;
 " 2>/dev/null | grep -v "^$")
 
@@ -159,16 +159,16 @@ echo ""
 if [ "$TEST_SEND" = true ]; then
   echo -e "${CYAN}━━━ Testing Edge Function Directly ━━━${NC}\n"
   
-  # Get service role key
-  SERVICE_KEY=$(psql "$DB_URL" -t -c "
+  # Get anon (publishable) key for Bearer auth
+  ANON_KEY=$(psql "$DB_URL" -t -c "
     SELECT decrypted_secret 
     FROM vault.decrypted_secrets 
-    WHERE name = 'service_role_key' 
+    WHERE name = 'anon_key' 
     LIMIT 1;
   " 2>/dev/null | tr -d ' ')
 
-  if [ -z "$SERVICE_KEY" ]; then
-    echo -e "  ${RED}✗ Service role key not found in vault${NC}"
+  if [ -z "$ANON_KEY" ]; then
+    echo -e "  ${RED}✗ anon_key not found in vault${NC}"
     exit 1
   fi
 
@@ -197,7 +197,7 @@ EOF
   RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
     -X POST \
     -H "Content-Type: application/json" \
-    -H "x-service-key: $SERVICE_KEY" \
+    -H "Authorization: Bearer $ANON_KEY" \
     -d "$TEST_PAYLOAD" \
     "$EDGE_FUNCTION_URL" 2>&1)
 
@@ -216,7 +216,7 @@ EOF
       ;;
     401)
       echo -e "${RED}✗ Authentication failed${NC}"
-      echo -e "${DIM}→ Check if service role key matches SUPABASE_SERVICE_ROLE_KEY env var${NC}"
+      echo -e "${DIM}→ Check if vault anon_key matches SUPABASE_ANON_KEY env var for the edge function${NC}"
       ;;
     500)
       echo -e "${RED}✗ Server error${NC}"

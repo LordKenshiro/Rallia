@@ -12,7 +12,7 @@ import Stripe from 'https://esm.sh/stripe@14';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'x-service-key, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-client-info, apikey',
 };
 
 interface PaymentRecord {
@@ -34,24 +34,19 @@ Deno.serve(async req => {
   }
 
   try {
-    // Verify service role key authentication via custom x-service-key header
-    // Note: We use a custom header because Authorization: Bearer gets stripped by some proxies
-    const serviceKey = req.headers.get('x-service-key');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-    if (!serviceKey) {
-      return new Response(JSON.stringify({ error: 'Missing x-service-key header' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 401,
-      });
-    }
-
-    if (serviceKey !== supabaseServiceKey) {
-      console.warn('Invalid service role key provided');
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 401,
-      });
+    // Bearer auth with anon key (staging/prod). When no key is configured (e.g. local --no-verify-jwt), skip validation.
+    const expectedAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    if (expectedAnonKey) {
+      const authHeader = req.headers.get('Authorization');
+      const token = authHeader?.replace(/^Bearer\s+/i, '').trim();
+      if (!token || token !== expectedAnonKey) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401,
+        });
+      }
     }
 
     // Initialize clients
