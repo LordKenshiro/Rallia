@@ -129,7 +129,7 @@ export function useNearbyMatches(options: UseNearbyMatchesOptions) {
     initialPageParam: 0,
     enabled: enabled && hasRequiredParams,
     staleTime: 0, // Always refetch in background when query is accessed
-    refetchOnWindowFocus: false, // Don't refetch on navigation back (use pull-to-refresh instead)
+    refetchOnWindowFocus: true, // Refetch when app/screen is focused so expired matches don't stay visible
     refetchOnReconnect: true,
   });
 

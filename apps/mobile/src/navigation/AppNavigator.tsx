@@ -20,7 +20,9 @@ import {
   Text as RNText,
 } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { StackActions } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { CopilotStep } from 'react-native-copilot';
 import { WalkthroughableView } from '../context/TourContext';
@@ -131,7 +133,7 @@ function SportSelectorWithContext() {
   const { theme } = useTheme();
   const { session } = useAuth();
   const { contentMode } = useActionsSheet();
-  const { profile, refetch } = useProfile();
+  const { refetch } = useProfile();
   const { t } = useTranslation();
   const isDark = theme === 'dark';
 
@@ -216,8 +218,8 @@ const getSharedScreenOptions = (colors: ReturnType<typeof useThemeStyles>['color
 function ProfilePictureButtonWithAuth() {
   const navigation = useAppNavigation();
   const { isReady, guardAction } = useRequireOnboarding();
-  const { session } = useAuth();
-  const { openSheet } = useActionsSheet();
+  const { session: _session } = useAuth();
+  const { openSheet: _openSheet } = useActionsSheet();
   const { t } = useTranslation();
 
   const handlePress = () => {
@@ -742,6 +744,28 @@ function ChatTabIconWithTour({ color, size }: { color: string; size: number }) {
   );
 }
 
+type TabName = keyof BottomTabParamList;
+
+/**
+ * Listener that resets a tab's nested stack to its root screen when the tab loses focus.
+ * This ensures users always see the home screen when switching back to a tab.
+ */
+const resetStackOnBlur = ({
+  navigation,
+  route,
+}: BottomTabScreenProps<BottomTabParamList, TabName>) => ({
+  blur: () => {
+    const state = navigation.getState();
+    const tabRoute = state.routes.find(r => r.key === route.key);
+    if (tabRoute?.state && typeof tabRoute.state.index === 'number' && tabRoute.state.index > 0) {
+      navigation.dispatch({
+        ...StackActions.popToTop(),
+        target: tabRoute.state.key,
+      });
+    }
+  },
+});
+
 function BottomTabs() {
   const { colors } = useThemeStyles();
   return (
@@ -768,6 +792,7 @@ function BottomTabs() {
         options={{
           tabBarIcon: ({ color, size }) => <HomeTabIcon color={color} size={size} />,
         }}
+        listeners={resetStackOnBlur}
       />
       <Tab.Screen
         name="Courts"
@@ -775,6 +800,7 @@ function BottomTabs() {
         options={{
           tabBarIcon: ({ color, size }) => <CourtsTabIcon color={color} size={size} />,
         }}
+        listeners={resetStackOnBlur}
       />
       <Tab.Screen
         name="Actions"
@@ -797,6 +823,7 @@ function BottomTabs() {
         options={{
           tabBarIcon: ({ color, size }) => <CommunityTabIcon color={color} size={size} />,
         }}
+        listeners={resetStackOnBlur}
       />
       <Tab.Screen
         name="Chat"
@@ -804,6 +831,7 @@ function BottomTabs() {
         options={{
           tabBarIcon: ({ color, size }) => <ChatTabIconWithTour color={color} size={size} />,
         }}
+        listeners={resetStackOnBlur}
       />
     </Tab.Navigator>
   );
