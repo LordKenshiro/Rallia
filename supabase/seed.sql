@@ -11,14 +11,16 @@
 --   - supabase_functions_url: Uses host.docker.internal so Postgres container can reach host
 --   - service_role_key: The JWT service role key (for server-side Supabase client use)
 --   - anon_key: The JWT anon/publishable key; triggers and cron send this in Bearer header
---
--- JWT tokens can be found by running:
---   docker exec supabase_edge_runtime_<project> env | grep SUPABASE_
+--     IMPORTANT: Must match SUPABASE_ANON_KEY from Edge Function runtime!
+--     Get the actual value: docker exec supabase_edge_runtime_<project> env | grep SUPABASE_ANON_KEY
+--     If triggers fail with 401, update vault: SELECT vault.update_secret((SELECT id FROM vault.secrets WHERE name = 'anon_key'), '<JWT_FROM_RUNTIME>', 'anon_key');
 -- ============================================================================
 DO $$
 DECLARE
   local_service_role_key TEXT := 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU';
-  local_anon_key TEXT := 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJe5xjztHsZOlhAW7GtblmOx4FQw-s16E';
+  -- NOTE: This is a fallback. The actual anon_key should match SUPABASE_ANON_KEY from Edge Function runtime.
+  -- If you get 401 errors, check: docker exec supabase_edge_runtime_Rallia env | grep SUPABASE_ANON_KEY
+  local_anon_key TEXT := 'eyJhbGciOiJFUzI1NiIsImtpZCI6ImI4MTI2OWYxLTIxZDgtNGYyZS1iNzE5LWMyMjQwYTg0MGQ5MCIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjIwODU1MzQ0NTh9.njT61CLkOy3AkOBDE7KgJ4vqL23h9bAA4HQb3T-fYlFwxfZV5flOkbxOXs4X_LEdOyBGRa_EkJJ-7U1KD6IsZw';
   local_functions_url TEXT := 'http://host.docker.internal:54321';
   existing_url_id UUID;
   existing_key_id UUID;
