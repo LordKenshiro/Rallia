@@ -55,6 +55,8 @@ interface OverlayContextType {
   isSportSelectionComplete: boolean;
   /** Handle sport selection completion */
   onSportSelectionComplete: (orderedSports: OverlaySport[]) => void;
+  /** Whether permissions have been handled (requested or skipped) */
+  permissionsHandled: boolean;
 }
 
 // =============================================================================
@@ -88,6 +90,7 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
   const [isSplashComplete, setIsSplashComplete] = useState(false);
   const [isSportSelectionComplete, setIsSportSelectionComplete] = useState(false);
   const [hasCheckedSportSelection, setHasCheckedSportSelection] = useState(false);
+  const [permissionsHandled, setPermissionsHandled] = useState(false);
 
   // Track if we've already requested permissions this session
   const hasRequestedPermissions = useRef(false);
@@ -156,8 +159,8 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
           await new Promise(resolve => setTimeout(resolve, ANIMATION_DELAYS.OVERLAY_STAGGER));
         }
 
-        // Note: Location permission is now handled in the pre-onboarding wizard (step 3)
-        // so we skip it here
+        // Mark permissions as handled
+        setPermissionsHandled(true);
       };
 
       requestPermissions();
@@ -213,6 +216,7 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
     isSplashComplete,
     isSportSelectionComplete,
     onSportSelectionComplete: handleSportSelectionComplete,
+    permissionsHandled,
   };
 
   // ==========================================================================

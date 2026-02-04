@@ -27,6 +27,7 @@ export * from './reports';
 // For server-side functions (createBooking, cancelBooking), use web app's lib/bookings
 export * from './bookings';
 export * from './programs';
+export * from './tour';
 
 // Export default DatabaseService
 export { default } from './database';

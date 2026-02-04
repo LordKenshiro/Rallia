@@ -5496,5 +5496,184 @@
       "openSite": "Ouvrir le site de réservation",
       "instructions": "Complétez votre réservation sur le site web du site de jeu."
     }
+  },
+  "tour": {
+    "buttons": {
+      "skip": "Passer",
+      "previous": "Précédent",
+      "next": "Suivant",
+      "finish": "Compris!"
+    },
+    "stepIndicator": "Étape {current} sur {total}",
+    "welcome": {
+      "title": "Bienvenue sur Rallia!",
+      "subtitle": "Faisons un tour rapide pour vous aider à démarrer",
+      "startTour": "Commencer la visite",
+      "skipTour": "Passer pour l'instant",
+      "returnUser": {
+        "title": "Content de vous revoir!",
+        "subtitle": "Voulez-vous un rappel rapide des fonctionnalités de l'application?",
+        "takeTour": "Faites-moi visiter",
+        "noThanks": "Non merci"
+      }
+    },
+    "mainNavigation": {
+      "home": {
+        "title": "Accueil",
+        "description": "Votre tableau de bord affichant les matchs à venir, les notifications et les actions rapides."
+      },
+      "courts": {
+        "title": "Terrains",
+        "description": "Découvrez les terrains et installations sportives près de chez vous sur la carte interactive."
+      },
+      "actions": {
+        "title": "Actions",
+        "description": "Accès rapide pour créer des matchs, trouver des joueurs et plus encore."
+      },
+      "matches": {
+        "title": "Parties",
+        "description": "Parcourez les parties disponibles, créez de nouveaux matchs et gérez votre calendrier."
+      },
+      "chat": {
+        "title": "Messages",
+        "description": "Discutez avec d'autres joueurs, coordonnez les détails du match et restez connecté."
+      },
+      "profile": {
+        "title": "Profil",
+        "description": "Consultez et modifiez votre profil, gérez vos paramètres et suivez vos statistiques."
+      }
+    },
+    "header": {
+      "profile": {
+        "title": "Votre profil",
+        "description": "Appuyez sur votre photo de profil pour consulter et modifier votre profil, vos statistiques et vos préférences."
+      },
+      "sportToggle": {
+        "title": "Sélecteur de sport",
+        "description": "Basculez entre vos sports pour voir les parties et joueurs pertinents."
+      },
+      "actions": {
+        "title": "Actions rapides",
+        "description": "Accédez aux notifications et aux paramètres de l'application ici."
+      }
+    },
+    "homeScreen": {
+      "upcomingMatches": {
+        "title": "Parties à venir",
+        "description": "Voyez vos parties planifiées en un coup d'œil. Appuyez sur une partie pour plus de détails."
+      },
+      "nearbyMatches": {
+        "title": "Parties à proximité",
+        "description": "Découvrez les parties près de chez vous. Appuyez sur une partie pour voir les détails et vous joindre."
+      },
+      "quickActions": {
+        "title": "Actions rapides",
+        "description": "Créez une nouvelle partie ou trouvez des joueurs en un seul clic."
+      },
+      "notifications": {
+        "title": "Notifications",
+        "description": "Restez informé des invitations aux parties, des messages et des alertes importantes."
+      },
+      "pullToRefresh": {
+        "title": "Tirer pour rafraîchir",
+        "description": "Tirez vers le bas sur la liste pour rafraîchir et voir les dernières parties."
+      }
+    },
+    "matchesScreen": {
+      "matchList": {
+        "title": "Parties disponibles",
+        "description": "Parcourez les parties dans votre région. Utilisez les filtres pour trouver la partie idéale."
+      },
+      "filters": {
+        "title": "Filtres",
+        "description": "Filtrez par sport, niveau de compétence, emplacement et plus pour trouver votre partie idéale."
+      },
+      "createMatch": {
+        "title": "Créer une partie",
+        "description": "Appuyez ici pour créer une nouvelle partie et inviter des joueurs."
+      }
+    },
+    "createMatch": {
+      "sport": {
+        "title": "Sélectionner le sport",
+        "description": "Choisissez le sport que vous voulez jouer."
+      },
+      "location": {
+        "title": "Définir l'emplacement",
+        "description": "Choisissez un lieu ou laissez-nous vous suggérer des installations à proximité."
+      },
+      "datetime": {
+        "title": "Date et heure",
+        "description": "Choisissez quand vous voulez jouer."
+      },
+      "skillLevel": {
+        "title": "Niveau de compétence",
+        "description": "Définissez le niveau de compétence pour attirer des joueurs de capacité similaire."
+      },
+      "players": {
+        "title": "Inviter des joueurs",
+        "description": "Invitez des amis ou laissez ouvert pour que n'importe qui puisse rejoindre."
+      }
+    },
+    "chatScreen": {
+      "conversations": {
+        "title": "Conversations",
+        "description": "Tous vos chats en un seul endroit. Appuyez pour ouvrir une conversation."
+      },
+      "search": {
+        "title": "Recherche",
+        "description": "Recherchez des conversations par nom ou contenu de message."
+      },
+      "tabs": {
+        "title": "Catégories de chat",
+        "description": "Basculez entre les messages directs, les groupes et les chats de parties. Le badge indique les messages non lus."
+      },
+      "newMessage": {
+        "title": "Nouveau message",
+        "description": "Commencez une conversation avec n'importe quel joueur avec qui vous êtes connecté."
+      }
+    },
+    "profileScreen": {
+      "picture": {
+        "title": "Photo de profil",
+        "description": "Appuyez sur votre photo pour la modifier. Une bonne photo aide les autres joueurs à vous reconnaître!"
+      },
+      "sports": {
+        "title": "Vos sports",
+        "description": "Consultez et gérez vos sports. Appuyez sur un sport pour voir votre évaluation et votre statut de certification."
+      },
+      "availability": {
+        "title": "Disponibilités",
+        "description": "Indiquez quand vous êtes libre pour jouer. Cela aide les autres à vous trouver pour des parties à des moments convenables."
+      },
+      "stats": {
+        "title": "Vos statistiques",
+        "description": "Suivez votre historique de parties, vos évaluations et vos réalisations."
+      },
+      "settings": {
+        "title": "Paramètres",
+        "description": "Personnalisez les notifications, la confidentialité et les préférences de l'application."
+      },
+      "sportProfiles": {
+        "title": "Profils sportifs",
+        "description": "Gérez vos évaluations de compétences et préférences pour chaque sport."
+      }
+    },
+    "settings": {
+      "restartTour": "Redémarrer la visite de l'application",
+      "restartTourDescription": "Refaites la visite guidée pour en apprendre davantage sur les fonctionnalités de l'application",
+      "tourReset": "La visite a été réinitialisée. La visite commencera lors de votre prochaine ouverture de l'application."
+    },
+    "completion": {
+      "title": "Vous êtes prêt!",
+      "message": "Vous connaissez maintenant les bases. Commencez à explorer et amusez-vous à jouer!",
+      "startPlaying": "Commencer à jouer"
+    },
+    "complete": {
+      "title": "Vous êtes prêt! 🎉",
+      "description": "Vous connaissez maintenant les bases de Rallia. Il est temps de trouver des matchs et de vous connecter avec d'autres joueurs!",
+      "button": "Commencer à explorer",
+      "tip": "Conseil: Vous pouvez rejouer cette visite à tout moment depuis les Paramètres"
+    }
   }
 }

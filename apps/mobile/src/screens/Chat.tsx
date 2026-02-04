@@ -22,8 +22,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, SkeletonConversation } from '@rallia/shared-components';
 import { lightHaptic, selectionHaptic } from '@rallia/shared-utils';
 import { getSafeAreaEdges } from '../utils';
-import { useThemeStyles, useAuth, useTranslation, useRequireOnboarding } from '../hooks';
+import {
+  useThemeStyles,
+  useAuth,
+  useTranslation,
+  useRequireOnboarding,
+  useTourSequence,
+  type TranslationKey,
+} from '../hooks';
 import { useActionsSheet } from '../context';
+import { CopilotStep, WalkthroughableView } from '../context/TourContext';
 import SignInPrompt from '../components/SignInPrompt';
 import { SearchBar } from '../components/SearchBar';
 import {
@@ -69,10 +77,20 @@ const Chat = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<TabKey>('direct');
 
+  // Chat screen tour - triggers after main navigation tour is completed
+  const { shouldShowTour: _shouldShowChatTour } = useTourSequence({
+    screenId: 'chat',
+    isReady: !!playerId,
+    delay: 800,
+    autoStart: true,
+  });
+
   // Track selected conversation for action handlers
   const [selectedConversation, setSelectedConversation] = useState<ConversationPreview | null>(
     null
   );
+  const [showActionsSheet, setShowActionsSheet] = useState(false);
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
 
   const {
     data: conversations,
@@ -415,69 +433,81 @@ const Chat = () => {
         </View>
       </View>
 
-      {/* Search bar */}
-      <View style={styles.searchContainer}>
-        <SearchBar
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder={t('chat.searchConversations')}
-          style={styles.searchBar}
-        />
-      </View>
+      {/* Search bar - Wrapped with CopilotStep for tour */}
+      <CopilotStep
+        text={t('tour.chatScreen.search.description' as TranslationKey)}
+        order={30}
+        name="chat_search"
+      >
+        <WalkthroughableView style={styles.searchContainer}>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder={t('chat.searchConversations')}
+            style={styles.searchBar}
+          />
+        </WalkthroughableView>
+      </CopilotStep>
 
-      {/* Tab Bar */}
-      <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
-        {TAB_CONFIGS.map(tab => {
-          const isActive = activeTab === tab.key;
-          const count = tabCounts[tab.key];
-          const label = t(`chat.tabs.${tab.key}`);
-          return (
-            <TouchableOpacity
-              key={tab.key}
-              style={[
-                styles.tab,
-                isActive && styles.activeTab,
-                isActive && { borderBottomColor: primary[500] },
-              ]}
-              onPress={() => {
-                selectionHaptic();
-                setActiveTab(tab.key);
-              }}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name={tab.icon}
-                size={18}
-                color={isActive ? primary[500] : colors.textMuted}
-                style={styles.tabIcon}
-              />
-              <Text
+      {/* Tab Bar - Wrapped with CopilotStep for tour */}
+      <CopilotStep
+        text={t('tour.chatScreen.tabs.description' as TranslationKey)}
+        order={31}
+        name="chat_tabs"
+      >
+        <WalkthroughableView style={[styles.tabBar, { borderBottomColor: colors.border }]}>
+          {TAB_CONFIGS.map(tab => {
+            const isActive = activeTab === tab.key;
+            const count = tabCounts[tab.key];
+            const label = t(`chat.tabs.${tab.key}`);
+            return (
+              <TouchableOpacity
+                key={tab.key}
                 style={[
-                  styles.tabLabel,
-                  {
-                    color: isActive ? primary[500] : colors.textMuted,
-                    fontWeight: isActive ? '600' : '500',
-                  },
+                  styles.tab,
+                  isActive && styles.activeTab,
+                  isActive && { borderBottomColor: primary[500] },
                 ]}
+                onPress={() => {
+                  selectionHaptic();
+                  setActiveTab(tab.key);
+                }}
+                activeOpacity={0.7}
               >
-                {label}
-              </Text>
-              {count > 0 && (
-                <View
+                <Ionicons
+                  name={tab.icon}
+                  size={18}
+                  color={isActive ? primary[500] : colors.textMuted}
+                  style={styles.tabIcon}
+                />
+                <Text
                   style={[
-                    styles.tabBadge,
-                    { backgroundColor: isActive ? primary[500] : neutral[400] },
+                    styles.tabLabel,
+                    {
+                      color: isActive ? primary[500] : colors.textMuted,
+                      fontWeight: isActive ? '600' : '500',
+                    },
                   ]}
                 >
-                  <Text style={styles.tabBadgeText}>{count > 99 ? '99+' : count}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+                  {label}
+                </Text>
+                {count > 0 && (
+                  <View
+                    style={[
+                      styles.tabBadge,
+                      { backgroundColor: isActive ? primary[500] : neutral[400] },
+                    ]}
+                  >
+                    <Text style={styles.tabBadgeText}>{count > 99 ? '99+' : count}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </WalkthroughableView>
+      </CopilotStep>
 
-      {/* Content */}
+      {/* Content - Conversations List */}
       {isLoading ? (
         <View style={styles.loadingContainer}>
           {[1, 2, 3, 4, 5, 6].map(i => (

@@ -14,6 +14,15 @@ export {
   UserLocationContext,
 } from './UserLocationContext';
 export { LocationModeProvider, useLocationMode, LocationModeContext } from './LocationModeContext';
+export {
+  TourProvider,
+  useTour,
+  CopilotStep,
+  walkthroughable,
+  WalkthroughableView,
+  WalkthroughableText,
+  WalkthroughableTouchableOpacity,
+} from './TourContext';
 export type { AuthContextType, OAuthProvider, AuthResult } from './AuthContext';
 export type { UserHomeLocation } from './UserLocationContext';
 export type { LocationMode } from './LocationModeContext';
@@ -21,3 +30,4 @@ export type { ActionsSheetMode } from './ActionsSheetContext';
 export type { Sport } from './SportContext';
 export type { MatchDetailData } from './MatchDetailSheetContext';
 export type { OverlaySport } from './OverlayContext';
+export type { TourContextType } from './TourContext';

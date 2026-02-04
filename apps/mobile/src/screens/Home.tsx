@@ -27,6 +27,7 @@ import {
   useTranslation,
   useEffectiveLocation,
   type TranslationKey,
+  useTourSequence,
 } from '../hooks';
 import {
   useOverlay,
@@ -35,6 +36,7 @@ import {
   useMatchDetailSheet,
   useUserHomeLocation,
 } from '../context';
+import { CopilotStep, WalkthroughableView } from '../context/TourContext';
 import {
   useProfile,
   useTheme,
@@ -64,6 +66,14 @@ const Home = () => {
   const isDark = theme === 'dark';
   const navigation = useHomeNavigation();
   const appNavigation = useAppNavigation();
+
+  // Home screen tour - triggers after main navigation tour is completed
+  const { shouldShowTour: _shouldShowHomeTour } = useTourSequence({
+    screenId: 'home',
+    isReady: !authLoading,
+    delay: 800,
+    autoStart: true,
+  });
 
   // Get user's current location and player preferences for nearby matches
   const { location, locationMode, setLocationMode, hasHomeLocation, hasBothLocationOptions } =
@@ -265,6 +275,8 @@ const Home = () => {
   );
 
   // Render section header with "Soon & Nearby" title, location selector, and "View All" button
+  // Render section header with "Soon & Nearby" title and "View All" button
+  // Wrapped with CopilotStep for home screen tour
   const renderSectionHeader = useCallback(() => {
     // Get a short label for the home location (postal code or city)
     const homeLocationLabel =
@@ -329,124 +341,130 @@ const Home = () => {
     if (!isOnboarded) return null;
 
     return (
-      <View style={styles.myMatchesSection}>
-        {/* Header with title and "See All" button */}
-        <View style={[styles.sectionHeader, { paddingVertical: spacingPixels[2] }]}>
-          <Text size="xl" weight="bold" color={colors.text}>
-            {t('home.myMatches' as TranslationKey)}
-          </Text>
-          <TouchableOpacity
-            style={styles.viewAllButton}
-            onPress={() => {
-              lightHaptic();
-              navigation.navigate('PlayerMatches');
-            }}
-            activeOpacity={0.7}
-          >
-            <Text size="base" weight="medium" color={colors.primary}>
-              {t('home.viewAll')}
+      <CopilotStep
+        text={t('tour.homeScreen.upcomingMatches.description' as TranslationKey)}
+        order={10}
+        name="home_my_matches"
+      >
+        <WalkthroughableView style={styles.myMatchesSection}>
+          {/* Header with title and "See All" button */}
+          <View style={[styles.sectionHeader]}>
+            <Text size="xl" weight="bold" color={colors.text}>
+              {t('home.myMatches' as TranslationKey)}
             </Text>
-            <Ionicons
-              name="chevron-forward"
-              size={18}
-              color={colors.primary}
-              style={styles.chevronIcon}
-            />
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity
+              style={styles.viewAllButton}
+              onPress={() => {
+                lightHaptic();
+                navigation.navigate('PlayerMatches');
+              }}
+              activeOpacity={0.7}
+            >
+              <Text size="base" weight="medium" color={colors.primary}>
+                {t('home.viewAll')}
+              </Text>
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={colors.primary}
+                style={styles.chevronIcon}
+              />
+            </TouchableOpacity>
+          </View>
 
-        {/* Content: horizontal scroll or empty state */}
-        {loadingMyMatches ? (
-          <View style={styles.myMatchesLoading}>
+          {/* Content: horizontal scroll or empty state */}
+          {loadingMyMatches ? (
+            <View style={styles.myMatchesLoading}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 16 }}
+              >
+                {[1, 2, 3].map(i => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.myMatchSkeletonCard,
+                      { backgroundColor: colors.card, marginRight: 12 },
+                    ]}
+                  >
+                    <Skeleton
+                      width={120}
+                      height={16}
+                      backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                      highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                      style={{ marginBottom: 8 }}
+                    />
+                    <Skeleton
+                      width={80}
+                      height={14}
+                      backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                      highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                      style={{ marginBottom: 6 }}
+                    />
+                    <Skeleton
+                      width={100}
+                      height={12}
+                      backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                      highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                    />
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          ) : myMatches.length === 0 ? (
+            <View style={styles.myMatchesEmpty}>
+              <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
+              <Text size="sm" color={colors.textMuted} style={styles.myMatchesEmptyText}>
+                {t('home.myMatchesEmpty.title' as TranslationKey)}
+              </Text>
+              <Text size="xs" color={colors.textMuted} style={styles.myMatchesEmptyDescription}>
+                {t('home.myMatchesEmpty.description' as TranslationKey)}
+              </Text>
+            </View>
+          ) : (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 16 }}
+              contentContainerStyle={styles.myMatchesScrollContent}
             >
-              {[1, 2, 3].map(i => (
-                <View
-                  key={i}
-                  style={[
-                    styles.myMatchSkeletonCard,
-                    { backgroundColor: colors.card, marginRight: 12 },
-                  ]}
-                >
-                  <Skeleton
-                    width={120}
-                    height={16}
-                    backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-                    highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-                    style={{ marginBottom: 8 }}
-                  />
-                  <Skeleton
-                    width={80}
-                    height={14}
-                    backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-                    highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-                    style={{ marginBottom: 6 }}
-                  />
-                  <Skeleton
-                    width={100}
-                    height={12}
-                    backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-                    highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-                  />
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        ) : myMatches.length === 0 ? (
-          <View style={styles.myMatchesEmpty}>
-            <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
-            <Text size="sm" color={colors.textMuted} style={styles.myMatchesEmptyText}>
-              {t('home.myMatchesEmpty.title' as TranslationKey)}
-            </Text>
-            <Text size="xs" color={colors.textMuted} style={styles.myMatchesEmptyDescription}>
-              {t('home.myMatchesEmpty.description' as TranslationKey)}
-            </Text>
-          </View>
-        ) : (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.myMatchesScrollContent}
-          >
-            {myMatches.slice(0, 5).map((match: MatchWithDetails) => {
-              // Check if current player is invited (has pending invitation)
-              const isInvited = !!(
-                player?.id &&
-                match.participants?.some(p => p.player_id === player.id && p.status === 'pending')
-              );
-              // Count pending join requests (only relevant if current user is creator)
-              const pendingRequestCount =
-                match.created_by === player?.id
-                  ? (match.participants?.filter(p => p.status === 'requested').length ?? 0)
-                  : 0;
+              {myMatches.slice(0, 5).map((match: MatchWithDetails) => {
+                // Check if current player is invited (has pending invitation)
+                const isInvited = !!(
+                  player?.id &&
+                  match.participants?.some(p => p.player_id === player.id && p.status === 'pending')
+                );
+                // Count pending join requests (only relevant if current user is creator)
+                const pendingRequestCount =
+                  match.created_by === player?.id
+                    ? (match.participants?.filter(p => p.status === 'requested').length ?? 0)
+                    : 0;
 
-              return (
-                <MyMatchCard
-                  key={match.id}
-                  match={match}
-                  isDark={isDark}
-                  t={
-                    t as (
-                      key: string,
-                      options?: Record<string, string | number | boolean>
-                    ) => string
-                  }
-                  locale={locale}
-                  isInvited={isInvited}
-                  pendingRequestCount={pendingRequestCount}
-                  onPress={() => {
-                    Logger.logUserAction('my_match_pressed', { matchId: match.id });
-                    openMatchDetail(match);
-                  }}
-                />
-              );
-            })}
-          </ScrollView>
-        )}
-      </View>
+                return (
+                  <MyMatchCard
+                    key={match.id}
+                    match={match}
+                    isDark={isDark}
+                    t={
+                      t as (
+                        key: string,
+                        options?: Record<string, string | number | boolean>
+                      ) => string
+                    }
+                    locale={locale}
+                    isInvited={isInvited}
+                    pendingRequestCount={pendingRequestCount}
+                    onPress={() => {
+                      Logger.logUserAction('my_match_pressed', { matchId: match.id });
+                      openMatchDetail(match);
+                    }}
+                  />
+                );
+              })}
+            </ScrollView>
+          )}
+        </WalkthroughableView>
+      </CopilotStep>
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [

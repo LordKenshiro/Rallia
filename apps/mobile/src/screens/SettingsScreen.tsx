@@ -6,11 +6,12 @@ import {
   ScrollView,
   Image,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
-import { Logger } from '@rallia/shared-services';
+import { Logger, tourService } from '@rallia/shared-services';
 import { useTheme } from '@rallia/shared-hooks';
 import { useAppNavigation } from '../navigation/hooks';
 import { useLocale } from '../context';
@@ -122,6 +123,29 @@ const SettingsScreen: React.FC = () => {
     Logger.logUserAction('permissions_pressed');
   };
 
+  const handleResetTour = () => {
+    lightHaptic();
+    Alert.alert(t('tour.settings.restartTour'), t('tour.settings.restartTourDescription'), [
+      {
+        text: t('common.cancel'),
+        style: 'cancel',
+      },
+      {
+        text: t('common.confirm'),
+        onPress: async () => {
+          try {
+            await tourService.resetAllTours();
+            toast.success(t('tour.settings.tourReset'));
+            Logger.logUserAction('tour_reset');
+          } catch (error) {
+            Logger.error('Failed to reset tour', error as Error);
+            toast.error(t('errors.unknown'));
+          }
+        },
+      },
+    ]);
+  };
+
   const SettingsItem = ({
     icon,
     title,
@@ -226,6 +250,16 @@ const SettingsScreen: React.FC = () => {
               icon="notifications-outline"
               title={t('settings.notifications')}
               onPress={handleNotificationPreferences}
+            />
+            <SettingsItem
+              icon="shield-checkmark-outline"
+              title={t('settings.permissions')}
+              onPress={handlePermissions}
+            />
+            <SettingsItem
+              icon="refresh-outline"
+              title={t('tour.settings.restartTour')}
+              onPress={handleResetTour}
             />
           </View>
         )}
