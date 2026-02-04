@@ -259,6 +259,8 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
   const costSplitType = watch('costSplitType');
   const estimatedCost = watch('estimatedCost');
   const visibility = watch('visibility');
+  const visibleInGroups = watch('visibleInGroups');
+  const visibleInCommunities = watch('visibleInCommunities');
   const joinMode = watch('joinMode');
   const preferredOpponentGender = watch('preferredOpponentGender');
   const minRatingScoreId = watch('minRatingScoreId');
@@ -644,6 +646,47 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
         </View>
       </View>
 
+      {/* Private visibility: visible in groups / communities (pre-checked) */}
+      {visibility === 'private' && (
+        <View style={[styles.fieldGroup, styles.privateVisibilityToggles]}>
+          <View style={[styles.privateVisibilityToggleRow, { borderColor: colors.border }]}>
+            <View style={styles.toggleTextContainer}>
+              <Text size="sm" weight="medium" color={colors.text}>
+                {t('matchCreation.fields.visibleInGroups' as TranslationKey)}
+              </Text>
+            </View>
+            <Switch
+              value={visibleInGroups ?? true}
+              onValueChange={value => {
+                lightHaptic();
+                setValue('visibleInGroups', value, { shouldValidate: true, shouldDirty: true });
+              }}
+              trackColor={{ false: colors.border, true: colors.buttonActive }}
+              thumbColor={colors.buttonTextActive}
+            />
+          </View>
+          <View style={[styles.privateVisibilityToggleRow, { borderColor: colors.border }]}>
+            <View style={styles.toggleTextContainer}>
+              <Text size="sm" weight="medium" color={colors.text}>
+                {t('matchCreation.fields.visibleInCommunities' as TranslationKey)}
+              </Text>
+            </View>
+            <Switch
+              value={visibleInCommunities ?? true}
+              onValueChange={value => {
+                lightHaptic();
+                setValue('visibleInCommunities', value, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                });
+              }}
+              trackColor={{ false: colors.border, true: colors.buttonActive }}
+              thumbColor={colors.buttonTextActive}
+            />
+          </View>
+        </View>
+      )}
+
       {/* Join mode options */}
       <View style={styles.fieldGroup}>
         <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
@@ -901,6 +944,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: spacingPixels[4],
     borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+  },
+  privateVisibilityToggles: {
+    gap: spacingPixels[2],
+  },
+  privateVisibilityToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacingPixels[2],
+    paddingHorizontal: spacingPixels[3],
+    borderRadius: radiusPixels.md,
     borderWidth: 1,
   },
   toggleTextContainer: {

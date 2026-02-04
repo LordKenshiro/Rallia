@@ -72,6 +72,10 @@ export interface CreateMatchInput {
 
   // Visibility & access
   visibility?: 'public' | 'private';
+  /** When private: whether the match is visible in groups the creator is part of */
+  visibleInGroups?: boolean;
+  /** When private: whether the match is visible in communities the creator is part of */
+  visibleInCommunities?: boolean;
   joinMode?: 'direct' | 'request';
 
   // Additional info
@@ -132,6 +136,8 @@ export async function createMatch(input: CreateMatchInput): Promise<Match> {
     preferred_opponent_gender:
       input.preferredOpponentGender === 'any' ? null : input.preferredOpponentGender,
     visibility: input.visibility ?? 'public',
+    visible_in_groups: input.visibleInGroups ?? true,
+    visible_in_communities: input.visibleInCommunities ?? true,
     join_mode: input.joinMode ?? 'direct',
     notes: emptyToNull(input.notes),
   };
@@ -761,6 +767,9 @@ export async function updateMatch(
     updateData.preferred_opponent_gender =
       updates.preferredOpponentGender === 'any' ? null : updates.preferredOpponentGender;
   if (updates.visibility !== undefined) updateData.visibility = updates.visibility;
+  if (updates.visibleInGroups !== undefined) updateData.visible_in_groups = updates.visibleInGroups;
+  if (updates.visibleInCommunities !== undefined)
+    updateData.visible_in_communities = updates.visibleInCommunities;
   if (updates.joinMode !== undefined) updateData.join_mode = updates.joinMode;
   if (updates.notes !== undefined) updateData.notes = emptyToNull(updates.notes);
 

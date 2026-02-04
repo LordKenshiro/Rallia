@@ -32,12 +32,14 @@ import {
   radiusPixels,
   primary,
   neutral,
+  secondary,
+  base,
 } from '@rallia/design-system';
 
 const BASE_WHITE = '#ffffff';
 import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
 import { useCreateMatch, useUpdateMatch } from '@rallia/shared-hooks';
-import { validateMatchUpdate } from '@rallia/shared-services';
+import { validateMatchUpdate, getMatchWithDetails } from '@rallia/shared-services';
 
 import { useTheme } from '@rallia/shared-hooks';
 import { useTranslation, type TranslationKey } from '../../../hooks/useTranslation';
@@ -45,6 +47,7 @@ import { useSport, type MatchDetailData } from '../../../context';
 import { useAuth } from '../../../hooks';
 import { useMatchForm, useMatchDraft, calculateEndTime, matchToFormData } from '../hooks';
 import { supabase } from '../../../lib/supabase';
+import { shareMatch } from '../../../utils';
 import type { MatchFormSchemaData } from '@rallia/shared-types';
 
 import { WhenFormatStep } from './steps/WhenFormatStep';
@@ -422,6 +425,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   const [successMatchId, setSuccessMatchId] = useState<string | null>(null);
   // Player invitation step (shown after success for new matches)
   const [showInviteStep, setShowInviteStep] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
 
   // Match creation mutation
   const { createMatch, isCreating } = useCreateMatch({
@@ -714,6 +718,23 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     [editMatch, updateMatch]
   );
 
+  // Share match from success step (fetch then open native share sheet)
+  const handleShareSuccess = useCallback(async () => {
+    if (!successMatchId) return;
+    lightHaptic();
+    setIsSharing(true);
+    try {
+      const match = await getMatchWithDetails(successMatchId);
+      if (match) {
+        await shareMatch(match as MatchDetailData, { t, locale });
+      }
+    } catch {
+      // Silently handle errors (same as MatchDetailSheet)
+    } finally {
+      setIsSharing(false);
+    }
+  }, [successMatchId, t, locale]);
+
   // Handle form submission
   const handleSubmit = useCallback(async () => {
     Keyboard.dismiss();
@@ -763,6 +784,9 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
       minRatingScoreId: values.minRatingScoreId,
       preferredOpponentGender: values.preferredOpponentGender,
       visibility: values.visibility,
+      visibleInGroups: values.visibility === 'private' ? (values.visibleInGroups ?? true) : true,
+      visibleInCommunities:
+        values.visibility === 'private' ? (values.visibleInCommunities ?? true) : true,
       joinMode: values.joinMode,
       notes: values.notes,
     };
@@ -1051,6 +1075,33 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                   : t('matchCreation.successDescription' as TranslationKey)}
               </Text>
               <View style={styles.successButtons}>
+                {/* Share button - first */}
+                <TouchableOpacity
+                  style={[
+                    styles.successButton,
+                    {
+                      backgroundColor: secondary[500],
+                    },
+                  ]}
+                  onPress={handleShareSuccess}
+                  disabled={isSharing}
+                >
+                  {isSharing ? (
+                    <ActivityIndicator color={base.white} size="small" />
+                  ) : (
+                    <>
+                      <Ionicons
+                        name="share-social"
+                        size={18}
+                        color={base.white}
+                        style={styles.buttonIcon}
+                      />
+                      <Text size="base" weight="semibold" color={base.white}>
+                        {t('matchDetail.inviteFriends' as TranslationKey)}
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
                 {/* Invite Players button - only for new matches */}
                 {!isEditMode && (
                   <TouchableOpacity

@@ -1030,6 +1030,7 @@ export type Database = {
         Row: {
           created_at: string;
           deleted_at: string | null;
+          duration_seconds: number | null;
           file_size: number;
           file_type: Database['public']['Enums']['file_type_enum'];
           id: string;
@@ -1038,6 +1039,8 @@ export type Database = {
           mime_type: string;
           original_name: string;
           storage_key: string;
+          storage_provider: Database['public']['Enums']['storage_provider_enum'];
+          thumbnail_status: string | null;
           thumbnail_url: string | null;
           updated_at: string;
           uploaded_by: string;
@@ -1046,6 +1049,7 @@ export type Database = {
         Insert: {
           created_at?: string;
           deleted_at?: string | null;
+          duration_seconds?: number | null;
           file_size: number;
           file_type: Database['public']['Enums']['file_type_enum'];
           id?: string;
@@ -1054,6 +1058,8 @@ export type Database = {
           mime_type: string;
           original_name: string;
           storage_key: string;
+          storage_provider?: Database['public']['Enums']['storage_provider_enum'];
+          thumbnail_status?: string | null;
           thumbnail_url?: string | null;
           updated_at?: string;
           uploaded_by: string;
@@ -1062,6 +1068,7 @@ export type Database = {
         Update: {
           created_at?: string;
           deleted_at?: string | null;
+          duration_seconds?: number | null;
           file_size?: number;
           file_type?: Database['public']['Enums']['file_type_enum'];
           id?: string;
@@ -1070,6 +1077,8 @@ export type Database = {
           mime_type?: string;
           original_name?: string;
           storage_key?: string;
+          storage_provider?: Database['public']['Enums']['storage_provider_enum'];
+          thumbnail_status?: string | null;
           thumbnail_url?: string | null;
           updated_at?: string;
           uploaded_by?: string;
@@ -1288,6 +1297,8 @@ export type Database = {
           timezone: string;
           updated_at: string | null;
           visibility: Database['public']['Enums']['match_visibility_enum'] | null;
+          visible_in_communities: boolean;
+          visible_in_groups: boolean;
         };
         Insert: {
           booking_id?: string | null;
@@ -1324,6 +1335,8 @@ export type Database = {
           timezone?: string;
           updated_at?: string | null;
           visibility?: Database['public']['Enums']['match_visibility_enum'] | null;
+          visible_in_communities?: boolean;
+          visible_in_groups?: boolean;
         };
         Update: {
           booking_id?: string | null;
@@ -1360,6 +1373,8 @@ export type Database = {
           timezone?: string;
           updated_at?: string | null;
           visibility?: Database['public']['Enums']['match_visibility_enum'] | null;
+          visible_in_communities?: boolean;
+          visible_in_groups?: boolean;
         };
         Relationships: [
           {
@@ -3022,7 +3037,9 @@ export type Database = {
       };
       player_rating_score: {
         Row: {
+          approved_proofs_count: number;
           assigned_at: string;
+          badge_status: Database['public']['Enums']['badge_status_enum'];
           certified_at: string | null;
           certified_via: Database['public']['Enums']['rating_certification_method_enum'] | null;
           created_at: string;
@@ -3032,15 +3049,21 @@ export type Database = {
           id: string;
           is_certified: boolean;
           last_evaluated_at: string | null;
+          level_changed_at: string | null;
           notes: string | null;
+          peer_evaluation_average: number | null;
+          peer_evaluation_count: number;
           player_id: string;
+          previous_rating_score_id: string | null;
           rating_score_id: string;
           referrals_count: number;
           source: string | null;
           updated_at: string;
         };
         Insert: {
+          approved_proofs_count?: number;
           assigned_at?: string;
+          badge_status?: Database['public']['Enums']['badge_status_enum'];
           certified_at?: string | null;
           certified_via?: Database['public']['Enums']['rating_certification_method_enum'] | null;
           created_at?: string;
@@ -3050,15 +3073,21 @@ export type Database = {
           id?: string;
           is_certified?: boolean;
           last_evaluated_at?: string | null;
+          level_changed_at?: string | null;
           notes?: string | null;
+          peer_evaluation_average?: number | null;
+          peer_evaluation_count?: number;
           player_id: string;
+          previous_rating_score_id?: string | null;
           rating_score_id: string;
           referrals_count?: number;
           source?: string | null;
           updated_at?: string;
         };
         Update: {
+          approved_proofs_count?: number;
           assigned_at?: string;
+          badge_status?: Database['public']['Enums']['badge_status_enum'];
           certified_at?: string | null;
           certified_via?: Database['public']['Enums']['rating_certification_method_enum'] | null;
           created_at?: string;
@@ -3068,14 +3097,25 @@ export type Database = {
           id?: string;
           is_certified?: boolean;
           last_evaluated_at?: string | null;
+          level_changed_at?: string | null;
           notes?: string | null;
+          peer_evaluation_average?: number | null;
+          peer_evaluation_count?: number;
           player_id?: string;
+          previous_rating_score_id?: string | null;
           rating_score_id?: string;
           referrals_count?: number;
           source?: string | null;
           updated_at?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: 'player_rating_score_previous_rating_score_id_fkey';
+            columns: ['previous_rating_score_id'];
+            isOneToOne: false;
+            referencedRelation: 'rating_score';
+            referencedColumns: ['id'];
+          },
           {
             foreignKeyName: 'player_rating_scores_external_rating_score_id_fkey';
             columns: ['external_rating_score_id'];
@@ -3960,6 +4000,7 @@ export type Database = {
           is_active: boolean;
           player_rating_score_id: string;
           proof_type: Database['public']['Enums']['proof_type_enum'];
+          rating_score_id: string | null;
           review_notes: string | null;
           reviewed_at: string | null;
           reviewed_by: string | null;
@@ -3976,6 +4017,7 @@ export type Database = {
           is_active?: boolean;
           player_rating_score_id: string;
           proof_type: Database['public']['Enums']['proof_type_enum'];
+          rating_score_id?: string | null;
           review_notes?: string | null;
           reviewed_at?: string | null;
           reviewed_by?: string | null;
@@ -3992,6 +4034,7 @@ export type Database = {
           is_active?: boolean;
           player_rating_score_id?: string;
           proof_type?: Database['public']['Enums']['proof_type_enum'];
+          rating_score_id?: string | null;
           review_notes?: string | null;
           reviewed_at?: string | null;
           reviewed_by?: string | null;
@@ -4012,6 +4055,13 @@ export type Database = {
             columns: ['player_rating_score_id'];
             isOneToOne: false;
             referencedRelation: 'player_rating_score';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'rating_proof_rating_score_id_fkey';
+            columns: ['rating_score_id'];
+            isOneToOne: false;
+            referencedRelation: 'rating_score';
             referencedColumns: ['id'];
           },
           {
@@ -4662,42 +4712,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      verification_code: {
-        Row: {
-          code: string;
-          created_at: string | null;
-          email: string;
-          expires_at: string;
-          id: string;
-          ip_address: string | null;
-          used: boolean | null;
-          used_at: string | null;
-          user_agent: string | null;
-        };
-        Insert: {
-          code: string;
-          created_at?: string | null;
-          email: string;
-          expires_at: string;
-          id?: string;
-          ip_address?: string | null;
-          used?: boolean | null;
-          used_at?: string | null;
-          user_agent?: string | null;
-        };
-        Update: {
-          code?: string;
-          created_at?: string | null;
-          email?: string;
-          expires_at?: string;
-          id?: string;
-          ip_address?: string | null;
-          used?: boolean | null;
-          used_at?: string | null;
-          user_agent?: string | null;
-        };
-        Relationships: [];
-      };
       waitlist_signup: {
         Row: {
           created_at: string | null;
@@ -4758,6 +4772,10 @@ export type Database = {
       confirm_match_score: {
         Args: { p_match_result_id: string; p_player_id: string };
         Returns: boolean;
+      };
+      count_current_level_proofs: {
+        Args: { p_player_rating_score_id: string };
+        Returns: number;
       };
       debug_check_conversation_participant: {
         Args: { p_conversation_id: string; p_player_id: string };
@@ -4984,6 +5002,13 @@ export type Database = {
         Returns: {
           label: string;
           value: string;
+        }[];
+      };
+      get_proof_counts: {
+        Args: { p_player_rating_score_id: string };
+        Returns: {
+          current_level_proofs_count: number;
+          total_proofs_count: number;
         }[];
       };
       get_public_communities: {
@@ -5244,12 +5269,18 @@ export type Database = {
       };
       search_facilities_nearby: {
         Args: {
+          p_court_types?: string[];
+          p_facility_types?: string[];
+          p_has_lighting?: boolean;
           p_latitude: number;
           p_limit?: number;
           p_longitude: number;
+          p_max_distance_km?: number;
+          p_membership_required?: boolean;
           p_offset?: number;
           p_search_query?: string;
           p_sport_id: string;
+          p_surface_types?: string[];
         };
         Returns: {
           address: string;
@@ -5259,10 +5290,26 @@ export type Database = {
           data_provider_type: string;
           distance_meters: number;
           external_provider_id: string;
+          facility_type: string;
           id: string;
           name: string;
           timezone: string;
         }[];
+      };
+      search_facilities_nearby_count: {
+        Args: {
+          p_court_types?: string[];
+          p_facility_types?: string[];
+          p_has_lighting?: boolean;
+          p_latitude: number;
+          p_longitude: number;
+          p_max_distance_km?: number;
+          p_membership_required?: boolean;
+          p_search_query?: string;
+          p_sport_id: string;
+          p_surface_types?: string[];
+        };
+        Returns: number;
       };
       search_matches_nearby: {
         Args: {
@@ -5285,6 +5332,7 @@ export type Database = {
           p_court_status?: string;
           p_date_range?: string;
           p_duration?: string;
+          p_facility_id?: string;
           p_format?: string;
           p_gender?: string;
           p_join_mode?: string;
@@ -5310,6 +5358,10 @@ export type Database = {
         Args: { p_organization_id: string };
         Returns: undefined;
       };
+      update_registration_paid_amount: {
+        Args: { p_registration_id: string };
+        Returns: number;
+      };
     };
     Enums: {
       account_status: 'active' | 'suspended' | 'deleted' | 'pending_verification';
@@ -5328,6 +5380,7 @@ export type Database = {
         | 'reserved'
         | 'under_maintenance'
         | 'closed';
+      badge_status_enum: 'self_declared' | 'certified' | 'disputed';
       booking_status:
         | 'pending'
         | 'confirmed'
@@ -5532,6 +5585,7 @@ export type Database = {
       share_channel_enum: 'sms' | 'email' | 'whatsapp' | 'share_sheet' | 'copy_link';
       share_status_enum: 'pending' | 'sent' | 'viewed' | 'accepted' | 'expired' | 'cancelled';
       skill_level: 'beginner' | 'intermediate' | 'advanced' | 'professional';
+      storage_provider_enum: 'supabase' | 'backblaze';
       surface_type_enum:
         | 'hard'
         | 'clay'
@@ -5688,6 +5742,7 @@ export const Constants = {
         'under_maintenance',
         'closed',
       ],
+      badge_status_enum: ['self_declared', 'certified', 'disputed'],
       booking_status: [
         'pending',
         'confirmed',
@@ -5881,6 +5936,7 @@ export const Constants = {
       share_channel_enum: ['sms', 'email', 'whatsapp', 'share_sheet', 'copy_link'],
       share_status_enum: ['pending', 'sent', 'viewed', 'accepted', 'expired', 'cancelled'],
       skill_level: ['beginner', 'intermediate', 'advanced', 'professional'],
+      storage_provider_enum: ['supabase', 'backblaze'],
       surface_type_enum: ['hard', 'clay', 'grass', 'synthetic', 'carpet', 'concrete', 'asphalt'],
       time_period: ['morning', 'afternoon', 'evening', 'night'],
       user_role: ['player', 'admin', 'super_admin'],

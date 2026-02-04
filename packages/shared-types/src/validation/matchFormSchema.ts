@@ -155,6 +155,8 @@ export const step3Schema = z.object({
   costSplitType: costSplitTypeSchema,
   estimatedCost: z.number().min(0).optional(),
   visibility: matchVisibilitySchema,
+  visibleInGroups: z.boolean().optional(),
+  visibleInCommunities: z.boolean().optional(),
   joinMode: matchJoinModeSchema,
   notes: z.string().max(500).optional(),
 });
@@ -199,6 +201,8 @@ export const matchFormSchema = z
     minRatingScoreId: z.string().optional(),
     preferredOpponentGender: z.enum(['male', 'female', 'other', 'any']).optional(),
     visibility: matchVisibilitySchema,
+    visibleInGroups: z.boolean().optional(),
+    visibleInCommunities: z.boolean().optional(),
     joinMode: matchJoinModeSchema,
     notes: z.string().max(500).optional(),
   })

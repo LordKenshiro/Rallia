@@ -275,6 +275,12 @@ export interface MatchFormData {
   /** Match visibility: public (discoverable) or private (invite only) */
   visibility: MatchVisibilityEnum;
 
+  /** When private: whether the match is visible in groups the creator is part of */
+  visibleInGroups?: boolean;
+
+  /** When private: whether the match is visible in communities the creator is part of */
+  visibleInCommunities?: boolean;
+
   /** How players join: direct (auto-approve) or request (manual approval) */
   joinMode: MatchJoinModeEnum;
 
