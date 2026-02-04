@@ -205,11 +205,10 @@ const styles = StyleSheet.create({
   },
   actionButtonsContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[3],
+    justifyContent: 'space-evenly',
+    paddingHorizontal: spacingPixels[2],
+    paddingTop: spacingPixels[2],
     paddingBottom: spacingPixels[2],
-    gap: spacingPixels[6],
   },
   actionButton: {
     alignItems: 'center',
