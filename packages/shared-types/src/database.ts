@@ -546,9 +546,6 @@ export type File = TableRow<'file'>;
 // Invitation
 export type Invitation = TableRow<'invitation'>;
 
-// Verification
-export type VerificationCode = TableRow<'verification_code'>;
-
 // Waitlist
 export type WaitlistSignup = TableRow<'waitlist_signup'>;
 
@@ -588,7 +585,6 @@ export type NotificationInsert = TableInsert<'notification'>;
 export type DeliveryAttemptInsert = TableInsert<'delivery_attempt'>;
 export type FileInsert = TableInsert<'file'>;
 export type InvitationInsert = TableInsert<'invitation'>;
-export type VerificationCodeInsert = TableInsert<'verification_code'>;
 export type WaitlistSignupInsert = TableInsert<'waitlist_signup'>;
 
 // ============================================
@@ -627,7 +623,6 @@ export type NotificationUpdate = TableUpdate<'notification'>;
 export type DeliveryAttemptUpdate = TableUpdate<'delivery_attempt'>;
 export type FileUpdate = TableUpdate<'file'>;
 export type InvitationUpdate = TableUpdate<'invitation'>;
-export type VerificationCodeUpdate = TableUpdate<'verification_code'>;
 export type WaitlistSignupUpdate = TableUpdate<'waitlist_signup'>;
 
 // ============================================
