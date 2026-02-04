@@ -663,6 +663,7 @@
     "gender": "Gender",
     "profilePicture": "Profile Picture",
     "changePhoto": "Change Photo",
+    "tapToChangePhoto": "Tap to change photo",
     "takePhoto": "Take Photo",
     "chooseFromGallery": "Choose from Gallery",
     "removePhoto": "Remove Photo",
