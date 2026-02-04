@@ -2751,6 +2751,8 @@
     "invite": {
       "title": "Inviter des joueurs",
       "description": "Invitez des joueurs à rejoindre votre partie",
+      "tabPlayers": "Joueurs",
+      "tabFromLists": "Depuis les listes",
       "searchPlaceholder": "Rechercher des joueurs...",
       "searching": "Recherche de joueurs...",
       "searchError": "Impossible de rechercher des joueurs",
@@ -2760,7 +2762,9 @@
       "sendInvitations": "Envoyer les invitations ({count})",
       "skip": "Passer",
       "invitationsSent": "Invitations envoyées!",
-      "invitationsSentCount": "{count} invitation(s) envoyée(s)"
+      "invitationsSentCount": "{count} invitation(s) envoyée(s)",
+      "shareWithContacts": "Partager avec {count} contact(s)",
+      "selectContactsFromLists": "Sélectionner des contacts dans vos listes"
     }
   },
   "home": {

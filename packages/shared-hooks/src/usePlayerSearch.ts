@@ -20,7 +20,8 @@ export const playerKeys = {
     query: string,
     filters: PlayerFilters,
     favoritePlayerIds: string[],
-    blockedPlayerIds: string[]
+    blockedPlayerIds: string[],
+    excludePlayerIds: string[]
   ) =>
     [
       ...playerKeys.search(),
@@ -30,6 +31,7 @@ export const playerKeys = {
       JSON.stringify(filters),
       JSON.stringify(favoritePlayerIds),
       JSON.stringify(blockedPlayerIds),
+      JSON.stringify(excludePlayerIds),
     ] as const,
 };
 
@@ -124,7 +126,8 @@ export function usePlayerSearch(options: UsePlayerSearchOptions): UsePlayerSearc
       debouncedQuery,
       filters,
       favoritePlayerIds,
-      blockedPlayerIds
+      blockedPlayerIds,
+      excludePlayerIds
     ),
     queryFn: async ({ pageParam }) => {
       if (!sportId) {

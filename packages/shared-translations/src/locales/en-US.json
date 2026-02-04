@@ -2751,6 +2751,8 @@
     "invite": {
       "title": "Invite Players",
       "description": "Invite players to join your game",
+      "tabPlayers": "Players",
+      "tabFromLists": "From lists",
       "searchPlaceholder": "Search players...",
       "searching": "Searching players...",
       "searchError": "Couldn't search players",
@@ -2760,7 +2762,9 @@
       "sendInvitations": "Send Invitations ({count})",
       "skip": "Skip",
       "invitationsSent": "Invitations sent!",
-      "invitationsSentCount": "Sent {count} invitation(s)"
+      "invitationsSentCount": "Sent {count} invitation(s)",
+      "shareWithContacts": "Share with {count} contact(s)",
+      "selectContactsFromLists": "Select contacts from your lists"
     }
   },
   "home": {

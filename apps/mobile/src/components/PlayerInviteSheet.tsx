@@ -100,11 +100,11 @@ export function PlayerInviteActionSheet({ payload }: SheetProps<'player-invite'>
       indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
       <View style={styles.container}>
-        {/* Close button */}
+        {/* Close button - simple icon, no rounded background (matches other sheets) */}
         <View style={styles.closeButtonContainer}>
           <TouchableOpacity
             onPress={handleClose}
-            style={[styles.closeButton, { backgroundColor: themeColors.muted }]}
+            style={styles.closeButton}
             activeOpacity={0.7}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
@@ -122,7 +122,6 @@ export function PlayerInviteActionSheet({ payload }: SheetProps<'player-invite'>
           colors={colors}
           t={t}
           isDark={isDark}
-          showSkip={false}
         />
       </View>
     </ActionSheet>
@@ -158,11 +157,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: spacingPixels[1],
   },
 });
 

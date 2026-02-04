@@ -8,3 +8,4 @@ export { default as ContactCard } from './components/ContactCard';
 export { AddContactActionSheet } from './components/AddContactModal';
 export { ImportContactsActionSheet } from './components/ImportContactsModal';
 export { ShareMatchActionSheet } from './components/ShareMatchModal';
+export { InviteFromListsStep } from './components/InviteFromListsStep';

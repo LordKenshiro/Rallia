@@ -1172,7 +1172,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                 sportId={selectedSport.id}
                 hostId={session.user.id}
                 onComplete={() => {
-                  // After invitations sent or skipped, go to match detail
+                  // Close invite step and go to match detail
                   onSuccess?.(successMatchId);
                 }}
                 colors={{
@@ -1181,6 +1181,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                 }}
                 t={t}
                 isDark={isDark}
+                showCloseButton
               />
             )}
           </View>
