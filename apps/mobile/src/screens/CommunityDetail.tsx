@@ -68,6 +68,12 @@ type TabKey = 'home' | 'leaderboard' | 'activity';
 
 const TAB_KEYS: TabKey[] = ['home', 'leaderboard', 'activity'];
 
+const TAB_ICONS: Record<TabKey, keyof typeof Ionicons.glyphMap> = {
+  home: 'home-outline',
+  leaderboard: 'podium-outline',
+  activity: 'flash-outline',
+};
+
 // Storage key for "never show intro again"
 const ADD_SCORE_INTRO_KEY = 'rallia_add_score_intro_dismissed';
 
@@ -1460,19 +1466,31 @@ export default function CommunityDetailScreen() {
         </View>
 
         {/* Tab Bar */}
-        <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
+        <View style={[styles.tabContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
           {TAB_KEYS.map(tabKey => (
             <TouchableOpacity
               key={tabKey}
               style={[
                 styles.tab,
-                activeTab === tabKey && { borderBottomColor: colors.primary, borderBottomWidth: 2 },
+                activeTab === tabKey && [
+                  styles.activeTab,
+                  { backgroundColor: colors.cardBackground },
+                ],
               ]}
               onPress={() => setActiveTab(tabKey)}
             >
+              <Ionicons
+                name={TAB_ICONS[tabKey]}
+                size={18}
+                color={activeTab === tabKey ? colors.primary : colors.textMuted}
+              />
               <Text
-                weight={activeTab === tabKey ? 'semibold' : 'regular'}
-                style={{ color: activeTab === tabKey ? colors.primary : colors.textSecondary }}
+                size="sm"
+                weight={activeTab === tabKey ? 'semibold' : 'medium'}
+                style={{
+                  color: activeTab === tabKey ? colors.primary : colors.textMuted,
+                  marginLeft: 6,
+                }}
               >
                 {t(`community.tabs.${tabKey}` as TranslationKey)}
               </Text>
@@ -1783,16 +1801,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  tabBar: {
+  tabContainer: {
     flexDirection: 'row',
     marginTop: 24,
     marginHorizontal: 16,
-    borderBottomWidth: 1,
+    marginBottom: 12,
+    borderRadius: 12,
+    padding: 4,
   },
   tab: {
     flex: 1,
-    paddingVertical: 14,
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  activeTab: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   tabContent: {
     padding: 16,

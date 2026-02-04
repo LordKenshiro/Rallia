@@ -481,7 +481,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
       </View>
 
       {/* Tab bar: Players | From lists */}
-      <View style={[styles.tabContainer, { backgroundColor: colors.buttonInactive }]}>
+      <View style={[styles.tabContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
         <TouchableOpacity
           style={[
             styles.tab,

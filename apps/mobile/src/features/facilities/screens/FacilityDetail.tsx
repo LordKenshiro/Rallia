@@ -15,9 +15,6 @@ import {
   RefreshControl,
   Linking,
   Platform,
-  Animated,
-  Dimensions,
-  LayoutChangeEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -59,8 +56,6 @@ const TAB_ICONS: Record<TabKey, keyof typeof Ionicons.glyphMap> = {
   matches: 'tennisball-outline',
 };
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
 // =============================================================================
 // MAIN COMPONENT
 // =============================================================================
@@ -78,11 +73,6 @@ export default function FacilityDetail() {
 
   // Active tab state
   const [activeTab, setActiveTab] = useState<TabKey>('info');
-
-  // Tab bar animation
-  const tabIndicatorAnim = useMemo(() => new Animated.Value(0), []);
-  const [tabWidths, setTabWidths] = useState<number[]>([]);
-  const [tabPositions, setTabPositions] = useState<number[]>([]);
 
   // Fetch facility details
   const { facility, courts, contacts, isLoading, isFetching, refetch } = useFacilityDetail({
@@ -146,42 +136,6 @@ export default function FacilityDetail() {
     toast,
   ]);
 
-  // Animate tab indicator when tab changes
-  const animateToTab = useCallback(
-    (index: number) => {
-      if (tabPositions.length === 0 || tabWidths.length === 0) return;
-
-      Animated.spring(tabIndicatorAnim, {
-        toValue: tabPositions[index] || 0,
-        useNativeDriver: true,
-        tension: 68,
-        friction: 10,
-      }).start();
-    },
-    [tabIndicatorAnim, tabPositions, tabWidths]
-  );
-
-  // Handle tab layout measurement
-  const handleTabLayout = useCallback((index: number, event: LayoutChangeEvent) => {
-    const { x, width } = event.nativeEvent.layout;
-    setTabPositions(prev => {
-      const newPositions = [...prev];
-      newPositions[index] = x;
-      return newPositions;
-    });
-    setTabWidths(prev => {
-      const newWidths = [...prev];
-      newWidths[index] = width;
-      return newWidths;
-    });
-  }, []);
-
-  // Animate to active tab when positions are ready
-  useEffect(() => {
-    const activeIndex = TAB_KEYS.indexOf(activeTab);
-    animateToTab(activeIndex);
-  }, [activeTab, tabPositions, animateToTab]);
-
   // Handle refresh (only for info and availability tabs - matches tab handles its own refresh)
   const handleRefresh = useCallback(() => {
     refetch();
@@ -223,51 +177,9 @@ export default function FacilityDetail() {
     });
   }, [facility]);
 
-  // Render tab button
-  const renderTabButton = useCallback(
-    (tab: TabKey, index: number) => {
-      const isActive = activeTab === tab;
-      const tabLabel = t(`facilityDetail.tabs.${tab}` as Parameters<typeof t>[0]);
-      const iconName = TAB_ICONS[tab];
-
-      return (
-        <TouchableOpacity
-          key={tab}
-          onPress={() => {
-            lightHaptic();
-            setActiveTab(tab);
-          }}
-          onLayout={e => handleTabLayout(index, e)}
-          style={styles.tabButton}
-          activeOpacity={0.7}
-        >
-          <View style={styles.tabButtonContent}>
-            <Ionicons
-              name={iconName}
-              size={18}
-              color={isActive ? colors.primary : colors.textMuted}
-            />
-            <Text
-              size="sm"
-              weight={isActive ? 'semibold' : 'regular'}
-              color={isActive ? colors.primary : colors.textMuted}
-            >
-              {tabLabel}
-            </Text>
-          </View>
-        </TouchableOpacity>
-      );
-    },
-    [activeTab, colors, t, handleTabLayout]
-  );
-
   // Theme-aware skeleton colors
   const skeletonBg = isDark ? neutral[800] : '#E1E9EE';
   const skeletonHighlight = isDark ? neutral[700] : '#F2F8FC';
-
-  // Get active tab indicator width
-  const activeIndex = TAB_KEYS.indexOf(activeTab);
-  const indicatorWidth = tabWidths[activeIndex] || SCREEN_WIDTH / 3;
 
   // Loading state
   if (isLoading) {
@@ -437,25 +349,43 @@ export default function FacilityDetail() {
         </TouchableOpacity>
       </View>
 
-      {/* Polished Tab Bar */}
-      <View style={[styles.tabBar, { backgroundColor: isDark ? neutral[900] : neutral[50] }]}>
-        <View style={styles.tabBarInner}>
-          {/* Animated indicator */}
-          {tabWidths.length === TAB_KEYS.length && (
-            <Animated.View
+      {/* Tab Bar (pill style – matches Communities) */}
+      <View style={[styles.tabBar, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
+        {TAB_KEYS.map(tab => {
+          const isActive = activeTab === tab;
+          const tabLabel = t(`facilityDetail.tabs.${tab}` as Parameters<typeof t>[0]);
+          const iconName = TAB_ICONS[tab];
+          return (
+            <TouchableOpacity
+              key={tab}
+              onPress={() => {
+                lightHaptic();
+                setActiveTab(tab);
+              }}
               style={[
-                styles.tabIndicator,
-                {
-                  backgroundColor: isDark ? neutral[800] : colors.card,
-                  width: indicatorWidth - spacingPixels[1],
-                  transform: [{ translateX: tabIndicatorAnim }],
-                },
-                shadowsNative.sm,
+                styles.tab,
+                isActive && [styles.activeTab, { backgroundColor: colors.cardBackground }],
               ]}
-            />
-          )}
-          {TAB_KEYS.map((tab, index) => renderTabButton(tab, index))}
-        </View>
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={iconName}
+                size={18}
+                color={isActive ? colors.primary : colors.textMuted}
+              />
+              <Text
+                size="sm"
+                weight={isActive ? 'semibold' : 'medium'}
+                style={{
+                  color: isActive ? colors.primary : colors.textMuted,
+                  marginLeft: 6,
+                }}
+              >
+                {tabLabel}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {/* Tab content */}
@@ -601,34 +531,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  // Tab bar styles
+  // Tab bar styles (pill container – matches Communities)
   tabBar: {
+    flexDirection: 'row',
     marginTop: spacingPixels[3],
-    marginHorizontal: spacingPixels[3],
-    borderRadius: radiusPixels.xl,
-    padding: spacingPixels[1],
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 12,
+    padding: 4,
   },
-  tabBarInner: {
-    flexDirection: 'row',
-    position: 'relative',
-  },
-  tabIndicator: {
-    position: 'absolute',
-    top: 0,
-    left: spacingPixels[0.5],
-    bottom: 0,
-    borderRadius: radiusPixels.lg,
-  },
-  tabButton: {
+  tab: {
     flex: 1,
-    paddingVertical: spacingPixels[2.5],
-    alignItems: 'center',
-    zIndex: 1,
-  },
-  tabButtonContent: {
     flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: spacingPixels[1.5],
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  activeTab: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   // Content styles
   content: {

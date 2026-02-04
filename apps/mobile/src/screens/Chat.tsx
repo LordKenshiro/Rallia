@@ -455,7 +455,9 @@ const Chat = () => {
         order={31}
         name="chat_tabs"
       >
-        <WalkthroughableView style={[styles.tabBar, { borderBottomColor: colors.border }]}>
+        <WalkthroughableView
+          style={[styles.tabContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}
+        >
           {TAB_CONFIGS.map(tab => {
             const isActive = activeTab === tab.key;
             const count = tabCounts[tab.key];
@@ -465,8 +467,7 @@ const Chat = () => {
                 key={tab.key}
                 style={[
                   styles.tab,
-                  isActive && styles.activeTab,
-                  isActive && { borderBottomColor: primary[500] },
+                  isActive && [styles.activeTab, { backgroundColor: colors.cardBackground }],
                 ]}
                 onPress={() => {
                   selectionHaptic();
@@ -477,17 +478,13 @@ const Chat = () => {
                 <Ionicons
                   name={tab.icon}
                   size={18}
-                  color={isActive ? primary[500] : colors.textMuted}
+                  color={isActive ? colors.primary : colors.textMuted}
                   style={styles.tabIcon}
                 />
                 <Text
-                  style={[
-                    styles.tabLabel,
-                    {
-                      color: isActive ? primary[500] : colors.textMuted,
-                      fontWeight: isActive ? '600' : '500',
-                    },
-                  ]}
+                  size="sm"
+                  weight={isActive ? 'semibold' : 'medium'}
+                  style={[styles.tabLabel, { color: isActive ? colors.primary : colors.textMuted }]}
                 >
                   {label}
                 </Text>
@@ -495,7 +492,7 @@ const Chat = () => {
                   <View
                     style={[
                       styles.tabBadge,
-                      { backgroundColor: isActive ? primary[500] : neutral[400] },
+                      { backgroundColor: isActive ? colors.primary : neutral[400] },
                     ]}
                   >
                     <Text style={styles.tabBadgeText}>{count > 99 ? '99+' : count}</Text>
@@ -668,26 +665,32 @@ const styles = StyleSheet.create({
     marginTop: spacingPixels[2],
     textAlign: 'center',
   },
-  // Tab bar styles
-  tabBar: {
+  // Tab bar styles (pill container – matches Communities)
+  tabContainer: {
     flexDirection: 'row',
-    borderBottomWidth: 1,
-    paddingHorizontal: spacingPixels[2],
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 12,
+    borderRadius: 12,
+    padding: 4,
   },
   tab: {
     flex: 1,
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacingPixels[3],
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
   },
   activeTab: {
-    borderBottomWidth: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   tabIcon: {
-    marginRight: spacingPixels[1],
+    marginRight: 6,
   },
   tabLabel: {
     fontSize: fontSizePixels.sm,

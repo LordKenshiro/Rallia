@@ -26,7 +26,7 @@ import type { TranslationKey } from '@rallia/shared-translations';
 import { useMatchDetailSheet, useDeepLink, useSport } from '../../../context';
 import { Logger } from '@rallia/shared-services';
 import { PlayerMatchFilterChips } from '../components';
-import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
+import { spacingPixels } from '@rallia/design-system';
 
 // =============================================================================
 // TYPES
@@ -230,15 +230,6 @@ export default function PlayerMatches() {
   }, [deepLinkMatch, isLoadingDeepLinkMatch, openMatchDetail]);
 
   // Theme colors
-  const tabColors = useMemo(
-    () => ({
-      activeBackground: isDark ? primary[600] : primary[500],
-      activeText: '#ffffff',
-      inactiveBackground: isDark ? neutral[800] : neutral[100],
-      inactiveText: isDark ? neutral[400] : neutral[600],
-    }),
-    [isDark]
-  );
 
   // Fetch matches based on active tab and filter
   const {
@@ -387,21 +378,32 @@ export default function PlayerMatches() {
     );
   };
 
-  // Render tab bar
+  // Render tab bar (pill style – matches Communities)
   const renderTabBar = () => (
-    <View style={[styles.tabBar, { backgroundColor: tabColors.inactiveBackground }]}>
+    <View style={[styles.tabBar, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
       <TouchableOpacity
         style={[
           styles.tab,
-          activeTab === 'upcoming' && { backgroundColor: tabColors.activeBackground },
+          activeTab === 'upcoming' && [
+            styles.activeTab,
+            { backgroundColor: colors.cardBackground },
+          ],
         ]}
         onPress={() => handleTabChange('upcoming')}
         activeOpacity={0.8}
       >
+        <Ionicons
+          name="calendar-outline"
+          size={18}
+          color={activeTab === 'upcoming' ? colors.primary : colors.textMuted}
+        />
         <Text
           size="sm"
-          weight="semibold"
-          color={activeTab === 'upcoming' ? tabColors.activeText : tabColors.inactiveText}
+          weight={activeTab === 'upcoming' ? 'semibold' : 'medium'}
+          style={{
+            color: activeTab === 'upcoming' ? colors.primary : colors.textMuted,
+            marginLeft: 6,
+          }}
         >
           {t('playerMatches.tabs.upcoming' as TranslationKey)}
         </Text>
@@ -409,15 +411,23 @@ export default function PlayerMatches() {
       <TouchableOpacity
         style={[
           styles.tab,
-          activeTab === 'past' && { backgroundColor: tabColors.activeBackground },
+          activeTab === 'past' && [styles.activeTab, { backgroundColor: colors.cardBackground }],
         ]}
         onPress={() => handleTabChange('past')}
         activeOpacity={0.8}
       >
+        <Ionicons
+          name="time-outline"
+          size={18}
+          color={activeTab === 'past' ? colors.primary : colors.textMuted}
+        />
         <Text
           size="sm"
-          weight="semibold"
-          color={activeTab === 'past' ? tabColors.activeText : tabColors.inactiveText}
+          weight={activeTab === 'past' ? 'semibold' : 'medium'}
+          style={{
+            color: activeTab === 'past' ? colors.primary : colors.textMuted,
+            marginLeft: 6,
+          }}
         >
           {t('playerMatches.tabs.past' as TranslationKey)}
         </Text>
@@ -494,18 +504,26 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    marginHorizontal: spacingPixels[4],
+    marginHorizontal: 16,
     marginTop: spacingPixels[3],
-    marginBottom: spacingPixels[2],
-    borderRadius: radiusPixels.lg,
-    padding: spacingPixels[1],
+    marginBottom: 12,
+    borderRadius: 12,
+    padding: 4,
   },
   tab: {
     flex: 1,
-    paddingVertical: spacingPixels[2.5],
-    alignItems: 'center',
+    flexDirection: 'row',
     justifyContent: 'center',
-    borderRadius: radiusPixels.md,
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  activeTab: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   listContent: {
     paddingTop: spacingPixels[2],
