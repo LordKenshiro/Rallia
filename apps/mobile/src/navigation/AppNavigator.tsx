@@ -40,7 +40,8 @@ import { useUnreadNotificationCount, useProfile, useTotalUnreadCount } from '@ra
 import { useAuth, useThemeStyles, useTranslation, useRequireOnboarding } from '../hooks';
 import { useTheme } from '@rallia/shared-hooks';
 import { useAppNavigation } from './hooks';
-import { spacingPixels, fontSizePixels, fontWeightNumeric } from '@rallia/design-system';
+import { spacingPixels, fontSizePixels } from '@rallia/design-system';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 // Screens
@@ -195,19 +196,76 @@ function SportSelectorWithContext() {
 // =============================================================================
 
 /**
- * Common header style for shared screens (UserProfile, Settings, etc.)
- * Note: Colors are applied dynamically via inline styles in screen options
+ * Custom header for shared screens (UserProfile, Settings, etc.)
+ * Matches MainTabHeader height/style but shows back button + centered title.
  */
-const getSharedScreenOptions = (colors: ReturnType<typeof useThemeStyles>['colors']) => ({
+function SharedScreenHeader({
+  navigation,
+  options,
+}: {
+  navigation: { goBack: () => void };
+  options: {
+    headerTitle?: string | (() => React.ReactNode);
+    headerRight?: (props: { tintColor?: string }) => React.ReactNode;
+  };
+}) {
+  const insets = useSafeAreaInsets();
+  const { colors } = useThemeStyles();
+  const title = typeof options.headerTitle === 'string' ? options.headerTitle : '';
+  const HeaderRight = options.headerRight;
+
+  return (
+    <View
+      style={{
+        backgroundColor: colors.headerBackground,
+        paddingTop: insets.top,
+        borderBottomWidth: 0.5,
+        borderBottomColor: colors.border,
+      }}
+    >
+      <View
+        style={{
+          height: HEADER_CONTENT_HEIGHT,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: spacingPixels[1],
+        }}
+      >
+        <View style={{ position: 'absolute', left: 0 }}>
+          <ThemedBackButton navigation={navigation} />
+        </View>
+        <RNText
+          style={{
+            fontSize: fontSizePixels.lg,
+            fontWeight: '600',
+            color: colors.headerForeground,
+          }}
+        >
+          {title}
+        </RNText>
+        {HeaderRight && (
+          <View style={{ position: 'absolute', right: spacingPixels[1] }}>
+            <HeaderRight tintColor={colors.headerForeground} />
+          </View>
+        )}
+      </View>
+    </View>
+  );
+}
+
+const getSharedScreenOptions = () => ({
   headerShown: true,
-  headerStyle: { backgroundColor: colors.headerBackground },
-  headerTintColor: colors.headerForeground,
-  headerTitleStyle: {
-    fontSize: fontSizePixels.lg,
-    fontWeight: String(fontWeightNumeric.semibold) as '600',
-    color: colors.headerForeground,
-  },
-  headerTitleAlign: 'center' as const,
+  header: ({
+    navigation,
+    options,
+  }: {
+    navigation: { goBack: () => void };
+    options: {
+      headerTitle?: string;
+      headerRight?: (props: { tintColor?: string }) => React.ReactNode;
+    };
+  }) => <SharedScreenHeader navigation={navigation} options={options} />,
 });
 
 /**
@@ -218,8 +276,8 @@ const getSharedScreenOptions = (colors: ReturnType<typeof useThemeStyles>['color
 function ProfilePictureButtonWithAuth() {
   const navigation = useAppNavigation();
   const { isReady, guardAction } = useRequireOnboarding();
-  const { session: _session } = useAuth();
-  const { openSheet: _openSheet } = useActionsSheet();
+  useAuth();
+  useActionsSheet();
   const { t } = useTranslation();
 
   const handlePress = () => {
@@ -267,23 +325,51 @@ function HeaderRightButtons() {
 }
 
 /**
+ * Custom header for main tab screens with configurable content height.
+ * Native stack's headerStyle.height has no effect on iOS, so we use
+ * a fully custom header via the `header` prop instead.
+ */
+const HEADER_CONTENT_HEIGHT = 52; // default native is 44
+
+function MainTabHeader() {
+  const insets = useSafeAreaInsets();
+  const { colors } = useThemeStyles();
+
+  return (
+    <View
+      style={{
+        backgroundColor: colors.headerBackground,
+        paddingTop: insets.top,
+        borderBottomWidth: 0.5,
+        borderBottomColor: colors.border,
+      }}
+    >
+      <View
+        style={{
+          height: HEADER_CONTENT_HEIGHT,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: spacingPixels[1],
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <ProfilePictureButtonWithAuth />
+          <SportSelectorWithContext />
+        </View>
+        <HeaderRightButtons />
+      </View>
+    </View>
+  );
+}
+
+/**
  * Header options for main tab screens (Home, Courts, Community, Chat)
  */
 function useMainScreenOptions() {
-  const { colors } = useThemeStyles();
   return {
     headerShown: true,
-    headerStyle: {
-      backgroundColor: colors.headerBackground,
-    },
-    headerTitleStyle: {
-      fontSize: fontSizePixels.lg,
-      fontWeight: String(fontWeightNumeric.semibold) as '600',
-      color: colors.headerForeground,
-    },
-    headerLeft: () => <ProfilePictureButtonWithAuth />,
-    headerTitle: () => <SportSelectorWithContext />,
-    headerRight: () => <HeaderRightButtons />,
+    header: () => <MainTabHeader />,
   };
 }
 
@@ -313,9 +399,8 @@ function MapIconButton() {
  * Header options for PublicMatches screen
  */
 function usePublicMatchesScreenOptions() {
-  const { colors } = useThemeStyles();
   const { t } = useTranslation();
-  const sharedOptions = getSharedScreenOptions(colors);
+  const sharedOptions = getSharedScreenOptions();
 
   return ({
     navigation,
@@ -333,9 +418,8 @@ function usePublicMatchesScreenOptions() {
  * Header options for PlayerMatches screen
  */
 function usePlayerMatchesScreenOptions() {
-  const { colors } = useThemeStyles();
   const { t } = useTranslation();
-  const sharedOptions = getSharedScreenOptions(colors);
+  const sharedOptions = getSharedScreenOptions();
 
   return ({
     navigation,
@@ -384,9 +468,8 @@ function HomeStack() {
  */
 function CourtsStack() {
   const mainScreenOptions = useMainScreenOptions();
-  const { colors } = useThemeStyles();
   const { t } = useTranslation();
-  const sharedOptions = getSharedScreenOptions(colors);
+  const sharedOptions = getSharedScreenOptions();
 
   return (
     <CourtsStackNavigator.Navigator id="CourtsStack" screenOptions={fastAnimationOptions}>
@@ -413,9 +496,8 @@ function CourtsStack() {
  */
 function CommunityStack() {
   const mainScreenOptions = useMainScreenOptions();
-  const { colors } = useThemeStyles();
   const { t } = useTranslation();
-  const sharedOptions = getSharedScreenOptions(colors);
+  const sharedOptions = getSharedScreenOptions();
 
   return (
     <CommunityStackNavigator.Navigator id="CommunityStack" screenOptions={fastAnimationOptions}>
@@ -469,9 +551,8 @@ function CommunityStack() {
  */
 function ChatStack() {
   const mainScreenOptions = useMainScreenOptions();
-  const { colors } = useThemeStyles();
   const { t } = useTranslation();
-  const sharedOptions = getSharedScreenOptions(colors);
+  const sharedOptions = getSharedScreenOptions();
   return (
     <ChatStackNavigator.Navigator id="ChatStack" screenOptions={fastAnimationOptions}>
       <ChatStackNavigator.Screen
@@ -882,10 +963,9 @@ function ThemedBackButton({
  *   These are full-screen (tabs hidden) and accessible from anywhere
  */
 export default function AppNavigator() {
-  const { colors } = useThemeStyles();
   const { t } = useTranslation();
   const { isSportSelectionComplete } = useOverlay();
-  const sharedOptions = getSharedScreenOptions(colors);
+  const sharedOptions = getSharedScreenOptions();
 
   return (
     <RootStack.Navigator
