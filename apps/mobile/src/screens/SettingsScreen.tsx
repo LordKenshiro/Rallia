@@ -264,15 +264,6 @@ const SettingsScreen: React.FC = () => {
           </View>
         )}
 
-        {/* Settings Items - Available to all users */}
-        <View style={[styles.settingsGroup, { backgroundColor: colors.background }]}>
-          <SettingsItem
-            icon="shield-checkmark-outline"
-            title={t('settings.permissions')}
-            onPress={handlePermissions}
-          />
-        </View>
-
         {/* Preferred Language */}
         <View style={[styles.preferenceSection, { backgroundColor: colors.background }]}>
           <View style={styles.preferenceTitleRow}>
