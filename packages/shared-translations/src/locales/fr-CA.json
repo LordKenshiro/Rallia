@@ -2297,6 +2297,7 @@
     "checkInFailed": "Échec de la confirmation",
     "checkInTooFar": "Vous devez être à moins de 100 mètres du lieu de la partie pour confirmer votre présence.",
     "checkInError": "Impossible de confirmer votre présence. Veuillez réessayer.",
+    "checkInNoLocation": "Cette partie n'a pas d'emplacement précis. Demandez à l'organisateur de mettre à jour le lieu pour confirmer votre présence.",
     "checkInLocationError": "Impossible d'obtenir votre position. Veuillez vérifier que les services de localisation sont activés.",
     "alreadyCheckedIn": "Vous avez déjà confirmé votre présence à cette partie.",
     "matchCancelled": "Cette partie a été annulée",

@@ -1060,8 +1060,11 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       // Combine address and city for locationAddress
       const fullAddress = [facility.address, facility.city].filter(Boolean).join(', ');
       setValue('locationAddress', fullAddress || undefined, { shouldDirty: true });
+      // Update timezone to facility's timezone when set, otherwise keep device timezone
+      const facilityTimezone = facility.timezone || deviceTimezone;
+      setValue('timezone', facilityTimezone, { shouldDirty: true });
     },
-    [setValue]
+    [setValue, deviceTimezone]
   );
 
   // Handle clearing selected facility
@@ -1087,7 +1090,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       setValue('locationName', place.name, { shouldValidate: true, shouldDirty: true });
       setValue('locationAddress', place.address || undefined, { shouldDirty: true });
 
-      // Fetch place details to get coordinates
+      // Fetch place details to get coordinates and timezone
       setIsFetchingPlaceDetails(true);
       try {
         const details = await getPlaceDetails(place.placeId);
@@ -1099,6 +1102,9 @@ export const WhereStep: React.FC<WhereStepProps> = ({
           // Store coordinates
           setValue('customLatitude', details.latitude, { shouldDirty: true });
           setValue('customLongitude', details.longitude, { shouldDirty: true });
+          // Update timezone to place's timezone (from Google Time Zone API) or device timezone
+          const placeTimezone = details.timezone || deviceTimezone;
+          setValue('timezone', placeTimezone, { shouldDirty: true });
         }
       } catch (error) {
         console.error('Failed to fetch place details:', error);
@@ -1107,7 +1113,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
         setIsFetchingPlaceDetails(false);
       }
     },
-    [setValue, clearPredictions, getPlaceDetails]
+    [setValue, clearPredictions, getPlaceDetails, deviceTimezone]
   );
 
   // Handle clearing selected place

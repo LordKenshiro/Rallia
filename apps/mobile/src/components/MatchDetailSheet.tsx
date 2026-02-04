@@ -862,6 +862,8 @@ export const MatchDetailSheet: React.FC = () => {
       errorHaptic();
       if (result.error === 'too_far') {
         toast.error(t('matchDetail.checkInTooFar' as TranslationKey));
+      } else if (result.error === 'no_location') {
+        toast.error(t('matchDetail.checkInNoLocation' as TranslationKey));
       } else if (result.error === 'already_checked_in') {
         // Already checked in - just refresh the UI
         toast.info(t('matchDetail.alreadyCheckedIn' as TranslationKey));
@@ -1702,8 +1704,43 @@ export const MatchDetailSheet: React.FC = () => {
       );
     }
 
-    // Match has results → Score is shown in scroll view; footer shows "Match completed"
+    // Match has results → Show "Match completed" unless current player still needs to give feedback
     if (hasResult && match.result) {
+      if (isWithinFeedbackWindow && playerNeedsFeedback && currentPlayerParticipant) {
+        return (
+          <Button
+            variant="primary"
+            onPress={() => {
+              mediumHaptic();
+              const opponents: OpponentForFeedback[] = (match.participants ?? [])
+                .filter(p => p.player_id !== playerId && p.status === 'joined')
+                .map(p => {
+                  const profile = p.player?.profile;
+                  const firstName = profile?.first_name || '';
+                  const lastName = profile?.last_name || '';
+                  const displayName = profile?.display_name;
+                  const name = displayName || firstName || 'Player';
+                  const fullName = displayName || `${firstName} ${lastName}`.trim() || 'Player';
+                  return {
+                    participantId: p.id,
+                    playerId: p.player_id,
+                    name,
+                    fullName,
+                    avatarUrl: profile?.profile_picture_url || null,
+                    hasExistingFeedback: false,
+                  };
+                });
+              openFeedbackSheet(match.id, playerId!, currentPlayerParticipant.id, opponents);
+            }}
+            style={styles.actionButton}
+            themeColors={successThemeColors}
+            isDark={isDark}
+            leftIcon={<Ionicons name="star-outline" size={18} color={base.white} />}
+          >
+            {t('matchDetail.provideFeedback' as TranslationKey)}
+          </Button>
+        );
+      }
       return (
         <View style={styles.matchEndedContainer}>
           <Ionicons name="trophy-outline" size={20} color={colors.textMuted} />

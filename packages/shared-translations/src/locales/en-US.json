@@ -2297,6 +2297,7 @@
     "checkInFailed": "Check-in Failed",
     "checkInTooFar": "You need to be within 100 meters of the game location to check in.",
     "checkInError": "Unable to check in. Please try again.",
+    "checkInNoLocation": "This match doesn't have a precise location set. Ask the organizer to update the location so you can check in.",
     "checkInLocationError": "Unable to get your location. Please ensure location services are enabled.",
     "alreadyCheckedIn": "You have already checked in to this game.",
     "matchCancelled": "This game was cancelled",
