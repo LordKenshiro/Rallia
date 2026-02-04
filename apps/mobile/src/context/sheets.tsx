@@ -18,6 +18,7 @@ import { EditCommunityActionSheet } from '../features/communities/components/Edi
 // Matches components
 import { MatchTypeActionSheet } from '../features/matches/components/MatchTypeModal';
 import { ScoreConfirmationActionSheet } from '../features/matches/components/ScoreConfirmationModal';
+import { RegisterMatchScoreActionSheet } from '../features/matches/components/RegisterMatchScoreSheet';
 import { BookingConfirmationActionSheet } from '../features/matches/components/BookingConfirmationSheet';
 import { CourtSelectionActionSheet } from '../features/matches/components/CourtSelectionSheet';
 // Facilities components
@@ -252,6 +253,12 @@ declare module 'react-native-actions-sheet' {
       payload: {
         confirmation: unknown;
         playerId: string;
+      };
+    }>;
+    'register-match-score': SheetDefinition<{
+      payload: {
+        match: import('@rallia/shared-types').MatchWithDetails;
+        onSuccess?: () => void;
       };
     }>;
     'booking-confirmation': SheetDefinition<{
@@ -517,6 +524,7 @@ export const Sheets = () => {
         'edit-community': EditCommunityActionSheet,
         'match-type': MatchTypeActionSheet,
         'score-confirmation': ScoreConfirmationActionSheet,
+        'register-match-score': RegisterMatchScoreActionSheet,
         'booking-confirmation': BookingConfirmationActionSheet,
         'court-selection': CourtSelectionActionSheet,
         'external-booking': ExternalBookingActionSheet,

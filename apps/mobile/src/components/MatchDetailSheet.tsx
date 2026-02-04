@@ -66,7 +66,8 @@ import {
   type TranslationKey,
 } from '../hooks';
 import { useTheme, usePlayer, useMatchActions } from '@rallia/shared-hooks';
-import { getMatchChat } from '@rallia/shared-services';
+import { getMatchChat, getMatchWithDetails } from '@rallia/shared-services';
+import { SheetManager } from 'react-native-actions-sheet';
 import { shareMatch } from '../utils';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import { ConfirmationModal } from './ConfirmationModal';
@@ -388,7 +389,7 @@ function willCancelAffectReputation(match: MatchDetailData): boolean {
 // =============================================================================
 
 interface InfoRowProps {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon?: keyof typeof Ionicons.glyphMap;
   iconColor?: string;
   children: React.ReactNode;
   colors: ThemeColors;
@@ -396,9 +397,11 @@ interface InfoRowProps {
 
 const InfoRow: React.FC<InfoRowProps> = ({ icon, iconColor, children, colors }) => (
   <View style={styles.infoRow}>
-    <View style={styles.infoIconContainer}>
-      <Ionicons name={icon} size={20} color={iconColor || colors.iconMuted} />
-    </View>
+    {icon != null && (
+      <View style={styles.infoIconContainer}>
+        <Ionicons name={icon} size={20} color={iconColor || colors.iconMuted} />
+      </View>
+    )}
     <View style={styles.infoContent}>{children}</View>
   </View>
 );
@@ -913,6 +916,21 @@ export const MatchDetailSheet: React.FC = () => {
     selectionHaptic();
     closeSheet();
   }, [closeSheet]);
+
+  // Handle register score (from match detail during feedback window)
+  const handleRegisterScore = useCallback(() => {
+    if (!selectedMatch) return;
+    mediumHaptic();
+    SheetManager.show('register-match-score', {
+      payload: {
+        match: selectedMatch,
+        onSuccess: async () => {
+          const refreshed = await getMatchWithDetails(selectedMatch.id);
+          if (refreshed) updateSelectedMatch(refreshed as MatchDetailData);
+        },
+      },
+    });
+  }, [selectedMatch, updateSelectedMatch]);
 
   // Handle share - uses rich message with match details and deep link
   const handleShare = useCallback(async () => {
@@ -1607,16 +1625,16 @@ export const MatchDetailSheet: React.FC = () => {
   // 6. Request mode → "Request to Join" button
   // 7. Default → "Join Now" button
   const renderActionButtons = () => {
-    // CTA colors matching MatchCard for consistency:
-    // - Positive (Join/Check-in/Feedback): primary (teal)
+    // CTA colors matching MatchCreationWizard (nextButton): same buttonActive / primary as wizard
+    // - Positive (Join/Check-in/Feedback): primary (teal) – primary[500] dark / primary[600] light
     // - Destructive (Leave/Cancel): secondary (coral)
     // - Edit: accent (amber)
     // - Pending/Waitlisted: neutral bg with secondary text
-    const ctaPositive = isDark ? primary[400] : primary[500];
+    const ctaPositive = isDark ? primary[500] : primary[600];
     const ctaDestructive = isDark ? secondary[400] : secondary[500];
     const ctaAccent = isDark ? accent[400] : accent[500];
 
-    // Prepare theme colors for Button component - primary/teal for join actions
+    // Prepare theme colors for Button component – match MatchCreationWizard nextButton
     const successThemeColors = {
       primary: ctaPositive,
       primaryForeground: base.white,
@@ -1684,8 +1702,8 @@ export const MatchDetailSheet: React.FC = () => {
       );
     }
 
-    // Match has results → No actions available
-    if (hasResult) {
+    // Match has results → Score is shown in scroll view; footer shows "Match completed"
+    if (hasResult && match.result) {
       return (
         <View style={styles.matchEndedContainer}>
           <Ionicons name="trophy-outline" size={20} color={colors.textMuted} />
@@ -1712,14 +1730,64 @@ export const MatchDetailSheet: React.FC = () => {
     if (hasMatchEnded) {
       // Within 48h window
       if (isWithinFeedbackWindow) {
-        // Current player needs to provide feedback → Show CTA button
+        // No result yet + participant + full → Show Register score (and optionally Provide Feedback)
+        if (!hasResult && currentPlayerParticipant && isFull) {
+          return (
+            <>
+              <Button
+                variant="primary"
+                onPress={handleRegisterScore}
+                style={styles.actionButton}
+                themeColors={successThemeColors}
+                isDark={isDark}
+                leftIcon={<Ionicons name="trophy-outline" size={18} color={base.white} />}
+              >
+                {t('matchDetail.registerScore' as TranslationKey)}
+              </Button>
+              {playerNeedsFeedback && (
+                <Button
+                  variant="primary"
+                  onPress={() => {
+                    mediumHaptic();
+                    const opponents: OpponentForFeedback[] = (match.participants ?? [])
+                      .filter(p => p.player_id !== playerId && p.status === 'joined')
+                      .map(p => {
+                        const profile = p.player?.profile;
+                        const firstName = profile?.first_name || '';
+                        const lastName = profile?.last_name || '';
+                        const displayName = profile?.display_name;
+                        const name = displayName || firstName || 'Player';
+                        const fullName =
+                          displayName || `${firstName} ${lastName}`.trim() || 'Player';
+                        return {
+                          participantId: p.id,
+                          playerId: p.player_id,
+                          name,
+                          fullName,
+                          avatarUrl: profile?.profile_picture_url || null,
+                          hasExistingFeedback: false,
+                        };
+                      });
+                    openFeedbackSheet(match.id, playerId!, currentPlayerParticipant.id, opponents);
+                  }}
+                  style={styles.actionButton}
+                  themeColors={successThemeColors}
+                  isDark={isDark}
+                  leftIcon={<Ionicons name="star-outline" size={18} color={base.white} />}
+                >
+                  {t('matchDetail.provideFeedback' as TranslationKey)}
+                </Button>
+              )}
+            </>
+          );
+        }
+        // Current player needs to provide feedback (but can't register score) → Show CTA button
         if (playerNeedsFeedback && currentPlayerParticipant) {
           return (
             <Button
               variant="primary"
               onPress={() => {
                 mediumHaptic();
-                // Build opponents list from match participants (excluding current player)
                 const opponents: OpponentForFeedback[] = (match.participants ?? [])
                   .filter(p => p.player_id !== playerId && p.status === 'joined')
                   .map(p => {
@@ -1735,7 +1803,7 @@ export const MatchDetailSheet: React.FC = () => {
                       name,
                       fullName,
                       avatarUrl: profile?.profile_picture_url || null,
-                      hasExistingFeedback: false, // Will be checked by the hook
+                      hasExistingFeedback: false,
                     };
                   });
                 openFeedbackSheet(match.id, playerId!, currentPlayerParticipant.id, opponents);
@@ -2121,11 +2189,11 @@ export const MatchDetailSheet: React.FC = () => {
           <View style={styles.headerRight}>
             <TouchableOpacity
               onPress={handleCloseSheet}
-              style={[styles.closeButton, { backgroundColor: themeColors.muted }]}
+              style={styles.closeButton}
               activeOpacity={0.7}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons name="close" size={20} color={colors.text} />
+              <Ionicons name="close" size={24} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
         </View>
@@ -2192,6 +2260,12 @@ export const MatchDetailSheet: React.FC = () => {
         {/* Match Info Grid - Moved up for context */}
         {hasAnyBadges && (
           <View style={[styles.section, { borderBottomColor: colors.border }]}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="information-circle-outline" size={20} color={colors.iconMuted} />
+              <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
+                {t('matchDetail.title' as TranslationKey)}
+              </Text>
+            </View>
             <View style={styles.badgesGrid}>
               {/* Court Booked badge - uses secondary (coral) for important callout */}
               {(tier === 'mostWanted' || tier === 'readyToPlay') && (
@@ -2305,11 +2379,23 @@ export const MatchDetailSheet: React.FC = () => {
         {/* Participants Section - with host inline (marked with star) */}
         <View style={[styles.section, { borderBottomColor: colors.border }]}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="people" size={20} color={colors.iconMuted} />
-            <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
-              {t('matchDetail.participants' as TranslationKey)} ({participantInfo.current}/
-              {participantInfo.total})
-            </Text>
+            <View style={styles.sectionHeaderTitleRow}>
+              <Ionicons name="people" size={20} color={colors.iconMuted} />
+              <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
+                {t('matchDetail.participants' as TranslationKey)} ({participantInfo.current}/
+                {participantInfo.total})
+              </Text>
+            </View>
+            {currentPlayerParticipant && matchConversationId && (
+              <TouchableOpacity
+                onPress={handleOpenChat}
+                style={styles.participantsSectionChatButton}
+                activeOpacity={0.7}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="chatbubble-outline" size={22} color={colors.primary} />
+              </TouchableOpacity>
+            )}
           </View>
           <View style={styles.participantsRow}>
             {participantAvatars.map((p, _index) => (
@@ -2771,11 +2857,14 @@ export const MatchDetailSheet: React.FC = () => {
           activeOpacity={hasLocationData ? 0.7 : 1}
           disabled={!hasLocationData}
         >
+          <View style={styles.sectionHeader}>
+            <Ionicons name="location-outline" size={20} color={colors.iconMuted} />
+            <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
+              {t('matchDetail.location' as TranslationKey)}
+            </Text>
+          </View>
           <View style={styles.locationRow}>
             <View style={[styles.infoRow, { flex: 1, minWidth: 0 }]}>
-              <View style={styles.infoIconContainer}>
-                <Ionicons name="location" size={20} color={colors.primary} />
-              </View>
               <View style={styles.infoContent}>
                 <Text size="base" weight="semibold" color={colors.text}>
                   {facilityName || t('matchDetail.locationTBD' as TranslationKey)}
@@ -2809,11 +2898,17 @@ export const MatchDetailSheet: React.FC = () => {
         {/* Cost Section */}
         {costDisplay && (
           <View style={[styles.section, { borderBottomColor: colors.border }]}>
-            <InfoRow
-              icon={match.is_court_free ? 'checkmark-circle' : 'cash-outline'}
-              iconColor={match.is_court_free ? status.success.DEFAULT : colors.primary}
-              colors={colors}
-            >
+            <View style={styles.sectionHeader}>
+              <Ionicons
+                name={match.is_court_free ? 'checkmark-circle-outline' : 'cash-outline'}
+                size={20}
+                color={match.is_court_free ? status.success.DEFAULT : colors.iconMuted}
+              />
+              <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
+                {t('matchDetail.estimatedCost' as TranslationKey)}
+              </Text>
+            </View>
+            <InfoRow colors={colors}>
               <View>
                 <Text size="sm" color={colors.textMuted}>
                   {t('matchDetail.courtEstimatedCost' as TranslationKey)}
@@ -2829,6 +2924,103 @@ export const MatchDetailSheet: React.FC = () => {
             </InfoRow>
           </View>
         )}
+
+        {/* Score Section - when match has a result */}
+        {hasResult &&
+          match.result &&
+          (() => {
+            const rawResult = Array.isArray(match.result) ? match.result[0] : match.result;
+            const result = rawResult as {
+              team1_score?: number | null;
+              team2_score?: number | null;
+              is_verified?: boolean | null;
+              disputed?: boolean | null;
+              submitted_by?: string | null;
+              sets?: Array<{ set_number: number; team1_score: number; team2_score: number }>;
+            };
+            const team1Sets = result.team1_score ?? 0;
+            const team2Sets = result.team2_score ?? 0;
+            const setsList = result.sets;
+            const isVerified = result.is_verified === true;
+            const isDisputed = result.disputed === true;
+            const statusKey = isDisputed
+              ? ('matchDetail.scoreDisputed' as TranslationKey)
+              : isVerified
+                ? ('matchDetail.scoreVerified' as TranslationKey)
+                : ('matchDetail.scorePendingConfirmation' as TranslationKey);
+            const statusIcon = isDisputed
+              ? 'warning-outline'
+              : isVerified
+                ? 'checkmark-circle-outline'
+                : 'time-outline';
+            const isCurrentUserTeam1 = !!(
+              playerId &&
+              result.submitted_by &&
+              playerId === result.submitted_by
+            );
+            const useYourTeamLabels = !!playerId && !!result.submitted_by;
+            const isSingles = match.format === 'singles';
+            const yourScore = isCurrentUserTeam1 ? team1Sets : team2Sets;
+            const oppScore = isCurrentUserTeam1 ? team2Sets : team1Sets;
+            const leftLabel = useYourTeamLabels
+              ? isSingles
+                ? t('matchDetail.you' as TranslationKey)
+                : t('matchDetail.yourTeam' as TranslationKey)
+              : t('matchDetail.team1' as TranslationKey);
+            const rightLabel = useYourTeamLabels
+              ? isSingles
+                ? t('matchDetail.opponent' as TranslationKey)
+                : t('matchDetail.opponents' as TranslationKey)
+              : t('matchDetail.team2' as TranslationKey);
+            return (
+              <View style={[styles.section, { borderBottomColor: colors.border }]}>
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="trophy-outline" size={20} color={colors.iconMuted} />
+                  <Text
+                    size="base"
+                    weight="semibold"
+                    color={colors.text}
+                    style={styles.sectionTitle}
+                  >
+                    {t('matchDetail.registerScore' as TranslationKey)}
+                  </Text>
+                </View>
+                <View style={styles.scoreSectionContent}>
+                  <View style={styles.scoreSectionRow}>
+                    <Text size="sm" weight="medium" color={colors.textMuted}>
+                      {leftLabel}
+                    </Text>
+                    <Text size="lg" weight="bold" color={colors.text}>
+                      {useYourTeamLabels
+                        ? `${yourScore} – ${oppScore}`
+                        : `${team1Sets} – ${team2Sets}`}
+                    </Text>
+                    <Text size="sm" weight="medium" color={colors.textMuted}>
+                      {rightLabel}
+                    </Text>
+                  </View>
+                  {setsList && setsList.length > 0 && (
+                    <Text size="sm" color={colors.textMuted} style={styles.scoreSetsText}>
+                      {setsList
+                        .sort((a, b) => a.set_number - b.set_number)
+                        .map(s =>
+                          useYourTeamLabels && !isCurrentUserTeam1
+                            ? `${s.team2_score}-${s.team1_score}`
+                            : `${s.team1_score}-${s.team2_score}`
+                        )
+                        .join(', ')}
+                    </Text>
+                  )}
+                  <View style={styles.scoreSectionStatusRow}>
+                    <Ionicons name={statusIcon} size={18} color={colors.textMuted} />
+                    <Text size="sm" color={colors.textMuted} style={styles.scoreSectionStatusText}>
+                      {t(statusKey)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            );
+          })()}
 
         {/* Notes Section */}
         {match.notes && (
@@ -2880,26 +3072,6 @@ export const MatchDetailSheet: React.FC = () => {
                 {t('matchDetail.inviteFriends' as TranslationKey)}
               </Text>
             )}
-          </TouchableOpacity>
-        )}
-        {/* Chat Button - only for joined participants when conversation exists */}
-        {currentPlayerParticipant && matchConversationId && (
-          <TouchableOpacity
-            style={[
-              styles.chatButton,
-              {
-                backgroundColor: isDark ? primary[600] : primary[500],
-                shadowColor: primary[600],
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.25,
-                shadowRadius: 4,
-                elevation: 4,
-              },
-            ]}
-            onPress={handleOpenChat}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="chatbubble" size={18} color={base.white} />
           </TouchableOpacity>
         )}
       </View>
@@ -3124,11 +3296,7 @@ const styles = StyleSheet.create({
     gap: spacingPixels[2],
   },
   closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: spacingPixels[1],
   },
 
   // Sections
@@ -3142,7 +3310,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacingPixels[3],
   },
+  sectionHeaderTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    minWidth: 0,
+  },
   sectionTitle: {
+    marginLeft: spacingPixels[2],
+  },
+  participantsSectionChatButton: {
+    padding: spacingPixels[1],
     marginLeft: spacingPixels[2],
   },
 
@@ -3422,41 +3600,45 @@ const styles = StyleSheet.create({
     gap: spacingPixels[2],
     minWidth: 0, // Allow shrinking
   },
+  // Footer buttons: same pattern as MatchCreationWizard nextButton – paddingVertical, no fixed height, so content is not clipped
   actionButton: {
     flex: 1,
-    minWidth: 0, // Allow shrinking
+    minWidth: 0,
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[2],
   },
   cancelButton: {
     flex: 1,
-    minWidth: 0, // Allow shrinking
+    minWidth: 0,
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[2],
     paddingHorizontal: spacingPixels[2],
   },
   shareButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'stretch',
     gap: spacingPixels[1.5],
     paddingHorizontal: spacingPixels[4],
-    minHeight: spacingPixels[11], // 44px - balanced size between 40px and 48px
+    paddingVertical: spacingPixels[4],
     borderRadius: radiusPixels.lg,
-    flexShrink: 0, // Don't shrink the share button
+    flexShrink: 0,
   },
   shareButtonCompact: {
     paddingHorizontal: 0,
-    width: spacingPixels[11], // Square icon-only button, same as minHeight (44px)
-    minHeight: spacingPixels[11], // 44px - balanced size
-    gap: 0, // No gap when icon-only
-  },
-  chatButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[1.5],
-    paddingHorizontal: spacingPixels[4],
-    minHeight: spacingPixels[11], // 44px - same as share button
-    borderRadius: radiusPixels.lg,
-    flexShrink: 0,
-    marginLeft: spacingPixels[2],
+    width: spacingPixels[12],
+    paddingVertical: spacingPixels[4],
+    alignSelf: 'stretch',
+    gap: 0,
   },
   matchEndedContainer: {
     flex: 1,
@@ -3468,6 +3650,39 @@ const styles = StyleSheet.create({
   },
   matchEndedText: {
     textAlign: 'center',
+  },
+  scoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[2],
+  },
+  scoreStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  // Score section (in scroll view) – aligned with other section content
+  scoreSectionContent: {
+    marginTop: 0,
+  },
+  scoreSectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[3],
+    marginBottom: spacingPixels[2],
+  },
+  scoreSetsText: {
+    marginTop: spacingPixels[1],
+    marginBottom: spacingPixels[2],
+  },
+  scoreSectionStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacingPixels[2],
+  },
+  scoreSectionStatusText: {
+    marginLeft: spacingPixels[2],
   },
 });
 

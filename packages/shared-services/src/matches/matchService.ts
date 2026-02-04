@@ -219,6 +219,25 @@ export async function getMatchWithDetails(matchId: string) {
           privacy_show_location,
           privacy_show_stats
         )
+      ),
+      result:match_result (
+        id,
+        winning_team,
+        team1_score,
+        team2_score,
+        is_verified,
+        disputed,
+        submitted_by,
+        confirmation_deadline,
+        confirmed_by,
+        verified_at,
+        created_at,
+        updated_at,
+        sets:match_set (
+          set_number,
+          team1_score,
+          team2_score
+        )
       )
     `
     )
@@ -2324,6 +2343,25 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
           privacy_show_location,
           privacy_show_stats
         )
+      ),
+      result:match_result (
+        id,
+        winning_team,
+        team1_score,
+        team2_score,
+        is_verified,
+        disputed,
+        submitted_by,
+        confirmation_deadline,
+        confirmed_by,
+        verified_at,
+        created_at,
+        updated_at,
+        sets:match_set (
+          set_number,
+          team1_score,
+          team2_score
+        )
       )
     `
     )
@@ -2630,6 +2668,25 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
           privacy_show_age,
           privacy_show_location,
           privacy_show_stats
+        )
+      ),
+      result:match_result (
+        id,
+        winning_team,
+        team1_score,
+        team2_score,
+        is_verified,
+        disputed,
+        submitted_by,
+        confirmation_deadline,
+        confirmed_by,
+        verified_at,
+        created_at,
+        updated_at,
+        sets:match_set (
+          set_number,
+          team1_score,
+          team2_score
         )
       )
     `
@@ -2965,6 +3022,25 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
           privacy_show_age,
           privacy_show_location,
           privacy_show_stats
+        )
+      ),
+      result:match_result (
+        id,
+        winning_team,
+        team1_score,
+        team2_score,
+        is_verified,
+        disputed,
+        submitted_by,
+        confirmation_deadline,
+        confirmed_by,
+        verified_at,
+        created_at,
+        updated_at,
+        sets:match_set (
+          set_number,
+          team1_score,
+          team2_score
         )
       )
     `

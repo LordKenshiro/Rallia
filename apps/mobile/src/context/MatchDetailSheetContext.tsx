@@ -4,11 +4,16 @@
  * This context provides global control over the Match Detail bottom sheet,
  * which opens when a match card is pressed. The sheet displays comprehensive
  * match information and action buttons.
+ *
+ * When opening, we refetch full match details (including result) so that
+ * later visits show the correct state (e.g. registered score) even when
+ * the match was opened from a list that doesn't include the result relation.
  */
 
 import React, { createContext, useContext, useRef, useCallback, useState, ReactNode } from 'react';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import type { MatchWithDetails } from '@rallia/shared-types';
+import { getMatchWithDetails } from '@rallia/shared-services';
 
 // =============================================================================
 // TYPES
@@ -62,11 +67,27 @@ export const MatchDetailSheetProvider: React.FC<MatchDetailSheetProviderProps> =
   const [selectedMatch, setSelectedMatch] = useState<MatchDetailData | null>(null);
 
   /**
-   * Open the sheet with the specified match
+   * Open the sheet with the specified match.
+   * Uses the passed match as-is so the sheet can show scores immediately when the caller
+   * already includes result (e.g. from list queries). Only refetches when the match has no
+   * result so we still get scores for lists that don't include the result relation.
    */
   const openSheet = useCallback((match: MatchDetailData) => {
     setSelectedMatch(match);
     sheetRef.current?.present();
+    const hasResult = Array.isArray(match.result)
+      ? (match.result?.length ?? 0) > 0
+      : !!match.result;
+    if (!hasResult) {
+      getMatchWithDetails(match.id).then(refreshed => {
+        if (refreshed) {
+          setSelectedMatch({
+            ...refreshed,
+            distance_meters: match.distance_meters,
+          } as MatchDetailData);
+        }
+      });
+    }
   }, []);
 
   /**

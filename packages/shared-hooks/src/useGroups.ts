@@ -31,6 +31,7 @@ import {
   postMatchToGroup,
   removeMatchFromGroup,
   createPlayedMatch,
+  submitMatchResultForMatch,
   getPendingScoreConfirmations,
   confirmMatchScore,
   disputeMatchScore,
@@ -53,8 +54,10 @@ import {
   type MatchSet,
   type LeaderboardEntry,
   type CreatePlayedMatchInput,
+  type SubmitMatchResultForMatchParams,
   type PendingScoreConfirmation,
 } from '@rallia/shared-services';
+import { matchKeys } from './useCreateMatch';
 
 // Query Keys
 export const groupKeys = {
@@ -519,6 +522,25 @@ export function useCreatePlayedMatch() {
         queryClient.invalidateQueries({ queryKey: groupKeys.activity(variables.networkId) });
         queryClient.invalidateQueries({ queryKey: groupKeys.stats(variables.networkId) });
       }
+    },
+  });
+}
+
+/**
+ * Submit match result for a specific match (e.g. from match detail during feedback window).
+ * Invalidates match detail and pending confirmations on success.
+ */
+export function useSubmitMatchResultForMatch() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (params: SubmitMatchResultForMatchParams) => submitMatchResultForMatch(params),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: matchKeys.detail(variables.matchId) });
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.pendingConfirmations(variables.submittedByPlayerId),
+      });
+      queryClient.invalidateQueries({ queryKey: matchKeys.lists() });
     },
   });
 }

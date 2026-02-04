@@ -439,8 +439,14 @@ export interface SessionAttendance {
 export type Match = TableRow<'match'>;
 export type MatchParticipant = TableRow<'match_participant'>;
 export type MatchResult = TableRow<'match_result'>;
+export type MatchSet = TableRow<'match_set'>;
 export type MatchFeedback = TableRow<'match_feedback'>;
 export type MatchReport = TableRow<'match_report'>;
+
+/** Match result with nested set scores (from getMatchWithDetails when result is selected with sets) */
+export interface MatchResultWithSets extends MatchResult {
+  sets?: MatchSet[];
+}
 
 // Notification
 export type Notification = TableRow<'notification'>;
@@ -739,7 +745,7 @@ export interface MatchWithDetails extends Match {
   court?: Court;
   min_rating_score?: RatingScore;
   participants?: MatchParticipantWithPlayer[];
-  result?: MatchResult;
+  result?: MatchResultWithSets;
 }
 
 /** Match participant with player and profile info */
