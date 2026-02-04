@@ -3709,20 +3709,41 @@ export interface PendingFeedbackMatch {
  * @param userId - The user's player ID
  * @returns The most recently ended match needing feedback, or null if none
  */
+const GET_MATCH_NEEDING_FEEDBACK_RPC_PARAMS = {
+  p_player_id: '' as string,
+  p_time_filter: 'past' as const,
+  p_sport_id: null as null,
+  p_limit: 50,
+  p_offset: 0,
+};
+
+async function callGetPlayerMatchesForFeedback(userId: string) {
+  return supabase.rpc('get_player_matches', {
+    ...GET_MATCH_NEEDING_FEEDBACK_RPC_PARAMS,
+    p_player_id: userId,
+  });
+}
+
 export async function getMatchNeedingFeedback(
   userId: string
 ): Promise<PendingFeedbackMatch | null> {
   // Fetch past matches where user is a joined participant with feedback_completed = false
-  const { data: matchIdResults, error: rpcError } = await supabase.rpc('get_player_matches', {
-    p_player_id: userId,
-    p_time_filter: 'past',
-    p_sport_id: null,
-    p_limit: 50, // Get recent past matches
-    p_offset: 0,
-  });
+  let { data: matchIdResults, error: rpcError } = await callGetPlayerMatchesForFeedback(userId);
+
+  // Retry once on upstream/invalid response (common after db reset or transient PostgREST issues)
+  if (rpcError?.message?.includes('upstream') || rpcError?.message?.includes('invalid response')) {
+    console.warn('[getMatchNeedingFeedback] RPC upstream error, retrying once:', rpcError.message);
+    const retry = await callGetPlayerMatchesForFeedback(userId);
+    rpcError = retry.error;
+    matchIdResults = retry.data;
+  }
 
   if (rpcError) {
-    console.error('[getMatchNeedingFeedback] RPC error:', rpcError);
+    console.error(
+      '[getMatchNeedingFeedback] RPC error:',
+      rpcError?.message,
+      rpcError?.details ?? rpcError
+    );
     return null;
   }
 
