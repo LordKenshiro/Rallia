@@ -706,8 +706,10 @@ const styles = StyleSheet.create({
   },
   tabBadgeText: {
     fontSize: 10,
+    lineHeight: 12,
     fontWeight: '600',
     color: '#FFFFFF',
+    ...(Platform.OS === 'android' && { textAlignVertical: 'center' as const }),
   },
 });
 
