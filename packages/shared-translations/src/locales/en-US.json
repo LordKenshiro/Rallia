@@ -634,12 +634,11 @@
     }
   },
   "permissions": {
-    "description": "Manage app permissions to enable features like notifications, finding games near you, and calendar sync.",
+    "description": "Manage app permissions to enable features like notifications and finding games near you.",
     "settingsNote": "If you denied a permission, you'll need to enable it in your device settings.",
     "types": {
       "notifications": "Notifications",
       "location": "Location",
-      "calendar": "Calendar",
       "photos": "Photos & Media",
       "contacts": "Contacts",
       "camera": "Camera"

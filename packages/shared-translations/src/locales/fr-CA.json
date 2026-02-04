@@ -634,12 +634,11 @@
     }
   },
   "permissions": {
-    "description": "Gérez les permissions de l'application pour activer les notifications, la recherche de parties près de chez vous et la synchronisation du calendrier.",
+    "description": "Gérez les permissions de l'application pour activer les notifications et la recherche de parties près de chez vous.",
     "settingsNote": "Si vous avez refusé une permission, vous devrez l'activer dans les paramètres de votre appareil.",
     "types": {
       "notifications": "Notifications",
       "location": "Localisation",
-      "calendar": "Calendrier",
       "photos": "Photos et médias",
       "contacts": "Contacts",
       "camera": "Caméra"

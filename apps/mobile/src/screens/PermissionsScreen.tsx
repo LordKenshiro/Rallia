@@ -33,7 +33,6 @@ import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils'
 // Permission imports
 import * as Notifications from 'expo-notifications';
 import * as Location from 'expo-location';
-import * as Calendar from 'expo-calendar';
 import * as ImagePicker from 'expo-image-picker';
 import * as Contacts from 'expo-contacts';
 import { Camera } from 'expo-camera';
@@ -41,7 +40,7 @@ import { Camera } from 'expo-camera';
 const BASE_WHITE = '#ffffff';
 
 // Permission types
-type PermissionType = 'notifications' | 'location' | 'calendar' | 'photos' | 'contacts' | 'camera';
+type PermissionType = 'notifications' | 'location' | 'photos' | 'contacts' | 'camera';
 type PermissionStatus = 'granted' | 'denied' | 'undetermined' | 'loading';
 
 interface PermissionInfo {
@@ -58,7 +57,6 @@ const PERMISSION_CONFIG: Record<
 > = {
   notifications: { icon: 'notifications-outline', color: '#FF9500' },
   location: { icon: 'location-outline', color: '#007AFF' },
-  calendar: { icon: 'calendar-outline', color: '#34C759' },
   photos: { icon: 'images-outline', color: '#AF52DE' },
   contacts: { icon: 'people-outline', color: '#5856D6' },
   camera: { icon: 'camera-outline', color: '#FF2D55' },
@@ -203,7 +201,6 @@ const PermissionsScreen: React.FC = () => {
   const [permissions, setPermissions] = useState<Record<PermissionType, PermissionStatus>>({
     notifications: 'loading',
     location: 'loading',
-    calendar: 'loading',
     photos: 'loading',
     contacts: 'loading',
     camera: 'loading',
@@ -217,26 +214,18 @@ const PermissionsScreen: React.FC = () => {
   }, []);
 
   const checkAllPermissions = async () => {
-    const [
-      notifStatus,
-      locationStatus,
-      calendarStatus,
-      photosStatus,
-      contactsStatus,
-      cameraStatus,
-    ] = await Promise.all([
-      checkNotificationPermission(),
-      checkLocationPermission(),
-      checkCalendarPermission(),
-      checkPhotosPermission(),
-      checkContactsPermission(),
-      checkCameraPermission(),
-    ]);
+    const [notifStatus, locationStatus, photosStatus, contactsStatus, cameraStatus] =
+      await Promise.all([
+        checkNotificationPermission(),
+        checkLocationPermission(),
+        checkPhotosPermission(),
+        checkContactsPermission(),
+        checkCameraPermission(),
+      ]);
 
     setPermissions({
       notifications: notifStatus,
       location: locationStatus,
-      calendar: calendarStatus,
       photos: photosStatus,
       contacts: contactsStatus,
       camera: cameraStatus,
@@ -255,15 +244,6 @@ const PermissionsScreen: React.FC = () => {
   const checkLocationPermission = async (): Promise<PermissionStatus> => {
     try {
       const { status } = await Location.getForegroundPermissionsAsync();
-      return mapExpoStatus(status);
-    } catch {
-      return 'undetermined';
-    }
-  };
-
-  const checkCalendarPermission = async (): Promise<PermissionStatus> => {
-    try {
-      const { status } = await Calendar.getCalendarPermissionsAsync();
       return mapExpoStatus(status);
     } catch {
       return 'undetermined';
@@ -323,11 +303,6 @@ const PermissionsScreen: React.FC = () => {
           newStatus = mapExpoStatus(status);
           break;
         }
-        case 'calendar': {
-          const { status } = await Calendar.requestCalendarPermissionsAsync();
-          newStatus = mapExpoStatus(status);
-          break;
-        }
         case 'photos': {
           const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
           newStatus = mapExpoStatus(status);
@@ -370,20 +345,13 @@ const PermissionsScreen: React.FC = () => {
 
   const permissionList: PermissionInfo[] = useMemo(
     () =>
-      (
-        [
-          'notifications',
-          'location',
-          'calendar',
-          'photos',
-          'contacts',
-          'camera',
-        ] as PermissionType[]
-      ).map(type => ({
-        type,
-        status: permissions[type],
-        ...PERMISSION_CONFIG[type],
-      })),
+      (['notifications', 'location', 'photos', 'contacts', 'camera'] as PermissionType[]).map(
+        type => ({
+          type,
+          status: permissions[type],
+          ...PERMISSION_CONFIG[type],
+        })
+      ),
     [permissions]
   );
 

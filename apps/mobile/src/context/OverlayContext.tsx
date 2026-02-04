@@ -4,7 +4,7 @@
  * This context manages:
  * 1. Splash animation completion state
  * 2. First-time pre-onboarding state (determines navigation flow)
- * 3. Requesting native permissions (Notifications, Calendar) after pre-onboarding
+ * 3. Requesting native permissions (Notifications) after pre-onboarding
  *
  * Note: Location permission is now handled within the pre-onboarding wizard (step 3),
  * so it's NOT requested here after the flow completes.
@@ -74,12 +74,10 @@ interface OverlayProviderProps {
 export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) => {
   // Permission handling
   // Note: Location permission is handled in the pre-onboarding wizard (step 3),
-  // so we only request notifications and calendar here
+  // so we only request notifications here
   const {
     shouldShowNotificationOverlay,
-    shouldShowCalendarOverlay,
     requestNotificationPermission,
-    requestCalendarPermission,
     loading: permissionsLoading,
   } = usePermissions();
 
@@ -160,19 +158,6 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
 
         // Note: Location permission is now handled in the pre-onboarding wizard (step 3)
         // so we skip it here
-
-        // Request calendar permission if needed
-        if (shouldShowCalendarOverlay) {
-          Logger.logNavigation('request_native_permission', {
-            permission: 'calendar',
-            trigger: 'post_preonboarding',
-          });
-          const calendarGranted = await requestCalendarPermission();
-          Logger.logUserAction('permission_result', {
-            permission: 'calendar',
-            granted: calendarGranted,
-          });
-        }
       };
 
       requestPermissions();
@@ -183,9 +168,7 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
     isSportSelectionComplete,
     permissionsLoading,
     shouldShowNotificationOverlay,
-    shouldShowCalendarOverlay,
     requestNotificationPermission,
-    requestCalendarPermission,
   ]);
 
   // ==========================================================================
