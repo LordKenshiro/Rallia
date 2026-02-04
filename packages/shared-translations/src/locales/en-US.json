@@ -1866,6 +1866,18 @@
   },
   "addScore": {
     "title": "Add Score",
+    "intro": {
+      "title": "Track your scores",
+      "description": "To make your skill level as accurate as possible, you can now add scores from all the games you play – even the ones you organise outside of the Rallia app.",
+      "howToTitle": "To add your scores:",
+      "step1": "Find your opponent on Rallia",
+      "step2": "Add details of the match you played (sport and date)",
+      "step3": "Choose the winner and add the scores",
+      "step4": "Rate your partner (rating, badges, review)",
+      "confirmationNote": "After that, the opponent has 24 hours to confirm the score, if they don't the score will be automatically confirmed.",
+      "addScoreNow": "Add score now",
+      "neverShowAgain": "Never show it again"
+    },
     "discardChanges": "Discard Changes?",
     "discardChangesMessage": "You have unsaved changes. Are you sure you want to discard your progress?",
     "sportNotFound": "Could not find sport: {sport}",

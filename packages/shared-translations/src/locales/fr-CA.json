@@ -1908,6 +1908,18 @@
   },
   "addScore": {
     "title": "Ajouter un score",
+    "intro": {
+      "title": "Suivez vos scores",
+      "description": "Pour rendre votre niveau de compétence le plus précis possible, vous pouvez maintenant ajouter les scores de tous vos matchs – même ceux que vous organisez en dehors de l'application Rallia.",
+      "howToTitle": "Pour ajouter vos scores :",
+      "step1": "Trouvez votre adversaire sur Rallia",
+      "step2": "Ajoutez les détails du match joué (sport et date)",
+      "step3": "Choisissez le gagnant et ajoutez les scores",
+      "step4": "Évaluez votre partenaire (classement, badges, avis)",
+      "confirmationNote": "Ensuite, l'adversaire a 24 heures pour confirmer le score. S'il ne le fait pas, le score sera automatiquement confirmé.",
+      "addScoreNow": "Ajouter un score maintenant",
+      "neverShowAgain": "Ne plus afficher"
+    },
     "discardChanges": "Abandonner les modifications?",
     "discardChangesMessage": "Vous avez des modifications non enregistrées. Êtes-vous sûr de vouloir abandonner votre progression?",
     "sportNotFound": "Sport introuvable: {sport}",
