@@ -3,17 +3,14 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  Platform,
   TextInput,
   ActivityIndicator,
-  Alert,
-  ToastAndroid,
   ScrollView,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
-import { Button, Heading, Text } from '@rallia/shared-components';
+import { Button, Heading, Text, useToast } from '@rallia/shared-components';
 import { COLORS } from '@rallia/shared-constants';
 import { supabase, Logger } from '@rallia/shared-services';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
@@ -27,6 +24,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
   const onClose = () => SheetManager.hide('player-information');
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
+  const toast = useToast();
   const { refetch: refetchPlayer } = usePlayer();
   const { refetch: refetchProfile } = useProfile();
   const [username, setUsername] = useState(initialData?.username || '');
@@ -64,10 +62,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
 
       if (!user) {
         setIsSaving(false);
-        Alert.alert(
-          t('alerts.error' as TranslationKey),
-          t('onboarding.validation.playerNotFound' as TranslationKey)
-        );
+        toast.error(t('onboarding.validation.playerNotFound' as TranslationKey));
         return;
       }
 
@@ -84,10 +79,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
       if (profileUpdateError) {
         Logger.error('Failed to update profile', profileUpdateError as Error, { userId: user.id });
         setIsSaving(false);
-        Alert.alert(
-          t('alerts.error' as TranslationKey),
-          t('onboarding.validation.failedToUpdateProfile' as TranslationKey)
-        );
+        toast.error(t('onboarding.validation.failedToUpdateProfile' as TranslationKey));
         return;
       }
 
@@ -103,10 +95,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
       if (playerUpdateError) {
         Logger.error('Failed to update player', playerUpdateError as Error, { userId: user.id });
         setIsSaving(false);
-        Alert.alert(
-          t('alerts.error' as TranslationKey),
-          t('onboarding.validation.failedToUpdateProfile' as TranslationKey)
-        );
+        toast.error(t('onboarding.validation.failedToUpdateProfile' as TranslationKey));
         return;
       }
 
@@ -127,18 +116,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
       await refetchPlayer();
       await refetchProfile();
 
-      // Show success toast
-      if (Platform.OS === 'android') {
-        ToastAndroid.show(
-          t('onboarding.successMessages.playerInfoUpdated' as TranslationKey),
-          ToastAndroid.LONG
-        );
-      } else {
-        Alert.alert(
-          t('alerts.success' as TranslationKey),
-          t('onboarding.successMessages.playerInfoUpdated' as TranslationKey)
-        );
-      }
+      toast.success(t('onboarding.successMessages.playerInfoUpdated' as TranslationKey));
 
       // Notify parent that data was saved successfully
       onSave?.();
@@ -150,10 +128,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
     } catch (error) {
       Logger.error('Unexpected error updating player information', error as Error);
       setIsSaving(false);
-      Alert.alert(
-        t('alerts.error' as TranslationKey),
-        t('onboarding.validation.unexpectedError' as TranslationKey)
-      );
+      toast.error(t('onboarding.validation.unexpectedError' as TranslationKey));
     }
   };
 
@@ -181,17 +156,19 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
         {/* Scrollable Content */}
         <ScrollView
           style={styles.scrollContent}
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, { paddingBottom: spacingPixels[8] }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
           {/* Username Input */}
           <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: colors.text }]}>Username</Text>
+            <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
+              Username
+            </Text>
             <View
               style={[
-                styles.inputWithIcon,
-                { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
+                styles.input,
+                { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder },
               ]}
             >
               <TextInput
@@ -207,12 +184,14 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
 
           {/* Bio Input */}
           <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: colors.text }]}>Bio</Text>
+            <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
+              Bio
+            </Text>
             <View
               style={[
-                styles.inputWithIcon,
+                styles.input,
                 styles.bioInput,
-                { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
+                { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder },
               ]}
             >
               <TextInput
@@ -231,33 +210,33 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
 
           {/* Preferred Playing Hand */}
           <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: colors.text }]}>Preferred Playing Hand</Text>
-            <View
-              style={[styles.handButtonsContainer, { backgroundColor: colors.inputBackground }]}
-            >
+            <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
+              Preferred Playing Hand
+            </Text>
+            <View style={styles.handButtonGroup}>
               <TouchableOpacity
                 style={[
-                  styles.handButton,
-                  styles.leftButton,
-                  preferredPlayingHand === 'left' && [
-                    styles.handButtonActive,
-                    { backgroundColor: colors.primary },
-                  ],
+                  styles.handOptionButton,
+                  {
+                    backgroundColor:
+                      preferredPlayingHand === 'left' ? colors.primary : colors.inputBackground,
+                    borderColor:
+                      preferredPlayingHand === 'left' ? colors.primary : colors.inputBorder,
+                  },
                 ]}
                 onPress={() => {
                   lightHaptic();
                   setPreferredPlayingHand('left');
                 }}
+                activeOpacity={0.8}
               >
                 <Text
-                  style={
+                  size="sm"
+                  weight="semibold"
+                  color={
                     preferredPlayingHand === 'left'
-                      ? [
-                          styles.handButtonText,
-                          styles.handButtonTextActive,
-                          { color: colors.primaryForeground },
-                        ]
-                      : [styles.handButtonText, { color: colors.textMuted }]
+                      ? colors.primaryForeground
+                      : colors.textSecondary
                   }
                 >
                   Left
@@ -266,27 +245,27 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
 
               <TouchableOpacity
                 style={[
-                  styles.handButton,
-                  styles.middleButton,
-                  preferredPlayingHand === 'right' && [
-                    styles.handButtonActive,
-                    { backgroundColor: colors.primary },
-                  ],
+                  styles.handOptionButton,
+                  {
+                    backgroundColor:
+                      preferredPlayingHand === 'right' ? colors.primary : colors.inputBackground,
+                    borderColor:
+                      preferredPlayingHand === 'right' ? colors.primary : colors.inputBorder,
+                  },
                 ]}
                 onPress={() => {
                   lightHaptic();
                   setPreferredPlayingHand('right');
                 }}
+                activeOpacity={0.8}
               >
                 <Text
-                  style={
+                  size="sm"
+                  weight="semibold"
+                  color={
                     preferredPlayingHand === 'right'
-                      ? [
-                          styles.handButtonText,
-                          styles.handButtonTextActive,
-                          { color: colors.primaryForeground },
-                        ]
-                      : [styles.handButtonText, { color: colors.textMuted }]
+                      ? colors.primaryForeground
+                      : colors.textSecondary
                   }
                 >
                   Right
@@ -295,27 +274,27 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
 
               <TouchableOpacity
                 style={[
-                  styles.handButton,
-                  styles.rightButton,
-                  preferredPlayingHand === 'both' && [
-                    styles.handButtonActive,
-                    { backgroundColor: colors.primary },
-                  ],
+                  styles.handOptionButton,
+                  {
+                    backgroundColor:
+                      preferredPlayingHand === 'both' ? colors.primary : colors.inputBackground,
+                    borderColor:
+                      preferredPlayingHand === 'both' ? colors.primary : colors.inputBorder,
+                  },
                 ]}
                 onPress={() => {
                   lightHaptic();
                   setPreferredPlayingHand('both');
                 }}
+                activeOpacity={0.8}
               >
                 <Text
-                  style={
+                  size="sm"
+                  weight="semibold"
+                  color={
                     preferredPlayingHand === 'both'
-                      ? [
-                          styles.handButtonText,
-                          styles.handButtonTextActive,
-                          { color: colors.primaryForeground },
-                        ]
-                      : [styles.handButtonText, { color: colors.textMuted }]
+                      ? colors.primaryForeground
+                      : colors.textSecondary
                   }
                 >
                   Both
@@ -326,11 +305,13 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
 
           {/* Maximum Travel Distance */}
           <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: colors.text }]}>Maximum Travel Distance</Text>
+            <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
+              Maximum Travel Distance
+            </Text>
             <View
               style={[
                 styles.sliderContainer,
-                { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
+                { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder },
               ]}
             >
               <Text style={[styles.sliderValue, { color: colors.text }]}>
@@ -415,25 +396,22 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacingPixels[4],
-    paddingBottom: spacingPixels[6],
   },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: spacingPixels[4],
   },
   inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
+    marginBottom: spacingPixels[2],
   },
-  inputWithIcon: {
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+  input: {
+    borderRadius: radiusPixels.lg,
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
     borderWidth: 1,
   },
   bioInput: {
     minHeight: 100,
-    paddingVertical: 12,
+    paddingVertical: spacingPixels[3],
   },
   inputField: {
     fontSize: 16,
@@ -442,61 +420,44 @@ const styles = StyleSheet.create({
   bioInputField: {
     minHeight: 80,
   },
-  handButtonsContainer: {
+  handButtonGroup: {
     flexDirection: 'row',
-    borderRadius: 10,
-    padding: 4,
+    gap: spacingPixels[2],
   },
-  handButton: {
+  handOptionButton: {
     flex: 1,
-    paddingVertical: 12,
+    borderRadius: radiusPixels.lg,
+    paddingVertical: spacingPixels[3],
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  leftButton: {
-    borderTopLeftRadius: 8,
-    borderBottomLeftRadius: 8,
-  },
-  middleButton: {
-    marginHorizontal: 4,
-  },
-  rightButton: {
-    borderTopRightRadius: 8,
-    borderBottomRightRadius: 8,
-  },
-  handButtonActive: {
-    // backgroundColor applied inline
-  },
-  handButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  handButtonTextActive: {
-    fontWeight: '600',
+    borderWidth: 1,
   },
   sliderContainer: {
-    borderRadius: 10,
-    padding: 16,
+    borderRadius: radiusPixels.lg,
+    padding: spacingPixels[4],
     borderWidth: 1,
   },
   sliderValue: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 8,
+    marginBottom: spacingPixels[2],
   },
   slider: {
     width: '100%',
     height: 40,
   },
   footer: {
-    padding: spacingPixels[4],
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[4],
+    paddingBottom: spacingPixels[8],
     borderTopWidth: 1,
   },
   submitButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 14,
+    paddingVertical: spacingPixels[4],
     borderRadius: radiusPixels.lg,
+    gap: spacingPixels[2],
   },
 });

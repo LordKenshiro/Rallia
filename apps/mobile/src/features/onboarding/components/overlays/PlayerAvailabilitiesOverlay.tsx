@@ -1,15 +1,8 @@
 import React, { useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
-import { Text } from '@rallia/shared-components';
+import { Text, useToast } from '@rallia/shared-components';
 import { OnboardingService, Logger } from '@rallia/shared-services';
 import type { DayEnum, PeriodEnum, OnboardingAvailability } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
@@ -40,6 +33,7 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
   const _selectedSportIds = payload?.selectedSportIds;
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
+  const toast = useToast();
   const days: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const timeSlots: TimeSlot[] = ['AM', 'PM', 'EVE'];
 
@@ -138,9 +132,7 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
         if (error) {
           Logger.error('Failed to save player availability', error as Error, { availabilityData });
           setIsSaving(false);
-          Alert.alert(t('common.error'), t('onboarding.validation.failedToSaveAvailability'), [
-            { text: t('common.ok') },
-          ]);
+          toast.error(t('onboarding.validation.failedToSaveAvailability'));
           return;
         }
 
@@ -162,9 +154,7 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
       } catch (error) {
         Logger.error('Unexpected error saving availability', error as Error);
         setIsSaving(false);
-        Alert.alert(t('common.error'), t('onboarding.validation.unexpectedError'), [
-          { text: t('common.ok') },
-        ]);
+        toast.error(t('onboarding.validation.unexpectedError'));
       }
     }
   };
@@ -191,7 +181,7 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
         {/* Scrollable Content */}
         <ScrollView
           style={styles.scrollContent}
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, { paddingBottom: spacingPixels[8] }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -229,7 +219,7 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
                     key={`${day}-${slot}`}
                     style={[
                       styles.timeSlotCell,
-                      { backgroundColor: colors.inputBackground },
+                      { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder },
                       availabilities[day][slot] && [
                         styles.timeSlotCellSelected,
                         { backgroundColor: colors.primary, borderColor: colors.primary },
@@ -323,7 +313,6 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacingPixels[4],
-    paddingBottom: spacingPixels[6],
   },
   backButton: {
     alignSelf: 'flex-start',
@@ -362,13 +351,12 @@ const styles = StyleSheet.create({
   },
   timeSlotCell: {
     flex: 1,
-    borderRadius: 8,
-    paddingVertical: 12,
-    marginHorizontal: 4,
+    borderRadius: radiusPixels.lg,
+    paddingVertical: spacingPixels[3],
+    marginHorizontal: spacingPixels[1],
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
+    borderWidth: 1,
   },
   timeSlotCellSelected: {
     // backgroundColor and borderColor applied inline
@@ -381,14 +369,17 @@ const styles = StyleSheet.create({
     // color applied inline
   },
   footer: {
-    padding: spacingPixels[4],
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[4],
+    paddingBottom: spacingPixels[8],
     borderTopWidth: 1,
   },
   submitButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 14,
+    paddingVertical: spacingPixels[4],
     borderRadius: radiusPixels.lg,
+    gap: spacingPixels[2],
   },
 });

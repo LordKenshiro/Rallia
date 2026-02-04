@@ -6,16 +6,14 @@ import {
   Platform,
   Image,
   Modal,
-  Alert,
   TextInput,
   ActivityIndicator,
-  ToastAndroid,
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
-import { Select, Button, Heading, Text, PhoneInput } from '@rallia/shared-components';
+import { Select, Button, Heading, Text, PhoneInput, useToast } from '@rallia/shared-components';
 import { useImagePicker, useThemeStyles, useTranslation } from '../../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { COLORS } from '@rallia/shared-constants';
@@ -42,6 +40,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
   const initialData = payload?.initialData;
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
+  const toast = useToast();
   const [firstName, setFirstName] = useState(initialData?.firstName || '');
   const [lastName, setLastName] = useState(initialData?.lastName || '');
   const [username, setUsername] = useState(initialData?.username || '');
@@ -142,20 +141,14 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
     mediumHaptic();
 
     if (!dateOfBirth) {
-      Alert.alert(
-        t('alerts.error' as TranslationKey),
-        t('onboarding.validation.selectDateOfBirth' as TranslationKey)
-      );
+      toast.error(t('onboarding.validation.selectDateOfBirth' as TranslationKey));
       return;
     }
 
     try {
       // Gender is now stored as the enum value (e.g., 'male', 'female')
       if (!gender) {
-        Alert.alert(
-          t('alerts.error' as TranslationKey),
-          t('onboarding.validation.selectGender' as TranslationKey)
-        );
+        toast.error(t('onboarding.validation.selectGender' as TranslationKey));
         return;
       }
 
@@ -177,26 +170,8 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
         if (uploadError) {
           Logger.error('Failed to upload profile picture', uploadError as Error);
           setIsSaving(false);
-          Alert.alert(
-            t('onboarding.validation.uploadError' as TranslationKey),
-            t('onboarding.validation.failedToUploadPicture' as TranslationKey),
-            [
-              {
-                text: t('common.cancel' as TranslationKey),
-                style: 'cancel',
-                onPress: () => {
-                  return;
-                },
-              },
-              {
-                text: t('common.continue' as TranslationKey),
-                onPress: () => {
-                  uploadedImageUrl = null;
-                },
-              },
-            ]
-          );
-          return; // Stop here to let user decide
+          toast.error(t('onboarding.validation.failedToUploadPicture' as TranslationKey));
+          return;
         } else {
           uploadedImageUrl = url;
         }
@@ -210,10 +185,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
 
         if (!user) {
           setIsSaving(false);
-          Alert.alert(
-            t('alerts.error' as TranslationKey),
-            t('onboarding.validation.playerNotFound' as TranslationKey)
-          );
+          toast.error(t('onboarding.validation.playerNotFound' as TranslationKey));
           return;
         }
 
@@ -247,10 +219,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
         if (updateError) {
           Logger.error('Failed to update profile', updateError as Error, { userId: user.id });
           setIsSaving(false);
-          Alert.alert(
-            t('alerts.error' as TranslationKey),
-            t('onboarding.validation.failedToUpdateProfile' as TranslationKey)
-          );
+          toast.error(t('onboarding.validation.failedToUpdateProfile' as TranslationKey));
           return;
         }
 
@@ -281,19 +250,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
           // Don't block the save - profile table is already updated
         }
 
-        // Show success toast
-        if (Platform.OS === 'android') {
-          ToastAndroid.show(
-            t('onboarding.successMessages.personalInfoUpdated' as TranslationKey),
-            ToastAndroid.LONG
-          );
-        } else {
-          // For iOS, use a brief Alert that auto-dismisses via timeout
-          Alert.alert(
-            t('alerts.success' as TranslationKey),
-            t('onboarding.successMessages.personalInfoUpdated' as TranslationKey)
-          );
-        }
+        toast.success(t('onboarding.successMessages.personalInfoUpdated' as TranslationKey));
 
         // Notify parent that data was saved successfully
         onSave?.();
@@ -318,11 +275,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
           Logger.error('Failed to save personal info during onboarding', error as Error, {
             hasProfileImage: !!uploadedImageUrl,
           });
-          Alert.alert(
-            t('alerts.error' as TranslationKey),
-            t('onboarding.validation.failedToSaveInfo' as TranslationKey),
-            [{ text: t('common.ok' as TranslationKey) }]
-          );
+          toast.error(t('onboarding.validation.failedToSaveInfo' as TranslationKey));
           return;
         }
 
@@ -359,11 +312,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
       }
     } catch (error) {
       Logger.error('Unexpected error saving personal info', error as Error, { mode });
-      Alert.alert(
-        t('alerts.error' as TranslationKey),
-        t('onboarding.validation.unexpectedError' as TranslationKey),
-        [{ text: t('common.ok' as TranslationKey) }]
-      );
+      toast.error(t('onboarding.validation.unexpectedError' as TranslationKey));
     }
   };
 
@@ -399,7 +348,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
         {/* Scrollable Content */}
         <ScrollView
           style={styles.scrollContent}
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, { paddingBottom: spacingPixels[8] }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -413,7 +362,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
             <TouchableOpacity
               style={[
                 styles.profilePicContainer,
-                { borderColor: colors.primary, backgroundColor: colors.inputBackground },
+                { borderColor: colors.buttonActive, backgroundColor: colors.inputBackground },
               ]}
               activeOpacity={0.8}
               onPress={() => {
@@ -424,15 +373,15 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
               {profileImage ? (
                 <Image source={{ uri: profileImage }} style={styles.profileImage} />
               ) : (
-                <Ionicons name="camera" size={32} color={colors.primary} />
+                <Ionicons name="camera" size={32} color={colors.buttonActive} />
               )}
             </TouchableOpacity>
           )}
 
           {/* First Name Input */}
-          <View style={styles.customInputContainer}>
-            <Text style={[styles.customInputLabel, { color: colors.text }]}>
-              First Name <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
+          <View style={styles.inputContainer}>
+            <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
+              First Name <Text color={colors.error}>*</Text>
             </Text>
             <TextInput
               placeholder="Enter your first name"
@@ -440,11 +389,10 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
               value={firstName}
               onChangeText={handleFirstNameChange}
               style={[
-                styles.inputWithIcon,
-                styles.inputField,
+                styles.input,
                 {
                   backgroundColor: colors.inputBackground,
-                  borderColor: colors.inputBackground,
+                  borderColor: colors.inputBorder,
                   color: colors.text,
                 },
               ]}
@@ -452,9 +400,9 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
           </View>
 
           {/* Last Name Input */}
-          <View style={styles.customInputContainer}>
-            <Text style={[styles.customInputLabel, { color: colors.text }]}>
-              Last Name <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
+          <View style={styles.inputContainer}>
+            <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
+              Last Name <Text color={colors.error}>*</Text>
             </Text>
             <TextInput
               placeholder="Enter your last name"
@@ -462,11 +410,10 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
               value={lastName}
               onChangeText={handleLastNameChange}
               style={[
-                styles.inputWithIcon,
-                styles.inputField,
+                styles.input,
                 {
                   backgroundColor: colors.inputBackground,
-                  borderColor: colors.inputBackground,
+                  borderColor: colors.inputBorder,
                   color: colors.text,
                 },
               ]}
@@ -475,9 +422,9 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
 
           {/* Email Input - Only show in edit mode, read-only */}
           {mode === 'edit' && (
-            <View style={styles.customInputContainer}>
-              <Text style={[styles.customInputLabel, { color: colors.text }]}>
-                Email <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
+            <View style={styles.inputContainer}>
+              <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
+                Email <Text color={colors.error}>*</Text>
               </Text>
               <TextInput
                 placeholder="Email"
@@ -486,26 +433,25 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
                 onChangeText={() => {}} // Read-only, no-op
                 editable={false}
                 style={[
-                  styles.inputWithIcon,
-                  styles.inputField,
-                  styles.customInputDisabled,
+                  styles.input,
+                  styles.inputDisabled,
                   {
                     backgroundColor: colors.inputBackground,
-                    borderColor: colors.inputBackground,
+                    borderColor: colors.inputBorder,
                     color: colors.text,
                   },
                 ]}
               />
-              <Text style={[styles.customHelperText, { color: colors.textMuted }]}>
+              <Text size="xs" color={colors.textSecondary} style={styles.helperText}>
                 This information cannot be modified
               </Text>
             </View>
           )}
 
-          {/* Username Input - Light green background for both modes */}
-          <View style={styles.customInputContainer}>
-            <Text style={[styles.customInputLabel, { color: colors.text }]}>
-              Username <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
+          {/* Username Input */}
+          <View style={styles.inputContainer}>
+            <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
+              Username <Text color={colors.error}>*</Text>
             </Text>
             <TextInput
               placeholder="Choose a username"
@@ -514,85 +460,89 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
               onChangeText={handleUsernameChange}
               maxLength={10}
               style={[
-                styles.inputWithIcon,
-                styles.inputField,
+                styles.input,
                 {
                   backgroundColor: colors.inputBackground,
-                  borderColor: colors.inputBackground,
+                  borderColor: colors.inputBorder,
                   color: colors.text,
                 },
               ]}
             />
             <View style={styles.inputFooter}>
-              <Text style={[styles.customHelperText, { color: colors.textMuted }]}>
+              <Text size="xs" color={colors.textSecondary}>
                 Max 10 characters, no spaces
               </Text>
-              <Text style={[styles.charCount, { color: colors.textMuted }]}>
+              <Text size="xs" color={colors.textSecondary}>
                 {username.length}/10
               </Text>
             </View>
           </View>
 
-          {/* Date of Birth Input - Light green background for both modes */}
-          <Text style={[styles.customInputLabel, { color: colors.text }]}>
-            Date of Birth <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
-          </Text>
-          {Platform.OS === 'web' ? (
-            <View
-              style={[
-                styles.inputWithIcon,
-                { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
-              ]}
-            >
-              <input
-                type="date"
-                style={{
-                  flex: 1,
-                  fontSize: 16,
-                  border: 'none',
-                  outline: 'none',
-                  backgroundColor: 'transparent',
-                  color: colors.text,
-                  fontFamily: 'inherit',
-                }}
-                value={dateOfBirth ? dateOfBirth.toISOString().split('T')[0] : ''}
-                onChange={e => {
-                  const selectedDate = e.target.value ? new Date(e.target.value) : null;
-                  if (selectedDate) {
-                    setDateOfBirth(selectedDate);
-                  }
-                }}
-                max={new Date().toISOString().split('T')[0]}
-                min="1900-01-01"
-                placeholder="Date of Birth"
-              />
-              <Ionicons
-                name="calendar-outline"
-                size={20}
-                color={colors.textMuted}
-                style={styles.inputIcon}
-              />
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={[
-                styles.inputWithIcon,
-                { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
-              ]}
-              onPress={() => setShowDatePicker(true)}
-              activeOpacity={0.8}
-            >
-              <Text color={dateOfBirth ? colors.text : colors.textMuted} style={{ flex: 1 }}>
-                {dateOfBirth ? formatDate(dateOfBirth) : 'Date of Birth'}
-              </Text>
-              <Ionicons
-                name="calendar-outline"
-                size={20}
-                color={colors.textMuted}
-                style={styles.inputIcon}
-              />
-            </TouchableOpacity>
-          )}
+          {/* Date of Birth Input */}
+          <View style={styles.inputContainer}>
+            <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
+              Date of Birth <Text color={colors.error}>*</Text>
+            </Text>
+            {Platform.OS === 'web' ? (
+              <View
+                style={[
+                  styles.input,
+                  styles.dateInput,
+                  {
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.inputBorder,
+                  },
+                ]}
+              >
+                <input
+                  type="date"
+                  style={{
+                    flex: 1,
+                    fontSize: 16,
+                    border: 'none',
+                    outline: 'none',
+                    backgroundColor: 'transparent',
+                    color: colors.text,
+                    fontFamily: 'inherit',
+                  }}
+                  value={dateOfBirth ? dateOfBirth.toISOString().split('T')[0] : ''}
+                  onChange={e => {
+                    const selectedDate = e.target.value ? new Date(e.target.value) : null;
+                    if (selectedDate) {
+                      setDateOfBirth(selectedDate);
+                    }
+                  }}
+                  max={new Date().toISOString().split('T')[0]}
+                  min="1900-01-01"
+                  placeholder="Date of Birth"
+                />
+                <Ionicons
+                  name="calendar-outline"
+                  size={20}
+                  color={colors.buttonActive}
+                  style={styles.inputIcon}
+                />
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  styles.input,
+                  styles.dateInput,
+                  {
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.inputBorder,
+                  },
+                ]}
+                onPress={() => setShowDatePicker(true)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="calendar-outline" size={20} color={colors.buttonActive} />
+                <Text color={dateOfBirth ? colors.text : colors.textMuted} style={{ flex: 1 }}>
+                  {dateOfBirth ? formatDate(dateOfBirth) : 'Date of Birth'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
           {/* Date Picker - iOS Modal */}
           {showDatePicker && Platform.OS === 'ios' && (
@@ -606,7 +556,9 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
                 <View style={[styles.datePickerContainer, { backgroundColor: colors.card }]}>
                   <View style={[styles.datePickerHeader, { borderBottomColor: colors.border }]}>
                     <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                      <Text style={[styles.datePickerButton, { color: colors.primary }]}>Done</Text>
+                      <Text style={[styles.datePickerButton, { color: colors.buttonActive }]}>
+                        Done
+                      </Text>
                     </TouchableOpacity>
                   </View>
                   <DateTimePicker
@@ -635,26 +587,29 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
             />
           )}
 
-          {/* Gender Picker - Light green background for both modes */}
-          <View style={styles.customInputContainer}>
-            <Text style={[styles.customInputLabel, { color: colors.text }]}>
-              Gender <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
+          {/* Gender Picker */}
+          <View style={styles.inputContainer}>
+            <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
+              Gender <Text color={colors.error}>*</Text>
             </Text>
             <Select
               placeholder="Select your gender"
               value={gender}
               onChange={setGender}
               options={genderOptions}
-              containerStyle={styles.inlineInputContainer}
+              containerStyle={styles.selectContainer}
               selectStyle={[
-                styles.genderSelectStyle,
-                { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
+                styles.genderSelect,
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.inputBorder,
+                },
               ]}
             />
           </View>
 
-          {/* Phone Number Input - Light green background for both modes */}
-          <View style={styles.customInputContainer}>
+          {/* Phone Number Input */}
+          <View style={styles.inputContainer}>
             <PhoneInput
               value={phoneNumber}
               onChangePhone={handlePhoneNumberChange}
@@ -669,7 +624,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
                 textSecondary: colors.textSecondary,
                 background: colors.background,
                 inputBackground: colors.inputBackground,
-                inputBorder: colors.inputBackground,
+                inputBorder: colors.inputBorder,
                 primary: colors.primary,
                 error: colors.error,
                 card: colors.card,
@@ -742,7 +697,6 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacingPixels[4],
-    paddingBottom: spacingPixels[6],
   },
   profilePicContainer: {
     width: 80,
@@ -751,7 +705,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
-    marginBottom: 25,
+    marginBottom: spacingPixels[6],
     borderWidth: 2,
     borderStyle: 'dashed',
     overflow: 'hidden',
@@ -762,72 +716,60 @@ const styles = StyleSheet.create({
     borderRadius: 40,
   },
   footer: {
-    padding: spacingPixels[4],
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[4],
+    paddingBottom: spacingPixels[8],
     borderTopWidth: 1,
   },
   submitButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 14,
+    paddingVertical: spacingPixels[4],
     borderRadius: radiusPixels.lg,
+    gap: spacingPixels[2],
   },
-  // Custom input styles for edit mode with light green background
-  customInputContainer: {
-    marginBottom: 12, // Reduced from 15 to save vertical space
+  inputContainer: {
+    marginBottom: spacingPixels[3],
   },
-  customInputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
+  inputLabel: {
+    marginBottom: spacingPixels[2],
   },
-  requiredStar: {
-    // Color applied inline
+  input: {
+    borderRadius: radiusPixels.lg,
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
+    fontSize: 16,
+    borderWidth: 1,
   },
-  customInputDisabled: {
+  dateInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+  },
+  inputDisabled: {
     opacity: 0.6,
   },
-  inlineInputContainer: {
-    marginBottom: 0, // Remove Select's default margin
+  selectContainer: {
+    marginBottom: 0,
   },
-  genderSelectStyle: {
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    marginBottom: 15,
+  genderSelect: {
+    borderRadius: radiusPixels.lg,
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
     borderWidth: 1,
-    minHeight: 50, // Match other input heights
+    minHeight: 48,
   },
-  customHelperText: {
-    fontSize: 12,
-    marginTop: 4,
+  helperText: {
+    marginTop: spacingPixels[1],
   },
   inputFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  charCount: {
-    fontSize: 12,
-  },
-  inputWithIcon: {
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    marginBottom: 15,
-    borderWidth: 1,
-  },
-  inputField: {
-    fontSize: 16,
-  },
-  inputText: {
-    paddingVertical: 0,
-  },
-  placeholderText: {
-    // Unused style - placeholderTextColor is set inline
+    marginTop: spacingPixels[1],
   },
   inputIcon: {
-    marginLeft: 10,
+    marginRight: spacingPixels[3],
   },
   modalOverlay: {
     flex: 1,
@@ -835,15 +777,15 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   datePickerContainer: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 20,
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
+    paddingBottom: spacingPixels[5],
   },
   datePickerHeader: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[4],
     borderBottomWidth: 1,
   },
   datePickerButton: {

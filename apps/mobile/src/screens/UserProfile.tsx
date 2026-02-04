@@ -5,7 +5,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -117,7 +116,7 @@ const UserProfile = () => {
       } = await supabase.auth.getUser();
       if (!user) {
         // User is not authenticated, go back
-        Alert.alert(t('alerts.error'), t('errors.unauthorized'));
+        toast.error(t('errors.unauthorized'));
         navigation.goBack();
         return;
       }
@@ -144,7 +143,7 @@ const UserProfile = () => {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        Alert.alert(t('alerts.error'), t('errors.unauthorized'));
+        toast.error(t('errors.unauthorized'));
         return;
       }
 
@@ -391,7 +390,7 @@ const UserProfile = () => {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        Alert.alert(t('alerts.error'), t('errors.unauthorized'));
+        toast.error(t('errors.unauthorized'));
         return;
       }
 
@@ -415,7 +414,7 @@ const UserProfile = () => {
       // Get the user's primary sport to save availabilities for
       const primarySport = sports.find(s => s.isPrimary && s.isActive);
       if (!primarySport) {
-        Alert.alert(t('alerts.error'), t('errors.noPrimarySport'));
+        toast.error(t('errors.noPrimarySport'));
         return;
       }
 
