@@ -853,9 +853,6 @@ const UserProfile = () => {
               <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
                 {t('profile.sections.sports')}
               </Text>
-              <TouchableOpacity style={styles.editIconButton}>
-                <Ionicons name="create-outline" size={20} color={colors.primary} />
-              </TouchableOpacity>
             </View>
 
             <View style={styles.sportsCardsContainer}>

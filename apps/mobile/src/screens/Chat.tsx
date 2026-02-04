@@ -426,11 +426,6 @@ const Chat = () => {
         <Text style={[styles.headerTitle, { color: colors.headerForeground }]}>
           {t('chat.inbox')}
         </Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.headerButton}>
-            <Ionicons name="create-outline" size={24} color={colors.headerForeground} />
-          </TouchableOpacity>
-        </View>
       </View>
 
       {/* Search bar - Wrapped with CopilotStep for tour */}
@@ -547,7 +542,8 @@ const Chat = () => {
           styles.fab,
           {
             backgroundColor: primary[500],
-            bottom: Platform.OS === 'android' ? insets.bottom + 8 : 8,
+            bottom: Platform.OS === 'android' ? insets.bottom + 16 : 16,
+            right: spacingPixels[5],
           },
         ]}
         onPress={handleNewGroupPress}
@@ -580,12 +576,6 @@ const styles = StyleSheet.create({
     fontSize: fontSizePixels.lg,
     fontWeight: String(fontWeightNumeric.semibold) as '600',
   },
-  headerActions: {
-    flexDirection: 'row',
-  },
-  headerButton: {
-    padding: spacingPixels[0],
-  },
   searchContainer: {
     paddingHorizontal: spacingPixels[4],
     paddingBottom: spacingPixels[2],
@@ -595,7 +585,6 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    right: spacingPixels[4],
     width: 56,
     height: 56,
     borderRadius: 28,
