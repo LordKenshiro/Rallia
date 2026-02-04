@@ -28,6 +28,10 @@ interface OverlayContextType {
   setOnHomeScreen: (isOnHome: boolean) => void;
   /** Notify that splash animation has completed */
   setSplashComplete: (complete: boolean) => void;
+  /** Whether splash animation has completed */
+  isSplashComplete: boolean;
+  /** Whether permissions have been handled (requested or skipped) */
+  permissionsHandled: boolean;
 }
 
 // =============================================================================
@@ -61,6 +65,7 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
   // ==========================================================================
   const [, setIsOnHomeScreen] = useState(false);
   const [isSplashComplete, setIsSplashComplete] = useState(false);
+  const [permissionsHandled, setPermissionsHandled] = useState(false);
 
   // Track if we've already requested permissions this session
   const hasRequestedPermissions = useRef(false);
@@ -124,6 +129,9 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
             granted: calendarGranted,
           });
         }
+
+        // Mark permissions as handled
+        setPermissionsHandled(true);
       };
 
       requestPermissions();
@@ -160,6 +168,8 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
   const contextValue: OverlayContextType = {
     setOnHomeScreen: handleSetOnHomeScreen,
     setSplashComplete: handleSetSplashComplete,
+    isSplashComplete,
+    permissionsHandled,
   };
 
   // ==========================================================================

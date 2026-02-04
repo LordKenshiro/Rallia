@@ -7,6 +7,7 @@ export * from './usePermissions';
 export * from './useTranslation';
 export * from './useUserLocation';
 export * from './usePushNotifications';
+export * from './useTourSequence';
 
 // Group chat hooks
 export * from './groupChat';

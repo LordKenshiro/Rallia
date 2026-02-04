@@ -17,6 +17,8 @@ import { navigationRef } from './src/navigation';
 import { ActionsBottomSheet } from './src/components/ActionsBottomSheet';
 import { MatchDetailSheet } from './src/components/MatchDetailSheet';
 import { SplashOverlay } from './src/components/SplashOverlay';
+import { WelcomeTourModal } from './src/components/WelcomeTourModal';
+import { TourCompleteModal } from './src/components/TourCompleteModal';
 import { ErrorBoundary, ToastProvider, NetworkProvider } from '@rallia/shared-components';
 import { ThemeProvider, useTheme } from '@rallia/shared-hooks';
 import { Logger } from './src/services/logger';
@@ -30,6 +32,8 @@ import {
   SportProvider,
   MatchDetailSheetProvider,
   useOverlay,
+  TourProvider,
+  useTour,
 } from './src/context';
 import { usePushNotifications } from './src/hooks';
 import { ProfileProvider, PlayerProvider, useNotificationRealtime } from '@rallia/shared-hooks';
@@ -90,7 +94,8 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
 
 function AppContent() {
   const { theme } = useTheme();
-  const { setSplashComplete } = useOverlay();
+  const { setSplashComplete, isSplashComplete, permissionsHandled } = useOverlay();
+  const { showCompletionModal, dismissCompletionModal, lastCompletedTourId } = useTour();
 
   return (
     <>
@@ -102,6 +107,17 @@ function AppContent() {
       <ActionsBottomSheet />
       {/* Match Detail Bottom Sheet - shows when match card is pressed */}
       <MatchDetailSheet />
+      {/* Welcome Tour Modal - shows for new users after splash/permissions */}
+      <WelcomeTourModal
+        splashComplete={isSplashComplete}
+        permissionsHandled={permissionsHandled}
+      />
+      {/* Tour Completion Modal - shows after completing main navigation tour */}
+      <TourCompleteModal
+        visible={showCompletionModal}
+        onDismiss={dismissCompletionModal}
+        tourId={lastCompletedTourId || undefined}
+      />
       {/* Splash overlay - renders on top of everything */}
       <SplashOverlay onAnimationComplete={() => setSplashComplete(true)} />
     </>
@@ -123,23 +139,25 @@ export default function App() {
           <QueryClientProvider client={queryClient}>
             <LocaleProvider>
               <ThemeProvider>
-                <NetworkProvider>
-                  <ToastProvider>
-                    <AuthProvider>
-                      <AuthenticatedProviders>
-                        <OverlayProvider>
-                          <ActionsSheetProvider>
-                            <MatchDetailSheetProvider>
-                              <BottomSheetModalProvider>
-                                <AppContent />
-                              </BottomSheetModalProvider>
-                            </MatchDetailSheetProvider>
-                          </ActionsSheetProvider>
-                        </OverlayProvider>
-                      </AuthenticatedProviders>
-                    </AuthProvider>
-                  </ToastProvider>
-                </NetworkProvider>
+                <TourProvider>
+                  <NetworkProvider>
+                    <ToastProvider>
+                      <AuthProvider>
+                        <AuthenticatedProviders>
+                          <OverlayProvider>
+                            <ActionsSheetProvider>
+                              <MatchDetailSheetProvider>
+                                <BottomSheetModalProvider>
+                                  <AppContent />
+                                </BottomSheetModalProvider>
+                              </MatchDetailSheetProvider>
+                            </ActionsSheetProvider>
+                          </OverlayProvider>
+                        </AuthenticatedProviders>
+                      </AuthProvider>
+                    </ToastProvider>
+                  </NetworkProvider>
+                </TourProvider>
               </ThemeProvider>
             </LocaleProvider>
           </QueryClientProvider>

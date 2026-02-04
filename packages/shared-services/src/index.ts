@@ -20,6 +20,7 @@ export * from './groups';
 export * from './communities';
 export * from './chat';
 export * from './reports';
+export * from './tour';
 
 // Export default DatabaseService
 export { default } from './database';

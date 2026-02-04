@@ -14,7 +14,8 @@ import { useAppNavigation } from '../navigation/hooks';
 import { Text, Skeleton, SkeletonAvatar, useToast } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
 import { replaceImage } from '../services/imageUpload';
-import { useImagePicker, useThemeStyles, useTranslation } from '../hooks';
+import { useImagePicker, useThemeStyles, useTranslation, useTourSequence, type TranslationKey } from '../hooks';
+import { CopilotStep, WalkthroughableView } from '../context/TourContext';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { formatDate as formatDateUtil, formatDateMonthYear } from '../utils/dateFormatting';
@@ -77,6 +78,14 @@ const UserProfile = () => {
   const [showPersonalInfoOverlay, setShowPersonalInfoOverlay] = useState(false);
   const [showPlayerInfoOverlay, setShowPlayerInfoOverlay] = useState(false);
   const [showAvailabilitiesOverlay, setShowAvailabilitiesOverlay] = useState(false);
+
+  // Profile screen tour - triggers after main navigation tour is completed
+  const { shouldShowTour: _shouldShowProfileTour } = useTourSequence({
+    screenId: 'profile',
+    isReady: !loading,
+    delay: 800,
+    autoStart: true,
+  });
 
   // Use custom hook for image picker (for profile picture editing)
   const {
@@ -586,53 +595,59 @@ const UserProfile = () => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Profile Picture with Edit Overlay - Same as PersonalInformationOverlay */}
-        <View style={[styles.profileHeader, { backgroundColor: colors.card }]}>
-          <TouchableOpacity
-            style={[
-              styles.profilePicContainer,
-              { borderColor: colors.primary, backgroundColor: colors.inputBackground },
-            ]}
-            activeOpacity={0.8}
-            onPress={openPicker}
-            disabled={uploadingImage}
-          >
-            {profile?.profile_picture_url || newProfileImage ? (
-              <Image
-                source={{
-                  uri: newProfileImage || getProfilePictureUrl(profile?.profile_picture_url) || '',
-                }}
-                style={styles.profileImage}
-              />
-            ) : (
-              <Ionicons name="camera" size={32} color={colors.primary} />
-            )}
-            {uploadingImage && (
-              <View style={styles.uploadingOverlay}>
-                <ActivityIndicator size="large" color={colors.primaryForeground} />
-                <Text style={[styles.uploadingText, { color: colors.primaryForeground }]}>
-                  {t('profile.uploading')}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
+        {/* Profile Picture with Edit Overlay - Wrapped with CopilotStep for tour */}
+        <CopilotStep
+          text={t('tour.profileScreen.picture.description' as TranslationKey)}
+          order={20}
+          name="profile_picture"
+        >
+          <WalkthroughableView style={[styles.profileHeader, { backgroundColor: colors.card }]}>
+            <TouchableOpacity
+              style={[
+                styles.profilePicContainer,
+                { borderColor: colors.primary, backgroundColor: colors.inputBackground },
+              ]}
+              activeOpacity={0.8}
+              onPress={openPicker}
+              disabled={uploadingImage}
+            >
+              {profile?.profile_picture_url || newProfileImage ? (
+                <Image
+                  source={{
+                    uri: newProfileImage || getProfilePictureUrl(profile?.profile_picture_url) || '',
+                  }}
+                  style={styles.profileImage}
+                />
+              ) : (
+                <Ionicons name="camera" size={32} color={colors.primary} />
+              )}
+              {uploadingImage && (
+                <View style={styles.uploadingOverlay}>
+                  <ActivityIndicator size="large" color={colors.primaryForeground} />
+                  <Text style={[styles.uploadingText, { color: colors.primaryForeground }]}>
+                    {t('profile.uploading')}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
 
-          {/* Name and Username */}
-          <Text style={[styles.profileName, { color: colors.text }]}>
-            {profile?.display_name || `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || t('profile.user')}
-          </Text>
-          <Text style={[styles.username, { color: colors.textMuted }]}>
-            @{profile?.display_name?.toLowerCase().replace(/\s/g, '') || t('profile.username')}
-          </Text>
-
-          {/* Joined Date */}
-          <View style={styles.joinedContainer}>
-            <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-            <Text style={[styles.joinedText, { color: colors.textMuted }]}>
-              {t('profile.joined')} {formatJoinedDate(player?.created_at || null)}
+            {/* Name and Username */}
+            <Text style={[styles.profileName, { color: colors.text }]}>
+              {profile?.display_name || `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || t('profile.user')}
             </Text>
-          </View>
-        </View>
+            <Text style={[styles.username, { color: colors.textMuted }]}>
+              @{profile?.display_name?.toLowerCase().replace(/\s/g, '') || t('profile.username')}
+            </Text>
+
+            {/* Joined Date */}
+            <View style={styles.joinedContainer}>
+              <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
+              <Text style={[styles.joinedText, { color: colors.textMuted }]}>
+                {t('profile.joined')} {formatJoinedDate(player?.created_at || null)}
+              </Text>
+            </View>
+          </WalkthroughableView>
+        </CopilotStep>
 
         {/* My Personal Information with Edit Icon */}
         <View style={styles.section}>
@@ -746,43 +761,48 @@ const UserProfile = () => {
           </View>
         </View>
 
-        {/* My Sports - Horizontal Cards with Chevrons - Show ALL sports */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
-              {t('profile.sections.sports')}
-            </Text>
-            <TouchableOpacity style={styles.editIconButton}>
-              <Ionicons name="create-outline" size={20} color={colors.primary} />
-            </TouchableOpacity>
-          </View>
+        {/* My Sports - Horizontal Cards with Chevrons - Wrapped with CopilotStep */}
+        <CopilotStep
+          text={t('tour.profileScreen.sports.description' as TranslationKey)}
+          order={21}
+          name="profile_sports"
+        >
+          <WalkthroughableView style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+                {t('profile.sections.sports')}
+              </Text>
+              <TouchableOpacity style={styles.editIconButton}>
+                <Ionicons name="create-outline" size={20} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
 
-          <View style={styles.sportsCardsContainer}>
-            {sports.map(sport => (
-              <TouchableOpacity
-                key={sport.id}
-                style={[
-                  styles.sportCard,
-                  {
-                    backgroundColor: sport.isActive ? colors.card : colors.inputBackground,
-                  },
-                  !sport.isActive && styles.sportCardInactive,
-                ]}
-                activeOpacity={0.7}
-                onPress={() => {
-                  navigation.navigate('SportProfile', {
-                    sportId: sport.id,
-                    sportName: sport.display_name as 'tennis' | 'pickleball',
-                  });
-                }}
-              >
-                <View style={styles.sportCardLeft}>
-                  <Text
-                    style={[
-                      styles.sportName,
-                      {
-                        color: sport.isActive ? colors.text : colors.textMuted,
-                      },
+            <View style={styles.sportsCardsContainer}>
+              {sports.map(sport => (
+                <TouchableOpacity
+                  key={sport.id}
+                  style={[
+                    styles.sportCard,
+                    {
+                      backgroundColor: sport.isActive ? colors.card : colors.inputBackground,
+                    },
+                    !sport.isActive && styles.sportCardInactive,
+                  ]}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    navigation.navigate('SportProfile', {
+                      sportId: sport.id,
+                      sportName: sport.display_name as 'tennis' | 'pickleball',
+                    });
+                  }}
+                >
+                  <View style={styles.sportCardLeft}>
+                    <Text
+                      style={[
+                        styles.sportName,
+                        {
+                          color: sport.isActive ? colors.text : colors.textMuted,
+                        },
                     ]}
                   >
                     {sport.display_name}
@@ -838,26 +858,32 @@ const UserProfile = () => {
                 {t('profile.status.noSports')}
               </Text>
             )}
-          </View>
-        </View>
+            </View>
+          </WalkthroughableView>
+        </CopilotStep>
 
-        {/* My Availabilities with Edit Icon */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
-              {t('profile.sections.availabilities')}
-            </Text>
-            <TouchableOpacity
-              style={styles.editIconButton}
-              onPress={() => setShowAvailabilitiesOverlay(true)}
-            >
-              <Ionicons name="create-outline" size={20} color={colors.primary} />
-            </TouchableOpacity>
-          </View>
+        {/* My Availabilities with Edit Icon - Wrapped with CopilotStep */}
+        <CopilotStep
+          text={t('tour.profileScreen.availability.description' as TranslationKey)}
+          order={22}
+          name="profile_availability"
+        >
+          <WalkthroughableView style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+                {t('profile.sections.availabilities')}
+              </Text>
+              <TouchableOpacity
+                style={styles.editIconButton}
+                onPress={() => setShowAvailabilitiesOverlay(true)}
+              >
+                <Ionicons name="create-outline" size={20} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
 
-          <View style={[styles.card, { backgroundColor: colors.card }]}>
-            {/* Availability Grid - Same as PlayerAvailabilitiesOverlay */}
-            <View style={styles.gridContainer}>
+            <View style={[styles.card, { backgroundColor: colors.card }]}>
+              {/* Availability Grid - Same as PlayerAvailabilitiesOverlay */}
+              <View style={styles.gridContainer}>
               {/* Header Row */}
               <View style={styles.gridRow}>
                 <View style={styles.dayCell} />
@@ -908,9 +934,10 @@ const UserProfile = () => {
                   ))}
                 </View>
               ))}
+              </View>
             </View>
-          </View>
-        </View>
+          </WalkthroughableView>
+        </CopilotStep>
 
         {/* Reference Requests Section - Only show if there are pending requests */}
         {pendingReferenceRequestsCount > 0 && (

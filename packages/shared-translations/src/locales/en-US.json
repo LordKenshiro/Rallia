@@ -3241,5 +3241,184 @@
       "unexpectedError": "Something unexpected happened",
       "invalidCallback": "Invalid callback parameters"
     }
+  },
+  "tour": {
+    "buttons": {
+      "skip": "Skip",
+      "previous": "Previous",
+      "next": "Next",
+      "finish": "Got it!"
+    },
+    "stepIndicator": "Step {current} of {total}",
+    "welcome": {
+      "title": "Welcome to Rallia!",
+      "subtitle": "Let's take a quick tour to help you get started",
+      "startTour": "Start Tour",
+      "skipTour": "Skip for now",
+      "returnUser": {
+        "title": "Welcome back!",
+        "subtitle": "Would you like a quick refresher on the app features?",
+        "takeTour": "Show me around",
+        "noThanks": "No thanks"
+      }
+    },
+    "mainNavigation": {
+      "home": {
+        "title": "Home",
+        "description": "Your dashboard showing upcoming matches, notifications, and quick actions."
+      },
+      "courts": {
+        "title": "Courts",
+        "description": "Discover courts and sports facilities near you on the interactive map."
+      },
+      "actions": {
+        "title": "Actions",
+        "description": "Quick access to create matches, find players, and more."
+      },
+      "matches": {
+        "title": "Games",
+        "description": "Browse available games, create new matches, and manage your game schedule."
+      },
+      "chat": {
+        "title": "Messages",
+        "description": "Chat with other players, coordinate game details, and stay connected."
+      },
+      "profile": {
+        "title": "Profile",
+        "description": "View and edit your profile, manage settings, and track your stats."
+      }
+    },
+    "header": {
+      "profile": {
+        "title": "Your Profile",
+        "description": "Tap your profile picture to view and edit your profile, stats, and preferences."
+      },
+      "sportToggle": {
+        "title": "Sport Selector",
+        "description": "Switch between your sports to see relevant games and players."
+      },
+      "actions": {
+        "title": "Quick Actions",
+        "description": "Access notifications and app settings from here."
+      }
+    },
+    "homeScreen": {
+      "upcomingMatches": {
+        "title": "Upcoming Games",
+        "description": "See your scheduled games at a glance. Tap any game for more details."
+      },
+      "nearbyMatches": {
+        "title": "Nearby Games",
+        "description": "Discover games happening near you. Tap any match to view details and join."
+      },
+      "quickActions": {
+        "title": "Quick Actions",
+        "description": "Create a new game or find players with just one tap."
+      },
+      "notifications": {
+        "title": "Notifications",
+        "description": "Stay updated with game invites, messages, and important alerts."
+      },
+      "pullToRefresh": {
+        "title": "Pull to Refresh",
+        "description": "Pull down on the list to refresh and see the latest games."
+      }
+    },
+    "matchesScreen": {
+      "matchList": {
+        "title": "Available Games",
+        "description": "Browse games in your area. Use filters to find the perfect match."
+      },
+      "filters": {
+        "title": "Filters",
+        "description": "Filter by sport, skill level, location, and more to find your ideal game."
+      },
+      "createMatch": {
+        "title": "Create Game",
+        "description": "Tap here to create a new game and invite players."
+      }
+    },
+    "createMatch": {
+      "sport": {
+        "title": "Select Sport",
+        "description": "Choose the sport you want to play."
+      },
+      "location": {
+        "title": "Set Location",
+        "description": "Pick a venue or let us suggest nearby facilities."
+      },
+      "datetime": {
+        "title": "Date & Time",
+        "description": "Choose when you want to play."
+      },
+      "skillLevel": {
+        "title": "Skill Level",
+        "description": "Set the skill level to attract players of similar ability."
+      },
+      "players": {
+        "title": "Invite Players",
+        "description": "Invite friends or leave it open for anyone to join."
+      }
+    },
+    "chatScreen": {
+      "conversations": {
+        "title": "Conversations",
+        "description": "All your chats in one place. Tap to open a conversation."
+      },
+      "search": {
+        "title": "Search",
+        "description": "Search for conversations by name or message content."
+      },
+      "tabs": {
+        "title": "Chat Categories",
+        "description": "Switch between Direct Messages, Groups, and Match chats. The badge shows unread messages."
+      },
+      "newMessage": {
+        "title": "New Message",
+        "description": "Start a conversation with any player you've connected with."
+      }
+    },
+    "profileScreen": {
+      "picture": {
+        "title": "Profile Picture",
+        "description": "Tap your photo to change it. A good photo helps other players recognize you!"
+      },
+      "sports": {
+        "title": "Your Sports",
+        "description": "View and manage your sports. Tap a sport to see your rating and certification status."
+      },
+      "availability": {
+        "title": "Availability",
+        "description": "Set when you're free to play. This helps others find you for matches at convenient times."
+      },
+      "stats": {
+        "title": "Your Stats",
+        "description": "Track your game history, ratings, and achievements."
+      },
+      "settings": {
+        "title": "Settings",
+        "description": "Customize notifications, privacy, and app preferences."
+      },
+      "sportProfiles": {
+        "title": "Sport Profiles",
+        "description": "Manage your skill ratings and preferences for each sport."
+      }
+    },
+    "settings": {
+      "restartTour": "Restart App Tour",
+      "restartTourDescription": "Take the guided tour again to learn about app features",
+      "tourReset": "Tour has been reset. The tour will start on your next app launch."
+    },
+    "completion": {
+      "title": "You're all set!",
+      "message": "You now know the basics. Start exploring and have fun playing!",
+      "startPlaying": "Start Playing"
+    },
+    "complete": {
+      "title": "You're all set! 🎉",
+      "description": "You now know the basics of Rallia. Time to find matches and connect with players!",
+      "button": "Start Exploring",
+      "tip": "Tip: You can replay this tour anytime from Settings"
+    }
   }
 }

@@ -15,7 +15,11 @@ import { View, TouchableOpacity, StyleProp, ViewStyle, GestureResponderEvent, Te
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { CopilotStep } from 'react-native-copilot';
+import { WalkthroughableView } from '../context/TourContext';
 import { lightHaptic } from '@rallia/shared-utils';
+
+// WalkthroughableView is now imported from TourContext with collapsable={false} for reliable Android measurement
 import {
   ProfilePictureButton,
   NotificationButton,
@@ -117,6 +121,7 @@ function SportSelectorWithContext() {
   const { session } = useAuth();
   const { contentMode } = useActionsSheet();
   const { profile, refetch } = useProfile();
+  const { t } = useTranslation();
   const isDark = theme === 'dark';
 
   // Refetch profile when auth state changes (e.g., user first authenticates)
@@ -149,12 +154,20 @@ function SportSelectorWithContext() {
   }
 
   return (
-    <SportSelector
-      selectedSport={selectedSport}
-      userSports={userSports}
-      onSelectSport={setSelectedSport}
-      isDark={isDark}
-    />
+    <CopilotStep
+      text={t('tour.header.sportToggle.description')}
+      order={7}
+      name="header-sport-toggle"
+    >
+      <WalkthroughableView>
+        <SportSelector
+          selectedSport={selectedSport}
+          userSports={userSports}
+          onSelectSport={setSelectedSport}
+          isDark={isDark}
+        />
+      </WalkthroughableView>
+    </CopilotStep>
   );
 }
 
@@ -187,6 +200,7 @@ function ProfilePictureButtonWithAuth() {
   const navigation = useAppNavigation();
   const { session } = useAuth();
   const { openSheet } = useActionsSheet();
+  const { t } = useTranslation();
 
   const handlePress = () => {
     if (session?.user) {
@@ -200,10 +214,16 @@ function ProfilePictureButtonWithAuth() {
 
   const { isDark } = useThemeStyles();
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      <ProfilePictureButton onPress={handlePress} isDark={isDark} />
-      <ThemeLogo width={100} height={30} />
-    </View>
+    <CopilotStep
+      text={t('tour.header.profile.description')}
+      order={6}
+      name="header-profile"
+    >
+      <WalkthroughableView style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <ProfilePictureButton onPress={handlePress} isDark={isDark} />
+        <ThemeLogo width={100} height={30} />
+      </WalkthroughableView>
+    </CopilotStep>
   );
 }
 
@@ -212,11 +232,18 @@ function ProfilePictureButtonWithAuth() {
  */
 function HeaderRightButtons() {
   const { colors } = useThemeStyles();
+  const { t } = useTranslation();
   return (
-    <View style={{ flexDirection: 'row', gap: spacingPixels[2], marginRight: spacingPixels[2] }}>
-      <NotificationButtonWithBadge color={colors.headerForeground} />
-      <SettingsButton color={colors.headerForeground} />
-    </View>
+    <CopilotStep
+      text={t('tour.header.actions.description')}
+      order={8}
+      name="header-actions"
+    >
+      <WalkthroughableView style={{ flexDirection: 'row', alignItems: 'center', gap: spacingPixels[2], marginRight: spacingPixels[2] }}>
+        <NotificationButtonWithBadge color={colors.headerForeground} />
+        <SettingsButton color={colors.headerForeground} />
+      </WalkthroughableView>
+    </CopilotStep>
   );
 }
 
@@ -511,10 +538,119 @@ function ActionsPlaceholder() {
 // BOTTOM TABS
 // =============================================================================
 
+// =============================================================================
+// TOUR TAB ICONS - Wrapped with CopilotStep for guided tour
+// =============================================================================
+
+// Standard padding for tab icon highlight area
+const TAB_ICON_PADDING = 8;
+
 /**
- * Chat tab icon with unread message badge
+ * Home tab icon with tour step
  */
-function ChatTabIcon({ color, size }: { color: string; size: number }) {
+function HomeTabIcon({ color, size }: { color: string; size: number }) {
+  const { t } = useTranslation();
+  return (
+    <CopilotStep
+      text={t('tour.mainNavigation.home.description')}
+      order={1}
+      name="home-tab"
+    >
+      <WalkthroughableView 
+        style={{ 
+          width: size + TAB_ICON_PADDING * 2, 
+          height: size + TAB_ICON_PADDING * 2, 
+          alignItems: 'center', 
+          justifyContent: 'center' 
+        }}
+      >
+        <Ionicons name="home" size={size} color={color} />
+      </WalkthroughableView>
+    </CopilotStep>
+  );
+}
+
+/**
+ * Courts/Games tab icon with tour step
+ */
+function CourtsTabIcon({ color, size }: { color: string; size: number }) {
+  const { t } = useTranslation();
+  return (
+    <CopilotStep
+      text={t('tour.mainNavigation.matches.description')}
+      order={2}
+      name="courts-tab"
+    >
+      <WalkthroughableView 
+        style={{ 
+          width: size + TAB_ICON_PADDING * 2, 
+          height: size + TAB_ICON_PADDING * 2, 
+          alignItems: 'center', 
+          justifyContent: 'center' 
+        }}
+      >
+        <Ionicons name="tennisball" size={size} color={color} />
+      </WalkthroughableView>
+    </CopilotStep>
+  );
+}
+
+/**
+ * Actions/Create tab icon with tour step
+ */
+function ActionsTabIcon({ color, size }: { color: string; size: number }) {
+  const { t } = useTranslation();
+  const adjustedSize = size * 1.2;
+  return (
+    <CopilotStep
+      text={t('tour.matchesScreen.createMatch.description')}
+      order={3}
+      name="actions-tab"
+    >
+      <WalkthroughableView 
+        style={{ 
+          width: adjustedSize + TAB_ICON_PADDING * 2, 
+          height: adjustedSize + TAB_ICON_PADDING * 2, 
+          alignItems: 'center', 
+          justifyContent: 'center' 
+        }}
+      >
+        <Ionicons name="add-circle" size={adjustedSize} color={color} />
+      </WalkthroughableView>
+    </CopilotStep>
+  );
+}
+
+/**
+ * Community tab icon with tour step
+ */
+function CommunityTabIcon({ color, size }: { color: string; size: number }) {
+  const { t } = useTranslation();
+  return (
+    <CopilotStep
+      text={t('tour.profileScreen.sportProfiles.description')}
+      order={4}
+      name="community-tab"
+    >
+      <WalkthroughableView 
+        style={{ 
+          width: size + TAB_ICON_PADDING * 2, 
+          height: size + TAB_ICON_PADDING * 2, 
+          alignItems: 'center', 
+          justifyContent: 'center' 
+        }}
+      >
+        <Ionicons name="people" size={size} color={color} />
+      </WalkthroughableView>
+    </CopilotStep>
+  );
+}
+
+/**
+ * Chat tab icon with tour step and unread badge
+ */
+function ChatTabIconWithTour({ color, size }: { color: string; size: number }) {
+  const { t } = useTranslation();
   const { session } = useAuth();
   const { data: unreadCount } = useTotalUnreadCount(session?.user?.id);
   const { colors } = useThemeStyles();
@@ -524,36 +660,49 @@ function ChatTabIcon({ color, size }: { color: string; size: number }) {
   const displayCount = count > 99 ? '99+' : count.toString();
 
   return (
-    <View style={{ width: size + 12, height: size + 8, alignItems: 'center', justifyContent: 'center' }}>
-      <Ionicons name="chatbubbles" size={size} color={color} />
-      {showBadge && (
-        <View
-          style={{
-            position: 'absolute',
-            top: -2,
-            right: -2,
-            backgroundColor: colors.error,
-            borderRadius: 10,
-            minWidth: count > 99 ? 24 : count > 9 ? 20 : 16,
-            height: 16,
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingHorizontal: 4,
-          }}
-        >
-          <RNText
+    <CopilotStep
+      text={t('tour.mainNavigation.chat.description')}
+      order={5}
+      name="chat-tab"
+    >
+      <WalkthroughableView 
+        style={{ 
+          width: size + TAB_ICON_PADDING * 2, 
+          height: size + TAB_ICON_PADDING * 2, 
+          alignItems: 'center', 
+          justifyContent: 'center' 
+        }}
+      >
+        <Ionicons name="chatbubbles" size={size} color={color} />
+        {showBadge && (
+          <View
             style={{
-              color: '#FFFFFF',
-              fontSize: count > 99 ? 8 : count > 9 ? 9 : 10,
-              fontWeight: '700',
-              textAlign: 'center',
+              position: 'absolute',
+              top: 0,
+              right: 0,
+              backgroundColor: colors.error,
+              borderRadius: 10,
+              minWidth: count > 99 ? 24 : count > 9 ? 20 : 16,
+              height: 16,
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingHorizontal: 4,
             }}
           >
-            {displayCount}
-          </RNText>
-        </View>
-      )}
-    </View>
+            <RNText
+              style={{
+                color: '#FFFFFF',
+                fontSize: count > 99 ? 8 : count > 9 ? 9 : 10,
+                fontWeight: '700',
+                textAlign: 'center',
+              }}
+            >
+              {displayCount}
+            </RNText>
+          </View>
+        )}
+      </WalkthroughableView>
+    </CopilotStep>
   );
 }
 
@@ -581,23 +730,21 @@ function BottomTabs() {
         name="Home"
         component={HomeStack}
         options={{
-          tabBarIcon: ({ color, size }) => <Ionicons name="home" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <HomeTabIcon color={color} size={size} />,
         }}
       />
       <Tab.Screen
         name="Courts"
         component={CourtsStack}
         options={{
-          tabBarIcon: ({ color, size }) => <Ionicons name="tennisball" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <CourtsTabIcon color={color} size={size} />,
         }}
       />
       <Tab.Screen
         name="Actions"
         component={ActionsPlaceholder}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="add-circle" size={size * 1.2} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <ActionsTabIcon color={color} size={size} />,
           tabBarButton: props => <CenterTabButton {...props} />,
         }}
         listeners={{
@@ -612,14 +759,14 @@ function BottomTabs() {
         name="Community"
         component={CommunityStack}
         options={{
-          tabBarIcon: ({ color, size }) => <Ionicons name="people" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <CommunityTabIcon color={color} size={size} />,
         }}
       />
       <Tab.Screen
         name="Chat"
         component={ChatStack}
         options={{
-          tabBarIcon: ({ color, size }) => <ChatTabIcon color={color} size={size} />,
+          tabBarIcon: ({ color, size }) => <ChatTabIconWithTour color={color} size={size} />,
         }}
       />
     </Tab.Navigator>

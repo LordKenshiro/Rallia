@@ -17,9 +17,11 @@ import {
   useThemeStyles,
   useTranslation,
   useUserLocation,
+  useTourSequence,
   type TranslationKey,
 } from '../hooks';
 import { useOverlay, useActionsSheet, useSport, useMatchDetailSheet } from '../context';
+import { CopilotStep, WalkthroughableView } from '../context/TourContext';
 import {
   useProfile,
   useTheme,
@@ -46,6 +48,14 @@ const Home = () => {
   const isDark = theme === 'dark';
   const navigation = useHomeNavigation();
   const appNavigation = useAppNavigation();
+
+  // Home screen tour - triggers after main navigation tour is completed
+  const { shouldShowTour: _shouldShowHomeTour } = useTourSequence({
+    screenId: 'home',
+    isReady: !authLoading,
+    delay: 800,
+    autoStart: true,
+  });
 
   // Get user's current location and player preferences for nearby matches
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -244,51 +254,23 @@ const Home = () => {
   );
 
   // Render section header with "Soon & Nearby" title and "View All" button
+  // Wrapped with CopilotStep for home screen tour
   const renderSectionHeader = useCallback(() => {
     return (
-      <View style={[styles.sectionHeader]}>
-        <Text size="xl" weight="bold" color={colors.text}>
-          {t('home.soonAndNearby' as TranslationKey)}
-        </Text>
-        <TouchableOpacity
-          style={styles.viewAllButton}
-          onPress={() => {
-            lightHaptic();
-            navigation.navigate('PublicMatches');
-          }}
-          activeOpacity={0.7}
-        >
-          <Text size="base" weight="medium" color={colors.primary}>
-            {t('home.viewAll')}
-          </Text>
-          <Ionicons
-            name="chevron-forward"
-            size={18}
-            color={colors.primary}
-            style={styles.chevronIcon}
-          />
-        </TouchableOpacity>
-      </View>
-    );
-  }, [colors.text, colors.primary, navigation, t]);
-
-  // Render "My Matches" section with horizontal scroll
-  const renderMyMatchesSection = useCallback(() => {
-    // Only show for authenticated users
-    if (!session) return null;
-
-    return (
-      <View style={styles.myMatchesSection}>
-        {/* Header with title and "See All" button */}
-        <View style={[styles.sectionHeader]}>
+      <CopilotStep
+        text={t('tour.homeScreen.nearbyMatches.description' as TranslationKey)}
+        order={11}
+        name="home_nearby_matches"
+      >
+        <WalkthroughableView style={[styles.sectionHeader]}>
           <Text size="xl" weight="bold" color={colors.text}>
-            {t('home.myMatches' as TranslationKey)}
+            {t('home.soonAndNearby' as TranslationKey)}
           </Text>
           <TouchableOpacity
             style={styles.viewAllButton}
             onPress={() => {
               lightHaptic();
-              navigation.navigate('PlayerMatches');
+              navigation.navigate('PublicMatches');
             }}
             activeOpacity={0.7}
           >
@@ -302,22 +284,62 @@ const Home = () => {
               style={styles.chevronIcon}
             />
           </TouchableOpacity>
-        </View>
+        </WalkthroughableView>
+      </CopilotStep>
+    );
+  }, [colors.text, colors.primary, navigation, t]);
 
-        {/* Content: horizontal scroll or empty state */}
-        {loadingMyMatches ? (
-          <View style={styles.myMatchesLoading}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
-              {[1, 2, 3].map((i) => (
-                <View key={i} style={[styles.myMatchSkeletonCard, { backgroundColor: colors.card, marginRight: 12 }]}>
-                  <Skeleton width={120} height={16} backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'} highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'} style={{ marginBottom: 8 }} />
-                  <Skeleton width={80} height={14} backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'} highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'} style={{ marginBottom: 6 }} />
-                  <Skeleton width={100} height={12} backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'} highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'} />
-                </View>
-              ))}
-            </ScrollView>
+  // Render "My Matches" section with horizontal scroll
+  const renderMyMatchesSection = useCallback(() => {
+    // Only show for authenticated users
+    if (!session) return null;
+
+    return (
+      <CopilotStep
+        text={t('tour.homeScreen.upcomingMatches.description' as TranslationKey)}
+        order={10}
+        name="home_my_matches"
+      >
+        <WalkthroughableView style={styles.myMatchesSection}>
+          {/* Header with title and "See All" button */}
+          <View style={[styles.sectionHeader]}>
+            <Text size="xl" weight="bold" color={colors.text}>
+              {t('home.myMatches' as TranslationKey)}
+            </Text>
+            <TouchableOpacity
+              style={styles.viewAllButton}
+              onPress={() => {
+                lightHaptic();
+                navigation.navigate('PlayerMatches');
+              }}
+              activeOpacity={0.7}
+            >
+              <Text size="base" weight="medium" color={colors.primary}>
+                {t('home.viewAll')}
+              </Text>
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={colors.primary}
+                style={styles.chevronIcon}
+              />
+            </TouchableOpacity>
           </View>
-        ) : myMatches.length === 0 ? (
+
+          {/* Content: horizontal scroll or empty state */}
+          {loadingMyMatches ? (
+            <View style={styles.myMatchesLoading}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
+                {[1, 2, 3].map((i) => (
+                  <View key={i} style={[styles.myMatchSkeletonCard, { backgroundColor: colors.card, marginRight: 12 }]}>
+                    <Skeleton width={120} height={16} backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'} highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'} style={{ marginBottom: 8 }} />
+                    <Skeleton width={80} height={14} backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'} highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'} style={{ marginBottom: 6 }} />
+                    <Skeleton width={100} height={12} backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'} highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'} />
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          ) : myMatches.length === 0 ? (
           <View style={styles.myMatchesEmpty}>
             <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
             <Text size="sm" color={colors.textMuted} style={styles.myMatchesEmptyText}>
@@ -350,7 +372,8 @@ const Home = () => {
             ))}
           </ScrollView>
         )}
-      </View>
+        </WalkthroughableView>
+      </CopilotStep>
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
