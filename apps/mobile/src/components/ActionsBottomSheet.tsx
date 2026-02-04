@@ -33,7 +33,7 @@ import Animated, {
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, Skeleton } from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -479,7 +479,11 @@ export const ActionsBottomSheet: React.FC = () => {
 
   // Handle keyboard dismissal to restore sheet position
   useEffect(() => {
-    const isWizardActive = showWizard || contentMode === 'auth' || contentMode === 'onboarding';
+    const isWizardActive =
+      showWizard ||
+      contentMode === 'auth' ||
+      contentMode === 'onboarding' ||
+      contentMode === 'loading';
     if (!isWizardActive) return;
 
     let hideTimeout: NodeJS.Timeout;
@@ -531,8 +535,51 @@ export const ActionsBottomSheet: React.FC = () => {
     opacity: interpolate(slideProgress.value, [0, 0.5, 1], [0, 0.5, 1]),
   }));
 
+  // Theme-aware skeleton colors (match FacilityDetail / FacilitiesDirectory)
+  const skeletonBg = isDark ? neutral[800] : '#E1E9EE';
+  const skeletonHighlight = isDark ? neutral[700] : '#F2F8FC';
+
   // Determine which content to show based on contentMode from context
   const renderContent = () => {
+    if (contentMode === 'loading') {
+      const ACTION_ITEMS_COUNT = 5;
+      const iconSize = spacingPixels[11];
+      return (
+        <View style={styles.contentContainer}>
+          <View style={styles.actionsList}>
+            {Array.from({ length: ACTION_ITEMS_COUNT }).map((_, index) => (
+              <View key={index} style={[styles.actionItem, { borderBottomColor: colors.border }]}>
+                <Skeleton
+                  width={iconSize}
+                  height={iconSize}
+                  circle
+                  backgroundColor={skeletonBg}
+                  highlightColor={skeletonHighlight}
+                />
+                <View style={styles.actionTextContainer}>
+                  <Skeleton
+                    width="80%"
+                    height={16}
+                    borderRadius={4}
+                    backgroundColor={skeletonBg}
+                    highlightColor={skeletonHighlight}
+                  />
+                  <Skeleton
+                    width="60%"
+                    height={12}
+                    borderRadius={4}
+                    backgroundColor={skeletonBg}
+                    highlightColor={skeletonHighlight}
+                    style={{ marginTop: spacingPixels[0.5] }}
+                  />
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+      );
+    }
+
     if (contentMode === 'auth') {
       return (
         <AuthWizard

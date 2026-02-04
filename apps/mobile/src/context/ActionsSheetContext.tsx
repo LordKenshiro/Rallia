@@ -30,7 +30,7 @@ import type { MatchDetailData } from './MatchDetailSheetContext';
 // TYPES
 // =============================================================================
 
-export type ActionsSheetMode = 'auth' | 'onboarding' | 'actions';
+export type ActionsSheetMode = 'auth' | 'onboarding' | 'actions' | 'loading';
 
 interface ActionsSheetContextType {
   /** Open the Actions bottom sheet, computing initial mode based on auth state */
@@ -119,9 +119,14 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
       return 'auth';
     }
 
-    // Session exists but profile is still loading or not available = show onboarding
-    // This prevents showing actions before we know the user's onboarding status
-    if (profileLoading || !profile) {
+    // Session exists but profile is still loading = show loading (skeleton)
+    // Do not show onboarding until we know the user's onboarding status
+    if (profileLoading) {
+      return 'loading';
+    }
+
+    // Profile loaded but no profile row = new user, show onboarding
+    if (!profile) {
       return 'onboarding';
     }
 
@@ -133,6 +138,13 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
     // Fully onboarded = show actions
     return 'actions';
   }, [session?.user, profile, profileLoading]);
+
+  // When sheet is in loading mode and profile finishes loading, transition to the correct mode
+  useEffect(() => {
+    if (contentMode === 'loading' && !profileLoading) {
+      setContentMode(profile?.onboarding_completed ? 'actions' : 'onboarding');
+    }
+  }, [contentMode, profileLoading, profile?.onboarding_completed]);
 
   /**
    * Open the sheet, computing the appropriate initial mode
