@@ -13,6 +13,7 @@ export type NotificationType =
   | 'match_updated'
   | 'match_starting_soon'
   | 'match_completed'
+  | 'match_new_available'
   | 'player_kicked'
   | 'player_left'
   | 'new_message'
@@ -170,6 +171,7 @@ export const DEFAULT_PREFERENCES: Record<NotificationType, Record<DeliveryChanne
   match_updated: { email: false, push: true, sms: false },
   match_starting_soon: { email: false, push: true, sms: true },
   match_completed: { email: false, push: true, sms: false },
+  match_new_available: { email: false, push: true, sms: false },
   player_kicked: { email: true, push: true, sms: false },
   player_left: { email: false, push: true, sms: false },
   chat: { email: false, push: true, sms: false },

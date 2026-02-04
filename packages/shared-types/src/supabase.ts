@@ -5518,7 +5518,8 @@ export type Database = {
         | 'booking_reminder'
         | 'booking_cancelled_by_org'
         | 'membership_approved'
-        | 'org_announcement';
+        | 'org_announcement'
+        | 'match_new_available';
       organization_nature_enum: 'public' | 'private';
       organization_type: 'club' | 'facility' | 'league' | 'academy' | 'association';
       organization_type_enum: 'club' | 'municipality' | 'city' | 'association';
@@ -5871,6 +5872,7 @@ export const Constants = {
         'booking_cancelled_by_org',
         'membership_approved',
         'org_announcement',
+        'match_new_available',
       ],
       organization_nature_enum: ['public', 'private'],
       organization_type: ['club', 'facility', 'league', 'academy', 'association'],

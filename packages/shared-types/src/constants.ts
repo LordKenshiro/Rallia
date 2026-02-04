@@ -307,6 +307,7 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   match_updated: 'create-outline',
   match_starting_soon: 'time-outline',
   match_completed: 'trophy-outline',
+  match_new_available: 'add-circle-outline',
   player_kicked: 'remove-circle-outline',
   player_left: 'exit-outline',
   // Social types
@@ -365,6 +366,7 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   match_updated: '#2196F3', // Blue
   match_starting_soon: '#FF9800', // Orange
   match_completed: '#4CAF50', // Green
+  match_new_available: '#4DB8A8', // Teal
   player_kicked: '#F44336', // Red
   player_left: '#FF9800', // Orange
   // Social types
@@ -421,6 +423,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   match_updated: 'Match Updated',
   match_starting_soon: 'Match Starting Soon',
   match_completed: 'Match Completed',
+  match_new_available: 'New Game in Group',
   player_kicked: 'Removed from Match',
   player_left: 'Player Left',
   new_message: 'New Message',
@@ -476,6 +479,7 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   match_updated: 'match',
   match_starting_soon: 'match',
   match_completed: 'match',
+  match_new_available: 'match',
   player_kicked: 'match',
   player_left: 'match',
   // Social category
@@ -576,6 +580,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   match_updated: { email: false, push: true, sms: false },
   match_starting_soon: { email: false, push: true, sms: true }, // SMS for reminders
   match_completed: { email: false, push: true, sms: false },
+  match_new_available: { email: false, push: true, sms: false },
   player_kicked: { email: true, push: true, sms: false },
   player_left: { email: false, push: true, sms: false }, // Push only for player leaves
   // Social types - push only by default

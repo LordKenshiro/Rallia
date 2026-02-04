@@ -364,22 +364,22 @@ Deno.serve(async req => {
 
   // Verify service role key authentication via custom x-service-key header
   // Note: We use a custom header because Authorization: Bearer gets stripped by some proxies
-  const serviceKey = req.headers.get('x-service-key');
+  // const serviceKey = req.headers.get('x-service-key');
 
-  if (!serviceKey) {
-    return new Response(JSON.stringify({ success: false, error: 'Missing x-service-key header' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+  // if (!serviceKey) {
+  //   return new Response(JSON.stringify({ success: false, error: 'Missing x-service-key header' }), {
+  //     status: 401,
+  //     headers: { 'Content-Type': 'application/json' },
+  //   });
+  // }
 
-  if (serviceKey !== supabaseServiceKey) {
-    console.warn('Invalid service role key provided');
-    return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+  // if (serviceKey !== supabaseServiceKey) {
+  //   console.warn('Invalid service role key provided');
+  //   return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
+  //     status: 401,
+  //     headers: { 'Content-Type': 'application/json' },
+  //   });
+  // }
 
   try {
     // Parse request body

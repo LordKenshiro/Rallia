@@ -307,6 +307,7 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
   match_join_accepted: 'high',
   match_join_rejected: 'high',
   match_player_joined: 'high',
+  match_new_available: 'high',
   player_kicked: 'high',
   player_left: 'high',
 
@@ -370,6 +371,7 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   match_join_accepted: "You're In!",
   match_join_rejected: 'Request Declined',
   match_player_joined: 'Player Joined!',
+  match_new_available: 'New Game in Group',
   match_cancelled: 'Game Cancelled',
   match_updated: 'Game Updated',
   match_starting_soon: 'Get Ready!',
@@ -431,6 +433,8 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   match_join_rejected:
     "Your request to join the {sportName} game wasn't accepted this time. Check out other games nearby!",
   match_player_joined: '{playerName} joined your {sportName} game. {spotsLeft} spot(s) left!',
+  match_new_available:
+    'A new {sportName} game was created in a group you belong to. Tap to view and join!',
   match_cancelled:
     'The {sportName} game on {matchDate} at {locationName} has been cancelled. We hope to see you on the court soon!',
   match_updated: 'Your {sportName} game on {matchDate} has new details. Tap to review the changes.',

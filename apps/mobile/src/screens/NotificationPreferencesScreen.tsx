@@ -315,6 +315,7 @@ const NotificationPreferencesScreen: React.FC = () => {
         match_updated: t('notifications.types.match_updated'),
         match_starting_soon: t('notifications.types.match_starting_soon'),
         match_completed: t('notifications.types.match_completed'),
+        match_new_available: t('notifications.types.match_new_available'),
         player_kicked: t('notifications.types.player_kicked'),
         player_left: t('notifications.types.player_left'),
         feedback_request: t('notifications.types.feedback_request'),

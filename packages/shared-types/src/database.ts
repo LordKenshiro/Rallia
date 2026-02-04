@@ -110,6 +110,7 @@ export type ExtendedNotificationTypeEnum =
   | 'match_updated'
   | 'match_starting_soon'
   | 'match_completed'
+  | 'match_new_available'
   | 'player_kicked'
   | 'player_left'
   | 'new_message'
