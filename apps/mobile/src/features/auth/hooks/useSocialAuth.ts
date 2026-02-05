@@ -125,17 +125,11 @@ async function initializeNativeModules(): Promise<boolean> {
     isErrorWithCode = googleModule.isErrorWithCode;
 
     // Configure Google Sign-In
-    // For iOS, we prioritize the native client ID and disable offline access to avoid token audience issues
+    // webClientId is used on both platforms per Supabase docs
+    // iosClientId is additionally needed on iOS for the native SDK
     GoogleSignin.configure({
-      ...(Platform.OS === 'ios'
-        ? {
-            iosClientId: GOOGLE_IOS_CLIENT_ID,
-            offlineAccess: false, // Disable to ensure iOS client ID is used in token
-          }
-        : {
-            webClientId: GOOGLE_WEB_CLIENT_ID || undefined,
-            offlineAccess: !!GOOGLE_WEB_CLIENT_ID,
-          }),
+      webClientId: GOOGLE_WEB_CLIENT_ID,
+      ...(Platform.OS === 'ios' ? { iosClientId: GOOGLE_IOS_CLIENT_ID } : {}),
       scopes: ['email', 'profile'],
     });
 
