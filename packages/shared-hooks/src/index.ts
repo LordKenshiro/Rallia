@@ -47,6 +47,7 @@ export * from './useFavoriteStatus';
 export * from './useSharedLists';
 export * from './usePlayPreferences';
 export * from './useFavoriteFacilities';
+export * from './useBooking';
 
 // Platform-specific exports - Metro resolves .native.ts for React Native builds
 // Web bundlers will use the stub .ts files which throw helpful errors at runtime

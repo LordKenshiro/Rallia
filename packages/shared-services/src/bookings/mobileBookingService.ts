@@ -1,6 +1,9 @@
 /**
  * Mobile Booking Service
  *
+ * @deprecated Use `bookingService` instead, which calls Supabase Edge Functions
+ * directly and works identically on both web and mobile.
+ *
  * Calls the web API to create bookings from the mobile app.
  * This is a client-side service that communicates with the server-side booking API.
  */
@@ -57,25 +60,11 @@ export interface MobileBookingError {
 /**
  * Creates a booking from the mobile app by calling the web API.
  *
+ * @deprecated Use `createBooking` from `bookingService` instead.
+ *
  * @param params - Booking parameters
  * @returns Booking result with client secret for payment (if required)
  * @throws Error if the request fails
- *
- * @example
- * ```typescript
- * const result = await createMobileBooking({
- *   courtId: 'court-uuid',
- *   bookingDate: '2024-01-15',
- *   startTime: '10:00',
- *   endTime: '11:00',
- * });
- *
- * if (result.clientSecret) {
- *   // Show Stripe PaymentSheet
- *   await initPaymentSheet({ paymentIntentClientSecret: result.clientSecret });
- *   await presentPaymentSheet();
- * }
- * ```
  */
 export async function createMobileBooking(
   params: CreateMobileBookingParams
@@ -164,8 +153,8 @@ export async function createMobileBooking(
  * Confirms that a payment was successful.
  * Called after the Stripe PaymentSheet completes successfully.
  *
- * Note: The webhook typically handles payment confirmation automatically,
- * but this can be used for immediate UI feedback.
+ * @deprecated The webhook handles payment confirmation automatically.
+ * Use `updateBookingStatus` from `bookingService` if manual confirmation is needed.
  *
  * @param bookingId - The booking ID to confirm
  * @returns Whether the confirmation was successful
@@ -196,6 +185,8 @@ export async function confirmMobileBookingPayment(bookingId: string): Promise<bo
 
 /**
  * Cancels a booking from the mobile app.
+ *
+ * @deprecated Use `cancelBooking` from `bookingService` instead.
  *
  * @param bookingId - The booking ID to cancel
  * @param reason - Optional cancellation reason

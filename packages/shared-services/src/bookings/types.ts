@@ -92,3 +92,93 @@ export interface BookingValidationResult {
   error?: string;
   availableSlot?: BookingSlot;
 }
+
+// ---------------------------------------------------------------------------
+// Client-facing types for the unified bookingService (Edge Function backed)
+// ---------------------------------------------------------------------------
+
+/** Parameters for creating a booking via the Edge Function */
+export interface CreateBookingClientParams {
+  courtId: string;
+  bookingDate: string; // YYYY-MM-DD
+  startTime: string; // HH:MM or HH:MM:SS
+  endTime: string; // HH:MM or HH:MM:SS
+  notes?: string;
+  /** Book on behalf of another player (staff only) */
+  playerId?: string;
+  /** Guest name (staff-created guest bookings) */
+  guestName?: string;
+  /** Guest email (staff-created guest bookings) */
+  guestEmail?: string;
+  /** Guest phone (staff-created guest bookings) */
+  guestPhone?: string;
+  /** Skip payment for staff / cash bookings */
+  skipPayment?: boolean;
+}
+
+/** Result from the booking-create Edge Function */
+export interface CreateBookingClientResult {
+  bookingId: string;
+  status: BookingStatus;
+  clientSecret: string | null;
+  priceCents: number;
+}
+
+/** Parameters for cancelling a booking via the Edge Function */
+export interface CancelBookingClientParams {
+  bookingId: string;
+  reason?: string;
+  forceCancel?: boolean;
+}
+
+/** Result from the booking-cancel Edge Function */
+export interface CancelBookingClientResult {
+  success: boolean;
+  refundAmountCents: number;
+  refundStatus: RefundStatus;
+  message?: string;
+}
+
+/** Booking record with joined court and facility details */
+export interface BookingWithDetails {
+  id: string;
+  organization_id: string;
+  court_id: string;
+  player_id: string | null;
+  booking_date: string;
+  start_time: string;
+  end_time: string;
+  status: BookingStatus;
+  price_cents: number;
+  currency: string;
+  stripe_payment_intent_id: string | null;
+  stripe_charge_id: string | null;
+  requires_approval: boolean;
+  notes: string | null;
+  cancelled_at: string | null;
+  cancelled_by: string | null;
+  cancellation_reason: string | null;
+  refund_amount_cents: number | null;
+  refund_status: RefundStatus | null;
+  created_at: string;
+  updated_at: string;
+  court: {
+    id: string;
+    name: string | null;
+    court_number: number | null;
+    facility: {
+      id: string;
+      name: string;
+      organization_id: string;
+    };
+  };
+}
+
+/** Filters for listing bookings */
+export interface BookingListFilters {
+  dateFrom?: string;
+  dateTo?: string;
+  status?: BookingStatus | BookingStatus[];
+  limit?: number;
+  offset?: number;
+}

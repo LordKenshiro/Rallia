@@ -13,10 +13,15 @@ import { Text, useToast } from '@rallia/shared-components';
 import { useStripe } from '@stripe/stripe-react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
-import { courtAvailabilityKeys, type FormattedSlot, type CourtOption } from '@rallia/shared-hooks';
+import {
+  courtAvailabilityKeys,
+  useCreateBooking,
+  type FormattedSlot,
+  type CourtOption,
+} from '@rallia/shared-hooks';
 import type { Court } from '@rallia/shared-types';
 import type { FacilityWithDetails } from '@rallia/shared-services';
-import { createMobileBooking, Logger } from '@rallia/shared-services';
+import { Logger } from '@rallia/shared-services';
 import { lightHaptic, mediumHaptic, selectionHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../../../hooks';
 
@@ -83,6 +88,13 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const toast = useToast();
   const queryClient = useQueryClient();
+
+  // Booking mutation
+  const { createBookingAsync, isCreating } = useCreateBooking({
+    onError: error => {
+      Logger.error('Booking creation failed', error);
+    },
+  });
 
   // State
   const [isLoading, setIsLoading] = useState(false);
@@ -243,8 +255,8 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
         endTime,
       });
 
-      // Create booking and get Stripe client secret
-      const result = await createMobileBooking({
+      // Create booking via Edge Function (useCreateBooking handles cache invalidation)
+      const result = await createBookingAsync({
         courtId: selectedCourt.id,
         bookingDate,
         startTime,
@@ -287,7 +299,7 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
         });
       }
 
-      // Invalidate court availability so the list refetches and the booked slot is removed
+      // Also invalidate the specific facility availability
       queryClient.invalidateQueries({ queryKey: courtAvailabilityKeys.facility(facility.id) });
 
       // Close sheet after short delay
@@ -307,6 +319,7 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
     displayPrice,
     facility.id,
     facility.paymentsEnabled,
+    createBookingAsync,
     initPaymentSheet,
     presentPaymentSheet,
     onSuccess,
@@ -518,11 +531,11 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
               styles.submitButton,
               {
                 backgroundColor: selectedCourt ? themeColors.primary : themeColors.textMuted,
-                opacity: isLoading || bookingSuccess ? 0.7 : 1,
+                opacity: isLoading || isCreating || bookingSuccess ? 0.7 : 1,
               },
             ]}
             onPress={handleBook}
-            disabled={!selectedCourt || isLoading || bookingSuccess}
+            disabled={!selectedCourt || isLoading || isCreating || bookingSuccess}
             activeOpacity={0.8}
           >
             {isLoading ? (
