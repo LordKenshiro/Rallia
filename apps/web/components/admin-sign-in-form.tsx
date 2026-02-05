@@ -111,9 +111,8 @@ export function AdminSignInForm({
 
   const isEmailLoading = authState === 'loading' && !loadingProvider;
   const isGoogleLoading = loadingProvider === 'google';
-  const isMicrosoftLoading = loadingProvider === 'azure';
   const isFacebookLoading = loadingProvider === 'facebook';
-  const isAnyOAuthLoading = isGoogleLoading || isMicrosoftLoading || isFacebookLoading;
+  const isAnyOAuthLoading = isGoogleLoading || isFacebookLoading;
 
   return (
     <Card className="w-full max-w-md border-[var(--secondary-200)] dark:border-[var(--secondary-800)]">
@@ -172,27 +171,6 @@ export function AdminSignInForm({
                   </svg>
                 )}
                 {t('signInWithGoogle')}
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                className="w-full"
-                onClick={() => handleOAuthSignIn('azure')}
-                disabled={isAnyOAuthLoading}
-              >
-                {isMicrosoftLoading ? (
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                ) : (
-                  <svg className="mr-2 size-4" viewBox="0 0 23 23" fill="currentColor">
-                    <path d="M0 0h10.977v10.977H0z" fill="#f25022" />
-                    <path d="M12.023 0H23v10.977H12.023z" fill="#00a4ef" />
-                    <path d="M0 12.023h10.977V23H0z" fill="#7fba00" />
-                    <path d="M12.023 12.023H23V23H12.023z" fill="#ffb900" />
-                  </svg>
-                )}
-                {t('signInWithMicrosoft')}
               </Button>
 
               <Button
