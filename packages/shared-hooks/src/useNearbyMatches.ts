@@ -131,6 +131,7 @@ export function useNearbyMatches(options: UseNearbyMatchesOptions) {
     staleTime: 0, // Always refetch in background when query is accessed
     refetchOnWindowFocus: true, // Refetch when app/screen is focused so expired matches don't stay visible
     refetchOnReconnect: true,
+    refetchInterval: 1000 * 60, // Refetch every minute so the home screen stays up to date
   });
 
   // Flatten all pages into a single array of matches

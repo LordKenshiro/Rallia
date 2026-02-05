@@ -5,7 +5,7 @@
  * Handles court cost, visibility, join mode, and notes.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -15,6 +15,7 @@ import {
   Linking,
   Keyboard,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { ScrollView as GestureScrollView } from 'react-native-gesture-handler';
 import { UseFormReturn } from 'react-hook-form';
@@ -299,6 +300,8 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const scrollViewRef = useRef<any>(null);
   const notesFieldRef = useRef<View>(null);
+  const ratingScrollRef = useRef<ScrollView>(null);
+  const [ratingScrollViewWidth, setRatingScrollViewWidth] = useState(0);
 
   // Keyboard handling state for Android
   const [focusedField, setFocusedField] = useState<'cost' | 'notes' | null>(null);
@@ -358,6 +361,49 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
       setValue('courtStatus', 'to_book', { shouldDirty: false });
     }
   }, [hasLocationSpecified, courtStatus, setValue]);
+
+  // Track measured positions of rating items for accurate scroll centering
+  const ratingItemPositions = useRef<Map<number, { x: number; width: number }>>(new Map());
+  const [ratingLayoutsReady, setRatingLayoutsReady] = useState(false);
+
+  // Reset measured positions when ratings reload
+  useEffect(() => {
+    if (isLoadingRatings) {
+      ratingItemPositions.current.clear();
+      queueMicrotask(() => setRatingLayoutsReady(false));
+    }
+  }, [isLoadingRatings]);
+
+  const handleRatingItemLayout = useCallback(
+    (index: number, x: number, width: number) => {
+      ratingItemPositions.current.set(index, { x, width });
+      if (ratingItemPositions.current.size === ratingScores.length + 1) {
+        setRatingLayoutsReady(true);
+      }
+    },
+    [ratingScores.length]
+  );
+
+  // Center the minimum rating horizontal scroll on the pre-selected rating
+  useEffect(() => {
+    if (isLoadingRatings || !ratingLayoutsReady || ratingScrollViewWidth <= 0) return;
+
+    const selectedIndex = minRatingScoreId
+      ? 1 + ratingScores.findIndex(s => s.id === minRatingScoreId)
+      : 0;
+    const clampedIndex = selectedIndex < 0 ? 0 : selectedIndex;
+
+    const layout = ratingItemPositions.current.get(clampedIndex);
+    if (!layout) return;
+
+    const itemCenterX = layout.x + layout.width / 2;
+    const scrollX = Math.max(0, itemCenterX - ratingScrollViewWidth / 2);
+
+    const id = setTimeout(() => {
+      ratingScrollRef.current?.scrollTo({ x: scrollX, animated: false });
+    }, 0);
+    return () => clearTimeout(id);
+  }, [isLoadingRatings, ratingLayoutsReady, ratingScores, minRatingScoreId, ratingScrollViewWidth]);
 
   return (
     <BottomSheetScrollView
@@ -789,10 +835,12 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
             </View>
           ) : (
             <GestureScrollView
+              ref={ratingScrollRef}
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.ratingScrollContent}
               nestedScrollEnabled
+              onLayout={e => setRatingScrollViewWidth(e.nativeEvent.layout.width)}
             >
               {/* No minimum option */}
               <TouchableOpacity
@@ -805,6 +853,9 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                     borderColor: !minRatingScoreId ? colors.buttonActive : colors.border,
                   },
                 ]}
+                onLayout={e =>
+                  handleRatingItemLayout(0, e.nativeEvent.layout.x, e.nativeEvent.layout.width)
+                }
                 onPress={() => {
                   lightHaptic();
                   setValue('minRatingScoreId', undefined, {
@@ -823,7 +874,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
               </TouchableOpacity>
 
               {/* Rating score options */}
-              {ratingScores.map(score => {
+              {ratingScores.map((score, index) => {
                 const isSelected = minRatingScoreId === score.id;
                 const isPlayerRating = score.id === playerRatingScoreId;
                 return (
@@ -838,6 +889,13 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                         borderColor: isSelected ? colors.buttonActive : colors.border,
                       },
                     ]}
+                    onLayout={e =>
+                      handleRatingItemLayout(
+                        index + 1,
+                        e.nativeEvent.layout.x,
+                        e.nativeEvent.layout.width
+                      )
+                    }
                     onPress={() => {
                       lightHaptic();
                       setValue('minRatingScoreId', score.id, {
