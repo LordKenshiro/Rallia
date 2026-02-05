@@ -3304,6 +3304,7 @@
     "welcomeMessage": "Welcome! Sign in to get started with your organization account.",
     "signInWithGoogle": "Continue with Google",
     "signInWithMicrosoft": "Continue with Microsoft",
+    "signInWithFacebook": "Continue with Facebook",
     "or": "Or continue with email",
     "emailLabel": "Email",
     "emailPlaceholder": "your.email@example.com",

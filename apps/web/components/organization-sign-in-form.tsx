@@ -39,7 +39,7 @@ export function OrganizationSignInForm({
   );
   const [loadingProvider, setLoadingProvider] = useState<OAuthProvider | null>(null);
 
-  const handleOAuthSignIn = async (provider: 'google' | 'azure') => {
+  const handleOAuthSignIn = async (provider: 'google' | 'azure' | 'facebook') => {
     setLoadingProvider(provider);
     setErrorMessage(null);
 
@@ -109,6 +109,8 @@ export function OrganizationSignInForm({
   const isEmailLoading = authState === 'loading' && !loadingProvider;
   const isGoogleLoading = loadingProvider === 'google';
   const isMicrosoftLoading = loadingProvider === 'azure';
+  const isFacebookLoading = loadingProvider === 'facebook';
+  const isAnyOAuthLoading = isGoogleLoading || isMicrosoftLoading || isFacebookLoading;
 
   return (
     <Card className="w-full max-w-md border-[var(--secondary-200)] dark:border-[var(--secondary-800)]">
@@ -139,7 +141,7 @@ export function OrganizationSignInForm({
                 size="lg"
                 className="w-full"
                 onClick={() => handleOAuthSignIn('google')}
-                disabled={isGoogleLoading || isMicrosoftLoading}
+                disabled={isAnyOAuthLoading}
               >
                 {isGoogleLoading ? (
                   <Loader2 className="mr-2 size-4 animate-spin" />
@@ -172,7 +174,7 @@ export function OrganizationSignInForm({
                 size="lg"
                 className="w-full"
                 onClick={() => handleOAuthSignIn('azure')}
-                disabled={isGoogleLoading || isMicrosoftLoading}
+                disabled={isAnyOAuthLoading}
               >
                 {isMicrosoftLoading ? (
                   <Loader2 className="mr-2 size-4 animate-spin" />
@@ -185,6 +187,27 @@ export function OrganizationSignInForm({
                   </svg>
                 )}
                 {t('signInWithMicrosoft')}
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                className="w-full"
+                onClick={() => handleOAuthSignIn('facebook')}
+                disabled={isAnyOAuthLoading}
+              >
+                {isFacebookLoading ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  <svg className="mr-2 size-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                      d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"
+                      fill="#1877F2"
+                    />
+                  </svg>
+                )}
+                {t('signInWithFacebook')}
               </Button>
             </div>
 
@@ -247,7 +270,7 @@ export function OrganizationSignInForm({
             type="submit"
             size="lg"
             className="w-full bg-[var(--secondary-500)] hover:bg-[var(--secondary-600)] dark:bg-[var(--secondary-500)] dark:hover:bg-[var(--secondary-600)]"
-            disabled={isEmailLoading || isGoogleLoading || isMicrosoftLoading}
+            disabled={isEmailLoading || isAnyOAuthLoading}
           >
             {isEmailLoading ? (
               <>

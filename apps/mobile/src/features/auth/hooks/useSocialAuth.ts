@@ -1,11 +1,11 @@
 /**
  * useSocialAuth Hook
  *
- * Handles native social authentication for Google and Apple.
+ * Handles native social authentication for Google, Apple, and Facebook.
  * Integrates with Supabase Auth for session management.
  *
- * NOTE: This requires a development build (not Expo Go) because it uses
- * native modules that aren't available in Expo Go.
+ * NOTE: Google and Apple require a development build (not Expo Go).
+ * Facebook uses OAuth redirect (expo-web-browser) and works in dev builds.
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
@@ -13,6 +13,7 @@ import { Platform, Alert } from 'react-native';
 import Constants from 'expo-constants';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
+import * as WebBrowser from 'expo-web-browser';
 import { supabase } from '../../../lib/supabase';
 import { Logger } from '@rallia/shared-services';
 import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
@@ -22,12 +23,36 @@ import { checkOnboardingStatus, getFriendlyErrorMessage } from '../utils';
 // TYPES
 // =============================================================================
 
-export type SocialProvider = 'google' | 'apple';
+export type SocialProvider = 'google' | 'apple' | 'facebook';
 
 export interface SocialAuthResult {
   success: boolean;
   needsOnboarding: boolean;
   error?: Error;
+}
+
+export const FACEBOOK_AUTH_CALLBACK = 'rallia://auth/callback';
+
+/**
+ * Parse Supabase OAuth redirect URL (hash fragment) for access_token and refresh_token.
+ */
+export function parseSessionFromAuthUrl(
+  url: string
+): { access_token: string; refresh_token: string } | null {
+  try {
+    const hashIndex = url.indexOf('#');
+    if (hashIndex === -1) return null;
+    const hash = url.slice(hashIndex + 1);
+    const params = new URLSearchParams(hash);
+    const access_token = params.get('access_token');
+    const refresh_token = params.get('refresh_token');
+    if (access_token && refresh_token) {
+      return { access_token, refresh_token };
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 interface UseSocialAuthReturn {
@@ -39,6 +64,7 @@ interface UseSocialAuthReturn {
   // Actions
   signInWithGoogle: () => Promise<SocialAuthResult>;
   signInWithApple: () => Promise<SocialAuthResult>;
+  signInWithFacebook: () => Promise<SocialAuthResult>;
 
   // Utilities
   isAppleSignInAvailable: boolean;
@@ -353,12 +379,98 @@ export function useSocialAuth(): UseSocialAuthReturn {
     }
   }, []);
 
+  /**
+   * Sign in with Facebook using OAuth redirect (browser).
+   */
+  const signInWithFacebook = useCallback(async (): Promise<SocialAuthResult> => {
+    if (!isNativeBuild) {
+      showExpoGoWarning('Facebook');
+      return { success: false, needsOnboarding: false };
+    }
+
+    lightHaptic();
+    setIsLoading(true);
+    setLoadingProvider('facebook');
+    setErrorMessage('');
+
+    try {
+      Logger.logUserAction('social_signin_initiated', { provider: 'facebook' });
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'facebook',
+        options: {
+          redirectTo: FACEBOOK_AUTH_CALLBACK,
+          skipBrowserRedirect: true,
+        },
+      });
+
+      if (error) {
+        Logger.error('Supabase Facebook OAuth error', error);
+        throw error;
+      }
+
+      if (!data?.url) {
+        throw new Error('No OAuth URL returned from Supabase');
+      }
+
+      const result = await WebBrowser.openAuthSessionAsync(data.url, FACEBOOK_AUTH_CALLBACK);
+
+      if (result.type !== 'success' || !result.url) {
+        Logger.debug('Facebook sign-in cancelled or dismissed');
+        setIsLoading(false);
+        setLoadingProvider(null);
+        return { success: false, needsOnboarding: false };
+      }
+
+      const sessionParams = parseSessionFromAuthUrl(result.url);
+      if (!sessionParams) {
+        throw new Error('Could not parse session from redirect URL');
+      }
+
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: sessionParams.access_token,
+        refresh_token: sessionParams.refresh_token,
+      });
+
+      if (sessionError) {
+        Logger.error('Supabase setSession failed after Facebook auth', sessionError);
+        throw sessionError;
+      }
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('No user after Facebook sign-in');
+      }
+
+      Logger.info('Facebook sign-in completed successfully', { userId: user.id });
+      successHaptic();
+
+      const needsOnboarding = await checkOnboardingStatus(user.id);
+
+      setIsLoading(false);
+      setLoadingProvider(null);
+      return { success: true, needsOnboarding };
+    } catch (error) {
+      setIsLoading(false);
+      setLoadingProvider(null);
+      const friendlyError = getFriendlyErrorMessage(error);
+      setErrorMessage(friendlyError);
+      Alert.alert('Error', friendlyError);
+      Logger.error('Facebook sign-in error', error as Error);
+      warningHaptic();
+      return { success: false, needsOnboarding: false, error: error as Error };
+    }
+  }, [isNativeBuild, showExpoGoWarning]);
+
   return {
     isLoading,
     loadingProvider,
     errorMessage,
     signInWithGoogle,
     signInWithApple,
+    signInWithFacebook,
     isAppleSignInAvailable,
     isNativeBuild,
   };

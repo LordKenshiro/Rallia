@@ -54,6 +54,7 @@ interface EmailStepProps {
   /** Social auth handlers */
   onGoogleSignIn?: () => void;
   onAppleSignIn?: () => void;
+  onFacebookSignIn?: () => void;
   /** Social auth loading state */
   socialAuthLoading?: boolean;
   socialAuthLoadingProvider?: SocialProvider | null;
@@ -74,6 +75,7 @@ export const EmailStep: React.FC<EmailStepProps> = ({
   isActive = true,
   onGoogleSignIn,
   onAppleSignIn,
+  onFacebookSignIn,
   socialAuthLoading = false,
   socialAuthLoadingProvider = null,
   isAppleSignInAvailable = Platform.OS === 'ios',
@@ -141,6 +143,24 @@ export const EmailStep: React.FC<EmailStepProps> = ({
             )}
           </TouchableOpacity>
         )}
+
+        {/* Facebook Sign In */}
+        <TouchableOpacity
+          style={[
+            styles.socialButton,
+            { backgroundColor: colors.buttonActive },
+            isAnyLoading && styles.socialButtonDisabled,
+          ]}
+          onPress={onFacebookSignIn}
+          activeOpacity={0.8}
+          disabled={isAnyLoading}
+        >
+          {socialAuthLoadingProvider === 'facebook' ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <Ionicons name="logo-facebook" size={24} color="#fff" />
+          )}
+        </TouchableOpacity>
       </View>
 
       {/* OR Divider */}
