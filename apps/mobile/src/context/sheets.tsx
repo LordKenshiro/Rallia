@@ -24,6 +24,8 @@ import { CourtSelectionActionSheet } from '../features/matches/components/CourtS
 // Facilities components
 import { ExternalBookingActionSheet } from '../features/facilities/components/ExternalBookingSheet';
 import { CourtBookingActionSheet } from '../features/facilities/components/CourtBookingSheet';
+// Booking components
+import { BookingDetailActionSheet } from '../features/bookings/components/BookingDetailSheet';
 // Shared components
 import { ImagePickerActionSheet } from '../components/ImagePickerSheet';
 import { PlayerInviteActionSheet } from '../components/PlayerInviteSheet';
@@ -491,6 +493,11 @@ declare module 'react-native-actions-sheet' {
         playerRatingScoreId: string;
       };
     }>;
+    'booking-detail': SheetDefinition<{
+      payload: {
+        booking: import('@rallia/shared-services').BookingWithDetails;
+      };
+    }>;
   }
 }
 
@@ -548,6 +555,8 @@ export const Sheets = () => {
         'image-proof': ImageProofActionSheet,
         'video-proof': VideoProofActionSheet,
         'document-proof': DocumentProofActionSheet,
+        // Booking sheets
+        'booking-detail': BookingDetailActionSheet,
       }}
     />
   );

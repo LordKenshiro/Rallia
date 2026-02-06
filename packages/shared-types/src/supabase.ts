@@ -5358,6 +5358,15 @@ export type Database = {
         Args: { p_organization_id: string };
         Returns: undefined;
       };
+      submit_match_result_for_match: {
+        Args: {
+          p_match_id: string;
+          p_sets: Json;
+          p_submitted_by: string;
+          p_winning_team: number;
+        };
+        Returns: string;
+      };
       update_registration_paid_amount: {
         Args: { p_registration_id: string };
         Returns: number;

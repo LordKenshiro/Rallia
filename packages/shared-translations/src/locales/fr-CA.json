@@ -5689,5 +5689,111 @@
       "button": "Commencer à explorer",
       "tip": "Conseil: Vous pouvez rejouer cette visite à tout moment depuis les Paramètres"
     }
+  },
+  "myBookings": {
+    "title": "Mes réservations",
+    "tabs": {
+      "upcoming": "À venir",
+      "past": "Passées"
+    },
+    "filters": {
+      "all": "Toutes",
+      "confirmed": "Confirmées",
+      "pending": "En attente",
+      "awaitingApproval": "En approbation",
+      "completed": "Terminées",
+      "cancelled": "Annulées",
+      "noShow": "Absent"
+    },
+    "time": {
+      "today": "Aujourd'hui",
+      "tomorrow": "Demain",
+      "thisWeek": "Cette semaine",
+      "nextWeek": "Semaine prochaine",
+      "later": "Plus tard",
+      "yesterday": "Hier",
+      "lastWeek": "Semaine dernière",
+      "earlier": "Précédent"
+    },
+    "emptyUpcoming": {
+      "title": "Aucune réservation à venir",
+      "description": "Réservez un terrain pour commencer"
+    },
+    "emptyPast": {
+      "title": "Aucune réservation passée",
+      "description": "Vos réservations terminées apparaîtront ici"
+    },
+    "emptyFiltered": {
+      "title": "Aucune réservation trouvée",
+      "description": "Aucune réservation ne correspond au filtre « {filter} »"
+    },
+    "card": {
+      "court": "Terrain",
+      "date": "Date",
+      "time": "Heure",
+      "price": "Prix",
+      "free": "Gratuit",
+      "duration": "{minutes} min"
+    },
+    "status": {
+      "confirmed": "Confirmée",
+      "pending": "En attente",
+      "awaitingApproval": "En approbation",
+      "cancelled": "Annulée",
+      "completed": "Terminée",
+      "noShow": "Absent"
+    },
+    "detail": {
+      "title": "Détails de la réservation",
+      "facilityInfo": "Centre",
+      "bookingInfo": "Infos réservation",
+      "paymentInfo": "Infos paiement",
+      "bookingId": "No. de réservation",
+      "court": "Terrain",
+      "date": "Date",
+      "time": "Heure",
+      "price": "Prix",
+      "status": "Statut",
+      "notes": "Notes",
+      "createdAt": "Réservé le",
+      "paymentStatus": "Statut du paiement",
+      "paymentMethod": "Méthode de paiement",
+      "paymentPending": "En attente",
+      "paymentCompleted": "Complété",
+      "paymentFailed": "Échoué",
+      "paymentRefunded": "Remboursé"
+    },
+    "cancel": {
+      "title": "Annuler la réservation",
+      "confirmMessage": "Êtes-vous sûr de vouloir annuler cette réservation?",
+      "selectReason": "Raison de l'annulation",
+      "reasons": {
+        "weather": "Conditions météo",
+        "courtUnavailable": "Terrain non disponible",
+        "emergency": "Urgence personnelle",
+        "other": "Autre raison"
+      },
+      "refundInfo": {
+        "full": "Un remboursement complet sera émis",
+        "partial": "Un remboursement de {percent}% sera émis",
+        "none": "Aucun remboursement pour les annulations tardives"
+      },
+      "cancelButton": "Annuler la réservation",
+      "keepButton": "Garder la réservation",
+      "success": "Réservation annulée avec succès",
+      "error": "Échec de l'annulation. Veuillez réessayer."
+    },
+    "facilitiesSection": {
+      "title": "Mes réservations",
+      "viewAll": "Voir tout",
+      "empty": {
+        "title": "Aucune réservation à venir",
+        "description": "Réservez un terrain pour commencer"
+      }
+    },
+    "viewFacility": "Voir le centre",
+    "viewMatch": "Voir le match lié",
+    "cancelBooking": "Annuler la réservation",
+    "viewMyBookings": "Voir mes réservations"
   }
 }

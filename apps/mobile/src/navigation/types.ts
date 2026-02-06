@@ -46,6 +46,8 @@ export type RootStackParamList = {
   GroupChatInfo: { conversationId: string }; // Group chat info/settings view
   ChatConversation: { conversationId: string; title?: string }; // Direct chat navigation
   PlayedMatchDetail: { match: unknown }; // Played match detail view
+  MyBookings: undefined; // My Bookings screen (court bookings management)
+  BookingDetail: { bookingId: string }; // Booking detail screen (deep link / notification target)
 };
 
 // =============================================================================

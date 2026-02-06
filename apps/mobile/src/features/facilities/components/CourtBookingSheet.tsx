@@ -26,6 +26,9 @@ import { lightHaptic, mediumHaptic, selectionHaptic } from '@rallia/shared-utils
 import { useThemeStyles, useTranslation, type TranslationKey } from '../../../hooks';
 import { useSport } from '../../../context';
 import { SportIcon } from '../../../components/SportIcon';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../../navigation/types';
 
 /**
  * Extended theme colors for the booking sheet
@@ -75,6 +78,32 @@ function convertTo24Hour(time12h: string): string {
   }
 
   return `${hours.toString().padStart(2, '0')}:${minutes}:00`;
+}
+
+/**
+ * "View My Bookings" text link shown after successful booking
+ */
+function ViewMyBookingsLink() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { t } = useTranslation();
+  const { colors } = useThemeStyles();
+
+  return (
+    <TouchableOpacity
+      style={styles.viewMyBookingsLink}
+      onPress={() => {
+        lightHaptic();
+        SheetManager.hide('court-booking');
+        navigation.navigate('MyBookings');
+      }}
+      activeOpacity={0.7}
+    >
+      <Text size="sm" weight="medium" color={colors.primary}>
+        {t('myBookings.viewMyBookings' as TranslationKey)}
+      </Text>
+      <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+    </TouchableOpacity>
+  );
 }
 
 export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>) {
@@ -305,11 +334,11 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
       // Also invalidate the specific facility availability
       queryClient.invalidateQueries({ queryKey: courtAvailabilityKeys.facility(facility.id) });
 
-      // Close sheet after short delay
+      // Close sheet after delay (gives user time to see "View My Bookings" link)
       setTimeout(() => {
         SheetManager.hide('court-booking');
         setBookingSuccess(false);
-      }, 1500);
+      }, 3000);
     } catch (error) {
       Logger.error('Mobile booking failed', error as Error);
       toast.error((error as Error).message || 'Booking failed');
@@ -572,6 +601,7 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
               </>
             )}
           </TouchableOpacity>
+          {bookingSuccess && <ViewMyBookingsLink />}
         </View>
       </View>
     </ActionSheet>
@@ -703,5 +733,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     gap: spacingPixels[2],
+  },
+  viewMyBookingsLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[2],
+    gap: 4,
   },
 });

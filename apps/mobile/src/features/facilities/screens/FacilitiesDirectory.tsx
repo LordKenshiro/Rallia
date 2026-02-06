@@ -4,7 +4,15 @@
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  TouchableOpacity,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Skeleton, useToast } from '@rallia/shared-components';
@@ -14,6 +22,7 @@ import {
   useFavoriteFacilities,
   usePlayer,
   useDebounce,
+  useUpcomingBookings,
   DEFAULT_FACILITY_FILTERS,
   type FacilityFilters,
 } from '@rallia/shared-hooks';
@@ -25,12 +34,15 @@ import {
   type TranslationKey,
   type TranslationOptions,
 } from '../../../hooks';
+import { useAuth } from '../../../hooks';
 import { useSport, useUserHomeLocation } from '../../../context';
 import { useCourtsNavigation } from '../../../navigation/hooks';
+import { useAppNavigation } from '../../../navigation/hooks';
 import { Logger } from '@rallia/shared-services';
-import { spacingPixels } from '@rallia/design-system';
+import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { FacilityCard, FacilityFiltersBar } from '../components';
 import { lightHaptic } from '@rallia/shared-utils';
+import { MyBookingCard } from '../../bookings/components';
 
 // =============================================================================
 // HELPER COMPONENTS
@@ -169,6 +181,8 @@ export default function FacilitiesDirectory() {
   const { colors, isDark } = useThemeStyles();
   const toast = useToast();
   const navigation = useCourtsNavigation();
+  const rootNavigation = useAppNavigation();
+  const { session } = useAuth();
 
   // Location and preferences
   const { location, locationMode, setLocationMode, hasHomeLocation, hasBothLocationOptions } =
@@ -176,6 +190,15 @@ export default function FacilitiesDirectory() {
   const { homeLocation } = useUserHomeLocation();
   const { player } = usePlayer();
   const { selectedSport, isLoading: sportLoading } = useSport();
+
+  // My Bookings preview data
+  const {
+    bookings: upcomingBookings,
+    isLoading: bookingsLoading,
+    refetch: refetchBookings,
+  } = useUpcomingBookings(session?.user?.id, 5, {
+    enabled: !!session?.user?.id,
+  });
 
   // Home location label for display
   const homeLocationLabel =
@@ -318,7 +341,149 @@ export default function FacilitiesDirectory() {
     [isFavorite, handleFacilityPress, handleToggleFavorite, isMaxReached, colors, t]
   );
 
-  // Render results count
+  // Render My Bookings section
+  const renderMyBookingsSection = useCallback(() => {
+    if (!session?.user?.id) return null;
+
+    const skeletonBg = isDark ? '#262626' : '#E1E9EE';
+    const skeletonHighlight = isDark ? '#404040' : '#F2F8FC';
+
+    return (
+      <View style={styles.myBookingsSection}>
+        {/* Section header */}
+        <View style={styles.myBookingsSectionHeader}>
+          <Text size="xl" weight="bold" color={colors.text}>
+            {t('myBookings.facilitiesSection.title' as TranslationKey)}
+          </Text>
+          <TouchableOpacity
+            style={styles.viewAllButton}
+            onPress={() => {
+              lightHaptic();
+              rootNavigation.navigate('MyBookings');
+            }}
+            activeOpacity={0.7}
+          >
+            <Text size="base" weight="medium" color={colors.primary}>
+              {t('myBookings.facilitiesSection.viewAll' as TranslationKey)}
+            </Text>
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color={colors.primary}
+              style={styles.chevronIcon}
+            />
+          </TouchableOpacity>
+        </View>
+
+        {/* Content */}
+        {bookingsLoading ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.myBookingsScroll}
+          >
+            {[1, 2, 3].map(i => (
+              <View
+                key={i}
+                style={[
+                  styles.myBookingSkeletonCard,
+                  {
+                    backgroundColor: colors.cardBackground,
+                    borderColor: colors.border,
+                  },
+                ]}
+              >
+                {/* Facility name */}
+                <Skeleton
+                  width="85%"
+                  height={14}
+                  backgroundColor={skeletonBg}
+                  highlightColor={skeletonHighlight}
+                />
+                {/* Court row (icon + text) */}
+                <View style={styles.myBookingSkeletonRow}>
+                  <Skeleton
+                    width={12}
+                    height={12}
+                    borderRadius={6}
+                    backgroundColor={skeletonBg}
+                    highlightColor={skeletonHighlight}
+                  />
+                  <Skeleton
+                    width="65%"
+                    height={12}
+                    backgroundColor={skeletonBg}
+                    highlightColor={skeletonHighlight}
+                  />
+                </View>
+                {/* Date row */}
+                <View style={styles.myBookingSkeletonRow}>
+                  <Skeleton
+                    width={12}
+                    height={12}
+                    borderRadius={6}
+                    backgroundColor={skeletonBg}
+                    highlightColor={skeletonHighlight}
+                  />
+                  <Skeleton
+                    width="70%"
+                    height={12}
+                    backgroundColor={skeletonBg}
+                    highlightColor={skeletonHighlight}
+                  />
+                </View>
+                {/* Time row */}
+                <View style={styles.myBookingSkeletonRow}>
+                  <Skeleton
+                    width={12}
+                    height={12}
+                    borderRadius={6}
+                    backgroundColor={skeletonBg}
+                    highlightColor={skeletonHighlight}
+                  />
+                  <Skeleton
+                    width="55%"
+                    height={12}
+                    backgroundColor={skeletonBg}
+                    highlightColor={skeletonHighlight}
+                  />
+                </View>
+                {/* Status badge */}
+                <View style={styles.myBookingSkeletonBadge}>
+                  <Skeleton
+                    width={56}
+                    height={18}
+                    borderRadius={radiusPixels.full}
+                    backgroundColor={skeletonBg}
+                    highlightColor={skeletonHighlight}
+                  />
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+        ) : upcomingBookings.length === 0 ? (
+          <View style={styles.myBookingsEmpty}>
+            <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
+            <Text size="sm" color={colors.textMuted} style={styles.myBookingsEmptyText}>
+              {t('myBookings.facilitiesSection.empty.title' as TranslationKey)}
+            </Text>
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.myBookingsScroll}
+          >
+            {upcomingBookings.map(booking => (
+              <MyBookingCard key={booking.id} booking={booking} />
+            ))}
+          </ScrollView>
+        )}
+      </View>
+    );
+  }, [session?.user?.id, bookingsLoading, upcomingBookings, colors, isDark, t, rootNavigation]);
+
+  // Render results count (used inside list header)
   const renderResultsInfo = useCallback(() => {
     if (isLoading || !showFacilities) return null;
 
@@ -337,6 +502,71 @@ export default function FacilitiesDirectory() {
       </View>
     );
   }, [isLoading, showFacilities, totalCount, sortedFacilities.length, colors.textMuted, t]);
+
+  // Full list header: My Bookings, title, search, filters, error, then results info or skeleton
+  const renderListHeader = useCallback(() => {
+    return (
+      <>
+        {renderMyBookingsSection()}
+        <View style={[styles.header, { backgroundColor: colors.background }]}>
+          <Text size="xl" weight="bold" color={colors.text}>
+            {t('facilitiesTab.title')}
+          </Text>
+        </View>
+        <View style={[styles.searchContainer, { backgroundColor: colors.background }]}>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder={t('facilitiesTab.searchPlaceholder')}
+            onClear={() => setSearchQuery('')}
+          />
+        </View>
+        <FacilityFiltersBar
+          filters={filters}
+          onFiltersChange={setFilters}
+          onReset={handleResetFilters}
+          hasActiveFilters={hasActiveFilters}
+          showLocationSelector={hasBothLocationOptions}
+          locationMode={locationMode}
+          onLocationModeChange={setLocationMode}
+          hasHomeLocation={hasHomeLocation}
+          homeLocationLabel={homeLocationLabel}
+        />
+        {queryError && (
+          <View style={[styles.errorContainer, { backgroundColor: colors.card }]}>
+            <Text size="sm" color={colors.error || '#ef4444'}>
+              {t('common.error')}: {queryError.message}
+            </Text>
+          </View>
+        )}
+        {isLoading || sportLoading ? (
+          <LoadingSkeleton colors={colors} isDark={isDark} />
+        ) : (
+          renderResultsInfo()
+        )}
+      </>
+    );
+  }, [
+    renderMyBookingsSection,
+    colors,
+    t,
+    searchQuery,
+    setSearchQuery,
+    filters,
+    setFilters,
+    handleResetFilters,
+    hasActiveFilters,
+    hasBothLocationOptions,
+    locationMode,
+    setLocationMode,
+    hasHomeLocation,
+    homeLocationLabel,
+    queryError,
+    isLoading,
+    sportLoading,
+    isDark,
+    renderResultsInfo,
+  ]);
 
   // Render footer (loading indicator for infinite scroll)
   const renderFooter = useCallback(() => {
@@ -361,74 +591,37 @@ export default function FacilitiesDirectory() {
     );
   }, [isLoading, hasActiveSearch, location, colors, t]);
 
+  const handleRefresh = useCallback(() => {
+    refetch();
+    if (session?.user?.id) {
+      refetchBookings();
+    }
+  }, [refetch, refetchBookings, session?.user?.id]);
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-      {/* Header with title */}
-      <View style={[styles.header, { backgroundColor: colors.background }]}>
-        <Text size="xl" weight="bold" color={colors.text}>
-          {t('facilitiesTab.title')}
-        </Text>
-      </View>
-
-      {/* Search bar */}
-      <View style={[styles.searchContainer, { backgroundColor: colors.background }]}>
-        <SearchBar
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder={t('facilitiesTab.searchPlaceholder')}
-          onClear={() => setSearchQuery('')}
-        />
-      </View>
-
-      {/* Filters bar */}
-      <FacilityFiltersBar
-        filters={filters}
-        onFiltersChange={setFilters}
-        onReset={handleResetFilters}
-        hasActiveFilters={hasActiveFilters}
-        showLocationSelector={hasBothLocationOptions}
-        locationMode={locationMode}
-        onLocationModeChange={setLocationMode}
-        hasHomeLocation={hasHomeLocation}
-        homeLocationLabel={homeLocationLabel}
+      <FlatList
+        data={sortedFacilities}
+        renderItem={renderFacilityCard}
+        keyExtractor={item => item.id}
+        ListHeaderComponent={renderListHeader}
+        ListEmptyComponent={renderEmptyComponent}
+        ListFooterComponent={renderFooter}
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.3}
+        refreshControl={
+          <RefreshControl
+            refreshing={isFetching && !isFetchingNextPage && !isLoading}
+            onRefresh={handleRefresh}
+            tintColor={colors.primary}
+          />
+        }
+        contentContainerStyle={[
+          styles.listContent,
+          sortedFacilities.length === 0 && styles.emptyListContent,
+        ]}
+        showsVerticalScrollIndicator={false}
       />
-
-      {/* Error display */}
-      {queryError && (
-        <View style={[styles.errorContainer, { backgroundColor: colors.card }]}>
-          <Text size="sm" color={colors.error || '#ef4444'}>
-            {t('common.error')}: {queryError.message}
-          </Text>
-        </View>
-      )}
-
-      {/* Main content */}
-      {isLoading || sportLoading ? (
-        <LoadingSkeleton colors={colors} isDark={isDark} />
-      ) : (
-        <FlatList
-          data={sortedFacilities}
-          renderItem={renderFacilityCard}
-          keyExtractor={item => item.id}
-          ListHeaderComponent={renderResultsInfo}
-          ListEmptyComponent={renderEmptyComponent}
-          ListFooterComponent={renderFooter}
-          onEndReached={handleEndReached}
-          onEndReachedThreshold={0.3}
-          refreshControl={
-            <RefreshControl
-              refreshing={isFetching && !isFetchingNextPage && !isLoading}
-              onRefresh={refetch}
-              tintColor={colors.primary}
-            />
-          }
-          contentContainerStyle={[
-            styles.listContent,
-            sortedFacilities.length === 0 && styles.emptyListContent,
-          ]}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
     </SafeAreaView>
   );
 }
@@ -452,7 +645,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacingPixels[2],
   },
   listContent: {
-    paddingTop: spacingPixels[3],
+    paddingTop: spacingPixels[2],
     paddingBottom: spacingPixels[4],
   },
   emptyListContent: {
@@ -517,5 +710,57 @@ const styles = StyleSheet.create({
     padding: spacingPixels[4],
     margin: spacingPixels[4],
     borderRadius: 8,
+  },
+  // My Bookings section styles (aligned with My Matches on Home)
+  myBookingsSection: {
+    marginBottom: spacingPixels[2],
+    overflow: 'visible',
+  },
+  myBookingsSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[5],
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  chevronIcon: {
+    marginLeft: spacingPixels[1],
+  },
+  myBookingsScroll: {
+    paddingTop: 10,
+    paddingLeft: spacingPixels[4],
+    paddingRight: spacingPixels[4],
+    paddingBottom: spacingPixels[2],
+    gap: spacingPixels[2],
+  },
+  myBookingSkeletonCard: {
+    width: 160,
+    padding: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+    gap: spacingPixels[1],
+  },
+  myBookingSkeletonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+  },
+  myBookingSkeletonBadge: {
+    marginTop: spacingPixels[1],
+  },
+  myBookingsEmpty: {
+    padding: spacingPixels[6],
+    marginHorizontal: spacingPixels[4],
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radiusPixels.xl,
+  },
+  myBookingsEmptyText: {
+    marginTop: spacingPixels[2],
+    textAlign: 'center',
   },
 });

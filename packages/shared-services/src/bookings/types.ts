@@ -139,6 +139,11 @@ export interface CancelBookingClientResult {
   message?: string;
 }
 
+export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
+export type PaymentMethod = 'credit_card' | 'debit_card' | 'paypal' | 'cash' | 'bank_transfer';
+export type BookingType = 'player' | 'program_session' | 'maintenance';
+export type BookingTab = 'upcoming' | 'past';
+
 /** Booking record with joined court and facility details */
 export interface BookingWithDetails {
   id: string;
@@ -149,8 +154,11 @@ export interface BookingWithDetails {
   start_time: string;
   end_time: string;
   status: BookingStatus;
+  booking_type: BookingType;
   price_cents: number;
   currency: string;
+  payment_status: PaymentStatus | null;
+  payment_method: PaymentMethod | null;
   stripe_payment_intent_id: string | null;
   stripe_charge_id: string | null;
   requires_approval: boolean;
@@ -169,6 +177,9 @@ export interface BookingWithDetails {
     facility: {
       id: string;
       name: string;
+      address: string | null;
+      city: string | null;
+      timezone: string | null;
       organization_id: string;
     };
   };
@@ -179,6 +190,23 @@ export interface BookingListFilters {
   dateFrom?: string;
   dateTo?: string;
   status?: BookingStatus | BookingStatus[];
+  bookingType?: BookingType;
   limit?: number;
   offset?: number;
+}
+
+/** Parameters for paginated player bookings query */
+export interface GetPlayerBookingsPaginatedParams {
+  playerId: string;
+  timeFilter: BookingTab;
+  statusFilter?: string;
+  limit?: number;
+  offset?: number;
+}
+
+/** Page result for infinite query */
+export interface PlayerBookingsPage {
+  bookings: BookingWithDetails[];
+  nextOffset: number | null;
+  hasMore: boolean;
 }

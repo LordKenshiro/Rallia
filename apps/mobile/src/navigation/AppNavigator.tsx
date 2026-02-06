@@ -45,7 +45,10 @@ import { useTheme } from '@rallia/shared-hooks';
 import { useAppNavigation } from './hooks';
 import { spacingPixels, fontSizePixels } from '@rallia/design-system';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type {
+  NativeStackNavigationProp,
+  NativeStackHeaderProps,
+} from '@react-navigation/native-stack';
 
 // Screens
 import Home from '../screens/Home';
@@ -89,6 +92,7 @@ import type {
 import PublicMatches from '../features/matches/screens/PublicMatches';
 import PlayerMatches from '../features/matches/screens/PlayerMatches';
 import { FacilitiesDirectory, FacilityDetail } from '../features/facilities';
+import { MyBookingsScreen, BookingDetailScreen } from '../features/bookings';
 
 // =============================================================================
 // TYPED NAVIGATORS
@@ -202,16 +206,7 @@ function SportSelectorWithContext() {
  * Custom header for shared screens (UserProfile, Settings, etc.)
  * Matches MainTabHeader height/style but shows back button + centered title.
  */
-function SharedScreenHeader({
-  navigation,
-  options,
-}: {
-  navigation: { goBack: () => void };
-  options: {
-    headerTitle?: string | (() => React.ReactNode);
-    headerRight?: (props: { tintColor?: string }) => React.ReactNode;
-  };
-}) {
+function SharedScreenHeader({ navigation, options }: NativeStackHeaderProps) {
   const insets = useSafeAreaInsets();
   const { colors } = useThemeStyles();
   const title = typeof options.headerTitle === 'string' ? options.headerTitle : '';
@@ -259,16 +254,7 @@ function SharedScreenHeader({
 
 const getSharedScreenOptions = () => ({
   headerShown: true,
-  header: ({
-    navigation,
-    options,
-  }: {
-    navigation: { goBack: () => void };
-    options: {
-      headerTitle?: string;
-      headerRight?: (props: { tintColor?: string }) => React.ReactNode;
-    };
-  }) => <SharedScreenHeader navigation={navigation} options={options} />,
+  header: (props: NativeStackHeaderProps) => <SharedScreenHeader {...props} />,
 });
 
 /**
@@ -484,11 +470,21 @@ function CourtsStack() {
       <CourtsStackNavigator.Screen
         name="FacilityDetail"
         component={FacilityDetail}
-        options={({ navigation }) => ({
-          ...sharedOptions,
-          headerTitle: t('facilitiesTab.title'),
-          headerLeft: () => <ThemedBackButton navigation={navigation} />,
-        })}
+        options={({ navigation, route }) => {
+          const rootNav = navigation.getParent()?.getParent() as
+            | NativeStackNavigationProp<RootStackParamList>
+            | undefined;
+          const returnTo = route.params?.returnTo;
+          const goBack =
+            returnTo === 'MyBookings' && rootNav
+              ? () => rootNav.navigate('MyBookings')
+              : () => navigation.goBack();
+          return {
+            ...sharedOptions,
+            headerTitle: t('facilitiesTab.title'),
+            headerLeft: () => <ThemedBackButton navigation={{ goBack }} />,
+          };
+        }}
       />
     </CourtsStackNavigator.Navigator>
   );
@@ -1136,6 +1132,26 @@ export default function AppNavigator() {
         options={{
           headerShown: false,
         }}
+      />
+
+      <RootStack.Screen
+        name="MyBookings"
+        component={MyBookingsScreen}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('myBookings.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="BookingDetail"
+        component={BookingDetailScreen}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('myBookings.detail.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
       />
     </RootStack.Navigator>
   );
