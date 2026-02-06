@@ -242,7 +242,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
         {formData.profileImage ? (
           <Image source={{ uri: formData.profileImage }} style={styles.profileImage} />
         ) : (
-          <Ionicons name="camera" size={32} color={colors.buttonActive} />
+          <Ionicons name="camera-outline" size={32} color={colors.buttonActive} />
         )}
       </TouchableOpacity>
 

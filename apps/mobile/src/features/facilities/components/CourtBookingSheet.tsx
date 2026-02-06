@@ -24,6 +24,8 @@ import type { FacilityWithDetails } from '@rallia/shared-services';
 import { Logger } from '@rallia/shared-services';
 import { lightHaptic, mediumHaptic, selectionHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../../../hooks';
+import { useSport } from '../../../context';
+import { SportIcon } from '../../../components/SportIcon';
 
 /**
  * Extended theme colors for the booking sheet
@@ -85,6 +87,7 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
 
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
+  const { selectedSport } = useSport();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const toast = useToast();
   const queryClient = useQueryClient();
@@ -357,7 +360,7 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
             </Text>
           </View>
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={themeColors.textMuted} />
+            <Ionicons name="close-outline" size={24} color={themeColors.textMuted} />
           </TouchableOpacity>
         </View>
 
@@ -396,7 +399,7 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
             {/* Time with duration badge */}
             <View style={[styles.infoRow, styles.infoRowSpacing]}>
               <View style={styles.infoIconContainer}>
-                <Ionicons name="time" size={18} color={themeColors.iconMuted} />
+                <Ionicons name="time-outline" size={18} color={themeColors.iconMuted} />
               </View>
               <View style={styles.infoContent}>
                 <View style={styles.timeRow}>
@@ -431,7 +434,11 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
           {availableCourts.length > 1 && (
             <View style={[styles.section, { borderBottomColor: themeColors.border }]}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="tennisball" size={18} color={themeColors.primary} />
+                <SportIcon
+                  sportName={selectedSport?.name ?? 'tennis'}
+                  size={18}
+                  color={themeColors.primary}
+                />
                 <Text
                   size="base"
                   weight="semibold"
@@ -512,7 +519,11 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
             <View style={[styles.section, { borderBottomColor: themeColors.border }]}>
               <View style={styles.infoRow}>
                 <View style={styles.infoIconContainer}>
-                  <Ionicons name="tennisball" size={18} color={themeColors.primary} />
+                  <SportIcon
+                    sportName={selectedSport?.name ?? 'tennis'}
+                    size={18}
+                    color={themeColors.primary}
+                  />
                 </View>
                 <View style={styles.infoContent}>
                   <Text size="sm" weight="medium" color={themeColors.text}>

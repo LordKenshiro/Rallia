@@ -212,7 +212,7 @@ export const RespondToReferenceOverlay: React.FC<RespondToReferenceOverlayProps>
                     { backgroundColor: colors.card },
                   ]}
                 >
-                  <Ionicons name="person" size={24} color={colors.textMuted} />
+                  <Ionicons name="person-outline" size={24} color={colors.textMuted} />
                 </View>
               )}
               <View style={styles.requesterInfo}>

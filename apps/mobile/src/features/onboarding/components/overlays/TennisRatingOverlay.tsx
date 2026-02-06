@@ -252,7 +252,7 @@ export function TennisRatingActionSheet({ payload }: SheetProps<'tennis-rating'>
             </Text>
           </View>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={colors.textMuted} />
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 

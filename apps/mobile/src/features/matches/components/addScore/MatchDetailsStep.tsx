@@ -8,6 +8,7 @@ import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
+import { SportIcon } from '../../../../components/SportIcon';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
 import { primary } from '@rallia/design-system';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -28,9 +29,9 @@ export function MatchDetailsStep({ onContinue }: MatchDetailsStepProps) {
   const [sport, setSport] = useState<Sport>(formData.sport || 'tennis');
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const sports: { value: Sport; label: string; icon: string }[] = [
-    { value: 'tennis', label: 'Tennis', icon: 'tennisball' },
-    { value: 'pickleball', label: 'Pickleball', icon: 'ellipse' }, // No direct pickleball icon
+  const sports: { value: Sport; label: string }[] = [
+    { value: 'tennis', label: 'Tennis' },
+    { value: 'pickleball', label: 'Pickleball' },
   ];
 
   const handleDateChange = useCallback((_event: unknown, selectedDate?: Date) => {
@@ -158,8 +159,8 @@ export function MatchDetailsStep({ onContinue }: MatchDetailsStepProps) {
                     },
                   ]}
                 >
-                  <Ionicons
-                    name={sportOption.icon as keyof typeof Ionicons.glyphMap}
+                  <SportIcon
+                    sportName={sportOption.value}
                     size={20}
                     color={isSelected ? '#FFFFFF' : colors.textMuted}
                   />
@@ -172,7 +173,7 @@ export function MatchDetailsStep({ onContinue }: MatchDetailsStepProps) {
                 </Text>
                 {isSelected && (
                   <View style={[styles.checkmark, { backgroundColor: colors.primary }]}>
-                    <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                    <Ionicons name="checkmark-outline" size={12} color="#FFFFFF" />
                   </View>
                 )}
               </TouchableOpacity>

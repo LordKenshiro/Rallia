@@ -267,7 +267,7 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
         >
           {winner === 'team1' && (
             <View style={styles.winnerBadge}>
-              <Ionicons name="trophy" size={16} color="#FFD700" />
+              <Ionicons name="trophy-outline" size={16} color="#FFD700" />
             </View>
           )}
 
@@ -304,7 +304,7 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
         >
           {winner === 'team2' && (
             <View style={styles.winnerBadge}>
-              <Ionicons name="trophy" size={16} color="#FFD700" />
+              <Ionicons name="trophy-outline" size={16} color="#FFD700" />
             </View>
           )}
 

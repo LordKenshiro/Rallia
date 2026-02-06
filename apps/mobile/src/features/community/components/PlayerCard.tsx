@@ -80,7 +80,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, colors, onPress }) => {
             <Image source={{ uri: player.profile_picture_url }} style={styles.avatar} />
           ) : (
             <View style={[styles.avatarPlaceholder, { backgroundColor: colors.border }]}>
-              <Ionicons name="person" size={24} color={colors.textMuted} />
+              <Ionicons name="person-outline" size={24} color={colors.textMuted} />
             </View>
           )}
           {/* Online Status Indicator */}

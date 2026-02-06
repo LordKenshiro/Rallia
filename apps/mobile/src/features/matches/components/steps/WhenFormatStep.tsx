@@ -639,7 +639,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
                     </Text>
                   </View>
                   {item.value === timezone && (
-                    <Ionicons name="checkmark" size={20} color={colors.buttonActive} />
+                    <Ionicons name="checkmark-outline" size={20} color={colors.buttonActive} />
                   )}
                 </TouchableOpacity>
               )}

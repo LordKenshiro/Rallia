@@ -220,7 +220,7 @@ export function ImportContactsActionSheet({ payload }: SheetProps<'import-contac
         activeOpacity={0.7}
       >
         <View style={[styles.checkbox, item.selected && styles.checkboxSelected]}>
-          {item.selected && <Ionicons name="checkmark" size={14} color="#fff" />}
+          {item.selected && <Ionicons name="checkmark-outline" size={14} color="#fff" />}
         </View>
         <View style={styles.contactInfo}>
           <Text size="base" weight="medium" style={{ color: colors.text }} numberOfLines={1}>
@@ -297,7 +297,7 @@ export function ImportContactsActionSheet({ payload }: SheetProps<'import-contac
           </Text>
         </View>
         <TouchableOpacity onPress={handleClose} style={styles.closeButton} disabled={isImporting}>
-          <Ionicons name="close" size={24} color={colors.textMuted} />
+          <Ionicons name="close-outline" size={24} color={colors.textMuted} />
         </TouchableOpacity>
       </View>
 
@@ -337,7 +337,7 @@ export function ImportContactsActionSheet({ payload }: SheetProps<'import-contac
                 ]}
               >
                 {filteredContacts.every(c => c.selected) && (
-                  <Ionicons name="checkmark" size={14} color="#fff" />
+                  <Ionicons name="checkmark-outline" size={14} color="#fff" />
                 )}
               </View>
               <Text size="sm" weight="medium" style={{ color: colors.text }}>

@@ -44,6 +44,7 @@ import { validateMatchUpdate, getMatchWithDetails } from '@rallia/shared-service
 import { useTheme } from '@rallia/shared-hooks';
 import { useTranslation, type TranslationKey } from '../../../hooks/useTranslation';
 import { useSport, type MatchDetailData } from '../../../context';
+import { SportIcon } from '../../../components/SportIcon';
 import { useAuth } from '../../../hooks';
 import { useMatchForm, useMatchDraft, calculateEndTime, matchToFormData } from '../hooks';
 import { supabase } from '../../../lib/supabase';
@@ -156,6 +157,7 @@ interface WizardHeaderProps {
   onBackToLanding: () => void;
   onClose: () => void;
   sportName: string;
+  sportKey?: string;
   colors: ThemeColors;
   t: (key: TranslationKey) => string;
 }
@@ -166,6 +168,7 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
   onBackToLanding,
   onClose,
   sportName,
+  sportKey,
   colors,
   t,
 }) => {
@@ -184,7 +187,7 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
             accessibilityLabel="Back to actions"
             accessibilityRole="button"
           >
-            <Ionicons name="chevron-back" size={24} color={colors.buttonActive} />
+            <Ionicons name="chevron-back-outline" size={24} color={colors.buttonActive} />
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
@@ -197,14 +200,14 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
             accessibilityLabel={t('matchCreation.accessibility.previousStep' as TranslationKey)}
             accessibilityRole="button"
           >
-            <Ionicons name="chevron-back" size={24} color={colors.buttonActive} />
+            <Ionicons name="chevron-back-outline" size={24} color={colors.buttonActive} />
           </TouchableOpacity>
         )}
       </View>
 
       {/* Sport badge */}
       <View style={[styles.sportBadge, { backgroundColor: colors.buttonActive }]}>
-        <Ionicons name="tennisball" size={14} color={BASE_WHITE} />
+        <SportIcon sportName={sportKey ?? 'tennis'} size={14} color={BASE_WHITE} />
         <Text size="sm" weight="semibold" color={BASE_WHITE}>
           {sportName}
         </Text>
@@ -222,7 +225,7 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
           accessibilityLabel={t('matchCreation.accessibility.closeWizard' as TranslationKey)}
           accessibilityRole="button"
         >
-          <Ionicons name="close" size={24} color={colors.textMuted} />
+          <Ionicons name="close-outline" size={24} color={colors.textMuted} />
         </TouchableOpacity>
       </View>
     </View>
@@ -1054,7 +1057,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                 ]}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Ionicons name="close" size={20} color={colors.textMuted} />
+                <Ionicons name="close-outline" size={20} color={colors.textMuted} />
               </TouchableOpacity>
 
               <View style={[styles.successIcon, { backgroundColor: colors.buttonActive }]}>
@@ -1199,6 +1202,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
         onBackToLanding={onBackToLanding}
         onClose={handleClose}
         sportName={selectedSport?.display_name ?? 'Sport'}
+        sportKey={selectedSport?.name}
         colors={colors}
         t={t}
       />
@@ -1265,7 +1269,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
             <Text size="lg" weight="semibold" color={colors.buttonTextActive}>
               {t('matchCreation.next' as TranslationKey)}
             </Text>
-            <Ionicons name="arrow-forward" size={20} color={colors.buttonTextActive} />
+            <Ionicons name="arrow-forward-outline" size={20} color={colors.buttonTextActive} />
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
@@ -1292,7 +1296,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                     ? t('matchCreation.saveChanges' as TranslationKey)
                     : t('matchCreation.createMatch' as TranslationKey)}
                 </Text>
-                <Ionicons name="checkmark" size={20} color={colors.buttonTextActive} />
+                <Ionicons name="checkmark-outline" size={20} color={colors.buttonTextActive} />
               </>
             )}
           </TouchableOpacity>

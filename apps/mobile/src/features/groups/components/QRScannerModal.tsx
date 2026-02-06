@@ -259,7 +259,7 @@ export function QRScannerModal({ visible, onClose, playerId, onGroupJoined }: QR
             style={[styles.manualEntryButton, { backgroundColor: colors.border }]}
             onPress={() => setShowManualEntry(false)}
           >
-            <Ionicons name="camera" size={20} color={colors.text} />
+            <Ionicons name="camera-outline" size={20} color={colors.text} />
             <Text weight="medium" style={{ color: colors.text, marginLeft: 8 }}>
               {t('groups.scanQR')}
             </Text>
@@ -274,7 +274,7 @@ export function QRScannerModal({ visible, onClose, playerId, onGroupJoined }: QR
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <>
-                <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+                <Ionicons name="arrow-forward-outline" size={20} color="#FFFFFF" />
                 <Text weight="medium" style={{ color: '#FFFFFF', marginLeft: 8 }}>
                   {t('groups.join')}
                 </Text>
@@ -380,7 +380,7 @@ export function QRScannerModal({ visible, onClose, playerId, onGroupJoined }: QR
             {t('groups.scanQRCode')}
           </Text>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={28} color="#FFFFFF" />
+            <Ionicons name="close-outline" size={28} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
 

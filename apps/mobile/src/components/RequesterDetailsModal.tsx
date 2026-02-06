@@ -222,7 +222,7 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                   disabled={isLoading}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="close" size={20} color={colors.text} />
+                  <Ionicons name="close-outline" size={20} color={colors.text} />
                 </TouchableOpacity>
               </View>
 
@@ -267,7 +267,7 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                       <View
                         style={[styles.verifiedBadge, { backgroundColor: status.success.DEFAULT }]}
                       >
-                        <Ionicons name="checkmark-circle" size={16} color={BASE_WHITE} />
+                        <Ionicons name="checkmark-circle-outline" size={16} color={BASE_WHITE} />
                         <Text
                           size="xs"
                           weight="semibold"
@@ -378,7 +378,11 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                   <View
                     style={[styles.warningBox, { backgroundColor: status.info.DEFAULT + '20' }]}
                   >
-                    <Ionicons name="information-circle" size={16} color={status.info.DEFAULT} />
+                    <Ionicons
+                      name="information-circle-outline"
+                      size={16}
+                      color={status.info.DEFAULT}
+                    />
                     <Text
                       size="sm"
                       style={{ color: status.info.DEFAULT, marginLeft: spacingPixels[2] }}
@@ -418,7 +422,7 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                   disabled={isLoading}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="close" size={18} color={BASE_WHITE} />
+                  <Ionicons name="close-outline" size={18} color={BASE_WHITE} />
                   <Text
                     size="base"
                     weight="medium"
@@ -443,7 +447,7 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                   disabled={isLoading || isMatchFull || isMatchInProgress}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="checkmark" size={18} color={BASE_WHITE} />
+                  <Ionicons name="checkmark-outline" size={18} color={BASE_WHITE} />
                   <Text
                     size="base"
                     weight="medium"

@@ -476,9 +476,9 @@ const ParticipantAvatar: React.FC<ParticipantAvatarProps> = ({
         {!isEmpty && avatarUrl ? (
           <Image source={{ uri: avatarUrl }} style={styles.participantAvatarImage} />
         ) : !isEmpty ? (
-          <Ionicons name="person" size={18} color={isDark ? neutral[400] : neutral[500]} />
+          <Ionicons name="person-outline" size={18} color={isDark ? neutral[400] : neutral[500]} />
         ) : (
-          <Ionicons name="add" size={20} color={colors.slotEmptyBorder} />
+          <Ionicons name="add-outline" size={20} color={colors.slotEmptyBorder} />
         )}
       </View>
       {isHost && (
@@ -488,7 +488,7 @@ const ParticipantAvatar: React.FC<ParticipantAvatarProps> = ({
       )}
       {isCheckedIn && (
         <View style={[styles.checkedInBadge, { backgroundColor: status.success.DEFAULT }]}>
-          <Ionicons name="checkmark" size={8} color={base.white} />
+          <Ionicons name="checkmark-outline" size={8} color={base.white} />
         </View>
       )}
     </View>
@@ -2230,7 +2230,7 @@ export const MatchDetailSheet: React.FC = () => {
               activeOpacity={0.7}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons name="close" size={24} color={colors.textMuted} />
+              <Ionicons name="close-outline" size={24} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
         </View>
@@ -2417,7 +2417,7 @@ export const MatchDetailSheet: React.FC = () => {
         <View style={[styles.section, { borderBottomColor: colors.border }]}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionHeaderTitleRow}>
-              <Ionicons name="people" size={20} color={colors.iconMuted} />
+              <Ionicons name="people-outline" size={20} color={colors.iconMuted} />
               <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
                 {t('matchDetail.participants' as TranslationKey)} ({participantInfo.current}/
                 {participantInfo.total})
@@ -2476,7 +2476,7 @@ export const MatchDetailSheet: React.FC = () => {
                         activeOpacity={0.7}
                         hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
                       >
-                        <Ionicons name="close" size={10} color={base.white} />
+                        <Ionicons name="close-outline" size={10} color={base.white} />
                       </TouchableOpacity>
                     )}
                 </View>
@@ -2602,7 +2602,7 @@ export const MatchDetailSheet: React.FC = () => {
                           style={styles.pendingRequestAvatarImage}
                         />
                       ) : (
-                        <Ionicons name="person" size={16} color={base.white} />
+                        <Ionicons name="person-outline" size={16} color={base.white} />
                       )}
                     </View>
                     <View style={styles.pendingRequestNameContainer}>
@@ -2665,7 +2665,7 @@ export const MatchDetailSheet: React.FC = () => {
                       }
                       activeOpacity={0.7}
                     >
-                      <Ionicons name="checkmark" size={18} color={base.white} />
+                      <Ionicons name="checkmark-outline" size={18} color={base.white} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[
@@ -2677,7 +2677,7 @@ export const MatchDetailSheet: React.FC = () => {
                       disabled={isAccepting || isRejecting}
                       activeOpacity={0.7}
                     >
-                      <Ionicons name="close" size={18} color={base.white} />
+                      <Ionicons name="close-outline" size={18} color={base.white} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -2756,7 +2756,7 @@ export const MatchDetailSheet: React.FC = () => {
                               style={styles.pendingRequestAvatarImage}
                             />
                           ) : (
-                            <Ionicons name="person" size={16} color={base.white} />
+                            <Ionicons name="person-outline" size={16} color={base.white} />
                           )}
                         </View>
                         <View style={styles.pendingRequestNameContainer}>
@@ -2825,7 +2825,7 @@ export const MatchDetailSheet: React.FC = () => {
                               }
                               activeOpacity={0.7}
                             >
-                              <Ionicons name="close" size={18} color={base.white} />
+                              <Ionicons name="close-outline" size={18} color={base.white} />
                             </TouchableOpacity>
                           </>
                         ) : (

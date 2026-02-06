@@ -64,7 +64,7 @@ export function MemberOptionsActionSheet({ payload }: SheetProps<'member-options
             {member.profilePictureUrl ? (
               <Image source={{ uri: member.profilePictureUrl }} style={styles.avatarImage} />
             ) : (
-              <Ionicons name="person" size={32} color={colors.textMuted} />
+              <Ionicons name="person-outline" size={32} color={colors.textMuted} />
             )}
           </TouchableOpacity>
           <View style={styles.memberInfo}>
@@ -91,7 +91,7 @@ export function MemberOptionsActionSheet({ payload }: SheetProps<'member-options
             </View>
           </View>
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={colors.textMuted} />
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 

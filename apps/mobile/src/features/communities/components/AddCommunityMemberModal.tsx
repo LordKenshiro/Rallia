@@ -239,7 +239,7 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
           {item.profile_picture_url ? (
             <Image source={{ uri: item.profile_picture_url }} style={styles.avatarImage} />
           ) : (
-            <Ionicons name="person" size={24} color={colors.textMuted} />
+            <Ionicons name="person-outline" size={24} color={colors.textMuted} />
           )}
         </View>
         <View style={styles.playerInfo}>
@@ -262,7 +262,7 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
           {isPending ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
-            <Ionicons name="add" size={20} color="#FFFFFF" />
+            <Ionicons name="add-outline" size={20} color="#FFFFFF" />
           )}
         </TouchableOpacity>
       </View>
@@ -283,14 +283,14 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
             {isModerator ? t('community.addCommunityMember') : t('community.referAPlayer')}
           </Text>
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={colors.textMuted} />
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
         {/* Info text for non-moderators */}
         {!isModerator && (
           <View style={[styles.infoBox, { backgroundColor: colors.inputBackground }]}>
-            <Ionicons name="information-circle" size={20} color={colors.primary} />
+            <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
             <Text size="sm" style={{ color: colors.textSecondary, marginLeft: 8, flex: 1 }}>
               {t('community.referralApprovalInfo')}
             </Text>
@@ -301,7 +301,7 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
         {isModerator && (
           <View style={[styles.moderatorToggle, { borderBottomColor: colors.border }]}>
             <View style={styles.toggleInfo}>
-              <Ionicons name="shield-checkmark" size={20} color={colors.primary} />
+              <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
               <Text size="sm" style={{ color: colors.text, marginLeft: 8 }}>
                 {t('community.addAsModerator')}
               </Text>

@@ -186,7 +186,7 @@ const PermissionRow: React.FC<PermissionRowProps> = ({
           </TouchableOpacity>
         ) : (
           <View style={[styles.grantedBadge, { backgroundColor: `${colors.success}20` }]}>
-            <Ionicons name="checkmark" size={16} color={colors.success} />
+            <Ionicons name="checkmark-outline" size={16} color={colors.success} />
           </View>
         )}
       </View>

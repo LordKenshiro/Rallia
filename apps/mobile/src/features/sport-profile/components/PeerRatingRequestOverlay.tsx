@@ -250,7 +250,7 @@ function PeerRatingRequestOverlayComponent({ payload }: SheetProps<'peer-rating-
             <View
               style={[styles.avatar, styles.avatarPlaceholder, { backgroundColor: colors.divider }]}
             >
-              <Ionicons name="person" size={24} color={colors.textMuted} />
+              <Ionicons name="person-outline" size={24} color={colors.textMuted} />
             </View>
           )}
           {isSelected && (
@@ -300,7 +300,7 @@ function PeerRatingRequestOverlayComponent({ payload }: SheetProps<'peer-rating-
             Request peer ratings
           </Text>
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={colors.textMuted} />
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 

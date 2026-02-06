@@ -244,7 +244,7 @@ export function ContactPickerModal({
             onPress={onClose}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="close" size={24} color={colors.text} />
+            <Ionicons name="close-outline" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text weight="semibold" size="lg" style={{ color: colors.text }}>
             {t('addScore.contactPicker.title' as TranslationKey)}

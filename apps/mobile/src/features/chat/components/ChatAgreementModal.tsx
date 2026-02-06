@@ -87,7 +87,7 @@ export function ChatAgreementActionSheet({ payload }: SheetProps<'chat-agreement
 
             {rules.map((rule, index) => (
               <View key={index} style={styles.ruleRow}>
-                <Ionicons name="close" size={18} color="#EF4444" style={styles.ruleIcon} />
+                <Ionicons name="close-outline" size={18} color="#EF4444" style={styles.ruleIcon} />
                 <Text style={[styles.ruleText, { color: colors.text }]}>{rule}</Text>
               </View>
             ))}

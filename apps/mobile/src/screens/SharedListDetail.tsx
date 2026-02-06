@@ -181,7 +181,7 @@ const SharedListDetail: React.FC = () => {
             onPress={handleAddManually}
             activeOpacity={0.8}
           >
-            <Ionicons name="add" size={20} color={colors.text} />
+            <Ionicons name="add-outline" size={20} color={colors.text} />
             <Text size="sm" weight="semibold" color={colors.text}>
               {t('sharedLists.addManually' as TranslationKey)}
             </Text>
@@ -244,7 +244,7 @@ const SharedListDetail: React.FC = () => {
                 onPress={handleAddManually}
                 activeOpacity={0.8}
               >
-                <Ionicons name="add" size={20} color="#fff" />
+                <Ionicons name="add-outline" size={20} color="#fff" />
               </TouchableOpacity>
             </View>
           </View>

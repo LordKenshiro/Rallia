@@ -257,7 +257,11 @@ export function InviteFromListsStep({
             <View
               style={[styles.listIcon, { backgroundColor: isDark ? primary[800] : primary[100] }]}
             >
-              <Ionicons name="people" size={20} color={isDark ? primary[300] : primary[600]} />
+              <Ionicons
+                name="people-outline"
+                size={20}
+                color={isDark ? primary[300] : primary[600]}
+              />
             </View>
             <View style={styles.listInfo}>
               <Text weight="semibold" style={{ color: colors.text }}>

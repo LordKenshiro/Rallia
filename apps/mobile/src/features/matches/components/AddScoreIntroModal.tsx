@@ -44,7 +44,7 @@ export function AddScoreIntroModal({
               onPress={onClose}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Ionicons name="close" size={28} color="#FFFFFF" />
+              <Ionicons name="close-outline" size={28} color="#FFFFFF" />
             </TouchableOpacity>
 
             {/* Content */}

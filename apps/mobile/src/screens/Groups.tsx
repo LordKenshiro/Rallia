@@ -104,7 +104,7 @@ const GroupCard: React.FC<{
             <View
               style={[styles.placeholderImage, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}
             >
-              <Ionicons name="people" size={40} color={colors.textMuted} />
+              <Ionicons name="people-outline" size={40} color={colors.textMuted} />
             </View>
           )}
 
@@ -212,7 +212,7 @@ export default function GroupsScreen() {
               SheetManager.show('create-group', { payload: { playerId } });
             }}
           >
-            <Ionicons name="add" size={20} color="#FFFFFF" />
+            <Ionicons name="add-outline" size={20} color="#FFFFFF" />
             <Text weight="semibold" style={styles.createButtonText}>
               {t('groups.empty.createButton')}
             </Text>
@@ -362,7 +362,7 @@ export default function GroupsScreen() {
             }}
             activeOpacity={0.8}
           >
-            <Ionicons name="add" size={28} color="#FFFFFF" />
+            <Ionicons name="add-outline" size={28} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
       )}

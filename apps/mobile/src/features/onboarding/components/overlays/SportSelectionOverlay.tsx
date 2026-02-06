@@ -15,6 +15,7 @@ import DatabaseService, { Logger } from '@rallia/shared-services';
 import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../../../hooks';
+import { SportIcon } from '../../../../components/SportIcon';
 
 interface SportSelectionOverlayProps {
   visible: boolean;
@@ -289,13 +290,25 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
                     <View style={styles.sportImageOverlay} />
                   </View>
 
-                  {/* Sport Name */}
+                  {/* Sport icon + name */}
                   <View style={styles.sportNameContainer}>
-                    <Text size="xl" weight="bold" color={colors.primaryForeground}>
-                      {sport.display_name}
-                    </Text>
+                    <View style={styles.sportNameRow}>
+                      <SportIcon
+                        sportName={sport.name}
+                        size={28}
+                        color={colors.primaryForeground}
+                        style={styles.sportCardIcon}
+                      />
+                      <Text size="xl" weight="bold" color={colors.primaryForeground}>
+                        {sport.display_name}
+                      </Text>
+                    </View>
                     {isSelected && (
-                      <Ionicons name="checkmark" size={24} color={colors.primaryForeground} />
+                      <Ionicons
+                        name="checkmark-outline"
+                        size={24}
+                        color={colors.primaryForeground}
+                      />
                     )}
                   </View>
                 </TouchableOpacity>
@@ -381,6 +394,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  sportNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  sportCardIcon: {
+    marginRight: 2,
   },
   continueButton: {
     marginTop: 10,

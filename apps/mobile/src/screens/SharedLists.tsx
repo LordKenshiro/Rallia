@@ -156,7 +156,7 @@ const SharedLists: React.FC = () => {
           onPress={handleCreateList}
           activeOpacity={0.8}
         >
-          <Ionicons name="add" size={20} color="#fff" />
+          <Ionicons name="add-outline" size={20} color="#fff" />
           <Text size="sm" weight="semibold" color="#fff">
             {t('sharedLists.createFirstList')}
           </Text>
@@ -261,7 +261,7 @@ const SharedLists: React.FC = () => {
             onPress={handleCreateList}
             activeOpacity={0.8}
           >
-            <Ionicons name="add" size={18} color="#fff" />
+            <Ionicons name="add-outline" size={18} color="#fff" />
             <Text size="sm" weight="semibold" color="#fff">
               {t('sharedLists.newList')}
             </Text>

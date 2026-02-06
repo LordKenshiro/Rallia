@@ -43,7 +43,7 @@ export function GroupOptionsActionSheet({ payload }: SheetProps<'group-options'>
             {title === 'Group Options' ? t('groups.groupOptions') : title}
           </Text>
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={colors.textMuted} />
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 

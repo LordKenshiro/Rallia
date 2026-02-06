@@ -18,6 +18,7 @@ import {
 import { useAuth, useThemeStyles, useTranslation, useEffectiveLocation } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { useMatchDetailSheet, useSport, useUserHomeLocation } from '../../../context';
+import { SportIcon } from '../../../components/SportIcon';
 import { Logger } from '@rallia/shared-services';
 import { spacingPixels } from '@rallia/design-system';
 import { SearchBar, MatchFiltersBar } from '../components';
@@ -33,14 +34,19 @@ interface EmptyStateProps {
 }
 
 function EmptyState({ hasActiveFilters, colors, t }: EmptyStateProps) {
+  const { selectedSport } = useSport();
   return (
     <View style={styles.emptyContainer}>
       <View style={[styles.emptyIconContainer, { backgroundColor: colors.card }]}>
-        <Ionicons
-          name={hasActiveFilters ? 'search-outline' : 'tennisball-outline'}
-          size={48}
-          color={colors.textMuted}
-        />
+        {hasActiveFilters ? (
+          <Ionicons name="search-outline" size={48} color={colors.textMuted} />
+        ) : (
+          <SportIcon
+            sportName={selectedSport?.name ?? 'tennis'}
+            size={48}
+            color={colors.textMuted}
+          />
+        )}
       </View>
       <Text size="lg" weight="semibold" color={colors.text} style={styles.emptyTitle}>
         {t(

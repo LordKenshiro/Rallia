@@ -1248,7 +1248,7 @@ const SportProfile = () => {
                         border: colors.border,
                         background: colors.background,
                       }}
-                      leftIcon={<Ionicons name="people" size={16} color={colors.primary} />}
+                      leftIcon={<Ionicons name="people-outline" size={16} color={colors.primary} />}
                     >
                       {t('profile.rating.references', { count: referencesCount })}
                     </Button>

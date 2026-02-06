@@ -28,6 +28,7 @@ import {
 import { useThemeStyles, useTranslation, useEffectiveLocation } from '../../../hooks';
 import { getSafeAreaEdges } from '../../../utils';
 import { useSport } from '../../../context';
+import { SportIcon } from '../../../components/SportIcon';
 import { useCourtsRoute } from '../../../navigation/hooks';
 import {
   spacingPixels,
@@ -303,7 +304,7 @@ export default function FacilityDetail() {
           <View style={styles.headerMeta}>
             {facility.distance_meters !== null && (
               <View style={[styles.metaBadge, { backgroundColor: primary[500] + '15' }]}>
-                <Ionicons name="navigate" size={12} color={colors.primary} />
+                <Ionicons name="navigate-outline" size={12} color={colors.primary} />
                 <Text size="xs" weight="medium" color={colors.primary}>
                   {facility.distance_meters < 1000
                     ? `${Math.round(facility.distance_meters)} m`
@@ -318,7 +319,7 @@ export default function FacilityDetail() {
                   { backgroundColor: isDark ? neutral[700] : neutral[100] },
                 ]}
               >
-                <Ionicons name="grid" size={12} color={colors.textMuted} />
+                <Ionicons name="grid-outline" size={12} color={colors.textMuted} />
                 <Text size="xs" weight="medium" color={colors.textMuted}>
                   {courts.length} {courts.length === 1 ? 'court' : 'courts'}
                 </Text>
@@ -368,11 +369,19 @@ export default function FacilityDetail() {
               ]}
               activeOpacity={0.7}
             >
-              <Ionicons
-                name={iconName}
-                size={18}
-                color={isActive ? colors.primary : colors.textMuted}
-              />
+              {tab === 'matches' ? (
+                <SportIcon
+                  sportName={selectedSport?.name ?? 'tennis'}
+                  size={18}
+                  color={isActive ? colors.primary : colors.textMuted}
+                />
+              ) : (
+                <Ionicons
+                  name={iconName}
+                  size={18}
+                  color={isActive ? colors.primary : colors.textMuted}
+                />
+              )}
               <Text
                 size="sm"
                 weight={isActive ? 'semibold' : 'medium'}

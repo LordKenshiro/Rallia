@@ -337,7 +337,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
             {item.profilePictureUrl ? (
               <Image source={{ uri: item.profilePictureUrl }} style={styles.avatarImage} />
             ) : (
-              <Ionicons name="person" size={24} color={colors.textMuted} />
+              <Ionicons name="person-outline" size={24} color={colors.textMuted} />
             )}
           </View>
           <View style={styles.playerInfo}>
@@ -345,7 +345,9 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
               {displayName}
             </Text>
           </View>
-          {isSelected && <Ionicons name="checkmark-circle" size={24} color={primary[500]} />}
+          {isSelected && (
+            <Ionicons name="checkmark-circle-outline" size={24} color={primary[500]} />
+          )}
         </TouchableOpacity>
       );
     },
@@ -377,11 +379,11 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
                     style={styles.selectedChipAvatarImage}
                   />
                 ) : (
-                  <Ionicons name="person" size={16} color={colors.textMuted} />
+                  <Ionicons name="person-outline" size={16} color={colors.textMuted} />
                 )}
               </View>
               <View style={[styles.removeChipBadge, { backgroundColor: primary[500] }]}>
-                <Ionicons name="close" size={10} color="#fff" />
+                <Ionicons name="close-outline" size={10} color="#fff" />
               </View>
             </View>
             <Text
@@ -464,7 +466,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
         <Text size="lg" weight="semibold" color={buttonTextActive}>
           {t('chat.continueSelected', { count: selectedMembers.length })}
         </Text>
-        <Ionicons name="arrow-forward" size={20} color={buttonTextActive} />
+        <Ionicons name="arrow-forward-outline" size={20} color={buttonTextActive} />
       </TouchableOpacity>
     </View>
   );
@@ -484,7 +486,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
             <TouchableOpacity onPress={handlePickImage} activeOpacity={0.8}>
               <Image source={{ uri: groupImage }} style={styles.groupImagePreview} />
               <View style={[styles.editImageBadge, { backgroundColor: primary[500] }]}>
-                <Ionicons name="camera" size={14} color="#fff" />
+                <Ionicons name="camera-outline" size={14} color="#fff" />
               </View>
             </TouchableOpacity>
           ) : (
@@ -493,7 +495,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
               onPress={handlePickImage}
               activeOpacity={0.7}
             >
-              <Ionicons name="camera" size={28} color={colors.textMuted} />
+              <Ionicons name="camera-outline" size={28} color={colors.textMuted} />
             </TouchableOpacity>
           )}
         </View>
@@ -539,7 +541,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
           {/* Current user (You) */}
           <View style={styles.memberRow}>
             <View style={[styles.memberAvatarLarge, { backgroundColor: primary[500] }]}>
-              <Ionicons name="person" size={20} color="#fff" />
+              <Ionicons name="person-outline" size={20} color="#fff" />
             </View>
             <View style={styles.memberInfo}>
               <Text weight="medium" style={{ color: colors.text }}>
@@ -569,7 +571,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
                       style={styles.memberAvatarImage}
                     />
                   ) : (
-                    <Ionicons name="person" size={20} color={colors.textMuted} />
+                    <Ionicons name="person-outline" size={20} color={colors.textMuted} />
                   )}
                 </View>
                 <View style={styles.memberInfo}>
@@ -605,7 +607,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
             <Text size="lg" weight="semibold" color={buttonTextActive}>
               {t('chat.createGroup')}
             </Text>
-            <Ionicons name="checkmark" size={20} color={buttonTextActive} />
+            <Ionicons name="checkmark-outline" size={20} color={buttonTextActive} />
           </>
         )}
       </TouchableOpacity>
@@ -630,7 +632,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           {step === 'group-details' ? (
             <TouchableOpacity onPress={handleBackToMembers} style={styles.backButton}>
-              <Ionicons name="chevron-back" size={24} color={colors.primary} />
+              <Ionicons name="chevron-back-outline" size={24} color={colors.primary} />
             </TouchableOpacity>
           ) : (
             <View style={styles.headerPlaceholder} />
@@ -639,7 +641,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
             {step === 'select-members' ? t('chat.selectMembers') : t('chat.groupDetails')}
           </Text>
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={colors.textMuted} />
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 

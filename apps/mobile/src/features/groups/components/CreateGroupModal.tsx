@@ -177,7 +177,7 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
           </Text>
         </View>
         <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-          <Ionicons name="close" size={24} color={colors.textMuted} />
+          <Ionicons name="close-outline" size={24} color={colors.textMuted} />
         </TouchableOpacity>
       </View>
 
@@ -200,13 +200,13 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
                 style={[styles.removeImageButton, { backgroundColor: colors.cardBackground }]}
                 onPress={handleRemoveImage}
               >
-                <Ionicons name="close" size={20} color={colors.text} />
+                <Ionicons name="close-outline" size={20} color={colors.text} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.changeImageButton, { backgroundColor: colors.primary }]}
                 onPress={handlePickImage}
               >
-                <Ionicons name="camera" size={16} color="#FFFFFF" />
+                <Ionicons name="camera-outline" size={16} color="#FFFFFF" />
                 <Text size="xs" weight="semibold" style={{ color: '#FFFFFF', marginLeft: 4 }}>
                   {t('common.change')}
                 </Text>
@@ -224,7 +224,7 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
               onPress={handlePickImage}
             >
               <View style={[styles.imagePickerIcon, { backgroundColor: colors.cardBackground }]}>
-                <Ionicons name="camera" size={24} color={colors.primary} />
+                <Ionicons name="camera-outline" size={24} color={colors.primary} />
               </View>
               <Text size="sm" style={{ color: colors.textSecondary, marginTop: 8 }}>
                 {t('groups.addCoverImage')}
@@ -295,7 +295,7 @@ export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) 
         </View>
 
         <View style={[styles.infoBox, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
-          <Ionicons name="information-circle" size={20} color={colors.primary} />
+          <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
           <Text size="sm" style={{ color: colors.textSecondary, flex: 1, marginLeft: 8 }}>
             {t('groups.createGroupHint')}
           </Text>

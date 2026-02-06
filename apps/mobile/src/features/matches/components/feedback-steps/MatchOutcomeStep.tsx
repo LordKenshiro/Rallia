@@ -10,6 +10,7 @@ import { View, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-nat
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
+import { SportIcon } from '../../../../components/SportIcon';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, selectionHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
 import type {
@@ -243,26 +244,6 @@ const capitalizeFirst = (str: string): string => {
   return str.charAt(0).toUpperCase() + str.slice(1);
 };
 
-/**
- * Get sport icon name based on sport slug
- */
-const getSportIcon = (slug: string): keyof typeof Ionicons.glyphMap => {
-  switch (slug) {
-    case 'tennis':
-      return 'tennisball-outline';
-    case 'padel':
-      return 'tennisball-outline';
-    case 'pickleball':
-      return 'tennisball-outline';
-    case 'badminton':
-      return 'tennisball-outline';
-    case 'squash':
-      return 'tennisball-outline';
-    default:
-      return 'tennisball-outline';
-  }
-};
-
 const MatchContextCard: React.FC<MatchContextCardProps> = ({
   matchContext,
   colors,
@@ -272,7 +253,6 @@ const MatchContextCard: React.FC<MatchContextCardProps> = ({
 }) => {
   const formattedDate = formatMatchDate(matchContext.matchDate, locale);
   const formattedTime = formatMatchTime(matchContext.startTime, locale);
-  const sportIcon = getSportIcon(matchContext.sportSlug);
 
   // Build location string
   const location = matchContext.facilityName
@@ -314,7 +294,7 @@ const MatchContextCard: React.FC<MatchContextCardProps> = ({
       {/* Sport icon and name */}
       <View style={styles.matchContextHeader}>
         <View style={[styles.sportIconContainer, { backgroundColor: `${colors.buttonActive}20` }]}>
-          <Ionicons name={sportIcon} size={20} color={colors.buttonActive} />
+          <SportIcon sportName={matchContext.sportSlug} size={20} color={colors.buttonActive} />
         </View>
         <View style={styles.matchContextHeaderText}>
           <Text size="base" weight="bold" color={colors.text}>
@@ -404,7 +384,7 @@ const PlayerSelectCard: React.FC<PlayerSelectCardProps> = ({
         <Image source={{ uri: avatarUrl }} style={styles.playerAvatar} />
       ) : (
         <View style={[styles.playerAvatarPlaceholder, { backgroundColor: colors.border }]}>
-          <Ionicons name="person" size={20} color={colors.textMuted} />
+          <Ionicons name="person-outline" size={20} color={colors.textMuted} />
         </View>
       )}
       <Text
@@ -424,7 +404,9 @@ const PlayerSelectCard: React.FC<PlayerSelectCardProps> = ({
           },
         ]}
       >
-        {selected && <Ionicons name="checkmark" size={16} color={colors.buttonTextActive} />}
+        {selected && (
+          <Ionicons name="checkmark-outline" size={16} color={colors.buttonTextActive} />
+        )}
       </View>
     </TouchableOpacity>
   );

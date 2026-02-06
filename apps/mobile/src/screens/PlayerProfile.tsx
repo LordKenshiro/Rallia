@@ -25,6 +25,8 @@ import { Text, Skeleton, SkeletonAvatar } from '@rallia/shared-components';
 import { supabase, Logger, isPlayerOnline } from '@rallia/shared-services';
 import { useGetOrCreateDirectConversation } from '@rallia/shared-hooks';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
+import { useSport } from '../context';
+import { SportIcon } from '../components/SportIcon';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import { getProfilePictureUrl, lightHaptic, mediumHaptic } from '@rallia/shared-utils';
 import { formatDateMonthYear } from '../utils/dateFormatting';
@@ -109,6 +111,7 @@ const PlayerProfile = () => {
   const { playerId, sportId } = route.params;
   const { colors } = useThemeStyles();
   const { t, locale } = useTranslation();
+  const { selectedSport } = useSport();
   const getOrCreateDirectConversation = useGetOrCreateDirectConversation();
 
   const [loading, setLoading] = useState(true);
@@ -986,7 +989,7 @@ const PlayerProfile = () => {
                   style={styles.profileImage}
                 />
               ) : (
-                <Ionicons name="person" size={40} color={colors.primary} />
+                <Ionicons name="person-outline" size={40} color={colors.primary} />
               )}
             </View>
             {/* Online Status Indicator */}
@@ -1017,7 +1020,11 @@ const PlayerProfile = () => {
               style={[styles.actionButton, { backgroundColor: colors.primary }]}
               onPress={handleInviteToMatch}
             >
-              <Ionicons name="tennisball-outline" size={18} color={colors.primaryForeground} />
+              <SportIcon
+                sportName={selectedSport?.name ?? 'tennis'}
+                size={18}
+                color={colors.primaryForeground}
+              />
               <Text style={[styles.actionButtonText, { color: colors.primaryForeground }]}>
                 Invite to Match
               </Text>

@@ -54,7 +54,7 @@ const SharedListCard: React.FC<SharedListCardProps> = ({
       <View
         style={[styles.iconContainer, { backgroundColor: isDark ? primary[900] : primary[50] }]}
       >
-        <Ionicons name="people" size={24} color={primary[500]} />
+        <Ionicons name="people-outline" size={24} color={primary[500]} />
       </View>
 
       {/* Content */}

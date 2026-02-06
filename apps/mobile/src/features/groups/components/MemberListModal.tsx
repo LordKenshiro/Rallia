@@ -254,7 +254,7 @@ export function MemberListActionSheet({ payload }: SheetProps<'member-list'>) {
                   style={styles.avatarImage}
                 />
               ) : (
-                <Ionicons name="person" size={24} color={colors.textMuted} />
+                <Ionicons name="person-outline" size={24} color={colors.textMuted} />
               )}
             </View>
             {/* Online indicator */}
@@ -326,7 +326,7 @@ export function MemberListActionSheet({ payload }: SheetProps<'member-list'>) {
             {t('groups.members')} ({group.member_count})
           </Text>
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={colors.textMuted} />
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 

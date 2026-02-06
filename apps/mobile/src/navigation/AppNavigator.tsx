@@ -33,9 +33,12 @@ import {
   ProfilePictureButton,
   NotificationButton,
   SettingsButton,
-  SportSelector,
 } from '@rallia/shared-components';
 import { useActionsSheet, useSport, useOverlay } from '../context';
+import SportSelector from '../components/SportSelector';
+import TennisIcon from '../../assets/icons/tennis.svg';
+import PickleballIcon from '../../assets/icons/pickleball.svg';
+import StadiumIcon from '../../assets/icons/stadium.svg';
 import { useUnreadNotificationCount, useProfile, useTotalUnreadCount } from '@rallia/shared-hooks';
 import { useAuth, useThemeStyles, useTranslation, useRequireOnboarding } from '../hooks';
 import { useTheme } from '@rallia/shared-hooks';
@@ -390,7 +393,7 @@ function MapIconButton() {
       style={{ marginRight: spacingPixels[2] }}
       activeOpacity={0.7}
     >
-      <Ionicons name="map" size={24} color={colors.headerForeground} />
+      <Ionicons name="map-outline" size={24} color={colors.headerForeground} />
     </TouchableOpacity>
   );
 }
@@ -679,8 +682,14 @@ const TAB_ICON_PADDING = 8;
 /**
  * Home tab icon with tour step
  */
+/**
+ * Home tab icon. Shows tennis.svg when tennis is selected, pickleball.svg when pickleball is selected.
+ */
 function HomeTabIcon({ color, size }: { color: string; size: number }) {
   const { t } = useTranslation();
+  const { selectedSport } = useSport();
+  const isPickleball = selectedSport?.name?.toLowerCase() === 'pickleball';
+  const IconComponent = isPickleball ? PickleballIcon : TennisIcon;
   return (
     <CopilotStep text={t('tour.mainNavigation.home.description')} order={1} name="home-tab">
       <WalkthroughableView
@@ -691,14 +700,14 @@ function HomeTabIcon({ color, size }: { color: string; size: number }) {
           justifyContent: 'center',
         }}
       >
-        <Ionicons name="home" size={size} color={color} />
+        <IconComponent width={size} height={size} fill={color} />
       </WalkthroughableView>
     </CopilotStep>
   );
 }
 
 /**
- * Courts/Games tab icon with tour step
+ * Courts/Games tab icon with tour step. Uses stadium.svg.
  */
 function CourtsTabIcon({ color, size }: { color: string; size: number }) {
   const { t } = useTranslation();
@@ -712,7 +721,7 @@ function CourtsTabIcon({ color, size }: { color: string; size: number }) {
           justifyContent: 'center',
         }}
       >
-        <Ionicons name="tennisball" size={size} color={color} />
+        <StadiumIcon width={size} height={size} fill={color} />
       </WalkthroughableView>
     </CopilotStep>
   );
@@ -738,7 +747,7 @@ function ActionsTabIcon({ color, size }: { color: string; size: number }) {
           justifyContent: 'center',
         }}
       >
-        <Ionicons name="add-circle" size={adjustedSize} color={color} />
+        <Ionicons name="add-circle-outline" size={adjustedSize} color={color} />
       </WalkthroughableView>
     </CopilotStep>
   );
@@ -763,7 +772,7 @@ function CommunityTabIcon({ color, size }: { color: string; size: number }) {
           justifyContent: 'center',
         }}
       >
-        <Ionicons name="people" size={size} color={color} />
+        <Ionicons name="people-outline" size={size} color={color} />
       </WalkthroughableView>
     </CopilotStep>
   );
@@ -792,7 +801,7 @@ function ChatTabIconWithTour({ color, size }: { color: string; size: number }) {
           justifyContent: 'center',
         }}
       >
-        <Ionicons name="chatbubbles" size={size} color={color} />
+        <Ionicons name="chatbubbles-outline" size={size} color={color} />
         {showBadge && (
           <View
             style={{
@@ -928,7 +937,7 @@ function BottomTabs() {
  */
 function ThemedBackButton({
   navigation,
-  icon = 'chevron-back',
+  icon = 'chevron-back-outline',
 }: {
   navigation: { goBack: () => void };
   icon?: string;

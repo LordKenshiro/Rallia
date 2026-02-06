@@ -108,7 +108,7 @@ export function MatchExpectationStep({ onContinue }: MatchExpectationStepProps) 
               </View>
               {isSelected && (
                 <View style={[styles.checkmark, { backgroundColor: colors.primary }]}>
-                  <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                  <Ionicons name="checkmark-outline" size={16} color="#FFFFFF" />
                 </View>
               )}
             </TouchableOpacity>

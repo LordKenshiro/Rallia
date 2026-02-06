@@ -30,7 +30,8 @@ import {
   useTourSequence,
   type TranslationKey,
 } from '../hooks';
-import { useActionsSheet } from '../context';
+import { useActionsSheet, useSport } from '../context';
+import { SportIcon } from '../components/SportIcon';
 import { CopilotStep, WalkthroughableView } from '../context/TourContext';
 import SignInPrompt from '../components/SignInPrompt';
 import { SearchBar } from '../components/SearchBar';
@@ -61,7 +62,7 @@ type TabKey = 'direct' | 'groups' | 'matches';
 const TAB_CONFIGS: { key: TabKey; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: 'direct', icon: 'chatbubble-outline' },
   { key: 'groups', icon: 'people-outline' },
-  { key: 'matches', icon: 'tennisball-outline' },
+  { key: 'matches', icon: 'tennisball-outline' }, // Rendered as SportIcon when key === 'matches'
 ];
 
 const Chat = () => {
@@ -72,6 +73,7 @@ const Chat = () => {
   const { session, isAuthenticated, loading: isLoadingAuth } = useAuth();
   const { t } = useTranslation();
   const { openSheet } = useActionsSheet();
+  const { selectedSport } = useSport();
   const { guardAction, isReady: isOnboarded } = useRequireOnboarding();
   const playerId = session?.user?.id;
   const [searchQuery, setSearchQuery] = useState('');
@@ -333,12 +335,20 @@ const Chat = () => {
 
     return (
       <View style={styles.emptyContainer}>
-        <Ionicons name={icon} size={64} color={colors.textMuted} />
+        {activeTab === 'matches' ? (
+          <SportIcon
+            sportName={selectedSport?.name ?? 'tennis'}
+            size={64}
+            color={colors.textMuted}
+          />
+        ) : (
+          <Ionicons name={icon} size={64} color={colors.textMuted} />
+        )}
         <Text style={[styles.emptyTitle, { color: colors.text }]}>{title}</Text>
         <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>{subtitle}</Text>
       </View>
     );
-  }, [isLoading, colors, searchQuery, activeTab, t]);
+  }, [isLoading, colors, searchQuery, activeTab, t, selectedSport?.name]);
 
   const renderSeparator = useCallback(
     () => <View style={[styles.separator, { backgroundColor: colors.border }]} />,
@@ -363,7 +373,7 @@ const Chat = () => {
               { backgroundColor: isDark ? colors.card : '#F0F0F0' },
             ]}
           >
-            <Ionicons name="archive" size={20} color={colors.textMuted} />
+            <Ionicons name="archive-outline" size={20} color={colors.textMuted} />
           </View>
           <View style={styles.archivedContent}>
             <Text style={[styles.archivedText, { color: colors.text }]}>{t('chat.archived')}</Text>
@@ -470,12 +480,21 @@ const Chat = () => {
                 }}
                 activeOpacity={0.7}
               >
-                <Ionicons
-                  name={tab.icon}
-                  size={18}
-                  color={isActive ? colors.primary : colors.textMuted}
-                  style={styles.tabIcon}
-                />
+                {tab.key === 'matches' ? (
+                  <SportIcon
+                    sportName={selectedSport?.name ?? 'tennis'}
+                    size={18}
+                    color={isActive ? colors.primary : colors.textMuted}
+                    style={styles.tabIcon}
+                  />
+                ) : (
+                  <Ionicons
+                    name={tab.icon}
+                    size={18}
+                    color={isActive ? colors.primary : colors.textMuted}
+                    style={styles.tabIcon}
+                  />
+                )}
                 <Text
                   size="sm"
                   weight={isActive ? 'semibold' : 'medium'}
@@ -549,7 +568,7 @@ const Chat = () => {
         onPress={handleNewGroupPress}
         activeOpacity={0.8}
       >
-        <Ionicons name="add" size={28} color="#fff" />
+        <Ionicons name="add-outline" size={28} color="#fff" />
       </TouchableOpacity>
     </SafeAreaView>
   );

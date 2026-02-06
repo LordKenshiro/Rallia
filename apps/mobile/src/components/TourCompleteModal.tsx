@@ -157,7 +157,12 @@ export const TourCompleteModal: React.FC<TourCompleteModalProps> = ({
             accessibilityRole="button"
           >
             <Text style={styles.ctaButtonText}>{t('tour.complete.button')}</Text>
-            <Ionicons name="arrow-forward" size={20} color={COLORS.white} style={styles.ctaIcon} />
+            <Ionicons
+              name="arrow-forward-outline"
+              size={20}
+              color={COLORS.white}
+              style={styles.ctaIcon}
+            />
           </TouchableOpacity>
 
           {/* Subtle tip */}
@@ -180,7 +185,7 @@ const SummaryItem: React.FC<SummaryItemProps> = ({ icon, label }) => (
       <Ionicons name={icon} size={16} color={COLORS.primary} />
     </View>
     <Text style={styles.summaryLabel}>{label}</Text>
-    <Ionicons name="checkmark" size={16} color={COLORS.success} />
+    <Ionicons name="checkmark-outline" size={16} color={COLORS.success} />
   </View>
 );
 

@@ -127,7 +127,7 @@ function ChatSearchBarComponent({
               onPress={handleClear}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+              <Ionicons name="close-circle-outline" size={18} color={colors.textMuted} />
             </TouchableOpacity>
           )}
         </View>
@@ -178,7 +178,7 @@ function ChatSearchBarComponent({
 
         {/* Close button */}
         <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-          <Ionicons name="close" size={24} color={colors.text} />
+          <Ionicons name="close-outline" size={24} color={colors.text} />
         </TouchableOpacity>
       </View>
     </View>

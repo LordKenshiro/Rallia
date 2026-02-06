@@ -88,7 +88,7 @@ export function ReportUserActionSheet({ payload }: SheetProps<'report-user'>) {
             {t('chat.report.reportUser', { name: reportedName })}
           </Text>
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={colors.textMuted} />
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
@@ -155,7 +155,7 @@ export function ReportUserActionSheet({ payload }: SheetProps<'report-user'>) {
                 {REPORT_REASON_LABELS[reason]}
               </Text>
               {selectedReason === reason && (
-                <Ionicons name="checkmark-circle" size={20} color={primary[500]} />
+                <Ionicons name="checkmark-circle-outline" size={20} color={primary[500]} />
               )}
             </TouchableOpacity>
           ))}

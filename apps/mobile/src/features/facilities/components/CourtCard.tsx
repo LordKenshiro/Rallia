@@ -7,6 +7,8 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
+import { useSport } from '../../../context';
+import { SportIcon } from '../../../components/SportIcon';
 import {
   spacingPixels,
   radiusPixels,
@@ -33,15 +35,16 @@ interface CourtCardProps {
 
 // Surface type icons
 const SURFACE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  hard: 'square',
-  clay: 'leaf',
-  grass: 'flower',
-  carpet: 'grid',
-  acrylic: 'ellipse',
-  synthetic: 'shapes',
+  hard: 'square-outline',
+  clay: 'leaf-outline',
+  grass: 'flower-outline',
+  carpet: 'grid-outline',
+  acrylic: 'ellipse-outline',
+  synthetic: 'shapes-outline',
 };
 
 export default function CourtCard({ court, colors, isDark, t }: CourtCardProps) {
+  const { selectedSport } = useSport();
   // Format court name
   const courtName = court.name || `Court ${court.court_number || ''}`;
 
@@ -50,7 +53,7 @@ export default function CourtCard({ court, colors, isDark, t }: CourtCardProps) 
   const surfaceLabel = court.surface_type
     ? court.surface_type.charAt(0).toUpperCase() + court.surface_type.slice(1).replace('_', ' ')
     : null;
-  const surfaceIcon = SURFACE_ICONS[surfaceType] || 'layers';
+  const surfaceIcon = SURFACE_ICONS[surfaceType] || 'layers-outline';
 
   return (
     <View
@@ -63,7 +66,7 @@ export default function CourtCard({ court, colors, isDark, t }: CourtCardProps) 
       {/* Header row with court name only */}
       <View style={styles.header}>
         <View style={[styles.courtIcon, { backgroundColor: primary[500] + '15' }]}>
-          <Ionicons name="tennisball" size={16} color={colors.primary} />
+          <SportIcon sportName={selectedSport?.name ?? 'tennis'} size={16} color={colors.primary} />
         </View>
         <Text size="sm" weight="bold" color={colors.text} style={styles.courtName}>
           {courtName}
@@ -86,7 +89,7 @@ export default function CourtCard({ court, colors, isDark, t }: CourtCardProps) 
           ]}
         >
           <Ionicons
-            name={court.indoor ? 'home' : 'sunny'}
+            name={court.indoor ? 'home-outline' : 'sunny-outline'}
             size={12}
             color={court.indoor ? primary[500] : accent[500]}
           />
@@ -100,7 +103,7 @@ export default function CourtCard({ court, colors, isDark, t }: CourtCardProps) 
           <View
             style={[styles.badge, { backgroundColor: isDark ? neutral[700] : accent[500] + '15' }]}
           >
-            <Ionicons name="bulb" size={12} color={accent[600]} />
+            <Ionicons name="bulb-outline" size={12} color={accent[600]} />
             <Text size="xs" weight="medium" color={accent[600]}>
               {t('facilityDetail.lighted')}
             </Text>
@@ -124,7 +127,7 @@ export default function CourtCard({ court, colors, isDark, t }: CourtCardProps) 
           <View
             style={[styles.badge, { backgroundColor: isDark ? neutral[700] : primary[500] + '15' }]}
           >
-            <Ionicons name="fitness" size={12} color={primary[600]} />
+            <Ionicons name="fitness-outline" size={12} color={primary[600]} />
             <Text size="xs" weight="medium" color={primary[600]}>
               {t('facilityDetail.multiSport')}
             </Text>

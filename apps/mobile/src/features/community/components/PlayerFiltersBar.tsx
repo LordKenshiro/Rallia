@@ -255,7 +255,12 @@ function FilterChip({
           {value === 'all' ? label : value}
         </Text>
         {hasDropdown && (
-          <Ionicons name="chevron-down" size={12} color={textColor} style={styles.chipChevron} />
+          <Ionicons
+            name="chevron-down-outline"
+            size={12}
+            color={textColor}
+            style={styles.chipChevron}
+          />
         )}
       </TouchableOpacity>
     </Animated.View>
@@ -369,7 +374,7 @@ function FilterDropdown<T extends string | number>({
               onPress={onClose}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Ionicons name="close" size={22} color={themeColors.mutedForeground} />
+              <Ionicons name="close-outline" size={22} color={themeColors.mutedForeground} />
             </TouchableOpacity>
           </View>
 
@@ -404,7 +409,7 @@ function FilterDropdown<T extends string | number>({
                     {getLabel(option)}
                   </Text>
                   {isSelected && (
-                    <Ionicons name="checkmark-circle" size={22} color={colors.checkmark} />
+                    <Ionicons name="checkmark-circle-outline" size={22} color={colors.checkmark} />
                   )}
                 </TouchableOpacity>
               );

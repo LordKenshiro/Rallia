@@ -576,7 +576,7 @@ const UserProfile = () => {
                         style={styles.profileImage}
                       />
                     ) : (
-                      <Ionicons name="camera" size={32} color={colors.primary} />
+                      <Ionicons name="camera-outline" size={32} color={colors.primary} />
                     )}
                     {uploadingImage && (
                       <View style={styles.uploadingOverlay}>
@@ -594,7 +594,7 @@ const UserProfile = () => {
                         { backgroundColor: colors.primary, borderColor: colors.card },
                       ]}
                     >
-                      <Ionicons name="camera" size={14} color={colors.primaryForeground} />
+                      <Ionicons name="camera-outline" size={14} color={colors.primaryForeground} />
                     </View>
                   )}
                 </View>

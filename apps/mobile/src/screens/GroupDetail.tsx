@@ -33,6 +33,8 @@ import {
   useRequireOnboarding,
   type TranslationKey,
 } from '../hooks';
+import { useSport } from '../context';
+import { SportIcon } from '../components/SportIcon';
 import {
   useGroupWithMembers,
   useGroupStats,
@@ -82,6 +84,7 @@ export default function GroupDetailScreen() {
   const { session } = useAuth();
   const { t } = useTranslation();
   const { guardAction } = useRequireOnboarding();
+  const { selectedSport } = useSport();
   const playerId = session?.user?.id;
   const navigateToPlayerProfile = useNavigateToPlayerProfile();
 
@@ -502,20 +505,24 @@ export default function GroupDetailScreen() {
                 </View>
                 <View style={styles.statsList}>
                   <View style={styles.statItem}>
-                    <Ionicons name="people" size={20} color="#5AC8FA" />
+                    <Ionicons name="people-outline" size={20} color="#5AC8FA" />
                     <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
                       {t('groups.activity.newMembers' as TranslationKey, { count: membersCount })}
                     </Text>
                   </View>
                   <View style={styles.statItem}>
-                    <Ionicons name="tennisball" size={20} color="#FF9500" />
+                    <SportIcon
+                      sportName={selectedSport?.name ?? 'tennis'}
+                      size={20}
+                      color="#FF9500"
+                    />
                     <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
                       {t('groups.activity.gamesCreated' as TranslationKey, { count: gamesCount })}
                     </Text>
                   </View>
                   <View style={styles.statItem}>
                     <Ionicons
-                      name="chatbubble-ellipses"
+                      name="chatbubble-ellipses-outline"
                       size={20}
                       color={isDark ? '#8E8E93' : '#C7C7CC'}
                     />
@@ -556,7 +563,7 @@ export default function GroupDetailScreen() {
             >
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitle}>
-                  <Ionicons name="trophy" size={20} color={colors.primary} />
+                  <Ionicons name="trophy-outline" size={20} color={colors.primary} />
                   <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
                     {t('groups.leaderboard.title')}
                   </Text>
@@ -587,7 +594,7 @@ export default function GroupDetailScreen() {
                             style={styles.avatarImage}
                           />
                         ) : (
-                          <Ionicons name="person" size={14} color={colors.textMuted} />
+                          <Ionicons name="person-outline" size={14} color={colors.textMuted} />
                         )}
                       </View>
                       <Text size="sm" style={{ color: colors.text, flex: 1, marginLeft: 8 }}>
@@ -631,7 +638,7 @@ export default function GroupDetailScreen() {
             >
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitle}>
-                  <Ionicons name="time" size={20} color={colors.textSecondary} />
+                  <Ionicons name="time-outline" size={20} color={colors.textSecondary} />
                   <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
                     {t('groups.recentGames.title' as TranslationKey)}
                   </Text>
@@ -674,12 +681,8 @@ export default function GroupDetailScreen() {
                   {/* Match Header */}
                   <View style={styles.matchHeader}>
                     <View style={styles.matchInfo}>
-                      <Ionicons
-                        name={
-                          recentMatch.match.sport?.name?.toLowerCase() === 'tennis'
-                            ? 'tennisball'
-                            : 'american-football'
-                        }
+                      <SportIcon
+                        sportName={recentMatch.match.sport?.name ?? 'tennis'}
                         size={16}
                         color={colors.primary}
                       />
@@ -752,7 +755,7 @@ export default function GroupDetailScreen() {
                         >
                           {isWinner && (
                             <View style={styles.teamWinnerBadge}>
-                              <Ionicons name="trophy" size={12} color="#F59E0B" />
+                              <Ionicons name="trophy-outline" size={12} color="#F59E0B" />
                             </View>
                           )}
 
@@ -778,7 +781,11 @@ export default function GroupDetailScreen() {
                                     style={styles.teamAvatarImage}
                                   />
                                 ) : (
-                                  <Ionicons name="person" size={20} color={colors.textMuted} />
+                                  <Ionicons
+                                    name="person-outline"
+                                    size={20}
+                                    color={colors.textMuted}
+                                  />
                                 )}
                               </TouchableOpacity>
                             ))}
@@ -848,7 +855,7 @@ export default function GroupDetailScreen() {
                         >
                           {isWinner && (
                             <View style={styles.teamWinnerBadge}>
-                              <Ionicons name="trophy" size={12} color="#F59E0B" />
+                              <Ionicons name="trophy-outline" size={12} color="#F59E0B" />
                             </View>
                           )}
 
@@ -874,7 +881,11 @@ export default function GroupDetailScreen() {
                                     style={styles.teamAvatarImage}
                                   />
                                 ) : (
-                                  <Ionicons name="person" size={20} color={colors.textMuted} />
+                                  <Ionicons
+                                    name="person-outline"
+                                    size={20}
+                                    color={colors.textMuted}
+                                  />
                                 )}
                               </TouchableOpacity>
                             ))}
@@ -922,7 +933,11 @@ export default function GroupDetailScreen() {
                 </TouchableOpacity>
               ) : (
                 <View style={styles.emptyMatch}>
-                  <Ionicons name="tennisball-outline" size={32} color={colors.textMuted} />
+                  <SportIcon
+                    sportName={selectedSport?.name ?? 'tennis'}
+                    size={32}
+                    color={colors.textMuted}
+                  />
                   <Text size="sm" style={{ color: colors.textSecondary, marginTop: 8 }}>
                     {t('groups.recentGames.noGames' as TranslationKey)}
                   </Text>
@@ -939,7 +954,7 @@ export default function GroupDetailScreen() {
             >
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitle}>
-                  <Ionicons name="podium" size={20} color={colors.textSecondary} />
+                  <Ionicons name="podium-outline" size={20} color={colors.textSecondary} />
                   <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
                     {t('groups.leaderboard.title')}
                   </Text>
@@ -994,7 +1009,7 @@ export default function GroupDetailScreen() {
                               style={styles.avatarImage}
                             />
                           ) : (
-                            <Ionicons name="person" size={28} color={colors.textMuted} />
+                            <Ionicons name="person-outline" size={28} color={colors.textMuted} />
                           )}
                           <View style={[styles.rankBadge, { backgroundColor: '#C0C0C0' }]}>
                             <Text size="xs" weight="bold" style={{ color: '#FFF' }}>
@@ -1019,7 +1034,7 @@ export default function GroupDetailScreen() {
                               style={styles.avatarImage}
                             />
                           ) : (
-                            <Ionicons name="person" size={32} color={colors.textMuted} />
+                            <Ionicons name="person-outline" size={32} color={colors.textMuted} />
                           )}
                           <View
                             style={[
@@ -1028,7 +1043,7 @@ export default function GroupDetailScreen() {
                               { backgroundColor: '#FFD700' },
                             ]}
                           >
-                            <Ionicons name="trophy" size={14} color="#FFF" />
+                            <Ionicons name="trophy-outline" size={14} color="#FFF" />
                           </View>
                         </View>
                       </View>
@@ -1048,7 +1063,7 @@ export default function GroupDetailScreen() {
                               style={styles.avatarImage}
                             />
                           ) : (
-                            <Ionicons name="person" size={24} color={colors.textMuted} />
+                            <Ionicons name="person-outline" size={24} color={colors.textMuted} />
                           )}
                           <View style={[styles.rankBadge, { backgroundColor: '#CD7F32' }]}>
                             <Text size="xs" weight="bold" style={{ color: '#FFF' }}>
@@ -1110,7 +1125,7 @@ export default function GroupDetailScreen() {
                             style={styles.avatarImage}
                           />
                         ) : (
-                          <Ionicons name="person" size={18} color={colors.textMuted} />
+                          <Ionicons name="person-outline" size={18} color={colors.textMuted} />
                         )}
                       </View>
                       <Text size="sm" style={{ color: colors.text, flex: 1, marginLeft: 12 }}>
@@ -1192,7 +1207,7 @@ export default function GroupDetailScreen() {
                             style={styles.avatarImage}
                           />
                         ) : (
-                          <Ionicons name="person" size={20} color={colors.textMuted} />
+                          <Ionicons name="person-outline" size={20} color={colors.textMuted} />
                         )}
                       </View>
                       <View style={styles.activityContent}>
@@ -1275,7 +1290,7 @@ export default function GroupDetailScreen() {
             ]}
           >
             <View style={[styles.headerIcon, { backgroundColor: colors.cardBackground }]}>
-              <Ionicons name="people" size={48} color={colors.primary} />
+              <Ionicons name="people-outline" size={48} color={colors.primary} />
             </View>
           </View>
         )}
@@ -1365,7 +1380,7 @@ export default function GroupDetailScreen() {
                   })
                 }
               >
-                <Ionicons name="person-add" size={18} color={colors.primary} />
+                <Ionicons name="person-add-outline" size={18} color={colors.primary} />
                 <Text weight="semibold" style={{ color: colors.primary, marginLeft: 8 }}>
                   {t('groups.detail.addMember' as TranslationKey)}
                 </Text>
@@ -1375,7 +1390,7 @@ export default function GroupDetailScreen() {
               style={[styles.menuButton, { borderColor: colors.border }]}
               onPress={handleShowOptions}
             >
-              <Ionicons name="ellipsis-horizontal" size={20} color={colors.text} />
+              <Ionicons name="ellipsis-horizontal-outline" size={20} color={colors.text} />
             </TouchableOpacity>
           </View>
         </View>
@@ -1426,7 +1441,7 @@ export default function GroupDetailScreen() {
           style={[styles.chatButton, { backgroundColor: colors.primary }]}
           onPress={handleAddGame}
         >
-          <Ionicons name="add-circle" size={20} color="#FFFFFF" />
+          <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />
           <Text weight="semibold" style={styles.chatButtonText}>
             {t('community.leaderboard.addPlayedGame')}
           </Text>
@@ -1436,7 +1451,7 @@ export default function GroupDetailScreen() {
           style={[styles.chatButton, { backgroundColor: colors.primary }]}
           onPress={handleOpenChat}
         >
-          <Ionicons name="chatbubbles" size={20} color="#FFFFFF" />
+          <Ionicons name="chatbubbles-outline" size={20} color="#FFFFFF" />
           <Text weight="semibold" style={styles.chatButtonText}>
             {t('groups.chatWithMembers' as TranslationKey)}
           </Text>

@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation } from '../../../hooks';
+import { SportIcon } from '../../../components/SportIcon';
 import type { GroupMatch } from '@rallia/shared-hooks';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 
@@ -64,11 +65,7 @@ export function RecentGamesActionSheet({ payload }: SheetProps<'recent-games'>) 
           {/* Header: Sport & Date + Badge */}
           <View style={styles.matchHeader}>
             <View style={styles.matchInfo}>
-              <Ionicons
-                name={sportName.toLowerCase() === 'tennis' ? 'tennisball' : 'american-football'}
-                size={16}
-                color={colors.primary}
-              />
+              <SportIcon sportName={sportName} size={16} color={colors.primary} />
               <Text size="sm" style={{ color: colors.textSecondary, marginLeft: 6 }}>
                 {sportName} · {formatMatchDate(match.match_date)}
               </Text>
@@ -109,7 +106,7 @@ export function RecentGamesActionSheet({ payload }: SheetProps<'recent-games'>) 
             >
               {winningTeam === 1 && (
                 <View style={styles.winnerBadge}>
-                  <Ionicons name="trophy" size={12} color="#F59E0B" />
+                  <Ionicons name="trophy-outline" size={12} color="#F59E0B" />
                 </View>
               )}
               <View style={styles.teamAvatarsContainer}>
@@ -133,7 +130,7 @@ export function RecentGamesActionSheet({ payload }: SheetProps<'recent-games'>) 
                         style={styles.avatarImage}
                       />
                     ) : (
-                      <Ionicons name="person" size={20} color={colors.textMuted} />
+                      <Ionicons name="person-outline" size={20} color={colors.textMuted} />
                     )}
                   </TouchableOpacity>
                 ))}
@@ -184,7 +181,7 @@ export function RecentGamesActionSheet({ payload }: SheetProps<'recent-games'>) 
             >
               {winningTeam === 2 && (
                 <View style={styles.winnerBadge}>
-                  <Ionicons name="trophy" size={12} color="#F59E0B" />
+                  <Ionicons name="trophy-outline" size={12} color="#F59E0B" />
                 </View>
               )}
               <View style={styles.teamAvatarsContainer}>
@@ -208,7 +205,7 @@ export function RecentGamesActionSheet({ payload }: SheetProps<'recent-games'>) 
                         style={styles.avatarImage}
                       />
                     ) : (
-                      <Ionicons name="person" size={20} color={colors.textMuted} />
+                      <Ionicons name="person-outline" size={20} color={colors.textMuted} />
                     )}
                   </TouchableOpacity>
                 ))}
@@ -253,7 +250,7 @@ export function RecentGamesActionSheet({ payload }: SheetProps<'recent-games'>) 
     if (matches.length === 0) {
       return (
         <View style={styles.emptyState}>
-          <Ionicons name="tennisball-outline" size={48} color={colors.textMuted} />
+          <SportIcon sportName="tennis" size={48} color={colors.textMuted} />
           <Text style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}>
             {t('groups.recentGames.noGames')}
           </Text>
@@ -277,7 +274,7 @@ export function RecentGamesActionSheet({ payload }: SheetProps<'recent-games'>) 
             {t('groups.recentGames.title')}
           </Text>
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={colors.textMuted} />
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 

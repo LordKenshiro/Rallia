@@ -125,7 +125,7 @@ const CommunityCard: React.FC<{
             <View
               style={[styles.placeholderImage, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}
             >
-              <Ionicons name="globe" size={40} color={colors.textMuted} />
+              <Ionicons name="globe-outline" size={40} color={colors.textMuted} />
             </View>
           )}
 
@@ -361,7 +361,7 @@ export default function CommunitiesScreen() {
             style={[styles.createButton, { backgroundColor: colors.primary }]}
             onPress={handleOpenCreateCommunityActionSheet}
           >
-            <Ionicons name="add" size={20} color="#FFFFFF" />
+            <Ionicons name="add-outline" size={20} color="#FFFFFF" />
             <Text weight="semibold" style={styles.createButtonText}>
               {t('community.createCommunity')}
             </Text>
@@ -542,7 +542,7 @@ export default function CommunitiesScreen() {
           onPress={handleOpenCreateCommunityActionSheet}
           activeOpacity={0.8}
         >
-          <Ionicons name="add" size={28} color="#FFFFFF" />
+          <Ionicons name="add-outline" size={28} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 

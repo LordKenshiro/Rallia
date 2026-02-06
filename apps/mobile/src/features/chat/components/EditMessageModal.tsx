@@ -91,7 +91,7 @@ function EditMessageModalComponent({ payload }: SheetProps<'edit-message'>) {
           <View style={styles.headerSpacer} />
           <Text style={[styles.title, { color: colors.text }]}>{t('chat.editMessage')}</Text>
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={colors.textMuted} />
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 

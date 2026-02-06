@@ -158,7 +158,7 @@ export function TennisPreferencesActionSheet({ payload }: SheetProps<'tennis-pre
             </Text>
           </View>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={colors.textMuted} />
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
@@ -344,7 +344,7 @@ export function TennisPreferencesActionSheet({ payload }: SheetProps<'tennis-pre
                       {style.label}
                     </Text>
                     {playStyle === style.value && (
-                      <Ionicons name="checkmark" size={20} color={colors.primary} />
+                      <Ionicons name="checkmark-outline" size={20} color={colors.primary} />
                     )}
                   </TouchableOpacity>
                 ))}

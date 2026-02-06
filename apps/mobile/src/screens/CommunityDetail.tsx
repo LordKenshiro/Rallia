@@ -35,6 +35,8 @@ import {
   useRequireOnboarding,
   type TranslationKey,
 } from '../hooks';
+import { useSport } from '../context';
+import { SportIcon } from '../components/SportIcon';
 import {
   useCommunityWithMembers,
   useIsCommunityModerator,
@@ -86,6 +88,7 @@ export default function CommunityDetailScreen() {
   const { session } = useAuth();
   const { t } = useTranslation();
   const { guardAction } = useRequireOnboarding();
+  const { selectedSport } = useSport();
   const playerId = session?.user?.id;
   const navigateToPlayerProfile = useNavigateToPlayerProfile();
 
@@ -361,7 +364,7 @@ export default function CommunityDetailScreen() {
               <View style={styles.communityStatsList}>
                 <View style={styles.communityStatItem}>
                   <View style={[styles.communityStatIcon, { backgroundColor: '#5AC8FA20' }]}>
-                    <Ionicons name="people" size={24} color="#5AC8FA" />
+                    <Ionicons name="people-outline" size={24} color="#5AC8FA" />
                   </View>
                   <View style={styles.communityStatInfo}>
                     <Text weight="bold" size="lg" style={{ color: colors.text }}>
@@ -403,7 +406,7 @@ export default function CommunityDetailScreen() {
                   ]}
                   onPress={() => setShowPendingRequestsModal(true)}
                 >
-                  <Ionicons name="person-add" size={20} color="#FF3B30" />
+                  <Ionicons name="person-add-outline" size={20} color="#FF3B30" />
                   <Text
                     size="sm"
                     weight="semibold"
@@ -503,7 +506,7 @@ export default function CommunityDetailScreen() {
                 </View>
                 <View style={styles.statsList}>
                   <View style={styles.statItem}>
-                    <Ionicons name="people" size={20} color="#5AC8FA" />
+                    <Ionicons name="people-outline" size={20} color="#5AC8FA" />
                     <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
                       {t('community.detail.newMembers' as TranslationKey, {
                         count: membersCountLast7Days,
@@ -511,7 +514,11 @@ export default function CommunityDetailScreen() {
                     </Text>
                   </View>
                   <View style={styles.statItem}>
-                    <Ionicons name="tennisball" size={20} color="#FF9500" />
+                    <SportIcon
+                      sportName={selectedSport?.name ?? 'tennis'}
+                      size={20}
+                      color="#FF9500"
+                    />
                     <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
                       {t('community.detail.gamesCreated' as TranslationKey, {
                         count: gamesCountLast7Days,
@@ -520,7 +527,7 @@ export default function CommunityDetailScreen() {
                   </View>
                   <View style={styles.statItem}>
                     <Ionicons
-                      name="chatbubble-ellipses"
+                      name="chatbubble-ellipses-outline"
                       size={20}
                       color={isDark ? '#8E8E93' : '#C7C7CC'}
                     />
@@ -563,7 +570,7 @@ export default function CommunityDetailScreen() {
             >
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitle}>
-                  <Ionicons name="trophy" size={20} color={colors.primary} />
+                  <Ionicons name="trophy-outline" size={20} color={colors.primary} />
                   <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
                     {t('community.leaderboard.title')}
                   </Text>
@@ -594,7 +601,7 @@ export default function CommunityDetailScreen() {
                             style={styles.avatarImage}
                           />
                         ) : (
-                          <Ionicons name="person" size={14} color={colors.textMuted} />
+                          <Ionicons name="person-outline" size={14} color={colors.textMuted} />
                         )}
                       </View>
                       <Text size="sm" style={{ color: colors.text, flex: 1, marginLeft: 8 }}>
@@ -626,7 +633,7 @@ export default function CommunityDetailScreen() {
               >
                 <View style={styles.sectionHeader}>
                   <View style={styles.sectionTitle}>
-                    <Ionicons name="person-add" size={20} color="#FF9500" />
+                    <Ionicons name="person-add-outline" size={20} color="#FF9500" />
                     <Text
                       weight="semibold"
                       size="base"
@@ -665,7 +672,7 @@ export default function CommunityDetailScreen() {
                             style={styles.avatarImage}
                           />
                         ) : (
-                          <Ionicons name="person" size={14} color={colors.textMuted} />
+                          <Ionicons name="person-outline" size={14} color={colors.textMuted} />
                         )}
                       </View>
                       <View style={styles.pendingRequestInfo}>
@@ -698,7 +705,7 @@ export default function CommunityDetailScreen() {
                             }
                           }}
                         >
-                          <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                          <Ionicons name="checkmark-outline" size={16} color="#FFFFFF" />
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={[
@@ -719,7 +726,7 @@ export default function CommunityDetailScreen() {
                             }
                           }}
                         >
-                          <Ionicons name="close" size={16} color={colors.text} />
+                          <Ionicons name="close-outline" size={16} color={colors.text} />
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -749,7 +756,7 @@ export default function CommunityDetailScreen() {
             >
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitle}>
-                  <Ionicons name="time" size={20} color={colors.textSecondary} />
+                  <Ionicons name="time-outline" size={20} color={colors.textSecondary} />
                   <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
                     {t('groups.recentGames.title' as TranslationKey)}
                   </Text>
@@ -792,12 +799,8 @@ export default function CommunityDetailScreen() {
                   {/* Match Header */}
                   <View style={styles.matchHeader}>
                     <View style={styles.matchInfo}>
-                      <Ionicons
-                        name={
-                          recentMatch.match.sport?.name?.toLowerCase() === 'tennis'
-                            ? 'tennisball'
-                            : 'american-football'
-                        }
+                      <SportIcon
+                        sportName={recentMatch.match.sport?.name ?? 'tennis'}
                         size={16}
                         color={colors.primary}
                       />
@@ -870,7 +873,7 @@ export default function CommunityDetailScreen() {
                         >
                           {isWinner && (
                             <View style={styles.teamWinnerBadge}>
-                              <Ionicons name="trophy" size={12} color="#F59E0B" />
+                              <Ionicons name="trophy-outline" size={12} color="#F59E0B" />
                             </View>
                           )}
 
@@ -896,7 +899,11 @@ export default function CommunityDetailScreen() {
                                     style={styles.teamAvatarImage}
                                   />
                                 ) : (
-                                  <Ionicons name="person" size={20} color={colors.textMuted} />
+                                  <Ionicons
+                                    name="person-outline"
+                                    size={20}
+                                    color={colors.textMuted}
+                                  />
                                 )}
                               </TouchableOpacity>
                             ))}
@@ -962,7 +969,7 @@ export default function CommunityDetailScreen() {
                         >
                           {isWinner && (
                             <View style={styles.teamWinnerBadge}>
-                              <Ionicons name="trophy" size={12} color="#F59E0B" />
+                              <Ionicons name="trophy-outline" size={12} color="#F59E0B" />
                             </View>
                           )}
 
@@ -988,7 +995,11 @@ export default function CommunityDetailScreen() {
                                     style={styles.teamAvatarImage}
                                   />
                                 ) : (
-                                  <Ionicons name="person" size={20} color={colors.textMuted} />
+                                  <Ionicons
+                                    name="person-outline"
+                                    size={20}
+                                    color={colors.textMuted}
+                                  />
                                 )}
                               </TouchableOpacity>
                             ))}
@@ -1032,7 +1043,11 @@ export default function CommunityDetailScreen() {
                 </TouchableOpacity>
               ) : (
                 <View style={styles.emptyMatch}>
-                  <Ionicons name="tennisball-outline" size={32} color={colors.textMuted} />
+                  <SportIcon
+                    sportName={selectedSport?.name ?? 'tennis'}
+                    size={32}
+                    color={colors.textMuted}
+                  />
                   <Text size="sm" style={{ color: colors.textSecondary, marginTop: 8 }}>
                     {t('groups.detail.noRecentGames' as TranslationKey)}
                   </Text>
@@ -1123,7 +1138,7 @@ export default function CommunityDetailScreen() {
                           style={styles.leaderboardAvatarImage}
                         />
                       ) : (
-                        <Ionicons name="person" size={20} color={colors.textMuted} />
+                        <Ionicons name="person-outline" size={20} color={colors.textMuted} />
                       )}
                     </View>
                     <View style={styles.leaderboardInfo}>
@@ -1163,7 +1178,7 @@ export default function CommunityDetailScreen() {
                 {activities.slice(0, 20).map((activity, index) => {
                   const actorName = activity.actor?.profile?.first_name || 'Someone';
                   let message = '';
-                  let icon: keyof typeof Ionicons.glyphMap = 'ellipse';
+                  let icon: keyof typeof Ionicons.glyphMap | 'sport' = 'ellipse';
                   let iconColor: string = colors.primary;
 
                   switch (activity.activity_type) {
@@ -1181,7 +1196,7 @@ export default function CommunityDetailScreen() {
                       break;
                     case 'game_created':
                       message = `${actorName} created a new game`;
-                      icon = 'tennisball';
+                      icon = 'sport'; // Rendered as SportIcon below
                       iconColor = '#FF9500';
                       break;
                     case 'message_sent':
@@ -1220,7 +1235,15 @@ export default function CommunityDetailScreen() {
                           { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' },
                         ]}
                       >
-                        <Ionicons name={icon} size={16} color={iconColor} />
+                        {icon === 'sport' ? (
+                          <SportIcon
+                            sportName={selectedSport?.name ?? 'tennis'}
+                            size={16}
+                            color={iconColor}
+                          />
+                        ) : (
+                          <Ionicons name={icon} size={16} color={iconColor} />
+                        )}
                       </View>
                       <View style={styles.activityContent}>
                         <Text size="sm" style={{ color: colors.text }}>
@@ -1340,7 +1363,7 @@ export default function CommunityDetailScreen() {
             ]}
           >
             <View style={[styles.headerIcon, { backgroundColor: colors.cardBackground }]}>
-              <Ionicons name="globe" size={48} color={colors.primary} />
+              <Ionicons name="globe-outline" size={48} color={colors.primary} />
             </View>
           </View>
         )}
@@ -1451,7 +1474,7 @@ export default function CommunityDetailScreen() {
                 })
               }
             >
-              <Ionicons name="person-add" size={18} color={colors.primary} />
+              <Ionicons name="person-add-outline" size={18} color={colors.primary} />
               <Text weight="semibold" style={{ color: colors.primary, marginLeft: 8 }}>
                 {t('community.members.addMember' as TranslationKey)}
               </Text>
@@ -1460,7 +1483,7 @@ export default function CommunityDetailScreen() {
               style={[styles.menuButton, { borderColor: colors.border }]}
               onPress={handleShowOptions}
             >
-              <Ionicons name="ellipsis-horizontal" size={20} color={colors.text} />
+              <Ionicons name="ellipsis-horizontal-outline" size={20} color={colors.text} />
             </TouchableOpacity>
           </View>
         </View>
@@ -1511,7 +1534,7 @@ export default function CommunityDetailScreen() {
           style={[styles.chatButton, { backgroundColor: colors.primary }]}
           onPress={handleAddGame}
         >
-          <Ionicons name="add-circle" size={20} color="#FFFFFF" />
+          <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />
           <Text weight="semibold" style={styles.chatButtonText}>
             {t('community.leaderboard.addPlayedGame')}
           </Text>
@@ -1521,7 +1544,7 @@ export default function CommunityDetailScreen() {
           style={[styles.chatButton, { backgroundColor: colors.primary }]}
           onPress={handleOpenChat}
         >
-          <Ionicons name="chatbubbles" size={20} color="#FFFFFF" />
+          <Ionicons name="chatbubbles-outline" size={20} color="#FFFFFF" />
           <Text weight="semibold" style={styles.chatButtonText}>
             {t('community.chat.chatWithMembers')}
           </Text>
@@ -1547,7 +1570,7 @@ export default function CommunityDetailScreen() {
                 Pending Requests
               </Text>
               <TouchableOpacity onPress={() => setShowPendingRequestsModal(false)}>
-                <Ionicons name="close" size={24} color={colors.text} />
+                <Ionicons name="close-outline" size={24} color={colors.text} />
               </TouchableOpacity>
             </View>
 
@@ -1577,7 +1600,7 @@ export default function CommunityDetailScreen() {
                             style={styles.requestAvatarImage}
                           />
                         ) : (
-                          <Ionicons name="person" size={24} color={colors.textMuted} />
+                          <Ionicons name="person-outline" size={24} color={colors.textMuted} />
                         )}
                       </View>
                       <View style={styles.requestInfo}>
@@ -1617,7 +1640,7 @@ export default function CommunityDetailScreen() {
                         }}
                         disabled={approveMemberMutation.isPending || rejectMemberMutation.isPending}
                       >
-                        <Ionicons name="checkmark" size={18} color="#FFFFFF" />
+                        <Ionicons name="checkmark-outline" size={18} color="#FFFFFF" />
                         <Text
                           weight="semibold"
                           size="sm"
@@ -1647,7 +1670,7 @@ export default function CommunityDetailScreen() {
                         }}
                         disabled={approveMemberMutation.isPending || rejectMemberMutation.isPending}
                       >
-                        <Ionicons name="close" size={18} color={colors.text} />
+                        <Ionicons name="close-outline" size={18} color={colors.text} />
                         <Text
                           weight="semibold"
                           size="sm"

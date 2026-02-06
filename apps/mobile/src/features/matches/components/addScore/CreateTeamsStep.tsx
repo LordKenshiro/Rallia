@@ -83,7 +83,7 @@ export function CreateTeamsStep({ onContinue }: CreateTeamsStepProps) {
         </Text>
         {isSelected && (
           <View style={[styles.checkmark, { backgroundColor: colors.primary }]}>
-            <Ionicons name="checkmark" size={16} color="#fff" />
+            <Ionicons name="checkmark-outline" size={16} color="#fff" />
           </View>
         )}
       </TouchableOpacity>
@@ -128,7 +128,7 @@ export function CreateTeamsStep({ onContinue }: CreateTeamsStepProps) {
               <View
                 style={[styles.previewAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}
               >
-                <Ionicons name="person" size={20} color={colors.primary} />
+                <Ionicons name="person-outline" size={20} color={colors.primary} />
               </View>
               <View
                 style={[

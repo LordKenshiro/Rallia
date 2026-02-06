@@ -546,12 +546,12 @@ export function SportSelectionScreen() {
                                 {selectionOrder}
                               </Text>
                             ) : (
-                              <Ionicons name="checkmark" size={18} color={BASE_WHITE} />
+                              <Ionicons name="checkmark-outline" size={18} color={BASE_WHITE} />
                             )}
                           </View>
                         ) : (
                           <View style={styles.addButton}>
-                            <Ionicons name="add" size={22} color={BASE_WHITE} />
+                            <Ionicons name="add-outline" size={22} color={BASE_WHITE} />
                           </View>
                         )}
                       </View>

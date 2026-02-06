@@ -174,7 +174,7 @@ export default function GroupChatInfoScreen() {
             <Image source={{ uri: profile.profile_picture_url }} style={styles.memberAvatar} />
           ) : (
             <View style={[styles.memberAvatarPlaceholder, { backgroundColor: primary[100] }]}>
-              <Ionicons name="person" size={20} color={primary[500]} />
+              <Ionicons name="person-outline" size={20} color={primary[500]} />
             </View>
           )}
 
@@ -307,11 +307,11 @@ export default function GroupChatInfoScreen() {
             <Image source={{ uri: groupImageUrl }} style={styles.groupImage} />
           ) : (
             <View style={[styles.groupImagePlaceholder, { backgroundColor: primary[100] }]}>
-              <Ionicons name="people" size={60} color={primary[500]} />
+              <Ionicons name="people-outline" size={60} color={primary[500]} />
             </View>
           )}
           <View style={[styles.editImageBadge, { backgroundColor: primary[500] }]}>
-            <Ionicons name="camera" size={16} color="#FFFFFF" />
+            <Ionicons name="camera-outline" size={16} color="#FFFFFF" />
           </View>
         </TouchableOpacity>
 
@@ -334,10 +334,10 @@ export default function GroupChatInfoScreen() {
                 maxLength={50}
               />
               <TouchableOpacity style={styles.saveButton} onPress={handleSaveName}>
-                <Ionicons name="checkmark" size={24} color={primary[500]} />
+                <Ionicons name="checkmark-outline" size={24} color={primary[500]} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.cancelButton} onPress={handleCancelEditName}>
-                <Ionicons name="close" size={24} color={status.error.DEFAULT} />
+                <Ionicons name="close-outline" size={24} color={status.error.DEFAULT} />
               </TouchableOpacity>
             </View>
           ) : (

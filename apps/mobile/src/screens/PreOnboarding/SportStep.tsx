@@ -15,6 +15,7 @@ import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-sy
 import { SportService, Logger } from '@rallia/shared-services';
 import { selectionHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../hooks';
+import { SportIcon } from '../../components/SportIcon';
 import type { Sport as DatabaseSport } from '@rallia/shared-types';
 
 const BASE_WHITE = '#ffffff';
@@ -133,7 +134,7 @@ export function SportStep({ onContinue, isActive = true }: SportStepProps) {
               { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)' },
             ]}
           >
-            <Ionicons name="tennisball" size={36} color={isDark ? primary[400] : primary[600]} />
+            <SportIcon sportName="tennis" size={36} color={isDark ? primary[400] : primary[600]} />
           </View>
 
           <Text size="xl" weight="bold" color={colors.foreground} style={styles.title}>
@@ -203,12 +204,12 @@ export function SportStep({ onContinue, isActive = true }: SportStepProps) {
                                 {selectionOrder}
                               </Text>
                             ) : (
-                              <Ionicons name="checkmark" size={18} color={BASE_WHITE} />
+                              <Ionicons name="checkmark-outline" size={18} color={BASE_WHITE} />
                             )}
                           </View>
                         ) : (
                           <View style={styles.addButton}>
-                            <Ionicons name="add" size={22} color={BASE_WHITE} />
+                            <Ionicons name="add-outline" size={22} color={BASE_WHITE} />
                           </View>
                         )}
                       </View>

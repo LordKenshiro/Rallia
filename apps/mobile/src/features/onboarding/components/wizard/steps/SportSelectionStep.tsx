@@ -311,7 +311,7 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
                 <Text size="xl" weight="bold" color={BASE_WHITE}>
                   {sport.display_name}
                 </Text>
-                {isSelected && <Ionicons name="checkmark" size={24} color={BASE_WHITE} />}
+                {isSelected && <Ionicons name="checkmark-outline" size={24} color={BASE_WHITE} />}
               </View>
             </TouchableOpacity>
           );

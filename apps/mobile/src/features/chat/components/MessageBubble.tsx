@@ -255,7 +255,7 @@ function MessageBubbleComponent({
         ]}
       >
         <View style={[styles.replyIcon, { backgroundColor: primary[500] }]}>
-          <Ionicons name="arrow-undo" size={18} color="#FFFFFF" />
+          <Ionicons name="arrow-undo-outline" size={18} color="#FFFFFF" />
         </View>
       </Animated.View>
 
@@ -272,7 +272,7 @@ function MessageBubbleComponent({
                 <Image source={{ uri: senderAvatar }} style={styles.avatar} />
               ) : (
                 <View style={[styles.avatarPlaceholder, { backgroundColor: colors.border }]}>
-                  <Ionicons name="person" size={16} color={colors.textMuted} />
+                  <Ionicons name="person-outline" size={16} color={colors.textMuted} />
                 </View>
               )}
             </View>
@@ -365,7 +365,11 @@ function MessageBubbleComponent({
                 {isOwnMessage && !isDeleted && (
                   <View style={styles.deliveryStatus}>
                     {message.status === 'failed' ? (
-                      <Ionicons name="alert-circle" size={14} color={status.error.DEFAULT} />
+                      <Ionicons
+                        name="alert-circle-outline"
+                        size={14}
+                        color={status.error.DEFAULT}
+                      />
                     ) : message.status === 'read' ? (
                       <View style={styles.doubleCheck}>
                         <Ionicons
@@ -398,7 +402,7 @@ function MessageBubbleComponent({
                       </View>
                     ) : (
                       // 'sent' status - single check
-                      <Ionicons name="checkmark" size={14} color="rgba(255,255,255,0.6)" />
+                      <Ionicons name="checkmark-outline" size={14} color="rgba(255,255,255,0.6)" />
                     )}
                   </View>
                 )}

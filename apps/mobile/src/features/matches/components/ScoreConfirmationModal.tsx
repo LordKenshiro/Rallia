@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, Button, useToast } from '@rallia/shared-components';
 import { successHaptic, warningHaptic, lightHaptic } from '@rallia/shared-utils';
 import { useThemeStyles } from '../../../hooks';
+import { SportIcon } from '../../../components/SportIcon';
 import {
   useConfirmMatchScore,
   useDisputeMatchScore,
@@ -124,7 +125,7 @@ export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-conf
             Confirm Score
           </Text>
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={colors.textMuted} />
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
@@ -146,7 +147,7 @@ export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-conf
                   style={styles.avatarImage}
                 />
               ) : (
-                <Ionicons name="person" size={24} color={colors.textMuted} />
+                <Ionicons name="person-outline" size={24} color={colors.textMuted} />
               )}
             </View>
             <View style={styles.submitterInfo}>
@@ -172,7 +173,11 @@ export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-conf
                 {confirmation.sport_icon_url ? (
                   <Image source={{ uri: confirmation.sport_icon_url }} style={styles.sportIcon} />
                 ) : (
-                  <Ionicons name="tennisball" size={16} color={colors.primary} />
+                  <SportIcon
+                    sportName={confirmation.sport_name ?? 'tennis'}
+                    size={16}
+                    color={colors.primary}
+                  />
                 )}
                 <Text size="sm" weight="medium" style={{ color: colors.text, marginLeft: 4 }}>
                   {confirmation.sport_name}
@@ -200,7 +205,7 @@ export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-conf
                 </Text>
                 {confirmation.winning_team === 1 && (
                   <View style={[styles.winnerBadge, { backgroundColor: colors.primary }]}>
-                    <Ionicons name="trophy" size={12} color="#fff" />
+                    <Ionicons name="trophy-outline" size={12} color="#fff" />
                     <Text size="xs" weight="medium" style={{ color: '#fff', marginLeft: 2 }}>
                       Winner
                     </Text>
@@ -229,7 +234,7 @@ export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-conf
                 </Text>
                 {confirmation.winning_team === 2 && (
                   <View style={[styles.winnerBadge, { backgroundColor: colors.primary }]}>
-                    <Ionicons name="trophy" size={12} color="#fff" />
+                    <Ionicons name="trophy-outline" size={12} color="#fff" />
                     <Text size="xs" weight="medium" style={{ color: '#fff', marginLeft: 2 }}>
                       Winner
                     </Text>
@@ -241,7 +246,7 @@ export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-conf
             {/* Group info if any */}
             {confirmation.network_name && (
               <View style={[styles.groupInfo, { borderTopColor: colors.border }]}>
-                <Ionicons name="people" size={14} color={colors.textSecondary} />
+                <Ionicons name="people-outline" size={14} color={colors.textSecondary} />
                 <Text size="sm" style={{ color: colors.textSecondary, marginLeft: 4 }}>
                   Posted to {confirmation.network_name}
                 </Text>

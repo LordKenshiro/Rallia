@@ -325,7 +325,11 @@ export function ShareMatchActionSheet({ payload }: SheetProps<'share-match'>) {
             <View
               style={[styles.listIcon, { backgroundColor: isDark ? primary[800] : primary[100] }]}
             >
-              <Ionicons name="people" size={20} color={isDark ? primary[300] : primary[600]} />
+              <Ionicons
+                name="people-outline"
+                size={20}
+                color={isDark ? primary[300] : primary[600]}
+              />
             </View>
             <View style={styles.listInfo}>
               <Text weight="semibold" style={{ color: colors.text }}>
@@ -548,7 +552,7 @@ export function ShareMatchActionSheet({ payload }: SheetProps<'share-match'>) {
                 { backgroundColor: colors.cardBackground, borderColor: colors.border },
               ]}
             >
-              <Ionicons name="people" size={20} color={colors.primary} />
+              <Ionicons name="people-outline" size={20} color={colors.primary} />
               <View style={styles.summaryInfo}>
                 <Text weight="semibold" style={{ color: colors.text }}>
                   {t('sharedLists.share.recipients' as TranslationKey, {
@@ -734,14 +738,14 @@ export function ShareMatchActionSheet({ payload }: SheetProps<'share-match'>) {
           <View style={styles.headerSpacer} />
         ) : (
           <TouchableOpacity onPress={handleBack}>
-            <Ionicons name="chevron-back" size={24} color={colors.primary} />
+            <Ionicons name="chevron-back-outline" size={24} color={colors.primary} />
           </TouchableOpacity>
         )}
         <Text weight="semibold" size="lg" style={[styles.headerTitle, { color: colors.text }]}>
           {t('sharedLists.share.shareMatch' as TranslationKey)}
         </Text>
         <TouchableOpacity onPress={handleClose}>
-          <Ionicons name="close" size={24} color={colors.textMuted} />
+          <Ionicons name="close-outline" size={24} color={colors.textMuted} />
         </TouchableOpacity>
       </View>
 

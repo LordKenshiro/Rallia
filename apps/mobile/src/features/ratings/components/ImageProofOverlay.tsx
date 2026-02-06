@@ -204,7 +204,7 @@ export function ImageProofActionSheet({ payload }: SheetProps<'image-proof'>) {
             </Text>
           </View>
           <TouchableOpacity onPress={onClose} style={styles.closeButton} disabled={isSubmitting}>
-            <Ionicons name="close" size={24} color={colors.textMuted} />
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
@@ -281,7 +281,7 @@ export function ImageProofActionSheet({ payload }: SheetProps<'image-proof'>) {
                   onPress={handleRemoveImage}
                   disabled={isSubmitting}
                 >
-                  <Ionicons name="close" size={20} color="#fff" />
+                  <Ionicons name="close-outline" size={20} color="#fff" />
                 </TouchableOpacity>
               </View>
               <Text size="sm" color={colors.textMuted} style={styles.fileName}>

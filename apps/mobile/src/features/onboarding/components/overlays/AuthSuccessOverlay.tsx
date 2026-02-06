@@ -1,10 +1,12 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
 import { Logger } from '@rallia/shared-services';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
 import { useThemeStyles } from '../../../../hooks';
+import { useSport } from '../../../../context';
+import { SportIcon } from '../../../../components/SportIcon';
 
 interface AuthSuccessOverlayProps {
   visible: boolean;
@@ -13,9 +15,10 @@ interface AuthSuccessOverlayProps {
 
 const AuthSuccessOverlay: React.FC<AuthSuccessOverlayProps> = ({ visible, onClose }) => {
   const { colors } = useThemeStyles();
-  // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
+  const { selectedSport } = useSport();
+  // Animation values (useState so we don't read refs during render)
+  const [fadeAnim] = useState(() => new Animated.Value(0));
+  const [slideAnim] = useState(() => new Animated.Value(50));
 
   // Trigger animations when overlay becomes visible
   useEffect(() => {
@@ -94,7 +97,11 @@ const AuthSuccessOverlay: React.FC<AuthSuccessOverlayProps> = ({ visible, onClos
             activeOpacity={0.7}
           >
             <View style={styles.actionLeft}>
-              <Ionicons name="tennisball-outline" size={24} color={colors.primary} />
+              <SportIcon
+                sportName={selectedSport?.name ?? 'tennis'}
+                size={24}
+                color={colors.primary}
+              />
               <View style={styles.actionTextContainer}>
                 <Text style={[styles.actionTitle, { color: colors.text }]}>Create a new match</Text>
                 <Text style={[styles.actionDescription, { color: colors.textMuted }]}>

@@ -185,7 +185,7 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
           {item.profilePictureUrl ? (
             <Image source={{ uri: item.profilePictureUrl }} style={styles.avatarImage} />
           ) : (
-            <Ionicons name="person" size={24} color={colors.textMuted} />
+            <Ionicons name="person-outline" size={24} color={colors.textMuted} />
           )}
         </View>
         <View style={styles.playerInfo}>
@@ -248,11 +248,11 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
                       style={styles.selectedAvatarImage}
                     />
                   ) : (
-                    <Ionicons name="person" size={20} color={colors.textMuted} />
+                    <Ionicons name="person-outline" size={20} color={colors.textMuted} />
                   )}
                 </View>
                 <View style={[styles.removePlayerBadge, { backgroundColor: colors.primary }]}>
-                  <Ionicons name="close" size={10} color="#fff" />
+                  <Ionicons name="close-outline" size={10} color="#fff" />
                 </View>
               </View>
               <Text

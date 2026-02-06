@@ -169,11 +169,11 @@ export function AddMembersToGroupActionSheet({ payload }: SheetProps<'add-member
                     style={styles.selectedChipAvatarImage}
                   />
                 ) : (
-                  <Ionicons name="person" size={16} color={colors.textMuted} />
+                  <Ionicons name="person-outline" size={16} color={colors.textMuted} />
                 )}
               </View>
               <View style={[styles.removeChipBadge, { backgroundColor: primary[500] }]}>
-                <Ionicons name="close" size={10} color="#fff" />
+                <Ionicons name="close-outline" size={10} color="#fff" />
               </View>
             </View>
             <Text style={[styles.selectedChipName, { color: colors.text }]} numberOfLines={1}>
@@ -212,7 +212,7 @@ export function AddMembersToGroupActionSheet({ payload }: SheetProps<'add-member
             {item.profilePictureUrl ? (
               <Image source={{ uri: item.profilePictureUrl }} style={styles.avatarImage} />
             ) : (
-              <Ionicons name="person" size={24} color={colors.textMuted} />
+              <Ionicons name="person-outline" size={24} color={colors.textMuted} />
             )}
           </View>
 
@@ -224,7 +224,9 @@ export function AddMembersToGroupActionSheet({ payload }: SheetProps<'add-member
           </View>
 
           {/* Selection indicator */}
-          {isSelected && <Ionicons name="checkmark-circle" size={24} color={primary[500]} />}
+          {isSelected && (
+            <Ionicons name="checkmark-circle-outline" size={24} color={primary[500]} />
+          )}
         </TouchableOpacity>
       );
     },
@@ -243,7 +245,7 @@ export function AddMembersToGroupActionSheet({ payload }: SheetProps<'add-member
           <View style={styles.headerPlaceholder} />
           <Text style={[styles.headerTitle, { color: colors.text }]}>{t('chat.addMembers')}</Text>
           <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-            <Ionicons name="close" size={24} color={colors.textMuted} />
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 

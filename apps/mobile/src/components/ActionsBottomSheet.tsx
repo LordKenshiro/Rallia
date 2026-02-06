@@ -46,8 +46,9 @@ import {
 
 const BASE_WHITE = '#ffffff';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
-import { useActionsSheet, useMatchDetailSheet } from '../context';
+import { useActionsSheet, useMatchDetailSheet, useSport } from '../context';
 import { useTranslation, type TranslationKey } from '../hooks';
+import { SportIcon } from './SportIcon';
 import { useTheme } from '@rallia/shared-hooks';
 import { getMatchWithDetails } from '@rallia/shared-services';
 import { MatchCreationWizard } from '../features/matches';
@@ -87,7 +88,7 @@ interface ThemeColors {
  * Action item for the actions wizard
  */
 interface ActionItemProps {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: keyof typeof Ionicons.glyphMap | 'sport';
   title: string;
   description: string;
   onPress: () => void;
@@ -95,6 +96,7 @@ interface ActionItemProps {
 }
 
 const ActionItem: React.FC<ActionItemProps> = ({ icon, title, description, onPress, colors }) => {
+  const { selectedSport } = useSport();
   return (
     <TouchableOpacity
       style={[styles.actionItem, { borderBottomColor: colors.border }]}
@@ -105,7 +107,15 @@ const ActionItem: React.FC<ActionItemProps> = ({ icon, title, description, onPre
       activeOpacity={0.7}
     >
       <View style={[styles.actionIconContainer, { backgroundColor: colors.buttonInactive }]}>
-        <Ionicons name={icon} size={24} color={colors.buttonActive} />
+        {icon === 'sport' ? (
+          <SportIcon
+            sportName={selectedSport?.name ?? 'tennis'}
+            size={24}
+            color={colors.buttonActive}
+          />
+        ) : (
+          <Ionicons name={icon} size={24} color={colors.buttonActive} />
+        )}
       </View>
       <View style={styles.actionTextContainer}>
         <Text size="base" weight="semibold" color={colors.text}>
@@ -170,7 +180,7 @@ const ActionsContent: React.FC<ActionsContentProps> = ({ onClose, onCreateMatch,
     <View style={styles.contentContainer}>
       <View style={styles.actionsList}>
         <ActionItem
-          icon="tennisball-outline"
+          icon="sport"
           title={t('actions.createMatch')}
           description={t('actions.createMatchDescription')}
           onPress={onCreateMatch}
@@ -240,7 +250,7 @@ const ActionsContent: React.FC<ActionsContentProps> = ({ onClose, onCreateMatch,
                 activeOpacity={0.7}
               >
                 <View style={[styles.modalOptionIcon, { backgroundColor: primary[100] }]}>
-                  <Ionicons name="people" size={28} color={primary[600]} />
+                  <Ionicons name="people-outline" size={28} color={primary[600]} />
                 </View>
                 <Text size="base" weight="semibold" color={colors.text}>
                   {t('actions.group')}
@@ -259,7 +269,7 @@ const ActionsContent: React.FC<ActionsContentProps> = ({ onClose, onCreateMatch,
                 activeOpacity={0.7}
               >
                 <View style={[styles.modalOptionIcon, { backgroundColor: primary[100] }]}>
-                  <Ionicons name="globe" size={28} color={primary[600]} />
+                  <Ionicons name="globe-outline" size={28} color={primary[600]} />
                 </View>
                 <Text size="base" weight="semibold" color={colors.text}>
                   {t('actions.community')}

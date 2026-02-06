@@ -341,7 +341,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
             </Text>
           </View>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={colors.textMuted} />
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
@@ -373,7 +373,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
               {profileImage ? (
                 <Image source={{ uri: profileImage }} style={styles.profileImage} />
               ) : (
-                <Ionicons name="camera" size={32} color={colors.buttonActive} />
+                <Ionicons name="camera-outline" size={32} color={colors.buttonActive} />
               )}
             </TouchableOpacity>
           )}

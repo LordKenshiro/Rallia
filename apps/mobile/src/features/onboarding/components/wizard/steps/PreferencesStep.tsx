@@ -300,7 +300,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                   ]}
                 >
                   {sameMatchDurationForAll && (
-                    <Ionicons name="checkmark" size={14} color={colors.buttonTextActive} />
+                    <Ionicons name="checkmark-outline" size={14} color={colors.buttonTextActive} />
                   )}
                 </View>
                 <Text size="xs" color={colors.textSecondary}>
@@ -433,7 +433,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                   ]}
                 >
                   {sameMatchTypeForAll && (
-                    <Ionicons name="checkmark" size={14} color={colors.buttonTextActive} />
+                    <Ionicons name="checkmark-outline" size={14} color={colors.buttonTextActive} />
                   )}
                 </View>
                 <Text size="xs" color={colors.textSecondary}>

@@ -583,7 +583,7 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
                   ]}
                 >
                   {sameDurationForAllSports && (
-                    <Ionicons name="checkmark" size={16} color={colors.primaryForeground} />
+                    <Ionicons name="checkmark-outline" size={16} color={colors.primaryForeground} />
                   )}
                 </View>
                 <Text style={styles.checkboxLabel}>Same for all sports</Text>
@@ -815,7 +815,7 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
                   ]}
                 >
                   {sameMatchTypeForAllSports && (
-                    <Ionicons name="checkmark" size={16} color={colors.primaryForeground} />
+                    <Ionicons name="checkmark-outline" size={16} color={colors.primaryForeground} />
                   )}
                 </View>
                 <Text style={styles.checkboxLabel}>Same for all sports</Text>

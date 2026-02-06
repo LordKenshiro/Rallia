@@ -184,7 +184,7 @@ export function AddMemberActionSheet({ payload }: SheetProps<'add-member'>) {
           {item.profile_picture_url ? (
             <Image source={{ uri: item.profile_picture_url }} style={styles.avatarImage} />
           ) : (
-            <Ionicons name="person" size={24} color={colors.textMuted} />
+            <Ionicons name="person-outline" size={24} color={colors.textMuted} />
           )}
         </View>
         <View style={styles.playerInfo}>
@@ -207,7 +207,7 @@ export function AddMemberActionSheet({ payload }: SheetProps<'add-member'>) {
           {addMemberMutation.isPending ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
-            <Ionicons name="add" size={20} color="#FFFFFF" />
+            <Ionicons name="add-outline" size={20} color="#FFFFFF" />
           )}
         </TouchableOpacity>
       </View>
@@ -228,7 +228,7 @@ export function AddMemberActionSheet({ payload }: SheetProps<'add-member'>) {
             {t('groups.addMember')}
           </Text>
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={colors.textMuted} />
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 

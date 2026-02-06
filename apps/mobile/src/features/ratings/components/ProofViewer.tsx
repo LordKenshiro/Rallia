@@ -294,7 +294,7 @@ const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) =>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={28} color="#fff" />
+            <Ionicons name="close-outline" size={28} color="#fff" />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <View style={styles.headerTitleRow}>

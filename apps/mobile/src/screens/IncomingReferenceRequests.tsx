@@ -287,7 +287,7 @@ const IncomingReferenceRequests: React.FC = () => {
                   { backgroundColor: colors.inputBackground },
                 ]}
               >
-                <Ionicons name="person" size={20} color={colors.textMuted} />
+                <Ionicons name="person-outline" size={20} color={colors.textMuted} />
               </View>
             )}
             <View style={styles.requesterText}>

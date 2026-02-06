@@ -151,7 +151,7 @@ export function AddContactActionSheet({ payload }: SheetProps<'add-contact'>) {
           </Text>
         </View>
         <TouchableOpacity onPress={handleClose} style={styles.closeButton} disabled={isSubmitting}>
-          <Ionicons name="close" size={24} color={colors.textMuted} />
+          <Ionicons name="close-outline" size={24} color={colors.textMuted} />
         </TouchableOpacity>
       </View>
 

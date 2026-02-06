@@ -11,6 +11,7 @@ import { View, StyleSheet, TextInput, Keyboard, Platform, ScrollView } from 'rea
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button, Spinner } from '@rallia/shared-components';
+import { SportIcon } from '../../components/SportIcon';
 import { spacingPixels, radiusPixels, primary, neutral, status } from '@rallia/design-system';
 import { usePostalCodeGeocode } from '@rallia/shared-hooks';
 import { selectionHaptic } from '@rallia/shared-utils';
@@ -166,7 +167,11 @@ export function PostalCodeStep({ onContinue, isActive = true }: PostalCodeStepPr
               { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)' },
             ]}
           >
-            <Ionicons name="location" size={36} color={isDark ? primary[400] : primary[600]} />
+            <Ionicons
+              name="location-outline"
+              size={36}
+              color={isDark ? primary[400] : primary[600]}
+            />
           </View>
 
           <Text size="xl" weight="bold" color={colors.foreground} style={styles.title}>
@@ -218,11 +223,19 @@ export function PostalCodeStep({ onContinue, isActive = true }: PostalCodeStepPr
                   },
                 ]}
               >
-                <Ionicons
-                  name={benefit.icon}
-                  size={20}
-                  color={isDark ? primary[400] : primary[600]}
-                />
+                {benefit.icon === 'tennisball' ? (
+                  <SportIcon
+                    sportName="tennis"
+                    size={20}
+                    color={isDark ? primary[400] : primary[600]}
+                  />
+                ) : (
+                  <Ionicons
+                    name={benefit.icon}
+                    size={20}
+                    color={isDark ? primary[400] : primary[600]}
+                  />
+                )}
               </View>
               <View style={styles.benefitContent}>
                 <Text size="sm" weight="semibold" color={colors.foreground}>
@@ -274,7 +287,7 @@ export function PostalCodeStep({ onContinue, isActive = true }: PostalCodeStepPr
             />
             {isLoading && <Spinner size="sm" style={styles.inputSpinner} />}
             {hasValidInput && !isLoading && (
-              <Ionicons name="checkmark-circle" size={24} color={status.success.DEFAULT} />
+              <Ionicons name="checkmark-circle-outline" size={24} color={status.success.DEFAULT} />
             )}
           </View>
 
@@ -286,7 +299,7 @@ export function PostalCodeStep({ onContinue, isActive = true }: PostalCodeStepPr
           )}
           {hasValidInput && !isLoading && (
             <View style={styles.verifiedContainer}>
-              <Ionicons name="checkmark-circle" size={16} color={status.success.DEFAULT} />
+              <Ionicons name="checkmark-circle-outline" size={16} color={status.success.DEFAULT} />
               <Text size="sm" color={status.success.DEFAULT} style={styles.verifiedText}>
                 {t('preOnboarding.postalCode.verified')}
               </Text>
@@ -298,7 +311,7 @@ export function PostalCodeStep({ onContinue, isActive = true }: PostalCodeStepPr
           )}
           {showError && errorMessage && (
             <View style={styles.errorContainer}>
-              <Ionicons name="alert-circle" size={16} color={status.error.DEFAULT} />
+              <Ionicons name="alert-circle-outline" size={16} color={status.error.DEFAULT} />
               <Text size="sm" color={status.error.DEFAULT} style={styles.errorText}>
                 {errorMessage}
               </Text>

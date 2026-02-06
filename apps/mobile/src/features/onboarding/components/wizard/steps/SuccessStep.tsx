@@ -70,8 +70,7 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
     if (hasAutoSelected.current || selectedSports.length === 0) return;
 
     // Check if current sport is still in the selected sports
-    const currentStillSelected =
-      currentSport && selectedSports.some(s => s.id === currentSport.id);
+    const currentStillSelected = currentSport && selectedSports.some(s => s.id === currentSport.id);
 
     if (currentStillSelected) {
       // Keep the current sport
@@ -129,7 +128,7 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
       <Animated.View
         style={[styles.iconContainer, { backgroundColor: colors.buttonActive }, iconAnimatedStyle]}
       >
-        <Ionicons name="checkmark" size={48} color={BASE_WHITE} />
+        <Ionicons name="checkmark-outline" size={48} color={BASE_WHITE} />
       </Animated.View>
 
       {/* Success Text */}

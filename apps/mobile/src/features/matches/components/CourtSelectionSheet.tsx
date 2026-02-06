@@ -13,6 +13,8 @@ import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../../../hooks';
+import { useSport } from '../../../context';
+import { SportIcon } from '../../../components/SportIcon';
 import type { CourtOption } from '@rallia/shared-hooks';
 
 // =============================================================================
@@ -33,6 +35,7 @@ interface CourtItemProps {
 }
 
 const CourtItem: React.FC<CourtItemProps> = ({ court, onPress, colors, t }) => {
+  const { selectedSport } = useSport();
   // Display translated "Court X" if we have a court number, otherwise fallback to raw name
   const displayName =
     court.courtNumber !== undefined
@@ -55,7 +58,11 @@ const CourtItem: React.FC<CourtItemProps> = ({ court, onPress, colors, t }) => {
       activeOpacity={0.7}
     >
       <View style={[styles.courtIconContainer, { backgroundColor: `${colors.buttonActive}20` }]}>
-        <Ionicons name="tennisball-outline" size={20} color={colors.buttonActive} />
+        <SportIcon
+          sportName={selectedSport?.name ?? 'tennis'}
+          size={20}
+          color={colors.buttonActive}
+        />
       </View>
       <View style={styles.courtInfo}>
         <Text size="base" weight="medium" color={colors.text} numberOfLines={2}>
@@ -135,7 +142,7 @@ export function CourtSelectionActionSheet({ payload }: SheetProps<'court-selecti
             style={[styles.closeButton, { backgroundColor: colors.buttonInactive }]}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="close" size={24} color={colors.textMuted} />
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 

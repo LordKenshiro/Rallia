@@ -140,7 +140,7 @@ function MessageInputComponent({
             </Text>
           </View>
           <TouchableOpacity onPress={onCancelReply} style={styles.cancelReplyButton}>
-            <Ionicons name="close" size={20} color={colors.textMuted} />
+            <Ionicons name="close-outline" size={20} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
       )}

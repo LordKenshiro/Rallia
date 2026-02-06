@@ -177,7 +177,9 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isSelected, onToggle, c
           },
         ]}
       >
-        {isSelected && <Ionicons name="checkmark" size={14} color={colors.buttonTextActive} />}
+        {isSelected && (
+          <Ionicons name="checkmark-outline" size={14} color={colors.buttonTextActive} />
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -232,7 +234,7 @@ const SelectedPlayersStrip: React.FC<SelectedPlayersStripProps> = ({
               </View>
             )}
             <View style={[styles.removeButton, { backgroundColor: colors.textMuted }]}>
-              <Ionicons name="close" size={10} color={colors.buttonTextActive} />
+              <Ionicons name="close-outline" size={10} color={colors.buttonTextActive} />
             </View>
           </TouchableOpacity>
         )}
@@ -475,7 +477,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
             style={styles.headerCloseButton}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Ionicons name="close" size={24} color={colors.textMuted} />
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         )}
       </View>

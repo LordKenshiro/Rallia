@@ -48,7 +48,7 @@ function ReplyBannerComponent({ senderName, messageContent, onCancel }: ReplyBan
         onPress={onCancel}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        <Ionicons name="close" size={20} color={colors.textMuted} />
+        <Ionicons name="close-outline" size={20} color={colors.textMuted} />
       </TouchableOpacity>
     </View>
   );

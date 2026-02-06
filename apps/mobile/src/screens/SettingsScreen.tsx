@@ -204,7 +204,7 @@ const SettingsScreen: React.FC = () => {
                 />
               ) : (
                 <View style={styles.profileImagePlaceholder}>
-                  <Ionicons name="person" size={32} color={colors.iconMuted} />
+                  <Ionicons name="person-outline" size={32} color={colors.iconMuted} />
                 </View>
               )}
               <View style={styles.profileInfo}>

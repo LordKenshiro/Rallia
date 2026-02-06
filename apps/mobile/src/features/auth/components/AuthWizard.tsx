@@ -159,7 +159,7 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
           accessibilityLabel={t('common.back' as TranslationKey)}
           accessibilityRole="button"
         >
-          <Ionicons name="chevron-back" size={24} color={colors.buttonActive} />
+          <Ionicons name="chevron-back-outline" size={24} color={colors.buttonActive} />
         </TouchableOpacity>
       </View>
 
@@ -178,7 +178,7 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
           accessibilityLabel={t('common.close' as TranslationKey)}
           accessibilityRole="button"
         >
-          <Ionicons name="close" size={24} color={colors.textMuted} />
+          <Ionicons name="close-outline" size={24} color={colors.textMuted} />
         </TouchableOpacity>
       </View>
     </View>

@@ -172,7 +172,7 @@ export const ReportIssueSheet: React.FC<ReportIssueSheetProps> = ({
             style={styles.closeButton}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Ionicons name="close" size={24} color={colors.textMuted} />
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
           <Text size="lg" weight="semibold" color={colors.text}>
             {title}

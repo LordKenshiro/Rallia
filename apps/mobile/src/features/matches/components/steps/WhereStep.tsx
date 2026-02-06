@@ -408,7 +408,7 @@ const FacilityItem: React.FC<FacilityItemProps> = ({
                         </Text>
                         {/* Show court count badge for external slots, building icon for local */}
                         {slot.isLocalSlot ? (
-                          <Ionicons name="business" size={10} color={colors.buttonActive} />
+                          <Ionicons name="business-outline" size={10} color={colors.buttonActive} />
                         ) : (
                           slot.courtCount > 0 && (
                             <View
@@ -484,7 +484,7 @@ const SelectedFacility: React.FC<SelectedFacilityProps> = ({
     ]}
   >
     <View style={styles.selectedFacilityContent}>
-      <Ionicons name="business" size={20} color={colors.buttonActive} />
+      <Ionicons name="business-outline" size={20} color={colors.buttonActive} />
       <View style={styles.selectedFacilityText}>
         <View style={styles.selectedFacilityHeader}>
           <Text size="base" weight="semibold" color={colors.text}>

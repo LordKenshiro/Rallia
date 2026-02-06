@@ -311,7 +311,7 @@ export function ReferenceRequestActionSheet({ payload }: SheetProps<'reference-r
             <View
               style={[styles.avatar, styles.avatarPlaceholder, { backgroundColor: colors.divider }]}
             >
-              <Ionicons name="person" size={24} color={colors.textMuted} />
+              <Ionicons name="person-outline" size={24} color={colors.textMuted} />
             </View>
           )}
           {isSelected && (
@@ -375,7 +375,7 @@ export function ReferenceRequestActionSheet({ payload }: SheetProps<'reference-r
             </Text>
           </View>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={colors.textMuted} />
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 

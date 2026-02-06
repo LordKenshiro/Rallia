@@ -280,7 +280,7 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
         <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
             <TouchableOpacity onPress={handleClose} style={styles.headerButton} hitSlop={8}>
-              <Ionicons name="close" size={24} color={colors.textMuted} />
+              <Ionicons name="close-outline" size={24} color={colors.textMuted} />
             </TouchableOpacity>
             <Text size="lg" weight="semibold" color={colors.text}>
               {t('registerMatchScore.title' as TranslationKey)}
@@ -323,7 +323,7 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
               style={styles.headerButton}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons name="close" size={24} color={colors.textMuted} />
+              <Ionicons name="close-outline" size={24} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
         </View>

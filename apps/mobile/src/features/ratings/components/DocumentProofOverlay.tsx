@@ -215,7 +215,7 @@ export function DocumentProofActionSheet({ payload }: SheetProps<'document-proof
             </Text>
           </View>
           <TouchableOpacity onPress={onClose} style={styles.closeButton} disabled={isSubmitting}>
-            <Ionicons name="close" size={24} color={colors.textMuted} />
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
@@ -331,7 +331,7 @@ export function DocumentProofActionSheet({ payload }: SheetProps<'document-proof
                   onPress={handleRemoveDocument}
                   disabled={isSubmitting}
                 >
-                  <Ionicons name="close" size={18} color="#fff" />
+                  <Ionicons name="close-outline" size={18} color="#fff" />
                 </TouchableOpacity>
               </View>
 

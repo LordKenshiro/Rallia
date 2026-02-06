@@ -207,7 +207,7 @@ export function EditCommunityActionSheet({ payload }: SheetProps<'edit-community
             {t('community.editCommunity')}
           </Text>
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={colors.textMuted} />
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
@@ -229,13 +229,13 @@ export function EditCommunityActionSheet({ payload }: SheetProps<'edit-community
                   style={[styles.removeImageButton, { backgroundColor: colors.cardBackground }]}
                   onPress={handleRemoveImage}
                 >
-                  <Ionicons name="close" size={20} color={colors.text} />
+                  <Ionicons name="close-outline" size={20} color={colors.text} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.changeImageButton, { backgroundColor: colors.primary }]}
                   onPress={handlePickImage}
                 >
-                  <Ionicons name="camera" size={16} color="#FFFFFF" />
+                  <Ionicons name="camera-outline" size={16} color="#FFFFFF" />
                   <Text size="xs" weight="semibold" style={{ color: '#FFFFFF', marginLeft: 4 }}>
                     {t('common.change')}
                   </Text>
@@ -253,7 +253,7 @@ export function EditCommunityActionSheet({ payload }: SheetProps<'edit-community
                 onPress={handlePickImage}
               >
                 <View style={[styles.imagePickerIcon, { backgroundColor: colors.cardBackground }]}>
-                  <Ionicons name="camera" size={24} color={colors.primary} />
+                  <Ionicons name="camera-outline" size={24} color={colors.primary} />
                 </View>
                 <Text size="sm" style={{ color: colors.textSecondary, marginTop: 8 }}>
                   {t('community.addCoverImage')}

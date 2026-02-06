@@ -277,7 +277,7 @@ export function CommunityQRScannerModal({
             style={[styles.manualEntryButton, { backgroundColor: colors.border }]}
             onPress={() => setShowManualEntry(false)}
           >
-            <Ionicons name="camera" size={20} color={colors.text} />
+            <Ionicons name="camera-outline" size={20} color={colors.text} />
             <Text weight="medium" style={{ color: colors.text, marginLeft: 8 }}>
               {t('community.qrScanner.scanQR')}
             </Text>
@@ -400,7 +400,7 @@ export function CommunityQRScannerModal({
             {t('community.qrScanner.title')}
           </Text>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={28} color="#FFFFFF" />
+            <Ionicons name="close-outline" size={28} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
 

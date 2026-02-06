@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
 import { useThemeStyles, useNavigateToPlayerProfile } from '../hooks';
+import { SportIcon } from '../components/SportIcon';
 import { getSafeAreaEdges } from '../utils';
 import {
   spacingPixels,
@@ -122,13 +123,8 @@ export default function PlayedMatchDetailScreen() {
     });
   }, [matchData]);
 
-  // Get sport icon
-  const sportIcon = useMemo(() => {
-    const sportName = matchData?.sport?.name?.toLowerCase();
-    if (sportName === 'tennis') return 'tennisball';
-    if (sportName === 'pickleball') return 'tennisball-outline';
-    return 'american-football';
-  }, [matchData?.sport]);
+  // Sport name for icon (SportIcon uses tennis/pickleball SVGs; others fallback to tennis)
+  const sportNameForIcon = matchData?.sport?.name ?? 'tennis';
 
   // Organize participants by team
   const { team1, team2 } = useMemo(() => {
@@ -199,7 +195,7 @@ export default function PlayedMatchDetailScreen() {
     <View style={styles.playerRow}>
       {/* Trophy icon for winner */}
       <View style={styles.trophyContainer}>
-        {isWinner && <Ionicons name="trophy" size={20} color="#F59E0B" />}
+        {isWinner && <Ionicons name="trophy-outline" size={20} color="#F59E0B" />}
       </View>
 
       {/* Avatar(s) - Show overlapping avatars for doubles, tappable to view profile */}
@@ -319,11 +315,7 @@ export default function PlayedMatchDetailScreen() {
         {/* Sport */}
         <View style={styles.detailRow}>
           <View style={styles.detailIcon}>
-            <Ionicons
-              name={sportIcon as keyof typeof Ionicons.glyphMap}
-              size={20}
-              color={colors.textMuted}
-            />
+            <SportIcon sportName={sportNameForIcon} size={20} color={colors.textMuted} />
           </View>
           <View style={styles.detailContent}>
             <Text style={[styles.detailLabel, { color: colors.text }]}>Sport</Text>

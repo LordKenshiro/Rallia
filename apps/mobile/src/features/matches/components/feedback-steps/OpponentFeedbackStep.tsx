@@ -235,7 +235,7 @@ export const OpponentFeedbackStep: React.FC<OpponentFeedbackStepProps> = ({
           {avatarUrl ? (
             <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
           ) : (
-            <Ionicons name="person" size={32} color={colors.textMuted} />
+            <Ionicons name="person-outline" size={32} color={colors.textMuted} />
           )}
         </View>
         <Text size="xl" weight="bold" color={colors.text} style={styles.opponentName}>

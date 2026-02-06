@@ -256,7 +256,7 @@ export function VideoProofActionSheet({ payload }: SheetProps<'video-proof'>) {
             </Text>
           </View>
           <TouchableOpacity onPress={onClose} style={styles.closeButton} disabled={isSubmitting}>
-            <Ionicons name="close" size={24} color={colors.textMuted} />
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
@@ -359,7 +359,7 @@ export function VideoProofActionSheet({ payload }: SheetProps<'video-proof'>) {
                   onPress={handleRemoveVideo}
                   disabled={isSubmitting}
                 >
-                  <Ionicons name="close" size={20} color="#fff" />
+                  <Ionicons name="close-outline" size={20} color="#fff" />
                 </TouchableOpacity>
               </View>
               <View style={styles.videoInfo}>

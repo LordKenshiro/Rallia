@@ -491,7 +491,7 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
               style={styles.headerButton}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons name="chevron-back" size={24} color={colors.buttonActive} />
+              <Ionicons name="chevron-back-outline" size={24} color={colors.buttonActive} />
             </TouchableOpacity>
           )}
         </View>
@@ -506,7 +506,7 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
             style={styles.headerButton}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Ionicons name="close" size={24} color={colors.textMuted} />
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
       </View>

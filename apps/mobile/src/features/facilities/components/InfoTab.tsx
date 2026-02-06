@@ -31,6 +31,8 @@ import type { Court, FacilityContact, Facility } from '@rallia/shared-types';
 import type { FacilityWithDetails } from '@rallia/shared-services';
 import { lightHaptic } from '@rallia/shared-utils';
 import type { TranslationKey, TranslationOptions } from '../../../hooks';
+import { useSport } from '../../../context';
+import { SportIcon } from '../../../components/SportIcon';
 
 import CourtCard from './CourtCard';
 
@@ -320,6 +322,7 @@ export default function InfoTab({
   isLoading = false,
 }: InfoTabProps) {
   const toast = useToast();
+  const { selectedSport } = useSport();
   const [showAllCourts, setShowAllCourts] = useState(false);
 
   // Facility data from facilityData (full record)
@@ -433,7 +436,7 @@ export default function InfoTab({
               <View
                 style={[styles.typeBadge, { backgroundColor: isDark ? neutral[700] : primary[50] }]}
               >
-                <Ionicons name="business" size={12} color={colors.primary} />
+                <Ionicons name="business-outline" size={12} color={colors.primary} />
                 <Text size="xs" weight="medium" color={colors.primary}>
                   {facilityType}
                 </Text>
@@ -500,7 +503,7 @@ export default function InfoTab({
               </Text>
               {distanceDisplay && (
                 <View style={styles.distanceRow}>
-                  <Ionicons name="navigate-circle" size={14} color={colors.textMuted} />
+                  <Ionicons name="navigate-circle-outline" size={14} color={colors.textMuted} />
                   <Text size="xs" color={colors.textMuted}>
                     {t('facilityDetail.distanceAway', { distance: distanceDisplay })}
                   </Text>
@@ -524,7 +527,7 @@ export default function InfoTab({
             style={[styles.mapsButton, { backgroundColor: isDark ? neutral[700] : primary[50] }]}
             activeOpacity={0.7}
           >
-            <Ionicons name="navigate" size={16} color={colors.primary} />
+            <Ionicons name="navigate-outline" size={16} color={colors.primary} />
             <Text size="sm" weight="semibold" color={colors.primary}>
               {t('facilityDetail.openInMaps')}
             </Text>
@@ -542,7 +545,7 @@ export default function InfoTab({
                   style={[styles.quickActionButton, { backgroundColor: primary[500] + '15' }]}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="call" size={20} color={primary[600]} />
+                  <Ionicons name="call-outline" size={20} color={primary[600]} />
                 </TouchableOpacity>
               )}
               {email && (
@@ -551,7 +554,7 @@ export default function InfoTab({
                   style={[styles.quickActionButton, { backgroundColor: primary[500] + '15' }]}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="mail" size={20} color={primary[600]} />
+                  <Ionicons name="mail-outline" size={20} color={primary[600]} />
                 </TouchableOpacity>
               )}
               {website && (
@@ -560,7 +563,7 @@ export default function InfoTab({
                   style={[styles.quickActionButton, { backgroundColor: primary[500] + '15' }]}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="globe" size={20} color={primary[600]} />
+                  <Ionicons name="globe-outline" size={20} color={primary[600]} />
                 </TouchableOpacity>
               )}
             </View>
@@ -581,7 +584,11 @@ export default function InfoTab({
 
         {courts.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="tennisball-outline" size={32} color={colors.textMuted} />
+            <SportIcon
+              sportName={selectedSport?.name ?? 'tennis'}
+              size={32}
+              color={colors.textMuted}
+            />
             <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
               {t('facilityDetail.noCourts')}
             </Text>

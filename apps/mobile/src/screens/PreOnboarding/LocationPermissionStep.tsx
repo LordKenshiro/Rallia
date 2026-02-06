@@ -21,7 +21,10 @@ interface LocationPermissionStepProps {
   isActive?: boolean;
 }
 
-export function LocationPermissionStep({ onContinue, isActive = true }: LocationPermissionStepProps) {
+export function LocationPermissionStep({
+  onContinue,
+  isActive = true,
+}: LocationPermissionStepProps) {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
   const { requestLocationPermission, markLocationAsked } = usePermissions();
@@ -60,17 +63,18 @@ export function LocationPermissionStep({ onContinue, isActive = true }: Location
         keyboardShouldPersistTaps="handled"
       >
         {/* Header Section */}
-        <Animated.View
-          entering={FadeInDown.delay(50).springify()}
-          style={styles.headerSection}
-        >
+        <Animated.View entering={FadeInDown.delay(50).springify()} style={styles.headerSection}>
           <View
             style={[
               styles.iconContainer,
               { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)' },
             ]}
           >
-            <Ionicons name="navigate" size={36} color={isDark ? primary[400] : primary[600]} />
+            <Ionicons
+              name="navigate-outline"
+              size={36}
+              color={isDark ? primary[400] : primary[600]}
+            />
           </View>
 
           <Text size="xl" weight="bold" color={colors.foreground} style={styles.title}>
@@ -112,17 +116,12 @@ export function LocationPermissionStep({ onContinue, isActive = true }: Location
               <Text size="lg" weight="semibold" color={isDark ? neutral[400] : neutral[500]}>
                 {t('preOnboarding.locationPermission.comparison.withoutExample')}
               </Text>
-              
             </View>
           </View>
 
           {/* Arrow */}
           <View style={styles.arrowContainer}>
-            <Ionicons
-              name="arrow-forward"
-              size={20}
-              color={isDark ? primary[400] : primary[600]}
-            />
+            <Ionicons name="arrow-forward" size={20} color={isDark ? primary[400] : primary[600]} />
           </View>
 
           {/* With GPS */}
@@ -136,11 +135,7 @@ export function LocationPermissionStep({ onContinue, isActive = true }: Location
             ]}
           >
             <View style={styles.comparisonHeader}>
-              <Ionicons
-                name="navigate"
-                size={18}
-                color={status.success.DEFAULT}
-              />
+              <Ionicons name="navigate" size={18} color={status.success.DEFAULT} />
               <Text size="xs" weight="medium" color={status.success.DEFAULT}>
                 {t('preOnboarding.locationPermission.comparison.with')}
               </Text>
@@ -149,7 +144,6 @@ export function LocationPermissionStep({ onContinue, isActive = true }: Location
               <Text size="lg" weight="bold" color={status.success.DEFAULT}>
                 {t('preOnboarding.locationPermission.comparison.withExample')}
               </Text>
-              
             </View>
           </View>
         </Animated.View>
@@ -183,17 +177,24 @@ export function LocationPermissionStep({ onContinue, isActive = true }: Location
                   styles.benefitIconContainer,
                   {
                     backgroundColor: benefit.highlight
-                      ? isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(34, 197, 94, 0.1)'
-                      : isDark ? neutral[800] : neutral[100],
+                      ? isDark
+                        ? 'rgba(34, 197, 94, 0.15)'
+                        : 'rgba(34, 197, 94, 0.1)'
+                      : isDark
+                        ? neutral[800]
+                        : neutral[100],
                   },
                 ]}
               >
                 <Ionicons
                   name={benefit.icon}
                   size={18}
-                  color={benefit.highlight
-                    ? status.success.DEFAULT
-                    : isDark ? neutral[400] : neutral[500]
+                  color={
+                    benefit.highlight
+                      ? status.success.DEFAULT
+                      : isDark
+                        ? neutral[400]
+                        : neutral[500]
                   }
                 />
               </View>
@@ -230,10 +231,7 @@ export function LocationPermissionStep({ onContinue, isActive = true }: Location
         </Animated.View>
 
         {/* Bottom Section */}
-        <Animated.View
-          entering={FadeInUp.delay(400).springify()}
-          style={styles.bottomSection}
-        >
+        <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.bottomSection}>
           <Button
             variant="primary"
             onPress={handleEnableLocation}
@@ -290,7 +288,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
     paddingHorizontal: spacingPixels[2],
-    paddingTop: spacingPixels[2]
+    paddingTop: spacingPixels[2],
   },
 
   // Comparison section

@@ -63,7 +63,7 @@ const RatingProofs: React.FC = () => {
       navigation.setOptions({
         headerRight: () => (
           <TouchableOpacity onPress={handleAddProof} style={{ marginRight: spacingPixels[2] }}>
-            <Ionicons name="add" size={28} color={colors.headerForeground} />
+            <Ionicons name="add-outline" size={28} color={colors.headerForeground} />
           </TouchableOpacity>
         ),
       });

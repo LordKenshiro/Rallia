@@ -914,7 +914,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                           },
                         ]}
                       >
-                        <Ionicons name="person" size={10} color={colors.buttonTextActive} />
+                        <Ionicons name="person-outline" size={10} color={colors.buttonTextActive} />
                       </View>
                     )}
                     <Text
