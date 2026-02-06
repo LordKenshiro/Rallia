@@ -14,6 +14,8 @@ import type {
   CancelBookingClientResult,
   BookingWithDetails,
   BookingListFilters,
+  GetPlayerBookingsPaginatedParams,
+  PlayerBookingsPage,
 } from './types';
 
 // ---------------------------------------------------------------------------
@@ -23,7 +25,8 @@ import type {
 const BOOKING_WITH_DETAILS_SELECT = `
   id, organization_id, court_id, player_id,
   booking_date, start_time, end_time,
-  status, price_cents, currency,
+  status, booking_type, price_cents, currency,
+  payment_status, payment_method,
   stripe_payment_intent_id, stripe_charge_id,
   requires_approval, notes,
   cancelled_at, cancelled_by, cancellation_reason,
@@ -32,7 +35,7 @@ const BOOKING_WITH_DETAILS_SELECT = `
   court:court_id (
     id, name, court_number,
     facility:facility_id (
-      id, name, organization_id
+      id, name, address, city, timezone, organization_id
     )
   )
 `;
@@ -159,6 +162,75 @@ export async function getOrgBookings(
 }
 
 // ---------------------------------------------------------------------------
+// Read: paginated player bookings (for infinite scroll)
+// ---------------------------------------------------------------------------
+
+/** Default page size for paginated queries */
+const DEFAULT_PAGE_SIZE = 20;
+
+/**
+ * Get paginated bookings for a player with time-based filtering.
+ * Designed for useInfiniteQuery consumption (returns page structure).
+ */
+export async function getPlayerBookingsPaginated(
+  params: GetPlayerBookingsPaginatedParams
+): Promise<PlayerBookingsPage> {
+  const {
+    playerId,
+    timeFilter,
+    statusFilter = 'all',
+    limit = DEFAULT_PAGE_SIZE,
+    offset = 0,
+  } = params;
+
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+  let query = supabase
+    .from('booking')
+    .select(BOOKING_WITH_DETAILS_SELECT)
+    .eq('player_id', playerId)
+    .eq('booking_type', 'player');
+
+  // Apply time filter and sort: upcoming = soonest first, past = most recent first
+  if (timeFilter === 'upcoming') {
+    query = query
+      .gte('booking_date', todayStr)
+      .order('booking_date', { ascending: true })
+      .order('start_time', { ascending: true });
+  } else {
+    query = query
+      .lte('booking_date', todayStr)
+      .order('booking_date', { ascending: false })
+      .order('start_time', { ascending: false });
+  }
+
+  // Apply status filter
+  if (statusFilter !== 'all') {
+    query = query.eq('status', statusFilter);
+  } else if (timeFilter === 'upcoming') {
+    query = query.in('status', ['confirmed', 'pending', 'awaiting_approval']);
+  }
+  // For 'past' with 'all', we show all statuses (completed, cancelled, no_show)
+
+  // Fetch one extra to determine if there are more pages
+  query = query.range(offset, offset + limit);
+
+  const { data, error } = await query;
+
+  if (error) throw new Error(`Failed to fetch player bookings: ${error.message}`);
+
+  const bookings = (data ?? []) as unknown as BookingWithDetails[];
+  const hasMore = bookings.length > limit;
+
+  return {
+    bookings: hasMore ? bookings.slice(0, limit) : bookings,
+    nextOffset: hasMore ? offset + limit : null,
+    hasMore,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
 
@@ -178,6 +250,9 @@ function applyFilters(query: any, filters?: BookingListFilters) {
     } else {
       query = query.eq('status', filters.status);
     }
+  }
+  if (filters.bookingType) {
+    query = query.eq('booking_type', filters.bookingType);
   }
   if (filters.limit) {
     query = query.limit(filters.limit);

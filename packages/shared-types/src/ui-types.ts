@@ -128,9 +128,11 @@ export interface PlayerProfileScreenParams {
 
 /**
  * Props for Facility detail screen
+ * returnTo: when set, back button navigates to this root screen instead of popping the stack
  */
 export interface FacilityDetailScreenParams {
   facilityId: string;
+  returnTo?: 'MyBookings';
 }
 
 /**

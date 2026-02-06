@@ -772,6 +772,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     flexGrow: 1,
+    paddingTop: spacingPixels[2],
   },
   matchesSection: {
     padding: spacingPixels[5],
@@ -857,7 +858,6 @@ const styles = StyleSheet.create({
     marginLeft: spacingPixels[1],
   },
   myMatchesSection: {
-    marginTop: spacingPixels[2],
     overflow: 'visible', // Allow corner badges to extend outside cards
   },
   myMatchesLoading: {

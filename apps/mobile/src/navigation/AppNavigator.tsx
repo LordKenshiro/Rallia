@@ -86,6 +86,7 @@ import type {
 import PublicMatches from '../features/matches/screens/PublicMatches';
 import PlayerMatches from '../features/matches/screens/PlayerMatches';
 import { FacilitiesDirectory, FacilityDetail } from '../features/facilities';
+import { MyBookingsScreen, BookingDetailScreen } from '../features/bookings';
 
 // =============================================================================
 // TYPED NAVIGATORS
@@ -481,11 +482,21 @@ function CourtsStack() {
       <CourtsStackNavigator.Screen
         name="FacilityDetail"
         component={FacilityDetail}
-        options={({ navigation }) => ({
-          ...sharedOptions,
-          headerTitle: t('facilitiesTab.title'),
-          headerLeft: () => <ThemedBackButton navigation={navigation} />,
-        })}
+        options={({ navigation, route }) => {
+          const rootNav = navigation.getParent()?.getParent() as
+            | NativeStackNavigationProp<RootStackParamList>
+            | undefined;
+          const returnTo = route.params?.returnTo;
+          const goBack =
+            returnTo === 'MyBookings' && rootNav
+              ? () => rootNav.navigate('MyBookings')
+              : () => navigation.goBack();
+          return {
+            ...sharedOptions,
+            headerTitle: t('facilitiesTab.title'),
+            headerLeft: () => <ThemedBackButton navigation={{ goBack }} />,
+          };
+        }}
       />
     </CourtsStackNavigator.Navigator>
   );
@@ -1127,6 +1138,26 @@ export default function AppNavigator() {
         options={{
           headerShown: false,
         }}
+      />
+
+      <RootStack.Screen
+        name="MyBookings"
+        component={MyBookingsScreen}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('myBookings.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="BookingDetail"
+        component={BookingDetailScreen}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('myBookings.detail.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
       />
     </RootStack.Navigator>
   );

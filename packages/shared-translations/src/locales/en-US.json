@@ -5687,5 +5687,111 @@
       "button": "Start Exploring",
       "tip": "Tip: You can replay this tour anytime from Settings"
     }
+  },
+  "myBookings": {
+    "title": "My Bookings",
+    "tabs": {
+      "upcoming": "Upcoming",
+      "past": "Past"
+    },
+    "filters": {
+      "all": "All",
+      "confirmed": "Confirmed",
+      "pending": "Pending",
+      "awaitingApproval": "Awaiting Approval",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "noShow": "No-Show"
+    },
+    "time": {
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "thisWeek": "This Week",
+      "nextWeek": "Next Week",
+      "later": "Later",
+      "yesterday": "Yesterday",
+      "lastWeek": "Last Week",
+      "earlier": "Earlier"
+    },
+    "emptyUpcoming": {
+      "title": "No upcoming bookings",
+      "description": "Book a court to get started"
+    },
+    "emptyPast": {
+      "title": "No past bookings",
+      "description": "Your completed bookings will appear here"
+    },
+    "emptyFiltered": {
+      "title": "No bookings found",
+      "description": "No bookings match the \"{filter}\" filter"
+    },
+    "card": {
+      "court": "Court",
+      "date": "Date",
+      "time": "Time",
+      "price": "Price",
+      "free": "Free",
+      "duration": "{minutes} min"
+    },
+    "status": {
+      "confirmed": "Confirmed",
+      "pending": "Pending",
+      "awaitingApproval": "Awaiting Approval",
+      "cancelled": "Cancelled",
+      "completed": "Completed",
+      "noShow": "No-Show"
+    },
+    "detail": {
+      "title": "Booking Details",
+      "facilityInfo": "Facility",
+      "bookingInfo": "Booking Info",
+      "paymentInfo": "Payment Info",
+      "bookingId": "Booking ID",
+      "court": "Court",
+      "date": "Date",
+      "time": "Time",
+      "price": "Price",
+      "status": "Status",
+      "notes": "Notes",
+      "createdAt": "Booked on",
+      "paymentStatus": "Payment Status",
+      "paymentMethod": "Payment Method",
+      "paymentPending": "Pending",
+      "paymentCompleted": "Completed",
+      "paymentFailed": "Failed",
+      "paymentRefunded": "Refunded"
+    },
+    "cancel": {
+      "title": "Cancel Booking",
+      "confirmMessage": "Are you sure you want to cancel this booking?",
+      "selectReason": "Reason for cancellation",
+      "reasons": {
+        "weather": "Weather conditions",
+        "courtUnavailable": "Court unavailable",
+        "emergency": "Personal emergency",
+        "other": "Other reason"
+      },
+      "refundInfo": {
+        "full": "Full refund will be issued",
+        "partial": "{percent}% refund will be issued",
+        "none": "No refund available for late cancellations"
+      },
+      "cancelButton": "Cancel Booking",
+      "keepButton": "Keep Booking",
+      "success": "Booking cancelled successfully",
+      "error": "Failed to cancel booking. Please try again."
+    },
+    "facilitiesSection": {
+      "title": "My Bookings",
+      "viewAll": "View All",
+      "empty": {
+        "title": "No upcoming bookings",
+        "description": "Book a court to get started"
+      }
+    },
+    "viewFacility": "View Facility",
+    "viewMatch": "View Linked Match",
+    "cancelBooking": "Cancel Booking",
+    "viewMyBookings": "View My Bookings"
   }
 }
