@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -13,7 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
-import { Select, Button, Heading, Text, PhoneInput, useToast } from '@rallia/shared-components';
+import { Text, PhoneInput, useToast } from '@rallia/shared-components';
 import { useImagePicker, useThemeStyles, useTranslation } from '../../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { COLORS } from '@rallia/shared-constants';
@@ -22,10 +22,12 @@ import {
   validateUsername,
   lightHaptic,
   mediumHaptic,
+  selectionHaptic,
 } from '@rallia/shared-utils';
 import { OnboardingService, supabase, Logger } from '@rallia/shared-services';
 import { uploadImage, replaceImage } from '../../../../services/imageUpload';
-import type { GenderEnum, GenderType } from '@rallia/shared-types';
+import { GENDER_VALUES } from '@rallia/shared-types';
+import type { GenderEnum } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
 
@@ -52,47 +54,11 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
   const [gender, setGender] = useState(initialData?.gender || '');
   const [phoneNumber, setPhoneNumber] = useState(initialData?.phoneNumber || '');
 
-  // Dynamic gender options from database
-  const [genderOptions, setGenderOptions] = useState<Array<{ value: string; label: string }>>([]);
-
   // Use custom hook for image picker
   const { image: profileImage, pickImage } = useImagePicker();
 
   // Track saving state
   const [isSaving, setIsSaving] = useState(false);
-
-  // Fetch gender options from database
-  useEffect(() => {
-    const fetchGenderOptions = async () => {
-      try {
-        const { data, error } = await OnboardingService.getGenderTypes();
-
-        if (error) {
-          Logger.error('Failed to fetch gender types from database', error as Error);
-          // Use fallback if API fails
-          setGenderOptions([
-            { value: 'male', label: 'Male' },
-            { value: 'female', label: 'Female' },
-            { value: 'other', label: 'Other' },
-            //{ value: 'prefer_not_to_say', label: 'Prefer not to say' },
-          ]);
-        } else if (data) {
-          setGenderOptions(data);
-        }
-      } catch (error) {
-        Logger.error('Unexpected error fetching gender types', error as Error);
-        // Use fallback on error
-        setGenderOptions([
-          { value: 'male', label: 'Male' },
-          { value: 'female', label: 'Female' },
-          { value: 'other', label: 'Other' },
-          //{ value: 'prefer_not_to_say', label: 'Prefer not to say' },
-        ]);
-      }
-    };
-
-    fetchGenderOptions();
-  }, []);
 
   // Validation handlers using utility functions
   const handleFirstNameChange = (text: string) => {
@@ -227,7 +193,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
         const { error: playerUpdateError } = await supabase
           .from('player')
           .update({
-            gender: gender as GenderType,
+            gender: gender as GenderEnum,
           })
           .eq('id', user.id);
 
@@ -587,25 +553,41 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
             />
           )}
 
-          {/* Gender Picker */}
+          {/* Gender - Full-width Options */}
           <View style={styles.inputContainer}>
             <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
               Gender <Text color={colors.error}>*</Text>
             </Text>
-            <Select
-              placeholder="Select your gender"
-              value={gender}
-              onChange={setGender}
-              options={genderOptions}
-              containerStyle={styles.selectContainer}
-              selectStyle={[
-                styles.genderSelect,
-                {
-                  backgroundColor: colors.inputBackground,
-                  borderColor: colors.inputBorder,
-                },
-              ]}
-            />
+            <View style={styles.genderRow}>
+              {GENDER_VALUES.map(value => {
+                const isSelected = gender === value;
+                return (
+                  <TouchableOpacity
+                    key={value}
+                    style={[
+                      styles.genderOption,
+                      {
+                        backgroundColor: isSelected ? colors.buttonActive : colors.buttonInactive,
+                        borderColor: isSelected ? colors.buttonActive : colors.border,
+                      },
+                    ]}
+                    onPress={() => {
+                      selectionHaptic();
+                      setGender(value);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      size="base"
+                      weight={isSelected ? 'semibold' : 'regular'}
+                      color={isSelected ? colors.buttonTextActive : colors.text}
+                    >
+                      {t(`profile.genderValues.${value}` as TranslationKey)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
 
           {/* Phone Number Input */}
@@ -750,15 +732,17 @@ const styles = StyleSheet.create({
   inputDisabled: {
     opacity: 0.6,
   },
-  selectContainer: {
-    marginBottom: 0,
+  genderRow: {
+    flexDirection: 'row',
+    gap: spacingPixels[2],
   },
-  genderSelect: {
-    borderRadius: radiusPixels.lg,
-    paddingHorizontal: spacingPixels[4],
+  genderOption: {
+    flex: 1,
     paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
     borderWidth: 1,
-    minHeight: 48,
+    alignItems: 'center',
   },
   helperText: {
     marginTop: spacingPixels[1],

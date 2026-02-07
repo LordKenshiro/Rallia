@@ -899,8 +899,7 @@
     "genderValues": {
       "male": "Homme",
       "female": "Femme",
-      "other": "Autre",
-      "preferNotToSay": "Préfère ne pas dire"
+      "other": "Autre"
     },
     "hand": {
       "left": "Gauche",

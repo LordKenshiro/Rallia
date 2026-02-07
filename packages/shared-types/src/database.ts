@@ -220,9 +220,6 @@ export type MatchDuration = DbEnum<'match_duration_enum'>;
 export type DayOfWeek = DbEnum<'day_of_week'>;
 export type TimePeriod = DbEnum<'time_period'>;
 
-// Gender (non-suffixed variant)
-export type GenderType = DbEnum<'gender_type'>;
-
 // Court (non-suffixed variants)
 export type CourtSurface = DbEnum<'court_surface'>;
 export type CourtType = DbEnum<'court_type'>;

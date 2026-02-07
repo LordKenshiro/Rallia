@@ -133,59 +133,6 @@ export const AuthService = {
 
 export const EnumService = {
   /**
-   * Get all gender type enum values with display labels
-   */
-  async getGenderTypes(): Promise<DatabaseResponse<Array<{ value: string; label: string }>>> {
-    try {
-      // Query the enum values from the database
-      const { data, error } = await supabase.rpc('get_gender_types');
-
-      if (error) {
-        // Fallback to hardcoded values if RPC function doesn't exist yet
-        console.warn('get_gender_types RPC not found, using fallback values', error);
-        const fallbackData = [
-          { value: 'male', label: 'Male' },
-          { value: 'female', label: 'Female' },
-          { value: 'other', label: 'Other' },
-          //{ value: 'prefer_not_to_say', label: 'Prefer not to say' },
-        ];
-        return { data: fallbackData, error: null };
-      }
-
-      // The RPC function returns TABLE(value TEXT, label TEXT)
-      // So data is already in the correct format
-      console.log('✅ Gender types loaded from database:', data);
-
-      // Only allow these 3 gender types
-      const allowedGenders = ['male', 'female', 'other'];
-      const labelMap: Record<string, string> = {
-        male: 'Male',
-        female: 'Female',
-        other: 'Other',
-      };
-
-      // Filter to only allowed gender types and map to display labels
-      const genderTypes = (data || [])
-        .filter((item: { value: string; label: string }) => allowedGenders.includes(item.value))
-        .map((item: { value: string; label: string }) => ({
-          value: item.value,
-          label: labelMap[item.value] || item.value,
-        }));
-
-      return { data: genderTypes, error: null };
-    } catch (error) {
-      // Fallback to hardcoded values
-      const fallbackData = [
-        { value: 'male', label: 'Male' },
-        { value: 'female', label: 'Female' },
-        { value: 'other', label: 'Other' },
-        //{ value: 'prefer_not_to_say', label: 'Prefer not to say' },
-      ];
-      return { data: fallbackData, error: null };
-    }
-  },
-
-  /**
    * Get all playing hand enum values with display labels
    */
   async getPlayingHandTypes(): Promise<DatabaseResponse<Array<{ value: string; label: string }>>> {
@@ -912,14 +859,6 @@ export const AvailabilityService = {
 // ============================================
 
 export const OnboardingService = {
-  /**
-   * Get gender types for PersonalInformationOverlay dropdown
-   * Delegates to EnumService
-   */
-  async getGenderTypes(): Promise<DatabaseResponse<Array<{ value: string; label: string }>>> {
-    return EnumService.getGenderTypes();
-  },
-
   /**
    * Save personal information from PersonalInformationOverlay
    */

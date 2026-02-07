@@ -1291,7 +1291,7 @@ export type Database = {
           mutually_cancelled: boolean | null;
           notes: string | null;
           player_expectation: Database['public']['Enums']['match_type_enum'];
-          preferred_opponent_gender: Database['public']['Enums']['gender_type'] | null;
+          preferred_opponent_gender: Database['public']['Enums']['gender_enum'] | null;
           sport_id: string;
           start_time: string;
           timezone: string;
@@ -1329,7 +1329,7 @@ export type Database = {
           mutually_cancelled?: boolean | null;
           notes?: string | null;
           player_expectation?: Database['public']['Enums']['match_type_enum'];
-          preferred_opponent_gender?: Database['public']['Enums']['gender_type'] | null;
+          preferred_opponent_gender?: Database['public']['Enums']['gender_enum'] | null;
           sport_id: string;
           start_time: string;
           timezone?: string;
@@ -1367,7 +1367,7 @@ export type Database = {
           mutually_cancelled?: boolean | null;
           notes?: string | null;
           player_expectation?: Database['public']['Enums']['match_type_enum'];
-          preferred_opponent_gender?: Database['public']['Enums']['gender_type'] | null;
+          preferred_opponent_gender?: Database['public']['Enums']['gender_enum'] | null;
           sport_id?: string;
           start_time?: string;
           timezone?: string;
@@ -2805,7 +2805,7 @@ export type Database = {
           chat_rules_agreed_at: string | null;
           created_at: string | null;
           expo_push_token: string | null;
-          gender: Database['public']['Enums']['gender_type'] | null;
+          gender: Database['public']['Enums']['gender_enum'] | null;
           id: string;
           last_seen_at: string | null;
           max_travel_distance: number | null;
@@ -2829,7 +2829,7 @@ export type Database = {
           chat_rules_agreed_at?: string | null;
           created_at?: string | null;
           expo_push_token?: string | null;
-          gender?: Database['public']['Enums']['gender_type'] | null;
+          gender?: Database['public']['Enums']['gender_enum'] | null;
           id: string;
           last_seen_at?: string | null;
           max_travel_distance?: number | null;
@@ -2853,7 +2853,7 @@ export type Database = {
           chat_rules_agreed_at?: string | null;
           created_at?: string | null;
           expo_push_token?: string | null;
-          gender?: Database['public']['Enums']['gender_type'] | null;
+          gender?: Database['public']['Enums']['gender_enum'] | null;
           id?: string;
           last_seen_at?: string | null;
           max_travel_distance?: number | null;
@@ -4824,13 +4824,6 @@ export type Database = {
           template_source: string;
         }[];
       };
-      get_gender_types: {
-        Args: never;
-        Returns: {
-          label: string;
-          value: string;
-        }[];
-      };
       get_match_duration_types: {
         Args: never;
         Returns: {
@@ -5329,10 +5322,7 @@ export type Database = {
       search_public_matches: {
         Args: {
           p_cost?: string;
-          p_court_status?: string;
           p_date_range?: string;
-          p_duration?: string;
-          p_facility_id?: string;
           p_format?: string;
           p_gender?: string;
           p_join_mode?: string;
@@ -5344,7 +5334,6 @@ export type Database = {
           p_offset?: number;
           p_search_query?: string;
           p_skill_level?: string;
-          p_specific_date?: string;
           p_sport_id: string;
           p_time_of_day?: string;
           p_user_gender?: string;
@@ -5434,8 +5423,7 @@ export type Database = {
         | 'school'
         | 'community_center';
       file_type_enum: 'image' | 'video' | 'document' | 'audio' | 'other';
-      gender_enum: 'M' | 'F' | 'O' | 'prefer_not_to_say';
-      gender_type: 'male' | 'female' | 'other' | 'prefer_not_to_say';
+      gender_enum: 'male' | 'female' | 'other';
       invite_source_enum:
         | 'manual'
         | 'auto_match'
@@ -5793,8 +5781,7 @@ export const Constants = {
         'community_center',
       ],
       file_type_enum: ['image', 'video', 'document', 'audio', 'other'],
-      gender_enum: ['M', 'F', 'O', 'prefer_not_to_say'],
-      gender_type: ['male', 'female', 'other', 'prefer_not_to_say'],
+      gender_enum: ['male', 'female', 'other'],
       invite_source_enum: ['manual', 'auto_match', 'invite_list', 'mailing_list', 'growth_prompt'],
       invite_status_enum: ['pending', 'sent', 'accepted', 'expired', 'bounced', 'cancelled'],
       locale_enum: ['en-US', 'en-CA', 'fr-CA', 'fr-FR'],

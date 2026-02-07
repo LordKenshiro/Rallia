@@ -486,13 +486,7 @@ const UserProfile = () => {
 
   const formatGender = (gender: string | null): string => {
     if (!gender) return t('profile.notSet');
-    const genderMap: { [key: string]: string } = {
-      male: t('profile.genderValues.male'),
-      female: t('profile.genderValues.female'),
-      other: t('profile.genderValues.other'),
-      prefer_not_to_say: t('profile.genderValues.preferNotToSay'),
-    };
-    return genderMap[gender] || gender;
+    return t(`profile.genderValues.${gender}` as TranslationKey) || gender;
   };
 
   const formatPlayingHand = (hand: string | null): string => {

@@ -13,7 +13,7 @@ import type {
   MatchDuration,
   DayOfWeek,
   TimePeriod,
-  GenderType,
+  GenderEnum,
   CourtSurface,
   CourtType,
   ExtendedNotificationTypeEnum,
@@ -209,14 +209,9 @@ export const TIME_PERIODS_ORDERED: TimePeriod[] = ['morning', 'afternoon', 'even
 // ============================================
 
 /**
- * Human-readable labels for gender types
+ * Ordered list of gender values for iteration (labels come from translations)
  */
-export const GENDER_LABELS: Record<GenderType, string> = {
-  male: 'Male',
-  female: 'Female',
-  other: 'Other',
-  prefer_not_to_say: 'Prefer not to say',
-};
+export const GENDER_VALUES: GenderEnum[] = ['male', 'female', 'other'];
 
 // ============================================
 // COURT

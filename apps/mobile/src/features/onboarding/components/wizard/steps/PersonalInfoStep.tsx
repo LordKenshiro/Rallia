@@ -25,13 +25,13 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Text, PhoneInput } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { OnboardingService, Logger } from '@rallia/shared-services';
 import {
   validateFullName,
   validateUsername,
   lightHaptic,
   selectionHaptic,
 } from '@rallia/shared-utils';
+import { GENDER_VALUES } from '@rallia/shared-types';
 import type { TranslationKey } from '@rallia/shared-translations';
 import type { OnboardingFormData } from '../../../hooks/useOnboardingWizard';
 
@@ -69,7 +69,6 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
 }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempDate, setTempDate] = useState<Date>(formData.dateOfBirth || new Date(2000, 0, 1));
-  const [genderOptions, setGenderOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   // Refs for keyboard visibility handling
@@ -100,37 +99,6 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
     };
   }, []);
 
-  // Fetch gender options from database
-  useEffect(() => {
-    const fetchGenderOptions = async () => {
-      try {
-        const { data, error } = await OnboardingService.getGenderTypes();
-
-        if (error) {
-          Logger.error('Failed to fetch gender types from database', error as Error);
-          setGenderOptions([
-            { value: 'male', label: 'Male' },
-            { value: 'female', label: 'Female' },
-            { value: 'other', label: 'Other' },
-            //{ value: 'prefer_not_to_say', label: 'Prefer not to say' },
-          ]);
-        } else if (data) {
-          setGenderOptions(data);
-        }
-      } catch (error) {
-        Logger.error('Unexpected error fetching gender types', error as Error);
-        setGenderOptions([
-          { value: 'male', label: 'Male' },
-          { value: 'female', label: 'Female' },
-          { value: 'other', label: 'Other' },
-          //{ value: 'prefer_not_to_say', label: 'Prefer not to say' },
-        ]);
-      }
-    };
-
-    fetchGenderOptions();
-  }, []);
-
   const handleFirstNameChange = (text: string) => {
     onUpdateFormData({ firstName: validateFullName(text) });
   };
@@ -148,24 +116,6 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
       onUpdateFormData({ phoneNumber: fullNumber });
     },
     [onUpdateFormData]
-  );
-
-  const getGenderLabel = useCallback(
-    (value: string, fallbackLabel: string) => {
-      switch (value) {
-        case 'male':
-          return t('profile.genderValues.male');
-        case 'female':
-          return t('profile.genderValues.female');
-        case 'other':
-          return t('profile.genderValues.other');
-        case 'prefer_not_to_say':
-          return t('profile.genderValues.preferNotToSay');
-        default:
-          return fallbackLabel;
-      }
-    },
-    [t]
   );
 
   // Get the current date value for the picker
@@ -445,11 +395,11 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
           </Text>
         </Text>
         <View style={styles.genderRow}>
-          {genderOptions.map(option => {
-            const isSelected = formData.gender === option.value;
+          {GENDER_VALUES.map(value => {
+            const isSelected = formData.gender === value;
             return (
               <TouchableOpacity
-                key={option.value}
+                key={value}
                 style={[
                   styles.genderOption,
                   {
@@ -459,7 +409,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
                 ]}
                 onPress={() => {
                   selectionHaptic();
-                  onUpdateFormData({ gender: option.value });
+                  onUpdateFormData({ gender: value });
                 }}
                 activeOpacity={0.7}
               >
@@ -468,7 +418,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
                   weight={isSelected ? 'semibold' : 'regular'}
                   color={isSelected ? colors.buttonTextActive : colors.text}
                 >
-                  {getGenderLabel(option.value, option.label)}
+                  {t(`profile.genderValues.${value}` as TranslationKey)}
                 </Text>
               </TouchableOpacity>
             );

@@ -51,6 +51,7 @@ import type {
   OnboardingAvailability,
   DayEnum,
   PeriodEnum,
+  GenderEnum,
 } from '@rallia/shared-types';
 
 import { useOnboardingWizard, type OnboardingStepId } from '../../hooks/useOnboardingWizard';
@@ -442,7 +443,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             last_name: formData.lastName,
             display_name: formData.username,
             birth_date: formattedDate,
-            gender: formData.gender as 'M' | 'F' | 'O' | 'prefer_not_to_say',
+            gender: formData.gender as GenderEnum,
             phone: formData.phoneNumber,
             profile_picture_url: uploadedImageUrl,
           });

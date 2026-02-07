@@ -18,7 +18,7 @@ import type {
   LocationTypeEnum,
   MatchDurationEnum,
   MatchTypeEnum,
-  GenderType,
+  GenderEnum,
 } from './database';
 
 // ============================================
@@ -268,7 +268,7 @@ export interface MatchFormData {
   minRatingScoreId?: string;
 
   /** Preferred gender of opponent/partner */
-  preferredOpponentGender?: GenderType;
+  preferredOpponentGender?: GenderEnum;
 
   // ============================================
   // VISIBILITY & ACCESS
