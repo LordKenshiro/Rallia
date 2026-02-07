@@ -226,6 +226,7 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
   const {
     isLoading: socialAuthLoading,
     loadingProvider: socialAuthLoadingProvider,
+    errorMessage: socialAuthError,
     signInWithGoogle,
     signInWithApple,
     signInWithFacebook,
@@ -246,6 +247,13 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
   }, [currentStep, translateX]);
 
   // Handle social sign-in result
+  // Show toast when social auth sets an error
+  useEffect(() => {
+    if (socialAuthError) {
+      toast.error(socialAuthError);
+    }
+  }, [socialAuthError, toast]);
+
   const handleSocialAuthResult = useCallback(
     async (signInFn: () => Promise<{ success: boolean; needsOnboarding: boolean }>) => {
       Keyboard.dismiss();

@@ -9,7 +9,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Platform, Alert } from 'react-native';
+import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
@@ -175,10 +175,8 @@ export function useSocialAuth(): UseSocialAuthReturn {
    * Show Expo Go warning
    */
   const showExpoGoWarning = useCallback((provider: string) => {
-    Alert.alert(
-      'Development Build Required',
-      `${provider} Sign-In requires a development build and is not available in Expo Go.\n\nTo test social sign-in:\n1. Run: eas build --profile development\n2. Install the development build on your device`,
-      [{ text: 'OK' }]
+    setErrorMessage(
+      `${provider} Sign-In requires a development build and is not available in Expo Go.`
     );
   }, []);
 
@@ -208,19 +206,8 @@ export function useSocialAuth(): UseSocialAuthReturn {
       // Check if Google Play Services are available (Android)
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
-      // Generate nonce: rawNonce goes to Supabase, nonceDigest (SHA-256 hash) goes to Google
-      const randomBytes = Crypto.getRandomValues(new Uint8Array(32));
-      const rawNonce = btoa(String.fromCharCode(...randomBytes))
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/[=]/g, '');
-      const nonceDigest = await Crypto.digestStringAsync(
-        Crypto.CryptoDigestAlgorithm.SHA256,
-        rawNonce
-      );
-
-      // Perform sign-in with hashed nonce
-      const response = await GoogleSignin.signIn({ nonce: nonceDigest });
+      // Perform sign-in
+      const response = await GoogleSignin.signIn();
 
       if (!isSuccessResponse || !isSuccessResponse(response)) {
         throw new Error('Google sign-in was cancelled or failed');
@@ -234,11 +221,10 @@ export function useSocialAuth(): UseSocialAuthReturn {
 
       Logger.debug('Google sign-in successful, authenticating with Supabase');
 
-      // Sign in to Supabase with the Google ID token and raw nonce
+      // Sign in to Supabase with the Google ID token
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: idToken,
-        nonce: rawNonce,
       });
 
       if (error) {
@@ -272,23 +258,15 @@ export function useSocialAuth(): UseSocialAuthReturn {
             setErrorMessage('A sign-in is already in progress.');
             break;
           case statusCodes.PLAY_SERVICES_NOT_AVAILABLE: {
-            const playServicesError =
-              'Google Play Services is required. Please update it and try again.';
-            setErrorMessage(playServicesError);
-            Alert.alert('Error', playServicesError);
+            setErrorMessage('Google Play Services is required. Please update it and try again.');
             break;
           }
           default: {
-            const friendlyError = getFriendlyErrorMessage(error);
-            setErrorMessage(friendlyError);
-            Alert.alert('Error', friendlyError);
+            setErrorMessage(getFriendlyErrorMessage(error));
           }
         }
       } else {
-        // Use friendly error message utility for all other errors
-        const friendlyError = getFriendlyErrorMessage(error);
-        setErrorMessage(friendlyError);
-        Alert.alert('Error', friendlyError);
+        setErrorMessage(getFriendlyErrorMessage(error));
       }
 
       Logger.error('Google sign-in error', error as Error);
@@ -375,10 +353,7 @@ export function useSocialAuth(): UseSocialAuthReturn {
         return { success: false, needsOnboarding: false };
       }
 
-      // Use friendly error message utility
-      const friendlyError = getFriendlyErrorMessage(error);
-      setErrorMessage(friendlyError);
-      Alert.alert('Error', friendlyError);
+      setErrorMessage(getFriendlyErrorMessage(error));
       Logger.error('Apple sign-in error', error as Error);
       warningHaptic();
       return { success: false, needsOnboarding: false, error: error as Error };
@@ -461,9 +436,7 @@ export function useSocialAuth(): UseSocialAuthReturn {
     } catch (error) {
       setIsLoading(false);
       setLoadingProvider(null);
-      const friendlyError = getFriendlyErrorMessage(error);
-      setErrorMessage(friendlyError);
-      Alert.alert('Error', friendlyError);
+      setErrorMessage(getFriendlyErrorMessage(error));
       Logger.error('Facebook sign-in error', error as Error);
       warningHaptic();
       return { success: false, needsOnboarding: false, error: error as Error };
