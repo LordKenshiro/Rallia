@@ -208,8 +208,19 @@ export function useSocialAuth(): UseSocialAuthReturn {
       // Check if Google Play Services are available (Android)
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
-      // Perform sign-in
-      const response = await GoogleSignin.signIn();
+      // Generate nonce: rawNonce goes to Supabase, nonceDigest (SHA-256 hash) goes to Google
+      const randomBytes = Crypto.getRandomValues(new Uint8Array(32));
+      const rawNonce = btoa(String.fromCharCode(...randomBytes))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/[=]/g, '');
+      const nonceDigest = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        rawNonce
+      );
+
+      // Perform sign-in with hashed nonce
+      const response = await GoogleSignin.signIn({ nonce: nonceDigest });
 
       if (!isSuccessResponse || !isSuccessResponse(response)) {
         throw new Error('Google sign-in was cancelled or failed');
@@ -223,10 +234,11 @@ export function useSocialAuth(): UseSocialAuthReturn {
 
       Logger.debug('Google sign-in successful, authenticating with Supabase');
 
-      // Sign in to Supabase with the Google ID token
+      // Sign in to Supabase with the Google ID token and raw nonce
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: idToken,
+        nonce: rawNonce,
       });
 
       if (error) {
