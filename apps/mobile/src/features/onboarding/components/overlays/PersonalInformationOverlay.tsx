@@ -302,8 +302,8 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
           <View style={styles.headerCenter}>
             <Text weight="semibold" size="lg" style={{ color: colors.text }}>
               {mode === 'onboarding'
-                ? 'Tell us about yourself'
-                : 'Update your personal information'}
+                ? t('onboarding.personalInfoStep.title' as TranslationKey)
+                : t('profile.editSheets.personalInfoTitle' as TranslationKey)}
             </Text>
           </View>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -347,10 +347,10 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
           {/* First Name Input */}
           <View style={styles.inputContainer}>
             <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-              First Name <Text color={colors.error}>*</Text>
+              {t('profile.fields.firstName' as TranslationKey)} <Text color={colors.error}>*</Text>
             </Text>
             <TextInput
-              placeholder="Enter your first name"
+              placeholder={t('onboarding.personalInfoStep.firstNamePlaceholder' as TranslationKey)}
               placeholderTextColor={colors.textMuted}
               value={firstName}
               onChangeText={handleFirstNameChange}
@@ -368,10 +368,10 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
           {/* Last Name Input */}
           <View style={styles.inputContainer}>
             <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-              Last Name <Text color={colors.error}>*</Text>
+              {t('profile.fields.lastName' as TranslationKey)} <Text color={colors.error}>*</Text>
             </Text>
             <TextInput
-              placeholder="Enter your last name"
+              placeholder={t('onboarding.personalInfoStep.lastNamePlaceholder' as TranslationKey)}
               placeholderTextColor={colors.textMuted}
               value={lastName}
               onChangeText={handleLastNameChange}
@@ -390,10 +390,10 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
           {mode === 'edit' && (
             <View style={styles.inputContainer}>
               <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-                Email <Text color={colors.error}>*</Text>
+                {t('profile.fields.email' as TranslationKey)} <Text color={colors.error}>*</Text>
               </Text>
               <TextInput
-                placeholder="Email"
+                placeholder={t('profile.fields.email' as TranslationKey)}
                 placeholderTextColor={colors.textMuted}
                 value={email}
                 onChangeText={() => {}} // Read-only, no-op
@@ -409,7 +409,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
                 ]}
               />
               <Text size="xs" color={colors.textSecondary} style={styles.helperText}>
-                This information cannot be modified
+                {t('profile.editSheets.emailReadOnlyHelp' as TranslationKey)}
               </Text>
             </View>
           )}
@@ -417,10 +417,11 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
           {/* Username Input */}
           <View style={styles.inputContainer}>
             <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-              Username <Text color={colors.error}>*</Text>
+              {t('onboarding.personalInfoStep.username' as TranslationKey)}{' '}
+              <Text color={colors.error}>*</Text>
             </Text>
             <TextInput
-              placeholder="Choose a username"
+              placeholder={t('onboarding.personalInfoStep.usernamePlaceholder' as TranslationKey)}
               placeholderTextColor={colors.textMuted}
               value={username}
               onChangeText={handleUsernameChange}
@@ -436,7 +437,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
             />
             <View style={styles.inputFooter}>
               <Text size="xs" color={colors.textSecondary}>
-                Max 10 characters, no spaces
+                {t('onboarding.personalInfoStep.usernameHelper' as TranslationKey)}
               </Text>
               <Text size="xs" color={colors.textSecondary}>
                 {username.length}/10
@@ -447,7 +448,8 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
           {/* Date of Birth Input */}
           <View style={styles.inputContainer}>
             <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-              Date of Birth <Text color={colors.error}>*</Text>
+              {t('profile.fields.dateOfBirth' as TranslationKey)}{' '}
+              <Text color={colors.error}>*</Text>
             </Text>
             {Platform.OS === 'web' ? (
               <View
@@ -480,7 +482,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
                   }}
                   max={new Date().toISOString().split('T')[0]}
                   min="1900-01-01"
-                  placeholder="Date of Birth"
+                  placeholder={t('profile.fields.dateOfBirth' as TranslationKey)}
                 />
                 <Ionicons
                   name="calendar-outline"
@@ -504,7 +506,9 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
               >
                 <Ionicons name="calendar-outline" size={20} color={colors.buttonActive} />
                 <Text color={dateOfBirth ? colors.text : colors.textMuted} style={{ flex: 1 }}>
-                  {dateOfBirth ? formatDate(dateOfBirth) : 'Date of Birth'}
+                  {dateOfBirth
+                    ? formatDate(dateOfBirth)
+                    : t('profile.fields.dateOfBirth' as TranslationKey)}
                 </Text>
               </TouchableOpacity>
             )}
@@ -523,7 +527,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
                   <View style={[styles.datePickerHeader, { borderBottomColor: colors.border }]}>
                     <TouchableOpacity onPress={() => setShowDatePicker(false)}>
                       <Text style={[styles.datePickerButton, { color: colors.buttonActive }]}>
-                        Done
+                        {t('common.done' as TranslationKey)}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -556,7 +560,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
           {/* Gender - Full-width Options */}
           <View style={styles.inputContainer}>
             <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-              Gender <Text color={colors.error}>*</Text>
+              {t('profile.gender' as TranslationKey)} <Text color={colors.error}>*</Text>
             </Text>
             <View style={styles.genderRow}>
               {GENDER_VALUES.map(value => {
@@ -595,8 +599,8 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
             <PhoneInput
               value={phoneNumber}
               onChangePhone={handlePhoneNumberChange}
-              label="Phone Number"
-              placeholder="Enter phone number"
+              label={t('profile.fields.phoneNumber' as TranslationKey)}
+              placeholder={t('profile.editSheets.phonePlaceholder' as TranslationKey)}
               required
               maxLength={15}
               showCharCount
@@ -631,7 +635,9 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
               <ActivityIndicator size="small" color={colors.primaryForeground} />
             ) : (
               <Text weight="semibold" style={{ color: colors.primaryForeground }}>
-                {mode === 'onboarding' ? 'Continue' : 'Save'}
+                {mode === 'onboarding'
+                  ? t('common.continue' as TranslationKey)
+                  : t('common.save' as TranslationKey)}
               </Text>
             )}
           </TouchableOpacity>
@@ -667,7 +673,9 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   headerCenter: {
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   closeButton: {
     padding: spacingPixels[1],

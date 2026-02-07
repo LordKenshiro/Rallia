@@ -145,7 +145,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <View style={styles.headerCenter}>
             <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-              Update your player information
+              {t('profile.editSheets.playerInfoTitle' as TranslationKey)}
             </Text>
           </View>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -163,7 +163,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
           {/* Username Input */}
           <View style={styles.inputContainer}>
             <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-              Username
+              {t('onboarding.personalInfoStep.username' as TranslationKey)}
             </Text>
             <View
               style={[
@@ -172,7 +172,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
               ]}
             >
               <TextInput
-                placeholder="Enter your username"
+                placeholder={t('profile.editSheets.usernamePlaceholder' as TranslationKey)}
                 placeholderTextColor={colors.textMuted}
                 value={username}
                 onChangeText={setUsername}
@@ -185,7 +185,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
           {/* Bio Input */}
           <View style={styles.inputContainer}>
             <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-              Bio
+              {t('profile.bio' as TranslationKey)}
             </Text>
             <View
               style={[
@@ -195,7 +195,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
               ]}
             >
               <TextInput
-                placeholder="Tell us about yourself..."
+                placeholder={t('profile.editSheets.bioPlaceholder' as TranslationKey)}
                 placeholderTextColor={colors.textMuted}
                 value={bio}
                 onChangeText={setBio}
@@ -211,7 +211,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
           {/* Preferred Playing Hand */}
           <View style={styles.inputContainer}>
             <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-              Preferred Playing Hand
+              {t('onboarding.preferencesStep.playingHand' as TranslationKey)}
             </Text>
             <View style={styles.handButtonGroup}>
               <TouchableOpacity
@@ -239,7 +239,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
                       : colors.textSecondary
                   }
                 >
-                  Left
+                  {t('onboarding.preferencesStep.left' as TranslationKey)}
                 </Text>
               </TouchableOpacity>
 
@@ -268,7 +268,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
                       : colors.textSecondary
                   }
                 >
-                  Right
+                  {t('onboarding.preferencesStep.right' as TranslationKey)}
                 </Text>
               </TouchableOpacity>
 
@@ -297,7 +297,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
                       : colors.textSecondary
                   }
                 >
-                  Both
+                  {t('onboarding.preferencesStep.both' as TranslationKey)}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -306,7 +306,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
           {/* Maximum Travel Distance */}
           <View style={styles.inputContainer}>
             <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-              Maximum Travel Distance
+              {t('onboarding.preferencesStep.travelDistance' as TranslationKey)}
             </Text>
             <View
               style={[
@@ -348,7 +348,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
               <ActivityIndicator size="small" color={colors.primaryForeground} />
             ) : (
               <Text weight="semibold" style={{ color: colors.primaryForeground }}>
-                Save
+                {t('common.save' as TranslationKey)}
               </Text>
             )}
           </TouchableOpacity>
@@ -384,7 +384,9 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   headerCenter: {
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   closeButton: {
     padding: spacingPixels[1],

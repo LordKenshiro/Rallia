@@ -696,6 +696,14 @@
       "playingStyle": "Playing Style",
       "playAttributes": "Play Attributes"
     },
+    "editSheets": {
+      "personalInfoTitle": "Personal info",
+      "playerInfoTitle": "Player info",
+      "emailReadOnlyHelp": "This information cannot be modified",
+      "phonePlaceholder": "Enter phone number",
+      "usernamePlaceholder": "Enter your username",
+      "bioPlaceholder": "Tell us about yourself..."
+    },
     "status": {
       "active": "Active",
       "inactive": "Inactive",
