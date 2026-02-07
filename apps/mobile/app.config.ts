@@ -7,7 +7,8 @@ export default ({ config: _config }: ConfigContext): ExpoConfig => {
   // Extract the iOS URL scheme from the iOS Client ID
   // The iOS URL scheme for Google Sign-In should be in format: com.googleusercontent.apps.CLIENT_ID
   const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '';
-  let googleIosUrlScheme = 'com.googleusercontent.apps.YOUR_IOS_CLIENT_ID';
+  let googleIosUrlScheme =
+    'com.googleusercontent.apps.438904367358-9a8l1o2u2a5ap608fq88m912fppdsveq';
 
   if (googleIosClientId) {
     // Extract just the client ID part from formats like:
