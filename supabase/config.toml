@@ -200,7 +200,16 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
-# Uncomment to customize email template
+# Auth email templates (version-controlled)
+[auth.email.template.magic_link]
+subject = "Your Rallia verification code"
+content_path = "./supabase/templates/magic_link.html"
+
+[auth.email.template.confirmation]
+subject = "Welcome to Rallia - Verify your email"
+content_path = "./supabase/templates/confirmation.html"
+
+# Uncomment to customize invite email template
 # [auth.email.template.invite]
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"

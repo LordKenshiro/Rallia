@@ -1,9 +1,11 @@
 'use client';
 
-import { useLocale } from 'next-intl';
+import { createClient } from '@/lib/supabase/client';
+import { syncLocaleToBackend } from '@/lib/sync-locale';
 import { usePathname } from '@/i18n/navigation';
+import { useLocale } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
-import { useTransition } from 'react';
+import { useMemo, useTransition } from 'react';
 import { Button } from './ui/button';
 
 const locales = [
@@ -16,11 +18,15 @@ export default function LocaleToggle() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const supabase = useMemo(() => createClient(), []);
 
   const handleLocaleChange = (newLocale: string) => {
     if (newLocale === locale) return; // Avoid unnecessary changes
 
-    startTransition(() => {
+    startTransition(async () => {
+      // Persist locale to auth user_metadata and profile for signed-in users
+      await syncLocaleToBackend(supabase, newLocale);
+
       // Get the current pathname without locale prefix
       const pathWithoutLocale = pathname.startsWith('/') ? pathname : `/${pathname}`;
 

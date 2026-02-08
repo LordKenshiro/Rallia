@@ -116,7 +116,8 @@ export const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
 
       {/* Description */}
       <Text size="base" color={colors.textSecondary} style={styles.description}>
-        We sent an email verification code to{'\n'}
+        {t('auth.codeSentTo')}
+        {'\n'}
         <Text size="base" weight="semibold" color={colors.text}>
           {email}
         </Text>

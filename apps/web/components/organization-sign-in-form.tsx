@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth, type OAuthProvider } from '@rallia/shared-hooks';
 import { Loader2 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
@@ -21,6 +21,7 @@ export function OrganizationSignInForm({
   initialEmail?: string;
 }) {
   const t = useTranslations('signIn');
+  const locale = useLocale();
   const router = useRouter();
   // Use SSR-aware Supabase client for proper cookie handling
   const supabase = useMemo(() => createClient(), []);
@@ -76,6 +77,7 @@ export function OrganizationSignInForm({
 
       const result = await signInWithEmail(email, {
         emailRedirectTo: callbackUrl.toString(),
+        data: { locale },
       });
 
       if (!result.success) {

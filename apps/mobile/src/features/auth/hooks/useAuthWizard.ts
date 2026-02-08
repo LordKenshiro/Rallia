@@ -12,7 +12,8 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
-import { useAuth } from '../../../hooks';
+import { useAuth, useTranslation } from '../../../hooks';
+import { supabase } from '../../../lib/supabase';
 import { Logger } from '@rallia/shared-services';
 import { lightHaptic, mediumHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
 import { checkOnboardingStatus, getFriendlyErrorMessage, RESEND_COOLDOWN_SECONDS } from '../utils';
@@ -76,6 +77,7 @@ const isValidEmail = (email: string): boolean => {
 export function useAuthWizard(options: UseAuthWizardOptions = {}): UseAuthWizardReturn {
   const { onVerificationError, onError, onSuccess, onWarning } = options;
   const { signInWithEmail, verifyOtp } = useAuth();
+  const { locale } = useTranslation();
 
   // State
   const [email, setEmail] = useState('');
@@ -219,7 +221,7 @@ export function useAuthWizard(options: UseAuthWizardOptions = {}): UseAuthWizard
     try {
       Logger.debug('Sending OTP via Supabase SDK', { emailDomain: email.split('@')[1] });
 
-      const result = await signInWithEmail(email);
+      const result = await signInWithEmail(email, { data: { locale } });
 
       if (result.success) {
         Logger.info('OTP sent successfully', { emailDomain: email.split('@')[1] });
@@ -243,7 +245,7 @@ export function useAuthWizard(options: UseAuthWizardOptions = {}): UseAuthWizard
       setIsLoading(false);
       return false;
     }
-  }, [email, isEmailValid, signInWithEmail, startResendCooldown, showError]);
+  }, [email, isEmailValid, locale, signInWithEmail, startResendCooldown, showError]);
 
   /**
    * Resend verification code (with rate limiting)
@@ -263,7 +265,7 @@ export function useAuthWizard(options: UseAuthWizardOptions = {}): UseAuthWizard
     setErrorMessage('');
 
     try {
-      const result = await signInWithEmail(email);
+      const result = await signInWithEmail(email, { data: { locale } });
 
       if (result.success) {
         Logger.info('OTP resent successfully', { emailDomain: email.split('@')[1] });
@@ -287,6 +289,7 @@ export function useAuthWizard(options: UseAuthWizardOptions = {}): UseAuthWizard
     }
   }, [
     email,
+    locale,
     signInWithEmail,
     canResend,
     resendCooldown,
@@ -346,6 +349,15 @@ export function useAuthWizard(options: UseAuthWizardOptions = {}): UseAuthWizard
 
       Logger.info('User authenticated successfully', { userId, emailDomain: email.split('@')[1] });
 
+      // Store current locale in auth user_metadata so the next OTP email is in the right language
+      supabase.auth.updateUser({ data: { locale } }).then(({ error: updateError }) => {
+        if (updateError) {
+          Logger.debug('Could not sync locale to auth user_metadata', {
+            error: updateError.message,
+          });
+        }
+      });
+
       // Check onboarding status using shared utility
       const needsOnboarding = await checkOnboardingStatus(userId);
 
@@ -369,7 +381,7 @@ export function useAuthWizard(options: UseAuthWizardOptions = {}): UseAuthWizard
       setIsLoading(false);
       return { success: false, needsOnboarding: false };
     }
-  }, [code, email, verifyOtp, showVerificationError]);
+  }, [code, email, locale, verifyOtp, showVerificationError]);
 
   return {
     // State

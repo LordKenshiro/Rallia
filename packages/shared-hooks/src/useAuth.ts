@@ -27,6 +27,8 @@ export type EmailOtpOptions = {
   emailRedirectTo?: string;
   /** Whether to create a new user if one doesn't exist */
   shouldCreateUser?: boolean;
+  /** Data merged into user metadata / available in email template as .Data (e.g. locale for i18n) */
+  data?: Record<string, unknown>;
 };
 
 /** Options for the useAuth hook */
@@ -181,6 +183,7 @@ export const useAuth = (options?: UseAuthOptions) => {
           options: {
             emailRedirectTo: options?.emailRedirectTo,
             shouldCreateUser: options?.shouldCreateUser ?? true,
+            data: options?.data,
           },
         });
 

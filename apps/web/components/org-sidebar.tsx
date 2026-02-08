@@ -14,6 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Link, usePathname } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { syncLocaleToBackend } from '@/lib/sync-locale';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@rallia/shared-hooks';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
@@ -60,7 +61,10 @@ export function OrgSidebar() {
   const handleLocaleChange = (newLocale: string) => {
     if (newLocale === locale) return;
 
-    startTransition(() => {
+    startTransition(async () => {
+      // Persist locale to auth user_metadata and profile for signed-in users
+      await syncLocaleToBackend(supabase, newLocale);
+
       const pathWithoutLocale = pathname.startsWith('/') ? pathname : `/${pathname}`;
       const queryString = searchParams.toString();
       const queryPart = queryString ? `?${queryString}` : '';

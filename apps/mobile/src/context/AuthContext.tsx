@@ -49,6 +49,8 @@ export type OAuthSignInOptions = {
 export type EmailOtpOptions = {
   emailRedirectTo?: string;
   shouldCreateUser?: boolean;
+  /** Data merged into user metadata / available in email template as .Data (e.g. locale for i18n) */
+  data?: Record<string, unknown>;
 };
 
 // =============================================================================
@@ -346,6 +348,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
               options: {
                 emailRedirectTo: options?.emailRedirectTo,
                 shouldCreateUser: options?.shouldCreateUser ?? true,
+                data: options?.data,
               },
             }),
           { maxRetries: 2 }
