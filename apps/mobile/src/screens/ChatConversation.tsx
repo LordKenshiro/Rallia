@@ -77,8 +77,7 @@ export default function ChatConversationScreen() {
   const { t } = useTranslation();
   const playerId = session?.user?.id;
   // Get player name for typing indicator - use type assertion since DB types may not include first_name directly
-  const playerName =
-    (profile as { first_name?: string } | null)?.first_name || t('common.user' as TranslationKey);
+  const playerName = (profile as { first_name?: string } | null)?.first_name || t('common.user');
   const insets = useSafeAreaInsets();
 
   const [reactions, setReactions] = useState<Map<string, ReactionSummary[]>>(new Map());
@@ -260,7 +259,7 @@ export default function ChatConversationScreen() {
       }
     }
 
-    return t('chat.title' as TranslationKey);
+    return t('chat.title');
   }, [routeTitle, conversation, playerId, t]);
 
   const headerSubtitle = useMemo(() => {
@@ -312,16 +311,13 @@ export default function ChatConversationScreen() {
 
   // Get the other user's name for the blocked modal
   const otherUserName = useMemo(() => {
-    if (!isDirectChat || !conversation?.participants || !playerId)
-      return t('chat.thisUser' as TranslationKey);
+    if (!isDirectChat || !conversation?.participants || !playerId) return t('chat.thisUser');
     const otherParticipant = conversation.participants.find(p => p.player_id !== playerId);
     if (otherParticipant?.player?.profile) {
       const { first_name, last_name } = otherParticipant.player.profile;
-      return last_name
-        ? `${first_name} ${last_name}`
-        : first_name || t('chat.thisUser' as TranslationKey);
+      return last_name ? `${first_name} ${last_name}` : first_name || t('chat.thisUser');
     }
-    return t('chat.thisUser' as TranslationKey);
+    return t('chat.thisUser');
   }, [isDirectChat, conversation, playerId, t]);
 
   // Block status for direct chats
@@ -400,10 +396,7 @@ export default function ChatConversationScreen() {
 
   const handleReport = useCallback(() => {
     if (!isDirectChat || !otherUserId || !playerId) {
-      Alert.alert(
-        t('chat.alerts.cannotReport' as TranslationKey),
-        t('chat.alerts.cannotReportMessage' as TranslationKey)
-      );
+      Alert.alert(t('chat.alerts.cannotReport'), t('chat.alerts.cannotReportMessage'));
       return;
     }
     SheetManager.show('report-user', {
@@ -419,30 +412,24 @@ export default function ChatConversationScreen() {
   const handleClearChat = useCallback(() => {
     if (!playerId) return;
 
-    Alert.alert(
-      t('chat.alerts.clearYourMessages' as TranslationKey),
-      t('chat.alerts.clearYourMessagesConfirm' as TranslationKey),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('chat.alerts.clear' as TranslationKey),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const { clearChatForUser } = await import('@rallia/shared-services');
-              const deletedCount = await clearChatForUser(conversationId, playerId);
-              refetchMessages();
-              toast.success(
-                t('chat.alerts.messagesDeleted' as TranslationKey, { count: deletedCount })
-              );
-            } catch (error) {
-              console.error('Failed to clear chat:', error);
-              toast.error(t('chat.alerts.failedToClear' as TranslationKey));
-            }
-          },
+    Alert.alert(t('chat.alerts.clearYourMessages'), t('chat.alerts.clearYourMessagesConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('chat.alerts.clear'),
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const { clearChatForUser } = await import('@rallia/shared-services');
+            const deletedCount = await clearChatForUser(conversationId, playerId);
+            refetchMessages();
+            toast.success(t('chat.alerts.messagesDeleted', { count: deletedCount }));
+          } catch (error) {
+            console.error('Failed to clear chat:', error);
+            toast.error(t('chat.alerts.failedToClear'));
+          }
         },
-      ]
-    );
+      },
+    ]);
   }, [conversationId, playerId, refetchMessages, toast, t]);
 
   const handleCloseSearch = useCallback(() => {

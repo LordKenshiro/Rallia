@@ -62,7 +62,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
 
       if (!user) {
         setIsSaving(false);
-        toast.error(t('onboarding.validation.playerNotFound' as TranslationKey));
+        toast.error(t('onboarding.validation.playerNotFound'));
         return;
       }
 
@@ -79,7 +79,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
       if (profileUpdateError) {
         Logger.error('Failed to update profile', profileUpdateError as Error, { userId: user.id });
         setIsSaving(false);
-        toast.error(t('onboarding.validation.failedToUpdateProfile' as TranslationKey));
+        toast.error(t('onboarding.validation.failedToUpdateProfile'));
         return;
       }
 
@@ -95,7 +95,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
       if (playerUpdateError) {
         Logger.error('Failed to update player', playerUpdateError as Error, { userId: user.id });
         setIsSaving(false);
-        toast.error(t('onboarding.validation.failedToUpdateProfile' as TranslationKey));
+        toast.error(t('onboarding.validation.failedToUpdateProfile'));
         return;
       }
 
@@ -116,7 +116,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
       await refetchPlayer();
       await refetchProfile();
 
-      toast.success(t('onboarding.successMessages.playerInfoUpdated' as TranslationKey));
+      toast.success(t('onboarding.successMessages.playerInfoUpdated'));
 
       // Notify parent that data was saved successfully
       onSave?.();
@@ -128,7 +128,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
     } catch (error) {
       Logger.error('Unexpected error updating player information', error as Error);
       setIsSaving(false);
-      toast.error(t('onboarding.validation.unexpectedError' as TranslationKey));
+      toast.error(t('onboarding.validation.unexpectedError'));
     }
   };
 
@@ -145,7 +145,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <View style={styles.headerCenter}>
             <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-              {t('profile.editSheets.playerInfoTitle' as TranslationKey)}
+              {t('profile.editSheets.playerInfoTitle')}
             </Text>
           </View>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -163,7 +163,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
           {/* Username Input */}
           <View style={styles.inputContainer}>
             <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-              {t('onboarding.personalInfoStep.username' as TranslationKey)}
+              {t('onboarding.personalInfoStep.username')}
             </Text>
             <View
               style={[
@@ -172,7 +172,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
               ]}
             >
               <TextInput
-                placeholder={t('profile.editSheets.usernamePlaceholder' as TranslationKey)}
+                placeholder={t('profile.editSheets.usernamePlaceholder')}
                 placeholderTextColor={colors.textMuted}
                 value={username}
                 onChangeText={setUsername}
@@ -185,7 +185,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
           {/* Bio Input */}
           <View style={styles.inputContainer}>
             <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-              {t('profile.bio' as TranslationKey)}
+              {t('profile.bio')}
             </Text>
             <View
               style={[
@@ -195,7 +195,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
               ]}
             >
               <TextInput
-                placeholder={t('profile.editSheets.bioPlaceholder' as TranslationKey)}
+                placeholder={t('profile.editSheets.bioPlaceholder')}
                 placeholderTextColor={colors.textMuted}
                 value={bio}
                 onChangeText={setBio}
@@ -211,7 +211,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
           {/* Preferred Playing Hand */}
           <View style={styles.inputContainer}>
             <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-              {t('onboarding.preferencesStep.playingHand' as TranslationKey)}
+              {t('onboarding.preferencesStep.playingHand')}
             </Text>
             <View style={styles.handButtonGroup}>
               <TouchableOpacity
@@ -239,7 +239,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
                       : colors.textSecondary
                   }
                 >
-                  {t('onboarding.preferencesStep.left' as TranslationKey)}
+                  {t('onboarding.preferencesStep.left')}
                 </Text>
               </TouchableOpacity>
 
@@ -268,7 +268,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
                       : colors.textSecondary
                   }
                 >
-                  {t('onboarding.preferencesStep.right' as TranslationKey)}
+                  {t('onboarding.preferencesStep.right')}
                 </Text>
               </TouchableOpacity>
 
@@ -297,7 +297,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
                       : colors.textSecondary
                   }
                 >
-                  {t('onboarding.preferencesStep.both' as TranslationKey)}
+                  {t('onboarding.preferencesStep.both')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -306,7 +306,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
           {/* Maximum Travel Distance */}
           <View style={styles.inputContainer}>
             <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-              {t('onboarding.preferencesStep.travelDistance' as TranslationKey)}
+              {t('onboarding.preferencesStep.travelDistance')}
             </Text>
             <View
               style={[
@@ -348,7 +348,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
               <ActivityIndicator size="small" color={colors.primaryForeground} />
             ) : (
               <Text weight="semibold" style={{ color: colors.primaryForeground }}>
-                {t('common.save' as TranslationKey)}
+                {t('common.save')}
               </Text>
             )}
           </TouchableOpacity>

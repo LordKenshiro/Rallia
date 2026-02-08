@@ -48,15 +48,15 @@ function getUpcomingDateSectionKey(
   const matchDateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
   if (matchDateOnly.getTime() === today.getTime()) {
-    return t('myBookings.time.today' as TranslationKey);
+    return t('myBookings.time.today');
   } else if (matchDateOnly.getTime() === tomorrow.getTime()) {
-    return t('myBookings.time.tomorrow' as TranslationKey);
+    return t('myBookings.time.tomorrow');
   } else if (matchDateOnly < thisWeekEnd) {
-    return t('myBookings.time.thisWeek' as TranslationKey);
+    return t('myBookings.time.thisWeek');
   } else if (matchDateOnly < nextWeekEnd) {
-    return t('myBookings.time.nextWeek' as TranslationKey);
+    return t('myBookings.time.nextWeek');
   } else {
-    return t('myBookings.time.later' as TranslationKey);
+    return t('myBookings.time.later');
   }
 }
 
@@ -75,13 +75,13 @@ function getPastDateSectionKey(
   const matchDateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
   if (matchDateOnly.getTime() === today.getTime()) {
-    return t('myBookings.time.today' as TranslationKey);
+    return t('myBookings.time.today');
   } else if (matchDateOnly.getTime() === yesterday.getTime()) {
-    return t('myBookings.time.yesterday' as TranslationKey);
+    return t('myBookings.time.yesterday');
   } else if (matchDateOnly >= lastWeekStart) {
-    return t('myBookings.time.lastWeek' as TranslationKey);
+    return t('myBookings.time.lastWeek');
   } else {
-    return t('myBookings.time.earlier' as TranslationKey);
+    return t('myBookings.time.earlier');
   }
 }
 
@@ -96,17 +96,17 @@ function groupBookingsByDate(
   const order =
     timeFilter === 'upcoming'
       ? [
-          t('myBookings.time.today' as TranslationKey),
-          t('myBookings.time.tomorrow' as TranslationKey),
-          t('myBookings.time.thisWeek' as TranslationKey),
-          t('myBookings.time.nextWeek' as TranslationKey),
-          t('myBookings.time.later' as TranslationKey),
+          t('myBookings.time.today'),
+          t('myBookings.time.tomorrow'),
+          t('myBookings.time.thisWeek'),
+          t('myBookings.time.nextWeek'),
+          t('myBookings.time.later'),
         ]
       : [
-          t('myBookings.time.today' as TranslationKey),
-          t('myBookings.time.yesterday' as TranslationKey),
-          t('myBookings.time.lastWeek' as TranslationKey),
-          t('myBookings.time.earlier' as TranslationKey),
+          t('myBookings.time.today'),
+          t('myBookings.time.yesterday'),
+          t('myBookings.time.lastWeek'),
+          t('myBookings.time.earlier'),
         ];
 
   const groups: Record<string, BookingWithDetails[]> = {};
@@ -260,7 +260,7 @@ export default function MyBookingsScreen() {
             marginLeft: 6,
           }}
         >
-          {t('myBookings.tabs.upcoming' as TranslationKey)}
+          {t('myBookings.tabs.upcoming')}
         </Text>
       </TouchableOpacity>
       <TouchableOpacity
@@ -284,7 +284,7 @@ export default function MyBookingsScreen() {
             marginLeft: 6,
           }}
         >
-          {t('myBookings.tabs.past' as TranslationKey)}
+          {t('myBookings.tabs.past')}
         </Text>
       </TouchableOpacity>
     </View>

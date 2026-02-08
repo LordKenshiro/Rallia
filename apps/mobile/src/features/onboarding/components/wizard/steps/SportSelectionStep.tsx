@@ -79,10 +79,7 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
 
       if (error) {
         Logger.error('Failed to fetch sports', error as Error);
-        Alert.alert(
-          t('alerts.error' as TranslationKey),
-          t('onboarding.validation.failedToLoadSports' as TranslationKey)
-        );
+        Alert.alert(t('alerts.error'), t('onboarding.validation.failedToLoadSports'));
         setSports([
           {
             id: 'tennis-fallback',
@@ -184,10 +181,7 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
     selectionHaptic();
 
     if (!playerId) {
-      Alert.alert(
-        t('alerts.error' as TranslationKey),
-        t('onboarding.validation.playerNotFound' as TranslationKey)
-      );
+      Alert.alert(t('alerts.error'), t('onboarding.validation.playerNotFound'));
       return;
     }
 
@@ -234,10 +228,7 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
           selectedSportNames: [...formData.selectedSportNames, sport.name],
         });
       }
-      Alert.alert(
-        t('alerts.error' as TranslationKey),
-        t('onboarding.validation.failedToUpdateSportSelection' as TranslationKey)
-      );
+      Alert.alert(t('alerts.error'), t('onboarding.validation.failedToUpdateSportSelection'));
     }
   };
 
@@ -261,10 +252,10 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
     >
       {/* Title */}
       <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
-        {t('onboarding.sportSelectionStep.title' as TranslationKey)}
+        {t('onboarding.sportSelectionStep.title')}
       </Text>
       <Text size="base" color={colors.textSecondary} style={styles.subtitle}>
-        {t('onboarding.sportSelectionStep.subtitle' as TranslationKey)}
+        {t('onboarding.sportSelectionStep.subtitle')}
       </Text>
 
       {/* Sports Grid */}
@@ -272,7 +263,7 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
         <View style={styles.loadingContainer}>
           <Spinner size="lg" />
           <Text size="sm" color={colors.textMuted} style={styles.loadingText}>
-            {t('common.loading' as TranslationKey)}
+            {t('common.loading')}
           </Text>
         </View>
       ) : (

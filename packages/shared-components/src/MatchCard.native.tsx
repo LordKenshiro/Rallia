@@ -39,6 +39,7 @@ import {
   deriveMatchStatus,
   type DerivedMatchStatus,
 } from '@rallia/shared-utils';
+import { TranslationKey } from '@rallia/shared-translations';
 
 // =============================================================================
 // TIER-BASED GRADIENT PALETTES (using design system tokens)
@@ -183,7 +184,7 @@ export interface MatchCardProps {
   /** Whether dark mode is enabled */
   isDark: boolean;
   /** Translation function */
-  t: (key: string, options?: TranslationOptions) => string;
+  t: (key: TranslationKey, options?: TranslationOptions) => string;
   /** Current locale for date/time formatting */
   locale: string;
   /** Current user's player ID (to determine owner/participant status) */
@@ -234,7 +235,7 @@ function getRelativeTimeDisplay(
   endTime: string,
   timezone: string,
   locale: string,
-  t: (key: string, options?: TranslationOptions) => string
+  t: (key: TranslationKey, options?: TranslationOptions) => string
 ): { label: string; isUrgent: boolean } {
   const tz = timezone || 'UTC';
 
@@ -266,7 +267,7 @@ function getRelativeTimeDisplay(
 /**
  * Get location display string
  */
-function getLocationDisplay(match: MatchWithDetails, t: (key: string) => string): string {
+function getLocationDisplay(match: MatchWithDetails, t: (key: TranslationKey) => string): string {
   if (match.facility?.name) {
     return match.facility.name;
   }
@@ -394,7 +395,7 @@ interface PlayerSlotsProps {
   participantInfo: { current: number; total: number; spotsLeft: number };
   colors: ThemeColors;
   isDark: boolean;
-  t: (key: string, options?: TranslationOptions) => string;
+  t: (key: TranslationKey, options?: TranslationOptions) => string;
   /** Current user's player ID to check if they're invited */
   currentPlayerId?: string;
 }
@@ -607,7 +608,7 @@ interface CardFooterProps {
   participantInfo: { current: number; total: number; spotsLeft: number };
   colors: ThemeColors;
   isDark: boolean;
-  t: (key: string, options?: TranslationOptions) => string;
+  t: (key: TranslationKey, options?: TranslationOptions) => string;
   onPress?: () => void;
   currentPlayerId?: string;
 }

@@ -347,7 +347,7 @@ export default function GroupChatInfoScreen() {
             </TouchableOpacity>
           )}
           <Text style={[styles.memberCount, { color: colors.textMuted }]}>
-            {t('groupChat.groupMemberCount' as TranslationKey, { count: memberCount })}
+            {t('groupChat.groupMemberCount', { count: memberCount })}
           </Text>
         </View>
 
@@ -360,7 +360,7 @@ export default function GroupChatInfoScreen() {
               </View>
               <View style={styles.sectionContent}>
                 <Text style={[styles.sectionLabel, { color: colors.text }]}>
-                  {networkInfo.description || t('groupChat.addGroupDescription' as TranslationKey)}
+                  {networkInfo.description || t('groupChat.addGroupDescription')}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
@@ -388,7 +388,7 @@ export default function GroupChatInfoScreen() {
             </View>
             <View style={styles.sectionContent}>
               <Text style={[styles.sectionLabel, { color: colors.text }]}>
-                {t('groupChat.addMembers' as TranslationKey)}
+                {t('groupChat.addMembers')}
               </Text>
             </View>
           </TouchableOpacity>
@@ -403,7 +403,7 @@ export default function GroupChatInfoScreen() {
             </View>
             <View style={styles.sectionContent}>
               <Text style={[styles.sectionLabel, { color: colors.text }]}>
-                {t('groupChat.inviteViaLinkOrQR' as TranslationKey)}
+                {t('groupChat.inviteViaLinkOrQR')}
               </Text>
             </View>
           </TouchableOpacity>

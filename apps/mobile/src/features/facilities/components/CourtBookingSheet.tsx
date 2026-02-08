@@ -99,7 +99,7 @@ function ViewMyBookingsLink() {
       activeOpacity={0.7}
     >
       <Text size="sm" weight="medium" color={colors.primary}>
-        {t('myBookings.viewMyBookings' as TranslationKey)}
+        {t('myBookings.viewMyBookings')}
       </Text>
       <Ionicons name="chevron-forward" size={14} color={colors.primary} />
     </TouchableOpacity>

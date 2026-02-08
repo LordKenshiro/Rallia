@@ -106,7 +106,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
     <View style={styles.progressContainer}>
       <View style={styles.progressHeader}>
         <Text size="sm" weight="semibold" color={colors.textMuted}>
-          {t('matchFeedback.step' as TranslationKey)
+          {t('matchFeedback.step')
             .replace('{current}', String(currentStep))
             .replace('{total}', String(totalSteps))}
         </Text>
@@ -407,14 +407,14 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
   const getFooterButton = useMemo(() => {
     if (isOnOutcomeStep) {
       // Outcome step
-      let label = t('matchFeedback.outcomeStep.continue' as TranslationKey);
+      let label = t('matchFeedback.outcomeStep.continue');
       let icon = 'arrow-forward';
 
       if (outcome === 'mutual_cancel') {
-        label = t('matchFeedback.outcomeStep.confirmCancelled' as TranslationKey);
+        label = t('matchFeedback.outcomeStep.confirmCancelled');
         icon = 'checkmark';
       } else if (outcome === 'opponent_no_show') {
-        label = t('matchFeedback.outcomeStep.confirmNoShows' as TranslationKey);
+        label = t('matchFeedback.outcomeStep.confirmNoShows');
         icon = 'checkmark';
       }
 
@@ -429,8 +429,8 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
       const isLastOpponent = currentStep >= totalSteps - 1;
       return {
         label: isLastOpponent
-          ? t('matchFeedback.opponentStep.complete' as TranslationKey)
-          : t('matchFeedback.opponentStep.continue' as TranslationKey),
+          ? t('matchFeedback.opponentStep.complete')
+          : t('matchFeedback.opponentStep.continue'),
         icon: isLastOpponent ? 'checkmark' : 'arrow-forward',
         onPress: handleOpponentFeedbackSubmit,
         isLoading: isSubmittingFeedback,
@@ -473,7 +473,7 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.buttonActive} />
           <Text size="base" color={colors.textMuted} style={styles.loadingText}>
-            {t('common.loading' as TranslationKey)}
+            {t('common.loading')}
           </Text>
         </View>
       </View>
@@ -497,7 +497,7 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
         </View>
 
         <Text size="lg" weight="semibold" color={colors.text}>
-          {t('matchFeedback.title' as TranslationKey)}
+          {t('matchFeedback.title')}
         </Text>
 
         <View style={styles.headerRight}>
@@ -519,9 +519,9 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
         t={t}
         currentStepName={
           isOnOutcomeStep
-            ? t('matchFeedback.stepNames.outcome' as TranslationKey)
+            ? t('matchFeedback.stepNames.outcome')
             : opponents[getOpponentIndex(currentStep)]?.name ||
-              t('matchFeedback.stepNames.feedback' as TranslationKey)
+              t('matchFeedback.stepNames.feedback')
         }
       />
 
@@ -592,7 +592,7 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
             activeOpacity={0.7}
           >
             <Text size="base" color={colors.textSecondary}>
-              {t('matchFeedback.opponentStep.skip' as TranslationKey)}
+              {t('matchFeedback.opponentStep.skip')}
             </Text>
           </TouchableOpacity>
         )}

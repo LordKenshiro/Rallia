@@ -11,7 +11,6 @@ import { Text } from '@rallia/shared-components';
 import { Ionicons } from '@expo/vector-icons';
 import { SheetManager } from 'react-native-actions-sheet';
 import { useThemeStyles, useTranslation } from '../../../hooks';
-import type { TranslationKey } from '@rallia/shared-translations';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import type { BookingWithDetails } from '@rallia/shared-services';
 import { lightHaptic } from '../../../utils/haptics';
@@ -62,15 +61,11 @@ export default function BookingCard({ booking }: BookingCardProps) {
 
   const facilityName = booking.court?.facility?.name ?? '';
   const courtLabel = booking.court?.court_number
-    ? `${t('myBookings.card.court' as TranslationKey)} ${booking.court.court_number}`
+    ? `${t('myBookings.card.court')} ${booking.court.court_number}`
     : (booking.court?.name ?? '');
   const dateLabel = formatDate(booking.booking_date, locale);
   const timeLabel = `${formatTime(booking.start_time)} – ${formatTime(booking.end_time)}`;
-  const priceLabel = formatPrice(
-    booking.price_cents,
-    booking.currency,
-    t('myBookings.card.free' as TranslationKey)
-  );
+  const priceLabel = formatPrice(booking.price_cents, booking.currency, t('myBookings.card.free'));
 
   return (
     <TouchableOpacity

@@ -42,8 +42,8 @@ interface Rating {
 /**
  * Maps DUPR score value to a translation key
  */
-const getDuprSkillLabelKey = (scoreValue: number): string => {
-  const mapping: Record<number, string> = {
+const getDuprSkillLabelKey = (scoreValue: number): TranslationKey => {
+  const mapping: Record<number, TranslationKey> = {
     1.0: 'onboarding.ratingStep.skillLevels.beginner1',
     2.0: 'onboarding.ratingStep.skillLevels.beginner2',
     2.5: 'onboarding.ratingStep.skillLevels.beginner3',
@@ -61,8 +61,8 @@ const getDuprSkillLabelKey = (scoreValue: number): string => {
 /**
  * Maps DUPR score value to a description translation key
  */
-const getDuprDescriptionKey = (scoreValue: number): string => {
-  return `onboarding.ratingStep.duprDescriptions.${scoreValue.toFixed(1).replace('.', '_')}`;
+const getDuprDescriptionKey = (scoreValue: number): TranslationKey => {
+  return `onboarding.ratingStep.duprDescriptions.${scoreValue.toFixed(1).replace('.', '_')}` as TranslationKey;
 };
 
 export function PickleballRatingActionSheet({ payload }: SheetProps<'pickleball-rating'>) {
@@ -96,10 +96,7 @@ export function PickleballRatingActionSheet({ payload }: SheetProps<'pickleball-
             sport: 'pickleball',
             system: 'dupr',
           });
-          Alert.alert(
-            t('alerts.error' as TranslationKey),
-            t('onboarding.ratingOverlay.failedToLoadRatings' as TranslationKey)
-          );
+          Alert.alert(t('alerts.error'), t('onboarding.ratingOverlay.failedToLoadRatings'));
           return;
         }
 
@@ -115,10 +112,7 @@ export function PickleballRatingActionSheet({ payload }: SheetProps<'pickleball-
         setRatings(transformedRatings);
       } catch (error) {
         Logger.error('Unexpected error loading pickleball ratings', error as Error);
-        Alert.alert(
-          t('alerts.error' as TranslationKey),
-          t('onboarding.ratingOverlay.unexpectedError' as TranslationKey)
-        );
+        Alert.alert(t('alerts.error'), t('onboarding.ratingOverlay.unexpectedError'));
       } finally {
         setIsLoading(false);
       }
@@ -173,11 +167,9 @@ export function PickleballRatingActionSheet({ payload }: SheetProps<'pickleball-
         if (sportError || !pickleballSport) {
           Logger.error('Failed to fetch pickleball sport', sportError as Error);
           setIsSaving(false);
-          Alert.alert(
-            t('alerts.error' as TranslationKey),
-            t('onboarding.ratingOverlay.failedToSaveRating' as TranslationKey),
-            [{ text: t('common.ok' as TranslationKey) }]
-          );
+          Alert.alert(t('alerts.error'), t('onboarding.ratingOverlay.failedToSaveRating'), [
+            { text: t('common.ok') },
+          ]);
           return;
         }
 
@@ -186,10 +178,7 @@ export function PickleballRatingActionSheet({ payload }: SheetProps<'pickleball-
 
         if (!selectedRatingData) {
           setIsSaving(false);
-          Alert.alert(
-            t('alerts.error' as TranslationKey),
-            t('onboarding.ratingOverlay.invalidRatingSelected' as TranslationKey)
-          );
+          Alert.alert(t('alerts.error'), t('onboarding.ratingOverlay.invalidRatingSelected'));
           return;
         }
 
@@ -207,11 +196,9 @@ export function PickleballRatingActionSheet({ payload }: SheetProps<'pickleball-
         if (error) {
           Logger.error('Failed to save pickleball rating', error as Error, { ratingData });
           setIsSaving(false);
-          Alert.alert(
-            t('alerts.error' as TranslationKey),
-            t('onboarding.ratingOverlay.failedToSaveRating' as TranslationKey),
-            [{ text: t('common.ok' as TranslationKey) }]
-          );
+          Alert.alert(t('alerts.error'), t('onboarding.ratingOverlay.failedToSaveRating'), [
+            { text: t('common.ok') },
+          ]);
           return;
         }
 
@@ -220,11 +207,9 @@ export function PickleballRatingActionSheet({ payload }: SheetProps<'pickleball-
       } catch (error) {
         Logger.error('Unexpected error saving pickleball rating', error as Error);
         setIsSaving(false);
-        Alert.alert(
-          t('alerts.error' as TranslationKey),
-          t('onboarding.ratingOverlay.unexpectedError' as TranslationKey),
-          [{ text: t('common.ok' as TranslationKey) }]
-        );
+        Alert.alert(t('alerts.error'), t('onboarding.ratingOverlay.unexpectedError'), [
+          { text: t('common.ok') },
+        ]);
       }
     }
   };
@@ -247,8 +232,8 @@ export function PickleballRatingActionSheet({ payload }: SheetProps<'pickleball-
               ellipsizeMode="tail"
             >
               {mode === 'edit'
-                ? t('onboarding.ratingOverlay.editPickleballTitle' as TranslationKey)
-                : t('onboarding.ratingOverlay.title' as TranslationKey)}
+                ? t('onboarding.ratingOverlay.editPickleballTitle')
+                : t('onboarding.ratingOverlay.title')}
             </Text>
           </View>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -278,7 +263,7 @@ export function PickleballRatingActionSheet({ payload }: SheetProps<'pickleball-
           {/* Sport Badge */}
           <View style={[styles.sportBadge, { backgroundColor: colors.primary }]}>
             <Text style={[styles.sportBadgeText, { color: colors.primaryForeground }]}>
-              {t('onboarding.pickleball' as TranslationKey)}
+              {t('onboarding.pickleball')}
             </Text>
           </View>
 
@@ -289,10 +274,10 @@ export function PickleballRatingActionSheet({ payload }: SheetProps<'pickleball-
                 style={[styles.link, { color: colors.primary }]}
                 onPress={() => Linking.openURL('https://mydupr.com/')}
               >
-                {t('onboarding.ratingOverlay.learnMoreDupr' as TranslationKey)}
+                {t('onboarding.ratingOverlay.learnMoreDupr')}
               </Text>
             ) : (
-              t('onboarding.ratingOverlay.pickleballSubtitle' as TranslationKey)
+              t('onboarding.ratingOverlay.pickleballSubtitle')
             )}
           </Text>
 
@@ -301,7 +286,7 @@ export function PickleballRatingActionSheet({ payload }: SheetProps<'pickleball-
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
               <Text style={[styles.loadingText, { color: colors.textMuted }]}>
-                {t('onboarding.ratingOverlay.loading' as TranslationKey)}
+                {t('onboarding.ratingOverlay.loading')}
               </Text>
             </View>
           ) : (
@@ -341,7 +326,7 @@ export function PickleballRatingActionSheet({ payload }: SheetProps<'pickleball-
                         },
                       ]}
                     >
-                      {t(getDuprSkillLabelKey(rating.score_value) as TranslationKey)}
+                      {t(getDuprSkillLabelKey(rating.score_value))}
                     </Text>
                   </View>
                   <Text
@@ -362,7 +347,7 @@ export function PickleballRatingActionSheet({ payload }: SheetProps<'pickleball-
                       },
                     ]}
                   >
-                    {t(getDuprDescriptionKey(rating.score_value) as TranslationKey)}
+                    {t(getDuprDescriptionKey(rating.score_value))}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -387,8 +372,8 @@ export function PickleballRatingActionSheet({ payload }: SheetProps<'pickleball-
             ) : (
               <Text weight="semibold" style={{ color: colors.primaryForeground }}>
                 {mode === 'edit'
-                  ? t('onboarding.ratingOverlay.save' as TranslationKey)
-                  : t('onboarding.ratingOverlay.continue' as TranslationKey)}
+                  ? t('onboarding.ratingOverlay.save')
+                  : t('onboarding.ratingOverlay.continue')}
               </Text>
             )}
           </TouchableOpacity>

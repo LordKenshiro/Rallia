@@ -353,7 +353,7 @@ export default function FacilitiesDirectory() {
         {/* Section header */}
         <View style={styles.myBookingsSectionHeader}>
           <Text size="xl" weight="bold" color={colors.text}>
-            {t('myBookings.facilitiesSection.title' as TranslationKey)}
+            {t('myBookings.facilitiesSection.title')}
           </Text>
           <TouchableOpacity
             style={styles.viewAllButton}
@@ -364,7 +364,7 @@ export default function FacilitiesDirectory() {
             activeOpacity={0.7}
           >
             <Text size="base" weight="medium" color={colors.primary}>
-              {t('myBookings.facilitiesSection.viewAll' as TranslationKey)}
+              {t('myBookings.facilitiesSection.viewAll')}
             </Text>
             <Ionicons
               name="chevron-forward"
@@ -465,7 +465,7 @@ export default function FacilitiesDirectory() {
           <View style={styles.myBookingsEmpty}>
             <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
             <Text size="sm" color={colors.textMuted} style={styles.myBookingsEmptyText}>
-              {t('myBookings.facilitiesSection.empty.title' as TranslationKey)}
+              {t('myBookings.facilitiesSection.empty.title')}
             </Text>
           </View>
         ) : (

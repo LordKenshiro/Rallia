@@ -12,6 +12,7 @@ import {
   duration,
 } from '@rallia/design-system';
 import { lightHaptic, selectionHaptic } from '@rallia/shared-utils';
+import { TranslationKey } from '@rallia/shared-translations';
 
 export type LocationMode = 'current' | 'home';
 
@@ -27,7 +28,7 @@ export interface LocationSelectorProps {
   /** Whether dark mode is enabled */
   isDark?: boolean;
   /** Translation function */
-  t: (key: string) => string;
+  t: (key: TranslationKey) => string;
 }
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -138,8 +139,8 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
   const locationOptions: Array<{
     mode: LocationMode;
     icon: 'navigate-outline' | 'home-outline';
-    labelKey: string;
-    descriptionKey?: string;
+    labelKey: TranslationKey;
+    descriptionKey?: TranslationKey;
     disabled?: boolean;
   }> = [
     {

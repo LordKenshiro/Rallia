@@ -439,11 +439,7 @@ const Chat = () => {
       </View>
 
       {/* Search bar - Wrapped with CopilotStep for tour */}
-      <CopilotStep
-        text={t('tour.chatScreen.search.description' as TranslationKey)}
-        order={30}
-        name="chat_search"
-      >
+      <CopilotStep text={t('tour.chatScreen.search.description')} order={30} name="chat_search">
         <WalkthroughableView style={styles.searchContainer}>
           <SearchBar
             value={searchQuery}
@@ -455,11 +451,7 @@ const Chat = () => {
       </CopilotStep>
 
       {/* Tab Bar - Wrapped with CopilotStep for tour */}
-      <CopilotStep
-        text={t('tour.chatScreen.tabs.description' as TranslationKey)}
-        order={31}
-        name="chat_tabs"
-      >
+      <CopilotStep text={t('tour.chatScreen.tabs.description')} order={31} name="chat_tabs">
         <WalkthroughableView
           style={[styles.tabContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}
         >

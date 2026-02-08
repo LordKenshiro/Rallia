@@ -98,10 +98,10 @@ export function CreateTeamsStep({ onContinue }: CreateTeamsStepProps) {
     >
       {/* Title */}
       <Text weight="bold" size="xl" style={[styles.title, { color: colors.text }]}>
-        {t('addScore.createTeams.title' as TranslationKey)}
+        {t('addScore.createTeams.title')}
       </Text>
       <Text size="sm" style={[styles.subtitle, { color: colors.textSecondary }]}>
-        {t('addScore.createTeams.pickPartner' as TranslationKey)}
+        {t('addScore.createTeams.pickPartner')}
       </Text>
 
       {/* Player list */}
@@ -111,7 +111,7 @@ export function CreateTeamsStep({ onContinue }: CreateTeamsStepProps) {
       {selectedPartner && (
         <View style={styles.teamPreview}>
           <Text weight="semibold" style={[styles.previewTitle, { color: colors.text }]}>
-            {t('addScore.createTeams.teamsPreview' as TranslationKey)}
+            {t('addScore.createTeams.teamsPreview')}
           </Text>
 
           {/* Your Team */}
@@ -122,7 +122,7 @@ export function CreateTeamsStep({ onContinue }: CreateTeamsStepProps) {
             ]}
           >
             <Text size="sm" weight="medium" style={[styles.teamLabel, { color: colors.primary }]}>
-              {t('addScore.createTeams.yourTeam' as TranslationKey)}
+              {t('addScore.createTeams.yourTeam')}
             </Text>
             <View style={styles.teamAvatars}>
               <View
@@ -150,7 +150,7 @@ export function CreateTeamsStep({ onContinue }: CreateTeamsStepProps) {
               </View>
             </View>
             <Text size="sm" style={{ color: colors.textSecondary }}>
-              {t('addScore.createTeams.youAnd' as TranslationKey, {
+              {t('addScore.createTeams.youAnd', {
                 name: selectedPartner.firstName,
               })}
             </Text>
@@ -168,7 +168,7 @@ export function CreateTeamsStep({ onContinue }: CreateTeamsStepProps) {
               weight="medium"
               style={[styles.teamLabel, { color: colors.textSecondary }]}
             >
-              {t('addScore.createTeams.opponents' as TranslationKey)}
+              {t('addScore.createTeams.opponents')}
             </Text>
             <View style={styles.teamAvatars}>
               {opponents

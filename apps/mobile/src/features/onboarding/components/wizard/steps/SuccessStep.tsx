@@ -134,10 +134,10 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
       {/* Success Text */}
       <Animated.View style={textAnimatedStyle}>
         <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
-          {t('onboarding.success.title' as TranslationKey)}
+          {t('onboarding.success.title')}
         </Text>
         <Text size="base" color={colors.textMuted} style={styles.subtitle}>
-          {t('onboarding.success.subtitle' as TranslationKey)}
+          {t('onboarding.success.subtitle')}
         </Text>
       </Animated.View>
 
@@ -149,7 +149,7 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
           activeOpacity={0.8}
         >
           <Text size="base" weight="semibold" color={colors.buttonTextActive}>
-            {t('onboarding.success.getStarted' as TranslationKey)}
+            {t('onboarding.success.getStarted')}
           </Text>
         </TouchableOpacity>
       </Animated.View>

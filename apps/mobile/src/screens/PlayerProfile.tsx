@@ -630,8 +630,8 @@ const PlayerProfile = () => {
     if (!duration) return t('profile.notSet');
 
     // Use translation keys for enum values
-    const translationKey = `profile.preferences.durations.${duration}`;
-    const translated = t(translationKey as TranslationKey);
+    const translationKey = `profile.preferences.durations.${duration}` as TranslationKey;
+    const translated = t(translationKey);
 
     // If translation exists (not the same as key), use it
     if (translated !== translationKey) {
@@ -657,8 +657,8 @@ const PlayerProfile = () => {
     if (!type) return t('profile.notSet');
 
     // Use translation keys for match types
-    const translationKey = `profile.preferences.matchTypes.${type.toLowerCase()}`;
-    const translated = t(translationKey as TranslationKey);
+    const translationKey = `profile.preferences.matchTypes.${type.toLowerCase()}` as TranslationKey;
+    const translated = t(translationKey);
 
     // If translation exists (not the same as key), use it
     if (translated !== translationKey) {
@@ -673,8 +673,8 @@ const PlayerProfile = () => {
     if (!style) return t('profile.notSet');
 
     // Use translation keys for play styles
-    const translationKey = `profile.preferences.playStyles.${style}`;
-    const translated = t(translationKey as TranslationKey);
+    const translationKey = `profile.preferences.playStyles.${style}` as TranslationKey;
+    const translated = t(translationKey);
 
     // If translation exists (not the same as key), use it
     if (translated !== translationKey) {
@@ -687,8 +687,8 @@ const PlayerProfile = () => {
 
   const formatPlayAttribute = (attr: string): string => {
     // Use translation keys for play attributes
-    const translationKey = `profile.preferences.playAttributes.${attr}`;
-    const translated = t(translationKey as TranslationKey);
+    const translationKey = `profile.preferences.playAttributes.${attr}` as TranslationKey;
+    const translated = t(translationKey);
 
     // If translation exists (not the same as key), use it
     if (translated !== translationKey) {

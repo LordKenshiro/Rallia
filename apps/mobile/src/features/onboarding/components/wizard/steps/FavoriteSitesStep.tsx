@@ -306,7 +306,7 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
         <View style={styles.emptyState}>
           <ActivityIndicator size="large" color={colors.buttonActive} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('onboarding.favoriteSitesStep.loading' as TranslationKey)}
+            {t('onboarding.favoriteSitesStep.loading')}
           </Text>
         </View>
       );
@@ -317,7 +317,7 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
         <View style={styles.emptyState}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('onboarding.favoriteSitesStep.noSportSelected' as TranslationKey)}
+            {t('onboarding.favoriteSitesStep.noSportSelected')}
           </Text>
         </View>
       );
@@ -328,7 +328,7 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
         <View style={styles.emptyState}>
           <Ionicons name="location-outline" size={48} color={colors.textMuted} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('onboarding.favoriteSitesStep.noLocation' as TranslationKey)}
+            {t('onboarding.favoriteSitesStep.noLocation')}
           </Text>
         </View>
       );
@@ -339,7 +339,7 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
         <View style={styles.emptyState}>
           <Ionicons name="search-outline" size={48} color={colors.textMuted} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('onboarding.favoriteSitesStep.noResults' as TranslationKey)}
+            {t('onboarding.favoriteSitesStep.noResults')}
           </Text>
         </View>
       );
@@ -350,7 +350,7 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
         <View style={styles.emptyState}>
           <Ionicons name="business-outline" size={48} color={colors.textMuted} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('onboarding.favoriteSitesStep.noFacilitiesNearby' as TranslationKey)}
+            {t('onboarding.favoriteSitesStep.noFacilitiesNearby')}
           </Text>
         </View>
       );
@@ -371,17 +371,17 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
     >
       {/* Title */}
       <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
-        {t('onboarding.favoriteSitesStep.title' as TranslationKey)}
+        {t('onboarding.favoriteSitesStep.title')}
       </Text>
       <Text size="base" color={colors.textSecondary} style={styles.subtitle}>
-        {t('onboarding.favoriteSitesStep.subtitle' as TranslationKey)}
+        {t('onboarding.favoriteSitesStep.subtitle')}
       </Text>
 
       {/* Optional hint - at top so users see it before scrolling */}
       <View style={styles.hintContainer}>
         <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />
         <Text size="xs" color={colors.textMuted} style={styles.hintText}>
-          {t('onboarding.favoriteSitesStep.hint' as TranslationKey)}
+          {t('onboarding.favoriteSitesStep.hint')}
         </Text>
       </View>
 
@@ -392,8 +392,7 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
           weight="semibold"
           color={selectedFacilities.length > 0 ? colors.buttonActive : colors.textMuted}
         >
-          {selectedFacilities.length} / {MAX_FAVORITES}{' '}
-          {t('onboarding.favoriteSitesStep.selected' as TranslationKey)}
+          {selectedFacilities.length} / {MAX_FAVORITES} {t('onboarding.favoriteSitesStep.selected')}
         </Text>
       </View>
 
@@ -415,12 +414,12 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
       {/* Search input */}
       <View style={styles.searchSection}>
         <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-          {t('onboarding.favoriteSitesStep.searchLabel' as TranslationKey)}
+          {t('onboarding.favoriteSitesStep.searchLabel')}
         </Text>
         <SearchBar
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholder={t('onboarding.favoriteSitesStep.searchPlaceholder' as TranslationKey)}
+          placeholder={t('onboarding.favoriteSitesStep.searchPlaceholder')}
           colors={colors}
           InputComponent={BottomSheetTextInput}
         />

@@ -52,12 +52,12 @@ export function BookingConfirmationActionSheet({ payload }: SheetProps<'booking-
 
         {/* Title */}
         <Text size="lg" weight="bold" color={colors.text} style={styles.title}>
-          {t('matchCreation.booking.bookingConfirmTitle' as TranslationKey)}
+          {t('matchCreation.booking.bookingConfirmTitle')}
         </Text>
 
         {/* Description */}
         <Text size="base" color={colors.textMuted} style={styles.description}>
-          {t('matchCreation.booking.bookingConfirmMessage' as TranslationKey)}
+          {t('matchCreation.booking.bookingConfirmMessage')}
         </Text>
 
         {/* Buttons */}
@@ -70,7 +70,7 @@ export function BookingConfirmationActionSheet({ payload }: SheetProps<'booking-
           >
             <Ionicons name="checkmark-circle" size={20} color={colors.buttonTextActive} />
             <Text size="base" weight="semibold" color={colors.buttonTextActive}>
-              {t('matchCreation.booking.iBookedThisCourt' as TranslationKey)}
+              {t('matchCreation.booking.iBookedThisCourt')}
             </Text>
           </TouchableOpacity>
 
@@ -81,7 +81,7 @@ export function BookingConfirmationActionSheet({ payload }: SheetProps<'booking-
             activeOpacity={0.8}
           >
             <Text size="base" weight="medium" color={colors.textSecondary}>
-              {t('matchCreation.booking.notYet' as TranslationKey)}
+              {t('matchCreation.booking.notYet')}
             </Text>
           </TouchableOpacity>
         </View>

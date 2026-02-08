@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
 import { useThemeStyles } from '../../../hooks';
 import { spacingPixels, fontSizePixels, radiusPixels, primary } from '@rallia/design-system';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '../../../hooks';
 
 export function ChatAgreementActionSheet({ payload }: SheetProps<'chat-agreement'>) {
   const chatName = payload?.chatName ?? 'this chat';
@@ -29,21 +29,15 @@ export function ChatAgreementActionSheet({ payload }: SheetProps<'chat-agreement
   }, [onAgree]);
 
   const rules = [
-    t('chat.rules.noHarassment', 'No harassment, hate speech, sexual language'),
-    t('chat.rules.noAdvertising', 'No advertising or self promotion'),
-    t('chat.rules.noDisrespect', 'No disrespect!'),
+    t('chat.rules.noHarassment'),
+    t('chat.rules.noAdvertising'),
+    t('chat.rules.noDisrespect'),
   ];
 
   // Different description based on chat type
   const description = isDirectChat
-    ? t(
-        'chat.agreement.descriptionDirect',
-        'This is a private conversation. Please be respectful and follow our community guidelines.'
-      )
-    : t(
-        'chat.agreement.description',
-        'This is a group chat - all members of this community will see your messages'
-      );
+    ? t('chat.agreement.descriptionDirect')
+    : t('chat.agreement.description');
 
   // Different icon based on chat type
   const iconName = isDirectChat ? 'chatbubble' : 'people';
@@ -70,9 +64,7 @@ export function ChatAgreementActionSheet({ payload }: SheetProps<'chat-agreement
 
           {/* Welcome Text */}
           <Text style={[styles.welcomeText, { color: colors.textMuted }]}>
-            {isDirectChat
-              ? t('chat.agreement.welcomeDirect', 'Starting conversation with')
-              : t('chat.agreement.welcome', 'Welcome to')}
+            {isDirectChat ? t('chat.agreement.welcomeDirect') : t('chat.agreement.welcome')}
           </Text>
           <Text style={[styles.chatName, { color: colors.text }]}>{chatName}</Text>
 
@@ -82,7 +74,7 @@ export function ChatAgreementActionSheet({ payload }: SheetProps<'chat-agreement
           {/* Rules Section */}
           <View style={styles.rulesSection}>
             <Text style={[styles.rulesTitle, { color: colors.text }]}>
-              {t('chat.agreement.chatRules', 'Chat rules')}
+              {t('chat.agreement.chatRules')}
             </Text>
 
             {rules.map((rule, index) => (
@@ -94,16 +86,13 @@ export function ChatAgreementActionSheet({ payload }: SheetProps<'chat-agreement
 
             {/* Warning Text */}
             <Text style={[styles.warningText, { color: colors.textMuted }]}>
-              {t(
-                'chat.agreement.warning',
-                'Content will be removed and users banned for violations of our community guidelines'
-              )}
+              {t('chat.agreement.warning')}
             </Text>
           </View>
 
           {/* Agree Button */}
           <Button onPress={handleAgree} variant="primary" fullWidth>
-            {t('chat.agreement.agree', 'I agree')}
+            {t('chat.agreement.agree')}
           </Button>
         </ScrollView>
       </View>

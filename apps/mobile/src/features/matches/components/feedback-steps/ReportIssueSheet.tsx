@@ -152,7 +152,7 @@ export const ReportIssueSheet: React.FC<ReportIssueSheetProps> = ({
   const canSubmit = useMemo(() => selectedReason !== null, [selectedReason]);
 
   // Title with opponent name
-  const title = t('matchFeedback.report.title' as TranslationKey).replace('{name}', opponentName);
+  const title = t('matchFeedback.report.title').replace('{name}', opponentName);
 
   return (
     <Modal
@@ -190,7 +190,7 @@ export const ReportIssueSheet: React.FC<ReportIssueSheetProps> = ({
               color={colors.textSecondary}
               style={styles.sectionLabel}
             >
-              {t('matchFeedback.report.selectReason' as TranslationKey)}
+              {t('matchFeedback.report.selectReason')}
             </Text>
             <View style={styles.reasonsGrid}>
               {REPORT_REASONS.map(reason => (
@@ -214,7 +214,7 @@ export const ReportIssueSheet: React.FC<ReportIssueSheetProps> = ({
               color={colors.textSecondary}
               style={styles.sectionLabel}
             >
-              {t('matchFeedback.report.detailsLabel' as TranslationKey)}
+              {t('matchFeedback.report.detailsLabel')}
             </Text>
             <BottomSheetTextInput
               style={[
@@ -227,7 +227,7 @@ export const ReportIssueSheet: React.FC<ReportIssueSheetProps> = ({
               ]}
               value={details}
               onChangeText={setDetails}
-              placeholder={t('matchFeedback.report.detailsPlaceholder' as TranslationKey)}
+              placeholder={t('matchFeedback.report.detailsPlaceholder')}
               placeholderTextColor={colors.textMuted}
               multiline
               numberOfLines={4}
@@ -261,7 +261,7 @@ export const ReportIssueSheet: React.FC<ReportIssueSheetProps> = ({
                 weight="semibold"
                 color={canSubmit ? colors.buttonTextActive : colors.textMuted}
               >
-                {t('matchFeedback.report.submit' as TranslationKey)}
+                {t('matchFeedback.report.submit')}
               </Text>
             )}
           </TouchableOpacity>

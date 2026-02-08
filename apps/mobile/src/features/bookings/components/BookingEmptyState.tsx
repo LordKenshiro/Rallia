@@ -45,8 +45,8 @@ function getFilterIcon(filter: string, tab: BookingTab): keyof typeof Ionicons.g
 /**
  * Map filter key to its i18n label key
  */
-function getFilterLabelKey(filter: string): string {
-  const map: Record<string, string> = {
+function getFilterLabelKey(filter: string): TranslationKey {
+  const map: Record<string, TranslationKey> = {
     confirmed: 'myBookings.filters.confirmed',
     pending: 'myBookings.filters.pending',
     awaiting_approval: 'myBookings.filters.awaitingApproval',
@@ -71,14 +71,14 @@ export default function BookingEmptyState({
     if (!isFiltered) {
       const emptyKey = activeTab === 'upcoming' ? 'emptyUpcoming' : 'emptyPast';
       return {
-        title: t(`myBookings.${emptyKey}.title` as TranslationKey),
-        description: t(`myBookings.${emptyKey}.description` as TranslationKey),
+        title: t(`myBookings.${emptyKey}.title`),
+        description: t(`myBookings.${emptyKey}.description`),
       };
     }
     return {
-      title: t('myBookings.emptyFiltered.title' as TranslationKey),
-      description: t('myBookings.emptyFiltered.description' as TranslationKey, {
-        filter: t(getFilterLabelKey(currentStatusFilter) as TranslationKey),
+      title: t('myBookings.emptyFiltered.title'),
+      description: t('myBookings.emptyFiltered.description', {
+        filter: t(getFilterLabelKey(currentStatusFilter)),
       }),
     };
   };

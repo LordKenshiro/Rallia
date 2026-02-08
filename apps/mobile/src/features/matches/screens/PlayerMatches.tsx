@@ -62,15 +62,15 @@ function getUpcomingDateSectionKey(
   const matchDateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
   if (matchDateOnly.getTime() === today.getTime()) {
-    return t('playerMatches.time.today' as TranslationKey);
+    return t('playerMatches.time.today');
   } else if (matchDateOnly.getTime() === tomorrow.getTime()) {
-    return t('playerMatches.time.tomorrow' as TranslationKey);
+    return t('playerMatches.time.tomorrow');
   } else if (matchDateOnly < thisWeekEnd) {
-    return t('playerMatches.time.thisWeek' as TranslationKey);
+    return t('playerMatches.time.thisWeek');
   } else if (matchDateOnly < nextWeekEnd) {
-    return t('playerMatches.time.nextWeek' as TranslationKey);
+    return t('playerMatches.time.nextWeek');
   } else {
-    return t('playerMatches.time.later' as TranslationKey);
+    return t('playerMatches.time.later');
   }
 }
 
@@ -94,13 +94,13 @@ function getPastDateSectionKey(
 
   // Check for today first (matches that ended earlier today)
   if (matchDateOnly.getTime() === today.getTime()) {
-    return t('playerMatches.time.today' as TranslationKey);
+    return t('playerMatches.time.today');
   } else if (matchDateOnly.getTime() === yesterday.getTime()) {
-    return t('playerMatches.time.yesterday' as TranslationKey);
+    return t('playerMatches.time.yesterday');
   } else if (matchDateOnly >= lastWeekStart) {
-    return t('playerMatches.time.lastWeek' as TranslationKey);
+    return t('playerMatches.time.lastWeek');
   } else {
-    return t('playerMatches.time.earlier' as TranslationKey);
+    return t('playerMatches.time.earlier');
   }
 }
 
@@ -119,17 +119,17 @@ function groupMatchesByDate(
   const order =
     timeFilter === 'upcoming'
       ? [
-          t('playerMatches.time.today' as TranslationKey),
-          t('playerMatches.time.tomorrow' as TranslationKey),
-          t('playerMatches.time.thisWeek' as TranslationKey),
-          t('playerMatches.time.nextWeek' as TranslationKey),
-          t('playerMatches.time.later' as TranslationKey),
+          t('playerMatches.time.today'),
+          t('playerMatches.time.tomorrow'),
+          t('playerMatches.time.thisWeek'),
+          t('playerMatches.time.nextWeek'),
+          t('playerMatches.time.later'),
         ]
       : [
-          t('playerMatches.time.today' as TranslationKey),
-          t('playerMatches.time.yesterday' as TranslationKey),
-          t('playerMatches.time.lastWeek' as TranslationKey),
-          t('playerMatches.time.earlier' as TranslationKey),
+          t('playerMatches.time.today'),
+          t('playerMatches.time.yesterday'),
+          t('playerMatches.time.lastWeek'),
+          t('playerMatches.time.earlier'),
         ];
 
   const groups: Record<string, MatchWithDetails[]> = {};
@@ -338,16 +338,16 @@ export default function PlayerMatches() {
       if (!isFiltered) {
         const emptyKey = activeTab === 'upcoming' ? 'emptyUpcoming' : 'emptyPast';
         return {
-          title: t(`playerMatches.${emptyKey}.title` as TranslationKey),
-          description: t(`playerMatches.${emptyKey}.description` as TranslationKey),
+          title: t(`playerMatches.${emptyKey}.title`),
+          description: t(`playerMatches.${emptyKey}.description`),
         };
       }
       // Filter-specific empty state
       return {
-        title: t(`playerMatches.emptyFiltered.title` as TranslationKey),
-        description: t(`playerMatches.emptyFiltered.description` as TranslationKey, {
+        title: t(`playerMatches.emptyFiltered.title`),
+        description: t(`playerMatches.emptyFiltered.description`, {
           filter: t(
-            `playerMatches.filters.${currentStatusFilter === 'needs_players' ? 'needsPlayers' : currentStatusFilter === 'ready_to_play' ? 'readyToPlay' : currentStatusFilter === 'feedback_needed' ? 'feedbackNeeded' : currentStatusFilter === 'as_participant' ? 'asParticipant' : currentStatusFilter}` as TranslationKey
+            `playerMatches.filters.${currentStatusFilter === 'needs_players' ? 'needsPlayers' : currentStatusFilter === 'ready_to_play' ? 'readyToPlay' : currentStatusFilter === 'feedback_needed' ? 'feedbackNeeded' : currentStatusFilter === 'as_participant' ? 'asParticipant' : currentStatusFilter}`
           ),
         }),
       };
@@ -405,7 +405,7 @@ export default function PlayerMatches() {
             marginLeft: 6,
           }}
         >
-          {t('playerMatches.tabs.upcoming' as TranslationKey)}
+          {t('playerMatches.tabs.upcoming')}
         </Text>
       </TouchableOpacity>
       <TouchableOpacity
@@ -429,7 +429,7 @@ export default function PlayerMatches() {
             marginLeft: 6,
           }}
         >
-          {t('playerMatches.tabs.past' as TranslationKey)}
+          {t('playerMatches.tabs.past')}
         </Text>
       </TouchableOpacity>
     </View>

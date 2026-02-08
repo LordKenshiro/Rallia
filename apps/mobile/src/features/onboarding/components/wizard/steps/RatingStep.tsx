@@ -47,8 +47,8 @@ interface Rating {
 /**
  * Maps NTRP score value to a translation key
  */
-const getNtrpSkillLabelKey = (scoreValue: number): string => {
-  const mapping: Record<number, string> = {
+const getNtrpSkillLabelKey = (scoreValue: number): TranslationKey => {
+  const mapping: Record<number, TranslationKey> = {
     1.5: 'onboarding.ratingStep.skillLevels.beginner1',
     2.0: 'onboarding.ratingStep.skillLevels.beginner2',
     2.5: 'onboarding.ratingStep.skillLevels.beginner3',
@@ -66,8 +66,8 @@ const getNtrpSkillLabelKey = (scoreValue: number): string => {
 /**
  * Maps DUPR score value to a translation key
  */
-const getDuprSkillLabelKey = (scoreValue: number): string => {
-  const mapping: Record<number, string> = {
+const getDuprSkillLabelKey = (scoreValue: number): TranslationKey => {
+  const mapping: Record<number, TranslationKey> = {
     1.0: 'onboarding.ratingStep.skillLevels.beginner1',
     2.0: 'onboarding.ratingStep.skillLevels.beginner2',
     2.5: 'onboarding.ratingStep.skillLevels.beginner3',
@@ -85,15 +85,15 @@ const getDuprSkillLabelKey = (scoreValue: number): string => {
 /**
  * Maps NTRP score value to a description translation key
  */
-const getNtrpDescriptionKey = (scoreValue: number): string => {
-  return `onboarding.ratingStep.ntrpDescriptions.${scoreValue.toFixed(1).replace('.', '_')}`;
+const getNtrpDescriptionKey = (scoreValue: number): TranslationKey => {
+  return `onboarding.ratingStep.ntrpDescriptions.${scoreValue.toFixed(1).replace('.', '_')}` as TranslationKey;
 };
 
 /**
  * Maps DUPR score value to a description translation key
  */
-const getDuprDescriptionKey = (scoreValue: number): string => {
-  return `onboarding.ratingStep.duprDescriptions.${scoreValue.toFixed(1).replace('.', '_')}`;
+const getDuprDescriptionKey = (scoreValue: number): TranslationKey => {
+  return `onboarding.ratingStep.duprDescriptions.${scoreValue.toFixed(1).replace('.', '_')}` as TranslationKey;
 };
 
 /**
@@ -129,12 +129,10 @@ export const RatingStep: React.FC<RatingStepProps> = ({
 
   const isTennis = sport === 'tennis';
   const ratingSystem = isTennis ? 'ntrp' : 'dupr';
-  const sportDisplayName = isTennis
-    ? t('onboarding.tennis' as TranslationKey)
-    : t('onboarding.pickleball' as TranslationKey);
+  const sportDisplayName = isTennis ? t('onboarding.tennis') : t('onboarding.pickleball');
   const ratingSystemName = isTennis
-    ? t('onboarding.ratingStep.ntrpSubtitle' as TranslationKey)
-    : t('onboarding.ratingStep.duprSubtitle' as TranslationKey);
+    ? t('onboarding.ratingStep.ntrpSubtitle')
+    : t('onboarding.ratingStep.duprSubtitle');
   const selectedRatingId = isTennis ? formData.tennisRatingId : formData.pickleballRatingId;
   const ratingFieldKey = isTennis ? 'tennisRatingId' : 'pickleballRatingId';
 
@@ -153,10 +151,7 @@ export const RatingStep: React.FC<RatingStepProps> = ({
             sport,
             system: ratingSystem,
           });
-          Alert.alert(
-            t('alerts.error' as TranslationKey),
-            t('onboarding.validation.failedToLoadRatings' as TranslationKey)
-          );
+          Alert.alert(t('alerts.error'), t('onboarding.validation.failedToLoadRatings'));
           return;
         }
 
@@ -171,10 +166,7 @@ export const RatingStep: React.FC<RatingStepProps> = ({
         setRatings(transformedRatings);
       } catch (error) {
         Logger.error(`Unexpected error loading ${sport} ratings`, error as Error);
-        Alert.alert(
-          t('alerts.error' as TranslationKey),
-          t('onboarding.validation.unexpectedError' as TranslationKey)
-        );
+        Alert.alert(t('alerts.error'), t('onboarding.validation.unexpectedError'));
       } finally {
         setIsLoading(false);
       }
@@ -212,7 +204,7 @@ export const RatingStep: React.FC<RatingStepProps> = ({
     >
       {/* Title */}
       <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
-        {t('onboarding.ratingStep.tennisTitle' as TranslationKey)}
+        {t('onboarding.ratingStep.tennisTitle')}
       </Text>
 
       {/* Sport Badge */}
@@ -232,7 +224,7 @@ export const RatingStep: React.FC<RatingStepProps> = ({
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.buttonActive} />
           <Text size="sm" color={colors.textMuted} style={styles.loadingText}>
-            {t('common.loading' as TranslationKey)}
+            {t('common.loading')}
           </Text>
         </View>
       ) : (
@@ -268,9 +260,9 @@ export const RatingStep: React.FC<RatingStepProps> = ({
                     color={isSelected ? colors.buttonActive : colors.text}
                   >
                     {t(
-                      (isTennis
+                      isTennis
                         ? getNtrpSkillLabelKey(rating.score_value)
-                        : getDuprSkillLabelKey(rating.score_value)) as TranslationKey
+                        : getDuprSkillLabelKey(rating.score_value)
                     )}
                   </Text>
                 </View>
@@ -288,9 +280,9 @@ export const RatingStep: React.FC<RatingStepProps> = ({
                   style={styles.ratingDescription}
                 >
                   {t(
-                    (isTennis
+                    isTennis
                       ? getNtrpDescriptionKey(rating.score_value)
-                      : getDuprDescriptionKey(rating.score_value)) as TranslationKey
+                      : getDuprDescriptionKey(rating.score_value)
                   )}
                 </Text>
               </TouchableOpacity>
@@ -307,9 +299,9 @@ export const RatingStep: React.FC<RatingStepProps> = ({
       >
         <Text size="sm" color={colors.buttonActive}>
           {t(
-            (isTennis
+            isTennis
               ? 'onboarding.ratingOverlay.learnMoreNtrp'
-              : 'onboarding.ratingOverlay.learnMoreDupr') as TranslationKey
+              : 'onboarding.ratingOverlay.learnMoreDupr'
           )}
         </Text>
       </TouchableOpacity>

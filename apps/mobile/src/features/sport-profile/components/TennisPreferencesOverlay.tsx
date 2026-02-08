@@ -248,10 +248,10 @@ export function TennisPreferencesActionSheet({ payload }: SheetProps<'tennis-pre
           {/* Favorite Facilities */}
           <View style={styles.section}>
             <Text style={[styles.label, { color: colors.text }]}>
-              {t('profile.preferences.favoriteFacilities' as TranslationKey)}
+              {t('profile.preferences.favoriteFacilities')}
             </Text>
             <Text style={[styles.sublabel, { color: colors.textMuted }]}>
-              {t('profile.preferences.selectUpTo3' as TranslationKey)}
+              {t('profile.preferences.selectUpTo3')}
             </Text>
             {playerId && sportId ? (
               <FavoriteFacilitiesSelector

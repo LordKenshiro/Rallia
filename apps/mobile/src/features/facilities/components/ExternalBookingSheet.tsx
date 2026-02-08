@@ -69,7 +69,7 @@ export function ExternalBookingActionSheet({ payload }: SheetProps<'external-boo
         {/* Header */}
         <View style={styles.header}>
           <Text size="lg" weight="bold" color={colors.text}>
-            {t('booking.external.title' as TranslationKey)}
+            {t('booking.external.title')}
           </Text>
           <TouchableOpacity
             onPress={handleClose}

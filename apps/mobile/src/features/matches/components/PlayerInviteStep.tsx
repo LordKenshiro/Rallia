@@ -313,12 +313,12 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
       if (newInvitedIds.length > 0) {
         setInvitedPlayerIds(prev => [...prev, ...newInvitedIds]);
       }
-      toast.success(t('matchCreation.invite.invitationsSentCount' as TranslationKey, { count }));
+      toast.success(t('matchCreation.invite.invitationsSentCount', { count }));
       setSelectedPlayers([]);
     },
     onError: error => {
       console.error('Failed to invite players:', error);
-      toast.error(t('common.tryAgain' as TranslationKey));
+      toast.error(t('common.tryAgain'));
     },
   });
 
@@ -395,7 +395,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
         <View style={styles.emptyState}>
           <ActivityIndicator size="small" color={colors.buttonActive} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('matchCreation.invite.searching' as TranslationKey)}
+            {t('matchCreation.invite.searching')}
           </Text>
         </View>
       );
@@ -406,7 +406,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
         <View style={styles.emptyState}>
           <Ionicons name="alert-circle-outline" size={32} color={colors.textMuted} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('matchCreation.invite.searchError' as TranslationKey)}
+            {t('matchCreation.invite.searchError')}
           </Text>
         </View>
       );
@@ -417,7 +417,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
         <View style={styles.emptyState}>
           <Ionicons name="search-outline" size={32} color={colors.textMuted} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('matchCreation.invite.noPlayersFound' as TranslationKey)}
+            {t('matchCreation.invite.noPlayersFound')}
           </Text>
         </View>
       );
@@ -428,7 +428,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
         <View style={styles.emptyState}>
           <Ionicons name="people-outline" size={32} color={colors.textMuted} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('matchCreation.invite.noPlayersAvailable' as TranslationKey)}
+            {t('matchCreation.invite.noPlayersAvailable')}
           </Text>
         </View>
       );
@@ -465,10 +465,10 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
       <View style={styles.header}>
         <View style={styles.headerTextBlock}>
           <Text size="lg" weight="bold" color={colors.text}>
-            {t('matchCreation.invite.title' as TranslationKey)}
+            {t('matchCreation.invite.title')}
           </Text>
           <Text size="sm" color={colors.textMuted}>
-            {t('matchCreation.invite.description' as TranslationKey)}
+            {t('matchCreation.invite.description')}
           </Text>
         </View>
         {showCloseButton && (
@@ -507,7 +507,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
               marginLeft: 6,
             }}
           >
-            {t('matchCreation.invite.tabPlayers' as TranslationKey)}
+            {t('matchCreation.invite.tabPlayers')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -530,7 +530,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
               marginLeft: 6,
             }}
           >
-            {t('matchCreation.invite.tabFromLists' as TranslationKey)}
+            {t('matchCreation.invite.tabFromLists')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -548,7 +548,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
           <SearchBar
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder={t('matchCreation.invite.searchPlaceholder' as TranslationKey)}
+            placeholder={t('matchCreation.invite.searchPlaceholder')}
             colors={colors}
             style={styles.searchBarWrapper}
           />
@@ -599,10 +599,10 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
                   color={selectedPlayers.length > 0 ? colors.buttonTextActive : colors.textMuted}
                 >
                   {selectedPlayers.length > 0
-                    ? t('matchCreation.invite.sendInvitations' as TranslationKey, {
+                    ? t('matchCreation.invite.sendInvitations', {
                         count: selectedPlayers.length,
                       })
-                    : t('matchCreation.invite.selectPlayers' as TranslationKey)}
+                    : t('matchCreation.invite.selectPlayers')}
                 </Text>
               )}
             </TouchableOpacity>

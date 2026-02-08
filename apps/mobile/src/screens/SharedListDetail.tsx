@@ -111,8 +111,8 @@ const SharedListDetail: React.FC = () => {
   const handleDeleteContact = useCallback(
     (contact: SharedContact) => {
       Alert.alert(
-        t('sharedLists.deleteContact' as TranslationKey),
-        t('sharedLists.deleteContactConfirm' as TranslationKey, { name: contact.name }),
+        t('sharedLists.deleteContact'),
+        t('sharedLists.deleteContactConfirm', { name: contact.name }),
         [
           { text: t('common.cancel'), style: 'cancel' },
           {
@@ -123,10 +123,7 @@ const SharedListDetail: React.FC = () => {
                 await deleteContactMutation.mutateAsync({ contactId: contact.id, listId });
               } catch (error) {
                 console.error('Failed to delete contact:', error);
-                Alert.alert(
-                  t('common.error'),
-                  t('sharedLists.failedToDeleteContact' as TranslationKey)
-                );
+                Alert.alert(t('common.error'), t('sharedLists.failedToDeleteContact'));
               }
             },
           },
@@ -158,10 +155,10 @@ const SharedListDetail: React.FC = () => {
       <View style={styles.emptyContainer}>
         <Ionicons name="person-add-outline" size={64} color={colors.textMuted} />
         <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
-          {t('sharedLists.emptyState.noContacts' as TranslationKey)}
+          {t('sharedLists.emptyState.noContacts')}
         </Text>
         <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-          {t('sharedLists.emptyState.addContacts' as TranslationKey)}
+          {t('sharedLists.emptyState.addContacts')}
         </Text>
 
         <View style={styles.emptyButtons}>
@@ -172,7 +169,7 @@ const SharedListDetail: React.FC = () => {
           >
             <Ionicons name="phone-portrait-outline" size={20} color="#fff" />
             <Text size="sm" weight="semibold" color="#fff">
-              {t('sharedLists.importFromPhone' as TranslationKey)}
+              {t('sharedLists.importFromPhone')}
             </Text>
           </TouchableOpacity>
 
@@ -183,7 +180,7 @@ const SharedListDetail: React.FC = () => {
           >
             <Ionicons name="add-outline" size={20} color={colors.text} />
             <Text size="sm" weight="semibold" color={colors.text}>
-              {t('sharedLists.addManually' as TranslationKey)}
+              {t('sharedLists.addManually')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -217,16 +214,16 @@ const SharedListDetail: React.FC = () => {
           <SearchBar
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder={t('sharedLists.searchContacts' as TranslationKey)}
+            placeholder={t('sharedLists.searchContacts')}
           />
 
           {/* Count and Buttons Row */}
           <View style={styles.headerRow}>
             <Text size="sm" color={colors.textSecondary}>
-              {t('sharedLists.contactCount' as TranslationKey, { count: filteredContacts.length })}
+              {t('sharedLists.contactCount', { count: filteredContacts.length })}
               {searchQuery &&
                 contacts.length !== filteredContacts.length &&
-                ` (${t('sharedLists.ofTotal' as TranslationKey, { total: contacts.length })})`}
+                ` (${t('sharedLists.ofTotal', { total: contacts.length })})`}
             </Text>
             <View style={styles.headerButtons}>
               <TouchableOpacity

@@ -28,7 +28,7 @@ export function MatchTypeActionSheet({ payload }: SheetProps<'match-type'>) {
     [onSelect]
   );
 
-  const options: { type: MatchType; labelKey: string; icon: string }[] = [
+  const options: { type: MatchType; labelKey: TranslationKey; icon: string }[] = [
     { type: 'single', labelKey: 'match.format.singles', icon: 'person' },
     { type: 'double', labelKey: 'match.format.doubles', icon: 'people' },
   ];
@@ -42,7 +42,7 @@ export function MatchTypeActionSheet({ payload }: SheetProps<'match-type'>) {
       <View style={styles.container}>
         {/* Title */}
         <Text weight="semibold" size="lg" style={[styles.title, { color: colors.text }]}>
-          {t('match.pickMatchType' as TranslationKey)}
+          {t('match.pickMatchType')}
         </Text>
 
         {/* Options */}
@@ -70,7 +70,7 @@ export function MatchTypeActionSheet({ payload }: SheetProps<'match-type'>) {
                 />
               </View>
               <Text weight="medium" size="base" style={{ color: colors.text, marginLeft: 16 }}>
-                {t(option.labelKey as TranslationKey)}
+                {t(option.labelKey)}
               </Text>
             </TouchableOpacity>
           ))}

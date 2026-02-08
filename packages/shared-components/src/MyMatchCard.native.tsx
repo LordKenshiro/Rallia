@@ -36,6 +36,7 @@ import {
   getProfilePictureUrl,
   deriveMatchStatus,
 } from '@rallia/shared-utils';
+import { TranslationKey } from '@rallia/shared-translations';
 
 // =============================================================================
 // TIER-BASED GRADIENT PALETTES (using design system tokens)
@@ -174,7 +175,7 @@ export interface MyMatchCardProps {
   /** Whether dark mode is enabled */
   isDark: boolean;
   /** Translation function */
-  t: (key: string, options?: TranslationOptions) => string;
+  t: (key: TranslationKey, options?: TranslationOptions) => string;
   /** Current locale for date/time formatting */
   locale: string;
   /**
@@ -220,7 +221,7 @@ function getCompactTimeDisplay(
   startTime: string,
   timezone: string,
   locale: string,
-  t: (key: string, options?: TranslationOptions) => string
+  t: (key: TranslationKey, options?: TranslationOptions) => string
 ): { dayLabel: string; timeLabel: string; isUrgent: boolean } {
   const tz = timezone || 'UTC';
 
@@ -442,7 +443,7 @@ interface ParticipantAvatarsProps {
   match: MatchWithDetails;
   colors: ThemeColors;
   isDark: boolean;
-  t: (key: string, options?: TranslationOptions) => string;
+  t: (key: TranslationKey, options?: TranslationOptions) => string;
 }
 
 const ParticipantAvatars: React.FC<ParticipantAvatarsProps> = ({ match, colors, isDark, t }) => {
@@ -853,7 +854,15 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
           <Text
             size="xs"
             weight="semibold"
-            color={isExpired ? colors.textMuted : isOngoing ? liveColor : isStartingSoon ? soonColor : colors.textMuted}
+            color={
+              isExpired
+                ? colors.textMuted
+                : isOngoing
+                  ? liveColor
+                  : isStartingSoon
+                    ? soonColor
+                    : colors.textMuted
+            }
             style={styles.dayLabel}
           >
             {dayLabel.toUpperCase()}
@@ -864,7 +873,15 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
         <Text
           size="lg"
           weight="bold"
-          color={isExpired ? colors.textMuted : isOngoing ? liveColor : isStartingSoon ? soonColor : colors.text}
+          color={
+            isExpired
+              ? colors.textMuted
+              : isOngoing
+                ? liveColor
+                : isStartingSoon
+                  ? soonColor
+                  : colors.text
+          }
           numberOfLines={1}
         >
           {timeLabel}

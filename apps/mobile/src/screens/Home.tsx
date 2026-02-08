@@ -286,7 +286,7 @@ const Home = () => {
       <View style={[styles.sectionHeader]}>
         <View style={styles.sectionTitleRow}>
           <Text size="xl" weight="bold" color={colors.text}>
-            {t('home.soonAndNearby' as TranslationKey)}
+            {t('home.soonAndNearby')}
           </Text>
           {/* Only show LocationSelector when both GPS and home location are available */}
           {hasBothLocationOptions && (
@@ -342,7 +342,7 @@ const Home = () => {
 
     return (
       <CopilotStep
-        text={t('tour.homeScreen.upcomingMatches.description' as TranslationKey)}
+        text={t('tour.homeScreen.upcomingMatches.description')}
         order={10}
         name="home_my_matches"
       >
@@ -350,7 +350,7 @@ const Home = () => {
           {/* Header with title and "See All" button */}
           <View style={[styles.sectionHeader]}>
             <Text size="xl" weight="bold" color={colors.text}>
-              {t('home.myMatches' as TranslationKey)}
+              {t('home.myMatches')}
             </Text>
             <TouchableOpacity
               style={styles.viewAllButton}
@@ -416,10 +416,10 @@ const Home = () => {
             <View style={styles.myMatchesEmpty}>
               <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
               <Text size="sm" color={colors.textMuted} style={styles.myMatchesEmptyText}>
-                {t('home.myMatchesEmpty.title' as TranslationKey)}
+                {t('home.myMatchesEmpty.title')}
               </Text>
               <Text size="xs" color={colors.textMuted} style={styles.myMatchesEmptyDescription}>
-                {t('home.myMatchesEmpty.description' as TranslationKey)}
+                {t('home.myMatchesEmpty.description')}
               </Text>
             </View>
           ) : (

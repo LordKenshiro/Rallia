@@ -265,10 +265,10 @@ const MatchContextCard: React.FC<MatchContextCardProps> = ({
   const opponentDisplay =
     matchContext.opponentNames.length > 0
       ? matchContext.opponentNames.length === 1
-        ? t('matchFeedback.matchContext.vsPlayer' as TranslationKey, {
+        ? t('matchFeedback.matchContext.vsPlayer', {
             name: matchContext.opponentNames[0],
           })
-        : t('matchFeedback.matchContext.vsPlayers' as TranslationKey, {
+        : t('matchFeedback.matchContext.vsPlayers', {
             names: matchContext.opponentNames.join(', '),
           })
       : undefined;
@@ -276,9 +276,9 @@ const MatchContextCard: React.FC<MatchContextCardProps> = ({
   // Translate format (singles/doubles)
   const translatedFormat =
     matchContext.format === 'singles'
-      ? t('match.format.singles' as TranslationKey)
+      ? t('match.format.singles')
       : matchContext.format === 'doubles'
-        ? t('match.format.doubles' as TranslationKey)
+        ? t('match.format.doubles')
         : matchContext.format;
 
   return (
@@ -490,10 +490,10 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
       {/* Title */}
       <View style={styles.header}>
         <Text size="xl" weight="bold" color={colors.text}>
-          {t('matchFeedback.outcomeStep.title' as TranslationKey)}
+          {t('matchFeedback.outcomeStep.title')}
         </Text>
         <Text size="sm" color={colors.textMuted} style={styles.subtitle}>
-          {t('matchFeedback.outcomeStep.subtitle' as TranslationKey)}
+          {t('matchFeedback.outcomeStep.subtitle')}
         </Text>
       </View>
 
@@ -501,11 +501,11 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
       <View style={styles.optionsContainer}>
         <OptionCard
           icon="checkmark-circle-outline"
-          title={t('matchFeedback.outcomeStep.matchPlayed' as TranslationKey)}
+          title={t('matchFeedback.outcomeStep.matchPlayed')}
           description={
             opponents.length === 1
-              ? t('matchFeedback.outcomeStep.matchPlayedDescription' as TranslationKey)
-              : t('matchFeedback.outcomeStep.matchPlayedDescriptionPlural' as TranslationKey)
+              ? t('matchFeedback.outcomeStep.matchPlayedDescription')
+              : t('matchFeedback.outcomeStep.matchPlayedDescriptionPlural')
           }
           selected={outcome === 'played'}
           onPress={() => handleOutcomeChange('played')}
@@ -513,8 +513,8 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
         />
         <OptionCard
           icon="close-circle-outline"
-          title={t('matchFeedback.outcomeStep.matchCancelled' as TranslationKey)}
-          description={t('matchFeedback.outcomeStep.matchCancelledDescription' as TranslationKey)}
+          title={t('matchFeedback.outcomeStep.matchCancelled')}
+          description={t('matchFeedback.outcomeStep.matchCancelledDescription')}
           selected={outcome === 'mutual_cancel'}
           onPress={() => handleOutcomeChange('mutual_cancel')}
           colors={colors}
@@ -523,13 +523,13 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
           icon="person-remove-outline"
           title={
             opponents.length === 1
-              ? t('matchFeedback.outcomeStep.missingPlayer' as TranslationKey)
-              : t('matchFeedback.outcomeStep.missingPlayers' as TranslationKey)
+              ? t('matchFeedback.outcomeStep.missingPlayer')
+              : t('matchFeedback.outcomeStep.missingPlayers')
           }
           description={
             opponents.length === 1
-              ? t('matchFeedback.outcomeStep.missingPlayerDescription' as TranslationKey)
-              : t('matchFeedback.outcomeStep.missingPlayersDescription' as TranslationKey)
+              ? t('matchFeedback.outcomeStep.missingPlayerDescription')
+              : t('matchFeedback.outcomeStep.missingPlayersDescription')
           }
           selected={outcome === 'opponent_no_show'}
           onPress={() => handleOutcomeChange('opponent_no_show')}
@@ -546,7 +546,7 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
             color={colors.textSecondary}
             style={styles.reasonsLabel}
           >
-            {t('matchFeedback.outcomeStep.selectNoShowPlayers' as TranslationKey)}
+            {t('matchFeedback.outcomeStep.selectNoShowPlayers')}
           </Text>
           <View style={styles.playersGrid}>
             {opponents.map(opponent => (
@@ -571,7 +571,7 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
             color={colors.textSecondary}
             style={styles.reasonsLabel}
           >
-            {t('matchFeedback.outcomeStep.whyCancelled' as TranslationKey)}
+            {t('matchFeedback.outcomeStep.whyCancelled')}
           </Text>
           <View style={styles.reasonsGrid}>
             {CANCELLATION_REASONS.map(reason => (
@@ -600,9 +600,7 @@ export const MatchOutcomeStep: React.FC<MatchOutcomeStepProps> = ({
                 ]}
                 value={cancellationNotes}
                 onChangeText={handleCancellationNotesChange}
-                placeholder={t(
-                  'matchFeedback.outcomeStep.otherReasonPlaceholder' as TranslationKey
-                )}
+                placeholder={t('matchFeedback.outcomeStep.otherReasonPlaceholder')}
                 placeholderTextColor={colors.textMuted}
                 multiline
                 numberOfLines={3}

@@ -95,10 +95,7 @@ export function ContactPickerModal({
       setFilteredContacts(transformedContacts);
     } catch (error) {
       console.error('Failed to load contacts:', error);
-      Alert.alert(
-        t('addScore.contactPicker.error' as TranslationKey),
-        t('addScore.contactPicker.errorMessage' as TranslationKey)
-      );
+      Alert.alert(t('addScore.contactPicker.error'), t('addScore.contactPicker.errorMessage'));
     } finally {
       setIsLoading(false);
     }
@@ -183,7 +180,7 @@ export function ContactPickerModal({
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            {t('addScore.contactPicker.loading' as TranslationKey)}
+            {t('addScore.contactPicker.loading')}
           </Text>
         </View>
       );
@@ -194,13 +191,13 @@ export function ContactPickerModal({
         <View style={styles.centerContainer}>
           <Ionicons name="lock-closed-outline" size={64} color={colors.textMuted} />
           <Text weight="semibold" style={[styles.permissionTitle, { color: colors.text }]}>
-            {t('addScore.contactPicker.accessRequired' as TranslationKey)}
+            {t('addScore.contactPicker.accessRequired')}
           </Text>
           <Text style={[styles.permissionText, { color: colors.textSecondary }]}>
-            {t('addScore.contactPicker.accessRequiredMessage' as TranslationKey)}
+            {t('addScore.contactPicker.accessRequiredMessage')}
           </Text>
           <Button variant="primary" onPress={openSettings} style={styles.settingsButton}>
-            {t('addScore.contactPicker.openSettings' as TranslationKey)}
+            {t('addScore.contactPicker.openSettings')}
           </Button>
         </View>
       );
@@ -212,8 +209,8 @@ export function ContactPickerModal({
           <Ionicons name="people-outline" size={64} color={colors.textMuted} />
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
             {searchQuery
-              ? t('addScore.contactPicker.noContactsMatch' as TranslationKey)
-              : t('addScore.contactPicker.noContactsFound' as TranslationKey)}
+              ? t('addScore.contactPicker.noContactsMatch')
+              : t('addScore.contactPicker.noContactsFound')}
           </Text>
         </View>
       );
@@ -247,7 +244,7 @@ export function ContactPickerModal({
             <Ionicons name="close-outline" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-            {t('addScore.contactPicker.title' as TranslationKey)}
+            {t('addScore.contactPicker.title')}
           </Text>
           <View style={{ width: 24 }} />
         </View>
@@ -258,7 +255,7 @@ export function ContactPickerModal({
             <SearchBar
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder={t('addScore.contactPicker.searchPlaceholder' as TranslationKey)}
+              placeholder={t('addScore.contactPicker.searchPlaceholder')}
               colors={colors}
             />
           </View>

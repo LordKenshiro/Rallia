@@ -16,6 +16,7 @@ import type { BookingWithDetails, PlayerBookingsPage } from '@rallia/shared-serv
 import { calculateRefundAmount } from '@rallia/shared-services';
 import { useCancelBooking, useCancellationPolicy, bookingKeys } from '@rallia/shared-hooks';
 import { lightHaptic, mediumHaptic } from '../../../utils/haptics';
+import type { CancellationReasonEnum } from '@rallia/shared-types';
 
 interface CancelBookingModalProps {
   visible: boolean;
@@ -24,7 +25,13 @@ interface CancelBookingModalProps {
   onCancelled: () => void;
 }
 
-const CANCELLATION_REASONS = [
+interface CancellationReason {
+  key: CancellationReasonEnum;
+  labelKey: TranslationKey;
+  icon: keyof typeof Ionicons.glyphMap;
+}
+
+const CANCELLATION_REASONS: CancellationReason[] = [
   { key: 'weather', labelKey: 'myBookings.cancel.reasons.weather', icon: 'cloud-outline' as const },
   {
     key: 'court_unavailable',
@@ -121,14 +128,14 @@ export default function CancelBookingModal({
   const getRefundMessage = (): string => {
     if (!refundInfo) return '';
     if (refundInfo.refundPercent === 100) {
-      return t('myBookings.cancel.refundInfo.full' as TranslationKey);
+      return t('myBookings.cancel.refundInfo.full');
     }
     if (refundInfo.refundPercent > 0) {
-      return t('myBookings.cancel.refundInfo.partial' as TranslationKey, {
+      return t('myBookings.cancel.refundInfo.partial', {
         percent: refundInfo.refundPercent,
       });
     }
-    return t('myBookings.cancel.refundInfo.none' as TranslationKey);
+    return t('myBookings.cancel.refundInfo.none');
   };
 
   return (
@@ -147,13 +154,13 @@ export default function CancelBookingModal({
           <View style={styles.header}>
             <Ionicons name="alert-circle" size={32} color={colors.error} />
             <Text size="lg" weight="bold" color={colors.text} style={styles.headerTitle}>
-              {t('myBookings.cancel.title' as TranslationKey)}
+              {t('myBookings.cancel.title')}
             </Text>
           </View>
 
           {/* Message */}
           <Text size="sm" color={colors.textMuted} style={styles.message}>
-            {t('myBookings.cancel.confirmMessage' as TranslationKey)}
+            {t('myBookings.cancel.confirmMessage')}
           </Text>
 
           {/* Refund info */}
@@ -181,7 +188,7 @@ export default function CancelBookingModal({
 
           {/* Reason selector */}
           <Text size="sm" weight="semibold" color={colors.text} style={styles.reasonLabel}>
-            {t('myBookings.cancel.selectReason' as TranslationKey)}
+            {t('myBookings.cancel.selectReason')}
           </Text>
           <View style={styles.reasonList}>
             {CANCELLATION_REASONS.map(reason => {
@@ -219,7 +226,7 @@ export default function CancelBookingModal({
                     color={isSelected ? colors.error : colors.text}
                     style={styles.reasonText}
                   >
-                    {t(reason.labelKey as TranslationKey)}
+                    {t(reason.labelKey)}
                   </Text>
                   {isSelected && (
                     <Ionicons name="checkmark-circle" size={18} color={colors.error} />
@@ -244,7 +251,7 @@ export default function CancelBookingModal({
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
                 <Text size="base" weight="semibold" color="#fff">
-                  {t('myBookings.cancel.cancelButton' as TranslationKey)}
+                  {t('myBookings.cancel.cancelButton')}
                 </Text>
               )}
             </TouchableOpacity>
@@ -261,7 +268,7 @@ export default function CancelBookingModal({
               activeOpacity={0.8}
             >
               <Text size="base" weight="semibold" color={colors.text}>
-                {t('myBookings.cancel.keepButton' as TranslationKey)}
+                {t('myBookings.cancel.keepButton')}
               </Text>
             </TouchableOpacity>
           </View>

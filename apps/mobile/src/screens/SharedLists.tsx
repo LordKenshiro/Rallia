@@ -91,7 +91,7 @@ const SharedLists: React.FC = () => {
     (list: SharedContactList) => {
       Alert.alert(
         t('sharedLists.deleteList'),
-        t('sharedLists.deleteListConfirm' as TranslationKey, { name: list.name }),
+        t('sharedLists.deleteListConfirm', { name: list.name }),
         [
           { text: t('common.cancel'), style: 'cancel' },
           {
@@ -102,10 +102,7 @@ const SharedLists: React.FC = () => {
                 await deleteListMutation.mutateAsync(list.id);
               } catch (error) {
                 console.error('Failed to delete list:', error);
-                Alert.alert(
-                  t('common.error'),
-                  t('sharedLists.errors.failedToDelete' as TranslationKey)
-                );
+                Alert.alert(t('common.error'), t('sharedLists.errors.failedToDelete'));
               }
             },
           },
@@ -241,10 +238,10 @@ const SharedLists: React.FC = () => {
         </View>
         <View style={styles.shareMatchContent}>
           <Text weight="semibold" style={{ color: colors.text }}>
-            {t('sharedLists.shareMatch.title' as TranslationKey)}
+            {t('sharedLists.shareMatch.title')}
           </Text>
           <Text size="sm" style={{ color: colors.textSecondary }}>
-            {t('sharedLists.shareMatch.subtitle' as TranslationKey)}
+            {t('sharedLists.shareMatch.subtitle')}
           </Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
@@ -253,7 +250,7 @@ const SharedLists: React.FC = () => {
       {/* Section Header */}
       <View style={styles.sectionHeader}>
         <Text weight="semibold" style={{ color: colors.text }}>
-          {t('sharedLists.yourLists' as TranslationKey)}
+          {t('sharedLists.yourLists')}
         </Text>
         {lists.length > 0 && (
           <TouchableOpacity

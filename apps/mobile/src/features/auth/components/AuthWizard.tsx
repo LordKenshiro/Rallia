@@ -100,7 +100,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ currentStep, totalSteps, colo
     <View style={styles.progressContainer}>
       <View style={styles.progressHeader}>
         <Text size="sm" weight="semibold" color={colors.textMuted}>
-          {t('auth.step' as TranslationKey)
+          {t('auth.step')
             .replace('{current}', String(currentStep))
             .replace('{total}', String(totalSteps))}
         </Text>
@@ -156,7 +156,7 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
             }
           }}
           style={styles.headerButton}
-          accessibilityLabel={t('common.back' as TranslationKey)}
+          accessibilityLabel={t('common.back')}
           accessibilityRole="button"
         >
           <Ionicons name="chevron-back-outline" size={24} color={colors.buttonActive} />
@@ -175,7 +175,7 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
             onClose();
           }}
           style={styles.headerButton}
-          accessibilityLabel={t('common.close' as TranslationKey)}
+          accessibilityLabel={t('common.close')}
           accessibilityRole="button"
         >
           <Ionicons name="close-outline" size={24} color={colors.textMuted} />

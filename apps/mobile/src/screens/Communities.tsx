@@ -134,7 +134,7 @@ const CommunityCard: React.FC<{
             <View style={[styles.badgeContainer, { backgroundColor: '#FF9500' }]}>
               <Ionicons name="lock-closed" size={10} color="#FFFFFF" />
               <Text size="xs" weight="semibold" style={styles.badgeText}>
-                {t('community.visibility.private' as TranslationKey)}
+                {t('community.visibility.private')}
               </Text>
             </View>
           )}

@@ -177,7 +177,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
     >
       {/* Title */}
       <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
-        {t('onboarding.personalInfoStep.title' as TranslationKey)}
+        {t('onboarding.personalInfoStep.title')}
       </Text>
 
       {/* Profile Picture */}
@@ -205,13 +205,11 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
         }}
       >
         <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-          {t('onboarding.personalInfoStep.firstName' as TranslationKey)}{' '}
-          <Text color={colors.error}>
-            {t('onboarding.personalInfoStep.required' as TranslationKey)}
-          </Text>
+          {t('onboarding.personalInfoStep.firstName')}{' '}
+          <Text color={colors.error}>{t('onboarding.personalInfoStep.required')}</Text>
         </Text>
         <BottomSheetTextInput
-          placeholder={t('onboarding.personalInfoStep.firstNamePlaceholder' as TranslationKey)}
+          placeholder={t('onboarding.personalInfoStep.firstNamePlaceholder')}
           placeholderTextColor={colors.textMuted}
           value={formData.firstName}
           onChangeText={handleFirstNameChange}
@@ -236,13 +234,11 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
         }}
       >
         <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-          {t('onboarding.personalInfoStep.lastName' as TranslationKey)}{' '}
-          <Text color={colors.error}>
-            {t('onboarding.personalInfoStep.required' as TranslationKey)}
-          </Text>
+          {t('onboarding.personalInfoStep.lastName')}{' '}
+          <Text color={colors.error}>{t('onboarding.personalInfoStep.required')}</Text>
         </Text>
         <BottomSheetTextInput
-          placeholder={t('onboarding.personalInfoStep.lastNamePlaceholder' as TranslationKey)}
+          placeholder={t('onboarding.personalInfoStep.lastNamePlaceholder')}
           placeholderTextColor={colors.textMuted}
           value={formData.lastName}
           onChangeText={handleLastNameChange}
@@ -267,13 +263,11 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
         }}
       >
         <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-          {t('onboarding.personalInfoStep.username' as TranslationKey)}{' '}
-          <Text color={colors.error}>
-            {t('onboarding.personalInfoStep.required' as TranslationKey)}
-          </Text>
+          {t('onboarding.personalInfoStep.username')}{' '}
+          <Text color={colors.error}>{t('onboarding.personalInfoStep.required')}</Text>
         </Text>
         <BottomSheetTextInput
-          placeholder={t('onboarding.personalInfoStep.usernamePlaceholder' as TranslationKey)}
+          placeholder={t('onboarding.personalInfoStep.usernamePlaceholder')}
           placeholderTextColor={colors.textMuted}
           value={formData.username}
           onChangeText={handleUsernameChange}
@@ -290,7 +284,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
         />
         <View style={styles.inputFooter}>
           <Text size="xs" color={colors.textSecondary}>
-            {t('onboarding.personalInfoStep.usernameHelper' as TranslationKey)}
+            {t('onboarding.personalInfoStep.usernameHelper')}
           </Text>
           <Text size="xs" color={colors.textSecondary}>
             {formData.username.length}/10
@@ -301,10 +295,8 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
       {/* Date of Birth */}
       <View style={styles.inputContainer}>
         <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-          {t('onboarding.personalInfoStep.dateOfBirth' as TranslationKey)}{' '}
-          <Text color={colors.error}>
-            {t('onboarding.personalInfoStep.required' as TranslationKey)}
-          </Text>
+          {t('onboarding.personalInfoStep.dateOfBirth')}{' '}
+          <Text color={colors.error}>{t('onboarding.personalInfoStep.required')}</Text>
         </Text>
         <TouchableOpacity
           style={[
@@ -321,9 +313,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
         >
           <Ionicons name="calendar-outline" size={20} color={colors.buttonActive} />
           <Text color={formData.dateOfBirth ? colors.text : colors.textMuted} style={{ flex: 1 }}>
-            {formData.dateOfBirth
-              ? formatDate(formData.dateOfBirth)
-              : t('common.select' as TranslationKey)}
+            {formData.dateOfBirth ? formatDate(formData.dateOfBirth) : t('common.select')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -347,15 +337,15 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
               <View style={[styles.datePickerHeader, { borderBottomColor: colors.border }]}>
                 <TouchableOpacity onPress={handleDateCancel} style={styles.pickerHeaderButton}>
                   <Text size="base" color={colors.textMuted}>
-                    {t('common.cancel' as TranslationKey)}
+                    {t('common.cancel')}
                   </Text>
                 </TouchableOpacity>
                 <Text size="base" weight="semibold" color={colors.text}>
-                  {t('onboarding.personalInfoStep.dateOfBirth' as TranslationKey)}
+                  {t('onboarding.personalInfoStep.dateOfBirth')}
                 </Text>
                 <TouchableOpacity onPress={handleDateDone} style={styles.pickerHeaderButton}>
                   <Text size="base" weight="semibold" color={colors.buttonActive}>
-                    {t('common.done' as TranslationKey)}
+                    {t('common.done')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -389,10 +379,8 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
       {/* Gender - Full-width Options */}
       <View style={styles.inputContainer}>
         <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-          {t('onboarding.personalInfoStep.gender' as TranslationKey)}{' '}
-          <Text color={colors.error}>
-            {t('onboarding.personalInfoStep.required' as TranslationKey)}
-          </Text>
+          {t('onboarding.personalInfoStep.gender')}{' '}
+          <Text color={colors.error}>{t('onboarding.personalInfoStep.required')}</Text>
         </Text>
         <View style={styles.genderRow}>
           {GENDER_VALUES.map(value => {
@@ -418,7 +406,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
                   weight={isSelected ? 'semibold' : 'regular'}
                   color={isSelected ? colors.buttonTextActive : colors.text}
                 >
-                  {t(`profile.genderValues.${value}` as TranslationKey)}
+                  {t(`profile.genderValues.${value}`)}
                 </Text>
               </TouchableOpacity>
             );
@@ -437,8 +425,8 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
         <PhoneInput
           value={formData.phoneNumber}
           onChangePhone={handlePhoneNumberChange}
-          label={t('onboarding.personalInfoStep.phoneNumber' as TranslationKey)}
-          placeholder={t('onboarding.personalInfoStep.phoneNumber' as TranslationKey)}
+          label={t('onboarding.personalInfoStep.phoneNumber')}
+          placeholder={t('onboarding.personalInfoStep.phoneNumber')}
           required
           maxLength={15}
           showCharCount

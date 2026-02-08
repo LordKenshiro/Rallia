@@ -51,7 +51,7 @@ export function AddScoreIntroModal({
             <View style={styles.content}>
               {/* Title */}
               <Text weight="bold" size="2xl" style={styles.title}>
-                {t('addScore.intro.title' as TranslationKey)}
+                {t('addScore.intro.title')}
               </Text>
 
               {/* Accent line */}
@@ -59,44 +59,44 @@ export function AddScoreIntroModal({
 
               {/* Description */}
               <Text size="base" style={styles.description}>
-                {t('addScore.intro.description' as TranslationKey)}
+                {t('addScore.intro.description')}
               </Text>
 
               {/* How to add scores */}
               <Text size="base" style={styles.howToTitle}>
-                {t('addScore.intro.howToTitle' as TranslationKey)}
+                {t('addScore.intro.howToTitle')}
               </Text>
 
               <View style={styles.bulletPoints}>
                 <Text size="base" style={styles.bulletPoint}>
-                  • {t('addScore.intro.step1' as TranslationKey)}
+                  • {t('addScore.intro.step1')}
                 </Text>
                 <Text size="base" style={styles.bulletPoint}>
-                  • {t('addScore.intro.step2' as TranslationKey)}
+                  • {t('addScore.intro.step2')}
                 </Text>
                 <Text size="base" style={styles.bulletPoint}>
-                  • {t('addScore.intro.step3' as TranslationKey)}
+                  • {t('addScore.intro.step3')}
                 </Text>
                 <Text size="base" style={styles.bulletPoint}>
-                  • {t('addScore.intro.step4' as TranslationKey)}
+                  • {t('addScore.intro.step4')}
                 </Text>
               </View>
 
               {/* Confirmation note */}
               <Text size="base" style={styles.confirmationNote}>
-                {t('addScore.intro.confirmationNote' as TranslationKey)}
+                {t('addScore.intro.confirmationNote')}
               </Text>
             </View>
 
             {/* Bottom buttons */}
             <View style={styles.bottomButtons}>
               <Button variant="primary" onPress={onAddScore} style={styles.addScoreButton}>
-                {t('addScore.intro.addScoreNow' as TranslationKey)}
+                {t('addScore.intro.addScoreNow')}
               </Button>
 
               <TouchableOpacity style={styles.neverShowButton} onPress={onNeverShowAgain}>
                 <Text size="base" style={styles.neverShowText}>
-                  {t('addScore.intro.neverShowAgain' as TranslationKey)}
+                  {t('addScore.intro.neverShowAgain')}
                 </Text>
               </TouchableOpacity>
             </View>

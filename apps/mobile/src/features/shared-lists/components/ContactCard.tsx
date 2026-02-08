@@ -87,8 +87,8 @@ const ContactCard: React.FC<ContactCardProps> = ({ contact, colors, isDark, onEd
             />
             <Text size="xs" color={colors.textMuted}>
               {contact.source === 'phone_book'
-                ? t('sharedLists.contact.fromContacts' as TranslationKey)
-                : t('sharedLists.contact.manual' as TranslationKey)}
+                ? t('sharedLists.contact.fromContacts')
+                : t('sharedLists.contact.manual')}
             </Text>
           </View>
         </View>

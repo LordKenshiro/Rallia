@@ -142,28 +142,28 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
     >
       {/* Title */}
       <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
-        {t('onboarding.preferencesStep.title' as TranslationKey)}
+        {t('onboarding.preferencesStep.title')}
       </Text>
 
       {/* Playing Hand */}
       <Text size="sm" weight="semibold" color={colors.text} style={styles.sectionLabel}>
-        {t('onboarding.preferencesStep.playingHand' as TranslationKey)}
+        {t('onboarding.preferencesStep.playingHand')}
       </Text>
       <View style={styles.buttonGroup}>
         {renderOptionButton(
-          t('onboarding.preferencesStep.left' as TranslationKey),
+          t('onboarding.preferencesStep.left'),
           'left',
           formData.playingHand,
           () => onUpdateFormData({ playingHand: 'left' })
         )}
         {renderOptionButton(
-          t('onboarding.preferencesStep.right' as TranslationKey),
+          t('onboarding.preferencesStep.right'),
           'right',
           formData.playingHand,
           () => onUpdateFormData({ playingHand: 'right' })
         )}
         {renderOptionButton(
-          t('onboarding.preferencesStep.both' as TranslationKey),
+          t('onboarding.preferencesStep.both'),
           'both',
           formData.playingHand,
           () => onUpdateFormData({ playingHand: 'both' })
@@ -172,7 +172,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
 
       {/* Maximum Travel Distance */}
       <Text size="sm" weight="semibold" color={colors.text} style={styles.sectionLabel}>
-        {t('onboarding.preferencesStep.travelDistance' as TranslationKey)}
+        {t('onboarding.preferencesStep.travelDistance')}
       </Text>
       <View style={styles.sliderContainer}>
         <Text size="lg" weight="bold" color={colors.text} style={styles.sliderValue}>
@@ -198,7 +198,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
           {/* Section Header */}
           <View style={styles.sectionHeaderRow}>
             <Text size="sm" weight="semibold" color={colors.text}>
-              {t('onboarding.preferencesStep.matchDuration' as TranslationKey)}
+              {t('onboarding.preferencesStep.matchDuration')}
             </Text>
           </View>
 
@@ -304,7 +304,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                   )}
                 </View>
                 <Text size="xs" color={colors.textSecondary}>
-                  {t('onboarding.preferencesStep.sameForAll' as TranslationKey)}
+                  {t('onboarding.preferencesStep.sameForAll')}
                 </Text>
               </TouchableOpacity>
             )}
@@ -318,7 +318,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
           {/* Section Header with "Same for all sports" checkbox when both sports selected */}
           <View style={styles.sectionHeaderRow}>
             <Text size="sm" weight="semibold" color={colors.text}>
-              {t('onboarding.preferencesStep.matchType' as TranslationKey)}
+              {t('onboarding.preferencesStep.matchType')}
             </Text>
           </View>
 
@@ -326,7 +326,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
           {(sameMatchTypeForAll || !hasBothSports) && (
             <View style={styles.buttonGroup}>
               {renderOptionButton(
-                t('onboarding.preferencesStep.casual' as TranslationKey),
+                t('onboarding.preferencesStep.casual'),
                 'casual',
                 hasTennis ? formData.tennisMatchType : formData.pickleballMatchType,
                 () =>
@@ -337,7 +337,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                       })
               )}
               {renderOptionButton(
-                t('onboarding.preferencesStep.competitive' as TranslationKey),
+                t('onboarding.preferencesStep.competitive'),
                 'competitive',
                 hasTennis ? formData.tennisMatchType : formData.pickleballMatchType,
                 () =>
@@ -348,7 +348,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                       })
               )}
               {renderOptionButton(
-                t('onboarding.preferencesStep.both' as TranslationKey),
+                t('onboarding.preferencesStep.both'),
                 'both',
                 hasTennis ? formData.tennisMatchType : formData.pickleballMatchType,
                 () =>
@@ -370,19 +370,19 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
               </Text>
               <View style={styles.buttonGroup}>
                 {renderOptionButton(
-                  t('onboarding.preferencesStep.casual' as TranslationKey),
+                  t('onboarding.preferencesStep.casual'),
                   'casual',
                   formData.tennisMatchType,
                   () => onUpdateFormData({ tennisMatchType: 'casual' })
                 )}
                 {renderOptionButton(
-                  t('onboarding.preferencesStep.competitive' as TranslationKey),
+                  t('onboarding.preferencesStep.competitive'),
                   'competitive',
                   formData.tennisMatchType,
                   () => onUpdateFormData({ tennisMatchType: 'competitive' })
                 )}
                 {renderOptionButton(
-                  t('onboarding.preferencesStep.both' as TranslationKey),
+                  t('onboarding.preferencesStep.both'),
                   'both',
                   formData.tennisMatchType,
                   () => onUpdateFormData({ tennisMatchType: 'both' })
@@ -395,19 +395,19 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
               </Text>
               <View style={styles.buttonGroup}>
                 {renderOptionButton(
-                  t('onboarding.preferencesStep.casual' as TranslationKey),
+                  t('onboarding.preferencesStep.casual'),
                   'casual',
                   formData.pickleballMatchType,
                   () => onUpdateFormData({ pickleballMatchType: 'casual' })
                 )}
                 {renderOptionButton(
-                  t('onboarding.preferencesStep.competitive' as TranslationKey),
+                  t('onboarding.preferencesStep.competitive'),
                   'competitive',
                   formData.pickleballMatchType,
                   () => onUpdateFormData({ pickleballMatchType: 'competitive' })
                 )}
                 {renderOptionButton(
-                  t('onboarding.preferencesStep.both' as TranslationKey),
+                  t('onboarding.preferencesStep.both'),
                   'both',
                   formData.pickleballMatchType,
                   () => onUpdateFormData({ pickleballMatchType: 'both' })
@@ -437,7 +437,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                   )}
                 </View>
                 <Text size="xs" color={colors.textSecondary}>
-                  {t('onboarding.preferencesStep.sameForAll' as TranslationKey)}
+                  {t('onboarding.preferencesStep.sameForAll')}
                 </Text>
               </TouchableOpacity>
             )}

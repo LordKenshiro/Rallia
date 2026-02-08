@@ -100,8 +100,8 @@ const Community = () => {
   //   lightHaptic();
   //   // TODO: Implement tournaments functionality
   //   Alert.alert(
-  //     t('community.tournaments' as TranslationKey),
-  //     t('community.tournamentsComingSoon' as TranslationKey)
+  //     t('community.tournaments'),
+  //     t('community.tournamentsComingSoon')
   //   );
   // }, [t]);
 
@@ -111,25 +111,25 @@ const Community = () => {
       {
         id: 'share-lists',
         icon: 'paper-plane-outline',
-        label: t('community.shareLists' as TranslationKey),
+        label: t('community.shareLists'),
         onPress: handleShareLists,
       },
       {
         id: 'groups',
         icon: 'people-outline',
-        label: t('community.groups' as TranslationKey),
+        label: t('community.groups'),
         onPress: handleGroups,
       },
       {
         id: 'communities',
         icon: 'globe-outline',
-        label: t('community.communities' as TranslationKey),
+        label: t('community.communities'),
         onPress: handleCommunities,
       },
       // {
       //   id: 'tournaments',
       //   icon: 'trophy-outline',
-      //   label: t('community.tournaments' as TranslationKey),
+      //   label: t('community.tournaments'),
       //   onPress: handleTournaments,
       // },
     ],
@@ -178,7 +178,7 @@ const Community = () => {
       {/* Find a Partner Section Header */}
       <View style={styles.sectionHeader}>
         <Text size="lg" weight="bold" color={colors.text} style={styles.sectionTitle}>
-          {t('community.findPartner' as TranslationKey)}
+          {t('community.findPartner')}
         </Text>
       </View>
 

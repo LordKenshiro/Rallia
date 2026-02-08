@@ -242,14 +242,14 @@ export const OpponentFeedbackStep: React.FC<OpponentFeedbackStepProps> = ({
           {opponent.fullName}
         </Text>
         <Text size="sm" color={colors.textMuted}>
-          {t('matchFeedback.opponentStep.rateExperience' as TranslationKey)}
+          {t('matchFeedback.opponentStep.rateExperience')}
         </Text>
       </View>
 
       {/* Attendance Toggle */}
       <View style={styles.fieldGroup}>
         <ToggleRow
-          label={t('matchFeedback.opponentStep.showedUp' as TranslationKey)}
+          label={t('matchFeedback.opponentStep.showedUp')}
           value={showedUp}
           onChange={handleShowedUpChange}
           colors={colors}
@@ -258,7 +258,7 @@ export const OpponentFeedbackStep: React.FC<OpponentFeedbackStepProps> = ({
           <View style={[styles.infoBox, { backgroundColor: `${colors.buttonActive}10` }]}>
             <Ionicons name="information-circle-outline" size={16} color={colors.buttonActive} />
             <Text size="xs" color={colors.textSecondary} style={styles.infoText}>
-              {t('matchFeedback.opponentStep.noShowInfo' as TranslationKey)}
+              {t('matchFeedback.opponentStep.noShowInfo')}
             </Text>
           </View>
         )}
@@ -268,8 +268,8 @@ export const OpponentFeedbackStep: React.FC<OpponentFeedbackStepProps> = ({
       {showedUp && (
         <View style={styles.fieldGroup}>
           <ToggleRow
-            label={t('matchFeedback.opponentStep.wasLate' as TranslationKey)}
-            description={t('matchFeedback.opponentStep.wasLateDescription' as TranslationKey)}
+            label={t('matchFeedback.opponentStep.wasLate')}
+            description={t('matchFeedback.opponentStep.wasLateDescription')}
             value={wasLate}
             onChange={handleWasLateChange}
             colors={colors}
@@ -281,7 +281,7 @@ export const OpponentFeedbackStep: React.FC<OpponentFeedbackStepProps> = ({
       {showedUp && (
         <View style={styles.fieldGroup}>
           <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.fieldLabel}>
-            {t('matchFeedback.opponentStep.rating' as TranslationKey)}
+            {t('matchFeedback.opponentStep.rating')}
           </Text>
           <View style={styles.ratingContainer}>
             <StarRating
@@ -298,7 +298,7 @@ export const OpponentFeedbackStep: React.FC<OpponentFeedbackStepProps> = ({
       {/* Comments */}
       <View style={styles.fieldGroup}>
         <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.fieldLabel}>
-          {t('matchFeedback.opponentStep.comments' as TranslationKey)}
+          {t('matchFeedback.opponentStep.comments')}
         </Text>
         <BottomSheetTextInput
           style={[
@@ -311,7 +311,7 @@ export const OpponentFeedbackStep: React.FC<OpponentFeedbackStepProps> = ({
           ]}
           value={comments}
           onChangeText={handleCommentsChange}
-          placeholder={t('matchFeedback.opponentStep.commentsPlaceholder' as TranslationKey)}
+          placeholder={t('matchFeedback.opponentStep.commentsPlaceholder')}
           placeholderTextColor={colors.textMuted}
           multiline
           numberOfLines={3}
@@ -331,7 +331,7 @@ export const OpponentFeedbackStep: React.FC<OpponentFeedbackStepProps> = ({
       >
         <Ionicons name="flag-outline" size={16} color={colors.textMuted} />
         <Text size="sm" color={colors.textMuted}>
-          {t('matchFeedback.opponentStep.reportIssue' as TranslationKey)}
+          {t('matchFeedback.opponentStep.reportIssue')}
         </Text>
       </TouchableOpacity>
 

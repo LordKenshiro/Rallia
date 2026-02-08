@@ -208,12 +208,12 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
       {/* Title */}
       <Text weight="bold" size="xl" style={[styles.title, { color: colors.text }]}>
         {matchType === 'double'
-          ? t('addScore.findOpponent.titleDouble' as TranslationKey)
-          : t('addScore.findOpponent.title' as TranslationKey)}
+          ? t('addScore.findOpponent.titleDouble')
+          : t('addScore.findOpponent.title')}
       </Text>
       {matchType === 'double' && (
         <Text size="sm" style={[styles.subtitle, { color: colors.textSecondary }]}>
-          {t('addScore.findOpponent.subtitle' as TranslationKey)}
+          {t('addScore.findOpponent.subtitle')}
         </Text>
       )}
 
@@ -221,7 +221,7 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
       <SearchBar
         value={searchQuery}
         onChangeText={handleSearch}
-        placeholder={t('addScore.findOpponent.searchPlaceholder' as TranslationKey)}
+        placeholder={t('addScore.findOpponent.searchPlaceholder')}
         colors={colors}
         style={styles.searchBarWrapper}
       />
@@ -278,10 +278,10 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
           </View>
           <View style={styles.contactsTextContainer}>
             <Text weight="medium" style={{ color: colors.primary }}>
-              {t('addScore.findOpponent.addPlayer' as TranslationKey)}
+              {t('addScore.findOpponent.addPlayer')}
             </Text>
             <Text size="sm" style={{ color: colors.textSecondary }}>
-              {t('addScore.findOpponent.fromPhoneContacts' as TranslationKey)}
+              {t('addScore.findOpponent.fromPhoneContacts')}
             </Text>
           </View>
         </TouchableOpacity>
@@ -298,13 +298,13 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
             <Ionicons name="search-outline" size={64} color={colors.textMuted} />
           </View>
           <Text style={{ color: colors.textSecondary, textAlign: 'center' }}>
-            {t('addScore.findOpponent.searchHint' as TranslationKey)}
+            {t('addScore.findOpponent.searchHint')}
           </Text>
         </View>
       ) : searchResults.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={{ color: colors.textSecondary, textAlign: 'center' }}>
-            {t('addScore.findOpponent.noPlayersFound' as TranslationKey, { query: searchQuery })}
+            {t('addScore.findOpponent.noPlayersFound', { query: searchQuery })}
           </Text>
         </View>
       ) : (
@@ -314,7 +314,7 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
             weight="medium"
             style={[styles.sectionHeader, { color: colors.textMuted }]}
           >
-            {t('addScore.findOpponent.players' as TranslationKey)}
+            {t('addScore.findOpponent.players')}
           </Text>
           <FlatList
             data={searchResults}

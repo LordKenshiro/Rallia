@@ -189,7 +189,7 @@ export function InviteFromListsStep({
         if (channel === 'share_sheet' || channel === 'copy_link') {
           await Share.share({
             message: result.shareMessage,
-            title: t('sharedLists.share.shareGame' as TranslationKey),
+            title: t('sharedLists.share.shareGame'),
           });
         } else if (channel === 'sms') {
           const phones = selectedContacts
@@ -213,9 +213,7 @@ export function InviteFromListsStep({
             .map(c => c.email)
             .join(',');
           if (emails) {
-            const subject = encodeURIComponent(
-              t('sharedLists.share.gameInvitation' as TranslationKey)
-            );
+            const subject = encodeURIComponent(t('sharedLists.share.gameInvitation'));
             const body = encodeURIComponent(result.shareMessage);
             const mailUrl = `mailto:${emails}?subject=${subject}&body=${body}`;
             await Linking.openURL(mailUrl);
@@ -223,14 +221,14 @@ export function InviteFromListsStep({
         }
 
         toast.success(
-          t('sharedLists.share.invitationShared' as TranslationKey, {
+          t('sharedLists.share.invitationShared', {
             count: selectedContacts.length,
           })
         );
         // Do not call onShareSuccess so the sheet stays open (user may also invite players)
       } catch (error) {
         console.error('Failed to share:', error);
-        toast.error(t('sharedLists.share.failedToShare' as TranslationKey));
+        toast.error(t('sharedLists.share.failedToShare'));
       } finally {
         setIsSharing(false);
       }
@@ -269,10 +267,10 @@ export function InviteFromListsStep({
               </Text>
               <Text size="sm" style={{ color: colors.textSecondary }}>
                 {item.contact_count === 1
-                  ? t('sharedLists.contacts.contactCountSingular' as TranslationKey, {
+                  ? t('sharedLists.contacts.contactCountSingular', {
                       count: item.contact_count,
                     })
-                  : t('sharedLists.contacts.contactCount' as TranslationKey, {
+                  : t('sharedLists.contacts.contactCount', {
                       count: item.contact_count,
                     })}
               </Text>
@@ -290,7 +288,7 @@ export function InviteFromListsStep({
                 <ActivityIndicator size="small" color={colors.primary} style={styles.loader} />
               ) : contacts.length === 0 ? (
                 <Text size="sm" style={[styles.emptyText, { color: colors.textMuted }]}>
-                  {t('sharedLists.contacts.noContactsInList' as TranslationKey)}
+                  {t('sharedLists.contacts.noContactsInList')}
                 </Text>
               ) : (
                 <>
@@ -307,7 +305,7 @@ export function InviteFromListsStep({
                       color={allSelected ? colors.primary : colors.textSecondary}
                     />
                     <Text size="sm" style={{ color: colors.text, marginLeft: spacingPixels[2] }}>
-                      {t('common.selectAll' as TranslationKey)}
+                      {t('common.selectAll')}
                     </Text>
                   </TouchableOpacity>
                   {contacts.map(contact => {
@@ -363,7 +361,7 @@ export function InviteFromListsStep({
         <View style={styles.listLoading}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text size="sm" color={colors.textMuted} style={styles.loadingText}>
-            {t('sharedLists.import.loadingContacts' as TranslationKey)}
+            {t('sharedLists.import.loadingContacts')}
           </Text>
         </View>
       );
@@ -373,10 +371,10 @@ export function InviteFromListsStep({
         <View style={styles.emptyState}>
           <Ionicons name="people-outline" size={48} color={colors.textMuted} />
           <Text style={[styles.emptyTitle, { color: colors.text }]}>
-            {t('sharedLists.share.noSharedLists' as TranslationKey)}
+            {t('sharedLists.share.noSharedLists')}
           </Text>
           <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-            {t('sharedLists.share.createListFirst' as TranslationKey)}
+            {t('sharedLists.share.createListFirst')}
           </Text>
         </View>
       );
@@ -401,7 +399,7 @@ export function InviteFromListsStep({
             style={[styles.selectedBadge, { backgroundColor: isDark ? primary[900] : primary[50] }]}
           >
             <Text size="sm" style={{ color: colors.primary }}>
-              {t('sharedLists.share.contactsSelected' as TranslationKey, {
+              {t('sharedLists.share.contactsSelected', {
                 count: selectedContacts.length,
               })}
             </Text>
@@ -428,7 +426,7 @@ export function InviteFromListsStep({
               weight="semibold"
               style={{ color: colors.text, marginBottom: spacingPixels[3] }}
             >
-              {t('sharedLists.share.howToShare' as TranslationKey)}
+              {t('sharedLists.share.howToShare')}
             </Text>
             <View style={styles.channelGrid}>
               <TouchableOpacity
@@ -456,7 +454,7 @@ export function InviteFromListsStep({
                   weight="medium"
                   style={{ color: colors.text, marginTop: spacingPixels[1] }}
                 >
-                  {t('common.share' as TranslationKey)}
+                  {t('common.share')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -558,7 +556,7 @@ export function InviteFromListsStep({
                 weight="medium"
                 style={{ color: colors.textSecondary, marginLeft: spacingPixels[1] }}
               >
-                {t('common.cancel' as TranslationKey)}
+                {t('common.cancel')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -586,10 +584,10 @@ export function InviteFromListsStep({
                 color={selectedContacts.length > 0 ? colors.buttonTextActive : colors.textMuted}
               >
                 {selectedContacts.length > 0
-                  ? t('matchCreation.invite.shareWithContacts' as TranslationKey, {
+                  ? t('matchCreation.invite.shareWithContacts', {
                       count: selectedContacts.length,
                     })
-                  : t('matchCreation.invite.selectContactsFromLists' as TranslationKey)}
+                  : t('matchCreation.invite.selectContactsFromLists')}
               </Text>
             )}
           </TouchableOpacity>

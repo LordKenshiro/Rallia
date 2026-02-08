@@ -69,10 +69,10 @@ const SharedListCard: React.FC<SharedListCardProps> = ({
         ) : null}
         <Text size="xs" color={colors.textMuted} style={styles.contactCount}>
           {list.contact_count === 1
-            ? t('sharedLists.contacts.contactCountSingular' as TranslationKey, {
+            ? t('sharedLists.contacts.contactCountSingular', {
                 count: list.contact_count,
               })
-            : t('sharedLists.contacts.contactCount' as TranslationKey, {
+            : t('sharedLists.contacts.contactCount', {
                 count: list.contact_count,
               })}
         </Text>

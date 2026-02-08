@@ -116,9 +116,9 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ currentStep, totalSteps, colo
 
   // Get step name for current step (order: Where -> When -> Preferences)
   const stepNames = [
-    t('matchCreation.stepNames.where' as TranslationKey),
-    t('matchCreation.stepNames.when' as TranslationKey),
-    t('matchCreation.stepNames.preferences' as TranslationKey),
+    t('matchCreation.stepNames.where'),
+    t('matchCreation.stepNames.when'),
+    t('matchCreation.stepNames.preferences'),
   ];
   const currentStepName = stepNames[currentStep - 1] || '';
 
@@ -126,7 +126,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ currentStep, totalSteps, colo
     <View style={styles.progressContainer}>
       <View style={styles.progressHeader}>
         <Text size="sm" weight="semibold" color={colors.textMuted}>
-          {t('matchCreation.step' as TranslationKey)
+          {t('matchCreation.step')
             .replace('{current}', String(currentStep))
             .replace('{total}', String(totalSteps))}
         </Text>
@@ -197,7 +197,7 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
               onBack();
             }}
             style={styles.headerButton}
-            accessibilityLabel={t('matchCreation.accessibility.previousStep' as TranslationKey)}
+            accessibilityLabel={t('matchCreation.accessibility.previousStep')}
             accessibilityRole="button"
           >
             <Ionicons name="chevron-back-outline" size={24} color={colors.buttonActive} />
@@ -222,7 +222,7 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
             onClose();
           }}
           style={styles.headerButton}
-          accessibilityLabel={t('matchCreation.accessibility.closeWizard' as TranslationKey)}
+          accessibilityLabel={t('matchCreation.accessibility.closeWizard')}
           accessibilityRole="button"
         >
           <Ionicons name="close-outline" size={24} color={colors.textMuted} />
@@ -490,32 +490,28 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     // Now we know the loading is complete
     if (hasDraft && draft && isDraftForSport(sportId)) {
       hasCheckedDraft.current = true;
-      Alert.alert(
-        t('matchCreation.resumeDraft' as TranslationKey),
-        t('matchCreation.resumeDraftMessage' as TranslationKey),
-        [
-          {
-            text: t('matchCreation.discardDraft' as TranslationKey),
-            style: 'destructive',
-            onPress: () => {
-              clearDraft();
-              resetForm();
-              lastSavedStep.current = null;
-              hasUnsavedChanges.current = false;
-            },
+      Alert.alert(t('matchCreation.resumeDraft'), t('matchCreation.resumeDraftMessage'), [
+        {
+          text: t('matchCreation.discardDraft'),
+          style: 'destructive',
+          onPress: () => {
+            clearDraft();
+            resetForm();
+            lastSavedStep.current = null;
+            hasUnsavedChanges.current = false;
           },
-          {
-            text: t('matchCreation.resumeDraft' as TranslationKey),
-            onPress: () => {
-              loadFromDraft(draft.data);
-              setCurrentStep(draft.currentStep);
-              // Mark draft as already saved at this step
-              lastSavedStep.current = draft.currentStep;
-              hasUnsavedChanges.current = false;
-            },
+        },
+        {
+          text: t('matchCreation.resumeDraft'),
+          onPress: () => {
+            loadFromDraft(draft.data);
+            setCurrentStep(draft.currentStep);
+            // Mark draft as already saved at this step
+            lastSavedStep.current = draft.currentStep;
+            hasUnsavedChanges.current = false;
           },
-        ]
-      );
+        },
+      ]);
     } else {
       // No draft exists (loading complete, no draft found), mark as checked
       hasCheckedDraft.current = true;
@@ -598,12 +594,12 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     if (currentStep === 1) {
       if (values.locationType === 'facility' && !values.facilityId) {
         warningHaptic();
-        toast.warning(t('matchCreation.validation.facilityRequired' as TranslationKey));
+        toast.warning(t('matchCreation.validation.facilityRequired'));
         return;
       }
       if (values.locationType === 'custom' && !values.locationName) {
         warningHaptic();
-        toast.warning(t('matchCreation.validation.locationNameRequired' as TranslationKey));
+        toast.warning(t('matchCreation.validation.locationNameRequired'));
         return;
       }
     }
@@ -813,8 +809,8 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
 
             // Translate error code to localized message
             const errorMessage = validation.errorCode
-              ? t(`matchCreation.validation.errors.${validation.errorCode}` as TranslationKey)
-              : t('matchCreation.validation.cannotUpdate' as TranslationKey);
+              ? t(`matchCreation.validation.errors.${validation.errorCode}`)
+              : t('matchCreation.validation.cannotUpdate');
 
             toast.error(errorMessage);
             return;
@@ -827,18 +823,18 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
             if (genderWarning) {
               // Show confirmation for gender mismatch
               Alert.alert(
-                t('matchCreation.validation.genderMismatchTitle' as TranslationKey),
-                t('matchCreation.validation.genderMismatchMessage' as TranslationKey).replace(
+                t('matchCreation.validation.genderMismatchTitle'),
+                t('matchCreation.validation.genderMismatchMessage').replace(
                   '{count}',
                   String(genderWarning.affectedParticipantIds.length)
                 ),
                 [
                   {
-                    text: t('common.cancel' as TranslationKey),
+                    text: t('common.cancel'),
                     style: 'cancel',
                   },
                   {
-                    text: t('matchCreation.validation.updateAnyway' as TranslationKey),
+                    text: t('matchCreation.validation.updateAnyway'),
                     style: 'destructive',
                     onPress: () => performUpdate(matchData),
                   },
@@ -859,37 +855,33 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
           // Build a message describing the changes
           const changeDescriptions: string[] = [];
           if (impactfulChanges.includes('date') || impactfulChanges.includes('time')) {
-            changeDescriptions.push(
-              t('matchCreation.validation.changes.dateTime' as TranslationKey)
-            );
+            changeDescriptions.push(t('matchCreation.validation.changes.dateTime'));
           }
           if (impactfulChanges.includes('location')) {
-            changeDescriptions.push(
-              t('matchCreation.validation.changes.location' as TranslationKey)
-            );
+            changeDescriptions.push(t('matchCreation.validation.changes.location'));
           }
           if (impactfulChanges.includes('format')) {
-            changeDescriptions.push(t('matchCreation.validation.changes.format' as TranslationKey));
+            changeDescriptions.push(t('matchCreation.validation.changes.format'));
           }
           if (impactfulChanges.includes('cost')) {
-            changeDescriptions.push(t('matchCreation.validation.changes.cost' as TranslationKey));
+            changeDescriptions.push(t('matchCreation.validation.changes.cost'));
           }
 
           const changesList = changeDescriptions.join(', ');
 
           // Show confirmation dialog
           Alert.alert(
-            t('matchCreation.validation.confirmChangesTitle' as TranslationKey),
-            t('matchCreation.validation.confirmChangesMessage' as TranslationKey)
+            t('matchCreation.validation.confirmChangesTitle'),
+            t('matchCreation.validation.confirmChangesMessage')
               .replace('{changes}', changesList)
               .replace('{count}', String(joinedParticipants.length)),
             [
               {
-                text: t('common.cancel' as TranslationKey),
+                text: t('common.cancel'),
                 style: 'cancel',
               },
               {
-                text: t('matchCreation.validation.confirmUpdate' as TranslationKey),
+                text: t('matchCreation.validation.confirmUpdate'),
                 onPress: () => performUpdate(matchData),
               },
             ]
@@ -924,18 +916,14 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     // In edit mode, just ask if they want to discard changes (no draft saving)
     if (isEditMode) {
       if (isDirty) {
-        Alert.alert(
-          t('matchCreation.discardChanges' as TranslationKey),
-          t('matchCreation.discardEditMessage' as TranslationKey),
-          [
-            { text: t('matchCreation.keepEditing' as TranslationKey), style: 'cancel' },
-            {
-              text: t('matchCreation.discardChanges' as TranslationKey),
-              style: 'destructive',
-              onPress: onClose,
-            },
-          ]
-        );
+        Alert.alert(t('matchCreation.discardChanges'), t('matchCreation.discardEditMessage'), [
+          { text: t('matchCreation.keepEditing'), style: 'cancel' },
+          {
+            text: t('matchCreation.discardChanges'),
+            style: 'destructive',
+            onPress: onClose,
+          },
+        ]);
       } else {
         onClose();
       }
@@ -955,30 +943,26 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     const shouldAskToSave = hasFormData || hasProgressedWithoutSave || hasChangedSinceLastSave;
 
     if (shouldAskToSave) {
-      Alert.alert(
-        t('matchCreation.discardChanges' as TranslationKey),
-        t('matchCreation.discardChangesMessage' as TranslationKey),
-        [
-          { text: t('matchCreation.keepEditing' as TranslationKey), style: 'cancel' },
-          {
-            text: t('matchCreation.saveDraft' as TranslationKey),
-            onPress: () => {
-              saveDraft(values, currentStep, sportId);
-              lastSavedStep.current = currentStep;
-              hasUnsavedChanges.current = false;
-              onClose();
-            },
+      Alert.alert(t('matchCreation.discardChanges'), t('matchCreation.discardChangesMessage'), [
+        { text: t('matchCreation.keepEditing'), style: 'cancel' },
+        {
+          text: t('matchCreation.saveDraft'),
+          onPress: () => {
+            saveDraft(values, currentStep, sportId);
+            lastSavedStep.current = currentStep;
+            hasUnsavedChanges.current = false;
+            onClose();
           },
-          {
-            text: t('matchCreation.discardDraft' as TranslationKey),
-            style: 'destructive',
-            onPress: () => {
-              clearDraft();
-              onClose();
-            },
+        },
+        {
+          text: t('matchCreation.discardDraft'),
+          style: 'destructive',
+          onPress: () => {
+            clearDraft();
+            onClose();
           },
-        ]
-      );
+        },
+      ]);
     } else {
       onClose();
     }
@@ -1068,14 +1052,12 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                 />
               </View>
               <Text size="xl" weight="bold" color={colors.text} style={styles.successTitle}>
-                {isEditMode
-                  ? t('matchCreation.updateSuccess' as TranslationKey)
-                  : t('matchCreation.success' as TranslationKey)}
+                {isEditMode ? t('matchCreation.updateSuccess') : t('matchCreation.success')}
               </Text>
               <Text size="base" color={colors.textMuted} style={styles.successDescription}>
                 {isEditMode
-                  ? t('matchCreation.updateSuccessDescription' as TranslationKey)
-                  : t('matchCreation.successDescription' as TranslationKey)}
+                  ? t('matchCreation.updateSuccessDescription')
+                  : t('matchCreation.successDescription')}
               </Text>
               <View style={styles.successButtons}>
                 {/* Share button - first */}
@@ -1100,7 +1082,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                         style={styles.buttonIcon}
                       />
                       <Text size="base" weight="semibold" color={base.white}>
-                        {t('matchDetail.inviteFriends' as TranslationKey)}
+                        {t('matchDetail.inviteFriends')}
                       </Text>
                     </>
                   )}
@@ -1121,7 +1103,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                       style={styles.buttonIcon}
                     />
                     <Text size="base" weight="semibold" color={colors.buttonTextActive}>
-                      {t('matchCreation.invite.title' as TranslationKey)}
+                      {t('matchCreation.invite.title')}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -1139,7 +1121,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                     weight="semibold"
                     color={isEditMode ? colors.buttonTextActive : colors.buttonActive}
                   >
-                    {t('matchCreation.viewMatch' as TranslationKey)}
+                    {t('matchCreation.viewMatch')}
                   </Text>
                 </TouchableOpacity>
                 {!isEditMode && (
@@ -1159,7 +1141,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                     }}
                   >
                     <Text size="base" weight="regular" color={colors.textSecondary}>
-                      {t('matchCreation.createAnother' as TranslationKey)}
+                      {t('matchCreation.createAnother')}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -1263,11 +1245,11 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
           <TouchableOpacity
             style={[styles.nextButton, { backgroundColor: colors.buttonActive }]}
             onPress={goToNextStep}
-            accessibilityLabel={t('matchCreation.accessibility.nextStep' as TranslationKey)}
+            accessibilityLabel={t('matchCreation.accessibility.nextStep')}
             accessibilityRole="button"
           >
             <Text size="lg" weight="semibold" color={colors.buttonTextActive}>
-              {t('matchCreation.next' as TranslationKey)}
+              {t('matchCreation.next')}
             </Text>
             <Ionicons name="arrow-forward-outline" size={20} color={colors.buttonTextActive} />
           </TouchableOpacity>
@@ -1281,9 +1263,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
             onPress={handleSubmit}
             disabled={isSubmitting}
             accessibilityLabel={
-              isEditMode
-                ? t('matchCreation.saveChanges' as TranslationKey)
-                : t('matchCreation.createMatch' as TranslationKey)
+              isEditMode ? t('matchCreation.saveChanges') : t('matchCreation.createMatch')
             }
             accessibilityRole="button"
           >
@@ -1292,9 +1272,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
             ) : (
               <>
                 <Text size="lg" weight="semibold" color={colors.buttonTextActive}>
-                  {isEditMode
-                    ? t('matchCreation.saveChanges' as TranslationKey)
-                    : t('matchCreation.createMatch' as TranslationKey)}
+                  {isEditMode ? t('matchCreation.saveChanges') : t('matchCreation.createMatch')}
                 </Text>
                 <Ionicons name="checkmark-outline" size={20} color={colors.buttonTextActive} />
               </>

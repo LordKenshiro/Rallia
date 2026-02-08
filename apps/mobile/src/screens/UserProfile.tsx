@@ -511,7 +511,7 @@ const UserProfile = () => {
       afternoon: 'onboarding.availabilityStep.pm',
       evening: 'onboarding.availabilityStep.eve',
     } as const;
-    return t(keyMap[period] as TranslationKey);
+    return t(keyMap[period]);
   };
 
   return (
@@ -519,7 +519,7 @@ const UserProfile = () => {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Profile Picture with Edit Overlay - Wrapped with CopilotStep for tour */}
         <CopilotStep
-          text={t('tour.profileScreen.picture.description' as TranslationKey)}
+          text={t('tour.profileScreen.picture.description')}
           order={20}
           name="profile_picture"
         >
@@ -858,7 +858,7 @@ const UserProfile = () => {
 
         {/* My Sports - Horizontal Cards with Chevrons - Wrapped with CopilotStep */}
         <CopilotStep
-          text={t('tour.profileScreen.sports.description' as TranslationKey)}
+          text={t('tour.profileScreen.sports.description')}
           order={21}
           name="profile_sports"
         >
@@ -989,7 +989,7 @@ const UserProfile = () => {
 
         {/* My Availabilities with Edit Icon - Wrapped with CopilotStep */}
         <CopilotStep
-          text={t('tour.profileScreen.availability.description' as TranslationKey)}
+          text={t('tour.profileScreen.availability.description')}
           order={22}
           name="profile_availability"
         >

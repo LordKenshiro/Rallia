@@ -34,7 +34,7 @@ interface BookingFilterChipsProps {
 
 interface FilterOption<T> {
   value: T;
-  labelKey: string;
+  labelKey: TranslationKey;
   icon?: keyof typeof Ionicons.glyphMap;
 }
 
@@ -135,7 +135,7 @@ export default function BookingFilterChips({
       ? (v: string) => onUpcomingFilterToggle(v as UpcomingBookingFilter)
       : (v: string) => onPastFilterToggle(v as PastBookingFilter);
 
-  const getLabel = useCallback((labelKey: string): string => t(labelKey as TranslationKey), [t]);
+  const getLabel = useCallback((labelKey: TranslationKey): string => t(labelKey), [t]);
 
   return (
     <View style={styles.container}>

@@ -170,7 +170,7 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <View style={styles.headerCenter}>
             <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-              {t('onboarding.availabilityStep.title' as TranslationKey)}
+              {t('onboarding.availabilityStep.title')}
             </Text>
           </View>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -199,7 +199,7 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
 
           {/* Subtitle */}
           <Text style={[styles.subtitle, { color: colors.text }]}>
-            {t('onboarding.availabilityStep.subtitle' as TranslationKey)}
+            {t('onboarding.availabilityStep.subtitle')}
           </Text>
 
           {/* Availability Grid */}
@@ -264,8 +264,8 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
             ) : (
               <Text weight="semibold" style={{ color: colors.primaryForeground }}>
                 {mode === 'edit'
-                  ? t('onboarding.availabilityStep.saveButton' as TranslationKey)
-                  : t('onboarding.availabilityStep.complete' as TranslationKey)}
+                  ? t('onboarding.availabilityStep.saveButton')
+                  : t('onboarding.availabilityStep.complete')}
               </Text>
             )}
           </TouchableOpacity>

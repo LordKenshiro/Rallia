@@ -42,8 +42,8 @@ interface Rating {
 /**
  * Maps NTRP score value to a translation key
  */
-const getNtrpSkillLabelKey = (scoreValue: number): string => {
-  const mapping: Record<number, string> = {
+const getNtrpSkillLabelKey = (scoreValue: number): TranslationKey => {
+  const mapping: Record<number, TranslationKey> = {
     1.5: 'onboarding.ratingStep.skillLevels.beginner1',
     2.0: 'onboarding.ratingStep.skillLevels.beginner2',
     2.5: 'onboarding.ratingStep.skillLevels.beginner3',
@@ -61,8 +61,8 @@ const getNtrpSkillLabelKey = (scoreValue: number): string => {
 /**
  * Maps NTRP score value to a description translation key
  */
-const getNtrpDescriptionKey = (scoreValue: number): string => {
-  return `onboarding.ratingStep.ntrpDescriptions.${scoreValue.toFixed(1).replace('.', '_')}`;
+const getNtrpDescriptionKey = (scoreValue: number): TranslationKey => {
+  return `onboarding.ratingStep.ntrpDescriptions.${scoreValue.toFixed(1).replace('.', '_')}` as TranslationKey;
 };
 
 export function TennisRatingActionSheet({ payload }: SheetProps<'tennis-rating'>) {
@@ -96,10 +96,7 @@ export function TennisRatingActionSheet({ payload }: SheetProps<'tennis-rating'>
             sport: 'tennis',
             system: 'ntrp',
           });
-          Alert.alert(
-            t('alerts.error' as TranslationKey),
-            t('onboarding.validation.failedToLoadRatings' as TranslationKey)
-          );
+          Alert.alert(t('alerts.error'), t('onboarding.validation.failedToLoadRatings'));
           return;
         }
 
@@ -115,10 +112,7 @@ export function TennisRatingActionSheet({ payload }: SheetProps<'tennis-rating'>
         setRatings(transformedRatings);
       } catch (error) {
         Logger.error('Unexpected error loading tennis ratings', error as Error);
-        Alert.alert(
-          t('alerts.error' as TranslationKey),
-          t('onboarding.validation.unexpectedError' as TranslationKey)
-        );
+        Alert.alert(t('alerts.error'), t('onboarding.validation.unexpectedError'));
       } finally {
         setIsLoading(false);
       }
@@ -173,11 +167,9 @@ export function TennisRatingActionSheet({ payload }: SheetProps<'tennis-rating'>
         if (sportError || !tennisSport) {
           Logger.error('Failed to fetch tennis sport', sportError as Error);
           setIsSaving(false);
-          Alert.alert(
-            t('alerts.error' as TranslationKey),
-            t('onboarding.validation.failedToSaveRating' as TranslationKey),
-            [{ text: t('common.ok' as TranslationKey) }]
-          );
+          Alert.alert(t('alerts.error'), t('onboarding.validation.failedToSaveRating'), [
+            { text: t('common.ok') },
+          ]);
           return;
         }
 
@@ -186,10 +178,7 @@ export function TennisRatingActionSheet({ payload }: SheetProps<'tennis-rating'>
 
         if (!selectedRatingData) {
           setIsSaving(false);
-          Alert.alert(
-            t('alerts.error' as TranslationKey),
-            t('onboarding.validation.invalidRating' as TranslationKey)
-          );
+          Alert.alert(t('alerts.error'), t('onboarding.validation.invalidRating'));
           return;
         }
 
@@ -207,11 +196,9 @@ export function TennisRatingActionSheet({ payload }: SheetProps<'tennis-rating'>
         if (error) {
           Logger.error('Failed to save tennis rating', error as Error, { ratingData });
           setIsSaving(false);
-          Alert.alert(
-            t('alerts.error' as TranslationKey),
-            t('onboarding.validation.failedToSaveRating' as TranslationKey),
-            [{ text: t('common.ok' as TranslationKey) }]
-          );
+          Alert.alert(t('alerts.error'), t('onboarding.validation.failedToSaveRating'), [
+            { text: t('common.ok') },
+          ]);
           return;
         }
 
@@ -220,11 +207,9 @@ export function TennisRatingActionSheet({ payload }: SheetProps<'tennis-rating'>
       } catch (error) {
         Logger.error('Unexpected error saving tennis rating', error as Error);
         setIsSaving(false);
-        Alert.alert(
-          t('alerts.error' as TranslationKey),
-          t('onboarding.validation.unexpectedError' as TranslationKey),
-          [{ text: t('common.ok' as TranslationKey) }]
-        );
+        Alert.alert(t('alerts.error'), t('onboarding.validation.unexpectedError'), [
+          { text: t('common.ok') },
+        ]);
       }
     }
   };
@@ -247,8 +232,8 @@ export function TennisRatingActionSheet({ payload }: SheetProps<'tennis-rating'>
               ellipsizeMode="tail"
             >
               {mode === 'edit'
-                ? t('onboarding.ratingOverlay.editTennisTitle' as TranslationKey)
-                : t('onboarding.ratingOverlay.title' as TranslationKey)}
+                ? t('onboarding.ratingOverlay.editTennisTitle')
+                : t('onboarding.ratingOverlay.title')}
             </Text>
           </View>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -278,7 +263,7 @@ export function TennisRatingActionSheet({ payload }: SheetProps<'tennis-rating'>
           {/* Sport Badge */}
           <View style={[styles.sportBadge, { backgroundColor: colors.primary }]}>
             <Text style={[styles.sportBadgeText, { color: colors.primaryForeground }]}>
-              {t('onboarding.tennis' as TranslationKey)}
+              {t('onboarding.tennis')}
             </Text>
           </View>
 
@@ -293,10 +278,10 @@ export function TennisRatingActionSheet({ payload }: SheetProps<'tennis-rating'>
                   )
                 }
               >
-                {t('onboarding.ratingOverlay.learnMoreNtrp' as TranslationKey)}
+                {t('onboarding.ratingOverlay.learnMoreNtrp')}
               </Text>
             ) : (
-              t('onboarding.ratingOverlay.tennisSubtitle' as TranslationKey)
+              t('onboarding.ratingOverlay.tennisSubtitle')
             )}
           </Text>
 
@@ -305,7 +290,7 @@ export function TennisRatingActionSheet({ payload }: SheetProps<'tennis-rating'>
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
               <Text style={[styles.loadingText, { color: colors.textMuted }]}>
-                {t('onboarding.ratingOverlay.loading' as TranslationKey)}
+                {t('onboarding.ratingOverlay.loading')}
               </Text>
             </View>
           ) : (
@@ -345,7 +330,7 @@ export function TennisRatingActionSheet({ payload }: SheetProps<'tennis-rating'>
                         },
                       ]}
                     >
-                      {t(getNtrpSkillLabelKey(rating.score_value) as TranslationKey)}
+                      {t(getNtrpSkillLabelKey(rating.score_value))}
                     </Text>
                   </View>
                   <Text
@@ -366,7 +351,7 @@ export function TennisRatingActionSheet({ payload }: SheetProps<'tennis-rating'>
                       },
                     ]}
                   >
-                    {t(getNtrpDescriptionKey(rating.score_value) as TranslationKey)}
+                    {t(getNtrpDescriptionKey(rating.score_value))}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -391,8 +376,8 @@ export function TennisRatingActionSheet({ payload }: SheetProps<'tennis-rating'>
             ) : (
               <Text weight="semibold" style={{ color: colors.primaryForeground }}>
                 {mode === 'edit'
-                  ? t('onboarding.ratingOverlay.save' as TranslationKey)
-                  : t('onboarding.ratingOverlay.continue' as TranslationKey)}
+                  ? t('onboarding.ratingOverlay.save')
+                  : t('onboarding.ratingOverlay.continue')}
               </Text>
             )}
           </TouchableOpacity>

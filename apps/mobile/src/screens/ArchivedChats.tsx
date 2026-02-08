@@ -133,10 +133,10 @@ const ArchivedChats = () => {
       <View style={styles.emptyContainer}>
         <Ionicons name="archive-outline" size={64} color={colors.textMuted} />
         <Text style={[styles.emptyTitle, { color: colors.text }]}>
-          {t('chat.archivedChats.noArchivedChats' as TranslationKey)}
+          {t('chat.archivedChats.noArchivedChats')}
         </Text>
         <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
-          {t('chat.archivedChats.chatsAppearHere' as TranslationKey)}
+          {t('chat.archivedChats.chatsAppearHere')}
         </Text>
       </View>
     );

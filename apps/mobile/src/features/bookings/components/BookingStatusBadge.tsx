@@ -59,7 +59,7 @@ function getStatusColors(status: BookingStatus, isDark: boolean): { bg: string; 
  * Map booking status to i18n key
  */
 function getStatusLabelKey(status: BookingStatus): TranslationKey {
-  const map: Record<BookingStatus, string> = {
+  const map: Record<BookingStatus, TranslationKey> = {
     confirmed: 'myBookings.status.confirmed',
     pending: 'myBookings.status.pending',
     awaiting_approval: 'myBookings.status.awaitingApproval',
@@ -67,7 +67,7 @@ function getStatusLabelKey(status: BookingStatus): TranslationKey {
     completed: 'myBookings.status.completed',
     no_show: 'myBookings.status.noShow',
   };
-  return (map[status] ?? 'myBookings.status.pending') as TranslationKey;
+  return map[status] ?? 'myBookings.status.pending';
 }
 
 export default function BookingStatusBadge({ status, size = 'sm' }: BookingStatusBadgeProps) {

@@ -149,28 +149,28 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
         const partner = otherParticipants.find(p => p.player_id === partnerId);
         const opponents = otherParticipants.filter(p => p.player_id !== partnerId);
         const team1 = partner
-          ? t('registerMatchScore.teamYouAndPartner' as TranslationKey, {
+          ? t('registerMatchScore.teamYouAndPartner', {
               name: getParticipantName(partner),
             })
-          : t('registerMatchScore.teamYourTeam' as TranslationKey);
+          : t('registerMatchScore.teamYourTeam');
         const team2 =
           opponents.length === 2
-            ? t('registerMatchScore.teamOpponentsNames' as TranslationKey, {
+            ? t('registerMatchScore.teamOpponentsNames', {
                 name1: getParticipantName(opponents[0]),
                 name2: getParticipantName(opponents[1]),
               })
-            : t('registerMatchScore.teamOpponents' as TranslationKey);
+            : t('registerMatchScore.teamOpponents');
         return { team1Label: team1, team2Label: team2 };
       }
       return {
-        team1Label: t('registerMatchScore.teamYourTeam' as TranslationKey),
-        team2Label: t('registerMatchScore.teamOpponents' as TranslationKey),
+        team1Label: t('registerMatchScore.teamYourTeam'),
+        team2Label: t('registerMatchScore.teamOpponents'),
       };
     }
     const opponentName = otherParticipants[0] ? getParticipantName(otherParticipants[0]) : null;
     return {
-      team1Label: t('registerMatchScore.teamYou' as TranslationKey),
-      team2Label: opponentName ?? t('registerMatchScore.teamOpponent' as TranslationKey),
+      team1Label: t('registerMatchScore.teamYou'),
+      team2Label: opponentName ?? t('registerMatchScore.teamOpponent'),
     };
   }, [isDoubles, partnerId, otherParticipants, getParticipantName, t]);
 
@@ -231,15 +231,15 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
 
   const handleSubmit = useCallback(async () => {
     if (!match || !playerId || validSets.length === 0) {
-      setError(t('registerMatchScore.error.enterScores' as TranslationKey));
+      setError(t('registerMatchScore.error.enterScores'));
       return;
     }
     if (winningTeam === null) {
-      setError(t('registerMatchScore.error.noWinner' as TranslationKey));
+      setError(t('registerMatchScore.error.noWinner'));
       return;
     }
     if (isDoubles && !partnerId) {
-      setError(t('registerMatchScore.error.selectPartner' as TranslationKey));
+      setError(t('registerMatchScore.error.selectPartner'));
       return;
     }
 
@@ -283,14 +283,14 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
               <Ionicons name="close-outline" size={24} color={colors.textMuted} />
             </TouchableOpacity>
             <Text size="lg" weight="semibold" color={colors.text}>
-              {t('registerMatchScore.title' as TranslationKey)}
+              {t('registerMatchScore.title')}
             </Text>
             <View style={styles.headerButton} />
           </View>
           <View style={styles.errorStateContent}>
             <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
             <Text size="base" color={colors.textMuted} style={styles.errorStateText}>
-              {t('registerMatchScore.error.invalidParticipants' as TranslationKey)}
+              {t('registerMatchScore.error.invalidParticipants')}
             </Text>
           </View>
         </View>
@@ -315,7 +315,7 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
             style={styles.headerTitle}
             numberOfLines={1}
           >
-            {t('registerMatchScore.title' as TranslationKey)}
+            {t('registerMatchScore.title')}
           </Text>
           <View style={styles.headerRight}>
             <TouchableOpacity
@@ -343,7 +343,7 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
                 color={colors.textMuted}
                 style={styles.sectionLabel}
               >
-                {t('registerMatchScore.yourPartner' as TranslationKey)}
+                {t('registerMatchScore.yourPartner')}
               </Text>
               <View style={styles.partnerRow}>
                 {otherParticipants.map(p => {
@@ -390,7 +390,7 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
           )}
 
           <Text size="sm" weight="semibold" color={colors.textMuted} style={styles.sectionLabel}>
-            {t('registerMatchScore.sets' as TranslationKey)}
+            {t('registerMatchScore.sets')}
           </Text>
 
           {sets.map((set, idx) => (
@@ -408,14 +408,14 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
                   color={colors.textMuted}
                   style={styles.setCardLabel}
                 >
-                  {t('registerMatchScore.setN' as TranslationKey, { number: idx + 1 })}
+                  {t('registerMatchScore.setN', { number: idx + 1 })}
                 </Text>
                 {sets.length > 1 && idx > 0 && (
                   <TouchableOpacity
                     onPress={() => handleRemoveSet(idx)}
                     style={styles.removeSetButton}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    accessibilityLabel={t('registerMatchScore.removeSet' as TranslationKey)}
+                    accessibilityLabel={t('registerMatchScore.removeSet')}
                     accessibilityRole="button"
                   >
                     <Ionicons name="trash-outline" size={20} color={colors.textMuted} />
@@ -515,7 +515,7 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
                 color={colors.buttonActive}
                 style={styles.addSetLabel}
               >
-                {t('registerMatchScore.addSet' as TranslationKey)}
+                {t('registerMatchScore.addSet')}
               </Text>
             </TouchableOpacity>
           )}
@@ -554,7 +554,7 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
                   weight="semibold"
                   color={canSubmit ? colors.buttonTextActive : colors.textMuted}
                 >
-                  {t('registerMatchScore.submit' as TranslationKey)}
+                  {t('registerMatchScore.submit')}
                 </Text>
                 <Ionicons
                   name="checkmark"

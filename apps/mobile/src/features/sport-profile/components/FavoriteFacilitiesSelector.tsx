@@ -20,6 +20,7 @@ import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, selectionHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
 import { useFacilitySearch, useFavoriteFacilities } from '@rallia/shared-hooks';
 import type { FacilitySearchResult } from '@rallia/shared-types';
+import { TranslationKey } from '@rallia/shared-translations';
 
 // =============================================================================
 // TYPES
@@ -47,7 +48,7 @@ interface FavoriteFacilitiesSelectorProps {
   /** Theme colors */
   colors: ThemeColors;
   /** Translation function */
-  t: (key: string) => string;
+  t: (key: TranslationKey) => string;
   /** Maximum number of favorites allowed */
   maxFavorites?: number;
 }

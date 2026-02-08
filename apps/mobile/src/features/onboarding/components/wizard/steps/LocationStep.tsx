@@ -209,21 +209,21 @@ export const LocationStep: React.FC<LocationStepProps> = ({
     >
       {/* Title */}
       <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
-        {t('onboarding.locationStep.title' as TranslationKey)}
+        {t('onboarding.locationStep.title')}
       </Text>
 
       {/* Subtitle */}
       <Text size="sm" color={colors.textSecondary} style={styles.subtitle}>
-        {t('onboarding.locationStep.subtitle' as TranslationKey)}
+        {t('onboarding.locationStep.subtitle')}
       </Text>
 
       {/* Address Field with Autocomplete */}
       <View style={styles.inputContainer}>
         <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.inputLabel}>
-          {t('onboarding.locationStep.address' as TranslationKey)}
+          {t('onboarding.locationStep.address')}
           <Text size="xs" color={colors.textMuted}>
             {' '}
-            ({t('common.optional' as TranslationKey)})
+            ({t('common.optional')})
           </Text>
         </Text>
         <View style={styles.addressInputWrapper}>
@@ -236,7 +236,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
                 color: colors.text,
               },
             ]}
-            placeholder={t('onboarding.locationStep.addressPlaceholder' as TranslationKey)}
+            placeholder={t('onboarding.locationStep.addressPlaceholder')}
             placeholderTextColor={colors.textMuted}
             value={addressQuery}
             onChangeText={handleAddressChange}
@@ -282,7 +282,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
       {/* City Field (Mandatory) */}
       <View style={styles.inputContainer}>
         <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.inputLabel}>
-          {t('onboarding.locationStep.city' as TranslationKey)}
+          {t('onboarding.locationStep.city')}
           <Text size="xs" color={colors.error}>
             {' '}
             *
@@ -297,7 +297,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
               color: colors.text,
             },
           ]}
-          placeholder={t('onboarding.locationStep.cityPlaceholder' as TranslationKey)}
+          placeholder={t('onboarding.locationStep.cityPlaceholder')}
           placeholderTextColor={colors.textMuted}
           value={formData.city}
           onChangeText={handleCityChange}
@@ -309,10 +309,10 @@ export const LocationStep: React.FC<LocationStepProps> = ({
       {/* Postal Code Field */}
       <View style={styles.inputContainer}>
         <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.inputLabel}>
-          {t('onboarding.locationStep.postalCode' as TranslationKey)}
+          {t('onboarding.locationStep.postalCode')}
           <Text size="xs" color={colors.textMuted}>
             {' '}
-            ({t('common.optional' as TranslationKey)})
+            ({t('common.optional')})
           </Text>
         </Text>
         <BottomSheetTextInput
@@ -324,7 +324,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
               color: colors.text,
             },
           ]}
-          placeholder={t('onboarding.locationStep.postalCodePlaceholder' as TranslationKey)}
+          placeholder={t('onboarding.locationStep.postalCodePlaceholder')}
           placeholderTextColor={colors.textMuted}
           value={formData.postalCode}
           onChangeText={handlePostalCodeChange}
@@ -339,10 +339,10 @@ export const LocationStep: React.FC<LocationStepProps> = ({
         <Ionicons name="shield-checkmark" size={24} color={colors.buttonActive} />
         <View style={styles.infoTextContainer}>
           <Text size="sm" weight="semibold" color={colors.text} style={styles.infoTitle}>
-            {t('onboarding.locationStep.privacyTitle' as TranslationKey)}
+            {t('onboarding.locationStep.privacyTitle')}
           </Text>
           <Text size="xs" color={colors.textSecondary} style={styles.infoText}>
-            {t('onboarding.locationStep.privacyDescription' as TranslationKey)}
+            {t('onboarding.locationStep.privacyDescription')}
           </Text>
         </View>
       </View>

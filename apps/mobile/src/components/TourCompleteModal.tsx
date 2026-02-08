@@ -11,7 +11,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, Modal, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '../hooks';
 import { COLORS } from '@rallia/shared-constants';
 import { Logger } from '@rallia/shared-services';
 import { Ionicons } from '@expo/vector-icons';

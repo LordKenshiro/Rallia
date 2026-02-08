@@ -51,7 +51,7 @@ const DAY_TO_I18N_KEY: Record<DayOfWeek, string> = {
   Sun: 'sunday',
 };
 
-const SLOT_TO_I18N_KEY: Record<TimeSlot, string> = {
+const SLOT_TO_I18N_KEY: Record<TimeSlot, TranslationKey> = {
   AM: 'onboarding.availabilityStep.am',
   PM: 'onboarding.availabilityStep.pm',
   EVE: 'onboarding.availabilityStep.eve',
@@ -101,10 +101,10 @@ export const AvailabilitiesStep: React.FC<AvailabilitiesStepProps> = ({
     >
       {/* Title - aligned with profile availability wording */}
       <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
-        {t('onboarding.availability' as TranslationKey)}
+        {t('onboarding.availability')}
       </Text>
       <Text size="base" color={colors.textSecondary} style={styles.subtitle}>
-        {t('onboarding.availabilitySubtitle' as TranslationKey)}
+        {t('onboarding.availabilitySubtitle')}
       </Text>
 
       {/* Selection Counter */}
@@ -114,7 +114,7 @@ export const AvailabilitiesStep: React.FC<AvailabilitiesStepProps> = ({
           weight="semibold"
           color={hasMinimum ? colors.buttonActive : colors.textMuted}
         >
-          {t('onboarding.availabilityStep.minimumSelected' as TranslationKey)
+          {t('onboarding.availabilityStep.minimumSelected')
             .replace('{count}', String(totalSelections))
             .replace('{minimum}', String(MIN_SELECTIONS))}
         </Text>
@@ -157,7 +157,7 @@ export const AvailabilitiesStep: React.FC<AvailabilitiesStepProps> = ({
                       weight="semibold"
                       color={isSelected ? colors.buttonTextActive : colors.textSecondary}
                     >
-                      {t(SLOT_TO_I18N_KEY[slot] as TranslationKey)}
+                      {t(SLOT_TO_I18N_KEY[slot])}
                     </Text>
                   </TouchableOpacity>
                 );

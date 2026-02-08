@@ -34,14 +34,14 @@ export function MatchExpectationStep({ onContinue }: MatchExpectationStepProps) 
   }[] = [
     {
       value: 'friendly',
-      label: t('addScore.matchExpectation.friendly' as TranslationKey),
-      description: t('addScore.matchExpectation.friendlyDescription' as TranslationKey),
+      label: t('addScore.matchExpectation.friendly'),
+      description: t('addScore.matchExpectation.friendlyDescription'),
       icon: 'happy',
     },
     {
       value: 'competitive',
-      label: t('addScore.matchExpectation.competitive' as TranslationKey),
-      description: t('addScore.matchExpectation.competitiveDescription' as TranslationKey),
+      label: t('addScore.matchExpectation.competitive'),
+      description: t('addScore.matchExpectation.competitiveDescription'),
       icon: 'trophy',
     },
   ];
@@ -55,10 +55,10 @@ export function MatchExpectationStep({ onContinue }: MatchExpectationStepProps) 
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Title */}
       <Text weight="bold" size="xl" style={[styles.title, { color: colors.text }]}>
-        {t('addScore.matchExpectation.title' as TranslationKey)}
+        {t('addScore.matchExpectation.title')}
       </Text>
       <Text size="sm" style={[styles.subtitle, { color: colors.textSecondary }]}>
-        {t('addScore.matchExpectation.subtitle' as TranslationKey)}
+        {t('addScore.matchExpectation.subtitle')}
       </Text>
 
       {/* Options */}
@@ -119,7 +119,7 @@ export function MatchExpectationStep({ onContinue }: MatchExpectationStepProps) 
       {/* Continue button */}
       <View style={styles.bottomButton}>
         <Button variant="primary" onPress={handleContinue}>
-          {t('addScore.matchExpectation.continue' as TranslationKey)}
+          {t('addScore.matchExpectation.continue')}
         </Button>
       </View>
     </View>

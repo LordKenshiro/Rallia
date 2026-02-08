@@ -166,9 +166,7 @@ export default function CommunityDetailScreen() {
           } catch (error) {
             Alert.alert(
               t('common.error'),
-              error instanceof Error
-                ? error.message
-                : t('community.errors.failedToLeave' as TranslationKey)
+              error instanceof Error ? error.message : t('community.errors.failedToLeave')
             );
           }
         },
@@ -190,9 +188,7 @@ export default function CommunityDetailScreen() {
           } catch (error) {
             Alert.alert(
               t('common.error'),
-              error instanceof Error
-                ? error.message
-                : t('community.errors.failedToDelete' as TranslationKey)
+              error instanceof Error ? error.message : t('community.errors.failedToDelete')
             );
           }
         },
@@ -213,7 +209,7 @@ export default function CommunityDetailScreen() {
 
     options.push({
       id: 'invite',
-      label: t('community.options.shareInviteLink' as TranslationKey),
+      label: t('community.options.shareInviteLink'),
       icon: 'link-outline',
       onPress: () =>
         SheetManager.show('invite-link', {
@@ -230,7 +226,7 @@ export default function CommunityDetailScreen() {
     if (isModerator && pendingRequests && pendingRequests.length > 0) {
       options.push({
         id: 'requests',
-        label: t('community.options.pendingRequests' as TranslationKey, {
+        label: t('community.options.pendingRequests', {
           count: pendingRequests.length,
         }),
         icon: 'person-add-outline',
@@ -241,7 +237,7 @@ export default function CommunityDetailScreen() {
     if (isModerator && community) {
       options.push({
         id: 'edit',
-        label: t('community.options.editCommunity' as TranslationKey),
+        label: t('community.options.editCommunity'),
         icon: 'create-outline',
         onPress: () =>
           SheetManager.show('edit-community', {
@@ -252,7 +248,7 @@ export default function CommunityDetailScreen() {
 
     options.push({
       id: 'leave',
-      label: t('community.options.leaveCommunity' as TranslationKey),
+      label: t('community.options.leaveCommunity'),
       icon: 'exit-outline',
       onPress: handleLeaveCommunity,
       destructive: true,
@@ -261,7 +257,7 @@ export default function CommunityDetailScreen() {
     if (isCreator) {
       options.push({
         id: 'delete',
-        label: t('community.options.deleteCommunity' as TranslationKey),
+        label: t('community.options.deleteCommunity'),
         icon: 'trash-outline',
         onPress: handleDeleteCommunity,
         destructive: true,
@@ -428,7 +424,7 @@ export default function CommunityDetailScreen() {
               ]}
             >
               <Text weight="semibold" size="base" style={{ color: colors.text, marginBottom: 16 }}>
-                {t('community.detail.last7DaysActivities' as TranslationKey)}
+                {t('community.detail.last7DaysActivities')}
               </Text>
               <View style={styles.statsRow}>
                 <View style={styles.statCircle}>
@@ -499,7 +495,7 @@ export default function CommunityDetailScreen() {
                         {totalActivities}
                       </Text>
                       <Text size="xs" style={{ color: colors.textSecondary }}>
-                        {t('community.detail.activities' as TranslationKey)}
+                        {t('community.detail.activities')}
                       </Text>
                     </View>
                   </View>
@@ -508,7 +504,7 @@ export default function CommunityDetailScreen() {
                   <View style={styles.statItem}>
                     <Ionicons name="people-outline" size={20} color="#5AC8FA" />
                     <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
-                      {t('community.detail.newMembers' as TranslationKey, {
+                      {t('community.detail.newMembers', {
                         count: membersCountLast7Days,
                       })}
                     </Text>
@@ -520,7 +516,7 @@ export default function CommunityDetailScreen() {
                       color="#FF9500"
                     />
                     <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
-                      {t('community.detail.gamesCreated' as TranslationKey, {
+                      {t('community.detail.gamesCreated', {
                         count: gamesCountLast7Days,
                       })}
                     </Text>
@@ -532,7 +528,7 @@ export default function CommunityDetailScreen() {
                       color={isDark ? '#8E8E93' : '#C7C7CC'}
                     />
                     <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
-                      {t('community.detail.newMessages' as TranslationKey, {
+                      {t('community.detail.newMessages', {
                         count: messagesCountLast7Days,
                       })}
                     </Text>
@@ -552,7 +548,7 @@ export default function CommunityDetailScreen() {
                 <View style={styles.aboutHeader}>
                   <Ionicons name="information-circle-outline" size={24} color={colors.primary} />
                   <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
-                    {t('community.detail.about' as TranslationKey)}
+                    {t('community.detail.about')}
                   </Text>
                 </View>
                 <Text style={{ color: colors.textSecondary, lineHeight: 22, marginTop: 8 }}>
@@ -577,7 +573,7 @@ export default function CommunityDetailScreen() {
                 </View>
                 <TouchableOpacity onPress={() => setActiveTab('leaderboard')}>
                   <Text size="sm" style={{ color: colors.primary }}>
-                    {t('community.detail.viewAll' as TranslationKey)}
+                    {t('community.detail.viewAll')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -605,7 +601,7 @@ export default function CommunityDetailScreen() {
                         )}
                       </View>
                       <Text size="sm" style={{ color: colors.text, flex: 1, marginLeft: 8 }}>
-                        {entry.player?.profile?.first_name || t('common.player' as TranslationKey)}
+                        {entry.player?.profile?.first_name || t('common.player')}
                       </Text>
                       <Text size="sm" weight="semibold" style={{ color: colors.primary }}>
                         {entry.games_played}
@@ -618,7 +614,7 @@ export default function CommunityDetailScreen() {
                   size="sm"
                   style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}
                 >
-                  {t('community.leaderboard.noGamesYet' as TranslationKey)}
+                  {t('community.leaderboard.noGamesYet')}
                 </Text>
               )}
             </View>
@@ -639,7 +635,7 @@ export default function CommunityDetailScreen() {
                       size="base"
                       style={{ color: colors.text, marginLeft: 8 }}
                     >
-                      {t('community.pendingRequests.title' as TranslationKey)}
+                      {t('community.pendingRequests.title')}
                     </Text>
                     <View style={[styles.badgeCount, { backgroundColor: '#FF3B30' }]}>
                       <Text size="xs" weight="bold" style={{ color: '#FFFFFF' }}>
@@ -649,7 +645,7 @@ export default function CommunityDetailScreen() {
                   </View>
                   <TouchableOpacity onPress={() => setShowPendingRequestsModal(true)}>
                     <Text size="sm" style={{ color: colors.primary }}>
-                      {t('community.detail.viewAll' as TranslationKey)}
+                      {t('community.detail.viewAll')}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -677,14 +673,14 @@ export default function CommunityDetailScreen() {
                       </View>
                       <View style={styles.pendingRequestInfo}>
                         <Text size="sm" weight="medium" style={{ color: colors.text }}>
-                          {request.player_name || t('common.player' as TranslationKey)}
+                          {request.player_name || t('common.player')}
                         </Text>
                         <Text size="xs" style={{ color: colors.textSecondary }}>
                           {request.referrer_name
-                            ? t('community.referredBy' as TranslationKey, {
+                            ? t('community.referredBy', {
                                 name: request.referrer_name,
                               })
-                            : t('community.pendingRequests.joinRequest' as TranslationKey)}
+                            : t('community.pendingRequests.joinRequest')}
                         </Text>
                       </View>
                       <View style={styles.pendingRequestActions}>
@@ -739,10 +735,10 @@ export default function CommunityDetailScreen() {
 
       case 'leaderboard': {
         const periodOptions = [
-          { value: 30, label: t('groups.leaderboardPeriod.30days' as TranslationKey) },
-          { value: 90, label: t('groups.leaderboardPeriod.90days' as TranslationKey) },
-          { value: 180, label: t('groups.leaderboardPeriod.180days' as TranslationKey) },
-          { value: 0, label: t('groups.leaderboardPeriod.allTime' as TranslationKey) },
+          { value: 30, label: t('groups.leaderboardPeriod.30days') },
+          { value: 90, label: t('groups.leaderboardPeriod.90days') },
+          { value: 180, label: t('groups.leaderboardPeriod.180days') },
+          { value: 0, label: t('groups.leaderboardPeriod.allTime') },
         ];
 
         return (
@@ -758,7 +754,7 @@ export default function CommunityDetailScreen() {
                 <View style={styles.sectionTitle}>
                   <Ionicons name="time-outline" size={20} color={colors.textSecondary} />
                   <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
-                    {t('groups.recentGames.title' as TranslationKey)}
+                    {t('groups.recentGames.title')}
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -779,7 +775,7 @@ export default function CommunityDetailScreen() {
                   }
                 >
                   <Text size="sm" style={{ color: colors.primary }}>
-                    {t('community.detail.viewAll' as TranslationKey)}
+                    {t('community.detail.viewAll')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -848,8 +844,8 @@ export default function CommunityDetailScreen() {
                         }}
                       >
                         {recentMatch.match.player_expectation === 'competitive'
-                          ? t('groups.recentGames.competitive' as TranslationKey)
-                          : t('groups.recentGames.practice' as TranslationKey)}
+                          ? t('groups.recentGames.competitive')
+                          : t('groups.recentGames.practice')}
                       </Text>
                     </View>
                   </View>
@@ -1049,7 +1045,7 @@ export default function CommunityDetailScreen() {
                     color={colors.textMuted}
                   />
                   <Text size="sm" style={{ color: colors.textSecondary, marginTop: 8 }}>
-                    {t('groups.detail.noRecentGames' as TranslationKey)}
+                    {t('groups.detail.noRecentGames')}
                   </Text>
                 </View>
               )}
@@ -1267,7 +1263,7 @@ export default function CommunityDetailScreen() {
               >
                 <Ionicons name="time-outline" size={48} color={colors.textMuted} />
                 <Text style={{ color: colors.textSecondary, marginTop: 12 }}>
-                  {t('groups.detail.noRecentActivity' as TranslationKey)}
+                  {t('groups.detail.noRecentActivity')}
                 </Text>
               </View>
             )}
@@ -1287,12 +1283,12 @@ export default function CommunityDetailScreen() {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return t('groups.time.justNow' as TranslationKey);
-    if (diffMins < 60) return t('groups.time.minutesAgo' as TranslationKey, { count: diffMins });
-    if (diffHours < 24) return t('groups.time.hoursAgo' as TranslationKey, { count: diffHours });
-    if (diffDays === 1) return t('groups.activityMessages.yesterday' as TranslationKey);
-    if (diffDays < 7) return t('groups.time.daysAgo' as TranslationKey, { count: diffDays });
-    return date.toLocaleDateString(t('common.locale' as TranslationKey), {
+    if (diffMins < 1) return t('groups.time.justNow');
+    if (diffMins < 60) return t('groups.time.minutesAgo', { count: diffMins });
+    if (diffHours < 24) return t('groups.time.hoursAgo', { count: diffHours });
+    if (diffDays === 1) return t('groups.activityMessages.yesterday');
+    if (diffDays < 7) return t('groups.time.daysAgo', { count: diffDays });
+    return date.toLocaleDateString(t('common.locale'), {
       month: 'short',
       day: 'numeric',
     });
@@ -1320,7 +1316,7 @@ export default function CommunityDetailScreen() {
         <View style={styles.errorContainer}>
           <Ionicons name="warning-outline" size={64} color={colors.textMuted} />
           <Text style={{ color: colors.textSecondary, marginTop: 16 }}>
-            {t('community.detail.notFound' as TranslationKey)}
+            {t('community.detail.notFound')}
           </Text>
           <TouchableOpacity
             style={[styles.backButton, { backgroundColor: colors.primary }]}
@@ -1383,7 +1379,7 @@ export default function CommunityDetailScreen() {
               <View style={[styles.visibilityBadge, { backgroundColor: '#E8F5E9' }]}>
                 <Ionicons name="globe-outline" size={14} color="#2E7D32" />
                 <Text size="xs" weight="semibold" style={{ color: '#2E7D32', marginLeft: 4 }}>
-                  {t('community.visibility.public' as TranslationKey)}
+                  {t('community.visibility.public')}
                 </Text>
               </View>
             ) : (
@@ -1395,7 +1391,7 @@ export default function CommunityDetailScreen() {
               >
                 <Ionicons name="lock-closed-outline" size={14} color="#EF6C00" />
                 <Text size="xs" weight="semibold" style={{ color: '#EF6C00', marginLeft: 4 }}>
-                  {t('community.visibility.private' as TranslationKey)}
+                  {t('community.visibility.private')}
                 </Text>
               </View>
             )}
@@ -1476,7 +1472,7 @@ export default function CommunityDetailScreen() {
             >
               <Ionicons name="person-add-outline" size={18} color={colors.primary} />
               <Text weight="semibold" style={{ color: colors.primary, marginLeft: 8 }}>
-                {t('community.members.addMember' as TranslationKey)}
+                {t('community.members.addMember')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -1515,7 +1511,7 @@ export default function CommunityDetailScreen() {
                   marginLeft: 6,
                 }}
               >
-                {t(`community.tabs.${tabKey}` as TranslationKey)}
+                {t(`community.tabs.${tabKey}`)}
               </Text>
             </TouchableOpacity>
           ))}

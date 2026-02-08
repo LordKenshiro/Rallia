@@ -214,7 +214,7 @@ export function ShareMatchActionSheet({ payload }: SheetProps<'share-match'>) {
           // Use native share
           await Share.share({
             message: result.shareMessage,
-            title: t('sharedLists.share.shareGame' as TranslationKey),
+            title: t('sharedLists.share.shareGame'),
           });
         } else if (channel === 'sms') {
           // Open SMS with pre-filled message
@@ -241,9 +241,7 @@ export function ShareMatchActionSheet({ payload }: SheetProps<'share-match'>) {
             .map(c => c.email)
             .join(',');
           if (emails) {
-            const subject = encodeURIComponent(
-              t('sharedLists.share.gameInvitation' as TranslationKey)
-            );
+            const subject = encodeURIComponent(t('sharedLists.share.gameInvitation'));
             const body = encodeURIComponent(result.shareMessage);
             const mailUrl = `mailto:${emails}?subject=${subject}&body=${body}`;
             await Linking.openURL(mailUrl);
@@ -251,14 +249,14 @@ export function ShareMatchActionSheet({ payload }: SheetProps<'share-match'>) {
         }
 
         toast.success(
-          t('sharedLists.share.invitationShared' as TranslationKey, {
+          t('sharedLists.share.invitationShared', {
             count: selectedContacts.length,
           })
         );
         handleClose();
       } catch (error) {
         console.error('Failed to share:', error);
-        toast.error(t('sharedLists.share.failedToShare' as TranslationKey));
+        toast.error(t('sharedLists.share.failedToShare'));
       } finally {
         setIsSharing(false);
       }
@@ -337,10 +335,10 @@ export function ShareMatchActionSheet({ payload }: SheetProps<'share-match'>) {
               </Text>
               <Text size="sm" style={{ color: colors.textSecondary }}>
                 {item.contact_count === 1
-                  ? t('sharedLists.contacts.contactCountSingular' as TranslationKey, {
+                  ? t('sharedLists.contacts.contactCountSingular', {
                       count: item.contact_count,
                     })
-                  : t('sharedLists.contacts.contactCount' as TranslationKey, {
+                  : t('sharedLists.contacts.contactCount', {
                       count: item.contact_count,
                     })}
               </Text>
@@ -358,7 +356,7 @@ export function ShareMatchActionSheet({ payload }: SheetProps<'share-match'>) {
                 <ActivityIndicator size="small" color={colors.primary} style={styles.loader} />
               ) : contacts.length === 0 ? (
                 <Text size="sm" style={[styles.emptyText, { color: colors.textMuted }]}>
-                  {t('sharedLists.contacts.noContactsInList' as TranslationKey)}
+                  {t('sharedLists.contacts.noContactsInList')}
                 </Text>
               ) : (
                 <>
@@ -375,7 +373,7 @@ export function ShareMatchActionSheet({ payload }: SheetProps<'share-match'>) {
                       color={allSelected ? colors.primary : colors.textSecondary}
                     />
                     <Text size="sm" style={{ color: colors.text, marginLeft: spacingPixels[2] }}>
-                      {t('common.selectAll' as TranslationKey)}
+                      {t('common.selectAll')}
                     </Text>
                   </TouchableOpacity>
                   {contacts.map(contact => {
@@ -436,7 +434,7 @@ export function ShareMatchActionSheet({ payload }: SheetProps<'share-match'>) {
               size="lg"
               style={{ color: colors.text, marginBottom: spacingPixels[3] }}
             >
-              {t('sharedLists.share.selectMatch' as TranslationKey)}
+              {t('sharedLists.share.selectMatch')}
             </Text>
             {isLoadingMatches ? (
               <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
@@ -444,10 +442,10 @@ export function ShareMatchActionSheet({ payload }: SheetProps<'share-match'>) {
               <View style={styles.emptyState}>
                 <Ionicons name="calendar-outline" size={48} color={colors.textMuted} />
                 <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                  {t('sharedLists.share.noUpcomingMatches' as TranslationKey)}
+                  {t('sharedLists.share.noUpcomingMatches')}
                 </Text>
                 <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                  {t('sharedLists.share.createMatchFirst' as TranslationKey)}
+                  {t('sharedLists.share.createMatchFirst')}
                 </Text>
               </View>
             ) : (
@@ -470,7 +468,7 @@ export function ShareMatchActionSheet({ payload }: SheetProps<'share-match'>) {
               size="lg"
               style={{ color: colors.text, marginBottom: spacingPixels[3] }}
             >
-              {t('sharedLists.share.selectContacts' as TranslationKey)}
+              {t('sharedLists.share.selectContacts')}
             </Text>
             {selectedContacts.length > 0 && (
               <View
@@ -480,7 +478,7 @@ export function ShareMatchActionSheet({ payload }: SheetProps<'share-match'>) {
                 ]}
               >
                 <Text size="sm" style={{ color: colors.primary }}>
-                  {t('sharedLists.share.contactsSelected' as TranslationKey, {
+                  {t('sharedLists.share.contactsSelected', {
                     count: selectedContacts.length,
                   })}
                 </Text>
@@ -492,10 +490,10 @@ export function ShareMatchActionSheet({ payload }: SheetProps<'share-match'>) {
               <View style={styles.emptyState}>
                 <Ionicons name="people-outline" size={48} color={colors.textMuted} />
                 <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                  {t('sharedLists.share.noSharedLists' as TranslationKey)}
+                  {t('sharedLists.share.noSharedLists')}
                 </Text>
                 <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                  {t('sharedLists.share.createListFirst' as TranslationKey)}
+                  {t('sharedLists.share.createListFirst')}
                 </Text>
               </View>
             ) : (
@@ -518,7 +516,7 @@ export function ShareMatchActionSheet({ payload }: SheetProps<'share-match'>) {
               size="lg"
               style={{ color: colors.text, marginBottom: spacingPixels[3] }}
             >
-              {t('sharedLists.share.howToShare' as TranslationKey)}
+              {t('sharedLists.share.howToShare')}
             </Text>
 
             {/* Match summary */}
@@ -532,7 +530,7 @@ export function ShareMatchActionSheet({ payload }: SheetProps<'share-match'>) {
                 <Ionicons name="calendar" size={20} color={colors.primary} />
                 <View style={styles.summaryInfo}>
                   <Text weight="semibold" style={{ color: colors.text }}>
-                    {selectedMatch.sport?.name || t('common.game' as TranslationKey)}
+                    {selectedMatch.sport?.name || t('common.game')}
                   </Text>
                   <Text size="sm" style={{ color: colors.textSecondary }}>
                     {new Date(selectedMatch.match_date).toLocaleDateString('en-US', {
@@ -555,7 +553,7 @@ export function ShareMatchActionSheet({ payload }: SheetProps<'share-match'>) {
               <Ionicons name="people-outline" size={20} color={colors.primary} />
               <View style={styles.summaryInfo}>
                 <Text weight="semibold" style={{ color: colors.text }}>
-                  {t('sharedLists.share.recipients' as TranslationKey, {
+                  {t('sharedLists.share.recipients', {
                     count: selectedContacts.length,
                   })}
                 </Text>
@@ -565,7 +563,7 @@ export function ShareMatchActionSheet({ payload }: SheetProps<'share-match'>) {
                     .map(c => c.name)
                     .join(', ')}
                   {selectedContacts.length > 3
-                    ? ` +${t('common.more' as TranslationKey, { count: selectedContacts.length - 3 })}`
+                    ? ` +${t('common.more', { count: selectedContacts.length - 3 })}`
                     : ''}
                 </Text>
               </View>
@@ -588,7 +586,7 @@ export function ShareMatchActionSheet({ payload }: SheetProps<'share-match'>) {
               >
                 <Ionicons name="share-outline" size={24} color={colors.primary} />
                 <Text size="sm" style={[styles.shareOptionLabel, { color: colors.text }]}>
-                  {t('common.share' as TranslationKey)}
+                  {t('common.share')}
                 </Text>
               </TouchableOpacity>
 
@@ -742,7 +740,7 @@ export function ShareMatchActionSheet({ payload }: SheetProps<'share-match'>) {
           </TouchableOpacity>
         )}
         <Text weight="semibold" size="lg" style={[styles.headerTitle, { color: colors.text }]}>
-          {t('sharedLists.share.shareMatch' as TranslationKey)}
+          {t('sharedLists.share.shareMatch')}
         </Text>
         <TouchableOpacity onPress={handleClose}>
           <Ionicons name="close-outline" size={24} color={colors.textMuted} />
@@ -798,8 +796,8 @@ export function ShareMatchActionSheet({ payload }: SheetProps<'share-match'>) {
               color={canProceed() ? colors.buttonTextActive : colors.textMuted}
             >
               {step === 'select-match'
-                ? t('sharedLists.share.selectContactsButton' as TranslationKey)
-                : t('common.continue' as TranslationKey)}
+                ? t('sharedLists.share.selectContactsButton')
+                : t('common.continue')}
             </Text>
             <Ionicons
               name="arrow-forward"

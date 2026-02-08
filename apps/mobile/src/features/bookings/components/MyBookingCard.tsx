@@ -48,7 +48,7 @@ export default function MyBookingCard({ booking }: MyBookingCardProps) {
 
   const facilityName = booking.court?.facility?.name ?? '';
   const courtLabel = booking.court?.court_number
-    ? `${t('myBookings.card.court' as TranslationKey)} ${booking.court.court_number}`
+    ? `${t('myBookings.card.court')} ${booking.court.court_number}`
     : (booking.court?.name ?? '');
 
   return (

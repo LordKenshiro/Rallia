@@ -63,16 +63,16 @@ export function MatchDetailsStep({ onContinue }: MatchDetailsStepProps) {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Title */}
       <Text weight="bold" size="xl" style={[styles.title, { color: colors.text }]}>
-        {t('addScore.matchDetails.title' as TranslationKey)}
+        {t('addScore.matchDetails.title')}
       </Text>
       <Text size="sm" style={[styles.subtitle, { color: colors.textSecondary }]}>
-        {t('addScore.matchDetails.whenAndWhere' as TranslationKey)}
+        {t('addScore.matchDetails.whenAndWhere')}
       </Text>
 
       {/* Date picker */}
       <View style={styles.section}>
         <Text weight="semibold" style={[styles.sectionLabel, { color: colors.text }]}>
-          {t('addScore.matchDetails.datePlayed' as TranslationKey)}
+          {t('addScore.matchDetails.datePlayed')}
         </Text>
         <TouchableOpacity
           style={[
@@ -103,10 +103,10 @@ export function MatchDetailsStep({ onContinue }: MatchDetailsStepProps) {
       {/* Location (optional) */}
       <View style={styles.section}>
         <Text weight="semibold" style={[styles.sectionLabel, { color: colors.text }]}>
-          {t('addScore.matchDetails.location' as TranslationKey)}
+          {t('addScore.matchDetails.location')}
           <Text size="sm" style={{ color: colors.textMuted }}>
             {' '}
-            {t('addScore.matchDetails.locationOptional' as TranslationKey)}
+            {t('addScore.matchDetails.locationOptional')}
           </Text>
         </Text>
         <View
@@ -118,7 +118,7 @@ export function MatchDetailsStep({ onContinue }: MatchDetailsStepProps) {
           <Ionicons name="location" size={20} color={colors.textMuted} />
           <TextInput
             style={[styles.input, { color: colors.text }]}
-            placeholder={t('addScore.matchDetails.enterLocation' as TranslationKey)}
+            placeholder={t('addScore.matchDetails.enterLocation')}
             placeholderTextColor={colors.textMuted}
             value={location}
             onChangeText={setLocation}
@@ -129,7 +129,7 @@ export function MatchDetailsStep({ onContinue }: MatchDetailsStepProps) {
       {/* Sport selection */}
       <View style={styles.section}>
         <Text weight="semibold" style={[styles.sectionLabel, { color: colors.text }]}>
-          {t('addScore.matchDetails.sport' as TranslationKey)}
+          {t('addScore.matchDetails.sport')}
         </Text>
         <View style={styles.sportOptions}>
           {sports.map(sportOption => {

@@ -103,15 +103,12 @@ export function generateMatchShareMessage(match: MatchDetailData, options: Share
   const sportName = match.sport?.name || 'game';
   const date = formatShareDate(match.match_date, locale, match.timezone);
   const time = match.start_time ? formatShareTime(match.start_time, locale) : '';
-  const location =
-    match.location_name || match.facility?.name || t('matchDetail.locationTBD' as TranslationKey);
+  const location = match.location_name || match.facility?.name || t('matchDetail.locationTBD');
   const deepLink = generateMatchDeepLink(match.id);
 
   // Use translated strings
-  const inviteText = t('matchDetail.shareInvite' as TranslationKey, { sport: sportName });
-  const dateTimeStr = time
-    ? t('matchDetail.shareDateTime' as TranslationKey, { date, time })
-    : date;
+  const inviteText = t('matchDetail.shareInvite', { sport: sportName });
+  const dateTimeStr = time ? t('matchDetail.shareDateTime', { date, time }) : date;
 
   return `${inviteText}\n\n` + `📅 ${dateTimeStr}\n` + `📍 ${location}\n\n` + `${deepLink}`;
 }

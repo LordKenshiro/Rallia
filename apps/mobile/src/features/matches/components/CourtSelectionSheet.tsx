@@ -39,10 +39,7 @@ const CourtItem: React.FC<CourtItemProps> = ({ court, onPress, colors, t }) => {
   // Display translated "Court X" if we have a court number, otherwise fallback to raw name
   const displayName =
     court.courtNumber !== undefined
-      ? t('matchCreation.booking.courtNumber' as TranslationKey).replace(
-          '{number}',
-          String(court.courtNumber)
-        )
+      ? t('matchCreation.booking.courtNumber').replace('{number}', String(court.courtNumber))
       : court.courtName;
 
   return (
@@ -125,13 +122,13 @@ export function CourtSelectionActionSheet({ payload }: SheetProps<'court-selecti
             {/* Title */}
             <View style={styles.titleContainer}>
               <Text size="lg" weight="semibold" color={colors.text}>
-                {t('matchCreation.booking.selectCourt' as TranslationKey)}
+                {t('matchCreation.booking.selectCourt')}
               </Text>
               <Text size="sm" color={colors.textMuted}>
                 {timeLabel} • {courts.length}{' '}
                 {courts.length === 1
-                  ? t('matchCreation.booking.courtAvailable' as TranslationKey)
-                  : t('matchCreation.booking.courtsAvailable' as TranslationKey)}
+                  ? t('matchCreation.booking.courtAvailable')
+                  : t('matchCreation.booking.courtsAvailable')}
               </Text>
             </View>
           </View>
@@ -170,7 +167,7 @@ export function CourtSelectionActionSheet({ payload }: SheetProps<'court-selecti
           activeOpacity={0.8}
         >
           <Text size="base" weight="medium" color={colors.textSecondary}>
-            {t('common.cancel' as TranslationKey)}
+            {t('common.cancel')}
           </Text>
         </TouchableOpacity>
       </View>

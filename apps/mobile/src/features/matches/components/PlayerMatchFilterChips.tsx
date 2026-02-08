@@ -39,7 +39,7 @@ interface PlayerMatchFilterChipsProps {
 
 interface FilterOption<T> {
   value: T;
-  labelKey: string;
+  labelKey: TranslationKey;
   icon?: keyof typeof Ionicons.glyphMap;
 }
 
@@ -167,8 +167,8 @@ export default function PlayerMatchFilterChips({
       : (v: string) => onPastFilterToggle(v as PastMatchFilter);
 
   const getLabel = useCallback(
-    (labelKey: string): string => {
-      return t(labelKey as TranslationKey);
+    (labelKey: TranslationKey): string => {
+      return t(labelKey);
     },
     [t]
   );

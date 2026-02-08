@@ -117,16 +117,12 @@ export function BookingDetailActionSheet(props: SheetProps<'booking-detail'>) {
   const facilityName = booking.court?.facility?.name ?? '';
   const facilityAddress = [booking.court?.facility?.city].filter(Boolean).join(', ');
   const courtLabel = booking.court?.court_number
-    ? `${t('myBookings.card.court' as TranslationKey)} ${booking.court.court_number}`
+    ? `${t('myBookings.card.court')} ${booking.court.court_number}`
     : (booking.court?.name ?? '');
   const dateLabel = formatDate(booking.booking_date, locale);
   const timeLabel = `${formatTime(booking.start_time)} – ${formatTime(booking.end_time)}`;
   const duration = calculateDurationMinutes(booking.start_time, booking.end_time);
-  const priceLabel = formatPrice(
-    booking.price_cents,
-    booking.currency,
-    t('myBookings.card.free' as TranslationKey)
-  );
+  const priceLabel = formatPrice(booking.price_cents, booking.currency, t('myBookings.card.free'));
 
   return (
     <ActionSheet
@@ -138,7 +134,7 @@ export function BookingDetailActionSheet(props: SheetProps<'booking-detail'>) {
       {/* Header - aligned with MatchDetailSheet */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Text size="xl" weight="bold" color={colors.text}>
-          {t('myBookings.detail.title' as TranslationKey)}
+          {t('myBookings.detail.title')}
         </Text>
         <TouchableOpacity
           onPress={handleClose}
@@ -164,7 +160,7 @@ export function BookingDetailActionSheet(props: SheetProps<'booking-detail'>) {
           <View style={styles.sectionHeader}>
             <Ionicons name="location-outline" size={20} color={colors.iconMuted} />
             <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
-              {t('myBookings.detail.facilityInfo' as TranslationKey)}
+              {t('myBookings.detail.facilityInfo')}
             </Text>
           </View>
           <View style={styles.locationRow}>
@@ -191,7 +187,7 @@ export function BookingDetailActionSheet(props: SheetProps<'booking-detail'>) {
           <View style={styles.sectionHeader}>
             <Ionicons name="tennisball-outline" size={20} color={colors.iconMuted} />
             <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
-              {t('myBookings.detail.court' as TranslationKey)}
+              {t('myBookings.detail.court')}
             </Text>
           </View>
           <View style={styles.infoRow}>
@@ -208,7 +204,7 @@ export function BookingDetailActionSheet(props: SheetProps<'booking-detail'>) {
           <View style={styles.sectionHeader}>
             <Ionicons name="calendar-outline" size={20} color={colors.iconMuted} />
             <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
-              {t('myBookings.detail.date' as TranslationKey)}
+              {t('myBookings.detail.date')}
             </Text>
           </View>
           <View style={styles.infoRow}>
@@ -225,7 +221,7 @@ export function BookingDetailActionSheet(props: SheetProps<'booking-detail'>) {
           <View style={styles.sectionHeader}>
             <Ionicons name="time-outline" size={20} color={colors.iconMuted} />
             <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
-              {t('myBookings.detail.time' as TranslationKey)}
+              {t('myBookings.detail.time')}
             </Text>
           </View>
           <View style={styles.infoRow}>
@@ -236,7 +232,7 @@ export function BookingDetailActionSheet(props: SheetProps<'booking-detail'>) {
                 </Text>
                 <View style={[styles.durationBadge, { backgroundColor: colors.background }]}>
                   <Text size="xs" weight="medium" color={colors.textMuted}>
-                    {t('myBookings.card.duration' as TranslationKey, { minutes: duration })}
+                    {t('myBookings.card.duration', { minutes: duration })}
                   </Text>
                 </View>
               </View>
@@ -249,7 +245,7 @@ export function BookingDetailActionSheet(props: SheetProps<'booking-detail'>) {
           <View style={styles.sectionHeader}>
             <Ionicons name="wallet-outline" size={20} color={colors.iconMuted} />
             <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
-              {t('myBookings.detail.price' as TranslationKey)}
+              {t('myBookings.detail.price')}
             </Text>
           </View>
           <View style={styles.infoRow}>
@@ -273,7 +269,7 @@ export function BookingDetailActionSheet(props: SheetProps<'booking-detail'>) {
           <View style={styles.sectionHeader}>
             <Ionicons name="information-circle-outline" size={20} color={colors.iconMuted} />
             <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
-              {t('myBookings.detail.status' as TranslationKey)}
+              {t('myBookings.detail.status')}
             </Text>
           </View>
           <View style={styles.infoRow}>
@@ -289,7 +285,7 @@ export function BookingDetailActionSheet(props: SheetProps<'booking-detail'>) {
             <View style={styles.sectionHeader}>
               <Ionicons name="chatbubble-outline" size={20} color={colors.iconMuted} />
               <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
-                {t('myBookings.detail.notes' as TranslationKey)}
+                {t('myBookings.detail.notes')}
               </Text>
             </View>
             <View style={styles.infoRow}>
@@ -311,7 +307,7 @@ export function BookingDetailActionSheet(props: SheetProps<'booking-detail'>) {
           <View style={styles.sectionHeader}>
             <Ionicons name="copy-outline" size={20} color={colors.iconMuted} />
             <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
-              {t('myBookings.detail.bookingId' as TranslationKey)}
+              {t('myBookings.detail.bookingId')}
             </Text>
           </View>
           <View style={styles.infoRow}>
@@ -328,7 +324,7 @@ export function BookingDetailActionSheet(props: SheetProps<'booking-detail'>) {
           <View style={styles.sectionHeader}>
             <Ionicons name="create-outline" size={20} color={colors.iconMuted} />
             <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
-              {t('myBookings.detail.createdAt' as TranslationKey)}
+              {t('myBookings.detail.createdAt')}
             </Text>
           </View>
           <View style={styles.infoRow}>
@@ -358,7 +354,7 @@ export function BookingDetailActionSheet(props: SheetProps<'booking-detail'>) {
           >
             <Ionicons name="close-circle-outline" size={18} color="#fff" />
             <Text size="base" weight="semibold" color="#fff" style={styles.footerButtonText}>
-              {t('myBookings.cancelBooking' as TranslationKey)}
+              {t('myBookings.cancelBooking')}
             </Text>
           </TouchableOpacity>
         )}
@@ -370,7 +366,7 @@ export function BookingDetailActionSheet(props: SheetProps<'booking-detail'>) {
           activeOpacity={0.7}
         >
           <Text size="base" weight="semibold" color={colors.textMuted}>
-            {t('common.close' as TranslationKey)}
+            {t('common.close')}
           </Text>
         </TouchableOpacity>
       </View>

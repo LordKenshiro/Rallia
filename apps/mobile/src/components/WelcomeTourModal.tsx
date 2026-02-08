@@ -11,7 +11,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Modal, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '../hooks';
 import { COLORS } from '@rallia/shared-constants';
 import { useTour } from '../context/TourContext';
 import { tourService } from '@rallia/shared-services';

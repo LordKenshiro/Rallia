@@ -30,7 +30,7 @@ import {
   InteractionManager,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '../hooks';
 import { COLORS } from '@rallia/shared-constants';
 import { tourService, TourId, TourStatus } from '@rallia/shared-services';
 import { Logger } from '@rallia/shared-services';

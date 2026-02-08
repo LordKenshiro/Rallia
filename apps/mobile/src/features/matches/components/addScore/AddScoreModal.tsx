@@ -75,14 +75,10 @@ function AddScoreContent({
   // Handle close with discard confirmation
   const handleClose = useCallback(() => {
     if (hasUnsavedChanges()) {
-      Alert.alert(
-        t('addScore.discardChanges' as TranslationKey),
-        t('addScore.discardChangesMessage' as TranslationKey),
-        [
-          { text: t('common.cancel'), style: 'cancel' },
-          { text: t('common.discard' as TranslationKey), style: 'destructive', onPress: onClose },
-        ]
-      );
+      Alert.alert(t('addScore.discardChanges'), t('addScore.discardChangesMessage'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('common.discard'), style: 'destructive', onPress: onClose },
+      ]);
     } else {
       onClose();
     }
@@ -114,10 +110,7 @@ function AddScoreContent({
         const sportId = await getSportIdByName(sportName);
 
         if (!sportId) {
-          Alert.alert(
-            t('common.error'),
-            t('addScore.sportNotFound' as TranslationKey, { sport: sportName })
-          );
+          Alert.alert(t('common.error'), t('addScore.sportNotFound', { sport: sportName }));
           setIsSubmitting(false);
           return;
         }
@@ -166,22 +159,18 @@ function AddScoreContent({
 
         const result = await createPlayedMatchMutation.mutateAsync(matchInput);
 
-        Alert.alert(
-          t('addScore.scoreSubmitted' as TranslationKey),
-          t('addScore.scoreSubmittedMessage' as TranslationKey),
-          [
-            {
-              text: t('common.ok'),
-              onPress: () => {
-                onSuccess?.(result.matchId);
-                onClose();
-              },
+        Alert.alert(t('addScore.scoreSubmitted'), t('addScore.scoreSubmittedMessage'), [
+          {
+            text: t('common.ok'),
+            onPress: () => {
+              onSuccess?.(result.matchId);
+              onClose();
             },
-          ]
-        );
+          },
+        ]);
       } catch (error) {
         console.error('Error submitting score:', error);
-        Alert.alert(t('common.error'), t('addScore.failedToSubmit' as TranslationKey));
+        Alert.alert(t('common.error'), t('addScore.failedToSubmit'));
       } finally {
         setIsSubmitting(false);
       }
@@ -206,7 +195,7 @@ function AddScoreContent({
     }
   };
 
-  const stepTitle = t('addScore.title' as TranslationKey);
+  const stepTitle = t('addScore.title');
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>

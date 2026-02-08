@@ -58,17 +58,13 @@ function EmptyState({ hasActiveFilters, colors, t }: EmptyStateProps) {
         )}
       </View>
       <Text size="lg" weight="semibold" color={colors.text} style={styles.emptyTitle}>
-        {t(
-          hasActiveFilters
-            ? ('publicMatches.empty.title' as TranslationKey)
-            : ('publicMatches.empty.noFilters.title' as TranslationKey)
-        )}
+        {t(hasActiveFilters ? 'publicMatches.empty.title' : 'publicMatches.empty.noFilters.title')}
       </Text>
       <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
         {t(
           hasActiveFilters
-            ? ('publicMatches.empty.description' as TranslationKey)
-            : ('publicMatches.empty.noFilters.description' as TranslationKey)
+            ? 'publicMatches.empty.description'
+            : 'publicMatches.empty.noFilters.description'
         )}
       </Text>
     </View>
@@ -202,8 +198,8 @@ export default function MatchesTab({ facilityId }: MatchesTabProps) {
         <View style={styles.resultsContainer}>
           <Text size="sm" color={colors.textMuted}>
             {filteredMatches.length === 1
-              ? t('publicMatches.results.countSingular' as TranslationKey)
-              : t('publicMatches.results.count' as TranslationKey, {
+              ? t('publicMatches.results.countSingular')
+              : t('publicMatches.results.count', {
                   count: filteredMatches.length,
                 })}
           </Text>
@@ -251,7 +247,7 @@ export default function MatchesTab({ facilityId }: MatchesTabProps) {
         <View style={styles.loadingContainer}>
           <Ionicons name="location-outline" size={48} color={colors.textMuted} />
           <Text size="base" color={colors.textMuted} style={styles.noLocationText}>
-            {t('home.nearbyEmpty.title' as TranslationKey)}
+            {t('home.nearbyEmpty.title')}
           </Text>
         </View>
       </View>
@@ -268,7 +264,7 @@ export default function MatchesTab({ facilityId }: MatchesTabProps) {
             <SearchBar
               value={filters.searchQuery}
               onChangeText={setSearchQuery}
-              placeholder={t('publicMatches.searchPlaceholder' as TranslationKey)}
+              placeholder={t('publicMatches.searchPlaceholder')}
               isLoading={isFetching && debouncedSearchQuery !== filters.searchQuery}
               onClear={clearSearch}
             />

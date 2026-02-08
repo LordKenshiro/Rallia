@@ -340,7 +340,7 @@ const FacilityItem: React.FC<FacilityItemProps> = ({
                 >
                   <Ionicons name="star" size={10} color={colors.buttonActive} />
                   <Text size="xs" weight="semibold" color={colors.buttonActive}>
-                    {t('matchCreation.fields.preferredFacility' as TranslationKey)}
+                    {t('matchCreation.fields.preferredFacility')}
                   </Text>
                 </View>
               )}
@@ -448,7 +448,7 @@ const FacilityItem: React.FC<FacilityItemProps> = ({
           <View style={styles.emptySlots}>
             <Ionicons name="calendar-clear-outline" size={14} color={colors.textMuted} />
             <Text size="xs" color={colors.textMuted}>
-              {t('matchCreation.booking.noSlotsAvailable' as TranslationKey)}
+              {t('matchCreation.booking.noSlotsAvailable')}
             </Text>
           </View>
         )}
@@ -497,7 +497,7 @@ const SelectedFacility: React.FC<SelectedFacilityProps> = ({
         {bookedCourtNumber !== null && bookedCourtNumber !== undefined && (
           <View style={[styles.courtNumberBadge, { backgroundColor: `${colors.buttonActive}20` }]}>
             <Text size="xs" weight="semibold" color={colors.buttonActive}>
-              {t('matchCreation.fields.courtNumber' as TranslationKey, {
+              {t('matchCreation.fields.courtNumber', {
                 number: bookedCourtNumber,
               })}
             </Text>
@@ -1192,8 +1192,8 @@ export const WhereStep: React.FC<WhereStepProps> = ({
           <ActivityIndicator size="small" color={colors.buttonActive} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
             {locationLoading
-              ? t('matchCreation.fields.gettingLocation' as TranslationKey)
-              : t('matchCreation.fields.searchingFacilities' as TranslationKey)}
+              ? t('matchCreation.fields.gettingLocation')
+              : t('matchCreation.fields.searchingFacilities')}
           </Text>
         </View>
       );
@@ -1204,7 +1204,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
         <View style={styles.emptyState}>
           <Ionicons name="location-outline" size={32} color={colors.textMuted} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('matchCreation.fields.locationAccessNeeded' as TranslationKey)}
+            {t('matchCreation.fields.locationAccessNeeded')}
           </Text>
         </View>
       );
@@ -1215,7 +1215,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
         <View style={styles.emptyState}>
           <Ionicons name="alert-circle-outline" size={32} color={colors.textMuted} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('matchCreation.fields.failedToLoadFacilities' as TranslationKey)}
+            {t('matchCreation.fields.failedToLoadFacilities')}
           </Text>
         </View>
       );
@@ -1226,7 +1226,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
         <View style={styles.emptyState}>
           <Ionicons name="search-outline" size={32} color={colors.textMuted} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('matchCreation.fields.noFacilitiesFound' as TranslationKey, { query: searchQuery })}
+            {t('matchCreation.fields.noFacilitiesFound', { query: searchQuery })}
           </Text>
         </View>
       );
@@ -1237,7 +1237,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
         <View style={styles.emptyState}>
           <Ionicons name="business-outline" size={32} color={colors.textMuted} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('matchCreation.fields.noFacilitiesAvailable' as TranslationKey)}
+            {t('matchCreation.fields.noFacilitiesAvailable')}
           </Text>
         </View>
       );
@@ -1274,26 +1274,24 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       {/* Step title */}
       <View style={styles.stepHeader}>
         <Text size="lg" weight="bold" color={colors.text}>
-          {t('matchCreation.step1Title' as TranslationKey)}
+          {t('matchCreation.step1Title')}
         </Text>
         <Text size="sm" color={colors.textMuted}>
-          {t('matchCreation.step1Description' as TranslationKey)}
+          {t('matchCreation.step1Description')}
         </Text>
       </View>
 
       {/* Location type selection */}
       <View style={styles.fieldGroup}>
         <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-          {t('matchCreation.fields.locationType' as TranslationKey)}
+          {t('matchCreation.fields.locationType')}
         </Text>
 
         <View style={styles.locationCards}>
           <LocationTypeCard
             icon="business-outline"
-            title={t('matchCreation.fields.locationTypeFacility' as TranslationKey)}
-            description={t(
-              'matchCreation.fields.locationTypeFacilityDescription' as TranslationKey
-            )}
+            title={t('matchCreation.fields.locationTypeFacility')}
+            description={t('matchCreation.fields.locationTypeFacilityDescription')}
             selected={locationType === 'facility'}
             onPress={() => handleLocationTypeChange('facility')}
             colors={colors}
@@ -1301,8 +1299,8 @@ export const WhereStep: React.FC<WhereStepProps> = ({
 
           <LocationTypeCard
             icon="location-outline"
-            title={t('matchCreation.fields.locationTypeCustom' as TranslationKey)}
-            description={t('matchCreation.fields.locationTypeCustomDescription' as TranslationKey)}
+            title={t('matchCreation.fields.locationTypeCustom')}
+            description={t('matchCreation.fields.locationTypeCustomDescription')}
             selected={locationType === 'custom'}
             onPress={() => handleLocationTypeChange('custom')}
             colors={colors}
@@ -1310,8 +1308,8 @@ export const WhereStep: React.FC<WhereStepProps> = ({
 
           <LocationTypeCard
             icon="help-circle-outline"
-            title={t('matchCreation.fields.locationTypeTbd' as TranslationKey)}
-            description={t('matchCreation.fields.locationTypeTbdDescription' as TranslationKey)}
+            title={t('matchCreation.fields.locationTypeTbd')}
+            description={t('matchCreation.fields.locationTypeTbdDescription')}
             selected={locationType === 'tbd'}
             onPress={() => handleLocationTypeChange('tbd')}
             colors={colors}
@@ -1323,7 +1321,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       {locationType === 'facility' && (
         <View style={styles.fieldGroup}>
           <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-            {t('matchCreation.fields.facility' as TranslationKey)}
+            {t('matchCreation.fields.facility')}
           </Text>
 
           {/* Show selected facility or search UI */}
@@ -1342,7 +1340,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
                 <SearchBar
                   value={searchQuery}
                   onChangeText={setSearchQuery}
-                  placeholder={t('matchCreation.fields.facilityPlaceholder' as TranslationKey)}
+                  placeholder={t('matchCreation.fields.facilityPlaceholder')}
                   colors={colors}
                   InputComponent={BottomSheetTextInput}
                   onFocus={() => setFocusedField('facility')}
@@ -1382,7 +1380,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       {locationType === 'custom' && (
         <View style={styles.fieldGroup}>
           <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-            {t('matchCreation.fields.searchLocation' as TranslationKey)}
+            {t('matchCreation.fields.searchLocation')}
           </Text>
 
           {/* Show selected place or search UI */}
@@ -1403,9 +1401,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
                     setPlaceSearchQuery(text);
                     if (!text) clearPredictions();
                   }}
-                  placeholder={t(
-                    'matchCreation.fields.searchLocationPlaceholder' as TranslationKey
-                  )}
+                  placeholder={t('matchCreation.fields.searchLocationPlaceholder')}
                   colors={colors}
                   InputComponent={BottomSheetTextInput}
                   onFocus={() => setFocusedField('place')}
@@ -1423,7 +1419,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
                 <View style={styles.emptyState}>
                   <ActivityIndicator size="small" color={colors.buttonActive} />
                   <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-                    {t('matchCreation.fields.searchingPlaces' as TranslationKey)}
+                    {t('matchCreation.fields.searchingPlaces')}
                   </Text>
                 </View>
               )}
@@ -1433,7 +1429,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
                 <View style={styles.emptyState}>
                   <Ionicons name="alert-circle-outline" size={32} color={colors.textMuted} />
                   <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-                    {t('matchCreation.fields.failedToSearchPlaces' as TranslationKey)}
+                    {t('matchCreation.fields.failedToSearchPlaces')}
                   </Text>
                 </View>
               )}
@@ -1460,7 +1456,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
                   <View style={styles.emptyState}>
                     <Ionicons name="search-outline" size={32} color={colors.textMuted} />
                     <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-                      {t('matchCreation.fields.noPlacesFound' as TranslationKey)}
+                      {t('matchCreation.fields.noPlacesFound')}
                     </Text>
                   </View>
                 )}
@@ -1470,7 +1466,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
                 <View style={styles.hintContainer}>
                   <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />
                   <Text size="xs" color={colors.textMuted}>
-                    {t('matchCreation.fields.searchLocationHint' as TranslationKey)}
+                    {t('matchCreation.fields.searchLocationHint')}
                   </Text>
                 </View>
               )}
@@ -1481,7 +1477,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
           {hasSelectedPlace && (
             <View ref={addressFieldRef} style={styles.addressEditContainer}>
               <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-                {t('matchCreation.fields.locationAddress' as TranslationKey)}
+                {t('matchCreation.fields.locationAddress')}
               </Text>
               <BottomSheetTextInput
                 style={[
@@ -1494,7 +1490,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
                 ]}
                 value={locationAddress ?? ''}
                 onChangeText={text => setValue('locationAddress', text, { shouldDirty: true })}
-                placeholder={t('matchCreation.fields.locationAddressPlaceholder' as TranslationKey)}
+                placeholder={t('matchCreation.fields.locationAddressPlaceholder')}
                 placeholderTextColor={colors.textMuted}
                 multiline
                 numberOfLines={2}
@@ -1515,7 +1511,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
         >
           <Ionicons name="information-circle-outline" size={20} color={colors.buttonActive} />
           <Text size="sm" color={colors.textSecondary} style={styles.infoText}>
-            {t('matchCreation.fields.tbdLocationInfo' as TranslationKey)}
+            {t('matchCreation.fields.tbdLocationInfo')}
           </Text>
         </View>
       )}

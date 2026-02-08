@@ -186,17 +186,17 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
   // Format gender display
   const genderDisplay =
     gender === 'male'
-      ? t('common.gender.male' as TranslationKey)
+      ? t('common.gender.male')
       : gender === 'female'
-        ? t('common.gender.female' as TranslationKey)
+        ? t('common.gender.female')
         : null;
 
   // Format playing hand display
   const playingHandDisplay =
     playingHand === 'left'
-      ? t('common.playingHand.left' as TranslationKey)
+      ? t('common.playingHand.left')
       : playingHand === 'right'
-        ? t('common.playingHand.right' as TranslationKey)
+        ? t('common.playingHand.right')
         : null;
 
   return (
@@ -214,7 +214,7 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
               {/* Header */}
               <View style={[styles.header, { borderBottomColor: colors.border }]}>
                 <Text size="lg" weight="semibold" style={{ color: colors.text }}>
-                  {t('matchActions.requesterDetails' as TranslationKey)}
+                  {t('matchActions.requesterDetails')}
                 </Text>
                 <TouchableOpacity
                   onPress={handleClose}
@@ -273,7 +273,7 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                           weight="semibold"
                           style={{ color: BASE_WHITE, marginLeft: spacingPixels[1] }}
                         >
-                          {t('common.verified' as TranslationKey)}
+                          {t('common.verified')}
                         </Text>
                       </View>
                     )}
@@ -333,7 +333,7 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                       />
                       <View style={styles.detailContent}>
                         <Text size="xs" style={{ color: colors.textMuted }}>
-                          {t('common.gender.label' as TranslationKey)}
+                          {t('common.gender.label')}
                         </Text>
                         <Text size="sm" weight="medium" style={{ color: colors.text }}>
                           {genderDisplay}
@@ -348,7 +348,7 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                       <Ionicons name="hand-left-outline" size={18} color={colors.textMuted} />
                       <View style={styles.detailContent}>
                         <Text size="xs" style={{ color: colors.textMuted }}>
-                          {t('common.playingHand.label' as TranslationKey)}
+                          {t('common.playingHand.label')}
                         </Text>
                         <Text size="sm" weight="medium" style={{ color: colors.text }}>
                           {playingHandDisplay}
@@ -363,7 +363,7 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                       <Ionicons name="time-outline" size={18} color={colors.textMuted} />
                       <View style={styles.detailContent}>
                         <Text size="xs" style={{ color: colors.textMuted }}>
-                          {t('common.lastActive' as TranslationKey)}
+                          {t('common.lastActive')}
                         </Text>
                         <Text size="sm" weight="medium" style={{ color: colors.text }}>
                           {activityDisplay}
@@ -387,7 +387,7 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                       size="sm"
                       style={{ color: status.info.DEFAULT, marginLeft: spacingPixels[2] }}
                     >
-                      {t('matchActions.matchFullCannotAccept' as TranslationKey)}
+                      {t('matchActions.matchFullCannotAccept')}
                     </Text>
                   </View>
                 )}
@@ -402,7 +402,7 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                       size="sm"
                       style={{ color: status.warning.DEFAULT, marginLeft: spacingPixels[2] }}
                     >
-                      {t('matchDetail.matchInProgress' as TranslationKey)}
+                      {t('matchDetail.matchInProgress')}
                     </Text>
                   </View>
                 )}
@@ -428,7 +428,7 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                     weight="medium"
                     style={{ color: BASE_WHITE, marginLeft: spacingPixels[1] }}
                   >
-                    {t('matchActions.rejectRequest' as TranslationKey)}
+                    {t('matchActions.rejectRequest')}
                   </Text>
                 </TouchableOpacity>
 
@@ -453,7 +453,7 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                     weight="medium"
                     style={{ color: BASE_WHITE, marginLeft: spacingPixels[1] }}
                   >
-                    {t('matchActions.acceptRequest' as TranslationKey)}
+                    {t('matchActions.acceptRequest')}
                   </Text>
                 </TouchableOpacity>
               </View>
