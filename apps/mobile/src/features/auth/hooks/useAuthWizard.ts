@@ -267,6 +267,7 @@ export function useAuthWizard(options: UseAuthWizardOptions = {}): UseAuthWizard
 
       if (result.success) {
         Logger.info('OTP resent successfully', { emailDomain: email.split('@')[1] });
+        setCode(''); // Clear any code currently entered so user can type the new one
         startResendCooldown(); // Start cooldown after successful resend
         showSuccess('Verification code sent!');
       } else {
