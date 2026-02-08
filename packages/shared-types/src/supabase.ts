@@ -124,6 +124,51 @@ export type Database = {
           },
         ];
       };
+      beta_signup: {
+        Row: {
+          city: string;
+          created_at: string | null;
+          email: string;
+          full_name: string;
+          id: number;
+          ip_address: string | null;
+          location: string | null;
+          phone: string | null;
+          pickleball_level: string | null;
+          plays_pickleball: boolean;
+          plays_tennis: boolean;
+          tennis_level: string | null;
+        };
+        Insert: {
+          city: string;
+          created_at?: string | null;
+          email: string;
+          full_name: string;
+          id?: never;
+          ip_address?: string | null;
+          location?: string | null;
+          phone?: string | null;
+          pickleball_level?: string | null;
+          plays_pickleball?: boolean;
+          plays_tennis?: boolean;
+          tennis_level?: string | null;
+        };
+        Update: {
+          city?: string;
+          created_at?: string | null;
+          email?: string;
+          full_name?: string;
+          id?: never;
+          ip_address?: string | null;
+          location?: string | null;
+          phone?: string | null;
+          pickleball_level?: string | null;
+          plays_pickleball?: boolean;
+          plays_tennis?: boolean;
+          tennis_level?: string | null;
+        };
+        Relationships: [];
+      };
       booking: {
         Row: {
           approved_at: string | null;

@@ -5802,5 +5802,79 @@
     "viewMatch": "Voir le match lié",
     "cancelBooking": "Annuler la réservation",
     "viewMyBookings": "Voir mes réservations"
+  },
+  "beta": {
+    "title": "Devenez Beta Testeur - Rallia",
+    "hero": {
+      "badge": "Accès Exclusif",
+      "headline": "Devenez Beta Testeur",
+      "subheadline": "Rejoignez notre groupe de testeurs privilégiés et contribuez à façonner l'avenir du tennis et du pickleball au Québec."
+    },
+    "benefits": {
+      "priority": {
+        "title": "Accès Prioritaire",
+        "description": "Soyez parmi les premiers à découvrir et utiliser toutes les fonctionnalités de Rallia."
+      },
+      "influence": {
+        "title": "Influencez le Produit",
+        "description": "Vos retours façonneront directement l'expérience de milliers de joueurs."
+      },
+      "exclusive": {
+        "title": "Avantages Exclusifs",
+        "description": "Profitez de fonctionnalités premium gratuitement pendant la période beta."
+      },
+      "community": {
+        "title": "Communauté Fondatrice",
+        "description": "Rejoignez un groupe restreint de passionnés qui définissent le futur du sport."
+      }
+    },
+    "form": {
+      "fullNameLabel": "Nom complet",
+      "fullNamePlaceholder": "Votre nom complet",
+      "cityLabel": "Ville de résidence",
+      "cityPlaceholder": "Ex: Montréal",
+      "playsTennisLabel": "Pratiquez-vous le tennis?",
+      "tennisLevelLabel": "Niveau tennis",
+      "playsPickleballLabel": "Pratiquez-vous le pickleball?",
+      "pickleballLevelLabel": "Niveau pickleball",
+      "emailLabel": "Courriel",
+      "emailPlaceholder": "votre.courriel@exemple.com",
+      "phoneLabel": "Téléphone (facultatif)",
+      "phonePlaceholder": "+1 (555) 123-4567",
+      "submitButton": "Rejoindre le programme beta",
+      "submitting": "Envoi en cours...",
+      "levels": {
+        "beginner": "Débutant",
+        "intermediate": "Intermédiaire",
+        "advanced": "Avancé",
+        "elite": "Haut niveau"
+      },
+      "selectLevel": "Sélectionnez votre niveau"
+    },
+    "validation": {
+      "atLeastOneSport": "Veuillez sélectionner au moins un sport",
+      "tennisLevelRequired": "Veuillez indiquer votre niveau de tennis",
+      "pickleballLevelRequired": "Veuillez indiquer votre niveau de pickleball"
+    },
+    "success": {
+      "title": "Merci!",
+      "message": "Merci pour votre inscription! Nous vous contacterons bientôt avec les prochaines étapes pour rejoindre notre programme beta."
+    },
+    "error": {
+      "title": "Erreur",
+      "message": "Une erreur est survenue. Veuillez réessayer."
+    },
+    "urgency": {
+      "message": "Places limitées — Rejoignez les premiers testeurs dès maintenant!"
+    },
+    "formSection": {
+      "title": "Inscrivez-vous au programme beta",
+      "subtitle": "Remplissez le formulaire ci-dessous pour rejoindre notre communauté de testeurs privilégiés."
+    },
+    "trust": {
+      "secure": "Données sécurisées",
+      "fast": "Inscription rapide",
+      "premium": "Accès premium gratuit"
+    }
   }
 }

@@ -5800,5 +5800,79 @@
     "viewMatch": "View Linked Match",
     "cancelBooking": "Cancel Booking",
     "viewMyBookings": "View My Bookings"
+  },
+  "beta": {
+    "title": "Become a Beta Tester - Rallia",
+    "hero": {
+      "badge": "Exclusive Access",
+      "headline": "Become a Beta Tester",
+      "subheadline": "Join our group of privileged testers and help shape the future of tennis and pickleball in Quebec."
+    },
+    "benefits": {
+      "priority": {
+        "title": "Priority Access",
+        "description": "Be among the first to discover and use all of Rallia's features."
+      },
+      "influence": {
+        "title": "Influence the Product",
+        "description": "Your feedback will directly shape the experience of thousands of players."
+      },
+      "exclusive": {
+        "title": "Exclusive Benefits",
+        "description": "Enjoy premium features for free during the beta period."
+      },
+      "community": {
+        "title": "Founding Community",
+        "description": "Join a select group of enthusiasts who are defining the future of sport."
+      }
+    },
+    "form": {
+      "fullNameLabel": "Full name",
+      "fullNamePlaceholder": "Your full name",
+      "cityLabel": "City of residence",
+      "cityPlaceholder": "E.g., Montreal",
+      "playsTennisLabel": "Do you play tennis?",
+      "tennisLevelLabel": "Tennis level",
+      "playsPickleballLabel": "Do you play pickleball?",
+      "pickleballLevelLabel": "Pickleball level",
+      "emailLabel": "Email",
+      "emailPlaceholder": "your.email@example.com",
+      "phoneLabel": "Phone (optional)",
+      "phonePlaceholder": "+1 (555) 123-4567",
+      "submitButton": "Join the beta program",
+      "submitting": "Submitting...",
+      "levels": {
+        "beginner": "Beginner",
+        "intermediate": "Intermediate",
+        "advanced": "Advanced",
+        "elite": "Elite"
+      },
+      "selectLevel": "Select your level"
+    },
+    "validation": {
+      "atLeastOneSport": "Please select at least one sport",
+      "tennisLevelRequired": "Please indicate your tennis level",
+      "pickleballLevelRequired": "Please indicate your pickleball level"
+    },
+    "success": {
+      "title": "Thank you!",
+      "message": "Thank you for signing up! We will contact you soon with the next steps to join our beta program."
+    },
+    "error": {
+      "title": "Error",
+      "message": "An error occurred. Please try again."
+    },
+    "urgency": {
+      "message": "Limited spots — Join our first testers now!"
+    },
+    "formSection": {
+      "title": "Sign up for the beta program",
+      "subtitle": "Fill out the form below to join our community of privileged testers."
+    },
+    "trust": {
+      "secure": "Secure data",
+      "fast": "Quick signup",
+      "premium": "Free premium access"
+    }
   }
 }

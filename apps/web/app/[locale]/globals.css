@@ -1091,6 +1091,121 @@ textarea:focus-visible {
   }
 }
 
+/* Beta page animations */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-20px) rotate(5deg);
+  }
+}
+
+@keyframes float-delayed {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-15px) rotate(-5deg);
+  }
+}
+
+@keyframes float-slow {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-25px);
+  }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes gradient-rotate {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float-delayed 7s ease-in-out infinite;
+  animation-delay: 1s;
+}
+
+.animate-float-slow {
+  animation: float-slow 8s ease-in-out infinite;
+  animation-delay: 2s;
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 3s ease-in-out infinite;
+}
+
+/* Animated gradient border for beta form */
+.animated-border {
+  position: relative;
+  padding: 3px;
+  border-radius: 0.5rem;
+  background: linear-gradient(
+    90deg,
+    var(--primary-400),
+    var(--secondary-400),
+    var(--accent-400),
+    var(--primary-400)
+  );
+  background-size: 300% 100%;
+  animation: gradient-rotate 4s linear infinite;
+}
+
+.animated-border > * {
+  border-radius: calc(0.5rem - 2px);
+}
+
+.dark .animated-border {
+  background: linear-gradient(
+    90deg,
+    var(--primary-600),
+    var(--secondary-500),
+    var(--accent-600),
+    var(--primary-600)
+  );
+  background-size: 300% 100%;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-float-delayed,
+  .animate-float-slow,
+  .animate-pulse-subtle {
+    animation: none;
+  }
+
+  .animated-border {
+    animation: none;
+    background: var(--primary-400);
+  }
+}
+
 /* Print styles */
 @media print {
   .theme-switcher,
