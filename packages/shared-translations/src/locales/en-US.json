@@ -4549,8 +4549,10 @@
         "invalidCA": "Please enter a valid Canadian postal code (e.g., H2X 1Y4)",
         "invalidUS": "Please enter a valid US ZIP code (e.g., 90210)",
         "notFound": "We couldn't find this postal code. Please check and try again.",
-        "networkError": "Connection error. Please try again."
-      }
+        "networkError": "Connection error. Please try again.",
+        "outOfCoverage": "This area is not covered. We're currently only available in Greater Montreal."
+      },
+      "coverageNote": "We're currently available in Greater Montreal only."
     },
     "locationPermission": {
       "title": "Get the best match recommendations",

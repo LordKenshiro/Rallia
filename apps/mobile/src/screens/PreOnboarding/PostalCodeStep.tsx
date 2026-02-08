@@ -14,7 +14,7 @@ import { Text, Button, Spinner } from '@rallia/shared-components';
 import { SportIcon } from '../../components/SportIcon';
 import { spacingPixels, radiusPixels, primary, neutral, status } from '@rallia/design-system';
 import { usePostalCodeGeocode } from '@rallia/shared-hooks';
-import { selectionHaptic } from '@rallia/shared-utils';
+import { selectionHaptic, isPostalCodeInGreaterMontreal } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../hooks';
 import { useUserHomeLocation } from '../../context';
 
@@ -40,6 +40,7 @@ export function PostalCodeStep({ onContinue, isActive = true }: PostalCodeStepPr
 
   const [postalCode, setPostalCode] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [outOfCoverage, setOutOfCoverage] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [isInputFocused, setIsInputFocused] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -80,17 +81,33 @@ export function PostalCodeStep({ onContinue, isActive = true }: PostalCodeStepPr
     };
   }, [isInputFocused]);
 
-  // Debounced geocoding when valid format is entered
+  // Debounced geocoding only when format is valid and postal code is in GMA (no Google call if out of coverage)
   useEffect(() => {
     const validation = validateFormat(postalCode);
-    if (validation.isValid && validation.normalized) {
-      const timer = setTimeout(() => {
-        geocode(postalCode);
-      }, 500);
-      return () => clearTimeout(timer);
-    } else {
+    if (!validation.isValid || !validation.normalized) {
       clearResult();
+      setOutOfCoverage(false);
+      return;
     }
+    // US or non-GMA Canadian: show out-of-coverage, do not call geocode()
+    if (validation.country === 'US') {
+      clearResult();
+      setOutOfCoverage(true);
+      return;
+    }
+    if (
+      validation.country === 'CA' &&
+      !isPostalCodeInGreaterMontreal(validation.normalized, 'CA')
+    ) {
+      clearResult();
+      setOutOfCoverage(true);
+      return;
+    }
+    setOutOfCoverage(false);
+    const timer = setTimeout(() => {
+      geocode(postalCode);
+    }, 500);
+    return () => clearTimeout(timer);
   }, [postalCode, validateFormat, geocode, clearResult]);
 
   const handlePostalCodeChange = useCallback((text: string) => {
@@ -128,6 +145,9 @@ export function PostalCodeStep({ onContinue, isActive = true }: PostalCodeStepPr
   }, [result, isSaving, setHomeLocation, onContinue]);
 
   const getErrorMessage = (): string | null => {
+    if (outOfCoverage) {
+      return t('preOnboarding.postalCode.errors.outOfCoverage');
+    }
     if (!geocodeError) return null;
 
     switch (geocodeError) {
@@ -143,7 +163,8 @@ export function PostalCodeStep({ onContinue, isActive = true }: PostalCodeStepPr
   };
 
   const hasValidInput = result !== null;
-  const showError = geocodeError && postalCode.length >= 3;
+  const showError =
+    (geocodeError && postalCode.length >= 3) || (outOfCoverage && postalCode.length >= 3);
   const errorMessage = getErrorMessage();
 
   if (!isActive) return null;
@@ -179,7 +200,7 @@ export function PostalCodeStep({ onContinue, isActive = true }: PostalCodeStepPr
           </Text>
 
           <Text size="sm" color={colors.textMuted} style={styles.subtitle}>
-            {t('preOnboarding.postalCode.subtitle')}
+            {t('preOnboarding.postalCode.subtitle')} {t('preOnboarding.postalCode.coverageNote')}
           </Text>
         </Animated.View>
 
