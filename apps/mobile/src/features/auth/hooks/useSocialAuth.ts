@@ -266,6 +266,13 @@ export function useSocialAuth(): UseSocialAuthReturn {
           }
         }
       } else {
+        // User cancelled (our throw) or other error - don't show error for cancel
+        const msg = error instanceof Error ? error.message : String(error);
+        const isCancelled = msg.toLowerCase().includes('cancelled');
+        if (isCancelled) {
+          Logger.debug('Google sign-in cancelled by user');
+          return { success: false, needsOnboarding: false };
+        }
         setErrorMessage(getFriendlyErrorMessage(error));
       }
 

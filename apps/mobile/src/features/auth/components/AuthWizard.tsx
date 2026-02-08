@@ -246,13 +246,16 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
     });
   }, [currentStep, translateX]);
 
-  // Handle social sign-in result
-  // Show toast when social auth sets an error
+  // Handle social sign-in result: show toast when social auth sets an error.
+  // Only depend on socialAuthError so we don't re-run when toast identity changes
+  // (ToastProvider creates a new context value each render, which would cause an infinite loop).
+  const toastErrorRef = React.useRef(toast.error);
+  toastErrorRef.current = toast.error;
   useEffect(() => {
     if (socialAuthError) {
-      toast.error(socialAuthError);
+      toastErrorRef.current(socialAuthError);
     }
-  }, [socialAuthError, toast]);
+  }, [socialAuthError]);
 
   const handleSocialAuthResult = useCallback(
     async (signInFn: () => Promise<{ success: boolean; needsOnboarding: boolean }>) => {
