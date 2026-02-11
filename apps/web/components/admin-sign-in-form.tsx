@@ -113,8 +113,8 @@ export function AdminSignInForm({
 
   const isEmailLoading = authState === 'loading' && !loadingProvider;
   const isGoogleLoading = loadingProvider === 'google';
-  const isFacebookLoading = loadingProvider === 'facebook';
-  const isAnyOAuthLoading = isGoogleLoading || isFacebookLoading;
+  // const isFacebookLoading = loadingProvider === 'facebook'; // Facebook auth commented out
+  const isAnyOAuthLoading = isGoogleLoading; // was: isGoogleLoading || isFacebookLoading
 
   return (
     <Card className="w-full max-w-md border-[var(--secondary-200)] dark:border-[var(--secondary-800)]">
@@ -175,6 +175,7 @@ export function AdminSignInForm({
                 {t('signInWithGoogle')}
               </Button>
 
+              {/* Facebook auth commented out - re-enable by uncommenting and restoring isFacebookLoading / isAnyOAuthLoading
               <Button
                 type="button"
                 variant="outline"
@@ -195,6 +196,7 @@ export function AdminSignInForm({
                 )}
                 {t('signInWithFacebook')}
               </Button>
+              */}
             </div>
 
             <div className="relative flex items-center gap-3">
