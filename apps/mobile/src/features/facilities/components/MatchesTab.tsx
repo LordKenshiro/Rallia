@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
     marginTop: spacingPixels[2],
   },
   headerContainer: {
-    paddingTop: spacingPixels[3],
+    // Top spacing comes from FacilityDetail contentWithTopPadding
   },
   searchRow: {
     flexDirection: 'row',
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     flexGrow: 1,
-    paddingBottom: spacingPixels[5],
+    paddingBottom: spacingPixels[6],
   },
   emptyListContent: {
     justifyContent: 'center',

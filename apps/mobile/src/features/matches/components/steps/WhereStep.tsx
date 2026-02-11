@@ -45,7 +45,7 @@ import type {
 } from '@rallia/shared-types';
 import { SheetManager } from 'react-native-actions-sheet';
 import type { TranslationKey, TranslationOptions } from '../../../../hooks/useTranslation';
-import { useUserLocation } from '../../../../hooks/useUserLocation';
+import { useEffectiveLocation } from '../../../../hooks/useEffectiveLocation';
 
 // =============================================================================
 // TYPES
@@ -684,8 +684,8 @@ export const WhereStep: React.FC<WhereStepProps> = ({
     slot: FormattedSlot;
   } | null>(null);
 
-  // Get user location (needed for fetching facility details)
-  const { location, loading: locationLoading, error: locationError } = useUserLocation();
+  // Get effective user location (GPS with postal code fallback)
+  const { location, isLoading: locationLoading } = useEffectiveLocation();
 
   // Track if edit mode initialization has been done
   const hasInitializedFromEdit = useRef(false);
@@ -1199,17 +1199,6 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       );
     }
 
-    if (locationError) {
-      return (
-        <View style={styles.emptyState}>
-          <Ionicons name="location-outline" size={32} color={colors.textMuted} />
-          <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('matchCreation.fields.locationAccessNeeded')}
-          </Text>
-        </View>
-      );
-    }
-
     if (facilitiesError) {
       return (
         <View style={styles.emptyState}>
@@ -1248,7 +1237,6 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   }, [
     isLoadingFacilities,
     locationLoading,
-    locationError,
     facilitiesError,
     searchQuery,
     facilities.length,

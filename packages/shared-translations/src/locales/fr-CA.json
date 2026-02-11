@@ -5439,7 +5439,7 @@
     "hideCourts": "Masquer les terrains",
     "noAvailability": {
       "title": "Aucune disponibilité",
-      "description": "Aucun créneau horaire disponible pour les dates sélectionnées. Réessayez plus tard.",
+      "description": "Cet établissement n'a aucun créneau horaire disponible pour le moment.",
       "tryLater": "Revenez plus tard pour de nouvelles disponibilités",
       "tryDifferentDate": "Essayez une autre date"
     },
@@ -5454,6 +5454,7 @@
     "outdoor": "Extérieur",
     "lighted": "Éclairé",
     "openInMaps": "Ouvrir dans Plans",
+    "facilityImages": "Images du site",
     "noMatches": {
       "title": "Aucune partie à venir",
       "description": "Aucune partie publique n'est prévue à ce site de jeu."
@@ -5509,9 +5510,16 @@
     "paidCourtsUnavailable": "{count} terrain(s) payant(s) indisponible(s) pour la réservation en ligne",
     "available": "Disponible",
     "duration": "{hours}h",
+    "error": {
+      "generic": "La réservation a échoué. Veuillez réessayer."
+    },
     "success": {
       "title": "Réservation confirmée",
-      "description": "Votre terrain a été réservé avec succès."
+      "description": "Votre terrain a été réservé avec succès.",
+      "stepTitle": "Réservation confirmée!",
+      "createGamePrompt": "Créer une partie à partir de cette réservation?",
+      "createGame": "Créer une partie",
+      "done": "Terminé"
     },
     "external": {
       "title": "Réservation externe",

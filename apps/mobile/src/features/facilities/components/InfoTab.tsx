@@ -21,6 +21,7 @@ import { Text, Skeleton, useToast } from '@rallia/shared-components';
 import {
   spacingPixels,
   radiusPixels,
+  shadowsNative,
   primary,
   secondary,
   accent,
@@ -118,24 +119,31 @@ function buildFullAddress(facility: FacilityWithDetails): string | null {
 
 function SectionHeader({ title, icon, iconColor, badge, colors, isDark }: SectionHeaderProps) {
   return (
-    <View style={styles.sectionHeader}>
-      <View style={[styles.sectionIconWrapper, { backgroundColor: iconColor + '15' }]}>
-        <Ionicons name={icon} size={18} color={iconColor} />
-      </View>
-      <View style={styles.sectionHeaderText}>
-        <Text size="sm" weight="semibold" color={colors.text}>
-          {title}
-        </Text>
-      </View>
-      {badge !== undefined && (
-        <View
-          style={[styles.sectionBadge, { backgroundColor: isDark ? neutral[700] : primary[50] }]}
-        >
-          <Text size="xs" weight="semibold" color={colors.primary}>
-            {badge}
+    <View
+      style={[
+        styles.sectionHeaderRow,
+        { backgroundColor: isDark ? neutral[800] + '50' : neutral[50] },
+      ]}
+    >
+      <View style={styles.sectionHeader}>
+        <View style={[styles.sectionIconWrapper, { backgroundColor: iconColor + '15' }]}>
+          <Ionicons name={icon} size={18} color={iconColor} />
+        </View>
+        <View style={styles.sectionHeaderText}>
+          <Text size="sm" weight="semibold" color={colors.text}>
+            {title}
           </Text>
         </View>
-      )}
+        {badge !== undefined && (
+          <View
+            style={[styles.sectionBadge, { backgroundColor: isDark ? neutral[700] : primary[50] }]}
+          >
+            <Text size="xs" weight="semibold" color={colors.primary}>
+              {badge}
+            </Text>
+          </View>
+        )}
+      </View>
     </View>
   );
 }
@@ -154,154 +162,168 @@ function InfoTabSkeleton({
   const bgColor = isDark ? neutral[800] : '#E1E9EE';
   const highlightColor = isDark ? neutral[700] : '#F2F8FC';
 
+  const cardBg = isDark ? neutral[800] : '#E1E9EE';
+
   return (
     <View style={styles.skeletonContainer}>
       {/* About section skeleton */}
-      <View style={styles.skeletonSection}>
-        <View style={styles.skeletonSectionHeader}>
-          <Skeleton
-            width={32}
-            height={32}
-            backgroundColor={bgColor}
-            highlightColor={highlightColor}
-            style={{ borderRadius: radiusPixels.md }}
-          />
-          <Skeleton
-            width={100}
-            height={14}
-            backgroundColor={bgColor}
-            highlightColor={highlightColor}
-            style={{ borderRadius: radiusPixels.sm }}
-          />
-        </View>
-        <View style={styles.skeletonContent}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.skeletonBadgesRow}
-          >
-            {[1, 2].map(i => (
+      <View style={[styles.skeletonCard, { backgroundColor: cardBg }]}>
+        <View style={styles.skeletonSection}>
+          <View style={[styles.skeletonSectionHeaderRow, { backgroundColor: highlightColor }]}>
+            <View style={styles.skeletonSectionHeader}>
               <Skeleton
-                key={i}
-                width={100}
-                height={28}
+                width={32}
+                height={32}
                 backgroundColor={bgColor}
                 highlightColor={highlightColor}
-                style={{ borderRadius: radiusPixels.full }}
+                style={{ borderRadius: radiusPixels.md }}
               />
-            ))}
-          </ScrollView>
-          <View style={{ gap: spacingPixels[1] }}>
-            <Skeleton
-              width="100%"
-              height={14}
-              backgroundColor={bgColor}
-              highlightColor={highlightColor}
-            />
-            <Skeleton
-              width="80%"
-              height={14}
-              backgroundColor={bgColor}
-              highlightColor={highlightColor}
-            />
+              <Skeleton
+                width={100}
+                height={14}
+                backgroundColor={bgColor}
+                highlightColor={highlightColor}
+                style={{ borderRadius: radiusPixels.sm }}
+              />
+            </View>
+          </View>
+          <View style={styles.skeletonContent}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.skeletonBadgesRow}
+            >
+              {[1, 2].map(i => (
+                <Skeleton
+                  key={i}
+                  width={100}
+                  height={28}
+                  backgroundColor={bgColor}
+                  highlightColor={highlightColor}
+                  style={{ borderRadius: radiusPixels.full }}
+                />
+              ))}
+            </ScrollView>
+            <View style={{ gap: spacingPixels[1] }}>
+              <Skeleton
+                width="100%"
+                height={14}
+                backgroundColor={bgColor}
+                highlightColor={highlightColor}
+              />
+              <Skeleton
+                width="80%"
+                height={14}
+                backgroundColor={bgColor}
+                highlightColor={highlightColor}
+              />
+            </View>
           </View>
         </View>
       </View>
 
       {/* Location section skeleton */}
-      <View style={styles.skeletonSection}>
-        <View style={styles.skeletonSectionHeader}>
-          <Skeleton
-            width={32}
-            height={32}
-            backgroundColor={bgColor}
-            highlightColor={highlightColor}
-            style={{ borderRadius: radiusPixels.md }}
-          />
-          <Skeleton
-            width={140}
-            height={14}
-            backgroundColor={bgColor}
-            highlightColor={highlightColor}
-            style={{ borderRadius: radiusPixels.sm }}
-          />
-        </View>
-        <View style={styles.skeletonContent}>
-          <Skeleton
-            width="90%"
-            height={16}
-            backgroundColor={bgColor}
-            highlightColor={highlightColor}
-          />
-          <Skeleton
-            width={100}
-            height={12}
-            backgroundColor={bgColor}
-            highlightColor={highlightColor}
-          />
-          <Skeleton
-            width="100%"
-            height={44}
-            borderRadius={12}
-            backgroundColor={bgColor}
-            highlightColor={highlightColor}
-          />
-          <View style={{ flexDirection: 'row', gap: spacingPixels[2] }}>
-            {[1, 2, 3].map(i => (
+      <View style={[styles.skeletonCard, { backgroundColor: cardBg }]}>
+        <View style={styles.skeletonSection}>
+          <View style={[styles.skeletonSectionHeaderRow, { backgroundColor: highlightColor }]}>
+            <View style={styles.skeletonSectionHeader}>
               <Skeleton
-                key={i}
-                width={44}
-                height={44}
-                circle
+                width={32}
+                height={32}
                 backgroundColor={bgColor}
                 highlightColor={highlightColor}
+                style={{ borderRadius: radiusPixels.md }}
               />
-            ))}
+              <Skeleton
+                width={140}
+                height={14}
+                backgroundColor={bgColor}
+                highlightColor={highlightColor}
+                style={{ borderRadius: radiusPixels.sm }}
+              />
+            </View>
+          </View>
+          <View style={styles.skeletonContent}>
+            <Skeleton
+              width="90%"
+              height={16}
+              backgroundColor={bgColor}
+              highlightColor={highlightColor}
+            />
+            <Skeleton
+              width={100}
+              height={12}
+              backgroundColor={bgColor}
+              highlightColor={highlightColor}
+            />
+            <Skeleton
+              width="100%"
+              height={44}
+              borderRadius={12}
+              backgroundColor={bgColor}
+              highlightColor={highlightColor}
+            />
+            <View style={{ flexDirection: 'row', gap: spacingPixels[2] }}>
+              {[1, 2, 3].map(i => (
+                <Skeleton
+                  key={i}
+                  width={44}
+                  height={44}
+                  circle
+                  backgroundColor={bgColor}
+                  highlightColor={highlightColor}
+                />
+              ))}
+            </View>
           </View>
         </View>
       </View>
 
       {/* Courts section skeleton */}
-      <View style={styles.skeletonSection}>
-        <View style={styles.skeletonSectionHeader}>
-          <Skeleton
-            width={32}
-            height={32}
-            backgroundColor={bgColor}
-            highlightColor={highlightColor}
-            style={{ borderRadius: radiusPixels.md }}
-          />
-          <Skeleton
-            width={80}
-            height={14}
-            backgroundColor={bgColor}
-            highlightColor={highlightColor}
-            style={{ borderRadius: radiusPixels.sm }}
-          />
-          <Skeleton
-            width={24}
-            height={20}
-            backgroundColor={bgColor}
-            highlightColor={highlightColor}
-            style={{ borderRadius: radiusPixels.full }}
-          />
+      <View style={[styles.skeletonCard, { backgroundColor: cardBg }]}>
+        <View style={styles.skeletonSection}>
+          <View style={[styles.skeletonSectionHeaderRow, { backgroundColor: highlightColor }]}>
+            <View style={styles.skeletonSectionHeader}>
+              <Skeleton
+                width={32}
+                height={32}
+                backgroundColor={bgColor}
+                highlightColor={highlightColor}
+                style={{ borderRadius: radiusPixels.md }}
+              />
+              <Skeleton
+                width={80}
+                height={14}
+                backgroundColor={bgColor}
+                highlightColor={highlightColor}
+                style={{ borderRadius: radiusPixels.sm }}
+              />
+              <Skeleton
+                width={24}
+                height={20}
+                backgroundColor={bgColor}
+                highlightColor={highlightColor}
+                style={{ borderRadius: radiusPixels.full }}
+              />
+            </View>
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.skeletonCourtsRow}
+          >
+            {[1, 2, 3].map(i => (
+              <Skeleton
+                key={i}
+                width={160}
+                height={100}
+                borderRadius={12}
+                backgroundColor={bgColor}
+                highlightColor={highlightColor}
+              />
+            ))}
+          </ScrollView>
         </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.skeletonCourtsRow}
-        >
-          {[1, 2, 3].map(i => (
-            <Skeleton
-              key={i}
-              width={160}
-              height={100}
-              borderRadius={12}
-              backgroundColor={bgColor}
-              highlightColor={highlightColor}
-            />
-          ))}
-        </ScrollView>
       </View>
     </View>
   );
@@ -417,223 +439,258 @@ export default function InfoTab({
     <View style={styles.container}>
       {/* About Section */}
       {(description || facilityType || membershipRequired !== undefined) && (
-        <View style={styles.section}>
-          <SectionHeader
-            title={t('facilityDetail.about')}
-            icon="information-circle"
-            iconColor={colors.primary}
-            colors={colors}
-            isDark={isDark}
-          />
+        <View
+          style={[
+            styles.sectionCard,
+            { backgroundColor: colors.card },
+            isDark ? shadowsNative.sm : shadowsNative.DEFAULT,
+          ]}
+        >
+          <View style={styles.section}>
+            <SectionHeader
+              title={t('facilityDetail.about')}
+              icon="information-circle"
+              iconColor={colors.primary}
+              colors={colors}
+              isDark={isDark}
+            />
 
-          {/* Badges row - horizontal scroll */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.badgesScrollContent}
-          >
-            {facilityType && (
-              <View
-                style={[styles.typeBadge, { backgroundColor: isDark ? neutral[700] : primary[50] }]}
-              >
-                <Ionicons name="business-outline" size={12} color={colors.primary} />
-                <Text size="xs" weight="medium" color={colors.primary}>
-                  {facilityType}
-                </Text>
-              </View>
-            )}
-            {membershipRequired !== undefined && (
-              <View
-                style={[
-                  styles.typeBadge,
-                  {
-                    backgroundColor: isDark
-                      ? neutral[700]
-                      : membershipRequired
-                        ? accent[500] + '15'
-                        : status.success.DEFAULT + '15',
-                  },
-                ]}
-              >
-                <Ionicons
-                  name={membershipRequired ? 'lock-closed' : 'lock-open'}
-                  size={12}
-                  color={membershipRequired ? accent[600] : status.success.DEFAULT}
-                />
-                <Text
-                  size="xs"
-                  weight="medium"
-                  color={membershipRequired ? accent[600] : status.success.DEFAULT}
+            {/* Badges row - horizontal scroll */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.badgesScrollContent}
+            >
+              {facilityType && (
+                <View
+                  style={[
+                    styles.typeBadge,
+                    { backgroundColor: isDark ? neutral[700] : primary[50] },
+                  ]}
                 >
-                  {membershipRequired
-                    ? t('facilityDetail.membersOnly')
-                    : t('facilityDetail.publicAccess')}
+                  <Ionicons name="business-outline" size={12} color={colors.primary} />
+                  <Text size="xs" weight="medium" color={colors.primary}>
+                    {facilityType}
+                  </Text>
+                </View>
+              )}
+              {membershipRequired !== undefined && (
+                <View
+                  style={[
+                    styles.typeBadge,
+                    {
+                      backgroundColor: isDark
+                        ? neutral[700]
+                        : membershipRequired
+                          ? accent[500] + '15'
+                          : status.success.DEFAULT + '15',
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name={membershipRequired ? 'lock-closed' : 'lock-open'}
+                    size={12}
+                    color={membershipRequired ? accent[600] : status.success.DEFAULT}
+                  />
+                  <Text
+                    size="xs"
+                    weight="medium"
+                    color={membershipRequired ? accent[600] : status.success.DEFAULT}
+                  >
+                    {membershipRequired
+                      ? t('facilityDetail.membersOnly')
+                      : t('facilityDetail.publicAccess')}
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+
+            {/* Description */}
+            {description && (
+              <View style={styles.descriptionContainer}>
+                <Text
+                  size="sm"
+                  color={colors.text}
+                  style={styles.descriptionText}
+                  numberOfLines={5}
+                >
+                  {description}
                 </Text>
               </View>
             )}
-          </ScrollView>
-
-          {/* Description */}
-          {description && (
-            <View style={styles.descriptionContainer}>
-              <Text size="sm" color={colors.text} style={styles.descriptionText} numberOfLines={5}>
-                {description}
-              </Text>
-            </View>
-          )}
+          </View>
         </View>
       )}
 
       {/* Location & Contact Section */}
-      <View style={styles.section}>
-        <SectionHeader
-          title={t('facilityDetail.locationContact')}
-          icon="location"
-          iconColor={secondary[500]}
-          colors={colors}
-          isDark={isDark}
-        />
+      <View
+        style={[
+          styles.sectionCard,
+          { backgroundColor: colors.card },
+          isDark ? shadowsNative.sm : shadowsNative.DEFAULT,
+        ]}
+      >
+        <View style={styles.section}>
+          <SectionHeader
+            title={t('facilityDetail.locationContact')}
+            icon="location"
+            iconColor={secondary[500]}
+            colors={colors}
+            isDark={isDark}
+          />
 
-        {/* Address with copy */}
-        {fullAddress && (
-          <View style={styles.addressRow}>
-            <View style={styles.addressContent}>
-              <Text size="sm" weight="medium" color={colors.text} style={styles.addressText}>
-                {fullAddress}
-              </Text>
-              {distanceDisplay && (
-                <View style={styles.distanceRow}>
-                  <Ionicons name="navigate-circle-outline" size={14} color={colors.textMuted} />
-                  <Text size="xs" color={colors.textMuted}>
-                    {t('facilityDetail.distanceAway', { distance: distanceDisplay })}
-                  </Text>
-                </View>
-              )}
+          {/* Address with copy */}
+          {fullAddress && (
+            <View style={styles.addressRow}>
+              <View style={styles.addressContent}>
+                <Text size="sm" weight="medium" color={colors.text} style={styles.addressText}>
+                  {fullAddress}
+                </Text>
+                {distanceDisplay && (
+                  <View style={styles.distanceRow}>
+                    <Ionicons name="navigate-circle-outline" size={14} color={colors.textMuted} />
+                    <Text size="xs" color={colors.textMuted}>
+                      {t('facilityDetail.distanceAway', { distance: distanceDisplay })}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <TouchableOpacity
+                onPress={handleCopyAddress}
+                style={[
+                  styles.copyButton,
+                  { backgroundColor: isDark ? neutral[800] : primary[50] },
+                ]}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="copy-outline" size={16} color={colors.primary} />
+              </TouchableOpacity>
             </View>
+          )}
+
+          {/* Open in Maps button */}
+          <View style={styles.mapsButtonContainer}>
             <TouchableOpacity
-              onPress={handleCopyAddress}
-              style={[styles.copyButton, { backgroundColor: isDark ? neutral[800] : primary[50] }]}
+              onPress={onOpenInMaps}
+              style={[styles.mapsButton, { backgroundColor: isDark ? neutral[700] : primary[50] }]}
               activeOpacity={0.7}
             >
-              <Ionicons name="copy-outline" size={16} color={colors.primary} />
+              <Ionicons name="navigate-outline" size={16} color={colors.primary} />
+              <Text size="sm" weight="semibold" color={colors.primary}>
+                {t('facilityDetail.openInMaps')}
+              </Text>
             </TouchableOpacity>
           </View>
-        )}
 
-        {/* Open in Maps button */}
-        <View style={styles.mapsButtonContainer}>
-          <TouchableOpacity
-            onPress={onOpenInMaps}
-            style={[styles.mapsButton, { backgroundColor: isDark ? neutral[700] : primary[50] }]}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="navigate-outline" size={16} color={colors.primary} />
-            <Text size="sm" weight="semibold" color={colors.primary}>
-              {t('facilityDetail.openInMaps')}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Quick Actions Row */}
-        {hasContactInfo && (
-          <View style={styles.quickActionsContainer}>
-            <View style={styles.quickActionsRow}>
-              {phone && (
-                <TouchableOpacity
-                  onPress={handleCall}
-                  onLongPress={handleCopyPhone}
-                  style={[styles.quickActionButton, { backgroundColor: primary[500] + '15' }]}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="call-outline" size={20} color={primary[600]} />
-                </TouchableOpacity>
-              )}
-              {email && (
-                <TouchableOpacity
-                  onPress={handleEmail}
-                  style={[styles.quickActionButton, { backgroundColor: primary[500] + '15' }]}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="mail-outline" size={20} color={primary[600]} />
-                </TouchableOpacity>
-              )}
-              {website && (
-                <TouchableOpacity
-                  onPress={handleWebsite}
-                  style={[styles.quickActionButton, { backgroundColor: primary[500] + '15' }]}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="globe-outline" size={20} color={primary[600]} />
-                </TouchableOpacity>
-              )}
+          {/* Quick Actions Row */}
+          {hasContactInfo && (
+            <View style={styles.quickActionsContainer}>
+              <View style={styles.quickActionsRow}>
+                {phone && (
+                  <TouchableOpacity
+                    onPress={handleCall}
+                    onLongPress={handleCopyPhone}
+                    style={[styles.quickActionButton, { backgroundColor: primary[500] + '15' }]}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="call-outline" size={20} color={primary[600]} />
+                  </TouchableOpacity>
+                )}
+                {email && (
+                  <TouchableOpacity
+                    onPress={handleEmail}
+                    style={[styles.quickActionButton, { backgroundColor: primary[500] + '15' }]}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="mail-outline" size={20} color={primary[600]} />
+                  </TouchableOpacity>
+                )}
+                {website && (
+                  <TouchableOpacity
+                    onPress={handleWebsite}
+                    style={[styles.quickActionButton, { backgroundColor: primary[500] + '15' }]}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="globe-outline" size={20} color={primary[600]} />
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
-          </View>
-        )}
+          )}
+        </View>
       </View>
 
       {/* Courts Section */}
-      <View style={styles.section}>
-        <SectionHeader
-          title={t('facilityDetail.courts')}
-          icon="grid"
-          iconColor={primary[500]}
-          badge={courts.length}
-          colors={colors}
-          isDark={isDark}
-        />
+      <View
+        style={[
+          styles.sectionCard,
+          { backgroundColor: colors.card },
+          isDark ? shadowsNative.sm : shadowsNative.DEFAULT,
+        ]}
+      >
+        <View style={styles.section}>
+          <SectionHeader
+            title={t('facilityDetail.courts')}
+            icon="grid"
+            iconColor={primary[500]}
+            badge={courts.length}
+            colors={colors}
+            isDark={isDark}
+          />
 
-        {courts.length === 0 ? (
-          <View style={styles.emptyState}>
-            <SportIcon
-              sportName={selectedSport?.name ?? 'tennis'}
-              size={32}
-              color={colors.textMuted}
-            />
-            <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-              {t('facilityDetail.noCourts')}
-            </Text>
-          </View>
-        ) : (
-          <>
-            {/* Horizontal scroll for courts */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.courtsScrollContent}
-            >
-              {displayedCourts.map(court => (
-                <View key={court.id} style={styles.courtCardWrapper}>
-                  <CourtCard court={court} colors={colors} isDark={isDark} t={t} />
+          {courts.length === 0 ? (
+            <View style={styles.emptyState}>
+              <SportIcon
+                sportName={selectedSport?.name ?? 'tennis'}
+                size={32}
+                color={colors.textMuted}
+              />
+              <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
+                {t('facilityDetail.noCourts')}
+              </Text>
+            </View>
+          ) : (
+            <>
+              {/* Horizontal scroll for courts */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.courtsScrollContent}
+              >
+                {displayedCourts.map(court => (
+                  <View key={court.id} style={styles.courtCardWrapper}>
+                    <CourtCard court={court} colors={colors} isDark={isDark} t={t} />
+                  </View>
+                ))}
+              </ScrollView>
+
+              {/* Show all / Hide toggle */}
+              {hasMoreCourts && (
+                <View style={styles.showAllContainer}>
+                  <TouchableOpacity
+                    onPress={handleToggleShowAllCourts}
+                    style={[
+                      styles.showAllButton,
+                      { backgroundColor: isDark ? neutral[800] : primary[50] },
+                    ]}
+                    activeOpacity={0.7}
+                  >
+                    <Text size="sm" weight="medium" color={colors.primary}>
+                      {showAllCourts
+                        ? t('facilityDetail.hideCourts')
+                        : t('facilityDetail.showAllCourts', { count: courts.length })}
+                    </Text>
+                    <Ionicons
+                      name={showAllCourts ? 'chevron-up' : 'chevron-down'}
+                      size={16}
+                      color={colors.primary}
+                    />
+                  </TouchableOpacity>
                 </View>
-              ))}
-            </ScrollView>
-
-            {/* Show all / Hide toggle */}
-            {hasMoreCourts && (
-              <View style={styles.showAllContainer}>
-                <TouchableOpacity
-                  onPress={handleToggleShowAllCourts}
-                  style={[
-                    styles.showAllButton,
-                    { backgroundColor: isDark ? neutral[800] : primary[50] },
-                  ]}
-                  activeOpacity={0.7}
-                >
-                  <Text size="sm" weight="medium" color={colors.primary}>
-                    {showAllCourts
-                      ? t('facilityDetail.hideCourts')
-                      : t('facilityDetail.showAllCourts', { count: courts.length })}
-                  </Text>
-                  <Ionicons
-                    name={showAllCourts ? 'chevron-up' : 'chevron-down'}
-                    size={16}
-                    color={colors.primary}
-                  />
-                </TouchableOpacity>
-              </View>
-            )}
-          </>
-        )}
+              )}
+            </>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -649,15 +706,26 @@ const styles = StyleSheet.create({
     paddingBottom: spacingPixels[4],
   },
 
-  // Section (flat layout)
+  // Section card (wraps each section to match other tabs)
+  sectionCard: {
+    marginHorizontal: spacingPixels[4],
+    borderRadius: radiusPixels.xl,
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+  },
   section: {
     gap: spacingPixels[3],
+  },
+  sectionHeaderRow: {
+    borderRadius: radiusPixels.lg,
+    paddingVertical: spacingPixels[2],
+    paddingHorizontal: spacingPixels[3],
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[2.5],
-    paddingHorizontal: spacingPixels[4],
+    paddingHorizontal: 0,
   },
   sectionHeaderText: {
     flex: 1,
@@ -677,7 +745,6 @@ const styles = StyleSheet.create({
 
   // About Section
   badgesScrollContent: {
-    paddingHorizontal: spacingPixels[4],
     gap: spacingPixels[2],
   },
   typeBadge: {
@@ -688,9 +755,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[2],
     borderRadius: radiusPixels.full,
   },
-  descriptionContainer: {
-    paddingHorizontal: spacingPixels[4],
-  },
+  descriptionContainer: {},
   descriptionText: {
     lineHeight: 22,
   },
@@ -700,7 +765,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacingPixels[2],
-    paddingHorizontal: spacingPixels[4],
   },
   addressContent: {
     flex: 1,
@@ -721,9 +785,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  mapsButtonContainer: {
-    paddingHorizontal: spacingPixels[4],
-  },
+  mapsButtonContainer: {},
   mapsButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -734,9 +796,7 @@ const styles = StyleSheet.create({
   },
 
   // Quick Actions
-  quickActionsContainer: {
-    paddingHorizontal: spacingPixels[4],
-  },
+  quickActionsContainer: {},
   quickActionsRow: {
     flexDirection: 'row',
     gap: spacingPixels[2],
@@ -751,7 +811,6 @@ const styles = StyleSheet.create({
 
   // Courts Section
   courtsScrollContent: {
-    paddingHorizontal: spacingPixels[4],
     gap: spacingPixels[2.5],
   },
   courtCardWrapper: {
@@ -759,16 +818,13 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     paddingVertical: spacingPixels[6],
-    paddingHorizontal: spacingPixels[4],
     alignItems: 'center',
     gap: spacingPixels[2],
   },
   emptyStateText: {
     textAlign: 'center',
   },
-  showAllContainer: {
-    paddingHorizontal: spacingPixels[4],
-  },
+  showAllContainer: {},
   showAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -778,29 +834,38 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.lg,
   },
 
-  // Skeleton loading
+  // Skeleton loading (card layout to match section cards)
   skeletonContainer: {
-    padding: spacingPixels[2],
     gap: spacingPixels[4],
+    paddingBottom: spacingPixels[4],
+  },
+  skeletonCard: {
+    marginHorizontal: spacingPixels[4],
+    borderRadius: radiusPixels.xl,
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
   },
   skeletonSection: {
     gap: spacingPixels[3],
+  },
+  skeletonSectionHeaderRow: {
+    borderRadius: radiusPixels.lg,
+    paddingVertical: spacingPixels[2],
+    paddingHorizontal: spacingPixels[3],
   },
   skeletonSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[2.5],
-    paddingHorizontal: spacingPixels[4],
+    paddingHorizontal: 0,
   },
   skeletonContent: {
-    paddingHorizontal: spacingPixels[4],
     gap: spacingPixels[2],
   },
   skeletonBadgesRow: {
     gap: spacingPixels[2],
   },
   skeletonCourtsRow: {
-    paddingHorizontal: spacingPixels[4],
     gap: spacingPixels[2.5],
   },
 });

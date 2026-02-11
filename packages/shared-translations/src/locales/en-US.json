@@ -5437,7 +5437,7 @@
     "hideCourts": "Hide courts",
     "noAvailability": {
       "title": "No Availability",
-      "description": "No time slots are available for the selected dates. Try checking back later.",
+      "description": "This facility doesn't have any available time slots right now.",
       "tryLater": "Check back later for new openings",
       "tryDifferentDate": "Try a different date"
     },
@@ -5452,6 +5452,7 @@
     "outdoor": "Outdoor",
     "lighted": "Lighted",
     "openInMaps": "Open in Maps",
+    "facilityImages": "Facility images",
     "noMatches": {
       "title": "No Upcoming Matches",
       "description": "No public matches are scheduled at this facility."
@@ -5507,9 +5508,16 @@
     "paidCourtsUnavailable": "{count} paid court(s) unavailable for online booking",
     "available": "Available",
     "duration": "{hours}h",
+    "error": {
+      "generic": "Booking failed. Please try again."
+    },
     "success": {
       "title": "Booking Confirmed",
-      "description": "Your court has been booked successfully."
+      "description": "Your court has been booked successfully.",
+      "stepTitle": "Booking confirmed!",
+      "createGamePrompt": "Create a game from this booking?",
+      "createGame": "Create game",
+      "done": "Done"
     },
     "external": {
       "title": "External Booking",
