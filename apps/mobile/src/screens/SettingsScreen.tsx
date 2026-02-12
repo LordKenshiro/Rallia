@@ -243,26 +243,28 @@ const SettingsScreen: React.FC = () => {
           </View>
         )}
 
-        {/* Settings Items - Only show when fully onboarded */}
-        {isOnboarded && (
-          <View style={[styles.settingsGroup, { backgroundColor: colors.background }]}>
+        {/* Settings Items - Permissions always visible; Notifications and Restart Tour when onboarded */}
+        <View style={[styles.settingsGroup, { backgroundColor: colors.background }]}>
+          {isOnboarded && (
             <SettingsItem
               icon="notifications-outline"
               title={t('settings.notifications')}
               onPress={handleNotificationPreferences}
             />
-            <SettingsItem
-              icon="shield-checkmark-outline"
-              title={t('settings.permissions')}
-              onPress={handlePermissions}
-            />
+          )}
+          <SettingsItem
+            icon="shield-checkmark-outline"
+            title={t('settings.permissions')}
+            onPress={handlePermissions}
+          />
+          {isOnboarded && (
             <SettingsItem
               icon="refresh-outline"
               title={t('tour.settings.restartTour')}
               onPress={handleResetTour}
             />
-          </View>
-        )}
+          )}
+        </View>
 
         {/* Preferred Language */}
         <View style={[styles.preferenceSection, { backgroundColor: colors.background }]}>
