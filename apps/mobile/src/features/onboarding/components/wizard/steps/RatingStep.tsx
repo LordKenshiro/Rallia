@@ -129,10 +129,12 @@ export const RatingStep: React.FC<RatingStepProps> = ({
 
   const isTennis = sport === 'tennis';
   const ratingSystem = isTennis ? 'ntrp' : 'dupr';
-  const sportDisplayName = isTennis ? t('onboarding.tennis') : t('onboarding.pickleball');
-  const ratingSystemName = isTennis
-    ? t('onboarding.ratingStep.ntrpSubtitle')
-    : t('onboarding.ratingStep.duprSubtitle');
+  const titleKey = isTennis
+    ? 'onboarding.ratingStep.tennisTitle'
+    : 'onboarding.ratingStep.pickleballTitle';
+  const badgeText = isTennis
+    ? t('onboarding.ratingStep.ntrpBadge')
+    : t('onboarding.ratingStep.duprBadge');
   const selectedRatingId = isTennis ? formData.tennisRatingId : formData.pickleballRatingId;
   const ratingFieldKey = isTennis ? 'tennisRatingId' : 'pickleballRatingId';
 
@@ -204,20 +206,36 @@ export const RatingStep: React.FC<RatingStepProps> = ({
     >
       {/* Title */}
       <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
-        {t('onboarding.ratingStep.tennisTitle')}
+        {t(titleKey)}
       </Text>
 
-      {/* Sport Badge */}
+      {/* Rating System Badge */}
       <View style={[styles.sportBadge, { backgroundColor: colors.buttonActive }]}>
         <Text size="sm" weight="semibold" color={colors.buttonTextActive}>
-          {sportDisplayName}
+          {badgeText}
         </Text>
       </View>
 
-      {/* Subtitle */}
-      <Text size="base" color={colors.textSecondary} style={styles.subtitle}>
-        {ratingSystemName}
-      </Text>
+      {/* Learn More Link */}
+      <TouchableOpacity
+        style={styles.learnMore}
+        onPress={() => Linking.openURL(getRatingUrl())}
+        activeOpacity={0.7}
+      >
+        <Text size="sm" color={colors.buttonActive}>
+          {t(
+            isTennis
+              ? 'onboarding.ratingOverlay.learnMoreNtrp'
+              : 'onboarding.ratingOverlay.learnMoreDupr'
+          )}
+        </Text>
+        <Ionicons
+          name="open-outline"
+          size={14}
+          color={colors.buttonActive}
+          style={styles.externalLinkIcon}
+        />
+      </TouchableOpacity>
 
       {/* Rating Options */}
       {isLoading ? (
@@ -290,21 +308,6 @@ export const RatingStep: React.FC<RatingStepProps> = ({
           })}
         </View>
       )}
-
-      {/* Learn More Link */}
-      <TouchableOpacity
-        style={styles.learnMore}
-        onPress={() => Linking.openURL(getRatingUrl())}
-        activeOpacity={0.7}
-      >
-        <Text size="sm" color={colors.buttonActive}>
-          {t(
-            isTennis
-              ? 'onboarding.ratingOverlay.learnMoreNtrp'
-              : 'onboarding.ratingOverlay.learnMoreDupr'
-          )}
-        </Text>
-      </TouchableOpacity>
     </BottomSheetScrollView>
   );
 };
@@ -369,8 +372,13 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   learnMore: {
-    paddingVertical: spacingPixels[3],
+    flexDirection: 'row',
+    marginBottom: spacingPixels[4],
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  externalLinkIcon: {
+    marginLeft: spacingPixels[1],
   },
 });
 

@@ -1,9 +1,10 @@
 /**
  * LocationStep Component
  *
- * Second step of onboarding - collects location information (address, city, postal code).
+ * Second step of onboarding - collects optional address information.
  * Uses Google Places Autocomplete for address suggestions.
- * City is mandatory, address and postal code are optional.
+ * Postal code is pre-populated from pre-onboarding and shown as read-only.
+ * User can optionally add a specific address for more precise matching.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -25,6 +26,7 @@ import { selectionHaptic } from '@rallia/shared-utils';
 import type { TranslationKey } from '@rallia/shared-translations';
 import type { PlacePrediction } from '@rallia/shared-types';
 import type { OnboardingFormData } from '../../../hooks/useOnboardingWizard';
+import { useUserHomeLocation } from '../../../../../context/UserLocationContext';
 
 interface ThemeColors {
   background: string;
@@ -47,8 +49,6 @@ interface LocationStepProps {
   colors: ThemeColors;
   t: (key: TranslationKey) => string;
   isDark: boolean;
-  /** Show error state on city field (only after user attempted to continue with empty city) */
-  showCityError?: boolean;
 }
 
 export const LocationStep: React.FC<LocationStepProps> = ({
@@ -57,11 +57,15 @@ export const LocationStep: React.FC<LocationStepProps> = ({
   colors,
   t,
   isDark,
-  showCityError = false,
 }) => {
+  // Get the pre-saved postal code from pre-onboarding
+  const { homeLocation } = useUserHomeLocation();
   const [addressQuery, setAddressQuery] = useState(formData.address || '');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // The pre-populated postal code from pre-onboarding (read-only display)
+  const prePopulatedPostalCode = homeLocation?.postalCode || formData.postalCode || '';
 
   // Google Places Autocomplete hook
   const {
@@ -94,6 +98,17 @@ export const LocationStep: React.FC<LocationStepProps> = ({
     };
   }, []);
 
+  // Sync the pre-populated postal code and coordinates to form data on mount
+  useEffect(() => {
+    if (homeLocation && !formData.postalCode) {
+      onUpdateFormData({
+        postalCode: homeLocation.postalCode,
+        latitude: homeLocation.latitude,
+        longitude: homeLocation.longitude,
+      });
+    }
+  }, [homeLocation, formData.postalCode, onUpdateFormData]);
+
   // Handle address input change
   const handleAddressChange = (text: string) => {
     setAddressQuery(text);
@@ -115,15 +130,16 @@ export const LocationStep: React.FC<LocationStepProps> = ({
       setAddressQuery(fullAddress);
       onUpdateFormData({ address: fullAddress });
 
-      // Fetch place details to get coordinates and parse city/postal code
+      // Fetch place details to get coordinates and extract city/postal code
       try {
         const details = await getPlaceDetails(prediction.placeId);
         if (details) {
-          onUpdateFormData({
+          // Update with precise coordinates from the selected address
+          const updates: Partial<OnboardingFormData> = {
             address: details.address,
             latitude: details.latitude,
             longitude: details.longitude,
-          });
+          };
           setAddressQuery(details.address);
 
           // Try to extract city and postal code from the address
@@ -142,32 +158,24 @@ export const LocationStep: React.FC<LocationStepProps> = ({
               /[A-Z]\d[A-Z]\s?\d[A-Z]\d|^\d{5}(-\d{4})?$/i
             );
 
-            if (cityPart && !formData.city) {
-              onUpdateFormData({ city: cityPart });
+            // Update city from address selection
+            if (cityPart) {
+              updates.city = cityPart;
             }
-            if (postalMatch && !formData.postalCode) {
-              onUpdateFormData({ postalCode: postalMatch[0] });
+            // Update postal code from address if found (overrides pre-populated)
+            if (postalMatch) {
+              updates.postalCode = postalMatch[0];
             }
           }
+
+          onUpdateFormData(updates);
         }
       } catch (error) {
         console.error('Failed to get place details:', error);
       }
     },
-    [clearPredictions, getPlaceDetails, onUpdateFormData, formData.city, formData.postalCode]
+    [clearPredictions, getPlaceDetails, onUpdateFormData]
   );
-
-  // Handle city input change
-  const handleCityChange = (text: string) => {
-    onUpdateFormData({ city: text });
-  };
-
-  // Handle postal code input change
-  const handlePostalCodeChange = (text: string) => {
-    // Format Canadian postal code (A1A 1A1) or US zip code
-    const formatted = text.toUpperCase().replace(/[^A-Z0-9\s-]/g, '');
-    onUpdateFormData({ postalCode: formatted });
-  };
 
   // Render a single place suggestion
   const renderPrediction = ({ item }: { item: PlacePrediction }) => (
@@ -217,7 +225,24 @@ export const LocationStep: React.FC<LocationStepProps> = ({
         {t('onboarding.locationStep.subtitle')}
       </Text>
 
-      {/* Address Field with Autocomplete */}
+      {/* Pre-populated Postal Code Display (Read-only) */}
+      {prePopulatedPostalCode && (
+        <View style={[styles.postalCodeBadge, { backgroundColor: isDark ? '#1C1C1E' : '#E8F5E9' }]}>
+          <View style={styles.postalCodeBadgeContent}>
+            <Ionicons name="checkmark-circle" size={20} color={colors.buttonActive} />
+            <View style={styles.postalCodeTextContainer}>
+              <Text size="sm" weight="semibold" color={colors.text}>
+                {t('onboarding.locationStep.savedPostalCode')}
+              </Text>
+              <Text size="lg" weight="bold" color={colors.buttonActive}>
+                {prePopulatedPostalCode}
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Optional Address Field with Autocomplete */}
       <View style={styles.inputContainer}>
         <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.inputLabel}>
           {t('onboarding.locationStep.address')}
@@ -225,6 +250,9 @@ export const LocationStep: React.FC<LocationStepProps> = ({
             {' '}
             ({t('common.optional')})
           </Text>
+        </Text>
+        <Text size="xs" color={colors.textMuted} style={styles.addressHint}>
+          {t('onboarding.locationStep.addressHint')}
         </Text>
         <View style={styles.addressInputWrapper}>
           <BottomSheetTextInput
@@ -279,61 +307,6 @@ export const LocationStep: React.FC<LocationStepProps> = ({
         )}
       </View>
 
-      {/* City Field (Mandatory) */}
-      <View style={styles.inputContainer}>
-        <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.inputLabel}>
-          {t('onboarding.locationStep.city')}
-          <Text size="xs" color={colors.error}>
-            {' '}
-            *
-          </Text>
-        </Text>
-        <BottomSheetTextInput
-          style={[
-            styles.input,
-            {
-              backgroundColor: colors.inputBackground,
-              borderColor: showCityError ? colors.error : colors.inputBorder,
-              color: colors.text,
-            },
-          ]}
-          placeholder={t('onboarding.locationStep.cityPlaceholder')}
-          placeholderTextColor={colors.textMuted}
-          value={formData.city}
-          onChangeText={handleCityChange}
-          autoCapitalize="words"
-          autoCorrect={false}
-        />
-      </View>
-
-      {/* Postal Code Field */}
-      <View style={styles.inputContainer}>
-        <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.inputLabel}>
-          {t('onboarding.locationStep.postalCode')}
-          <Text size="xs" color={colors.textMuted}>
-            {' '}
-            ({t('common.optional')})
-          </Text>
-        </Text>
-        <BottomSheetTextInput
-          style={[
-            styles.input,
-            {
-              backgroundColor: colors.inputBackground,
-              borderColor: colors.inputBorder,
-              color: colors.text,
-            },
-          ]}
-          placeholder={t('onboarding.locationStep.postalCodePlaceholder')}
-          placeholderTextColor={colors.textMuted}
-          value={formData.postalCode}
-          onChangeText={handlePostalCodeChange}
-          autoCapitalize="characters"
-          autoCorrect={false}
-          maxLength={10}
-        />
-      </View>
-
       {/* Privacy Info Box */}
       <View style={[styles.infoBox, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
         <Ionicons name="shield-checkmark" size={24} color={colors.buttonActive} />
@@ -367,12 +340,29 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacingPixels[6],
   },
+  postalCodeBadge: {
+    padding: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    marginBottom: spacingPixels[5],
+  },
+  postalCodeBadgeContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+  },
+  postalCodeTextContainer: {
+    flex: 1,
+  },
   inputContainer: {
     marginBottom: spacingPixels[4],
     zIndex: 1,
   },
   inputLabel: {
+    marginBottom: spacingPixels[1],
+  },
+  addressHint: {
     marginBottom: spacingPixels[2],
+    lineHeight: 16,
   },
   addressInputWrapper: {
     position: 'relative',

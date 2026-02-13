@@ -140,6 +140,20 @@ export interface PhoneInputProps {
    * TextInput component override (for BottomSheet compatibility)
    */
   TextInputComponent?: React.ComponentType<React.ComponentProps<typeof TextInput>>;
+
+  /**
+   * Callback to open custom country selector sheet.
+   * If provided, this will be called instead of showing the default modal.
+   * The callback should open your custom sheet, which should call
+   * onCountrySelect when a country is chosen.
+   */
+  onOpenCountrySelector?: () => void;
+
+  /**
+   * Callback when a country is selected from custom selector.
+   * Use with onOpenCountrySelector for custom sheet implementation.
+   */
+  onCountrySelect?: (country: Country) => void;
 }
 
 export const PhoneInput: React.FC<PhoneInputProps> = ({

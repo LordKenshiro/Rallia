@@ -9,14 +9,15 @@ import {
   TextInput,
   ActivityIndicator,
   ScrollView,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
-import { Text, PhoneInput, useToast } from '@rallia/shared-components';
+import { Text, useToast } from '@rallia/shared-components';
+import { useTheme } from '@rallia/shared-hooks';
+import { PhoneInput } from '../../../../components/PhoneInput';
 import { useImagePicker, useThemeStyles, useTranslation } from '../../../../hooks';
-import type { TranslationKey } from '@rallia/shared-translations';
-import { COLORS } from '@rallia/shared-constants';
 import {
   validateFullName,
   validateUsername,
@@ -34,13 +35,16 @@ import { radiusPixels, spacingPixels } from '@rallia/design-system';
 export function PersonalInformationActionSheet({ payload }: SheetProps<'personal-information'>) {
   const mode = payload?.mode || 'onboarding';
   const onClose = () => SheetManager.hide('personal-information');
-  const onBack = payload?.onBack;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _onBack = payload?.onBack;
   const onContinue = payload?.onContinue;
   const onSave = payload?.onSave;
   const currentStep = payload?.currentStep || 1;
   const totalSteps = payload?.totalSteps || 8;
   const initialData = payload?.initialData;
   const { colors } = useThemeStyles();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const { t } = useTranslation();
   const toast = useToast();
   const [firstName, setFirstName] = useState(initialData?.firstName || '');
@@ -514,15 +518,35 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
           {showDatePicker && Platform.OS === 'ios' && (
             <Modal
               transparent
-              animationType="slide"
+              animationType="fade"
               visible={showDatePicker}
               onRequestClose={() => setShowDatePicker(false)}
             >
-              <View style={styles.modalOverlay}>
+              <Pressable
+                style={[
+                  styles.modalOverlay,
+                  { backgroundColor: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)' },
+                ]}
+                onPress={() => setShowDatePicker(false)}
+              >
                 <View style={[styles.datePickerContainer, { backgroundColor: colors.card }]}>
                   <View style={[styles.datePickerHeader, { borderBottomColor: colors.border }]}>
-                    <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                      <Text style={[styles.datePickerButton, { color: colors.buttonActive }]}>
+                    <TouchableOpacity
+                      onPress={() => setShowDatePicker(false)}
+                      style={styles.pickerHeaderButton}
+                    >
+                      <Text size="base" color={colors.textMuted}>
+                        {t('common.cancel')}
+                      </Text>
+                    </TouchableOpacity>
+                    <Text size="base" weight="semibold" color={colors.text}>
+                      {t('profile.fields.dateOfBirth')}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => setShowDatePicker(false)}
+                      style={styles.pickerHeaderButton}
+                    >
+                      <Text size="base" weight="semibold" color={colors.buttonActive}>
                         {t('common.done')}
                       </Text>
                     </TouchableOpacity>
@@ -534,10 +558,11 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
                     onChange={handleDateChange}
                     maximumDate={new Date()}
                     minimumDate={new Date(1900, 0, 1)}
-                    style={styles.datePicker}
+                    themeVariant={isDark ? 'dark' : 'light'}
+                    style={styles.iosPicker}
                   />
                 </View>
-              </View>
+              </Pressable>
             </Modal>
           )}
 
@@ -599,7 +624,6 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
               placeholder={t('profile.editSheets.phonePlaceholder')}
               required
               maxLength={15}
-              showCharCount
               colors={{
                 text: colors.text,
                 textMuted: colors.textMuted,
@@ -759,7 +783,6 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
   datePickerContainer: {
@@ -769,17 +792,18 @@ const styles = StyleSheet.create({
   },
   datePickerHeader: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[4],
     borderBottomWidth: 1,
   },
-  datePickerButton: {
-    fontSize: 16,
-    fontWeight: '600',
+  pickerHeaderButton: {
+    paddingVertical: spacingPixels[2],
+    paddingHorizontal: spacingPixels[2],
+    minWidth: 60,
   },
-  datePicker: {
-    width: '100%',
+  iosPicker: {
     height: 200,
   },
 });
