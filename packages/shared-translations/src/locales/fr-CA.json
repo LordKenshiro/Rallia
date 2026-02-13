@@ -1181,6 +1181,8 @@
       "title": "Confirmez votre emplacement",
       "subtitle": "Ajoutez votre adresse pour des matchs plus précis, ou continuez avec votre code postal",
       "savedPostalCode": "Votre emplacement enregistré",
+      "editPostalCode": "Modifier",
+      "postalCodeUpdated": "Code postal mis à jour",
       "address": "Adresse précise",
       "addressPlaceholder": "Recherchez votre adresse",
       "addressHint": "Ajouter votre adresse nous aide à trouver des parties plus près de chez vous",

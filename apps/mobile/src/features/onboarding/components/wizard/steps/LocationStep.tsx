@@ -3,8 +3,9 @@
  *
  * Second step of onboarding - collects optional address information.
  * Uses Google Places Autocomplete for address suggestions.
- * Postal code is pre-populated from pre-onboarding and shown as read-only.
+ * Postal code is pre-populated from pre-onboarding with an inline editor for corrections.
  * User can optionally add a specific address for more precise matching.
+ * City and postal code are extracted from structured Google Places address components.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -14,13 +15,12 @@ import {
   TouchableOpacity,
   Platform,
   Keyboard,
-  FlatList,
   ActivityIndicator,
 } from 'react-native';
 import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, lightTheme, darkTheme } from '@rallia/design-system';
 import { usePlacesAutocomplete } from '@rallia/shared-hooks';
 import { selectionHaptic } from '@rallia/shared-utils';
 import type { TranslationKey } from '@rallia/shared-translations';
@@ -63,9 +63,11 @@ export const LocationStep: React.FC<LocationStepProps> = ({
   const [addressQuery, setAddressQuery] = useState(formData.address || '');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [isEditingPostalCode, setIsEditingPostalCode] = useState(false);
+  const [editedPostalCode, setEditedPostalCode] = useState('');
 
-  // The pre-populated postal code from pre-onboarding (read-only display)
-  const prePopulatedPostalCode = homeLocation?.postalCode || formData.postalCode || '';
+  // The displayed postal code: prefer form data (which reflects user edits) over homeLocation
+  const displayPostalCode = formData.postalCode || homeLocation?.postalCode || '';
 
   // Google Places Autocomplete hook
   const {
@@ -109,12 +111,54 @@ export const LocationStep: React.FC<LocationStepProps> = ({
     }
   }, [homeLocation, formData.postalCode, onUpdateFormData]);
 
+  // Handle postal code editing
+  const handleStartEditPostalCode = () => {
+    setEditedPostalCode(formData.postalCode || displayPostalCode);
+    setIsEditingPostalCode(true);
+  };
+
+  const handlePostalCodeChange = (text: string) => {
+    // Strip everything except alphanumeric
+    const raw = text.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    // Auto-format Canadian postal codes: A1A 1A1
+    const isCanadianPattern = /^[A-Z]\d[A-Z]/.test(raw);
+    let formatted: string;
+    if (isCanadianPattern && raw.length > 3) {
+      formatted = `${raw.slice(0, 3)} ${raw.slice(3, 6)}`;
+    } else {
+      formatted = raw;
+    }
+
+    setEditedPostalCode(formatted);
+  };
+
+  const handleSavePostalCode = () => {
+    const trimmed = editedPostalCode.trim();
+    if (trimmed) {
+      onUpdateFormData({ postalCode: trimmed });
+    }
+    setIsEditingPostalCode(false);
+  };
+
+  const handleCancelEditPostalCode = () => {
+    setIsEditingPostalCode(false);
+    setEditedPostalCode('');
+  };
+
   // Handle address input change
   const handleAddressChange = (text: string) => {
     setAddressQuery(text);
-    setShowSuggestions(true);
+    setShowSuggestions(text.length >= 3);
     onUpdateFormData({ address: text });
   };
+
+  // Dismiss suggestions when tapping outside the address input area
+  const handleDismissSuggestions = useCallback(() => {
+    if (showSuggestions) {
+      setShowSuggestions(false);
+    }
+  }, [showSuggestions]);
 
   // Handle selecting a place from suggestions
   const handleSelectPlace = useCallback(
@@ -130,11 +174,10 @@ export const LocationStep: React.FC<LocationStepProps> = ({
       setAddressQuery(fullAddress);
       onUpdateFormData({ address: fullAddress });
 
-      // Fetch place details to get coordinates and extract city/postal code
+      // Fetch place details to get coordinates and structured address components
       try {
         const details = await getPlaceDetails(prediction.placeId);
         if (details) {
-          // Update with precise coordinates from the selected address
           const updates: Partial<OnboardingFormData> = {
             address: details.address,
             latitude: details.latitude,
@@ -142,30 +185,12 @@ export const LocationStep: React.FC<LocationStepProps> = ({
           };
           setAddressQuery(details.address);
 
-          // Try to extract city and postal code from the address
-          // Format is usually: "Street, City, Province PostalCode, Country"
-          const addressParts = details.address.split(',').map(part => part.trim());
-          if (addressParts.length >= 2) {
-            // City is usually the second-to-last part (before country)
-            // For Canadian addresses: "123 Main St, Montreal, QC H1A 1A1, Canada"
-            const cityPart =
-              addressParts.length >= 3 ? addressParts[addressParts.length - 3] : addressParts[0];
-
-            // Postal code is usually in the second-to-last part with province
-            const provincePostalPart =
-              addressParts.length >= 2 ? addressParts[addressParts.length - 2] : '';
-            const postalMatch = provincePostalPart.match(
-              /[A-Z]\d[A-Z]\s?\d[A-Z]\d|^\d{5}(-\d{4})?$/i
-            );
-
-            // Update city from address selection
-            if (cityPart) {
-              updates.city = cityPart;
-            }
-            // Update postal code from address if found (overrides pre-populated)
-            if (postalMatch) {
-              updates.postalCode = postalMatch[0];
-            }
+          // Use structured address components (city, postal code) from Google Places API
+          if (details.city) {
+            updates.city = details.city;
+          }
+          if (details.postalCode) {
+            updates.postalCode = details.postalCode;
           }
 
           onUpdateFormData(updates);
@@ -214,6 +239,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
+      onScrollBeginDrag={handleDismissSuggestions}
     >
       {/* Title */}
       <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
@@ -225,20 +251,87 @@ export const LocationStep: React.FC<LocationStepProps> = ({
         {t('onboarding.locationStep.subtitle')}
       </Text>
 
-      {/* Pre-populated Postal Code Display (Read-only) */}
-      {prePopulatedPostalCode && (
-        <View style={[styles.postalCodeBadge, { backgroundColor: isDark ? '#1C1C1E' : '#E8F5E9' }]}>
-          <View style={styles.postalCodeBadgeContent}>
-            <Ionicons name="checkmark-circle" size={20} color={colors.buttonActive} />
-            <View style={styles.postalCodeTextContainer}>
-              <Text size="sm" weight="semibold" color={colors.text}>
-                {t('onboarding.locationStep.savedPostalCode')}
+      {/* Pre-populated Postal Code Display with Edit */}
+      {(displayPostalCode || isEditingPostalCode) && (
+        <View
+          style={[
+            styles.postalCodeBadge,
+            { backgroundColor: isDark ? darkTheme.card : lightTheme.backgroundSecondary },
+          ]}
+        >
+          {isEditingPostalCode ? (
+            <View style={styles.postalCodeEditContainer}>
+              <Text
+                size="sm"
+                weight="semibold"
+                color={colors.text}
+                style={styles.postalCodeEditLabel}
+              >
+                {t('onboarding.locationStep.postalCode')}
               </Text>
-              <Text size="lg" weight="bold" color={colors.buttonActive}>
-                {prePopulatedPostalCode}
-              </Text>
+              <View style={styles.postalCodeEditRow}>
+                <BottomSheetTextInput
+                  style={[
+                    styles.postalCodeEditInput,
+                    {
+                      backgroundColor: colors.inputBackground,
+                      borderColor: colors.inputBorder,
+                      color: colors.text,
+                    },
+                  ]}
+                  value={editedPostalCode}
+                  onChangeText={handlePostalCodeChange}
+                  placeholder={t('onboarding.locationStep.postalCodePlaceholder')}
+                  placeholderTextColor={colors.textMuted}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  maxLength={10}
+                  autoFocus
+                />
+                <TouchableOpacity
+                  style={[styles.postalCodeActionButton, { backgroundColor: colors.buttonActive }]}
+                  onPress={handleSavePostalCode}
+                >
+                  <Ionicons name="checkmark" size={18} color={colors.buttonTextActive} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.postalCodeActionButton,
+                    {
+                      backgroundColor: colors.inputBackground,
+                      borderWidth: 1,
+                      borderColor: colors.inputBorder,
+                    },
+                  ]}
+                  onPress={handleCancelEditPostalCode}
+                >
+                  <Ionicons name="close" size={18} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          ) : (
+            <View style={styles.postalCodeBadgeContent}>
+              <Ionicons name="checkmark-circle" size={20} color={colors.buttonActive} />
+              <View style={styles.postalCodeTextContainer}>
+                <Text size="sm" weight="semibold" color={colors.text}>
+                  {t('onboarding.locationStep.savedPostalCode')}
+                </Text>
+                <Text size="lg" weight="bold" color={colors.buttonActive}>
+                  {displayPostalCode}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.postalCodeEditButton}
+                onPress={handleStartEditPostalCode}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="pencil" size={16} color={colors.buttonActive} />
+                <Text size="xs" weight="medium" color={colors.buttonActive}>
+                  {t('onboarding.locationStep.editPostalCode')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       )}
 
@@ -269,10 +362,6 @@ export const LocationStep: React.FC<LocationStepProps> = ({
             value={addressQuery}
             onChangeText={handleAddressChange}
             onFocus={() => setShowSuggestions(true)}
-            onBlur={() => {
-              // Delay hiding suggestions to allow tap on suggestion
-              setTimeout(() => setShowSuggestions(false), 200);
-            }}
             autoCapitalize="words"
             autoCorrect={false}
           />
@@ -296,19 +385,17 @@ export const LocationStep: React.FC<LocationStepProps> = ({
               },
             ]}
           >
-            <FlatList
-              data={predictions}
-              keyExtractor={item => item.placeId}
-              renderItem={renderPrediction}
-              keyboardShouldPersistTaps="handled"
-              scrollEnabled={false}
-            />
+            {predictions.map(item => (
+              <React.Fragment key={item.placeId}>{renderPrediction({ item })}</React.Fragment>
+            ))}
           </View>
         )}
       </View>
 
       {/* Privacy Info Box */}
-      <View style={[styles.infoBox, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
+      <View
+        style={[styles.infoBox, { backgroundColor: isDark ? darkTheme.card : lightTheme.muted }]}
+      >
         <Ionicons name="shield-checkmark" size={24} color={colors.buttonActive} />
         <View style={styles.infoTextContainer}>
           <Text size="sm" weight="semibold" color={colors.text} style={styles.infoTitle}>
@@ -352,6 +439,39 @@ const styles = StyleSheet.create({
   },
   postalCodeTextContainer: {
     flex: 1,
+  },
+  postalCodeEditButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    paddingVertical: spacingPixels[1],
+  },
+  postalCodeEditContainer: {
+    gap: spacingPixels[2],
+  },
+  postalCodeEditLabel: {
+    marginBottom: spacingPixels[1],
+  },
+  postalCodeEditRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+  },
+  postalCodeEditInput: {
+    flex: 1,
+    borderRadius: radiusPixels.md,
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[2],
+    fontSize: 16,
+    fontWeight: '600' as const,
+    borderWidth: 1,
+  },
+  postalCodeActionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: radiusPixels.md,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
   },
   inputContainer: {
     marginBottom: spacingPixels[4],

@@ -10,7 +10,7 @@
  * The two inputs are fully independent - changing one never affects the other.
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { View, StyleSheet, TextInput as RNTextInput, ViewStyle, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
@@ -119,7 +119,40 @@ function extractDigits(text: string): string {
   return text.replace(/\D/g, '');
 }
 
+/**
+ * Parse an international phone number (e.g., "+15551234567") into dial code and local number.
+ * Tries to match the longest possible dial code.
+ */
+function parsePhoneNumber(
+  fullNumber: string,
+  localeCountryCode: string | undefined
+): { dialDigits: string; phoneDigits: string } {
+  if (!fullNumber) {
+    return { dialDigits: '', phoneDigits: '' };
+  }
+
+  // Remove the leading + if present
+  const digits = fullNumber.startsWith('+') ? fullNumber.slice(1) : fullNumber;
+
+  // Try to find the best matching country by checking dial codes from longest to shortest
+  // Dial codes can be 1-4 digits
+  for (let len = Math.min(4, digits.length); len >= 1; len--) {
+    const potentialDialCode = digits.slice(0, len);
+    const country = findCountryByDialDigits(potentialDialCode, localeCountryCode);
+    if (country) {
+      return {
+        dialDigits: potentialDialCode,
+        phoneDigits: digits.slice(len),
+      };
+    }
+  }
+
+  // If no country found, return all digits as phone digits with empty dial code
+  return { dialDigits: '', phoneDigits: digits };
+}
+
 export const PhoneInput: React.FC<PhoneInputProps> = ({
+  value,
   onChangePhone,
   label,
   placeholder = 'Enter phone number',
@@ -162,11 +195,47 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
 
   // State: raw digits only (no formatting)
   const [dialDigits, setDialDigits] = useState<string>(() => {
+    // If value is provided, parse it; otherwise use locale default
+    if (value) {
+      const parsed = parsePhoneNumber(value, localeCountryCode);
+      return parsed.dialDigits || getLocaleCountry(locale)?.dialCode.replace('+', '') || '';
+    }
     const localeCountry = getLocaleCountry(locale);
     return localeCountry?.dialCode.replace('+', '') || '';
   });
 
-  const [phoneDigits, setPhoneDigits] = useState<string>('');
+  const [phoneDigits, setPhoneDigits] = useState<string>(() => {
+    if (value) {
+      const parsed = parsePhoneNumber(value, localeCountryCode);
+      return parsed.phoneDigits;
+    }
+    return '';
+  });
+
+  // Track the previous value prop to detect external changes
+  const prevValueRef = useRef(value);
+
+  // Sync state when value prop changes externally (e.g., when data is loaded from DB)
+  useEffect(() => {
+    // Only react to changes in the value prop, not on every render
+    if (value === prevValueRef.current) {
+      return;
+    }
+
+    prevValueRef.current = value;
+
+    // Parse the incoming value
+    const parsed = parsePhoneNumber(value || '', localeCountryCode);
+
+    // Use a callback to defer state updates outside of effect execution
+    const updateState = () => {
+      if (parsed.dialDigits) {
+        setDialDigits(parsed.dialDigits);
+      }
+      setPhoneDigits(parsed.phoneDigits);
+    };
+    setImmediate(updateState);
+  }, [value, localeCountryCode]);
 
   // Derive country from dial digits
   const selectedCountry = useMemo(

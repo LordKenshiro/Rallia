@@ -81,6 +81,19 @@ export interface FacilityCardDisplay {
 }
 
 /**
+ * Structured address component from Google Places API (New)
+ * @see https://developers.google.com/maps/documentation/places/web-service/reference/rest/v1/places#AddressComponent
+ */
+export interface AddressComponent {
+  /** Long form text of the address component (e.g. "Montreal") */
+  longText: string;
+  /** Short form text of the address component (e.g. "MTL") */
+  shortText?: string;
+  /** Types describing this component (e.g. ["locality", "political"]) */
+  types: string[];
+}
+
+/**
  * Place prediction from Google Places Autocomplete API
  * Used for location search in match creation
  */

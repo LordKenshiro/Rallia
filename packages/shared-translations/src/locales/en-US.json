@@ -1181,6 +1181,8 @@
       "title": "Confirm your location",
       "subtitle": "Add your address for more precise match finding, or continue with your postal code",
       "savedPostalCode": "Your saved location",
+      "editPostalCode": "Edit",
+      "postalCodeUpdated": "Postal code updated",
       "address": "Specific address",
       "addressPlaceholder": "Search for your address",
       "addressHint": "Adding your address helps us find games closer to you",
