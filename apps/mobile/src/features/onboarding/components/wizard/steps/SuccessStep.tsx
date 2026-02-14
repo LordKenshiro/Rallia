@@ -9,7 +9,7 @@
  */
 
 import React, { useEffect, useRef } from 'react';
-import { StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, TouchableOpacity, ScrollView, View } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -17,6 +17,7 @@ import Animated, {
   withTiming,
   withDelay,
 } from 'react-native-reanimated';
+import LottieView from 'lottie-react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
@@ -119,45 +120,69 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
   }));
 
   return (
-    <ScrollView
-      style={styles.scrollContainer}
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Success Icon */}
-      <Animated.View
-        style={[styles.iconContainer, { backgroundColor: colors.buttonActive }, iconAnimatedStyle]}
+    <View style={styles.wrapper}>
+      {/* Confetti Animation Overlay */}
+      <View style={styles.confetti} pointerEvents="none">
+        <LottieView
+          source={require('../../../../../../assets/animations/confetti.json')}
+          autoPlay
+          loop={false}
+          speed={0.8}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
+
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
       >
-        <Ionicons name="checkmark-outline" size={48} color={BASE_WHITE} />
-      </Animated.View>
-
-      {/* Success Text */}
-      <Animated.View style={textAnimatedStyle}>
-        <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
-          {t('onboarding.success.title')}
-        </Text>
-        <Text size="base" color={colors.textMuted} style={styles.subtitle}>
-          {t('onboarding.success.subtitle')}
-        </Text>
-      </Animated.View>
-
-      {/* Continue Button */}
-      <Animated.View style={[styles.buttonContainer, buttonAnimatedStyle]}>
-        <TouchableOpacity
-          style={[styles.continueButton, { backgroundColor: colors.buttonActive }]}
-          onPress={onComplete}
-          activeOpacity={0.8}
+        {/* Success Icon */}
+        <Animated.View
+          style={[
+            styles.iconContainer,
+            { backgroundColor: colors.buttonActive },
+            iconAnimatedStyle,
+          ]}
         >
-          <Text size="base" weight="semibold" color={colors.buttonTextActive}>
-            {t('onboarding.success.getStarted')}
+          <Ionicons name="checkmark-outline" size={48} color={BASE_WHITE} />
+        </Animated.View>
+
+        {/* Success Text */}
+        <Animated.View style={textAnimatedStyle}>
+          <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
+            {t('onboarding.success.title')}
           </Text>
-        </TouchableOpacity>
-      </Animated.View>
-    </ScrollView>
+          <Text size="base" color={colors.textMuted} style={styles.subtitle}>
+            {t('onboarding.success.subtitle')}
+          </Text>
+        </Animated.View>
+
+        {/* Continue Button */}
+        <Animated.View style={[styles.buttonContainer, buttonAnimatedStyle]}>
+          <TouchableOpacity
+            style={[styles.continueButton, { backgroundColor: colors.buttonActive }]}
+            onPress={onComplete}
+            activeOpacity={0.8}
+          >
+            <Text size="base" weight="semibold" color={colors.buttonTextActive}>
+              {t('onboarding.success.getStarted')}
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+  },
+  confetti: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1,
+  },
   scrollContainer: {
     flex: 1,
   },
