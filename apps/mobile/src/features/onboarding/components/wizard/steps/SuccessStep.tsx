@@ -70,8 +70,7 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
     if (hasAutoSelected.current || selectedSports.length === 0) return;
 
     // Check if current sport is still in the selected sports
-    const currentStillSelected =
-      currentSport && selectedSports.some(s => s.id === currentSport.id);
+    const currentStillSelected = currentSport && selectedSports.some(s => s.id === currentSport.id);
 
     if (currentStillSelected) {
       // Keep the current sport
@@ -129,16 +128,16 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
       <Animated.View
         style={[styles.iconContainer, { backgroundColor: colors.buttonActive }, iconAnimatedStyle]}
       >
-        <Ionicons name="checkmark" size={48} color={BASE_WHITE} />
+        <Ionicons name="checkmark-outline" size={48} color={BASE_WHITE} />
       </Animated.View>
 
       {/* Success Text */}
       <Animated.View style={textAnimatedStyle}>
         <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
-          {t('onboarding.success.title' as TranslationKey)}
+          {t('onboarding.success.title')}
         </Text>
         <Text size="base" color={colors.textMuted} style={styles.subtitle}>
-          {t('onboarding.success.subtitle' as TranslationKey)}
+          {t('onboarding.success.subtitle')}
         </Text>
       </Animated.View>
 
@@ -150,7 +149,7 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
           activeOpacity={0.8}
         >
           <Text size="base" weight="semibold" color={colors.buttonTextActive}>
-            {t('onboarding.success.getStarted' as TranslationKey)}
+            {t('onboarding.success.getStarted')}
           </Text>
         </TouchableOpacity>
       </Animated.View>

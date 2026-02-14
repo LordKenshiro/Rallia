@@ -272,7 +272,7 @@ function FilterDropdown<T extends string | number>({
               onPress={onClose}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Ionicons name="close" size={22} color={themeColors.mutedForeground} />
+              <Ionicons name="close-outline" size={22} color={themeColors.mutedForeground} />
             </TouchableOpacity>
           </View>
 
@@ -444,16 +444,16 @@ export default function MatchFiltersBar({
     [getFilterLabel]
   );
   const getDurationLabel = useCallback(
-    (v: DurationFilter) => t(`publicMatches.filters.duration.${v}` as TranslationKey),
+    (v: DurationFilter) => t(`publicMatches.filters.duration.${v}`),
     [t]
   );
   const getCourtStatusLabel = useCallback(
-    (v: CourtStatusFilter) => t(`publicMatches.filters.courtStatus.${v}` as TranslationKey),
+    (v: CourtStatusFilter) => t(`publicMatches.filters.courtStatus.${v}`),
     [t]
   );
   const getDistanceLabel = useCallback(
     (v: DistanceFilter) => {
-      if (v === 'all') return t('publicMatches.filters.distance.all' as TranslationKey);
+      if (v === 'all') return t('publicMatches.filters.distance.all');
       return `${v} km`;
     },
     [t]
@@ -484,42 +484,27 @@ export default function MatchFiltersBar({
   // =============================================================================
 
   const formatDisplay =
-    format === 'all'
-      ? t('publicMatches.filters.format.label' as TranslationKey)
-      : getFormatLabel(format);
+    format === 'all' ? t('publicMatches.filters.format.label') : getFormatLabel(format);
   const matchTypeDisplay =
-    matchType === 'all'
-      ? t('publicMatches.filters.matchType.label' as TranslationKey)
-      : getMatchTypeLabel(matchType);
+    matchType === 'all' ? t('publicMatches.filters.matchType.label') : getMatchTypeLabel(matchType);
   const timeOfDayDisplay =
-    timeOfDay === 'all'
-      ? t('publicMatches.filters.timeOfDay.label' as TranslationKey)
-      : getTimeOfDayLabel(timeOfDay);
+    timeOfDay === 'all' ? t('publicMatches.filters.timeOfDay.label') : getTimeOfDayLabel(timeOfDay);
   const skillLevelDisplay =
     skillLevel === 'all'
-      ? t('publicMatches.filters.skillLevel.label' as TranslationKey)
+      ? t('publicMatches.filters.skillLevel.label')
       : getSkillLevelLabel(skillLevel);
   const genderDisplay =
-    gender === 'all'
-      ? t('publicMatches.filters.gender.label' as TranslationKey)
-      : getGenderLabel(gender);
-  const costDisplay =
-    cost === 'all' ? t('publicMatches.filters.cost.label' as TranslationKey) : getCostLabel(cost);
+    gender === 'all' ? t('publicMatches.filters.gender.label') : getGenderLabel(gender);
+  const costDisplay = cost === 'all' ? t('publicMatches.filters.cost.label') : getCostLabel(cost);
   const joinModeDisplay =
-    joinMode === 'all'
-      ? t('publicMatches.filters.joinMode.label' as TranslationKey)
-      : getJoinModeLabel(joinMode);
+    joinMode === 'all' ? t('publicMatches.filters.joinMode.label') : getJoinModeLabel(joinMode);
   const distanceDisplay =
-    distance === 'all'
-      ? t('publicMatches.filters.distance.label' as TranslationKey)
-      : `${distance} km`;
+    distance === 'all' ? t('publicMatches.filters.distance.label') : `${distance} km`;
   const durationDisplay =
-    duration === 'all'
-      ? t('publicMatches.filters.duration.label' as TranslationKey)
-      : getDurationLabel(duration);
+    duration === 'all' ? t('publicMatches.filters.duration.label') : getDurationLabel(duration);
   const courtStatusDisplay =
     courtStatus === 'all'
-      ? t('publicMatches.filters.courtStatus.label' as TranslationKey)
+      ? t('publicMatches.filters.courtStatus.label')
       : getCourtStatusLabel(courtStatus);
 
   // Date display - combines dateRange and specificDate
@@ -529,7 +514,7 @@ export default function MatchFiltersBar({
       return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
     }
     if (dateRange === 'all') {
-      return t('publicMatches.filters.dateRange.label' as TranslationKey);
+      return t('publicMatches.filters.dateRange.label');
     }
     return getDateRangeLabel(dateRange);
   }, [specificDate, dateRange, t, getDateRangeLabel]);
@@ -618,8 +603,8 @@ export default function MatchFiltersBar({
     (v: DateRangeFilter | 'pick_date') => {
       if (v === 'pick_date') {
         return specificDate
-          ? t('publicMatches.filters.specificDate.clear' as TranslationKey)
-          : t('publicMatches.filters.specificDate.pick' as TranslationKey);
+          ? t('publicMatches.filters.specificDate.clear')
+          : t('publicMatches.filters.specificDate.pick');
       }
       return getDateRangeLabel(v as DateRangeFilter);
     },
@@ -766,7 +751,7 @@ export default function MatchFiltersBar({
               color={isDark ? secondary[400] : secondary[600]}
             />
             <Text size="xs" weight="semibold" color={isDark ? secondary[400] : secondary[600]}>
-              {t('publicMatches.filters.reset' as TranslationKey)}
+              {t('publicMatches.filters.reset')}
             </Text>
           </TouchableOpacity>
         )}
@@ -779,7 +764,7 @@ export default function MatchFiltersBar({
       {/* Date Dropdown (includes pick specific date option) */}
       <FilterDropdown
         visible={showDateDropdown}
-        title={t('publicMatches.filters.dateRange.label' as TranslationKey)}
+        title={t('publicMatches.filters.dateRange.label')}
         options={dateOptions}
         selectedValue={currentDateSelection}
         onSelect={handleDateRangeSelect}
@@ -792,7 +777,7 @@ export default function MatchFiltersBar({
       {/* Time of Day Dropdown */}
       <FilterDropdown
         visible={showTimeDropdown}
-        title={t('publicMatches.filters.timeOfDay.label' as TranslationKey)}
+        title={t('publicMatches.filters.timeOfDay.label')}
         options={TIME_OF_DAY_OPTIONS}
         selectedValue={timeOfDay}
         onSelect={onTimeOfDayChange}
@@ -805,7 +790,7 @@ export default function MatchFiltersBar({
       {/* Format Dropdown */}
       <FilterDropdown
         visible={showFormatDropdown}
-        title={t('publicMatches.filters.format.label' as TranslationKey)}
+        title={t('publicMatches.filters.format.label')}
         options={FORMAT_OPTIONS}
         selectedValue={format}
         onSelect={onFormatChange}
@@ -817,7 +802,7 @@ export default function MatchFiltersBar({
       {/* Match Type Dropdown */}
       <FilterDropdown
         visible={showMatchTypeDropdown}
-        title={t('publicMatches.filters.matchType.label' as TranslationKey)}
+        title={t('publicMatches.filters.matchType.label')}
         options={MATCH_TYPE_OPTIONS}
         selectedValue={matchType}
         onSelect={onMatchTypeChange}
@@ -829,7 +814,7 @@ export default function MatchFiltersBar({
       {/* Duration Dropdown */}
       <FilterDropdown
         visible={showDurationDropdown}
-        title={t('publicMatches.filters.duration.label' as TranslationKey)}
+        title={t('publicMatches.filters.duration.label')}
         options={DURATION_OPTIONS_LIST}
         selectedValue={duration}
         onSelect={onDurationChange}
@@ -841,7 +826,7 @@ export default function MatchFiltersBar({
       {/* Distance Dropdown */}
       <FilterDropdown
         visible={showDistanceDropdown}
-        title={t('publicMatches.filters.distance.label' as TranslationKey)}
+        title={t('publicMatches.filters.distance.label')}
         options={DISTANCE_OPTIONS as DistanceFilter[]}
         selectedValue={distance}
         onSelect={onDistanceChange}
@@ -853,7 +838,7 @@ export default function MatchFiltersBar({
       {/* Skill Level Dropdown */}
       <FilterDropdown
         visible={showSkillDropdown}
-        title={t('publicMatches.filters.skillLevel.label' as TranslationKey)}
+        title={t('publicMatches.filters.skillLevel.label')}
         options={SKILL_LEVEL_OPTIONS}
         selectedValue={skillLevel}
         onSelect={onSkillLevelChange}
@@ -865,7 +850,7 @@ export default function MatchFiltersBar({
       {/* Gender Dropdown */}
       <FilterDropdown
         visible={showGenderDropdown}
-        title={t('publicMatches.filters.gender.label' as TranslationKey)}
+        title={t('publicMatches.filters.gender.label')}
         options={GENDER_OPTIONS}
         selectedValue={gender}
         onSelect={onGenderChange}
@@ -877,7 +862,7 @@ export default function MatchFiltersBar({
       {/* Cost Dropdown */}
       <FilterDropdown
         visible={showCostDropdown}
-        title={t('publicMatches.filters.cost.label' as TranslationKey)}
+        title={t('publicMatches.filters.cost.label')}
         options={COST_OPTIONS}
         selectedValue={cost}
         onSelect={onCostChange}
@@ -890,7 +875,7 @@ export default function MatchFiltersBar({
       {/* Court Status Dropdown */}
       <FilterDropdown
         visible={showCourtStatusDropdown}
-        title={t('publicMatches.filters.courtStatus.label' as TranslationKey)}
+        title={t('publicMatches.filters.courtStatus.label')}
         options={COURT_STATUS_OPTIONS}
         selectedValue={courtStatus}
         onSelect={onCourtStatusChange}
@@ -902,7 +887,7 @@ export default function MatchFiltersBar({
       {/* Join Mode Dropdown */}
       <FilterDropdown
         visible={showJoinModeDropdown}
-        title={t('publicMatches.filters.joinMode.label' as TranslationKey)}
+        title={t('publicMatches.filters.joinMode.label')}
         options={JOIN_MODE_OPTIONS}
         selectedValue={joinMode}
         onSelect={onJoinModeChange}
@@ -946,15 +931,15 @@ export default function MatchFiltersBar({
               <View style={[styles.datePickerHeader, { borderBottomColor: colors.border }]}>
                 <TouchableOpacity onPress={handleDateCancel} style={styles.datePickerHeaderButton}>
                   <Text size="base" color={colors.textMuted}>
-                    {t('common.cancel' as TranslationKey)}
+                    {t('common.cancel')}
                   </Text>
                 </TouchableOpacity>
                 <Text size="base" weight="semibold" color={colors.text}>
-                  {t('publicMatches.filters.specificDate.label' as TranslationKey)}
+                  {t('publicMatches.filters.specificDate.label')}
                 </Text>
                 <TouchableOpacity onPress={handleDateDone} style={styles.datePickerHeaderButton}>
                   <Text size="base" weight="semibold" color={primary[500]}>
-                    {t('common.done' as TranslationKey)}
+                    {t('common.done')}
                   </Text>
                 </TouchableOpacity>
               </View>

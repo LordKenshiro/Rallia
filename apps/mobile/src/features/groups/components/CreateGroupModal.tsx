@@ -6,67 +6,63 @@
 import React, { useState, useCallback } from 'react';
 import {
   View,
-  Modal,
   TouchableOpacity,
   StyleSheet,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
   Image,
   Alert,
   ScrollView,
+  TextInput,
 } from 'react-native';
+import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useRequireOnboarding, useThemeStyles, useTranslation } from '../../../hooks';
 import { uploadImage } from '../../../services/imageUpload';
-import { primary } from '@rallia/design-system';
+import { primary, radiusPixels, spacingPixels } from '@rallia/design-system';
+import { useCreateGroup } from '@rallia/shared-hooks';
+import type { RootStackParamList } from '../../../navigation/types';
 
-interface CreateGroupModalProps {
-  visible: boolean;
-  onClose: () => void;
-  onSubmit: (name: string, description?: string, coverImageUrl?: string) => Promise<void>;
-  isLoading?: boolean;
-}
+export function CreateGroupActionSheet({ payload }: SheetProps<'create-group'>) {
+  const playerId = payload?.playerId;
 
-export function CreateGroupModal({
-  visible,
-  onClose,
-  onSubmit,
-  isLoading = false,
-}: CreateGroupModalProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
+  const { guardAction } = useRequireOnboarding();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleClose = useCallback(() => {
+  const createGroupMutation = useCreateGroup();
+
+  const resetForm = useCallback(() => {
     setName('');
     setDescription('');
     setCoverImage(null);
     setError(null);
-    onClose();
-  }, [onClose]);
+  }, []);
+
+  const handleClose = useCallback(() => {
+    resetForm();
+    SheetManager.hide('create-group');
+  }, [resetForm]);
 
   const handlePickImage = useCallback(async () => {
     try {
-      // Request permission
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(
-          'Permission Required',
-          'Please allow access to your photos to add a group image.'
-        );
+        Alert.alert(t('groups.permissionRequired'), t('groups.photoAccessRequired'));
         return;
       }
 
-      // Pick image
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -79,31 +75,34 @@ export function CreateGroupModal({
       }
     } catch (err) {
       console.error('Error picking image:', err);
-      Alert.alert('Error', 'Failed to pick image');
+      Alert.alert(t('common.error'), t('groups.failedToPickImage'));
     }
-  }, []);
+  }, [t]);
 
   const handleRemoveImage = useCallback(() => {
     setCoverImage(null);
   }, []);
 
   const handleSubmit = useCallback(async () => {
+    if (!guardAction()) return;
+
     if (!name.trim()) {
-      setError('Group name is required');
+      setError(t('groups.nameRequired'));
       return;
     }
 
     if (name.trim().length < 2) {
-      setError('Group name must be at least 2 characters');
+      setError(t('groups.nameTooShort'));
       return;
     }
 
     if (name.trim().length > 50) {
-      setError('Group name must be less than 50 characters');
+      setError(t('groups.nameTooLong'));
       return;
     }
 
     setError(null);
+    setIsLoading(true);
 
     let coverImageUrl: string | undefined;
 
@@ -114,10 +113,7 @@ export function CreateGroupModal({
         const { url, error: uploadError } = await uploadImage(coverImage, 'group-images');
         if (uploadError) {
           console.error('Error uploading image:', uploadError);
-          Alert.alert(
-            'Warning',
-            'Failed to upload group image. Group will be created without image.'
-          );
+          Alert.alert(t('common.warning'), t('groups.failedToUploadImage'));
         } else if (url) {
           coverImageUrl = url;
         }
@@ -128,204 +124,241 @@ export function CreateGroupModal({
       }
     }
 
-    await onSubmit(name.trim(), description.trim() || undefined, coverImageUrl);
-    setName('');
-    setDescription('');
-    setCoverImage(null);
-  }, [name, description, coverImage, onSubmit]);
+    try {
+      const newGroup = await createGroupMutation.mutateAsync({
+        playerId: playerId!,
+        input: {
+          name: name.trim(),
+          description: description.trim() || undefined,
+          cover_image_url: coverImageUrl,
+        },
+      });
+      resetForm();
+      SheetManager.hide('create-group');
+      // Navigate to the new group
+      navigation.navigate('GroupDetail', { groupId: newGroup.id });
+    } catch (error) {
+      Alert.alert(
+        t('common.error'),
+        error instanceof Error ? error.message : t('groups.errors.failedToCreate')
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [
+    guardAction,
+    name,
+    description,
+    coverImage,
+    playerId,
+    createGroupMutation,
+    resetForm,
+    navigation,
+    t,
+  ]);
 
   const isSubmitting = isLoading || isUploadingImage;
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
-      <KeyboardAvoidingView
-        style={styles.overlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[
+        styles.sheetBackground,
+        styles.container,
+        { backgroundColor: colors.cardBackground },
+      ]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+    >
+      {/* Header */}
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View style={styles.headerCenter}>
+          <Text weight="semibold" size="lg" style={{ color: colors.text }}>
+            {t('groups.createNewGroup')}
+          </Text>
+        </View>
+        <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+          <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Content */}
+      <ScrollView
+        style={styles.scrollContent}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={handleClose} />
-
-        <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
-          {/* Header */}
-          <View style={[styles.header, { borderBottomColor: colors.border }]}>
-            <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-              Create New Group
-            </Text>
-            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={colors.text} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Content */}
-          <ScrollView style={styles.scrollContent} contentContainerStyle={styles.content}>
-            {/* Cover Image Picker */}
-            <View style={styles.inputGroup}>
-              <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
-                Group Image (optional)
-              </Text>
-              {coverImage ? (
-                <View style={styles.imagePreviewContainer}>
-                  <Image source={{ uri: coverImage }} style={styles.imagePreview} />
-                  <TouchableOpacity
-                    style={[styles.removeImageButton, { backgroundColor: colors.cardBackground }]}
-                    onPress={handleRemoveImage}
-                  >
-                    <Ionicons name="close" size={20} color={colors.text} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.changeImageButton, { backgroundColor: colors.primary }]}
-                    onPress={handlePickImage}
-                  >
-                    <Ionicons name="camera" size={16} color="#FFFFFF" />
-                    <Text size="xs" weight="semibold" style={{ color: '#FFFFFF', marginLeft: 4 }}>
-                      Change
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={[
-                    styles.imagePicker,
-                    {
-                      backgroundColor: isDark ? primary[900] : primary[100],
-                      borderColor: colors.border,
-                    },
-                  ]}
-                  onPress={handlePickImage}
-                >
-                  <View
-                    style={[styles.imagePickerIcon, { backgroundColor: colors.cardBackground }]}
-                  >
-                    <Ionicons name="camera" size={24} color={colors.primary} />
-                  </View>
-                  <Text size="sm" style={{ color: colors.textSecondary, marginTop: 8 }}>
-                    Add a cover image
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
-                Group Name *
-              </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: colors.inputBackground,
-                    color: colors.text,
-                    borderColor: error ? '#FF3B30' : colors.border,
-                  },
-                ]}
-                placeholder="Enter group name..."
-                placeholderTextColor={colors.textMuted}
-                value={name}
-                onChangeText={setName}
-                maxLength={50}
-              />
-              {error && (
-                <Text size="xs" style={{ color: '#FF3B30', marginTop: 4 }}>
-                  {error}
+        {/* Cover Image Picker */}
+        <View style={styles.inputGroup}>
+          <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
+            {t('groups.groupImageOptional')}
+          </Text>
+          {coverImage ? (
+            <View style={styles.imagePreviewContainer}>
+              <Image source={{ uri: coverImage }} style={styles.imagePreview} />
+              <TouchableOpacity
+                style={[styles.removeImageButton, { backgroundColor: colors.cardBackground }]}
+                onPress={handleRemoveImage}
+              >
+                <Ionicons name="close-outline" size={20} color={colors.text} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.changeImageButton, { backgroundColor: colors.primary }]}
+                onPress={handlePickImage}
+              >
+                <Ionicons name="camera-outline" size={16} color="#FFFFFF" />
+                <Text size="xs" weight="semibold" style={{ color: '#FFFFFF', marginLeft: 4 }}>
+                  {t('common.change')}
                 </Text>
-              )}
+              </TouchableOpacity>
             </View>
-
-            <View style={styles.inputGroup}>
-              <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
-                Description (optional)
-              </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  styles.textArea,
-                  {
-                    backgroundColor: colors.inputBackground,
-                    color: colors.text,
-                    borderColor: colors.border,
-                  },
-                ]}
-                placeholder="What's this group about?"
-                placeholderTextColor={colors.textMuted}
-                value={description}
-                onChangeText={setDescription}
-                maxLength={200}
-                multiline
-                numberOfLines={3}
-                textAlignVertical="top"
-              />
-              <Text size="xs" style={{ color: colors.textMuted, marginTop: 4, textAlign: 'right' }}>
-                {description.length}/200
-              </Text>
-            </View>
-
-            <View style={[styles.infoBox, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
-              <Ionicons name="information-circle" size={20} color={colors.primary} />
-              <Text size="sm" style={{ color: colors.textSecondary, flex: 1, marginLeft: 8 }}>
-                Groups can have up to 10 members. As the creator, you'll be a moderator with the
-                ability to add and remove members.
-              </Text>
-            </View>
-          </ScrollView>
-
-          {/* Footer */}
-          <View style={[styles.footer, { borderTopColor: colors.border }]}>
-            <TouchableOpacity
-              style={[styles.cancelButton, { borderColor: colors.border }]}
-              onPress={handleClose}
-              disabled={isSubmitting}
-            >
-              <Text style={{ color: colors.text }}>Cancel</Text>
-            </TouchableOpacity>
+          ) : (
             <TouchableOpacity
               style={[
-                styles.submitButton,
-                { backgroundColor: colors.primary },
-                isSubmitting && { opacity: 0.7 },
+                styles.imagePicker,
+                {
+                  backgroundColor: isDark ? primary[900] : primary[100],
+                  borderColor: colors.border,
+                },
               ]}
-              onPress={handleSubmit}
-              disabled={isSubmitting || !name.trim()}
+              onPress={handlePickImage}
             >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text weight="semibold" style={{ color: '#FFFFFF' }}>
-                  Create Group
-                </Text>
-              )}
+              <View style={[styles.imagePickerIcon, { backgroundColor: colors.cardBackground }]}>
+                <Ionicons name="camera-outline" size={24} color={colors.primary} />
+              </View>
+              <Text size="sm" style={{ color: colors.textSecondary, marginTop: 8 }}>
+                {t('groups.addCoverImage')}
+              </Text>
             </TouchableOpacity>
-          </View>
+          )}
         </View>
-      </KeyboardAvoidingView>
-    </Modal>
+
+        <View style={styles.inputGroup}>
+          <View style={styles.labelRow}>
+            <Text weight="medium" size="sm" style={{ color: colors.text }}>
+              {t('groups.groupName')} *
+            </Text>
+            <Text size="xs" style={{ color: colors.textMuted }}>
+              {name.length}/50
+            </Text>
+          </View>
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: colors.inputBackground,
+                color: colors.text,
+                borderColor: error ? '#FF3B30' : colors.border,
+              },
+            ]}
+            placeholder={t('groups.enterGroupName')}
+            placeholderTextColor={colors.textMuted}
+            value={name}
+            onChangeText={setName}
+            maxLength={50}
+          />
+          {error && (
+            <Text size="xs" style={{ color: '#FF3B30', marginTop: 4 }}>
+              {error}
+            </Text>
+          )}
+        </View>
+
+        <View style={styles.inputGroup}>
+          <View style={styles.labelRow}>
+            <Text weight="medium" size="sm" style={{ color: colors.text }}>
+              {t('groups.descriptionOptional')}
+            </Text>
+            <Text size="xs" style={{ color: colors.textMuted }}>
+              {description.length}/200
+            </Text>
+          </View>
+          <TextInput
+            style={[
+              styles.input,
+              styles.textArea,
+              {
+                backgroundColor: colors.inputBackground,
+                color: colors.text,
+                borderColor: colors.border,
+              },
+            ]}
+            placeholder={t('groups.descriptionPlaceholder')}
+            placeholderTextColor={colors.textMuted}
+            value={description}
+            onChangeText={setDescription}
+            maxLength={200}
+            multiline
+            numberOfLines={3}
+            textAlignVertical="top"
+          />
+        </View>
+
+        <View style={[styles.infoBox, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
+          <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
+          <Text size="sm" style={{ color: colors.textSecondary, flex: 1, marginLeft: 8 }}>
+            {t('groups.createGroupHint')}
+          </Text>
+        </View>
+      </ScrollView>
+
+      {/* Footer */}
+      <View style={[styles.footer, { borderTopColor: colors.border }]}>
+        <TouchableOpacity
+          style={[
+            styles.submitButton,
+            { backgroundColor: colors.primary },
+            isSubmitting && { opacity: 0.7 },
+          ]}
+          onPress={handleSubmit}
+          disabled={isSubmitting || !name.trim()}
+        >
+          {isSubmitting ? (
+            <ActivityIndicator size="small" color={colors.buttonTextActive} />
+          ) : (
+            <Text size="lg" weight="semibold" color={colors.buttonTextActive}>
+              {t('groups.createGroup')}
+            </Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </ActionSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
+  sheetBackground: {
     flex: 1,
-    justifyContent: 'flex-end',
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
   },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
   },
   container: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '85%',
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     padding: 16,
     borderBottomWidth: 1,
+    position: 'relative',
+  },
+  headerCenter: {
+    alignItems: 'center',
   },
   closeButton: {
     padding: 4,
+    position: 'absolute',
+    right: 16,
   },
   scrollContent: {
-    maxHeight: 400,
+    flex: 1,
   },
   content: {
     padding: 16,
@@ -333,6 +366,12 @@ const styles = StyleSheet.create({
   },
   inputGroup: {
     gap: 0,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
   },
   imagePicker: {
     height: 120,
@@ -402,22 +441,19 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   footer: {
-    flexDirection: 'row',
-    padding: 16,
-    gap: 12,
+    padding: spacingPixels[4],
     borderTopWidth: 1,
-  },
-  cancelButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    alignItems: 'center',
+    paddingBottom: spacingPixels[4],
   },
   submitButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    gap: spacingPixels[2],
   },
 });
+
+// Keep default export for backwards compatibility during migration
+export default CreateGroupActionSheet;

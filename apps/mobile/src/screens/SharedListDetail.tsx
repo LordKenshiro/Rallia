@@ -7,9 +7,10 @@
  * - Add contacts from phone book
  * - Add contacts manually
  * - Edit/Delete contacts
+ * - Search contacts
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -24,17 +25,21 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { SheetManager } from 'react-native-actions-sheet';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { getSafeAreaEdges } from '../utils';
+import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
 import { primary, neutral } from '@rallia/design-system';
 import {
-  getSharedContacts,
-  deleteSharedContact,
+  useSharedContacts,
+  useDeleteSharedContact,
+  useSharedContactsRealtime,
   type SharedContact,
-} from '@rallia/shared-services';
-import { useThemeStyles } from '../hooks';
+} from '@rallia/shared-hooks';
+import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
 import type { CommunityStackParamList } from '../navigation/types';
-import { AddContactModal, ContactCard, ImportContactsModal } from '../features/shared-lists';
+import { ContactCard } from '../features/shared-lists';
+import { SearchBar } from '../components/SearchBar';
 
 type RouteParams = {
   SharedListDetail: {
@@ -47,15 +52,30 @@ const SharedListDetail: React.FC = () => {
   const route = useRoute<RouteProp<RouteParams, 'SharedListDetail'>>();
   const navigation = useNavigation<NativeStackNavigationProp<CommunityStackParamList>>();
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const { listId, listName } = route.params;
 
   // State
-  const [contacts, setContacts] = useState<SharedContact[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [editingContact, setEditingContact] = useState<SharedContact | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Queries and mutations
+  const { data: contacts = [], isLoading, isRefetching, refetch } = useSharedContacts(listId);
+  const deleteContactMutation = useDeleteSharedContact();
+
+  // Filter contacts based on search query
+  const filteredContacts = useMemo(() => {
+    if (!searchQuery.trim()) return contacts;
+    const query = searchQuery.toLowerCase().trim();
+    return contacts.filter(contact => {
+      const name = contact.name?.toLowerCase() || '';
+      const phone = contact.phone?.toLowerCase() || '';
+      const email = contact.email?.toLowerCase() || '';
+      return name.includes(query) || phone.includes(query) || email.includes(query);
+    });
+  }, [contacts, searchQuery]);
+
+  // Subscribe to real-time updates for this list's contacts
+  useSharedContactsRealtime(listId);
 
   // Set header title
   useEffect(() => {
@@ -64,92 +84,53 @@ const SharedListDetail: React.FC = () => {
     });
   }, [navigation, listName]);
 
-  // Fetch contacts
-  const fetchContacts = useCallback(async () => {
-    try {
-      const data = await getSharedContacts(listId);
-      setContacts(data);
-    } catch (error) {
-      console.error('Failed to fetch contacts:', error);
-      Alert.alert('Error', 'Failed to load contacts. Please try again.');
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  }, [listId]);
-
-  // Initial load
-  useEffect(() => {
-    fetchContacts();
-  }, [fetchContacts]);
-
   // Refresh handler
   const handleRefresh = useCallback(() => {
-    setIsRefreshing(true);
-    fetchContacts();
-  }, [fetchContacts]);
+    refetch();
+  }, [refetch]);
 
   // Add contact manually
   const handleAddManually = useCallback(() => {
-    setEditingContact(null);
-    setShowAddModal(true);
-  }, []);
+    SheetManager.show('add-contact', { payload: { listId, editingContact: null } });
+  }, [listId]);
 
   // Import from phone book
   const handleImportFromPhoneBook = useCallback(() => {
-    setShowImportModal(true);
-  }, []);
+    SheetManager.show('import-contacts', { payload: { listId, existingContacts: contacts } });
+  }, [listId, contacts]);
 
   // Edit contact
-  const handleEditContact = useCallback((contact: SharedContact) => {
-    setEditingContact(contact);
-    setShowAddModal(true);
-  }, []);
-
-  // Delete contact
-  const handleDeleteContact = useCallback((contact: SharedContact) => {
-    Alert.alert(
-      'Delete Contact',
-      `Are you sure you want to remove "${contact.name}" from this list?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteSharedContact(contact.id);
-              setContacts(prev => prev.filter(c => c.id !== contact.id));
-            } catch (error) {
-              console.error('Failed to delete contact:', error);
-              Alert.alert('Error', 'Failed to delete the contact. Please try again.');
-            }
-          },
-        },
-      ]
-    );
-  }, []);
-
-  // Modal close handlers
-  const handleAddModalClose = useCallback(
-    (refreshNeeded?: boolean) => {
-      setShowAddModal(false);
-      setEditingContact(null);
-      if (refreshNeeded) {
-        fetchContacts();
-      }
+  const handleEditContact = useCallback(
+    (contact: SharedContact) => {
+      SheetManager.show('add-contact', { payload: { listId, editingContact: contact } });
     },
-    [fetchContacts]
+    [listId]
   );
 
-  const handleImportModalClose = useCallback(
-    (refreshNeeded?: boolean) => {
-      setShowImportModal(false);
-      if (refreshNeeded) {
-        fetchContacts();
-      }
+  // Delete contact
+  const handleDeleteContact = useCallback(
+    (contact: SharedContact) => {
+      Alert.alert(
+        t('sharedLists.deleteContact'),
+        t('sharedLists.deleteContactConfirm', { name: contact.name }),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          {
+            text: t('common.delete'),
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await deleteContactMutation.mutateAsync({ contactId: contact.id, listId });
+              } catch (error) {
+                console.error('Failed to delete contact:', error);
+                Alert.alert(t('common.error'), t('sharedLists.failedToDeleteContact'));
+              }
+            },
+          },
+        ]
+      );
     },
-    [fetchContacts]
+    [deleteContactMutation, listId, t]
   );
 
   // Render contact item
@@ -174,10 +155,10 @@ const SharedListDetail: React.FC = () => {
       <View style={styles.emptyContainer}>
         <Ionicons name="person-add-outline" size={64} color={colors.textMuted} />
         <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
-          No Contacts Yet
+          {t('sharedLists.emptyState.noContacts')}
         </Text>
         <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-          Add contacts to this list to easily invite them to your matches
+          {t('sharedLists.emptyState.addContacts')}
         </Text>
 
         <View style={styles.emptyButtons}>
@@ -188,7 +169,7 @@ const SharedListDetail: React.FC = () => {
           >
             <Ionicons name="phone-portrait-outline" size={20} color="#fff" />
             <Text size="sm" weight="semibold" color="#fff">
-              Import from Phone
+              {t('sharedLists.importFromPhone')}
             </Text>
           </TouchableOpacity>
 
@@ -197,9 +178,9 @@ const SharedListDetail: React.FC = () => {
             onPress={handleAddManually}
             activeOpacity={0.8}
           >
-            <Ionicons name="add" size={20} color={colors.text} />
+            <Ionicons name="add-outline" size={20} color={colors.text} />
             <Text size="sm" weight="semibold" color={colors.text}>
-              Add Manually
+              {t('sharedLists.addManually')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -212,7 +193,7 @@ const SharedListDetail: React.FC = () => {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['bottom']}
+        edges={getSafeAreaEdges(['bottom'])}
       >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -224,74 +205,67 @@ const SharedListDetail: React.FC = () => {
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['bottom']}
+      edges={getSafeAreaEdges(['bottom'])}
     >
-      {/* Header with Add Buttons */}
+      {/* Header with Search and Add Buttons */}
       {contacts.length > 0 && (
         <View style={styles.header}>
-          <Text size="sm" color={colors.textSecondary}>
-            {contacts.length} {contacts.length === 1 ? 'contact' : 'contacts'}
-          </Text>
-          <View style={styles.headerButtons}>
-            <TouchableOpacity
-              style={[
-                styles.headerButton,
-                { backgroundColor: isDark ? neutral[700] : neutral[100] },
-              ]}
-              onPress={handleImportFromPhoneBook}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="phone-portrait-outline" size={18} color={colors.text} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.headerButton, { backgroundColor: primary[500] }]}
-              onPress={handleAddManually}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="add" size={20} color="#fff" />
-            </TouchableOpacity>
+          {/* Search Bar */}
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder={t('sharedLists.searchContacts')}
+          />
+
+          {/* Count and Buttons Row */}
+          <View style={styles.headerRow}>
+            <Text size="sm" color={colors.textSecondary}>
+              {t('sharedLists.contactCount', { count: filteredContacts.length })}
+              {searchQuery &&
+                contacts.length !== filteredContacts.length &&
+                ` (${t('sharedLists.ofTotal', { total: contacts.length })})`}
+            </Text>
+            <View style={styles.headerButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.headerButton,
+                  { backgroundColor: isDark ? neutral[700] : neutral[100] },
+                ]}
+                onPress={handleImportFromPhoneBook}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="phone-portrait-outline" size={18} color={colors.text} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.headerButton, { backgroundColor: primary[500] }]}
+                onPress={handleAddManually}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="add-outline" size={20} color="#fff" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       )}
 
       {/* Contacts List */}
       <FlatList
-        data={contacts}
+        data={filteredContacts}
         keyExtractor={item => item.id}
         renderItem={renderContactItem}
         contentContainerStyle={[
           styles.listContent,
-          contacts.length === 0 && styles.emptyListContent,
+          filteredContacts.length === 0 && styles.emptyListContent,
         ]}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={renderEmpty}
         refreshControl={
           <RefreshControl
-            refreshing={isRefreshing}
+            refreshing={isRefetching}
             onRefresh={handleRefresh}
             tintColor={colors.primary}
           />
         }
-      />
-
-      {/* Add/Edit Contact Modal */}
-      <AddContactModal
-        visible={showAddModal}
-        listId={listId}
-        editingContact={editingContact}
-        colors={colors}
-        isDark={isDark}
-        onClose={handleAddModalClose}
-      />
-
-      {/* Import from Phone Book Modal */}
-      <ImportContactsModal
-        visible={showImportModal}
-        listId={listId}
-        existingContacts={contacts}
-        colors={colors}
-        isDark={isDark}
-        onClose={handleImportModalClose}
       />
     </SafeAreaView>
   );
@@ -307,11 +281,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   header: {
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
+    gap: spacingPixels[3],
+  },
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
   },
   headerButtons: {
     flexDirection: 'row',

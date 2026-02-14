@@ -110,6 +110,7 @@ export type ExtendedNotificationTypeEnum =
   | 'match_updated'
   | 'match_starting_soon'
   | 'match_completed'
+  | 'match_new_available'
   | 'player_kicked'
   | 'player_left'
   | 'new_message'
@@ -117,7 +118,62 @@ export type ExtendedNotificationTypeEnum =
   | 'rating_verified'
   | 'feedback_request'
   | 'feedback_reminder'
-  | 'score_confirmation';
+  | 'score_confirmation'
+  // Organization staff notifications
+  | 'booking_created'
+  | 'booking_cancelled_by_player'
+  | 'booking_modified'
+  | 'new_member_joined'
+  | 'member_left'
+  | 'member_role_changed'
+  | 'payment_received'
+  | 'payment_failed'
+  | 'refund_processed'
+  | 'daily_summary'
+  | 'weekly_report'
+  // Organization member notifications
+  | 'booking_confirmed'
+  | 'booking_reminder'
+  | 'booking_cancelled_by_org'
+  | 'membership_approved'
+  | 'org_announcement'
+  // Program notifications
+  | 'program_registration_confirmed'
+  | 'program_registration_cancelled'
+  | 'program_session_reminder'
+  | 'program_session_cancelled'
+  | 'program_waitlist_promoted'
+  | 'program_payment_due'
+  | 'program_payment_received';
+
+// Organization notification types (subset for org-specific features)
+export type OrgNotificationTypeEnum =
+  // Staff notifications
+  | 'booking_created'
+  | 'booking_cancelled_by_player'
+  | 'booking_modified'
+  | 'new_member_joined'
+  | 'member_left'
+  | 'member_role_changed'
+  | 'payment_received'
+  | 'payment_failed'
+  | 'refund_processed'
+  | 'daily_summary'
+  | 'weekly_report'
+  // Member notifications
+  | 'booking_confirmed'
+  | 'booking_reminder'
+  | 'booking_cancelled_by_org'
+  | 'membership_approved'
+  | 'org_announcement'
+  // Program notifications (staff)
+  | 'program_registration_confirmed'
+  | 'program_registration_cancelled'
+  | 'program_session_reminder'
+  | 'program_session_cancelled'
+  | 'program_waitlist_promoted'
+  | 'program_payment_due'
+  | 'program_payment_received';
 
 // Extended delivery status (added by migration)
 export type ExtendedDeliveryStatusEnum =
@@ -142,6 +198,20 @@ export type PlayAttributeEnum = DbEnum<'play_attribute_enum'>;
 // Skill Level
 export type SkillLevel = DbEnum<'skill_level'>;
 
+// Programs & Lessons (added by migration, available after supabase types regeneration)
+// Manual type definitions until types are regenerated
+export type ProgramTypeEnum = 'program' | 'lesson';
+export type ProgramStatusEnum = 'draft' | 'published' | 'cancelled' | 'completed';
+export type RegistrationStatusEnum = 'pending' | 'confirmed' | 'cancelled' | 'refunded';
+export type PaymentPlanEnum = 'full' | 'installment';
+export type RegistrationPaymentStatusEnum =
+  | 'pending'
+  | 'succeeded'
+  | 'failed'
+  | 'refunded'
+  | 'cancelled';
+export type BookingTypeEnum = 'player' | 'program_session' | 'maintenance';
+
 // Match (non-suffixed variants)
 export type MatchType = DbEnum<'match_type_enum'>;
 export type MatchDuration = DbEnum<'match_duration_enum'>;
@@ -149,9 +219,6 @@ export type MatchDuration = DbEnum<'match_duration_enum'>;
 // Time & Schedule (non-suffixed variants)
 export type DayOfWeek = DbEnum<'day_of_week'>;
 export type TimePeriod = DbEnum<'time_period'>;
-
-// Gender (non-suffixed variant)
-export type GenderType = DbEnum<'gender_type'>;
 
 // Court (non-suffixed variants)
 export type CourtSurface = DbEnum<'court_surface'>;
@@ -198,12 +265,185 @@ export type FacilityFile = TableRow<'facility_file'>;
 export type Court = TableRow<'court'>;
 export type CourtSport = TableRow<'court_sport'>;
 
+// Programs & Lessons (manual definitions until supabase types regenerated)
+export interface InstructorProfile {
+  id: string;
+  organization_id: string;
+  organization_member_id: string | null;
+  display_name: string;
+  bio: string | null;
+  avatar_url: string | null;
+  email: string | null;
+  phone: string | null;
+  hourly_rate_cents: number | null;
+  currency: string;
+  certifications: Record<string, unknown>[];
+  specializations: string[];
+  is_external: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Program {
+  id: string;
+  organization_id: string;
+  facility_id: string | null;
+  sport_id: string | null;
+  type: ProgramTypeEnum;
+  status: ProgramStatusEnum;
+  name: string;
+  description: string | null;
+  start_date: string;
+  end_date: string | null;
+  registration_opens_at: string | null;
+  registration_deadline: string | null;
+  min_participants: number;
+  max_participants: number | null;
+  current_participants: number;
+  price_cents: number;
+  currency: string;
+  allow_installments: boolean;
+  installment_count: number;
+  deposit_cents: number | null;
+  auto_block_courts: boolean;
+  waitlist_enabled: boolean;
+  waitlist_limit: number | null;
+  age_min: number | null;
+  age_max: number | null;
+  skill_level_min: string | null;
+  skill_level_max: string | null;
+  cancellation_policy: ProgramCancellationPolicy;
+  cover_image_url: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  published_at: string | null;
+  cancelled_at: string | null;
+}
+
+export interface ProgramCancellationPolicy {
+  full_refund_days_before_start: number;
+  partial_refund_days_before_start: number;
+  partial_refund_percent: number;
+  no_refund_after_start: boolean;
+  prorate_by_sessions_attended: boolean;
+}
+
+export interface ProgramSession {
+  id: string;
+  program_id: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  location_override: string | null;
+  notes: string | null;
+  is_cancelled: boolean;
+  cancelled_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProgramSessionCourt {
+  id: string;
+  session_id: string;
+  court_id: string;
+  booking_id: string | null;
+  created_at: string;
+}
+
+export interface ProgramInstructor {
+  id: string;
+  program_id: string;
+  instructor_id: string;
+  is_primary: boolean;
+  created_at: string;
+}
+
+export interface ProgramRegistration {
+  id: string;
+  program_id: string;
+  player_id: string;
+  registered_by: string;
+  status: RegistrationStatusEnum;
+  payment_plan: PaymentPlanEnum;
+  total_amount_cents: number;
+  paid_amount_cents: number;
+  refund_amount_cents: number;
+  currency: string;
+  stripe_customer_id: string | null;
+  notes: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  registered_at: string;
+  confirmed_at: string | null;
+  cancelled_at: string | null;
+  refunded_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RegistrationPayment {
+  id: string;
+  registration_id: string;
+  amount_cents: number;
+  currency: string;
+  installment_number: number;
+  total_installments: number;
+  stripe_payment_intent_id: string | null;
+  stripe_customer_id: string | null;
+  stripe_charge_id: string | null;
+  status: RegistrationPaymentStatusEnum;
+  due_date: string;
+  paid_at: string | null;
+  failed_at: string | null;
+  failure_reason: string | null;
+  refund_amount_cents: number;
+  refunded_at: string | null;
+  retry_count: number;
+  next_retry_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProgramWaitlist {
+  id: string;
+  program_id: string;
+  player_id: string;
+  added_by: string;
+  position: number;
+  promoted_at: string | null;
+  promotion_expires_at: string | null;
+  registration_id: string | null;
+  notification_sent_at: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SessionAttendance {
+  id: string;
+  session_id: string;
+  registration_id: string;
+  attended: boolean | null;
+  marked_at: string | null;
+  marked_by: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
 // Match
 export type Match = TableRow<'match'>;
 export type MatchParticipant = TableRow<'match_participant'>;
 export type MatchResult = TableRow<'match_result'>;
+export type MatchSet = TableRow<'match_set'>;
 export type MatchFeedback = TableRow<'match_feedback'>;
 export type MatchReport = TableRow<'match_report'>;
+
+/** Match result with nested set scores (from getMatchWithDetails when result is selected with sets) */
+export interface MatchResultWithSets extends MatchResult {
+  sets?: MatchSet[];
+}
 
 // Notification
 export type Notification = TableRow<'notification'>;
@@ -240,14 +480,74 @@ export interface NotificationPreferenceUpdate {
   updated_at?: string;
 }
 
+// Organization Notification Preference (manual definition until supabase types regenerated)
+export interface OrganizationNotificationPreference {
+  id: string;
+  organization_id: string;
+  notification_type: ExtendedNotificationTypeEnum;
+  channel: DeliveryChannelEnum;
+  enabled: boolean;
+  recipient_roles: RoleEnum[] | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrganizationNotificationPreferenceInsert {
+  id?: string;
+  organization_id: string;
+  notification_type: ExtendedNotificationTypeEnum;
+  channel: DeliveryChannelEnum;
+  enabled?: boolean;
+  recipient_roles?: RoleEnum[] | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface OrganizationNotificationPreferenceUpdate {
+  id?: string;
+  organization_id?: string;
+  notification_type?: ExtendedNotificationTypeEnum;
+  channel?: DeliveryChannelEnum;
+  enabled?: boolean;
+  recipient_roles?: RoleEnum[] | null;
+  updated_at?: string;
+}
+
+// Organization Notification Recipient (manual definition until supabase types regenerated)
+export interface OrganizationNotificationRecipient {
+  id: string;
+  organization_id: string;
+  notification_type: ExtendedNotificationTypeEnum;
+  user_id: string;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrganizationNotificationRecipientInsert {
+  id?: string;
+  organization_id: string;
+  notification_type: ExtendedNotificationTypeEnum;
+  user_id: string;
+  enabled?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface OrganizationNotificationRecipientUpdate {
+  id?: string;
+  organization_id?: string;
+  notification_type?: ExtendedNotificationTypeEnum;
+  user_id?: string;
+  enabled?: boolean;
+  updated_at?: string;
+}
+
 // Files
 export type File = TableRow<'file'>;
 
 // Invitation
 export type Invitation = TableRow<'invitation'>;
-
-// Verification
-export type VerificationCode = TableRow<'verification_code'>;
 
 // Waitlist
 export type WaitlistSignup = TableRow<'waitlist_signup'>;
@@ -288,7 +588,6 @@ export type NotificationInsert = TableInsert<'notification'>;
 export type DeliveryAttemptInsert = TableInsert<'delivery_attempt'>;
 export type FileInsert = TableInsert<'file'>;
 export type InvitationInsert = TableInsert<'invitation'>;
-export type VerificationCodeInsert = TableInsert<'verification_code'>;
 export type WaitlistSignupInsert = TableInsert<'waitlist_signup'>;
 
 // ============================================
@@ -327,7 +626,6 @@ export type NotificationUpdate = TableUpdate<'notification'>;
 export type DeliveryAttemptUpdate = TableUpdate<'delivery_attempt'>;
 export type FileUpdate = TableUpdate<'file'>;
 export type InvitationUpdate = TableUpdate<'invitation'>;
-export type VerificationCodeUpdate = TableUpdate<'verification_code'>;
 export type WaitlistSignupUpdate = TableUpdate<'waitlist_signup'>;
 
 // ============================================
@@ -420,6 +718,7 @@ export interface FacilitiesPage {
   facilities: FacilitySearchResult[];
   hasMore: boolean;
   nextOffset: number | null;
+  totalCount?: number; // Total number of facilities matching the search criteria
 }
 
 /** Court with facility info */
@@ -443,7 +742,7 @@ export interface MatchWithDetails extends Match {
   court?: Court;
   min_rating_score?: RatingScore;
   participants?: MatchParticipantWithPlayer[];
-  result?: MatchResult;
+  result?: MatchResultWithSets;
 }
 
 /** Match participant with player and profile info */
@@ -464,6 +763,14 @@ export interface OnboardingPersonalInfo {
   phone?: string;
   avatar_url?: string;
   profile_picture_url?: string;
+}
+
+export interface OnboardingLocationInfo {
+  address: string | null;
+  city: string;
+  postal_code: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface OnboardingPlayerPreferences {

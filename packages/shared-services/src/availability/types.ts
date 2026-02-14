@@ -36,6 +36,23 @@ export interface AvailabilitySlot {
   price?: number;
   /** Optional currency code */
   currency?: string;
+
+  // =========================================================================
+  // LOCAL SLOT FIELDS (for org-managed availability)
+  // =========================================================================
+
+  /** Whether this is a local (org-managed) slot vs external provider */
+  isLocalSlot?: boolean;
+  /** Court UUID for local slots (needed for in-app booking) */
+  courtId?: string;
+  /**
+   * Source of the availability template:
+   * - 'court' - From court-specific recurring court_slot template
+   * - 'facility' - From facility-wide recurring court_slot template
+   * - 'one_time' - From court_one_time_availability (one-time override)
+   * - undefined - External provider slot
+   */
+  templateSource?: 'court' | 'facility' | 'one_time';
 }
 
 // =============================================================================

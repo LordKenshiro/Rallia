@@ -6,16 +6,11 @@
  */
 
 import React from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  Modal,
-  ImageBackground,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Modal, ImageBackground } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation, type TranslationKey } from '../../../hooks';
 
 interface AddScoreIntroModalProps {
   visible: boolean;
@@ -30,13 +25,10 @@ export function AddScoreIntroModal({
   onAddScore,
   onNeverShowAgain,
 }: AddScoreIntroModalProps) {
+  const { t } = useTranslation();
+
   return (
-    <Modal
-      visible={visible}
-      animationType="fade"
-      transparent={false}
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} animationType="fade" transparent={false} onRequestClose={onClose}>
       <View style={styles.container}>
         {/* Tennis image background */}
         <ImageBackground
@@ -45,81 +37,69 @@ export function AddScoreIntroModal({
           resizeMode="cover"
         >
           {/* Dark overlay gradient for text readability */}
-          <LinearGradient
-            colors={['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.85)']}
-            style={styles.overlay}
-          >
+          <LinearGradient colors={['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.85)']} style={styles.overlay}>
             {/* Close button */}
             <TouchableOpacity
               style={styles.closeButton}
               onPress={onClose}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Ionicons name="close" size={28} color="#FFFFFF" />
+              <Ionicons name="close-outline" size={28} color="#FFFFFF" />
             </TouchableOpacity>
 
             {/* Content */}
             <View style={styles.content}>
-            {/* Title */}
-            <Text weight="bold" size="2xl" style={styles.title}>
-              Track your scores
-            </Text>
-
-            {/* Accent line */}
-            <View style={styles.accentLine} />
-
-            {/* Description */}
-            <Text size="base" style={styles.description}>
-              To make your skill level as accurate as possible, you can now add scores from all
-              the games you play – even the ones you organise outside of the Rallia app.
-            </Text>
-
-            {/* How to add scores */}
-            <Text size="base" style={styles.howToTitle}>
-              To add your scores:
-            </Text>
-
-            <View style={styles.bulletPoints}>
-              <Text size="base" style={styles.bulletPoint}>
-                • Find your opponent on Rallia
+              {/* Title */}
+              <Text weight="bold" size="2xl" style={styles.title}>
+                {t('addScore.intro.title')}
               </Text>
-              <Text size="base" style={styles.bulletPoint}>
-                • Add details of the match you played{'\n'}  (sport and date)
+
+              {/* Accent line */}
+              <View style={styles.accentLine} />
+
+              {/* Description */}
+              <Text size="base" style={styles.description}>
+                {t('addScore.intro.description')}
               </Text>
-              <Text size="base" style={styles.bulletPoint}>
-                • Choose the winner and add the scores
+
+              {/* How to add scores */}
+              <Text size="base" style={styles.howToTitle}>
+                {t('addScore.intro.howToTitle')}
               </Text>
-              <Text size="base" style={styles.bulletPoint}>
-                • Rate your partner (rating, badges, review)
+
+              <View style={styles.bulletPoints}>
+                <Text size="base" style={styles.bulletPoint}>
+                  • {t('addScore.intro.step1')}
+                </Text>
+                <Text size="base" style={styles.bulletPoint}>
+                  • {t('addScore.intro.step2')}
+                </Text>
+                <Text size="base" style={styles.bulletPoint}>
+                  • {t('addScore.intro.step3')}
+                </Text>
+                <Text size="base" style={styles.bulletPoint}>
+                  • {t('addScore.intro.step4')}
+                </Text>
+              </View>
+
+              {/* Confirmation note */}
+              <Text size="base" style={styles.confirmationNote}>
+                {t('addScore.intro.confirmationNote')}
               </Text>
             </View>
 
-            {/* Confirmation note */}
-            <Text size="base" style={styles.confirmationNote}>
-              After that, the opponent has 24 hours to confirm the score, if they don't the score
-              will be automatically confirmed.
-            </Text>
-          </View>
+            {/* Bottom buttons */}
+            <View style={styles.bottomButtons}>
+              <Button variant="primary" onPress={onAddScore} style={styles.addScoreButton}>
+                {t('addScore.intro.addScoreNow')}
+              </Button>
 
-          {/* Bottom buttons */}
-          <View style={styles.bottomButtons}>
-            <Button
-              variant="primary"
-              onPress={onAddScore}
-              style={styles.addScoreButton}
-            >
-              Add score now
-            </Button>
-
-            <TouchableOpacity
-              style={styles.neverShowButton}
-              onPress={onNeverShowAgain}
-            >
-              <Text size="base" style={styles.neverShowText}>
-                Never show it again
-              </Text>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity style={styles.neverShowButton} onPress={onNeverShowAgain}>
+                <Text size="base" style={styles.neverShowText}>
+                  {t('addScore.intro.neverShowAgain')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </LinearGradient>
         </ImageBackground>
       </View>

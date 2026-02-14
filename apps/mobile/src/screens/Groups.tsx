@@ -9,22 +9,27 @@ import {
   View,
   FlatList,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   StyleSheet,
   RefreshControl,
-  Alert,
   Image,
   Dimensions,
+  Animated,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { SheetManager } from 'react-native-actions-sheet';
 
 import { Text, Skeleton } from '@rallia/shared-components';
-import { useThemeStyles, useAuth } from '../hooks';
-import { usePlayerGroups, useCreateGroup, type Group } from '@rallia/shared-hooks';
+import { lightHaptic } from '@rallia/shared-utils';
+import { getSafeAreaEdges } from '../utils';
+import { useThemeStyles, useAuth, useTranslation, useRequireOnboarding } from '../hooks';
+import { usePlayerGroups, usePlayerGroupsRealtime, type Group } from '@rallia/shared-hooks';
 import type { RootStackParamList } from '../navigation/types';
-import { CreateGroupModal, QRScannerModal } from '../features/groups';
+import { QRScannerModal } from '../features/groups';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_GAP = 12;
@@ -33,186 +38,233 @@ const CARD_WIDTH = (SCREEN_WIDTH - CARD_PADDING * 2 - CARD_GAP) / 2;
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
+interface ThemeColors {
+  background: string;
+  cardBackground: string;
+  text: string;
+  textSecondary: string;
+  textMuted: string;
+  border: string;
+  primary: string;
+}
+
+// Extracted GroupCard component with press animation
+const GroupCard: React.FC<{
+  item: Group;
+  index: number;
+  colors: ThemeColors;
+  isDark: boolean;
+  onPress: (group: Group) => void;
+}> = ({ item, index, colors, isDark, onPress }) => {
+  const scaleAnim = useMemo(() => new Animated.Value(1), []);
+  const { t } = useTranslation();
+  const hasBooking = false; // TODO: Add booking feature indicator
+
+  const handlePressIn = useCallback(() => {
+    Animated.timing(scaleAnim, {
+      toValue: 0.97,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+  }, [scaleAnim]);
+
+  const handlePressOut = useCallback(() => {
+    Animated.timing(scaleAnim, {
+      toValue: 1,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+  }, [scaleAnim]);
+
+  return (
+    <TouchableWithoutFeedback
+      onPress={() => onPress(item)}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+    >
+      <Animated.View
+        style={[
+          styles.groupCard,
+          {
+            backgroundColor: colors.cardBackground,
+            marginRight: index % 2 === 0 ? CARD_GAP : 0,
+            transform: [{ scale: scaleAnim }],
+          },
+        ]}
+      >
+        {/* Cover Image */}
+        <View style={styles.imageContainer}>
+          {item.cover_image_url ? (
+            <Image
+              source={{ uri: item.cover_image_url }}
+              style={styles.coverImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View
+              style={[styles.placeholderImage, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}
+            >
+              <Ionicons name="people-outline" size={40} color={colors.textMuted} />
+            </View>
+          )}
+
+          {/* Badge overlay (e.g., "Court booking" feature) */}
+          {hasBooking && (
+            <View style={styles.badgeContainer}>
+              <Text size="xs" weight="semibold" style={styles.badgeText}>
+                Court booking
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Group Info */}
+        <View style={styles.groupInfo}>
+          <Text weight="semibold" size="sm" style={{ color: colors.text }} numberOfLines={2}>
+            {item.name}
+          </Text>
+
+          {/* Verified indicator + Member count */}
+          <View style={styles.bottomRow}>
+            <View style={styles.verifiedBadge}>
+              <Ionicons name="checkmark-circle" size={16} color="#34C759" />
+            </View>
+            <View style={styles.memberCount}>
+              <Ionicons name="people-outline" size={14} color={colors.textMuted} />
+              <Text size="xs" style={{ color: colors.textMuted, marginLeft: 4 }}>
+                {t('common.memberCount', { count: item.member_count })}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </Animated.View>
+    </TouchableWithoutFeedback>
+  );
+};
+
 export default function GroupsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
+  const { t } = useTranslation();
+  const { guardAction } = useRequireOnboarding();
   const playerId = session?.user?.id;
 
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showScannerModal, setShowScannerModal] = useState(false);
 
   const { data: groups, isLoading, isRefetching, refetch } = usePlayerGroups(playerId);
 
-  const createGroupMutation = useCreateGroup();
+  // Subscribe to real-time updates for player's groups
+  usePlayerGroupsRealtime(playerId);
 
-  const handleCreateGroup = useCallback(
-    async (name: string, description?: string, coverImageUrl?: string) => {
-      if (!playerId) return;
-
-      try {
-        const newGroup = await createGroupMutation.mutateAsync({
-          playerId,
-          input: { name, description, cover_image_url: coverImageUrl },
-        });
-        setShowCreateModal(false);
-        // Navigate to the new group
-        navigation.navigate('GroupDetail', { groupId: newGroup.id });
-      } catch (error) {
-        Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create group');
-      }
-    },
-    [playerId, createGroupMutation, navigation]
-  );
-
-  const handleGroupJoined = useCallback((groupId: string, groupName: string) => {
-    // Refetch groups list and navigate to the joined group
-    refetch();
-    Alert.alert(
-      'Welcome!',
-      `You've successfully joined "${groupName}"`,
-      [
+  const handleGroupJoined = useCallback(
+    (groupId: string, groupName: string) => {
+      // Refetch groups list and navigate to the joined group
+      refetch();
+      Alert.alert(t('groups.welcome.title'), t('groups.welcome.joinedMessage', { groupName }), [
         {
-          text: 'View Group',
+          text: t('groups.viewGroup'),
           onPress: () => navigation.navigate('GroupDetail', { groupId }),
         },
-      ]
-    );
-  }, [refetch, navigation]);
+      ]);
+    },
+    [refetch, navigation, t]
+  );
 
-  const handleGroupPress = useCallback((group: Group) => {
-    navigation.navigate('GroupDetail', { groupId: group.id });
-  }, [navigation]);
+  const handleGroupPress = useCallback(
+    (group: Group) => {
+      lightHaptic();
+      navigation.navigate('GroupDetail', { groupId: group.id });
+    },
+    [navigation]
+  );
 
   const renderGroupItem = useCallback(
     ({ item, index }: { item: Group; index: number }) => {
-      const hasBooking = false; // TODO: Add booking feature indicator
-
       return (
-        <TouchableOpacity
-          style={[
-            styles.groupCard,
-            {
-              backgroundColor: colors.cardBackground,
-              marginRight: index % 2 === 0 ? CARD_GAP : 0,
-            },
-          ]}
-          onPress={() => handleGroupPress(item)}
-          activeOpacity={0.85}
-        >
-          {/* Cover Image */}
-          <View style={styles.imageContainer}>
-            {item.cover_image_url ? (
-              <Image
-                source={{ uri: item.cover_image_url }}
-                style={styles.coverImage}
-                resizeMode="cover"
-              />
-            ) : (
-              <View
-                style={[
-                  styles.placeholderImage,
-                  { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
-                ]}
-              >
-                <Ionicons name="people" size={40} color={colors.textMuted} />
-              </View>
-            )}
-
-            {/* Badge overlay (e.g., "Court booking" feature) */}
-            {hasBooking && (
-              <View style={styles.badgeContainer}>
-                <Text size="xs" weight="semibold" style={styles.badgeText}>
-                  Court booking
-                </Text>
-              </View>
-            )}
-          </View>
-
-          {/* Group Info */}
-          <View style={styles.groupInfo}>
-            <Text weight="semibold" size="sm" style={{ color: colors.text }} numberOfLines={2}>
-              {item.name}
-            </Text>
-
-            {/* Verified indicator + Member count */}
-            <View style={styles.bottomRow}>
-              <View style={styles.verifiedBadge}>
-                <Ionicons name="checkmark-circle" size={16} color="#34C759" />
-              </View>
-              <View style={styles.memberCount}>
-                <Ionicons name="heart-outline" size={14} color={colors.textMuted} />
-                <Text size="xs" style={{ color: colors.textMuted, marginLeft: 4 }}>
-                  {item.member_count} members
-                </Text>
-              </View>
-            </View>
-          </View>
-        </TouchableOpacity>
+        <GroupCard
+          item={item}
+          index={index}
+          colors={colors}
+          isDark={isDark}
+          onPress={handleGroupPress}
+        />
       );
     },
     [colors, isDark, handleGroupPress]
   );
 
-  const renderEmptyState = useMemo(() => (
-    <View style={styles.emptyState}>
-      <Ionicons name="people-outline" size={64} color={colors.textMuted} />
-      <Text weight="semibold" size="lg" style={[styles.emptyTitle, { color: colors.text }]}>
-        No Groups Yet
-      </Text>
-      <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-        Create a group or scan a QR code to join one
-      </Text>
-      <View style={styles.emptyButtons}>
-        <TouchableOpacity
-          style={[styles.createButton, { backgroundColor: colors.primary }]}
-          onPress={() => setShowCreateModal(true)}
-        >
-          <Ionicons name="add" size={20} color="#FFFFFF" />
-          <Text weight="semibold" style={styles.createButtonText}>
-            Create Group
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.scanButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
-          onPress={() => setShowScannerModal(true)}
-        >
-          <Ionicons name="qr-code-outline" size={20} color={colors.primary} />
-          <Text weight="semibold" style={[styles.scanButtonText, { color: colors.primary }]}>
-            Scan QR Code
-          </Text>
-        </TouchableOpacity>
+  const renderEmptyState = useMemo(
+    () => (
+      <View style={styles.emptyState}>
+        <Ionicons name="people-outline" size={64} color={colors.textMuted} />
+        <Text weight="semibold" size="lg" style={[styles.emptyTitle, { color: colors.text }]}>
+          {t('groups.empty.title')}
+        </Text>
+        <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+          {t('groups.empty.subtitle')}
+        </Text>
+        <View style={styles.emptyButtons}>
+          <TouchableOpacity
+            style={[styles.createButton, { backgroundColor: colors.primary }]}
+            onPress={() => {
+              if (!guardAction() || !playerId) return;
+              SheetManager.show('create-group', { payload: { playerId } });
+            }}
+          >
+            <Ionicons name="add-outline" size={20} color="#FFFFFF" />
+            <Text weight="semibold" style={styles.createButtonText}>
+              {t('groups.empty.createButton')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.scanButton,
+              { backgroundColor: colors.cardBackground, borderColor: colors.border },
+            ]}
+            onPress={() => {
+              if (!guardAction()) return;
+              setShowScannerModal(true);
+            }}
+          >
+            <Ionicons name="qr-code-outline" size={20} color={colors.primary} />
+            <Text weight="semibold" style={[styles.scanButtonText, { color: colors.primary }]}>
+              {t('groups.empty.scanButton')}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
-  ), [colors]);
+    ),
+    [colors, t, guardAction, playerId]
+  );
 
   if (isLoading) {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['bottom']}
+        edges={getSafeAreaEdges(['bottom'])}
       >
         <View style={styles.loadingContainer}>
           {/* Header skeleton */}
           <View style={styles.headerSkeleton}>
-            <Skeleton 
-              width={100} 
-              height={24} 
+            <Skeleton
+              width={100}
+              height={24}
               backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
               highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
             />
             <View style={styles.headerSkeletonButtons}>
-              <Skeleton 
-                width={36} 
-                height={36} 
+              <Skeleton
+                width={36}
+                height={36}
                 circle
                 backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
                 highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
                 style={{ marginRight: 12 }}
               />
-              <Skeleton 
-                width={36} 
-                height={36} 
+              <Skeleton
+                width={36}
+                height={36}
                 circle
                 backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
                 highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
@@ -221,26 +273,29 @@ export default function GroupsScreen() {
           </View>
           {/* Grid skeleton */}
           <View style={styles.gridSkeleton}>
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <View key={i} style={[styles.cardSkeleton, { backgroundColor: colors.cardBackground }]}>
-                <Skeleton 
-                  width="100%" 
-                  height={CARD_WIDTH * 0.6} 
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <View
+                key={i}
+                style={[styles.cardSkeleton, { backgroundColor: colors.cardBackground }]}
+              >
+                <Skeleton
+                  width="100%"
+                  height={CARD_WIDTH * 0.6}
                   borderRadius={12}
                   backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
                   highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
                   style={{ marginBottom: 12 }}
                 />
-                <Skeleton 
-                  width="70%" 
-                  height={16} 
+                <Skeleton
+                  width="70%"
+                  height={16}
                   backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
                   highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
                   style={{ marginBottom: 8 }}
                 />
-                <Skeleton 
-                  width="50%" 
-                  height={12} 
+                <Skeleton
+                  width="50%"
+                  height={12}
                   backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
                   highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
                 />
@@ -255,7 +310,7 @@ export default function GroupsScreen() {
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['bottom']}
+      edges={getSafeAreaEdges(['bottom'])}
     >
       <FlatList
         data={groups}
@@ -276,6 +331,11 @@ export default function GroupsScreen() {
           />
         }
         showsVerticalScrollIndicator={false}
+        // Performance optimizations
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={8}
+        windowSize={8}
+        initialNumToRender={6}
       />
 
       {/* FABs - Scan QR and Create Group */}
@@ -284,7 +344,10 @@ export default function GroupsScreen() {
           {/* Scan QR FAB */}
           <TouchableOpacity
             style={[styles.fabSecondary, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}
-            onPress={() => setShowScannerModal(true)}
+            onPress={() => {
+              if (!guardAction()) return;
+              setShowScannerModal(true);
+            }}
             activeOpacity={0.8}
           >
             <Ionicons name="qr-code-outline" size={24} color={colors.text} />
@@ -293,21 +356,16 @@ export default function GroupsScreen() {
           {/* Create Group FAB */}
           <TouchableOpacity
             style={[styles.fab, { backgroundColor: colors.primary }]}
-            onPress={() => setShowCreateModal(true)}
+            onPress={() => {
+              if (!guardAction() || !playerId) return;
+              SheetManager.show('create-group', { payload: { playerId } });
+            }}
             activeOpacity={0.8}
           >
-            <Ionicons name="add" size={28} color="#FFFFFF" />
+            <Ionicons name="add-outline" size={28} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
       )}
-
-      {/* Create Group Modal */}
-      <CreateGroupModal
-        visible={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSubmit={handleCreateGroup}
-        isLoading={createGroupMutation.isPending}
-      />
 
       {/* QR Scanner Modal */}
       {playerId && (

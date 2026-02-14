@@ -1,0 +1,27 @@
+# Pre-push hook - runs before git push
+# These checks are more thorough and can take longer
+
+echo "🔍 Running pre-push checks..."
+
+# Check for dependency conflicts
+echo "📦 Checking dependencies..."
+npm run check-deps --silent || {
+  echo "❌ Dependency conflicts found. Run 'npm run check-deps' for details."
+  exit 1
+}
+
+# Validate translations
+echo "🌐 Validating translations..."
+npm run validate-i18n --silent || {
+  echo "❌ Translation issues found. Run 'npm run validate-i18n --verbose' for details."
+  exit 1
+}
+
+# Type checking (optional - uncomment if you want stricter checks)
+# echo "📝 Running type check..."
+# npm run type-check --silent || {
+#   echo "❌ Type errors found. Run 'npm run type-check' for details."
+#   exit 1
+# }
+
+echo "✅ Pre-push checks passed!"

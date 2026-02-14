@@ -4,11 +4,11 @@
  * Follows the same pattern as SportSelector with compact toggle chips and dropdown modals.
  */
 
-import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { View, ScrollView, StyleSheet, TouchableOpacity, Modal, Animated } from 'react-native';
 import { Text } from '@rallia/shared-components';
 import { useTheme } from '@rallia/shared-hooks';
-import { useThemeStyles } from '../../../hooks';
+import { useTranslation, type TranslationKey } from '../../../hooks';
 import {
   spacingPixels,
   radiusPixels,
@@ -73,7 +73,13 @@ export type DuprFilter =
 export type DistanceFilter = 'all' | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 40 | 45 | 50;
 
 // Sort options
-export type SortOption = 'name_asc' | 'name_desc' | 'rating_high' | 'rating_low' | 'distance' | 'recently_active';
+export type SortOption =
+  | 'name_asc'
+  | 'name_desc'
+  | 'rating_high'
+  | 'rating_low'
+  | 'distance'
+  | 'recently_active';
 
 export interface PlayerFilters {
   favorites: boolean;
@@ -143,38 +149,45 @@ const DUPR_OPTIONS: DuprFilter[] = [
   '8.0',
 ];
 const DISTANCE_OPTIONS: DistanceFilter[] = ['all', 5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
-const SORT_OPTIONS: SortOption[] = ['name_asc', 'name_desc', 'rating_high', 'rating_low', 'distance', 'recently_active'];
+const SORT_OPTIONS: SortOption[] = [
+  'name_asc',
+  'name_desc',
+  'rating_high',
+  'rating_low',
+  'distance',
+  'recently_active',
+];
 
-// Labels
-
-const SORT_LABELS: Record<SortOption, string> = {
-  name_asc: 'Name (A-Z)',
-  name_desc: 'Name (Z-A)',
-  rating_high: 'Rating (High to Low)',
-  rating_low: 'Rating (Low to High)',
-  distance: 'Distance (Nearest)',
-  recently_active: 'Recently Active',
-};
-const GENDER_LABELS: Record<GenderFilter, string> = {
-  all: 'All',
-  male: 'Men',
-  female: 'Women',
-  other: 'Other',
-};
-
-const AVAILABILITY_LABELS: Record<AvailabilityFilter, string> = {
-  all: 'All',
-  morning: 'Morning',
-  afternoon: 'Afternoon',
-  evening: 'Evening',
+// Label key mappings for translation
+const SORT_LABEL_KEYS: Record<SortOption, TranslationKey> = {
+  name_asc: 'playerDirectory.filters.sortNameAsc',
+  name_desc: 'playerDirectory.filters.sortNameDesc',
+  rating_high: 'playerDirectory.filters.sortRatingHigh',
+  rating_low: 'playerDirectory.filters.sortRatingLow',
+  distance: 'playerDirectory.filters.sortDistanceNearest',
+  recently_active: 'playerDirectory.filters.sortRecentlyActive',
 };
 
-const PLAY_STYLE_LABELS: Record<PlayStyleFilter, string> = {
-  all: 'All',
-  counterpuncher: 'Counterpuncher',
-  aggressive_baseliner: 'Aggressive',
-  serve_and_volley: 'Serve & Volley',
-  all_court: 'All Court',
+const GENDER_LABEL_KEYS: Record<GenderFilter, TranslationKey> = {
+  all: 'playerDirectory.filters.genderAll',
+  male: 'playerDirectory.filters.genderMen',
+  female: 'playerDirectory.filters.genderWomen',
+  other: 'playerDirectory.filters.genderOther',
+};
+
+const AVAILABILITY_LABEL_KEYS: Record<AvailabilityFilter, TranslationKey> = {
+  all: 'playerDirectory.filters.availabilityAll',
+  morning: 'playerDirectory.filters.availabilityMorning',
+  afternoon: 'playerDirectory.filters.availabilityAfternoon',
+  evening: 'playerDirectory.filters.availabilityEvening',
+};
+
+const PLAY_STYLE_LABEL_KEYS: Record<PlayStyleFilter, TranslationKey> = {
+  all: 'playerDirectory.filters.playStyleAll',
+  counterpuncher: 'playerDirectory.filters.playStyleCounterpuncher',
+  aggressive_baseliner: 'playerDirectory.filters.playStyleAggressive',
+  serve_and_volley: 'playerDirectory.filters.playStyleServeAndVolley',
+  all_court: 'playerDirectory.filters.playStyleAllCourt',
 };
 
 // =============================================================================
@@ -200,7 +213,8 @@ function FilterChip({
   hasDropdown = true,
   icon,
 }: FilterChipProps) {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  // Animation value - using useMemo for stable instance
+  const scaleAnim = useMemo(() => new Animated.Value(1), []);
 
   const bgColor = isActive ? primary[500] : isDark ? neutral[800] : neutral[100];
   const borderColor = isActive ? primary[400] : isDark ? neutral[700] : neutral[200];
@@ -241,7 +255,12 @@ function FilterChip({
           {value === 'all' ? label : value}
         </Text>
         {hasDropdown && (
-          <Ionicons name="chevron-down" size={12} color={textColor} style={styles.chipChevron} />
+          <Ionicons
+            name="chevron-down-outline"
+            size={12}
+            color={textColor}
+            style={styles.chipChevron}
+          />
         )}
       </TouchableOpacity>
     </Animated.View>
@@ -273,8 +292,9 @@ function FilterDropdown<T extends string | number>({
   isDark,
   getLabel,
 }: FilterDropdownProps<T>) {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  // Animation values - using useMemo for stable instances
+  const fadeAnim = useMemo(() => new Animated.Value(0), []);
+  const scaleAnim = useMemo(() => new Animated.Value(0.9), []);
 
   const themeColors = isDark ? darkTheme : lightTheme;
   const colors = {
@@ -354,7 +374,7 @@ function FilterDropdown<T extends string | number>({
               onPress={onClose}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Ionicons name="close" size={22} color={themeColors.mutedForeground} />
+              <Ionicons name="close-outline" size={22} color={themeColors.mutedForeground} />
             </TouchableOpacity>
           </View>
 
@@ -389,7 +409,7 @@ function FilterDropdown<T extends string | number>({
                     {getLabel(option)}
                   </Text>
                   {isSelected && (
-                    <Ionicons name="checkmark-circle" size={22} color={colors.checkmark} />
+                    <Ionicons name="checkmark-circle-outline" size={22} color={colors.checkmark} />
                   )}
                 </TouchableOpacity>
               );
@@ -411,17 +431,18 @@ interface PlayerFiltersBarProps {
   maxTravelDistance?: number; // User's max travel distance preference (from onboarding)
   onFiltersChange: (filters: PlayerFilters) => void;
   onReset?: () => void;
+  isAuthenticated?: boolean; // Whether the user is signed in (hides favorites/blocked filters for guests)
 }
 
 export function PlayerFiltersBar({
   filters,
   sportName = 'Tennis',
-  maxTravelDistance = 50,
   onFiltersChange,
   onReset,
+  isAuthenticated = false,
 }: PlayerFiltersBarProps) {
   const { theme } = useTheme();
-  const { colors } = useThemeStyles();
+  const { t } = useTranslation();
   const isDark = theme === 'dark';
 
   // Dropdown visibility states
@@ -511,31 +532,54 @@ export function PlayerFiltersBar({
     [filters, onFiltersChange]
   );
 
-  const handleSortChange = useCallback((value: SortOption) => {
-    onFiltersChange({ ...filters, sortBy: value });
-  }, [filters, onFiltersChange]);
+  const handleSortChange = useCallback(
+    (value: SortOption) => {
+      onFiltersChange({ ...filters, sortBy: value });
+    },
+    [filters, onFiltersChange]
+  );
 
   const handleReset = useCallback(() => {
     lightHaptic();
     onReset?.();
   }, [onReset]);
 
-  // Label getters
-  const getGenderLabel = (v: GenderFilter) => GENDER_LABELS[v];
-  const getSkillLabel = (v: string) => (v === 'all' ? 'All' : `${v}+`);
-  const getDistanceLabel = (v: DistanceFilter) => (v === 'all' ? 'All' : `${v} km`);
-  const getAvailabilityLabel = (v: AvailabilityFilter) => AVAILABILITY_LABELS[v];
-  const getStyleLabel = (v: PlayStyleFilter) => PLAY_STYLE_LABELS[v];
-  const getSortLabel = (v: SortOption) => SORT_LABELS[v];
+  // Label getters using translations
+  const getGenderLabel = useCallback((v: GenderFilter) => t(GENDER_LABEL_KEYS[v]), [t]);
+  const getSkillLabel = useCallback(
+    (v: string) => (v === 'all' ? t('playerDirectory.filters.genderAll') : `${v}+`),
+    [t]
+  );
+  const getDistanceLabel = useCallback(
+    (v: DistanceFilter) => (v === 'all' ? t('playerDirectory.filters.distanceAll') : `${v} km`),
+    [t]
+  );
+  const getAvailabilityLabel = useCallback(
+    (v: AvailabilityFilter) => t(AVAILABILITY_LABEL_KEYS[v]),
+    [t]
+  );
+  const getStyleLabel = useCallback((v: PlayStyleFilter) => t(PLAY_STYLE_LABEL_KEYS[v]), [t]);
+  const getSortLabel = useCallback((v: SortOption) => t(SORT_LABEL_KEYS[v]), [t]);
 
   // Display values for chips
-  const genderDisplay = filters.gender === 'all' ? 'Gender' : GENDER_LABELS[filters.gender];
+  const genderDisplay =
+    filters.gender === 'all'
+      ? t('playerDirectory.filters.gender')
+      : t(GENDER_LABEL_KEYS[filters.gender]);
   const skillDisplay = filters.skillLevel === 'all' ? skillLabel : `${filters.skillLevel}+`;
-  const distanceDisplay = filters.maxDistance === 'all' ? 'Distance' : `${filters.maxDistance} km`;
+  const distanceDisplay =
+    filters.maxDistance === 'all'
+      ? t('playerDirectory.filters.distance')
+      : `${filters.maxDistance} km`;
   const availabilityDisplay =
-    filters.availability === 'all' ? 'Time' : AVAILABILITY_LABELS[filters.availability];
-  const styleDisplay = filters.playStyle === 'all' ? 'Style' : PLAY_STYLE_LABELS[filters.playStyle];
-  const sortDisplay = SORT_LABELS[filters.sortBy || 'name_asc'];
+    filters.availability === 'all'
+      ? t('playerDirectory.filters.availability')
+      : t(AVAILABILITY_LABEL_KEYS[filters.availability]);
+  const styleDisplay =
+    filters.playStyle === 'all'
+      ? t('playerDirectory.filters.playStyle')
+      : t(PLAY_STYLE_LABEL_KEYS[filters.playStyle]);
+  const sortDisplay = t(SORT_LABEL_KEYS[filters.sortBy || 'name_asc']);
 
   return (
     <View style={styles.container}>
@@ -544,31 +588,22 @@ export function PlayerFiltersBar({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Favorites Toggle */}
-        <FilterChip
-          label="Favorites"
-          value={filters.favorites ? 'Favorites' : 'Favorites'}
-          isActive={filters.favorites}
-          onPress={handleFavoritesToggle}
-          isDark={isDark}
-          hasDropdown={false}
-          icon={filters.favorites ? 'heart' : 'heart-outline'}
-        />
-
-        {/* Blocked Toggle */}
-        <FilterChip
-          label="Blocked"
-          value={filters.blocked ? 'Blocked' : 'Blocked'}
-          isActive={filters.blocked}
-          onPress={handleBlockedToggle}
-          isDark={isDark}
-          hasDropdown={false}
-          icon={filters.blocked ? 'ban' : 'ban-outline'}
-        />
+        {/* Favorites Toggle - Only show for authenticated users */}
+        {isAuthenticated && (
+          <FilterChip
+            label={t('playerDirectory.filters.favorites')}
+            value={t('playerDirectory.filters.favorites')}
+            isActive={filters.favorites}
+            onPress={handleFavoritesToggle}
+            isDark={isDark}
+            hasDropdown={false}
+            icon={filters.favorites ? 'heart' : 'heart-outline'}
+          />
+        )}
 
         {/* Gender Filter */}
         <FilterChip
-          label="Gender"
+          label={t('playerDirectory.filters.gender')}
           value={genderDisplay}
           isActive={filters.gender !== 'all'}
           onPress={() => setShowGenderDropdown(true)}
@@ -586,7 +621,7 @@ export function PlayerFiltersBar({
 
         {/* Distance Filter */}
         <FilterChip
-          label="Distance"
+          label={t('playerDirectory.filters.distance')}
           value={distanceDisplay}
           isActive={filters.maxDistance !== 'all'}
           onPress={() => setShowDistanceDropdown(true)}
@@ -595,7 +630,7 @@ export function PlayerFiltersBar({
 
         {/* Availability Filter */}
         <FilterChip
-          label="Time"
+          label={t('playerDirectory.filters.availability')}
           value={availabilityDisplay}
           isActive={filters.availability !== 'all'}
           onPress={() => setShowAvailabilityDropdown(true)}
@@ -613,16 +648,29 @@ export function PlayerFiltersBar({
 
         {/* Play Style Filter */}
         <FilterChip
-          label="Style"
+          label={t('playerDirectory.filters.playStyle')}
           value={styleDisplay}
           isActive={filters.playStyle !== 'all'}
           onPress={() => setShowStyleDropdown(true)}
           isDark={isDark}
         />
 
+        {/* Blocked Toggle - Only show for authenticated users */}
+        {isAuthenticated && (
+          <FilterChip
+            label={t('playerDirectory.filters.blocked')}
+            value={t('playerDirectory.filters.blocked')}
+            isActive={filters.blocked}
+            onPress={handleBlockedToggle}
+            isDark={isDark}
+            hasDropdown={false}
+            icon={filters.blocked ? 'ban' : 'ban-outline'}
+          />
+        )}
+
         {/* Sort Option */}
         <FilterChip
-          label="Sort"
+          label={t('playerDirectory.filters.sortBy')}
           value={sortDisplay}
           isActive={filters.sortBy !== 'name_asc'}
           onPress={() => setShowSortDropdown(true)}
@@ -649,7 +697,7 @@ export function PlayerFiltersBar({
               color={isDark ? secondary[400] : secondary[600]}
             />
             <Text size="xs" weight="semibold" color={isDark ? secondary[400] : secondary[600]}>
-              Reset
+              {t('playerDirectory.filters.reset')}
             </Text>
           </TouchableOpacity>
         )}
@@ -658,7 +706,7 @@ export function PlayerFiltersBar({
       {/* Dropdown Modals */}
       <FilterDropdown
         visible={showGenderDropdown}
-        title="Select Gender"
+        title={t('playerDirectory.filters.selectGender')}
         options={GENDER_OPTIONS}
         selectedValue={filters.gender}
         onSelect={handleGenderChange}
@@ -669,7 +717,7 @@ export function PlayerFiltersBar({
 
       <FilterDropdown
         visible={showSkillDropdown}
-        title={`Select ${skillLabel} Level`}
+        title={t('playerDirectory.filters.selectSkillLevel')}
         options={skillOptions as (NtrpFilter | DuprFilter)[]}
         selectedValue={filters.skillLevel}
         onSelect={handleSkillChange}
@@ -680,7 +728,7 @@ export function PlayerFiltersBar({
 
       <FilterDropdown
         visible={showDistanceDropdown}
-        title="Select Max Distance"
+        title={t('playerDirectory.filters.selectMaxDistance')}
         options={availableDistanceOptions}
         selectedValue={filters.maxDistance}
         onSelect={handleDistanceChange}
@@ -691,7 +739,7 @@ export function PlayerFiltersBar({
 
       <FilterDropdown
         visible={showAvailabilityDropdown}
-        title="Select Availability"
+        title={t('playerDirectory.filters.selectAvailability')}
         options={AVAILABILITY_OPTIONS}
         selectedValue={filters.availability}
         onSelect={handleAvailabilityChange}
@@ -702,7 +750,7 @@ export function PlayerFiltersBar({
 
       <FilterDropdown
         visible={showStyleDropdown}
-        title="Select Play Style"
+        title={t('playerDirectory.filters.selectPlayStyle')}
         options={PLAY_STYLE_OPTIONS}
         selectedValue={filters.playStyle}
         onSelect={handleStyleChange}
@@ -713,7 +761,7 @@ export function PlayerFiltersBar({
 
       <FilterDropdown
         visible={showSortDropdown}
-        title="Sort Players By"
+        title={t('playerDirectory.filters.sortPlayersBy')}
         options={SORT_OPTIONS}
         selectedValue={filters.sortBy || 'name_asc'}
         onSelect={handleSortChange}

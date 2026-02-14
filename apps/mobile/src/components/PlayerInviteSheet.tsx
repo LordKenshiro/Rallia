@@ -8,8 +8,7 @@
 import * as React from 'react';
 import { useCallback, useMemo } from 'react';
 import { StyleSheet, View, TouchableOpacity } from 'react-native';
-import { BottomSheetModal, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
-import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
+import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import {
   lightTheme,
@@ -21,7 +20,6 @@ import {
 } from '@rallia/design-system';
 import { selectionHaptic } from '@rallia/shared-utils';
 import { useTheme, useMatch } from '@rallia/shared-hooks';
-import { usePlayerInviteSheet } from '../context/PlayerInviteSheetContext';
 import { useMatchDetailSheet } from '../context/MatchDetailSheetContext';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import { useTranslation } from '../hooks';
@@ -33,8 +31,12 @@ const BASE_WHITE = '#ffffff';
 // MAIN COMPONENT
 // =============================================================================
 
-export const PlayerInviteSheet: React.FC = () => {
-  const { sheetRef, closeSheet, inviteData } = usePlayerInviteSheet();
+export function PlayerInviteActionSheet({ payload }: SheetProps<'player-invite'>) {
+  const matchId = payload?.matchId ?? '';
+  const sportId = payload?.sportId ?? '';
+  const hostId = payload?.hostId ?? '';
+  const excludePlayerIds = payload?.excludePlayerIds ?? [];
+
   const { updateSelectedMatch, selectedMatch } = useMatchDetailSheet();
   const { theme } = useTheme();
   const { t } = useTranslation();
@@ -42,8 +44,8 @@ export const PlayerInviteSheet: React.FC = () => {
 
   // Use the match query to get fresh data after invite
   // This query is automatically invalidated when useInviteToMatch succeeds
-  const { refetch: refetchMatch } = useMatch(inviteData?.matchId, {
-    enabled: !!inviteData?.matchId,
+  const { refetch: refetchMatch } = useMatch(matchId, {
+    enabled: !!matchId,
   });
 
   // Theme colors
@@ -63,17 +65,6 @@ export const PlayerInviteSheet: React.FC = () => {
     [themeColors, isDark]
   );
 
-  // Single snap point at 95% to match MatchDetailSheet
-  const snapPoints = useMemo(() => ['95%'], []);
-
-  // Backdrop
-  const renderBackdrop = useCallback(
-    (props: BottomSheetBackdropProps) => (
-      <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.5} />
-    ),
-    []
-  );
-
   // Handle complete - refetch match data and update context, then close the sheet
   const handleComplete = useCallback(async () => {
     // Refetch the match to get the updated participant list
@@ -88,73 +79,57 @@ export const PlayerInviteSheet: React.FC = () => {
         distance_meters: selectedMatch.distance_meters,
       } as MatchDetailData);
     }
-    closeSheet();
-  }, [closeSheet, refetchMatch, selectedMatch, updateSelectedMatch]);
+    SheetManager.hide('player-invite');
+  }, [refetchMatch, selectedMatch, updateSelectedMatch]);
 
   // Handle close button press
   const handleClose = useCallback(() => {
     selectionHaptic();
-    closeSheet();
-  }, [closeSheet]);
+    SheetManager.hide('player-invite');
+  }, []);
 
   // Render nothing meaningful if no invite data
-  if (!inviteData) {
-    return (
-      <BottomSheetModal
-        ref={sheetRef}
-        snapPoints={snapPoints}
-        index={0}
-        enableDynamicSizing={false}
-        backdropComponent={renderBackdrop}
-        enablePanDownToClose
-        handleIndicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
-        backgroundStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
-      >
-        {null}
-      </BottomSheetModal>
-    );
+  if (!matchId) {
+    return null;
   }
 
   return (
-    <BottomSheetModal
-      ref={sheetRef}
-      snapPoints={snapPoints}
-      index={0}
-      enableDynamicSizing={false}
-      backdropComponent={renderBackdrop}
-      enablePanDownToClose
-      handleIndicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
-      backgroundStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
       <View style={styles.container}>
-        {/* Close button */}
+        {/* Close button - simple icon, no rounded background (matches other sheets) */}
         <View style={styles.closeButtonContainer}>
           <TouchableOpacity
             onPress={handleClose}
-            style={[styles.closeButton, { backgroundColor: themeColors.muted }]}
+            style={styles.closeButton}
             activeOpacity={0.7}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Ionicons name="close" size={20} color={colors.text} />
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
         {/* Player invite content */}
         <PlayerInviteStep
-          matchId={inviteData.matchId}
-          sportId={inviteData.sportId}
-          hostId={inviteData.hostId}
-          excludePlayerIds={inviteData.excludePlayerIds}
+          matchId={matchId}
+          sportId={sportId}
+          hostId={hostId}
+          excludePlayerIds={excludePlayerIds}
           onComplete={handleComplete}
           colors={colors}
           t={t}
           isDark={isDark}
-          showSkip={false}
         />
       </View>
-    </BottomSheetModal>
+    </ActionSheet>
   );
-};
+}
+
+// Keep old export for backwards compatibility
+export const PlayerInviteSheet = PlayerInviteActionSheet;
 
 // =============================================================================
 // STYLES
@@ -162,11 +137,15 @@ export const PlayerInviteSheet: React.FC = () => {
 
 const styles = StyleSheet.create({
   sheetBackground: {
+    flex: 1,
     borderTopLeftRadius: radiusPixels['2xl'],
     borderTopRightRadius: radiusPixels['2xl'],
   },
   handleIndicator: {
-    width: 40,
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
   },
   container: {
     flex: 1,
@@ -178,12 +157,8 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: spacingPixels[1],
   },
 });
 
-export default PlayerInviteSheet;
+export default PlayerInviteActionSheet;

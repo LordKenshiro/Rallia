@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.xl,
     paddingTop: spacingPixels[6],
     paddingHorizontal: spacingPixels[5],
-    paddingBottom: spacingPixels[5],
+    paddingBottom: spacingPixels[4],
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,

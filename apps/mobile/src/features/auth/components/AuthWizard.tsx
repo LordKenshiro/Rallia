@@ -18,7 +18,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import type { TranslationKey } from '@rallia/shared-translations';
@@ -100,7 +100,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ currentStep, totalSteps, colo
     <View style={styles.progressContainer}>
       <View style={styles.progressHeader}>
         <Text size="sm" weight="semibold" color={colors.textMuted}>
-          {t('auth.step' as TranslationKey)
+          {t('auth.step')
             .replace('{current}', String(currentStep))
             .replace('{total}', String(totalSteps))}
         </Text>
@@ -156,10 +156,10 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
             }
           }}
           style={styles.headerButton}
-          accessibilityLabel={t('common.back' as TranslationKey)}
+          accessibilityLabel={t('common.back')}
           accessibilityRole="button"
         >
-          <Ionicons name="chevron-back" size={24} color={colors.buttonActive} />
+          <Ionicons name="chevron-back-outline" size={24} color={colors.buttonActive} />
         </TouchableOpacity>
       </View>
 
@@ -175,10 +175,10 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
             onClose();
           }}
           style={styles.headerButton}
-          accessibilityLabel={t('common.close' as TranslationKey)}
+          accessibilityLabel={t('common.close')}
           accessibilityRole="button"
         >
-          <Ionicons name="close" size={24} color={colors.textMuted} />
+          <Ionicons name="close-outline" size={24} color={colors.textMuted} />
         </TouchableOpacity>
       </View>
     </View>
@@ -198,6 +198,7 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
   isDark,
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
+  const toast = useToast();
 
   const {
     email,
@@ -206,17 +207,26 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
     setCode,
     isLoading,
     errorMessage,
+    resendCooldown,
+    canResend,
     handleEmailSubmit,
     handleResendCode,
     handleVerifyCode,
     resetState,
     isEmailValid,
-  } = useAuthWizard();
+  } = useAuthWizard({
+    // Use toast for all messages instead of Alert modals
+    onVerificationError: message => toast.error(message),
+    onError: message => toast.error(message),
+    onSuccess: message => toast.success(message),
+    onWarning: message => toast.warning(message),
+  });
 
   // Social auth hook
   const {
     isLoading: socialAuthLoading,
     loadingProvider: socialAuthLoadingProvider,
+    errorMessage: socialAuthError,
     signInWithGoogle,
     signInWithApple,
     signInWithFacebook,
@@ -236,7 +246,17 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
     });
   }, [currentStep, translateX]);
 
-  // Handle social sign-in result
+  // Handle social sign-in result: show toast when social auth sets an error.
+  // Only depend on socialAuthError so we don't re-run when toast identity changes
+  // (ToastProvider creates a new context value each render, which would cause an infinite loop).
+  const toastErrorRef = React.useRef(toast.error);
+  toastErrorRef.current = toast.error;
+  useEffect(() => {
+    if (socialAuthError) {
+      toastErrorRef.current(socialAuthError);
+    }
+  }, [socialAuthError]);
+
   const handleSocialAuthResult = useCallback(
     async (signInFn: () => Promise<{ success: boolean; needsOnboarding: boolean }>) => {
       Keyboard.dismiss();
@@ -372,6 +392,8 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
                 errorMessage={currentStep === 2 ? errorMessage : ''}
                 onVerify={goToNextStep}
                 onResendCode={handleResendCode}
+                resendCooldown={resendCooldown}
+                canResend={canResend}
                 colors={colors}
                 t={t}
                 isDark={isDark}

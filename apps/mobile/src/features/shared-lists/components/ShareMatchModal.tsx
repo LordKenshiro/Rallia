@@ -7,13 +7,14 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
-  Modal,
   TouchableOpacity,
-  FlatList,
   ActivityIndicator,
   Share,
   Linking,
+  FlatList,
+  ScrollView,
 } from 'react-native';
+import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
@@ -27,6 +28,7 @@ import {
   type ShareChannel,
 } from '@rallia/shared-services';
 import { usePlayerMatches } from '@rallia/shared-hooks';
+import { useThemeStyles, useTranslation, type TranslationKey } from '../../../hooks';
 
 // Local interface to ensure TypeScript recognizes match properties
 // (workaround for TS language server cache issues with extended types)
@@ -39,25 +41,6 @@ interface MatchItem {
   sport?: { name: string } | null;
 }
 
-interface ThemeColors {
-  background: string;
-  cardBackground: string;
-  text: string;
-  textSecondary: string;
-  textMuted: string;
-  border: string;
-  primary: string;
-  inputBackground: string;
-}
-
-interface ShareMatchModalProps {
-  visible: boolean;
-  playerId: string;
-  colors: ThemeColors;
-  isDark: boolean;
-  onClose: () => void;
-}
-
 type Step = 'select-match' | 'select-contacts' | 'confirm';
 
 interface SelectedContact {
@@ -68,15 +51,13 @@ interface SelectedContact {
   email?: string;
 }
 
-const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
-  visible,
-  playerId,
-  colors,
-  isDark,
-  onClose,
-}) => {
+export function ShareMatchActionSheet({ payload }: SheetProps<'share-match'>) {
+  const playerId = payload?.playerId ?? '';
+
+  const { colors, isDark } = useThemeStyles();
   const toast = useToast();
-  
+  const { t } = useTranslation();
+
   // State
   const [step, setStep] = useState<Step>('select-match');
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
@@ -125,28 +106,30 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
     [listContacts]
   );
 
-  // Load lists when modal opens and we're on contact selection step
+  // Load lists when we're on contact selection step
   useEffect(() => {
-    if (visible && step === 'select-contacts') {
+    if (step === 'select-contacts') {
       fetchLists();
     }
-  }, [visible, step, fetchLists]);
-
-  // Reset state when modal closes
-  useEffect(() => {
-    if (!visible) {
-      setStep('select-match');
-      setSelectedMatchId(null);
-      setSelectedContacts([]);
-      setExpandedListId(null);
-    }
-  }, [visible]);
+  }, [step, fetchLists]);
 
   // Get the selected match details
   const selectedMatch = useMemo(() => {
     if (!selectedMatchId) return null;
     return (upcomingMatches as MatchItem[] | undefined)?.find(m => m.id === selectedMatchId);
   }, [selectedMatchId, upcomingMatches]);
+
+  const resetState = useCallback(() => {
+    setStep('select-match');
+    setSelectedMatchId(null);
+    setSelectedContacts([]);
+    setExpandedListId(null);
+  }, []);
+
+  const handleClose = useCallback(() => {
+    resetState();
+    SheetManager.hide('share-match');
+  }, [resetState]);
 
   // Toggle list expansion
   const handleToggleList = useCallback(
@@ -227,15 +210,59 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
           })),
         });
 
-      toast.success(`Invitation shared with ${selectedContacts.length} contact(s)!`);
-      onClose();
-    } catch (error) {
-      console.error('Failed to share:', error);
-      toast.error('Failed to share the match. Please try again.');
-    } finally {
-      setIsSharing(false);
-    }
-  }, [selectedMatch, selectedContacts, onClose, toast]);
+        if (channel === 'share_sheet' || channel === 'copy_link') {
+          // Use native share
+          await Share.share({
+            message: result.shareMessage,
+            title: t('sharedLists.share.shareGame'),
+          });
+        } else if (channel === 'sms') {
+          // Open SMS with pre-filled message
+          const phones = selectedContacts
+            .filter(c => c.phone)
+            .map(c => c.phone)
+            .join(',');
+          if (phones) {
+            const smsUrl = `sms:${phones}?body=${encodeURIComponent(result.shareMessage)}`;
+            await Linking.openURL(smsUrl);
+          }
+        } else if (channel === 'whatsapp') {
+          // Open WhatsApp (can only send to one contact at a time)
+          const firstPhone = selectedContacts.find(c => c.phone)?.phone;
+          if (firstPhone) {
+            const cleanPhone = firstPhone.replace(/\D/g, '');
+            const waUrl = `whatsapp://send?phone=${cleanPhone}&text=${encodeURIComponent(result.shareMessage)}`;
+            await Linking.openURL(waUrl);
+          }
+        } else if (channel === 'email') {
+          // Open email client
+          const emails = selectedContacts
+            .filter(c => c.email)
+            .map(c => c.email)
+            .join(',');
+          if (emails) {
+            const subject = encodeURIComponent(t('sharedLists.share.gameInvitation'));
+            const body = encodeURIComponent(result.shareMessage);
+            const mailUrl = `mailto:${emails}?subject=${subject}&body=${body}`;
+            await Linking.openURL(mailUrl);
+          }
+        }
+
+        toast.success(
+          t('sharedLists.share.invitationShared', {
+            count: selectedContacts.length,
+          })
+        );
+        handleClose();
+      } catch (error) {
+        console.error('Failed to share:', error);
+        toast.error(t('sharedLists.share.failedToShare'));
+      } finally {
+        setIsSharing(false);
+      }
+    },
+    [selectedMatch, selectedContacts, handleClose, toast, t]
+  );
 
   // Render match item
   const renderMatchItem = useCallback(
@@ -296,14 +323,24 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
             <View
               style={[styles.listIcon, { backgroundColor: isDark ? primary[800] : primary[100] }]}
             >
-              <Ionicons name="people" size={20} color={isDark ? primary[300] : primary[600]} />
+              <Ionicons
+                name="people-outline"
+                size={20}
+                color={isDark ? primary[300] : primary[600]}
+              />
             </View>
             <View style={styles.listInfo}>
               <Text weight="semibold" style={{ color: colors.text }}>
                 {item.name}
               </Text>
               <Text size="sm" style={{ color: colors.textSecondary }}>
-                {item.contact_count} contact{item.contact_count !== 1 ? 's' : ''}
+                {item.contact_count === 1
+                  ? t('sharedLists.contacts.contactCountSingular', {
+                      count: item.contact_count,
+                    })
+                  : t('sharedLists.contacts.contactCount', {
+                      count: item.contact_count,
+                    })}
               </Text>
             </View>
             <Ionicons
@@ -319,7 +356,7 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
                 <ActivityIndicator size="small" color={colors.primary} style={styles.loader} />
               ) : contacts.length === 0 ? (
                 <Text size="sm" style={[styles.emptyText, { color: colors.textMuted }]}>
-                  No contacts in this list
+                  {t('sharedLists.contacts.noContactsInList')}
                 </Text>
               ) : (
                 <>
@@ -336,7 +373,7 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
                       color={allSelected ? colors.primary : colors.textSecondary}
                     />
                     <Text size="sm" style={{ color: colors.text, marginLeft: spacingPixels[2] }}>
-                      Select All
+                      {t('common.selectAll')}
                     </Text>
                   </TouchableOpacity>
                   {contacts.map(contact => {
@@ -382,6 +419,7 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
       handleToggleList,
       handleToggleContact,
       handleSelectAllFromList,
+      t,
     ]
   );
 
@@ -396,16 +434,18 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
               size="lg"
               style={{ color: colors.text, marginBottom: spacingPixels[3] }}
             >
-              Select a Match to Share
+              {t('sharedLists.share.selectMatch')}
             </Text>
             {isLoadingMatches ? (
               <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
             ) : !upcomingMatches || upcomingMatches.length === 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons name="calendar-outline" size={48} color={colors.textMuted} />
-                <Text style={[styles.emptyTitle, { color: colors.text }]}>No Upcoming Matches</Text>
+                <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                  {t('sharedLists.share.noUpcomingMatches')}
+                </Text>
                 <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                  Create a match first to share it with your contacts
+                  {t('sharedLists.share.createMatchFirst')}
                 </Text>
               </View>
             ) : (
@@ -428,7 +468,7 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
               size="lg"
               style={{ color: colors.text, marginBottom: spacingPixels[3] }}
             >
-              Select Contacts to Share With
+              {t('sharedLists.share.selectContacts')}
             </Text>
             {selectedContacts.length > 0 && (
               <View
@@ -438,8 +478,9 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
                 ]}
               >
                 <Text size="sm" style={{ color: colors.primary }}>
-                  {selectedContacts.length} contact{selectedContacts.length !== 1 ? 's' : ''}{' '}
-                  selected
+                  {t('sharedLists.share.contactsSelected', {
+                    count: selectedContacts.length,
+                  })}
                 </Text>
               </View>
             )}
@@ -448,9 +489,11 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
             ) : lists.length === 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons name="people-outline" size={48} color={colors.textMuted} />
-                <Text style={[styles.emptyTitle, { color: colors.text }]}>No Shared Lists</Text>
+                <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                  {t('sharedLists.share.noSharedLists')}
+                </Text>
                 <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                  Create a shared list first to add contacts
+                  {t('sharedLists.share.createListFirst')}
                 </Text>
               </View>
             ) : (
@@ -467,13 +510,13 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
 
       case 'confirm':
         return (
-          <View style={styles.stepContent}>
+          <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
             <Text
               weight="semibold"
               size="lg"
               style={{ color: colors.text, marginBottom: spacingPixels[3] }}
             >
-              How do you want to share?
+              {t('sharedLists.share.howToShare')}
             </Text>
 
             {/* Match summary */}
@@ -487,7 +530,7 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
                 <Ionicons name="calendar" size={20} color={colors.primary} />
                 <View style={styles.summaryInfo}>
                   <Text weight="semibold" style={{ color: colors.text }}>
-                    {selectedMatch.sport?.name || 'Game'}
+                    {selectedMatch.sport?.name || t('common.game')}
                   </Text>
                   <Text size="sm" style={{ color: colors.textSecondary }}>
                     {new Date(selectedMatch.match_date).toLocaleDateString('en-US', {
@@ -507,17 +550,21 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
                 { backgroundColor: colors.cardBackground, borderColor: colors.border },
               ]}
             >
-              <Ionicons name="people" size={20} color={colors.primary} />
+              <Ionicons name="people-outline" size={20} color={colors.primary} />
               <View style={styles.summaryInfo}>
                 <Text weight="semibold" style={{ color: colors.text }}>
-                  {selectedContacts.length} Recipient{selectedContacts.length !== 1 ? 's' : ''}
+                  {t('sharedLists.share.recipients', {
+                    count: selectedContacts.length,
+                  })}
                 </Text>
                 <Text size="sm" style={{ color: colors.textSecondary }} numberOfLines={1}>
                   {selectedContacts
                     .slice(0, 3)
                     .map(c => c.name)
                     .join(', ')}
-                  {selectedContacts.length > 3 ? ` +${selectedContacts.length - 3} more` : ''}
+                  {selectedContacts.length > 3
+                    ? ` +${t('common.more', { count: selectedContacts.length - 3 })}`
+                    : ''}
                 </Text>
               </View>
             </View>
@@ -527,22 +574,34 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
               <TouchableOpacity
                 style={[
                   styles.shareOption,
-                  { backgroundColor: isDark ? neutral[800] : neutral[100] },
+                  {
+                    backgroundColor: isDark ? neutral[800] : neutral[100],
+                    borderColor: colors.border,
+                    opacity: isSharing ? 0.6 : 1,
+                  },
                 ]}
                 onPress={() => handleShare('share_sheet')}
                 disabled={isSharing}
+                activeOpacity={0.7}
               >
                 <Ionicons name="share-outline" size={24} color={colors.primary} />
-                <Text style={{ color: colors.text, marginTop: spacingPixels[1] }}>Share</Text>
+                <Text size="sm" style={[styles.shareOptionLabel, { color: colors.text }]}>
+                  {t('common.share')}
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[
                   styles.shareOption,
-                  { backgroundColor: isDark ? neutral[800] : neutral[100] },
+                  {
+                    backgroundColor: isDark ? neutral[800] : neutral[100],
+                    borderColor: colors.border,
+                    opacity: isSharing || !selectedContacts.some(c => c.phone) ? 0.6 : 1,
+                  },
                 ]}
                 onPress={() => handleShare('sms')}
                 disabled={isSharing || !selectedContacts.some(c => c.phone)}
+                activeOpacity={0.7}
               >
                 <Ionicons
                   name="chatbubble-outline"
@@ -550,10 +609,13 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
                   color={selectedContacts.some(c => c.phone) ? colors.primary : colors.textMuted}
                 />
                 <Text
-                  style={{
-                    color: selectedContacts.some(c => c.phone) ? colors.text : colors.textMuted,
-                    marginTop: spacingPixels[1],
-                  }}
+                  size="sm"
+                  style={[
+                    styles.shareOptionLabel,
+                    {
+                      color: selectedContacts.some(c => c.phone) ? colors.text : colors.textMuted,
+                    },
+                  ]}
                 >
                   SMS
                 </Text>
@@ -562,10 +624,15 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
               <TouchableOpacity
                 style={[
                   styles.shareOption,
-                  { backgroundColor: isDark ? neutral[800] : neutral[100] },
+                  {
+                    backgroundColor: isDark ? neutral[800] : neutral[100],
+                    borderColor: colors.border,
+                    opacity: isSharing || !selectedContacts.some(c => c.phone) ? 0.6 : 1,
+                  },
                 ]}
                 onPress={() => handleShare('whatsapp')}
                 disabled={isSharing || !selectedContacts.some(c => c.phone)}
+                activeOpacity={0.7}
               >
                 <Ionicons
                   name="logo-whatsapp"
@@ -573,10 +640,13 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
                   color={selectedContacts.some(c => c.phone) ? '#25D366' : colors.textMuted}
                 />
                 <Text
-                  style={{
-                    color: selectedContacts.some(c => c.phone) ? colors.text : colors.textMuted,
-                    marginTop: spacingPixels[1],
-                  }}
+                  size="sm"
+                  style={[
+                    styles.shareOptionLabel,
+                    {
+                      color: selectedContacts.some(c => c.phone) ? colors.text : colors.textMuted,
+                    },
+                  ]}
                 >
                   WhatsApp
                 </Text>
@@ -585,10 +655,15 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
               <TouchableOpacity
                 style={[
                   styles.shareOption,
-                  { backgroundColor: isDark ? neutral[800] : neutral[100] },
+                  {
+                    backgroundColor: isDark ? neutral[800] : neutral[100],
+                    borderColor: colors.border,
+                    opacity: isSharing || !selectedContacts.some(c => c.email) ? 0.6 : 1,
+                  },
                 ]}
                 onPress={() => handleShare('email')}
                 disabled={isSharing || !selectedContacts.some(c => c.email)}
+                activeOpacity={0.7}
               >
                 <Ionicons
                   name="mail-outline"
@@ -596,10 +671,13 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
                   color={selectedContacts.some(c => c.email) ? colors.primary : colors.textMuted}
                 />
                 <Text
-                  style={{
-                    color: selectedContacts.some(c => c.email) ? colors.text : colors.textMuted,
-                    marginTop: spacingPixels[1],
-                  }}
+                  size="sm"
+                  style={[
+                    styles.shareOptionLabel,
+                    {
+                      color: selectedContacts.some(c => c.email) ? colors.text : colors.textMuted,
+                    },
+                  ]}
                 >
                   Email
                 </Text>
@@ -609,7 +687,7 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
             {isSharing && (
               <ActivityIndicator size="small" color={colors.primary} style={styles.loader} />
             )}
-          </View>
+          </ScrollView>
         );
     }
   };
@@ -643,89 +721,108 @@ const ShareMatchModal: React.FC<ShareMatchModalProps> = ({
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[
+        styles.sheetBackground,
+        styles.container,
+        { backgroundColor: colors.cardBackground },
+      ]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={step === 'select-match' ? onClose : handleBack}>
+      {/* Header - back arrow left (when not first step), close (cross) always right */}
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        {step === 'select-match' ? (
+          <View style={styles.headerSpacer} />
+        ) : (
+          <TouchableOpacity onPress={handleBack}>
+            <Ionicons name="chevron-back-outline" size={24} color={colors.primary} />
+          </TouchableOpacity>
+        )}
+        <Text weight="semibold" size="lg" style={[styles.headerTitle, { color: colors.text }]}>
+          {t('sharedLists.share.shareMatch')}
+        </Text>
+        <TouchableOpacity onPress={handleClose}>
+          <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Step indicator */}
+      <View style={styles.stepIndicator}>
+        <View style={[styles.stepDot, { backgroundColor: colors.primary }]} />
+        <View
+          style={[
+            styles.stepLine,
+            { backgroundColor: step !== 'select-match' ? colors.primary : colors.border },
+          ]}
+        />
+        <View
+          style={[
+            styles.stepDot,
+            { backgroundColor: step !== 'select-match' ? colors.primary : colors.border },
+          ]}
+        />
+        <View
+          style={[
+            styles.stepLine,
+            { backgroundColor: step === 'confirm' ? colors.primary : colors.border },
+          ]}
+        />
+        <View
+          style={[
+            styles.stepDot,
+            { backgroundColor: step === 'confirm' ? colors.primary : colors.border },
+          ]}
+        />
+      </View>
+
+      {/* Content */}
+      {renderStepContent()}
+
+      {/* Footer with Next button */}
+      {step !== 'confirm' && (
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
+          <TouchableOpacity
+            style={[
+              styles.nextButton,
+              { backgroundColor: canProceed() ? colors.primary : colors.border },
+            ]}
+            onPress={handleNext}
+            disabled={!canProceed()}
+          >
+            <Text
+              size="lg"
+              weight="semibold"
+              color={canProceed() ? colors.buttonTextActive : colors.textMuted}
+            >
+              {step === 'select-match'
+                ? t('sharedLists.share.selectContactsButton')
+                : t('common.continue')}
+            </Text>
             <Ionicons
-              name={step === 'select-match' ? 'close' : 'arrow-back'}
-              size={24}
-              color={colors.text}
+              name="arrow-forward"
+              size={20}
+              color={canProceed() ? colors.buttonTextActive : colors.textMuted}
             />
           </TouchableOpacity>
-          <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-            Share Match
-          </Text>
-          <View style={{ width: 24 }} />
         </View>
-
-        {/* Step indicator */}
-        <View style={styles.stepIndicator}>
-          <View style={[styles.stepDot, { backgroundColor: colors.primary }]} />
-          <View
-            style={[
-              styles.stepLine,
-              { backgroundColor: step !== 'select-match' ? colors.primary : colors.border },
-            ]}
-          />
-          <View
-            style={[
-              styles.stepDot,
-              { backgroundColor: step !== 'select-match' ? colors.primary : colors.border },
-            ]}
-          />
-          <View
-            style={[
-              styles.stepLine,
-              { backgroundColor: step === 'confirm' ? colors.primary : colors.border },
-            ]}
-          />
-          <View
-            style={[
-              styles.stepDot,
-              { backgroundColor: step === 'confirm' ? colors.primary : colors.border },
-            ]}
-          />
-        </View>
-
-        {/* Content */}
-        {renderStepContent()}
-
-        {/* Footer with Next button */}
-        {step !== 'confirm' && (
-          <View style={[styles.footer, { borderTopColor: colors.border }]}>
-            <TouchableOpacity
-              style={[
-                styles.nextButton,
-                { backgroundColor: canProceed() ? colors.primary : colors.border },
-              ]}
-              onPress={handleNext}
-              disabled={!canProceed()}
-            >
-              <Text weight="semibold" style={{ color: canProceed() ? '#fff' : colors.textMuted }}>
-                {step === 'select-match' ? 'Select Contacts' : 'Continue'}
-              </Text>
-              <Ionicons
-                name="arrow-forward"
-                size={20}
-                color={canProceed() ? '#fff' : colors.textMuted}
-                style={{ marginLeft: spacingPixels[2] }}
-              />
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-    </Modal>
+      )}
+    </ActionSheet>
   );
-};
+}
 
 const styles = StyleSheet.create({
+  sheetBackground: {
+    flex: 1,
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
+  },
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
+  },
   container: {
     flex: 1,
   },
@@ -736,6 +833,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[3],
     borderBottomWidth: 1,
+    direction: 'ltr',
+  },
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerSpacer: {
+    width: 24,
   },
   stepIndicator: {
     flexDirection: 'row',
@@ -836,15 +941,24 @@ const styles = StyleSheet.create({
   },
   shareOptions: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    flexWrap: 'wrap',
+    gap: spacingPixels[3],
     marginTop: spacingPixels[4],
+    paddingBottom: spacingPixels[4],
   },
   shareOption: {
+    flex: 1,
+    minWidth: 72,
     alignItems: 'center',
     justifyContent: 'center',
-    width: 70,
-    height: 70,
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[2],
     borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+  },
+  shareOptionLabel: {
+    marginTop: spacingPixels[1],
+    textAlign: 'center',
   },
   emptyState: {
     flex: 1,
@@ -873,14 +987,17 @@ const styles = StyleSheet.create({
   footer: {
     padding: spacingPixels[4],
     borderTopWidth: 1,
+    paddingBottom: spacingPixels[4],
   },
   nextButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacingPixels[3],
+    paddingVertical: spacingPixels[4],
     borderRadius: radiusPixels.lg,
+    gap: spacingPixels[2],
   },
 });
 
-export default ShareMatchModal;
+// Keep default export for backwards compatibility during migration
+export default ShareMatchActionSheet;

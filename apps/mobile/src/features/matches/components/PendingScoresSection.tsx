@@ -1,24 +1,18 @@
 /**
  * PendingScoresSection Component
- * 
+ *
  * Section displaying all pending score confirmations for the current user.
  * Includes the list of pending scores and the confirmation modal.
  */
 
-import React, { useState, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-} from 'react-native';
+import React, { useCallback } from 'react';
+import { View, StyleSheet } from 'react-native';
+import { SheetManager } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { useThemeStyles } from '../../../hooks';
-import { 
-  usePendingScoreConfirmations,
-  type PendingScoreConfirmation,
-} from '@rallia/shared-hooks';
+import { usePendingScoreConfirmations, type PendingScoreConfirmation } from '@rallia/shared-hooks';
 import { PendingScoreCard } from './PendingScoreCard';
-import { ScoreConfirmationModal } from './ScoreConfirmationModal';
 
 interface PendingScoresSectionProps {
   playerId: string;
@@ -35,24 +29,20 @@ export function PendingScoresSection({
 }: PendingScoresSectionProps) {
   const { colors } = useThemeStyles();
   const { data: allConfirmations, isLoading } = usePendingScoreConfirmations(playerId);
-  
-  const [selectedConfirmation, setSelectedConfirmation] = useState<PendingScoreConfirmation | null>(null);
-  const [modalVisible, setModalVisible] = useState(false);
 
   // Filter by groupId if provided
   const confirmations = groupId
     ? (allConfirmations || []).filter(c => c.network_id === groupId)
     : allConfirmations || [];
 
-  const handleCardPress = useCallback((confirmation: PendingScoreConfirmation) => {
-    setSelectedConfirmation(confirmation);
-    setModalVisible(true);
-  }, []);
-
-  const handleModalClose = useCallback(() => {
-    setModalVisible(false);
-    setSelectedConfirmation(null);
-  }, []);
+  const handleCardPress = useCallback(
+    (confirmation: PendingScoreConfirmation) => {
+      SheetManager.show('score-confirmation', {
+        payload: { confirmation, playerId },
+      });
+    },
+    [playerId]
+  );
 
   // Don't render if no pending confirmations
   if (isLoading || confirmations.length === 0) {
@@ -85,7 +75,7 @@ export function PendingScoresSection({
 
       {/* List of pending confirmations */}
       <View style={styles.list}>
-        {confirmations.map((confirmation) => (
+        {confirmations.map(confirmation => (
           <PendingScoreCard
             key={confirmation.match_result_id}
             confirmation={confirmation}
@@ -93,14 +83,6 @@ export function PendingScoresSection({
           />
         ))}
       </View>
-
-      {/* Confirmation Modal */}
-      <ScoreConfirmationModal
-        visible={modalVisible}
-        onClose={handleModalClose}
-        confirmation={selectedConfirmation}
-        playerId={playerId}
-      />
     </View>
   );
 }

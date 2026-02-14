@@ -6,11 +6,12 @@ import {
   ScrollView,
   Image,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
-import { Logger } from '@rallia/shared-services';
+import { Logger, tourService } from '@rallia/shared-services';
 import { useTheme } from '@rallia/shared-hooks';
 import { useAppNavigation } from '../navigation/hooks';
 import { useLocale } from '../context';
@@ -46,6 +47,9 @@ const SettingsScreen: React.FC = () => {
 
   const { isAuthenticated, loading: authLoading, signOut } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
+
+  // User is fully onboarded only if authenticated AND onboarding is complete
+  const isOnboarded = isAuthenticated && profile?.onboarding_completed;
 
   const [isChangingLocale, setIsChangingLocale] = useState(false);
   const { theme, themePreference, setThemePreference } = useTheme();
@@ -103,12 +107,6 @@ const SettingsScreen: React.FC = () => {
     }
   };
 
-  const handleDeleteAccount = () => {
-    warningHaptic();
-    // TODO: Implement delete account functionality
-    Logger.logUserAction('delete_account_pressed');
-  };
-
   const handleEditProfile = () => {
     navigation.navigate('UserProfile', {});
   };
@@ -123,6 +121,29 @@ const SettingsScreen: React.FC = () => {
     lightHaptic();
     navigation.navigate('Permissions');
     Logger.logUserAction('permissions_pressed');
+  };
+
+  const handleResetTour = () => {
+    lightHaptic();
+    Alert.alert(t('tour.settings.restartTour'), t('tour.settings.restartTourDescription'), [
+      {
+        text: t('common.cancel'),
+        style: 'cancel',
+      },
+      {
+        text: t('common.confirm'),
+        onPress: async () => {
+          try {
+            await tourService.resetAllTours();
+            toast.success(t('tour.settings.tourReset'));
+            Logger.logUserAction('tour_reset');
+          } catch (error) {
+            Logger.error('Failed to reset tour', error as Error);
+            toast.error(t('errors.unknown'));
+          }
+        },
+      },
+    ]);
   };
 
   const SettingsItem = ({
@@ -172,8 +193,8 @@ const SettingsScreen: React.FC = () => {
         style={[styles.scrollContent, { backgroundColor: colors.background }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Edit Profile */}
-        {isAuthenticated && (
+        {/* Edit Profile - Only show when fully onboarded */}
+        {isOnboarded && (
           <View style={[styles.profileGroup, { backgroundColor: colors.background }]}>
             <View style={[styles.profileSection, { backgroundColor: colors.background }]}>
               {profile?.profile_picture_url ? (
@@ -183,7 +204,7 @@ const SettingsScreen: React.FC = () => {
                 />
               ) : (
                 <View style={styles.profileImagePlaceholder}>
-                  <Ionicons name="person" size={32} color={colors.iconMuted} />
+                  <Ionicons name="person-outline" size={32} color={colors.iconMuted} />
                 </View>
               )}
               <View style={styles.profileInfo}>
@@ -222,24 +243,27 @@ const SettingsScreen: React.FC = () => {
           </View>
         )}
 
-        {/* Settings Items - Auth required */}
-        {isAuthenticated && (
-          <View style={[styles.settingsGroup, { backgroundColor: colors.background }]}>
+        {/* Settings Items - Permissions always visible; Notifications and Restart Tour when onboarded */}
+        <View style={[styles.settingsGroup, { backgroundColor: colors.background }]}>
+          {isOnboarded && (
             <SettingsItem
               icon="notifications-outline"
               title={t('settings.notifications')}
               onPress={handleNotificationPreferences}
             />
-          </View>
-        )}
-
-        {/* Settings Items - Available to all users */}
-        <View style={[styles.settingsGroup, { backgroundColor: colors.background }]}>
+          )}
           <SettingsItem
             icon="shield-checkmark-outline"
             title={t('settings.permissions')}
             onPress={handlePermissions}
           />
+          {isOnboarded && (
+            <SettingsItem
+              icon="refresh-outline"
+              title={t('tour.settings.restartTour')}
+              onPress={handleResetTour}
+            />
+          )}
         </View>
 
         {/* Preferred Language */}

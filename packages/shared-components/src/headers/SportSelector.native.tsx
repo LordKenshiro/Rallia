@@ -201,7 +201,7 @@ const SportSelector: React.FC<SportSelectorProps> = ({
           activeOpacity={hasMultipleSports ? 0.85 : 1}
           disabled={!hasMultipleSports}
         >
-          <Text color={colors.selectorText} weight="semibold" size="xs">
+          <Text color={colors.selectorText} weight="semibold" size="xs" numberOfLines={1}>
             {selectedSport.display_name}
           </Text>
           {hasMultipleSports && (
@@ -209,6 +209,7 @@ const SportSelector: React.FC<SportSelectorProps> = ({
               name={showDropdown ? 'chevron-up' : 'chevron-down'}
               size={12}
               color={colors.chevron}
+              style={{ marginLeft: 2 }}
             />
           )}
         </TouchableOpacity>
@@ -414,14 +415,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 3,
     elevation: 2,
+    alignSelf: 'flex-start',
   },
   selector: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacingPixels[2.5],
-    paddingVertical: spacingPixels[1],
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: radiusPixels.full,
-    gap: spacingPixels[1],
     shadowColor: primary[500],
     shadowOffset: {
       width: 0,
@@ -429,7 +430,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.15,
     shadowRadius: 3,
-    elevation: 3,
+    elevation: 0,
   },
   modalOverlay: {
     flex: 1,

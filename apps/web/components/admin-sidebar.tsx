@@ -7,7 +7,7 @@ import { Link, usePathname } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@rallia/shared-hooks';
-import { BarChart3, Building2, LayoutDashboard, LogOut, Settings, Users } from 'lucide-react';
+import { Building2, LayoutDashboard, LogOut, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';

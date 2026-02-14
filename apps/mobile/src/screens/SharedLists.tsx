@@ -9,31 +9,34 @@
  * - Share matches with contacts via SMS/Email/WhatsApp
  */
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import {
-  View,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  Alert,
-  RefreshControl,
-  TextInput,
-} from 'react-native';
+import React, { useState, useCallback, useMemo } from 'react';
+import { View, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { SheetManager } from 'react-native-actions-sheet';
 import { Text, Skeleton, SkeletonCard } from '@rallia/shared-components';
+import { lightHaptic } from '@rallia/shared-utils';
+import { getSafeAreaEdges } from '../utils';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { primary } from '@rallia/design-system';
 import {
-  getSharedContactLists,
-  deleteSharedContactList,
+  useSharedLists,
+  useDeleteSharedList,
+  useSharedListsRealtime,
   type SharedContactList,
-} from '@rallia/shared-services';
-import { useThemeStyles, useAuth } from '../hooks';
+} from '@rallia/shared-hooks';
+import {
+  useThemeStyles,
+  useAuth,
+  useTranslation,
+  useRequireOnboarding,
+  type TranslationKey,
+} from '../hooks';
 import type { CommunityStackParamList } from '../navigation/types';
-import { CreateListModal, SharedListCard, ShareMatchModal } from '../features/shared-lists';
+import { SharedListCard } from '../features/shared-lists';
+import { SearchBar } from '../components/SearchBar';
 
 type NavigationProp = NativeStackNavigationProp<CommunityStackParamList>;
 
@@ -41,86 +44,73 @@ const SharedLists: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
+  const { t } = useTranslation();
+  const { guardAction } = useRequireOnboarding();
+  const playerId = session?.user?.id;
 
   // State
-  const [lists, setLists] = useState<SharedContactList[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [editingList, setEditingList] = useState<SharedContactList | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Queries and mutations
+  const { data: lists = [], isLoading, isRefetching, refetch } = useSharedLists();
+  const deleteListMutation = useDeleteSharedList();
+
+  // Subscribe to real-time updates for shared lists
+  useSharedListsRealtime(playerId);
 
   // Filter lists based on search query
   const filteredLists = useMemo(() => {
     if (!searchQuery.trim()) return lists;
     const query = searchQuery.toLowerCase().trim();
-    return lists.filter(list => 
-      list.name.toLowerCase().includes(query) ||
-      (list.description?.toLowerCase().includes(query))
+    return lists.filter(
+      list =>
+        list.name.toLowerCase().includes(query) || list.description?.toLowerCase().includes(query)
     );
   }, [lists, searchQuery]);
 
-  // Fetch lists
-  const fetchLists = useCallback(async () => {
-    try {
-      const data = await getSharedContactLists();
-      setLists(data);
-    } catch (error) {
-      console.error('Failed to fetch lists:', error);
-      Alert.alert('Error', 'Failed to load your shared lists. Please try again.');
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  }, []);
-
-  // Initial load
-  useEffect(() => {
-    fetchLists();
-  }, [fetchLists]);
-
   // Refresh handler
   const handleRefresh = useCallback(() => {
-    setIsRefreshing(true);
-    fetchLists();
-  }, [fetchLists]);
+    refetch();
+  }, [refetch]);
 
   // Create list handler
   const handleCreateList = useCallback(() => {
-    setEditingList(null);
-    setShowCreateModal(true);
-  }, []);
+    if (!guardAction()) return;
+    lightHaptic();
+    SheetManager.show('create-list', { payload: { editingList: null } });
+  }, [guardAction]);
 
   // Edit list handler
   const handleEditList = useCallback((list: SharedContactList) => {
-    setEditingList(list);
-    setShowCreateModal(true);
+    lightHaptic();
+    SheetManager.show('create-list', { payload: { editingList: list } });
   }, []);
 
   // Delete list handler
-  const handleDeleteList = useCallback((list: SharedContactList) => {
-    Alert.alert(
-      'Delete List',
-      `Are you sure you want to delete "${list.name}"? This will also delete all contacts in this list.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteSharedContactList(list.id);
-              setLists(prev => prev.filter(l => l.id !== list.id));
-            } catch (error) {
-              console.error('Failed to delete list:', error);
-              Alert.alert('Error', 'Failed to delete the list. Please try again.');
-            }
+  const handleDeleteList = useCallback(
+    (list: SharedContactList) => {
+      Alert.alert(
+        t('sharedLists.deleteList'),
+        t('sharedLists.deleteListConfirm', { name: list.name }),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          {
+            text: t('common.delete'),
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await deleteListMutation.mutateAsync(list.id);
+              } catch (error) {
+                console.error('Failed to delete list:', error);
+                Alert.alert(t('common.error'), t('sharedLists.errors.failedToDelete'));
+              }
+            },
           },
-        },
-      ]
-    );
-  }, []);
+        ]
+      );
+    },
+    [deleteListMutation, t]
+  );
 
   // View list details handler
   const handleViewList = useCallback(
@@ -128,18 +118,6 @@ const SharedLists: React.FC = () => {
       navigation.navigate('SharedListDetail', { listId: list.id, listName: list.name });
     },
     [navigation]
-  );
-
-  // Modal close handler
-  const handleModalClose = useCallback(
-    (refreshNeeded?: boolean) => {
-      setShowCreateModal(false);
-      setEditingList(null);
-      if (refreshNeeded) {
-        fetchLists();
-      }
-    },
-    [fetchLists]
   );
 
   // Render list item
@@ -165,19 +143,19 @@ const SharedLists: React.FC = () => {
       <View style={styles.emptyContainer}>
         <Ionicons name="list-outline" size={64} color={colors.textMuted} />
         <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
-          No Shared Lists Yet
+          {t('sharedLists.noLists')}
         </Text>
         <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-          Create a list to easily invite friends and contacts to your matches
+          {t('sharedLists.noListsDescription')}
         </Text>
         <TouchableOpacity
           style={[styles.emptyButton, { backgroundColor: primary[500] }]}
           onPress={handleCreateList}
           activeOpacity={0.8}
         >
-          <Ionicons name="add" size={20} color="#fff" />
+          <Ionicons name="add-outline" size={20} color="#fff" />
           <Text size="sm" weight="semibold" color="#fff">
-            Create Your First List
+            {t('sharedLists.createFirstList')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -189,37 +167,37 @@ const SharedLists: React.FC = () => {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['bottom']}
+        edges={getSafeAreaEdges(['bottom'])}
       >
         <View style={styles.loadingContainer}>
           {/* Share Match CTA Skeleton */}
-          <Skeleton 
-            width="100%" 
-            height={80} 
+          <Skeleton
+            width="100%"
+            height={80}
             borderRadius={radiusPixels.lg}
             backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
             highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
             style={{ marginBottom: spacingPixels[4] }}
           />
           {/* Search Skeleton */}
-          <Skeleton 
-            width="100%" 
-            height={44} 
+          <Skeleton
+            width="100%"
+            height={44}
             borderRadius={radiusPixels.lg}
             backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
             highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
             style={{ marginBottom: spacingPixels[4] }}
           />
           {/* List Items Skeleton */}
-          {[1, 2, 3, 4].map((i) => (
-            <SkeletonCard 
+          {[1, 2, 3, 4].map(i => (
+            <SkeletonCard
               key={i}
               showAvatar={false}
               lines={2}
               backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
               highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-              style={{ 
-                backgroundColor: colors.cardBackground, 
+              style={{
+                backgroundColor: colors.cardBackground,
                 marginBottom: spacingPixels[3],
                 borderRadius: radiusPixels.lg,
                 padding: spacingPixels[4],
@@ -234,7 +212,7 @@ const SharedLists: React.FC = () => {
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['bottom']}
+      edges={getSafeAreaEdges(['bottom'])}
     >
       {/* Share Match CTA - Always visible at top */}
       <TouchableOpacity
@@ -245,7 +223,12 @@ const SharedLists: React.FC = () => {
             borderColor: isDark ? primary[700] : primary[200],
           },
         ]}
-        onPress={() => setShowShareModal(true)}
+        onPress={() => {
+          if (!guardAction()) return;
+          if (playerId) {
+            SheetManager.show('share-match', { payload: { playerId } });
+          }
+        }}
         activeOpacity={0.8}
       >
         <View
@@ -255,10 +238,10 @@ const SharedLists: React.FC = () => {
         </View>
         <View style={styles.shareMatchContent}>
           <Text weight="semibold" style={{ color: colors.text }}>
-            Share a Match
+            {t('sharedLists.shareMatch.title')}
           </Text>
           <Text size="sm" style={{ color: colors.textSecondary }}>
-            Invite contacts to your upcoming games
+            {t('sharedLists.shareMatch.subtitle')}
           </Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
@@ -267,7 +250,7 @@ const SharedLists: React.FC = () => {
       {/* Section Header */}
       <View style={styles.sectionHeader}>
         <Text weight="semibold" style={{ color: colors.text }}>
-          Your Contact Lists
+          {t('sharedLists.yourLists')}
         </Text>
         {lists.length > 0 && (
           <TouchableOpacity
@@ -275,9 +258,9 @@ const SharedLists: React.FC = () => {
             onPress={handleCreateList}
             activeOpacity={0.8}
           >
-            <Ionicons name="add" size={18} color="#fff" />
+            <Ionicons name="add-outline" size={18} color="#fff" />
             <Text size="sm" weight="semibold" color="#fff">
-              New List
+              {t('sharedLists.newList')}
             </Text>
           </TouchableOpacity>
         )}
@@ -286,23 +269,11 @@ const SharedLists: React.FC = () => {
       {/* Search Bar - only show when there are lists */}
       {lists.length > 0 && (
         <View style={styles.searchContainer}>
-          <View style={[styles.searchInputContainer, { backgroundColor: colors.inputBackground || (isDark ? '#2C2C2E' : '#F2F2F7') }]}>
-            <Ionicons name="search-outline" size={20} color={colors.textMuted} style={styles.searchIcon} />
-            <TextInput
-              style={[styles.searchInput, { color: colors.text }]}
-              placeholder="Search lists..."
-              placeholderTextColor={colors.textMuted}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Ionicons name="close-circle" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-            )}
-          </View>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder={t('sharedLists.searchLists')}
+          />
         </View>
       )}
 
@@ -316,32 +287,12 @@ const SharedLists: React.FC = () => {
         ListEmptyComponent={renderEmpty}
         refreshControl={
           <RefreshControl
-            refreshing={isRefreshing}
+            refreshing={isRefetching}
             onRefresh={handleRefresh}
             tintColor={colors.primary}
           />
         }
       />
-
-      {/* Create/Edit Modal */}
-      <CreateListModal
-        visible={showCreateModal}
-        editingList={editingList}
-        colors={colors}
-        isDark={isDark}
-        onClose={handleModalClose}
-      />
-
-      {/* Share Match Modal */}
-      {session?.user?.id && (
-        <ShareMatchModal
-          visible={showShareModal}
-          playerId={session.user.id}
-          colors={colors}
-          isDark={isDark}
-          onClose={() => setShowShareModal(false)}
-        />
-      )}
     </SafeAreaView>
   );
 };
@@ -393,21 +344,6 @@ const styles = StyleSheet.create({
   searchContainer: {
     paddingHorizontal: spacingPixels[4],
     paddingBottom: spacingPixels[2],
-  },
-  searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: radiusPixels.lg,
-    paddingHorizontal: spacingPixels[3],
-    height: 40,
-  },
-  searchIcon: {
-    marginRight: spacingPixels[2],
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    paddingVertical: 0,
   },
   listContent: {
     paddingHorizontal: spacingPixels[4],

@@ -3,21 +3,20 @@
  * Modal for manually adding or editing a contact
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   StyleSheet,
-  Modal,
   TouchableOpacity,
   TextInput,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
   Alert,
   ScrollView,
 } from 'react-native';
+import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
 import { neutral } from '@rallia/design-system';
 import {
@@ -26,34 +25,13 @@ import {
   type SharedContact,
 } from '@rallia/shared-services';
 
-interface ThemeColors {
-  background: string;
-  cardBackground: string;
-  text: string;
-  textSecondary: string;
-  textMuted: string;
-  border: string;
-  primary: string;
-  inputBackground: string;
-}
+export function AddContactActionSheet({ payload }: SheetProps<'add-contact'>) {
+  const listId = payload?.listId ?? '';
+  const editingContact = payload?.editingContact ?? null;
 
-interface AddContactModalProps {
-  visible: boolean;
-  listId: string;
-  editingContact: SharedContact | null;
-  colors: ThemeColors;
-  isDark: boolean;
-  onClose: (refreshNeeded?: boolean) => void;
-}
+  const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
 
-const AddContactModal: React.FC<AddContactModalProps> = ({
-  visible,
-  listId,
-  editingContact,
-  colors,
-  isDark,
-  onClose,
-}) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -62,48 +40,58 @@ const AddContactModal: React.FC<AddContactModalProps> = ({
 
   const isEditing = !!editingContact;
 
-  // Reset form when modal opens/closes
+  // Reset form when sheet opens with new data
   useEffect(() => {
-    if (visible) {
-      if (editingContact) {
-        setName(editingContact.name);
-        setPhone(editingContact.phone || '');
-        setEmail(editingContact.email || '');
-        setNotes(editingContact.notes || '');
-      } else {
-        setName('');
-        setPhone('');
-        setEmail('');
-        setNotes('');
-      }
+    if (editingContact) {
+      setName(editingContact.name);
+      setPhone(editingContact.phone || '');
+      setEmail(editingContact.email || '');
+      setNotes(editingContact.notes || '');
+    } else {
+      setName('');
+      setPhone('');
+      setEmail('');
+      setNotes('');
     }
-  }, [visible, editingContact]);
+  }, [editingContact]);
 
-  const validateForm = (): boolean => {
+  const resetForm = useCallback(() => {
+    setName('');
+    setPhone('');
+    setEmail('');
+    setNotes('');
+  }, []);
+
+  const handleClose = useCallback(() => {
+    resetForm();
+    SheetManager.hide('add-contact');
+  }, [resetForm]);
+
+  const validateForm = useCallback((): boolean => {
     const trimmedName = name.trim();
     const trimmedPhone = phone.trim();
     const trimmedEmail = email.trim();
 
     if (!trimmedName) {
-      Alert.alert('Error', 'Please enter a name');
+      Alert.alert(t('alerts.error'), t('sharedLists.contacts.nameRequired'));
       return false;
     }
 
     if (!trimmedPhone && !trimmedEmail) {
-      Alert.alert('Error', 'Please enter at least a phone number or email address');
+      Alert.alert(t('alerts.error'), t('sharedLists.contacts.phoneOrEmailRequired'));
       return false;
     }
 
     // Basic email validation
     if (trimmedEmail && !trimmedEmail.includes('@')) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      Alert.alert(t('alerts.error'), t('sharedLists.contacts.invalidEmail'));
       return false;
     }
 
     return true;
-  };
+  }, [name, phone, email, t]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (!validateForm()) return;
 
     setIsSubmitting(true);
@@ -126,203 +114,240 @@ const AddContactModal: React.FC<AddContactModalProps> = ({
           source: 'manual',
         });
       }
-      onClose(true);
+      resetForm();
+      SheetManager.hide('add-contact');
     } catch (error) {
       console.error('Failed to save contact:', error);
       Alert.alert(
-        'Error',
-        `Failed to ${isEditing ? 'update' : 'add'} the contact. Please try again.`
+        t('alerts.error'),
+        isEditing
+          ? t('sharedLists.contacts.failedToUpdate')
+          : t('sharedLists.errors.failedToAddContact')
       );
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [validateForm, isEditing, editingContact, listId, name, phone, email, notes, resetForm, t]);
 
   const canSubmit = name.trim() && (phone.trim() || email.trim());
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={() => onClose()}
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[
+        styles.sheetBackground,
+        styles.container,
+        { backgroundColor: colors.cardBackground },
+      ]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
-      <KeyboardAvoidingView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => onClose()} disabled={isSubmitting}>
-            <Text size="base" color={colors.primary}>
-              Cancel
-            </Text>
-          </TouchableOpacity>
-          <Text size="lg" weight="semibold" color={colors.text}>
-            {isEditing ? 'Edit Contact' : 'Add Contact'}
+      {/* Header */}
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View style={styles.headerCenter}>
+          <Text weight="semibold" size="lg" style={{ color: colors.text }}>
+            {isEditing
+              ? t('sharedLists.contacts.editContact')
+              : t('sharedLists.contacts.addContact')}
           </Text>
-          <TouchableOpacity onPress={handleSubmit} disabled={isSubmitting || !canSubmit}>
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color={colors.primary} />
-            ) : (
-              <Text
-                size="base"
-                weight="semibold"
-                color={canSubmit ? colors.primary : colors.textMuted}
-              >
-                {isEditing ? 'Save' : 'Add'}
-              </Text>
-            )}
-          </TouchableOpacity>
+        </View>
+        <TouchableOpacity onPress={handleClose} style={styles.closeButton} disabled={isSubmitting}>
+          <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Form */}
+      <ScrollView
+        style={styles.scrollContent}
+        contentContainerStyle={styles.formContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Name Input */}
+        <View style={styles.inputGroup}>
+          <Text size="sm" weight="medium" style={[styles.label, { color: colors.textSecondary }]}>
+            {t('sharedLists.contacts.contactName')} *
+          </Text>
+          <View
+            style={[
+              styles.inputContainer,
+              { backgroundColor: colors.inputBackground, borderColor: colors.border },
+            ]}
+          >
+            <Ionicons
+              name="person-outline"
+              size={20}
+              color={colors.textMuted}
+              style={styles.inputIcon}
+            />
+            <TextInput
+              style={[styles.input, { color: colors.text }]}
+              value={name}
+              onChangeText={setName}
+              placeholder={t('sharedLists.contacts.contactNamePlaceholder')}
+              placeholderTextColor={colors.textMuted}
+              autoFocus
+              maxLength={150}
+              editable={!isSubmitting}
+            />
+          </View>
         </View>
 
-        {/* Form */}
-        <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
-          {/* Name Input */}
-          <View style={styles.inputGroup}>
-            <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.label}>
-              Name *
-            </Text>
-            <View
-              style={[
-                styles.inputContainer,
-                { backgroundColor: colors.inputBackground, borderColor: colors.border },
-              ]}
-            >
-              <Ionicons
-                name="person-outline"
-                size={20}
-                color={colors.textMuted}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={[styles.input, { color: colors.text }]}
-                value={name}
-                onChangeText={setName}
-                placeholder="Full name"
-                placeholderTextColor={colors.textMuted}
-                autoFocus
-                maxLength={150}
-                editable={!isSubmitting}
-              />
-            </View>
+        {/* Phone Input */}
+        <View style={styles.inputGroup}>
+          <Text size="sm" weight="medium" style={[styles.label, { color: colors.textSecondary }]}>
+            {t('sharedLists.contacts.contactPhone')}
+          </Text>
+          <View
+            style={[
+              styles.inputContainer,
+              { backgroundColor: colors.inputBackground, borderColor: colors.border },
+            ]}
+          >
+            <Ionicons
+              name="call-outline"
+              size={20}
+              color={colors.textMuted}
+              style={styles.inputIcon}
+            />
+            <TextInput
+              style={[styles.input, { color: colors.text }]}
+              value={phone}
+              onChangeText={setPhone}
+              placeholder={t('sharedLists.contacts.contactPhonePlaceholder')}
+              placeholderTextColor={colors.textMuted}
+              keyboardType="phone-pad"
+              maxLength={30}
+              editable={!isSubmitting}
+            />
           </View>
+        </View>
 
-          {/* Phone Input */}
-          <View style={styles.inputGroup}>
-            <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.label}>
-              Phone Number
-            </Text>
-            <View
-              style={[
-                styles.inputContainer,
-                { backgroundColor: colors.inputBackground, borderColor: colors.border },
-              ]}
-            >
-              <Ionicons
-                name="call-outline"
-                size={20}
-                color={colors.textMuted}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={[styles.input, { color: colors.text }]}
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="+1 234 567 8900"
-                placeholderTextColor={colors.textMuted}
-                keyboardType="phone-pad"
-                maxLength={30}
-                editable={!isSubmitting}
-              />
-            </View>
+        {/* Email Input */}
+        <View style={styles.inputGroup}>
+          <Text size="sm" weight="medium" style={[styles.label, { color: colors.textSecondary }]}>
+            {t('sharedLists.contacts.contactEmail')}
+          </Text>
+          <View
+            style={[
+              styles.inputContainer,
+              { backgroundColor: colors.inputBackground, borderColor: colors.border },
+            ]}
+          >
+            <Ionicons
+              name="mail-outline"
+              size={20}
+              color={colors.textMuted}
+              style={styles.inputIcon}
+            />
+            <TextInput
+              style={[styles.input, { color: colors.text }]}
+              value={email}
+              onChangeText={setEmail}
+              placeholder={t('sharedLists.contacts.contactEmailPlaceholder')}
+              placeholderTextColor={colors.textMuted}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              maxLength={255}
+              editable={!isSubmitting}
+            />
           </View>
+        </View>
 
-          {/* Email Input */}
-          <View style={styles.inputGroup}>
-            <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.label}>
-              Email Address
-            </Text>
-            <View
-              style={[
-                styles.inputContainer,
-                { backgroundColor: colors.inputBackground, borderColor: colors.border },
-              ]}
-            >
-              <Ionicons
-                name="mail-outline"
-                size={20}
-                color={colors.textMuted}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={[styles.input, { color: colors.text }]}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="email@example.com"
-                placeholderTextColor={colors.textMuted}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                maxLength={255}
-                editable={!isSubmitting}
-              />
-            </View>
+        {/* Notes Input */}
+        <View style={styles.inputGroup}>
+          <Text size="sm" weight="medium" style={[styles.label, { color: colors.textSecondary }]}>
+            {t('sharedLists.contacts.notes')}
+          </Text>
+          <View
+            style={[
+              styles.inputContainer,
+              styles.notesContainer,
+              { backgroundColor: colors.inputBackground, borderColor: colors.border },
+            ]}
+          >
+            <TextInput
+              style={[styles.input, styles.notesInput, { color: colors.text }]}
+              value={notes}
+              onChangeText={setNotes}
+              placeholder={t('sharedLists.contacts.notesPlaceholder')}
+              placeholderTextColor={colors.textMuted}
+              multiline
+              numberOfLines={3}
+              maxLength={500}
+              textAlignVertical="top"
+              editable={!isSubmitting}
+            />
           </View>
+        </View>
 
-          {/* Notes Input */}
-          <View style={styles.inputGroup}>
-            <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.label}>
-              Notes (optional)
-            </Text>
-            <View
-              style={[
-                styles.inputContainer,
-                styles.notesContainer,
-                { backgroundColor: colors.inputBackground, borderColor: colors.border },
-              ]}
-            >
-              <TextInput
-                style={[styles.input, styles.notesInput, { color: colors.text }]}
-                value={notes}
-                onChangeText={setNotes}
-                placeholder="Add a note about this contact..."
-                placeholderTextColor={colors.textMuted}
-                multiline
-                numberOfLines={3}
-                maxLength={500}
-                textAlignVertical="top"
-                editable={!isSubmitting}
-              />
-            </View>
-          </View>
+        {/* Hint */}
+        <View style={[styles.hint, { backgroundColor: isDark ? neutral[800] : neutral[100] }]}>
+          <Ionicons name="information-circle-outline" size={20} color={colors.textSecondary} />
+          <Text size="sm" style={{ color: colors.textSecondary, flex: 1, marginLeft: 8 }}>
+            {t('sharedLists.contacts.contactMethodRequired')}
+          </Text>
+        </View>
+      </ScrollView>
 
-          {/* Hint */}
-          <View style={[styles.hint, { backgroundColor: isDark ? neutral[800] : neutral[100] }]}>
-            <Ionicons name="information-circle-outline" size={20} color={colors.textSecondary} />
-            <Text size="sm" color={colors.textSecondary} style={styles.hintText}>
-              At least one contact method (phone or email) is required.
+      {/* Footer */}
+      <View style={[styles.footer, { borderTopColor: colors.border }]}>
+        <TouchableOpacity
+          style={[
+            styles.submitButton,
+            { backgroundColor: colors.primary },
+            (isSubmitting || !canSubmit) && { opacity: 0.7 },
+          ]}
+          onPress={handleSubmit}
+          disabled={isSubmitting || !canSubmit}
+        >
+          {isSubmitting ? (
+            <ActivityIndicator size="small" color={colors.buttonTextActive} />
+          ) : (
+            <Text size="lg" weight="semibold" color={colors.buttonTextActive}>
+              {isEditing ? t('common.save') : t('sharedLists.contacts.add')}
             </Text>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </Modal>
+          )}
+        </TouchableOpacity>
+      </View>
+    </ActionSheet>
   );
-};
+}
 
 const styles = StyleSheet.create({
+  sheetBackground: {
+    flex: 1,
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
+  },
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
+  },
   container: {
     flex: 1,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
+    justifyContent: 'center',
+    padding: 16,
     borderBottomWidth: 1,
+    position: 'relative',
   },
-  form: {
+  headerCenter: {
+    alignItems: 'center',
+  },
+  closeButton: {
+    padding: 4,
+    position: 'absolute',
+    right: 16,
+  },
+  scrollContent: {
     flex: 1,
+  },
+  formContent: {
     padding: spacingPixels[4],
   },
   inputGroup: {
@@ -360,13 +385,21 @@ const styles = StyleSheet.create({
     padding: spacingPixels[3],
     borderRadius: radiusPixels.md,
     gap: spacingPixels[2],
-    marginTop: spacingPixels[2],
-    marginBottom: spacingPixels[4],
   },
-  hintText: {
-    flex: 1,
-    lineHeight: 20,
+  footer: {
+    padding: spacingPixels[4],
+    borderTopWidth: 1,
+    paddingBottom: spacingPixels[4],
+  },
+  submitButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    gap: spacingPixels[2],
   },
 });
 
-export default AddContactModal;
+// Keep default export for backwards compatibility during migration
+export default AddContactActionSheet;

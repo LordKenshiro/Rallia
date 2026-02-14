@@ -16,6 +16,7 @@ export * from './usePlayer';
 export * from './useNotifications';
 export * from './useNotificationRealtime';
 export * from './useNotificationPreferences';
+export * from './useOrgNotifications';
 export * from './useCreateMatch';
 export * from './useUpdateMatch';
 export * from './useMatches';
@@ -28,6 +29,7 @@ export * from './usePublicMatches';
 export * from './usePublicMatchFilters';
 export * from './useRatingScoresForSport';
 export * from './useFacilitySearch';
+export * from './useFacilityDetail';
 export * from './usePreferredFacility';
 export * from './useFacilityReservationContact';
 export * from './useCourtAvailability';
@@ -38,9 +40,15 @@ export * from './useInviteToMatch';
 export * from './usePlayerReputation';
 export * from './useGroups';
 export * from './usePendingFeedbackCheck';
+export * from './useCommunities';
 export * from './useChat';
 export * from './useBlockedStatus';
 export * from './useFavoriteStatus';
+export * from './useSharedLists';
+export * from './usePlayPreferences';
+export * from './useFavoriteFacilities';
+export * from './useBooking';
+export * from './usePlayerBookingFilters';
 
 // Platform-specific exports - Metro resolves .native.ts for React Native builds
 // Web bundlers will use the stub .ts files which throw helpful errors at runtime

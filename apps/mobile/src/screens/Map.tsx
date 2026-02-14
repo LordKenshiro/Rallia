@@ -30,7 +30,7 @@ const Map = () => {
           onPress={handleClose}
           activeOpacity={0.7}
         >
-          <Ionicons name="close" size={24} color={colors.text} />
+          <Ionicons name="close-outline" size={24} color={colors.text} />
         </TouchableOpacity>
       </View>
     </SafeAreaView>

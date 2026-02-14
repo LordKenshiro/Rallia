@@ -3,18 +3,13 @@
  * A styled bottom sheet modal for member action options
  */
 
-import React from 'react';
-import {
-  View,
-  Modal,
-  TouchableOpacity,
-  StyleSheet,
-  TouchableWithoutFeedback,
-  Image,
-} from 'react-native';
+import React, { useCallback } from 'react';
+import { View, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
+import { radiusPixels, spacingPixels } from '@rallia/design-system';
 
 interface OptionItem {
   id: string;
@@ -32,174 +27,169 @@ interface MemberInfo {
   playerId?: string;
 }
 
-interface MemberOptionsModalProps {
-  visible: boolean;
-  onClose: () => void;
-  member: MemberInfo | null;
-  options: OptionItem[];
-  onAvatarPress?: (playerId: string) => void;
-}
+export function MemberOptionsActionSheet({ payload }: SheetProps<'member-options'>) {
+  const member = payload?.member ?? null;
+  const options = payload?.options ?? [];
+  const onAvatarPress = payload?.onAvatarPress;
 
-export function MemberOptionsModal({
-  visible,
-  onClose,
-  member,
-  options,
-  onAvatarPress,
-}: MemberOptionsModalProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
+
+  const handleClose = useCallback(() => {
+    SheetManager.hide('member-options');
+  }, []);
 
   if (!member) return null;
 
   return (
-    <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.overlay}>
-          <TouchableWithoutFeedback>
-            <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
-              {/* Member Header */}
-              <View style={[styles.memberHeader, { borderBottomColor: colors.border }]}>
-                <TouchableOpacity 
-                  style={[styles.avatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}
-                  onPress={() => {
-                    if (member.playerId && onAvatarPress) {
-                      onClose();
-                      onAvatarPress(member.playerId);
-                    }
-                  }}
-                  activeOpacity={0.7}
-                  disabled={!member.playerId || !onAvatarPress}
-                >
-                  {member.profilePictureUrl ? (
-                    <Image source={{ uri: member.profilePictureUrl }} style={styles.avatarImage} />
-                  ) : (
-                    <Ionicons name="person" size={32} color={colors.textMuted} />
-                  )}
-                </TouchableOpacity>
-                <View style={styles.memberInfo}>
-                  <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-                    {member.name}
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+    >
+      <View style={styles.container}>
+        {/* Member Header */}
+        <View style={[styles.memberHeader, { borderBottomColor: colors.border }]}>
+          <TouchableOpacity
+            style={[styles.avatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}
+            onPress={() => {
+              if (member.playerId && onAvatarPress) {
+                handleClose();
+                onAvatarPress(member.playerId);
+              }
+            }}
+            activeOpacity={0.7}
+            disabled={!member.playerId || !onAvatarPress}
+          >
+            {member.profilePictureUrl ? (
+              <Image source={{ uri: member.profilePictureUrl }} style={styles.avatarImage} />
+            ) : (
+              <Ionicons name="person-outline" size={32} color={colors.textMuted} />
+            )}
+          </TouchableOpacity>
+          <View style={styles.memberInfo}>
+            <Text weight="semibold" size="lg" style={{ color: colors.text }}>
+              {member.name}
+            </Text>
+            <View style={styles.badges}>
+              {member.role === 'moderator' && (
+                <View style={[styles.badge, { backgroundColor: isDark ? '#FF9500' : '#FFF3E0' }]}>
+                  <Text size="xs" style={{ color: isDark ? '#FFFFFF' : '#FF9500' }}>
+                    {t('groups.moderator')}
                   </Text>
-                  <View style={styles.badges}>
-                    {member.role === 'moderator' && (
-                      <View
-                        style={[styles.badge, { backgroundColor: isDark ? '#FF9500' : '#FFF3E0' }]}
-                      >
-                        <Text size="xs" style={{ color: isDark ? '#FFFFFF' : '#FF9500' }}>
-                          Moderator
-                        </Text>
-                      </View>
-                    )}
-                    {member.isCreator && (
-                      <View
-                        style={[
-                          styles.badge,
-                          { backgroundColor: isDark ? colors.primary : '#E8F5E9' },
-                        ]}
-                      >
-                        <Text size="xs" style={{ color: isDark ? '#FFFFFF' : colors.primary }}>
-                          Creator
-                        </Text>
-                      </View>
-                    )}
-                  </View>
                 </View>
-                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                  <Ionicons name="close" size={24} color={colors.text} />
-                </TouchableOpacity>
-              </View>
-
-              {/* Options List */}
-              <View style={styles.optionsList}>
-                {options.map((option, index) => (
-                  <TouchableOpacity
-                    key={option.id}
-                    style={[
-                      styles.optionItem,
-                      index < options.length - 1 && {
-                        borderBottomColor: colors.border,
-                        borderBottomWidth: StyleSheet.hairlineWidth,
-                      },
-                    ]}
-                    onPress={() => {
-                      onClose();
-                      option.onPress();
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <View
-                      style={[
-                        styles.optionIcon,
-                        {
-                          backgroundColor: option.destructive
-                            ? isDark
-                              ? 'rgba(255, 59, 48, 0.15)'
-                              : 'rgba(255, 59, 48, 0.1)'
-                            : isDark
-                              ? 'rgba(0, 122, 255, 0.15)'
-                              : 'rgba(0, 122, 255, 0.1)',
-                        },
-                      ]}
-                    >
-                      <Ionicons
-                        name={option.icon}
-                        size={22}
-                        color={option.destructive ? '#FF3B30' : colors.primary}
-                      />
-                    </View>
-                    <Text
-                      weight="medium"
-                      size="base"
-                      style={{
-                        color: option.destructive ? '#FF3B30' : colors.text,
-                        flex: 1,
-                      }}
-                    >
-                      {option.label}
-                    </Text>
-                    <Ionicons
-                      name="chevron-forward"
-                      size={20}
-                      color={option.destructive ? '#FF3B30' : colors.textMuted}
-                    />
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {/* Cancel Button */}
-              <TouchableOpacity
-                style={[styles.cancelButton, { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}
-                onPress={onClose}
-                activeOpacity={0.7}
-              >
-                <Text weight="semibold" size="base" style={{ color: colors.primary }}>
-                  Cancel
-                </Text>
-              </TouchableOpacity>
+              )}
+              {member.isCreator && (
+                <View
+                  style={[styles.badge, { backgroundColor: isDark ? colors.primary : '#E8F5E9' }]}
+                >
+                  <Text size="xs" style={{ color: isDark ? '#FFFFFF' : colors.primary }}>
+                    {t('groups.creator')}
+                  </Text>
+                </View>
+              )}
             </View>
-          </TouchableWithoutFeedback>
+          </View>
+          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
         </View>
-      </TouchableWithoutFeedback>
-    </Modal>
+
+        {/* Options List */}
+        <View style={styles.optionsList}>
+          {options.map((option, index) => (
+            <TouchableOpacity
+              key={option.id}
+              style={[
+                styles.optionItem,
+                index < options.length - 1 && {
+                  borderBottomColor: colors.border,
+                  borderBottomWidth: StyleSheet.hairlineWidth,
+                },
+              ]}
+              onPress={() => {
+                handleClose();
+                option.onPress();
+              }}
+              activeOpacity={0.7}
+            >
+              <View
+                style={[
+                  styles.optionIcon,
+                  {
+                    backgroundColor: option.destructive
+                      ? isDark
+                        ? 'rgba(255, 59, 48, 0.15)'
+                        : 'rgba(255, 59, 48, 0.1)'
+                      : isDark
+                        ? 'rgba(0, 122, 255, 0.15)'
+                        : 'rgba(0, 122, 255, 0.1)',
+                  },
+                ]}
+              >
+                <Ionicons
+                  name={option.icon as keyof typeof Ionicons.glyphMap}
+                  size={22}
+                  color={option.destructive ? '#FF3B30' : colors.primary}
+                />
+              </View>
+              <Text
+                weight="medium"
+                size="base"
+                style={{
+                  color: option.destructive ? '#FF3B30' : colors.text,
+                  flex: 1,
+                }}
+              >
+                {option.label}
+              </Text>
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={option.destructive ? '#FF3B30' : colors.textMuted}
+              />
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Cancel Button */}
+        <TouchableOpacity
+          style={[styles.cancelButton, { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}
+          onPress={handleClose}
+          activeOpacity={0.7}
+        >
+          <Text weight="semibold" size="base" style={{ color: colors.primary }}>
+            {t('common.cancel')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </ActionSheet>
   );
 }
 
+// Keep old export for backwards compatibility during migration
+export const MemberOptionsModal = MemberOptionsActionSheet;
+
 const styles = StyleSheet.create({
-  overlay: {
+  sheetBackground: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
+  },
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
   },
   container: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 34, // Safe area
+    paddingBottom: spacingPixels[4],
   },
   memberHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: spacingPixels[5],
+    paddingVertical: spacingPixels[4],
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   avatar: {
@@ -232,8 +222,8 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   optionsList: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[2],
   },
   optionItem: {
     flexDirection: 'row',
@@ -250,10 +240,10 @@ const styles = StyleSheet.create({
     marginRight: 14,
   },
   cancelButton: {
-    marginHorizontal: 16,
-    marginTop: 8,
-    paddingVertical: 14,
-    borderRadius: 12,
+    marginHorizontal: spacingPixels[4],
+    marginTop: spacingPixels[2],
+    paddingVertical: spacingPixels[3.5],
+    borderRadius: radiusPixels.lg,
     alignItems: 'center',
   },
 });

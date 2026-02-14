@@ -244,7 +244,11 @@ export function PreOnboardingScreen() {
       <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
         {currentStep > 1 ? (
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={24} color={isDark ? neutral[300] : neutral[600]} />
+            <Ionicons
+              name="chevron-back-outline"
+              size={24}
+              color={isDark ? neutral[300] : neutral[600]}
+            />
           </TouchableOpacity>
         ) : (
           <View style={styles.backButtonPlaceholder} />

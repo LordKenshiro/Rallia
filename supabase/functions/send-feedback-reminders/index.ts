@@ -5,23 +5,7 @@
  * 1. Sends initial feedback requests 1 hour after match end
  * 2. Sends reminder notifications 24 hours after match end (for those who haven't completed feedback)
  *
- * Triggered hourly by cron-job.org
- *
- * ## Cron Job Configuration (cron-job.org)
- *
- * 1. Create a new cron job with the following settings:
- *    - URL: https://<project-ref>.supabase.co/functions/v1/send-feedback-reminders
- *    - Method: POST
- *    - Schedule: `0 * * * *` (every hour at minute 0)
- *
- * 2. Add the following request headers:
- *    - Content-Type: application/json
- *    - x-cron-secret: <your-cron-secret>
- *
- * 3. Environment variables required (set in Supabase Dashboard):
- *    - SUPABASE_URL: Your Supabase project URL
- *    - SUPABASE_SERVICE_ROLE_KEY: Service role key for admin access
- *    - CRON_SECRET: Secret to authenticate cron requests
+ * Triggered hourly by pg_cron
  *
  * ## Response Format
  *
@@ -103,7 +87,6 @@ const BATCH_SIZE = 100;
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const cronSecret = Deno.env.get('CRON_SECRET');
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -460,27 +443,22 @@ Deno.serve(async req => {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-cron-secret',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       },
     });
   }
 
-  // Verify cron secret
-  const providedSecret = req.headers.get('x-cron-secret');
-  if (!cronSecret) {
-    console.error('CRON_SECRET environment variable not set');
-    return new Response(JSON.stringify({ error: 'Server configuration error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  if (providedSecret !== cronSecret) {
-    console.warn('Invalid cron secret provided');
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  // Bearer auth with anon key (staging/prod). When no key is configured (e.g. local --no-verify-jwt), skip validation.
+  const expectedAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+  if (expectedAnonKey) {
+    const authHeader = req.headers.get('Authorization');
+    const token = authHeader?.replace(/^Bearer\s+/i, '').trim();
+    if (!token || token !== expectedAnonKey) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
   }
 
   console.log('Starting feedback reminder job...');

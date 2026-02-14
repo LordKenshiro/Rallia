@@ -46,6 +46,7 @@ function groupByCategory(): Record<NotificationCategory, ExtendedNotificationTyp
     match: [],
     social: [],
     system: [],
+    organization: [], // Organization notifications are managed separately in the web dashboard
   };
 
   for (const [type, category] of Object.entries(NOTIFICATION_TYPE_CATEGORIES)) {
@@ -77,8 +78,11 @@ const PreferenceToggle: React.FC<PreferenceToggleProps> = ({
   useEffect(() => {
     if (enabled !== expectedValueRef.current) {
       // External value changed unexpectedly (error rollback or external update)
-      setLocalValue(enabled);
-      expectedValueRef.current = enabled;
+      // Use setTimeout to avoid calling setState synchronously within effect
+      setTimeout(() => {
+        setLocalValue(enabled);
+        expectedValueRef.current = enabled;
+      }, 0);
     }
   }, [enabled]);
 
@@ -279,11 +283,12 @@ const NotificationPreferencesScreen: React.FC = () => {
   const categoryGroups = useMemo(() => groupByCategory(), []);
 
   // Translated labels
-  const categoryLabels = useMemo(
+  const categoryLabels: Record<NotificationCategory, string> = useMemo(
     () => ({
       match: t('notifications.categories.match'),
       social: t('notifications.categories.social'),
       system: t('notifications.categories.system'),
+      organization: t('notifications.categories.organization'),
     }),
     [t]
   );
@@ -310,8 +315,12 @@ const NotificationPreferencesScreen: React.FC = () => {
         match_updated: t('notifications.types.match_updated'),
         match_starting_soon: t('notifications.types.match_starting_soon'),
         match_completed: t('notifications.types.match_completed'),
+        match_new_available: t('notifications.types.match_new_available'),
         player_kicked: t('notifications.types.player_kicked'),
         player_left: t('notifications.types.player_left'),
+        feedback_request: t('notifications.types.feedback_request'),
+        feedback_reminder: t('notifications.types.feedback_reminder'),
+        score_confirmation: t('notifications.types.score_confirmation'),
         // Social category
         chat: t('notifications.types.chat'),
         new_message: t('notifications.types.new_message'),

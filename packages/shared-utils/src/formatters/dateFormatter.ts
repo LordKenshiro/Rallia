@@ -4,6 +4,8 @@
  * Utilities for formatting dates and times
  */
 
+import { TranslationKey } from '@rallia/shared-translations';
+
 /**
  * Format date to readable string (e.g., "January 15, 2025")
  */
@@ -409,7 +411,7 @@ export interface IntuitiveDateResult {
   /** The type of date display used */
   type: IntuitiveDateType;
   /** Translation key for Today/Tomorrow (null for weekday/date types) */
-  translationKey: string | null;
+  translationKey: TranslationKey | null;
   /** The formatted date string (weekday name or "Month Day") */
   formattedDate: string;
   /** The full display string (combined label + time if provided) */

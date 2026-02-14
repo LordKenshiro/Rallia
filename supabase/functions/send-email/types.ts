@@ -33,6 +33,7 @@ export interface InvitationRecord {
   source?: InviteSource | null;
   inviter_id: string;
   invited_user_id?: string | null;
+  organization_id?: string | null;
   role: AppRole;
   admin_role?: AdminRole | null;
   status?: InviteStatus;
@@ -73,6 +74,8 @@ export interface InvitationEmailPayload {
   signUpUrl: string;
   inviterName: string;
   expiresAt: string;
+  organizationName?: string;
+  orgRole?: string;
 }
 
 // Processed payload for email rendering (after computing missing fields)

@@ -12,7 +12,7 @@ import { useState } from 'react';
 type OrganizationNature = Enums<'organization_nature_enum'>;
 type OrganizationType = Enums<'organization_type_enum'>;
 type Country = Enums<'country_enum'>;
-type Role = Enums<'role_enum'>;
+type OrganizationMemberRole = Enums<'member_role'>;
 
 export function OrganizationOnboardingForm() {
   const t = useTranslations('onboarding');
@@ -30,7 +30,7 @@ export function OrganizationOnboardingForm() {
     type: 'club' as OrganizationType,
     description: '',
     website: '',
-    role: 'owner' as Role,
+    role: 'owner' as OrganizationMemberRole,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);

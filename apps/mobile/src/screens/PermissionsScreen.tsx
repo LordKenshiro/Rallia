@@ -33,13 +33,14 @@ import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils'
 // Permission imports
 import * as Notifications from 'expo-notifications';
 import * as Location from 'expo-location';
-import * as Calendar from 'expo-calendar';
 import * as ImagePicker from 'expo-image-picker';
+import * as Contacts from 'expo-contacts';
+import { Camera } from 'expo-camera';
 
 const BASE_WHITE = '#ffffff';
 
 // Permission types
-type PermissionType = 'notifications' | 'location' | 'calendar' | 'photos';
+type PermissionType = 'notifications' | 'location' | 'photos' | 'contacts' | 'camera';
 type PermissionStatus = 'granted' | 'denied' | 'undetermined' | 'loading';
 
 interface PermissionInfo {
@@ -56,8 +57,9 @@ const PERMISSION_CONFIG: Record<
 > = {
   notifications: { icon: 'notifications-outline', color: '#FF9500' },
   location: { icon: 'location-outline', color: '#007AFF' },
-  calendar: { icon: 'calendar-outline', color: '#34C759' },
   photos: { icon: 'images-outline', color: '#AF52DE' },
+  contacts: { icon: 'people-outline', color: '#5856D6' },
+  camera: { icon: 'camera-outline', color: '#FF2D55' },
 };
 
 function useColors() {
@@ -184,7 +186,7 @@ const PermissionRow: React.FC<PermissionRowProps> = ({
           </TouchableOpacity>
         ) : (
           <View style={[styles.grantedBadge, { backgroundColor: `${colors.success}20` }]}>
-            <Ionicons name="checkmark" size={16} color={colors.success} />
+            <Ionicons name="checkmark-outline" size={16} color={colors.success} />
           </View>
         )}
       </View>
@@ -193,36 +195,40 @@ const PermissionRow: React.FC<PermissionRowProps> = ({
 };
 
 const PermissionsScreen: React.FC = () => {
-  const { theme } = useTheme();
   const { t } = useTranslation();
   const colors = useColors();
 
   const [permissions, setPermissions] = useState<Record<PermissionType, PermissionStatus>>({
     notifications: 'loading',
     location: 'loading',
-    calendar: 'loading',
     photos: 'loading',
+    contacts: 'loading',
+    camera: 'loading',
   });
   const [isRequesting, setIsRequesting] = useState<PermissionType | null>(null);
 
   // Check all permissions on mount
   useEffect(() => {
     checkAllPermissions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkAllPermissions = async () => {
-    const [notifStatus, locationStatus, calendarStatus, photosStatus] = await Promise.all([
-      checkNotificationPermission(),
-      checkLocationPermission(),
-      checkCalendarPermission(),
-      checkPhotosPermission(),
-    ]);
+    const [notifStatus, locationStatus, photosStatus, contactsStatus, cameraStatus] =
+      await Promise.all([
+        checkNotificationPermission(),
+        checkLocationPermission(),
+        checkPhotosPermission(),
+        checkContactsPermission(),
+        checkCameraPermission(),
+      ]);
 
     setPermissions({
       notifications: notifStatus,
       location: locationStatus,
-      calendar: calendarStatus,
       photos: photosStatus,
+      contacts: contactsStatus,
+      camera: cameraStatus,
     });
   };
 
@@ -244,18 +250,27 @@ const PermissionsScreen: React.FC = () => {
     }
   };
 
-  const checkCalendarPermission = async (): Promise<PermissionStatus> => {
+  const checkPhotosPermission = async (): Promise<PermissionStatus> => {
     try {
-      const { status } = await Calendar.getCalendarPermissionsAsync();
+      const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
       return mapExpoStatus(status);
     } catch {
       return 'undetermined';
     }
   };
 
-  const checkPhotosPermission = async (): Promise<PermissionStatus> => {
+  const checkContactsPermission = async (): Promise<PermissionStatus> => {
     try {
-      const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
+      const { status } = await Contacts.getPermissionsAsync();
+      return mapExpoStatus(status);
+    } catch {
+      return 'undetermined';
+    }
+  };
+
+  const checkCameraPermission = async (): Promise<PermissionStatus> => {
+    try {
+      const { status } = await Camera.getCameraPermissionsAsync();
       return mapExpoStatus(status);
     } catch {
       return 'undetermined';
@@ -288,13 +303,18 @@ const PermissionsScreen: React.FC = () => {
           newStatus = mapExpoStatus(status);
           break;
         }
-        case 'calendar': {
-          const { status } = await Calendar.requestCalendarPermissionsAsync();
+        case 'photos': {
+          const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
           newStatus = mapExpoStatus(status);
           break;
         }
-        case 'photos': {
-          const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        case 'contacts': {
+          const { status } = await Contacts.requestPermissionsAsync();
+          newStatus = mapExpoStatus(status);
+          break;
+        }
+        case 'camera': {
+          const { status } = await Camera.requestCameraPermissionsAsync();
           newStatus = mapExpoStatus(status);
           break;
         }
@@ -325,11 +345,13 @@ const PermissionsScreen: React.FC = () => {
 
   const permissionList: PermissionInfo[] = useMemo(
     () =>
-      (['notifications', 'location', 'calendar', 'photos'] as PermissionType[]).map(type => ({
-        type,
-        status: permissions[type],
-        ...PERMISSION_CONFIG[type],
-      })),
+      (['notifications', 'location', 'photos', 'contacts', 'camera'] as PermissionType[]).map(
+        type => ({
+          type,
+          status: permissions[type],
+          ...PERMISSION_CONFIG[type],
+        })
+      ),
     [permissions]
   );
 

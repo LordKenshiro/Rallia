@@ -4,7 +4,7 @@
  * This context manages:
  * 1. Splash animation completion state
  * 2. First-time pre-onboarding state (determines navigation flow)
- * 3. Requesting native permissions (Notifications, Calendar) after pre-onboarding
+ * 3. Requesting native permissions (Notifications) after pre-onboarding
  *
  * Note: Location permission is now handled within the pre-onboarding wizard (step 3),
  * so it's NOT requested here after the flow completes.
@@ -55,6 +55,8 @@ interface OverlayContextType {
   isSportSelectionComplete: boolean;
   /** Handle sport selection completion */
   onSportSelectionComplete: (orderedSports: OverlaySport[]) => void;
+  /** Whether permissions have been handled (requested or skipped) */
+  permissionsHandled: boolean;
 }
 
 // =============================================================================
@@ -74,12 +76,10 @@ interface OverlayProviderProps {
 export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) => {
   // Permission handling
   // Note: Location permission is handled in the pre-onboarding wizard (step 3),
-  // so we only request notifications and calendar here
+  // so we only request notifications here
   const {
     shouldShowNotificationOverlay,
-    shouldShowCalendarOverlay,
     requestNotificationPermission,
-    requestCalendarPermission,
     loading: permissionsLoading,
   } = usePermissions();
 
@@ -90,6 +90,7 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
   const [isSplashComplete, setIsSplashComplete] = useState(false);
   const [isSportSelectionComplete, setIsSportSelectionComplete] = useState(false);
   const [hasCheckedSportSelection, setHasCheckedSportSelection] = useState(false);
+  const [permissionsHandled, setPermissionsHandled] = useState(false);
 
   // Track if we've already requested permissions this session
   const hasRequestedPermissions = useRef(false);
@@ -158,21 +159,8 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
           await new Promise(resolve => setTimeout(resolve, ANIMATION_DELAYS.OVERLAY_STAGGER));
         }
 
-        // Note: Location permission is now handled in the pre-onboarding wizard (step 3)
-        // so we skip it here
-
-        // Request calendar permission if needed
-        if (shouldShowCalendarOverlay) {
-          Logger.logNavigation('request_native_permission', {
-            permission: 'calendar',
-            trigger: 'post_preonboarding',
-          });
-          const calendarGranted = await requestCalendarPermission();
-          Logger.logUserAction('permission_result', {
-            permission: 'calendar',
-            granted: calendarGranted,
-          });
-        }
+        // Mark permissions as handled
+        setPermissionsHandled(true);
       };
 
       requestPermissions();
@@ -183,9 +171,7 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
     isSportSelectionComplete,
     permissionsLoading,
     shouldShowNotificationOverlay,
-    shouldShowCalendarOverlay,
     requestNotificationPermission,
-    requestCalendarPermission,
   ]);
 
   // ==========================================================================
@@ -230,6 +216,7 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
     isSplashComplete,
     isSportSelectionComplete,
     onSportSelectionComplete: handleSportSelectionComplete,
+    permissionsHandled,
   };
 
   // ==========================================================================

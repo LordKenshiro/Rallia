@@ -5,47 +5,17 @@
  * are available at the same time slot.
  */
 
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
+import { useThemeStyles, useTranslation, type TranslationKey } from '../../../hooks';
+import { useSport } from '../../../context';
+import { SportIcon } from '../../../components/SportIcon';
 import type { CourtOption } from '@rallia/shared-hooks';
-import type { TranslationKey } from '../../../hooks/useTranslation';
-
-// =============================================================================
-// TYPES
-// =============================================================================
-
-interface CourtSelectionSheetProps {
-  /** Whether the sheet is visible */
-  visible: boolean;
-  /** Available court options */
-  courts: CourtOption[];
-  /** Time slot label (e.g., "5:00 PM") */
-  timeLabel: string;
-  /** Called when user selects a court */
-  onSelect: (court: CourtOption) => void;
-  /** Called when user cancels/dismisses */
-  onCancel: () => void;
-  /** Theme colors */
-  colors: {
-    text: string;
-    textSecondary: string;
-    textMuted: string;
-    border: string;
-    buttonActive: string;
-    buttonInactive: string;
-    buttonTextActive: string;
-    cardBackground: string;
-    background: string;
-  };
-  /** Translation function */
-  t: (key: TranslationKey) => string;
-  /** Whether dark mode is active */
-  isDark: boolean;
-}
 
 // =============================================================================
 // COURT ITEM COMPONENT
@@ -54,18 +24,22 @@ interface CourtSelectionSheetProps {
 interface CourtItemProps {
   court: CourtOption;
   onPress: () => void;
-  colors: CourtSelectionSheetProps['colors'];
+  colors: {
+    text: string;
+    textMuted: string;
+    border: string;
+    buttonActive: string;
+    buttonInactive: string;
+  };
   t: (key: TranslationKey) => string;
 }
 
 const CourtItem: React.FC<CourtItemProps> = ({ court, onPress, colors, t }) => {
+  const { selectedSport } = useSport();
   // Display translated "Court X" if we have a court number, otherwise fallback to raw name
   const displayName =
     court.courtNumber !== undefined
-      ? t('matchCreation.booking.courtNumber' as TranslationKey).replace(
-          '{number}',
-          String(court.courtNumber)
-        )
+      ? t('matchCreation.booking.courtNumber').replace('{number}', String(court.courtNumber))
       : court.courtName;
 
   return (
@@ -81,7 +55,11 @@ const CourtItem: React.FC<CourtItemProps> = ({ court, onPress, colors, t }) => {
       activeOpacity={0.7}
     >
       <View style={[styles.courtIconContainer, { backgroundColor: `${colors.buttonActive}20` }]}>
-        <Ionicons name="tennisball-outline" size={20} color={colors.buttonActive} />
+        <SportIcon
+          sportName={selectedSport?.name ?? 'tennis'}
+          size={20}
+          color={colors.buttonActive}
+        />
       </View>
       <View style={styles.courtInfo}>
         <Text size="base" weight="medium" color={colors.text} numberOfLines={2}>
@@ -102,109 +80,122 @@ const CourtItem: React.FC<CourtItemProps> = ({ court, onPress, colors, t }) => {
 // MAIN COMPONENT
 // =============================================================================
 
-export const CourtSelectionSheet: React.FC<CourtSelectionSheetProps> = ({
-  visible,
-  courts,
-  timeLabel,
-  onSelect,
-  onCancel,
-  colors,
-  t,
-  isDark: _isDark,
-}) => {
-  const handleSelect = (court: CourtOption) => {
-    successHaptic();
-    onSelect(court);
-  };
+export function CourtSelectionActionSheet({ payload }: SheetProps<'court-selection'>) {
+  const courts = (payload?.courts ?? []) as CourtOption[];
+  const timeLabel = payload?.timeLabel ?? '';
+  const onSelect = payload?.onSelect;
+  const onCancel = payload?.onCancel;
 
-  const handleCancel = () => {
+  const { colors } = useThemeStyles();
+  const { t } = useTranslation();
+
+  const handleSelect = useCallback(
+    (court: CourtOption) => {
+      successHaptic();
+      onSelect?.(court);
+      SheetManager.hide('court-selection');
+    },
+    [onSelect]
+  );
+
+  const handleCancel = useCallback(() => {
     lightHaptic();
-    onCancel();
-  };
+    onCancel?.();
+    SheetManager.hide('court-selection');
+  }, [onCancel]);
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleCancel}>
-      <View style={styles.overlay}>
-        <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.headerContent}>
-              {/* Icon */}
-              <View style={[styles.iconContainer, { backgroundColor: `${colors.buttonActive}15` }]}>
-                <Ionicons name="calendar-outline" size={24} color={colors.buttonActive} />
-              </View>
-
-              {/* Title */}
-              <View style={styles.titleContainer}>
-                <Text size="lg" weight="bold" color={colors.text}>
-                  {t('matchCreation.booking.selectCourt' as TranslationKey)}
-                </Text>
-                <Text size="sm" color={colors.textMuted}>
-                  {timeLabel} • {courts.length}{' '}
-                  {courts.length === 1
-                    ? t('matchCreation.booking.courtAvailable' as TranslationKey)
-                    : t('matchCreation.booking.courtsAvailable' as TranslationKey)}
-                </Text>
-              </View>
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+    >
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            {/* Icon */}
+            <View style={[styles.iconContainer, { backgroundColor: `${colors.buttonActive}15` }]}>
+              <Ionicons name="calendar-outline" size={24} color={colors.buttonActive} />
             </View>
 
-            {/* Close button */}
-            <TouchableOpacity
-              onPress={handleCancel}
-              style={[styles.closeButton, { backgroundColor: colors.buttonInactive }]}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons name="close" size={20} color={colors.textMuted} />
-            </TouchableOpacity>
+            {/* Title */}
+            <View style={styles.titleContainer}>
+              <Text size="lg" weight="semibold" color={colors.text}>
+                {t('matchCreation.booking.selectCourt')}
+              </Text>
+              <Text size="sm" color={colors.textMuted}>
+                {timeLabel} • {courts.length}{' '}
+                {courts.length === 1
+                  ? t('matchCreation.booking.courtAvailable')
+                  : t('matchCreation.booking.courtsAvailable')}
+              </Text>
+            </View>
           </View>
 
-          {/* Court list */}
-          <ScrollView style={styles.courtList} showsVerticalScrollIndicator={false}>
-            {courts.map((court, index) => (
-              <CourtItem
-                key={`${court.facilityScheduleId}-${index}`}
-                court={court}
-                onPress={() => handleSelect(court)}
-                colors={colors}
-                t={t}
-              />
-            ))}
-          </ScrollView>
-
-          {/* Cancel Button */}
+          {/* Close button */}
           <TouchableOpacity
-            style={[styles.cancelButton, { backgroundColor: colors.buttonInactive }]}
             onPress={handleCancel}
-            activeOpacity={0.8}
+            style={[styles.closeButton, { backgroundColor: colors.buttonInactive }]}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Text size="base" weight="medium" color={colors.textSecondary}>
-              {t('common.cancel' as TranslationKey)}
-            </Text>
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
+
+        {/* Court list */}
+        <ScrollView
+          style={styles.courtList}
+          contentContainerStyle={styles.courtListContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {courts.map((court, index) => (
+            <CourtItem
+              key={`${court.facilityScheduleId}-${index}`}
+              court={court}
+              onPress={() => handleSelect(court)}
+              colors={colors}
+              t={t}
+            />
+          ))}
+        </ScrollView>
+
+        {/* Cancel Button */}
+        <TouchableOpacity
+          style={[styles.cancelButton, { backgroundColor: colors.buttonInactive }]}
+          onPress={handleCancel}
+          activeOpacity={0.8}
+        >
+          <Text size="base" weight="medium" color={colors.textSecondary}>
+            {t('common.cancel')}
+          </Text>
+        </TouchableOpacity>
       </View>
-    </Modal>
+    </ActionSheet>
   );
-};
+}
+
+// Keep old export for backwards compatibility during migration
+export const CourtSelectionSheet = CourtSelectionActionSheet;
 
 // =============================================================================
 // STYLES
 // =============================================================================
 
 const styles = StyleSheet.create({
-  overlay: {
+  sheetBackground: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacingPixels[4],
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
+  },
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
   },
   container: {
-    width: '100%',
-    maxWidth: 380,
-    maxHeight: '80%',
-    borderRadius: radiusPixels['2xl'],
-    overflow: 'hidden',
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -238,8 +229,10 @@ const styles = StyleSheet.create({
     marginLeft: spacingPixels[2],
   },
   courtList: {
+    flex: 1,
+  },
+  courtListContent: {
     paddingHorizontal: spacingPixels[4],
-    maxHeight: 300,
   },
   courtItem: {
     flexDirection: 'row',

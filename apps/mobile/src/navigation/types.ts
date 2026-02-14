@@ -40,10 +40,14 @@ export type RootStackParamList = {
   Permissions: undefined;
   Map: { focusLocation?: { lat: number; lng: number } } | undefined;
   RatingProofs: RatingProofsScreenParams;
+  IncomingReferenceRequests: undefined; // Incoming reference requests from other players
   GroupDetail: { groupId: string; groupName?: string }; // Group detail view
+  CommunityDetail: { communityId: string; communityName?: string }; // Community detail view
   GroupChatInfo: { conversationId: string }; // Group chat info/settings view
-  Chat: { conversationId: string; title?: string }; // Direct chat navigation
+  ChatConversation: { conversationId: string; title?: string }; // Direct chat navigation
   PlayedMatchDetail: { match: unknown }; // Played match detail view
+  MyBookings: undefined; // My Bookings screen (court bookings management)
+  BookingDetail: { bookingId: string }; // Booking detail screen (deep link / notification target)
 };
 
 // =============================================================================
@@ -101,7 +105,6 @@ export type CommunityStackParamList = {
  */
 export type ChatStackParamList = {
   Conversations: undefined;
-  ChatScreen: { conversationId: string; title?: string };
   ArchivedChats: undefined;
 };
 

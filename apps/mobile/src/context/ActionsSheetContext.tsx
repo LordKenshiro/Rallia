@@ -30,7 +30,7 @@ import type { MatchDetailData } from './MatchDetailSheetContext';
 // TYPES
 // =============================================================================
 
-export type ActionsSheetMode = 'auth' | 'onboarding' | 'actions';
+export type ActionsSheetMode = 'auth' | 'onboarding' | 'actions' | 'loading';
 
 interface ActionsSheetContextType {
   /** Open the Actions bottom sheet, computing initial mode based on auth state */
@@ -38,6 +38,9 @@ interface ActionsSheetContextType {
 
   /** Open the Actions bottom sheet in edit mode with pre-filled match data */
   openSheetForEdit: (match: MatchDetailData) => void;
+
+  /** Open the Actions bottom sheet directly to match creation (skips actions menu) */
+  openSheetForMatchCreation: () => void;
 
   /** Close the Actions bottom sheet */
   closeSheet: () => void;
@@ -62,6 +65,12 @@ interface ActionsSheetContextType {
 
   /** Clear the edit match data (call when closing sheet or completing edit) */
   clearEditMatch: () => void;
+
+  /** Flag to indicate we should open directly to match creation wizard */
+  shouldOpenMatchCreation: boolean;
+
+  /** Clear the shouldOpenMatchCreation flag after it's been consumed */
+  clearMatchCreationFlag: () => void;
 }
 
 // =============================================================================
@@ -89,11 +98,16 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
   // Edit match state - holds match data when editing
   const [editMatchData, setEditMatchData] = useState<MatchDetailData | null>(null);
 
+  // Flag to open directly to match creation wizard
+  const [shouldOpenMatchCreation, setShouldOpenMatchCreation] = useState(false);
+
+  // Refetch profile when auth state changes
   // Refetch profile when auth state changes
   useEffect(() => {
     if (session?.user) {
       refetch();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id, refetch]);
 
   /**
@@ -105,9 +119,14 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
       return 'auth';
     }
 
-    // Session exists but profile is still loading or not available = show onboarding
-    // This prevents showing actions before we know the user's onboarding status
-    if (profileLoading || !profile) {
+    // Session exists but profile is still loading = show loading (skeleton)
+    // Do not show onboarding until we know the user's onboarding status
+    if (profileLoading) {
+      return 'loading';
+    }
+
+    // Profile loaded but no profile row = new user, show onboarding
+    if (!profile) {
       return 'onboarding';
     }
 
@@ -119,6 +138,13 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
     // Fully onboarded = show actions
     return 'actions';
   }, [session?.user, profile, profileLoading]);
+
+  // When sheet is in loading mode and profile finishes loading, transition to the correct mode
+  useEffect(() => {
+    if (contentMode === 'loading' && !profileLoading) {
+      setContentMode(profile?.onboarding_completed ? 'actions' : 'onboarding');
+    }
+  }, [contentMode, profileLoading, profile?.onboarding_completed]);
 
   /**
    * Open the sheet, computing the appropriate initial mode
@@ -135,15 +161,44 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
    */
   const openSheetForEdit = useCallback((match: MatchDetailData) => {
     setEditMatchData(match);
+    setShouldOpenMatchCreation(false);
     setContentMode('actions'); // Always show actions mode when editing
     sheetRef.current?.present();
   }, []);
+
+  /**
+   * Open the sheet directly to match creation wizard (skips actions menu)
+   */
+  const openSheetForMatchCreation = useCallback(() => {
+    const mode = computeInitialMode();
+
+    // If user is not authenticated or not onboarded, show the appropriate screen first
+    if (mode !== 'actions') {
+      setContentMode(mode);
+      setShouldOpenMatchCreation(false);
+      sheetRef.current?.present();
+      return;
+    }
+
+    // User is authenticated and onboarded - open directly to match creation
+    setEditMatchData(null);
+    setShouldOpenMatchCreation(true);
+    setContentMode('actions');
+    sheetRef.current?.present();
+  }, [computeInitialMode]);
 
   /**
    * Clear the edit match data
    */
   const clearEditMatch = useCallback(() => {
     setEditMatchData(null);
+  }, []);
+
+  /**
+   * Clear the shouldOpenMatchCreation flag (called by ActionsBottomSheet after consuming it)
+   */
+  const clearMatchCreationFlag = useCallback(() => {
+    setShouldOpenMatchCreation(false);
   }, []);
 
   /**
@@ -174,6 +229,7 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
   const contextValue: ActionsSheetContextType = {
     openSheet,
     openSheetForEdit,
+    openSheetForMatchCreation,
     closeSheet,
     contentMode,
     setContentMode,
@@ -182,6 +238,8 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
     refreshProfile,
     editMatchData,
     clearEditMatch,
+    shouldOpenMatchCreation,
+    clearMatchCreationFlag,
   };
 
   return (

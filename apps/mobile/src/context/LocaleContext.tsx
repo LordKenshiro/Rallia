@@ -15,7 +15,7 @@ import {
   defaultLocale,
   isValidLocale,
 } from '@rallia/shared-translations';
-import { supabase } from '@rallia/shared-services';
+import { supabase } from '../lib/supabase';
 import { initI18n, changeLanguage, getDeviceLocale } from '../i18n';
 
 const LOCALE_STORAGE_KEY = '@rallia/locale';
@@ -53,22 +53,36 @@ export function LocaleProvider({ children }: LocaleProviderProps) {
   const currentUserIdRef = useRef<string | null>(null);
 
   /**
-   * Sync the current locale to the database for server-side notifications
+   * Sync the current locale to the database and to auth user_metadata.
+   * Profile preferred_locale is used for server-side notifications; auth user_metadata.locale
+   * is used by Supabase auth email templates (OTP/magic link) so the next email is in the right language.
    */
   const syncLocaleToDatabase = useCallback(
     async (userId: string) => {
       if (!userId) return;
 
       try {
-        const { error } = await supabase
+        const { error: profileError } = await supabase
           .from('profile')
           .update({ preferred_locale: locale })
           .eq('id', userId);
 
-        if (error) {
-          console.error('Failed to sync locale to database:', error);
+        if (profileError) {
+          console.error('Failed to sync locale to database:', profileError);
         } else {
           currentUserIdRef.current = userId;
+        }
+
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session) {
+          const { error: authError } = await supabase.auth.updateUser({
+            data: { locale },
+          });
+          if (authError) {
+            console.error('Failed to sync locale to auth user_metadata:', authError);
+          }
         }
       } catch (error) {
         console.error('Failed to sync locale to database:', error);
@@ -123,15 +137,33 @@ export function LocaleProvider({ children }: LocaleProviderProps) {
       setLocaleState(newLocale);
       setIsManuallySet(true);
 
-      // Sync to database if we have a user ID
-      if (currentUserIdRef.current) {
+      // Sync to profile and auth user_metadata for signed-in users (so notifications and next OTP email use this locale)
+      const userId =
+        currentUserIdRef.current ??
+        (await supabase.auth.getSession()).data.session?.user?.id ??
+        null;
+      if (userId) {
+        if (!currentUserIdRef.current) currentUserIdRef.current = userId;
+
         const { error } = await supabase
           .from('profile')
           .update({ preferred_locale: newLocale })
-          .eq('id', currentUserIdRef.current);
+          .eq('id', userId);
 
         if (error) {
           console.error('Failed to sync locale to database:', error);
+        }
+
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session) {
+          const { error: authError } = await supabase.auth.updateUser({
+            data: { locale: newLocale },
+          });
+          if (authError) {
+            console.error('Failed to sync locale to auth user_metadata:', authError);
+          }
         }
       }
     } catch (error) {
@@ -152,15 +184,33 @@ export function LocaleProvider({ children }: LocaleProviderProps) {
       setLocaleState(deviceLocale);
       setIsManuallySet(false);
 
-      // Sync to database if we have a user ID
-      if (currentUserIdRef.current) {
+      // Sync to profile and auth user_metadata for signed-in users
+      const userId =
+        currentUserIdRef.current ??
+        (await supabase.auth.getSession()).data.session?.user?.id ??
+        null;
+      if (userId) {
+        if (!currentUserIdRef.current) currentUserIdRef.current = userId;
+
         const { error } = await supabase
           .from('profile')
           .update({ preferred_locale: deviceLocale })
-          .eq('id', currentUserIdRef.current);
+          .eq('id', userId);
 
         if (error) {
           console.error('Failed to sync locale to database:', error);
+        }
+
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session) {
+          const { error: authError } = await supabase.auth.updateUser({
+            data: { locale: deviceLocale },
+          });
+          if (authError) {
+            console.error('Failed to sync locale to auth user_metadata:', authError);
+          }
         }
       }
     } catch (error) {

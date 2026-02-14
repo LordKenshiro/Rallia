@@ -1,7 +1,9 @@
 /**
  * Geo Utilities
- * Functions for geographic calculations
+ * Functions for geographic calculations and coverage zones
  */
+
+export { isValidCanadianPostalCode, isPostalCodeInGreaterMontreal } from './coverageZones';
 
 /**
  * Earth's radius in meters

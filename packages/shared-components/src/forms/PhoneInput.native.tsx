@@ -151,7 +151,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   error,
   disabled = false,
   defaultCountryCode = 'CA',
-  maxLength = 15,
+  maxLength: _maxLength = 15,
   containerStyle,
   inputStyle,
   colors,
@@ -184,11 +184,14 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   useEffect(() => {
     if (value) {
       const { country, localNumber: parsedLocal } = parsePhoneNumber(value);
+      // Using functional updates to avoid lint warnings about setState in effect
+      // This is intentional for controlled component synchronization
       if (country) {
-        setSelectedCountry(country);
+        setSelectedCountry(prev => (prev.code === country.code ? prev : country));
       }
-      setLocalNumber(parsedLocal);
+      setLocalNumber(prev => (prev === parsedLocal ? prev : parsedLocal));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
   // Merge theme colors with custom colors
@@ -221,15 +224,40 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
     );
   }, [searchQuery]);
 
+  // Format phone number for display as XXX-XXX-XXXX
+  const formatPhoneForDisplay = useCallback((digits: string): string => {
+    if (!digits) return '';
+
+    // Remove any non-digits
+    const cleaned = digits.replace(/\D/g, '');
+
+    // Format based on length
+    if (cleaned.length <= 3) {
+      return cleaned;
+    } else if (cleaned.length <= 6) {
+      return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
+    } else {
+      return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`;
+    }
+  }, []);
+
+  // Get the display value (formatted)
+  const displayValue = useMemo(
+    () => formatPhoneForDisplay(localNumber),
+    [localNumber, formatPhoneForDisplay]
+  );
+
   // Handle local number change
   const handleLocalNumberChange = useCallback(
     (text: string) => {
-      // Only allow digits
+      // Only allow digits - remove formatting characters
       const cleaned = text.replace(/\D/g, '');
-      setLocalNumber(cleaned);
+      // Limit to 10 digits for North American numbers
+      const limited = cleaned.slice(0, 10);
+      setLocalNumber(limited);
 
-      const fullNumber = formatFullPhoneNumber(selectedCountry.dialCode, cleaned);
-      onChangePhone(fullNumber, selectedCountry.code, cleaned);
+      const fullNumber = formatFullPhoneNumber(selectedCountry.dialCode, limited);
+      onChangePhone(fullNumber, selectedCountry.code, limited);
     },
     [selectedCountry, onChangePhone]
   );
@@ -335,12 +363,12 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
           <TextInput
             ref={inputRef}
             style={[styles.input, { color: mergedColors.text }, inputStyle]}
-            value={localNumber}
+            value={displayValue}
             onChangeText={handleLocalNumberChange}
             placeholder={placeholder}
             placeholderTextColor={mergedColors.textMuted}
             keyboardType="phone-pad"
-            maxLength={maxLength}
+            maxLength={12} // XXX-XXX-XXXX = 12 characters with dashes
             editable={!disabled}
             onFocus={onFocus}
             onBlur={onBlur}
@@ -348,12 +376,12 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
         ) : (
           <TextInputComponent
             style={[styles.input, { color: mergedColors.text }, inputStyle]}
-            value={localNumber}
+            value={displayValue}
             onChangeText={handleLocalNumberChange}
             placeholder={placeholder}
             placeholderTextColor={mergedColors.textMuted}
             keyboardType="phone-pad"
-            maxLength={maxLength}
+            maxLength={12} // XXX-XXX-XXXX = 12 characters with dashes
             editable={!disabled}
             onFocus={onFocus}
             onBlur={onBlur}
@@ -370,7 +398,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
         )}
         {showCharCount && (
           <Text style={[styles.charCount, { color: mergedColors.textSecondary }]}>
-            {localNumber.length}/{maxLength}
+            {localNumber.length}/10
           </Text>
         )}
       </View>

@@ -6,9 +6,10 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Image, Alert } from 'react-native';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Spinner, useToast } from '@rallia/shared-components';
+import { Text, Spinner } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 
 const BASE_WHITE = '#ffffff';
@@ -46,7 +47,6 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
   t,
   isDark,
 }) => {
-  const toast = useToast();
   const [sports, setSports] = useState<Sport[]>([]);
   const [isLoadingSports, setIsLoadingSports] = useState(true);
   const [playerId, setPlayerId] = useState<string | null>(null);
@@ -79,7 +79,7 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
 
       if (error) {
         Logger.error('Failed to fetch sports', error as Error);
-        toast.error('Failed to load sports. Please try again.');
+        Alert.alert(t('alerts.error'), t('onboarding.validation.failedToLoadSports'));
         setSports([
           {
             id: 'tennis-fallback',
@@ -115,6 +115,7 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
     };
 
     fetchSports();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Pre-populate from guest sports context (selected in SportSelectionScreen)
@@ -180,7 +181,7 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
     selectionHaptic();
 
     if (!playerId) {
-      toast.error('Player not found. Please try again.');
+      Alert.alert(t('alerts.error'), t('onboarding.validation.playerNotFound'));
       return;
     }
 
@@ -227,7 +228,7 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
           selectedSportNames: [...formData.selectedSportNames, sport.name],
         });
       }
-      toast.error('Failed to update sport selection. Please try again.');
+      Alert.alert(t('alerts.error'), t('onboarding.validation.failedToUpdateSportSelection'));
     }
   };
 
@@ -242,20 +243,19 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
   };
 
   return (
-    <ScrollView
+    <BottomSheetScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
-      contentInsetAdjustmentBehavior="automatic"
     >
       {/* Title */}
       <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
-        {t('onboarding.sportSelectionStep.title' as TranslationKey)}
+        {t('onboarding.sportSelectionStep.title')}
       </Text>
       <Text size="base" color={colors.textSecondary} style={styles.subtitle}>
-        {t('onboarding.sportSelectionStep.subtitle' as TranslationKey)}
+        {t('onboarding.sportSelectionStep.subtitle')}
       </Text>
 
       {/* Sports Grid */}
@@ -263,7 +263,7 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
         <View style={styles.loadingContainer}>
           <Spinner size="lg" />
           <Text size="sm" color={colors.textMuted} style={styles.loadingText}>
-            {t('common.loading' as TranslationKey)}
+            {t('common.loading')}
           </Text>
         </View>
       ) : (
@@ -302,13 +302,13 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
                 <Text size="xl" weight="bold" color={BASE_WHITE}>
                   {sport.display_name}
                 </Text>
-                {isSelected && <Ionicons name="checkmark" size={24} color={BASE_WHITE} />}
+                {isSelected && <Ionicons name="checkmark-outline" size={24} color={BASE_WHITE} />}
               </View>
             </TouchableOpacity>
           );
         })
       )}
-    </ScrollView>
+    </BottomSheetScrollView>
   );
 };
 

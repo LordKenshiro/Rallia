@@ -9,16 +9,16 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  TextInput,
   FlatList,
   Image,
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../../hooks';
+import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
 import { useAddScore } from './AddScoreContext';
 import { ContactPickerModal } from './ContactPickerModal';
+import { SearchBar } from '../../../../components/SearchBar';
 import type { SelectedPlayer } from './types';
 import { supabase } from '../../../../lib/supabase';
 
@@ -28,6 +28,7 @@ interface FindOpponentStepProps {
 
 export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const { formData, updateFormData, matchType } = useAddScore();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,7 +52,8 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
       // Use the specific foreign key hint for the player -> profile relationship
       const { data, error } = await supabase
         .from('player')
-        .select(`
+        .select(
+          `
           id,
           profile:profile!player_id_fkey (
             first_name,
@@ -59,7 +61,8 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
             display_name,
             profile_picture_url
           )
-        `)
+        `
+        )
         .limit(50);
 
       if (error) throw error;
@@ -68,33 +71,35 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
       const queryLower = query.toLowerCase();
       const filteredPlayers: SelectedPlayer[] = (data || [])
         .filter((p: unknown) => {
-          const player = p as { 
-            id: string; 
-            profile: { 
-              first_name?: string; 
-              last_name?: string; 
-              display_name?: string; 
+          const player = p as {
+            id: string;
+            profile: {
+              first_name?: string;
+              last_name?: string;
+              display_name?: string;
               profile_picture_url?: string;
             } | null;
           };
           if (!player.profile) return false;
-          
+
           const firstName = (player.profile.first_name || '').toLowerCase();
           const lastName = (player.profile.last_name || '').toLowerCase();
           const displayName = (player.profile.display_name || '').toLowerCase();
-          
-          return firstName.includes(queryLower) || 
-                 lastName.includes(queryLower) || 
-                 displayName.includes(queryLower);
+
+          return (
+            firstName.includes(queryLower) ||
+            lastName.includes(queryLower) ||
+            displayName.includes(queryLower)
+          );
         })
         .slice(0, 20)
         .map((p: unknown) => {
-          const player = p as { 
-            id: string; 
-            profile: { 
-              first_name?: string; 
-              last_name?: string; 
-              display_name?: string; 
+          const player = p as {
+            id: string;
+            profile: {
+              first_name?: string;
+              last_name?: string;
+              display_name?: string;
               profile_picture_url?: string;
             };
           };
@@ -116,43 +121,47 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
     }
   }, []);
 
-  const handleSelectPlayer = useCallback((player: SelectedPlayer) => {
-    setSelectedPlayers((prev) => {
-      // Check if already selected
-      if (prev.some((p) => p.id === player.id)) {
-        return prev.filter((p) => p.id !== player.id);
-      }
-      // For singles, only allow 1 opponent
-      if (matchType === 'single') {
-        return [player];
-      }
-      // For doubles, allow up to 3 opponents (you + 3 others = 4 players total)
-      if (prev.length < 3) {
-        return [...prev, player];
-      }
-      return prev;
-    });
-  }, [matchType]);
+  const handleSelectPlayer = useCallback(
+    (player: SelectedPlayer) => {
+      setSelectedPlayers(prev => {
+        // Check if already selected
+        if (prev.some(p => p.id === player.id)) {
+          return prev.filter(p => p.id !== player.id);
+        }
+        // For singles, only allow 1 opponent
+        if (matchType === 'single') {
+          return [player];
+        }
+        // For doubles, allow up to 3 opponents (you + 3 others = 4 players total)
+        if (prev.length < 3) {
+          return [...prev, player];
+        }
+        return prev;
+      });
+    },
+    [matchType]
+  );
 
   const handleAddFromContacts = useCallback(() => {
     setShowContactPicker(true);
   }, []);
 
-  const handleContactSelected = useCallback((player: SelectedPlayer) => {
-    handleSelectPlayer(player);
-  }, [handleSelectPlayer]);
+  const handleContactSelected = useCallback(
+    (player: SelectedPlayer) => {
+      handleSelectPlayer(player);
+    },
+    [handleSelectPlayer]
+  );
 
   const handleContinue = useCallback(() => {
     updateFormData({ opponents: selectedPlayers });
     onContinue();
   }, [selectedPlayers, updateFormData, onContinue]);
 
-  const isPlayerSelected = (playerId: string) =>
-    selectedPlayers.some((p) => p.id === playerId);
+  const isPlayerSelected = (playerId: string) => selectedPlayers.some(p => p.id === playerId);
 
-  const canContinue = matchType === 'single'
-    ? selectedPlayers.length >= 1
-    : selectedPlayers.length >= 3; // For doubles, need exactly 3 players (you + 3 others = 4 total)
+  const canContinue =
+    matchType === 'single' ? selectedPlayers.length >= 1 : selectedPlayers.length >= 3; // For doubles, need exactly 3 players (you + 3 others = 4 total)
 
   const renderPlayerItem = ({ item }: { item: SelectedPlayer }) => {
     const isSelected = isPlayerSelected(item.id);
@@ -162,7 +171,9 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
           styles.playerItem,
           {
             backgroundColor: isSelected
-              ? isDark ? 'rgba(64, 156, 255, 0.1)' : 'rgba(64, 156, 255, 0.1)'
+              ? isDark
+                ? 'rgba(64, 156, 255, 0.1)'
+                : 'rgba(64, 156, 255, 0.1)'
               : colors.cardBackground,
             borderColor: isSelected ? colors.primary : colors.border,
           },
@@ -174,7 +185,7 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
           {item.profilePictureUrl ? (
             <Image source={{ uri: item.profilePictureUrl }} style={styles.avatarImage} />
           ) : (
-            <Ionicons name="person" size={24} color={colors.textMuted} />
+            <Ionicons name="person-outline" size={24} color={colors.textMuted} />
           )}
         </View>
         <View style={styles.playerInfo}>
@@ -187,9 +198,7 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
             </Text>
           )}
         </View>
-        {isSelected && (
-          <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
-        )}
+        {isSelected && <Ionicons name="checkmark-circle" size={24} color={colors.primary} />}
       </TouchableOpacity>
     );
   };
@@ -198,55 +207,59 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Title */}
       <Text weight="bold" size="xl" style={[styles.title, { color: colors.text }]}>
-        {matchType === 'double' ? 'Find your opponents' : 'Find your opponent'}
+        {matchType === 'double'
+          ? t('addScore.findOpponent.titleDouble')
+          : t('addScore.findOpponent.title')}
       </Text>
       {matchType === 'double' && (
         <Text size="sm" style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Select 3 players (you + 3 others = 4 players for doubles)
+          {t('addScore.findOpponent.subtitle')}
         </Text>
       )}
 
       {/* Search input */}
-      <View style={[styles.searchContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-        <Ionicons name="search" size={20} color={colors.textMuted} />
-        <TextInput
-          style={[styles.searchInput, { color: colors.text }]}
-          placeholder="Search players"
-          placeholderTextColor={colors.textMuted}
-          value={searchQuery}
-          onChangeText={handleSearch}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => handleSearch('')}>
-            <Ionicons name="close-circle" size={20} color={colors.textMuted} />
-          </TouchableOpacity>
-        )}
-      </View>
+      <SearchBar
+        value={searchQuery}
+        onChangeText={handleSearch}
+        placeholder={t('addScore.findOpponent.searchPlaceholder')}
+        colors={colors}
+        style={styles.searchBarWrapper}
+      />
 
       {/* Selected players - shown below search bar */}
       {selectedPlayers.length > 0 && (
         <View style={styles.selectedPlayersRow}>
-          {selectedPlayers.map((player) => (
+          {selectedPlayers.map(player => (
             <TouchableOpacity
               key={player.id}
               style={styles.selectedPlayerChip}
               onPress={() => handleSelectPlayer(player)}
             >
               <View style={styles.selectedPlayerAvatarContainer}>
-                <View style={[styles.selectedPlayerAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+                <View
+                  style={[
+                    styles.selectedPlayerAvatar,
+                    { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
+                  ]}
+                >
                   {player.profilePictureUrl ? (
-                    <Image source={{ uri: player.profilePictureUrl }} style={styles.selectedAvatarImage} />
+                    <Image
+                      source={{ uri: player.profilePictureUrl }}
+                      style={styles.selectedAvatarImage}
+                    />
                   ) : (
-                    <Ionicons name="person" size={20} color={colors.textMuted} />
+                    <Ionicons name="person-outline" size={20} color={colors.textMuted} />
                   )}
                 </View>
                 <View style={[styles.removePlayerBadge, { backgroundColor: colors.primary }]}>
-                  <Ionicons name="close" size={10} color="#fff" />
+                  <Ionicons name="close-outline" size={10} color="#fff" />
                 </View>
               </View>
-              <Text size="sm" style={[styles.selectedPlayerName, { color: colors.text }]} numberOfLines={1}>
+              <Text
+                size="sm"
+                style={[styles.selectedPlayerName, { color: colors.text }]}
+                numberOfLines={1}
+              >
                 {player.firstName} {player.lastName || ''}
               </Text>
             </TouchableOpacity>
@@ -265,10 +278,10 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
           </View>
           <View style={styles.contactsTextContainer}>
             <Text weight="medium" style={{ color: colors.primary }}>
-              Add player
+              {t('addScore.findOpponent.addPlayer')}
             </Text>
             <Text size="sm" style={{ color: colors.textSecondary }}>
-              From Phone Contacts
+              {t('addScore.findOpponent.fromPhoneContacts')}
             </Text>
           </View>
         </TouchableOpacity>
@@ -282,26 +295,30 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
       ) : searchQuery.length < 2 ? (
         <View style={styles.emptyState}>
           <View style={styles.emptyIcon}>
-            <Ionicons name="search" size={64} color={colors.textMuted} />
+            <Ionicons name="search-outline" size={64} color={colors.textMuted} />
           </View>
           <Text style={{ color: colors.textSecondary, textAlign: 'center' }}>
-            Type the name of the player to find them on Rallia
+            {t('addScore.findOpponent.searchHint')}
           </Text>
         </View>
       ) : searchResults.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={{ color: colors.textSecondary, textAlign: 'center' }}>
-            No players found matching "{searchQuery}"
+            {t('addScore.findOpponent.noPlayersFound', { query: searchQuery })}
           </Text>
         </View>
       ) : (
         <View style={{ flex: 1 }}>
-          <Text size="xs" weight="medium" style={[styles.sectionHeader, { color: colors.textMuted }]}>
-            PLAYERS
+          <Text
+            size="xs"
+            weight="medium"
+            style={[styles.sectionHeader, { color: colors.textMuted }]}
+          >
+            {t('addScore.findOpponent.players')}
           </Text>
           <FlatList
             data={searchResults}
-            keyExtractor={(item) => item.id}
+            keyExtractor={item => item.id}
             renderItem={renderPlayerItem}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
@@ -343,19 +360,8 @@ const styles = StyleSheet.create({
   subtitle: {
     marginBottom: 16,
   },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
+  searchBarWrapper: {
     marginBottom: 16,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 12,
-    fontSize: 16,
   },
   addFromContactsButton: {
     flexDirection: 'row',

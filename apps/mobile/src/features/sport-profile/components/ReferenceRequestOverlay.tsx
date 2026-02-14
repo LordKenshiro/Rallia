@@ -1,26 +1,33 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  TextInput,
   Image,
   ActivityIndicator,
-  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Overlay, Text } from '@rallia/shared-components';
-import { COLORS } from '@rallia/shared-constants';
+import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import { Text } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
 import { selectionHaptic, mediumHaptic } from '../../../utils/haptics';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
+import { CertificationBadge } from '../../ratings/components';
+import { radiusPixels, spacingPixels } from '@rallia/design-system';
+import { SearchBar } from '../../../components/SearchBar';
 
 interface ReferenceRequestOverlayProps {
   visible: boolean;
   onClose: () => void;
   currentUserId: string;
   sportId: string;
+  /** Current user's rating score for this sport */
+  currentUserRatingScore?: number;
+  /** Current user's player_rating_score_id for this sport */
+  currentUserRatingScoreId?: string;
+  /** The rating system code (e.g., 'NTRP', 'DUPR') */
+  ratingSystemCode?: string;
   onSendRequests: (selectedPlayerIds: string[]) => Promise<void>;
 }
 
@@ -31,17 +38,45 @@ interface Player {
   display_name: string | null;
   profile_picture_url: string | null;
   rating: string | null;
+  ratingScore: number | null;
   isCertified: boolean;
+  playerRatingScoreId: string | null;
 }
 
-const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
-  visible,
-  onClose,
-  currentUserId,
-  sportId,
-  onSendRequests,
-}) => {
+// Interface for Supabase rating response
+interface RatingResponse {
+  id: string;
+  player_id: string;
+  source: string;
+  is_certified: boolean;
+  rating_score: {
+    id: string;
+    label: string;
+    value: number;
+    rating_system: {
+      id: string;
+      sport_id: string;
+      code: string;
+    }[];
+  }[];
+}
+
+// Minimum level thresholds for requesting references
+const MIN_LEVEL_THRESHOLDS: Record<string, number> = {
+  NTRP: 3.0,
+  DUPR: 3.5,
+};
+
+export function ReferenceRequestActionSheet({ payload }: SheetProps<'reference-request'>) {
+  const currentUserId = payload?.currentUserId || '';
+  const sportId = payload?.sportId || '';
+  const onClose = () => SheetManager.hide('reference-request');
+  const currentUserRatingScore = payload?.currentUserRatingScore;
+  const currentUserRatingScoreId = payload?.currentUserRatingScoreId;
+  const ratingSystemCode = payload?.ratingSystemCode;
+  const onSendRequests = payload?.onSendRequests;
   const { colors } = useThemeStyles();
+  const { t } = useTranslation();
   const [players, setPlayers] = useState<Player[]>([]);
   const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
   const [selectedPlayers, setSelectedPlayers] = useState<Set<string>>(new Set());
@@ -49,16 +84,10 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
 
-  // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
-
   useEffect(() => {
-    if (visible) {
-      fetchCertifiedPlayers();
-    }
+    fetchCertifiedPlayers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, currentUserId, sportId]);
+  }, [currentUserId, sportId]);
 
   useEffect(() => {
     // Filter players based on search query
@@ -76,67 +105,75 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
     }
   }, [searchQuery, players]);
 
-  // Trigger animations when overlay becomes visible
-  useEffect(() => {
-    if (visible) {
-      fadeAnim.setValue(0);
-      slideAnim.setValue(50);
-
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
+  // Get minimum level threshold for current rating system
+  const getMinLevelThreshold = (): number => {
+    if (ratingSystemCode && MIN_LEVEL_THRESHOLDS[ratingSystemCode]) {
+      return MIN_LEVEL_THRESHOLDS[ratingSystemCode];
     }
-  }, [visible, fadeAnim, slideAnim]);
+    // Default to NTRP threshold if unknown
+    return 3.0;
+  };
+
+  // Check if current user meets minimum level for requesting references
+  const canRequestReferences = (): boolean => {
+    if (!currentUserRatingScore) return false;
+    return currentUserRatingScore >= getMinLevelThreshold();
+  };
 
   const fetchCertifiedPlayers = async () => {
     try {
       setLoading(true);
 
-      // Step 1: Find all players with CERTIFIED ratings for this sport
+      // Step 1: Find all players with CERTIFIED ratings for this sport at same/higher level
       const { data: certifiedRatings, error: ratingsError } = await supabase
         .from('player_rating_score')
         .select(
           `
+          id,
           player_id,
           source,
           is_certified,
-          rating_score!player_rating_scores_rating_score_id_fkey (
+          badge_status,
+          rating_score:rating_score_id (
             id,
             label,
-            rating_system (
-              sport_id
+            value,
+            rating_system:rating_system_id (
+              id,
+              sport_id,
+              code
             )
           )
         `
         )
-        .eq('is_certified', true)
-        .neq('source', 'self_reported')
+        .or('is_certified.eq.true,badge_status.eq.certified')
         .neq('player_id', currentUserId); // Exclude current user
 
       if (ratingsError) throw ratingsError;
 
-      // Filter by sport and get unique player IDs
-      const sportCertifiedRatings =
-        certifiedRatings?.filter(
-          (rating: { rating_score: Array<{ rating_system: Array<{ sport_id: string }> }> }) => {
-            const ratingScoreArray = rating.rating_score;
-            const ratingSystemArray = ratingScoreArray?.[0]?.rating_system;
-            return ratingSystemArray?.[0]?.sport_id === sportId;
-          }
-        ) || [];
+      // Filter by sport and level (same or higher than current user)
+      const sportCertifiedRatings = ((certifiedRatings || []) as RatingResponse[]).filter(
+        rating => {
+          const ratingScore = Array.isArray(rating.rating_score)
+            ? rating.rating_score[0]
+            : rating.rating_score;
+          const ratingSystem = Array.isArray(ratingScore?.rating_system)
+            ? ratingScore?.rating_system[0]
+            : ratingScore?.rating_system;
 
-      const uniquePlayerIds = [
-        ...new Set(sportCertifiedRatings.map((r: { player_id: string }) => r.player_id)),
-      ];
+          // Must be same sport
+          if (ratingSystem?.sport_id !== sportId) return false;
+
+          // If current user has a rating, only show players at same or higher level
+          if (currentUserRatingScore && ratingScore?.value) {
+            return ratingScore.value >= currentUserRatingScore;
+          }
+
+          return true;
+        }
+      );
+
+      const uniquePlayerIds = [...new Set(sportCertifiedRatings.map(r => r.player_id))];
 
       if (uniquePlayerIds.length === 0) {
         setPlayers([]);
@@ -154,25 +191,31 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
       if (profilesError) throw profilesError;
 
       // Step 3: Map ratings by player_id (get certified rating)
-      const ratingsMap = new Map<string, { display_label: string; isCertified: boolean }>();
-      sportCertifiedRatings.forEach(
-        (rating: {
-          player_id: string;
-          source: string;
-          is_certified: boolean;
-          rating_score: unknown;
-        }) => {
-          const ratingScore = rating.rating_score as { label?: string };
-          const isCertified = rating.is_certified;
-
-          if (!ratingsMap.has(rating.player_id)) {
-            ratingsMap.set(rating.player_id, {
-              display_label: ratingScore?.label || '',
-              isCertified,
-            });
-          }
+      const ratingsMap = new Map<
+        string,
+        {
+          display_label: string;
+          ratingScore: number | null;
+          isCertified: boolean;
+          playerRatingScoreId: string;
         }
-      );
+      >();
+
+      sportCertifiedRatings.forEach(rating => {
+        const ratingScore = Array.isArray(rating.rating_score)
+          ? rating.rating_score[0]
+          : rating.rating_score;
+        const isCertified = rating.is_certified;
+
+        if (!ratingsMap.has(rating.player_id)) {
+          ratingsMap.set(rating.player_id, {
+            display_label: ratingScore?.label || '',
+            ratingScore: ratingScore?.value || null,
+            isCertified,
+            playerRatingScoreId: rating.id,
+          });
+        }
+      });
 
       // Step 4: Combine profiles with ratings
       const playersWithRatings: Player[] = (profiles || []).map(
@@ -191,10 +234,15 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
             display_name: profile.display_name,
             profile_picture_url: profile.profile_picture_url,
             rating: ratingInfo?.display_label || null,
+            ratingScore: ratingInfo?.ratingScore || null,
             isCertified: ratingInfo?.isCertified || false,
+            playerRatingScoreId: ratingInfo?.playerRatingScoreId || null,
           };
         }
       );
+
+      // Sort by rating score (highest first)
+      playersWithRatings.sort((a, b) => (b.ratingScore || 0) - (a.ratingScore || 0));
 
       setPlayers(playersWithRatings);
       setFilteredPlayers(playersWithRatings);
@@ -219,14 +267,15 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
   };
 
   const handleSendRequests = async () => {
-    if (selectedPlayers.size === 0) return;
+    if (selectedPlayers.size === 0 || sending || !userCanRequest) return;
 
     mediumHaptic();
     setSending(true);
     try {
-      await onSendRequests(Array.from(selectedPlayers));
+      await onSendRequests?.(Array.from(selectedPlayers));
       setSelectedPlayers(new Set());
       setSearchQuery('');
+      SheetManager.hide('reference-request');
     } catch (error) {
       Logger.error('Failed to send reference requests', error as Error, {
         count: selectedPlayers.size,
@@ -262,7 +311,7 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
             <View
               style={[styles.avatar, styles.avatarPlaceholder, { backgroundColor: colors.divider }]}
             >
-              <Ionicons name="person" size={24} color={colors.textMuted} />
+              <Ionicons name="person-outline" size={24} color={colors.textMuted} />
             </View>
           )}
           {isSelected && (
@@ -274,9 +323,14 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
 
         {/* Player Info */}
         <View style={styles.playerInfo}>
-          <Text style={[styles.playerName, { color: colors.text }]}>
-            {player.first_name} {player.last_name}
-          </Text>
+          <View style={styles.playerNameRow}>
+            <Text style={[styles.playerName, { color: colors.text }]}>
+              {player.first_name} {player.last_name}
+            </Text>
+            {player.isCertified && (
+              <CertificationBadge status="certified" size="sm" showLabel={false} />
+            )}
+          </View>
           {player.display_name && (
             <Text style={[styles.playerUsername, { color: colors.textMuted }]}>
               @{player.display_name}
@@ -296,70 +350,85 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
     );
   };
 
-  return (
-    <Overlay
-      visible={visible}
-      onClose={onClose}
-      type="bottom"
-      showBackButton={false}
-      showCloseButton={true}
-    >
-      <Animated.View
-        style={[
-          styles.container,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
-          },
-        ]}
-      >
-        {/* Title */}
-        <Text style={[styles.title, { color: colors.text }]}>
-          Request references for your current rating
-        </Text>
-        <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-          Request references allow you to certify your rating by asking other higher-rated or
-          certified players to confirm your declared rating
-        </Text>
+  // Check if user can request references (meets minimum level)
+  const userCanRequest = canRequestReferences();
+  const minLevel = getMinLevelThreshold();
 
-        {/* Search Bar */}
-        <View style={[styles.searchContainer, { backgroundColor: colors.inputBackground }]}>
-          <Ionicons name="search" size={20} color={colors.textMuted} style={styles.searchIcon} />
-          <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Search players..."
-            placeholderTextColor={colors.textMuted}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
-              <Ionicons name="close-circle" size={20} color={colors.textMuted} />
-            </TouchableOpacity>
-          )}
+  return (
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+    >
+      <View style={styles.modalContent}>
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={styles.headerCenter}>
+            <Text
+              weight="semibold"
+              size="lg"
+              style={{ color: colors.text }}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {t('profile.certification.referenceRequest.title')}
+            </Text>
+          </View>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
         </View>
 
-        {/* Players List */}
-        <ScrollView style={styles.playersList} showsVerticalScrollIndicator={false}>
+        {/* Scrollable Content */}
+        <ScrollView
+          style={styles.scrollContent}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={[styles.subtitle, { color: colors.textMuted }]}>
+            {t('profile.certification.referenceRequest.description')}
+          </Text>
+
+          {/* Minimum Level Warning (if user doesn't meet threshold) */}
+          {!userCanRequest && (
+            <View style={[styles.warningBox, { backgroundColor: '#FFF8E1' }]}>
+              <Ionicons name="information-circle" size={20} color={colors.warning} />
+              <Text style={[styles.warningText, { color: '#F57C00' }]}>
+                {t('profile.certification.referenceRequest.minimumLevelRequired', {
+                  level: minLevel,
+                })}
+              </Text>
+            </View>
+          )}
+
+          {/* Search Bar */}
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder={t('profile.certification.referenceRequest.searchPlaceholder')}
+            colors={colors}
+            style={styles.searchContainer}
+          />
+
+          {/* Players List */}
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
               <Text style={[styles.loadingText, { color: colors.textMuted }]}>
-                Loading certified players...
+                {t('common.loading')}
               </Text>
             </View>
           ) : filteredPlayers.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Ionicons name="people-outline" size={64} color={colors.textMuted} />
               <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-                No certified players found
+                {t('profile.certification.referenceRequest.noPlayersFound')}
               </Text>
               <Text style={[styles.emptySubtext, { color: colors.textMuted }]}>
                 {players.length === 0
-                  ? 'No players with certified ratings for this sport yet'
-                  : 'Try a different search term'}
+                  ? t('profile.certification.referenceRequest.noEligiblePlayers')
+                  : t('common.tryDifferentSearch')}
               </Text>
             </View>
           ) : (
@@ -369,71 +438,142 @@ const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
           )}
         </ScrollView>
 
-        {/* Send Requests Button */}
-        <TouchableOpacity
-          style={[
-            styles.sendButton,
-            { backgroundColor: colors.primary },
-            (selectedPlayers.size === 0 || sending) && [
-              styles.sendButtonDisabled,
-              { backgroundColor: colors.buttonInactive },
-            ],
-          ]}
-          onPress={handleSendRequests}
-          disabled={selectedPlayers.size === 0 || sending}
-          activeOpacity={0.8}
-        >
-          {sending ? (
-            <ActivityIndicator color={colors.primaryForeground} />
-          ) : (
-            <Text style={[styles.sendButtonText, { color: colors.primaryForeground }]}>
-              Send Requests{selectedPlayers.size > 0 ? ` (${selectedPlayers.size})` : ''}
-            </Text>
-          )}
-        </TouchableOpacity>
-      </Animated.View>
-    </Overlay>
+        {/* Sticky Footer */}
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              { backgroundColor: colors.primary },
+              (selectedPlayers.size === 0 || sending || !userCanRequest) && { opacity: 0.6 },
+            ]}
+            onPress={handleSendRequests}
+            disabled={selectedPlayers.size === 0 || sending || !userCanRequest}
+            activeOpacity={0.8}
+          >
+            {sending ? (
+              <ActivityIndicator color={colors.primaryForeground} />
+            ) : (
+              <Text weight="semibold" style={{ color: colors.primaryForeground }}>
+                {t('profile.certification.referenceRequest.sendRequest')}
+                {selectedPlayers.size > 0
+                  ? ` (${t('profile.certification.referenceRequest.selectedCount', { count: selectedPlayers.size })})`
+                  : ''}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </ActionSheet>
   );
+}
+
+// Keep old export for backwards compatibility during migration
+const ReferenceRequestOverlay: React.FC<ReferenceRequestOverlayProps> = ({
+  visible,
+  onClose,
+  currentUserId,
+  sportId,
+  currentUserRatingScore,
+  currentUserRatingScoreId,
+  ratingSystemCode,
+  onSendRequests,
+}) => {
+  useEffect(() => {
+    if (visible) {
+      SheetManager.show('reference-request', {
+        payload: {
+          currentUserId,
+          sportId,
+          currentUserRatingScore,
+          currentUserRatingScoreId,
+          ratingSystemCode,
+          onSendRequests,
+        },
+      });
+    }
+  }, [
+    visible,
+    currentUserId,
+    sportId,
+    currentUserRatingScore,
+    currentUserRatingScoreId,
+    ratingSystemCode,
+    onSendRequests,
+  ]);
+
+  useEffect(() => {
+    if (!visible) {
+      SheetManager.hide('reference-request');
+    }
+  }, [visible]);
+
+  return null;
 };
 
+export default ReferenceRequestOverlay;
+
 const styles = StyleSheet.create({
-  container: {
-    paddingVertical: 20,
-    maxHeight: '90%',
+  sheetBackground: {
+    flex: 1,
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 8,
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
+  },
+  modalContent: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacingPixels[4],
+    borderBottomWidth: 1,
+    position: 'relative',
+    minHeight: 56,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[12],
+  },
+  closeButton: {
+    padding: spacingPixels[1],
+    position: 'absolute',
+    right: spacingPixels[4],
+    zIndex: 1,
+  },
+  scrollContent: {
+    flex: 1,
+  },
+  content: {
+    padding: spacingPixels[4],
+    paddingBottom: spacingPixels[6],
   },
   subtitle: {
     fontSize: 14,
     textAlign: 'center',
-    marginBottom: 20,
-    paddingHorizontal: 20,
+    marginBottom: spacingPixels[5],
+    paddingHorizontal: spacingPixels[4],
     lineHeight: 20,
   },
-  searchContainer: {
+  warningBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 12,
-    paddingHorizontal: 12,
+    padding: 12,
+    borderRadius: 8,
     marginBottom: 16,
-    height: 48,
+    gap: 8,
   },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
+  warningText: {
+    fontSize: 14,
     flex: 1,
-    fontSize: 16,
   },
-  clearButton: {
-    padding: 4,
-  },
-  playersList: {
-    maxHeight: 400,
+  searchContainer: {
     marginBottom: 16,
   },
   playersGrid: {
@@ -473,10 +613,15 @@ const styles = StyleSheet.create({
   playerInfo: {
     flex: 1,
   },
+  playerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
+  },
   playerName: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 2,
   },
   playerUsername: {
     fontSize: 13,
@@ -490,28 +635,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  sendButton: {
-    borderRadius: 12,
-    paddingVertical: 16,
+  footer: {
+    padding: spacingPixels[4],
+    borderTopWidth: 1,
+  },
+  submitButton: {
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  sendButtonDisabled: {
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  sendButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    justifyContent: 'center',
+    padding: 14,
+    borderRadius: radiusPixels.lg,
   },
   loadingContainer: {
     flex: 1,
@@ -541,5 +674,3 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
 });
-
-export default ReferenceRequestOverlay;

@@ -1,28 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  TextInput,
-  Image,
-  ActivityIndicator,
-  Animated,
-} from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, StyleSheet, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Overlay, Text } from '@rallia/shared-components';
-import { COLORS } from '@rallia/shared-constants';
+import { Text } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
 import { selectionHaptic, mediumHaptic } from '../../../utils/haptics';
 import { useThemeStyles } from '../../../hooks';
-
-interface PeerRatingRequestOverlayProps {
-  visible: boolean;
-  onClose: () => void;
-  currentUserId: string;
-  sportId: string;
-  onSendRequests: (selectedPlayerIds: string[]) => Promise<void>;
-}
+import { radiusPixels, spacingPixels } from '@rallia/design-system';
+import { SearchBar } from '../../../components/SearchBar';
 
 interface Player {
   id: string;
@@ -33,13 +18,11 @@ interface Player {
   rating: string | null;
 }
 
-const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
-  visible,
-  onClose,
-  currentUserId,
-  sportId,
-  onSendRequests,
-}) => {
+function PeerRatingRequestOverlayComponent({ payload }: SheetProps<'peer-rating-request'>) {
+  const currentUserId = payload?.currentUserId ?? '';
+  const sportId = payload?.sportId ?? '';
+  const onSendRequests = payload?.onSendRequests;
+
   const { colors } = useThemeStyles();
   const [players, setPlayers] = useState<Player[]>([]);
   const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
@@ -47,55 +30,15 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
-  // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
+  const handleClose = useCallback(() => {
+    SheetManager.hide('peer-rating-request');
+  }, []);
 
-  useEffect(() => {
-    if (visible) {
-      fetchMatchedPlayers();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, currentUserId, sportId]);
+  const fetchMatchedPlayers = useCallback(async () => {
+    if (!currentUserId || !sportId) return;
 
-  useEffect(() => {
-    // Filter players based on search query
-    if (searchQuery.trim() === '') {
-      setFilteredPlayers(players);
-    } else {
-      const query = searchQuery.toLowerCase();
-      const filtered = players.filter(
-        player =>
-          `${player.first_name} ${player.last_name}`.toLowerCase().includes(query) ||
-          player.display_name?.toLowerCase().includes(query)
-      );
-      setFilteredPlayers(filtered);
-    }
-  }, [searchQuery, players]);
-
-  // Trigger animations when overlay becomes visible
-  useEffect(() => {
-    if (visible) {
-      fadeAnim.setValue(0);
-      slideAnim.setValue(50);
-
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible, fadeAnim, slideAnim]);
-
-  const fetchMatchedPlayers = async () => {
     try {
       setLoading(true);
 
@@ -216,7 +159,39 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentUserId, sportId]);
+
+  // Load data when sheet opens
+  const handleSheetOpen = useCallback(() => {
+    if (!hasLoaded && currentUserId && sportId) {
+      setHasLoaded(true);
+      fetchMatchedPlayers();
+    }
+  }, [hasLoaded, currentUserId, sportId, fetchMatchedPlayers]);
+
+  // Reset state when sheet closes
+  const handleSheetClose = useCallback(() => {
+    setHasLoaded(false);
+    setSelectedPlayers(new Set());
+    setSearchQuery('');
+    setPlayers([]);
+    setFilteredPlayers([]);
+  }, []);
+
+  useEffect(() => {
+    // Filter players based on search query
+    if (searchQuery.trim() === '') {
+      setFilteredPlayers(players);
+    } else {
+      const query = searchQuery.toLowerCase();
+      const filtered = players.filter(
+        player =>
+          `${player.first_name} ${player.last_name}`.toLowerCase().includes(query) ||
+          player.display_name?.toLowerCase().includes(query)
+      );
+      setFilteredPlayers(filtered);
+    }
+  }, [searchQuery, players]);
 
   const togglePlayerSelection = (playerId: string) => {
     selectionHaptic();
@@ -232,7 +207,7 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
   };
 
   const handleSendRequests = async () => {
-    if (selectedPlayers.size === 0) return;
+    if (selectedPlayers.size === 0 || !onSendRequests) return;
 
     mediumHaptic();
     setSending(true);
@@ -240,6 +215,7 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
       await onSendRequests(Array.from(selectedPlayers));
       setSelectedPlayers(new Set());
       setSearchQuery('');
+      handleClose();
     } catch (error) {
       Logger.error('Failed to send peer rating requests', error as Error, {
         selectedCount: selectedPlayers.size,
@@ -274,7 +250,7 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
             <View
               style={[styles.avatar, styles.avatarPlaceholder, { backgroundColor: colors.divider }]}
             >
-              <Ionicons name="person" size={24} color={colors.textMuted} />
+              <Ionicons name="person-outline" size={24} color={colors.textMuted} />
             </View>
           )}
           {isSelected && (
@@ -309,146 +285,157 @@ const PeerRatingRequestOverlay: React.FC<PeerRatingRequestOverlayProps> = ({
   };
 
   return (
-    <Overlay
-      visible={visible}
-      onClose={onClose}
-      type="bottom"
-      showBackButton={false}
-      showCloseButton={true}
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+      onBeforeShow={handleSheetOpen}
+      onClose={handleSheetClose}
     >
-      <Animated.View
-        style={[
-          styles.container,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
-          },
-        ]}
-      >
-        {/* Title */}
-        <Text style={[styles.title, { color: colors.text }]}>Request peer ratings</Text>
-        <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-          Request ratings from players you've competed with to validate your skill level
-        </Text>
-
-        {/* Search Bar */}
-        <View style={[styles.searchContainer, { backgroundColor: colors.inputBackground }]}>
-          <Ionicons name="search" size={20} color={colors.textMuted} style={styles.searchIcon} />
-          <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Search players..."
-            placeholderTextColor={colors.textMuted}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
-              <Ionicons name="close-circle" size={20} color={colors.textMuted} />
-            </TouchableOpacity>
-          )}
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={styles.headerPlaceholder} />
+          <Text weight="semibold" size="lg" style={{ color: colors.text }}>
+            Request peer ratings
+          </Text>
+          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
         </View>
 
-        {/* Players List */}
-        <ScrollView style={styles.playersList} showsVerticalScrollIndicator={false}>
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={[styles.loadingText, { color: colors.textMuted }]}>
-                Loading players...
-              </Text>
-            </View>
-          ) : filteredPlayers.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="people-outline" size={64} color={colors.textMuted} />
-              <Text style={[styles.emptyText, { color: colors.textMuted }]}>No players found</Text>
-              <Text style={[styles.emptySubtext, { color: colors.textMuted }]}>
-                {players.length === 0
-                  ? 'Complete matches to request peer ratings'
-                  : 'Try a different search term'}
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.playersGrid}>
-              {filteredPlayers.map(player => renderPlayerCard(player))}
-            </View>
-          )}
-        </ScrollView>
+        <View style={styles.content}>
+          {/* Subtitle */}
+          <Text style={[styles.subtitle, { color: colors.textMuted }]}>
+            Request ratings from players you've competed with to validate your skill level
+          </Text>
+
+          {/* Search Bar */}
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search players..."
+            colors={colors}
+            style={styles.searchContainer}
+          />
+
+          {/* Players List */}
+          <ScrollView style={styles.playersList} showsVerticalScrollIndicator={false}>
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={[styles.loadingText, { color: colors.textMuted }]}>
+                  Loading players...
+                </Text>
+              </View>
+            ) : filteredPlayers.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="people-outline" size={64} color={colors.textMuted} />
+                <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+                  No players found
+                </Text>
+                <Text style={[styles.emptySubtext, { color: colors.textMuted }]}>
+                  {players.length === 0
+                    ? 'Complete matches to request peer ratings'
+                    : 'Try a different search term'}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.playersGrid}>
+                {filteredPlayers.map(player => renderPlayerCard(player))}
+              </View>
+            )}
+          </ScrollView>
+        </View>
 
         {/* Send Requests Button */}
-        <TouchableOpacity
-          style={[
-            styles.sendButton,
-            { backgroundColor: colors.primary },
-            (selectedPlayers.size === 0 || sending) && [
-              styles.sendButtonDisabled,
-              { backgroundColor: colors.buttonInactive },
-            ],
-          ]}
-          onPress={handleSendRequests}
-          disabled={selectedPlayers.size === 0 || sending}
-          activeOpacity={0.8}
-        >
-          {sending ? (
-            <ActivityIndicator color={colors.primaryForeground} />
-          ) : (
-            <>
-              <Ionicons
-                name="paper-plane"
-                size={18}
-                color={colors.primaryForeground}
-                style={styles.sendIcon}
-              />
-              <Text style={[styles.sendButtonText, { color: colors.primaryForeground }]}>
-                Send {selectedPlayers.size > 0 ? `(${selectedPlayers.size})` : 'Requests'}
-              </Text>
-            </>
-          )}
-        </TouchableOpacity>
-      </Animated.View>
-    </Overlay>
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
+          <TouchableOpacity
+            style={[
+              styles.sendButton,
+              { backgroundColor: colors.primary },
+              (selectedPlayers.size === 0 || sending) && [
+                styles.sendButtonDisabled,
+                { backgroundColor: colors.buttonInactive },
+              ],
+            ]}
+            onPress={handleSendRequests}
+            disabled={selectedPlayers.size === 0 || sending}
+            activeOpacity={0.8}
+          >
+            {sending ? (
+              <ActivityIndicator color={colors.primaryForeground} />
+            ) : (
+              <>
+                <Ionicons
+                  name="paper-plane"
+                  size={18}
+                  color={colors.primaryForeground}
+                  style={styles.sendIcon}
+                />
+                <Text style={[styles.sendButtonText, { color: colors.primaryForeground }]}>
+                  Send {selectedPlayers.size > 0 ? `(${selectedPlayers.size})` : 'Requests'}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </ActionSheet>
   );
-};
+}
+
+export const PeerRatingRequestActionSheet = PeerRatingRequestOverlayComponent;
+
+// Keep old export for backwards compatibility during migration
+const PeerRatingRequestOverlay = PeerRatingRequestActionSheet;
+export default PeerRatingRequestOverlay;
 
 const styles = StyleSheet.create({
-  container: {
-    paddingVertical: 20,
-    maxHeight: '90%',
+  sheetBackground: {
+    flex: 1,
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 8,
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
+  },
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacingPixels[4],
+    paddingHorizontal: spacingPixels[4],
+    borderBottomWidth: 1,
+  },
+  headerPlaceholder: {
+    width: 32,
+  },
+  closeButton: {
+    padding: spacingPixels[1],
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[4],
   },
   subtitle: {
     fontSize: 14,
     textAlign: 'center',
     marginBottom: 20,
-    paddingHorizontal: 20,
     lineHeight: 20,
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 12,
-    paddingHorizontal: 12,
     marginBottom: 16,
-    height: 48,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-  },
-  clearButton: {
-    padding: 4,
   },
   playersList: {
-    maxHeight: 400,
+    flex: 1,
     marginBottom: 16,
   },
   playersGrid: {
@@ -505,6 +492,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  footer: {
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[4],
+    paddingBottom: spacingPixels[8],
+    borderTopWidth: 1,
+  },
   sendButton: {
     borderRadius: 12,
     paddingVertical: 16,
@@ -559,5 +552,3 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
 });
-
-export default PeerRatingRequestOverlay;

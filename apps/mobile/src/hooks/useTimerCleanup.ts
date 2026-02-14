@@ -14,7 +14,7 @@ export const useTimerCleanup = () => {
       callback();
       timers.current.delete(timerId); // Remove from tracking after execution
     }, delay);
-    
+
     timers.current.add(timerId);
     return timerId;
   }, []);
@@ -33,9 +33,10 @@ export const useTimerCleanup = () => {
 
   // Cleanup all timers on unmount
   useEffect(() => {
+    const currentTimers = timers.current;
     return () => {
-      timers.current.forEach(timerId => clearTimeout(timerId));
-      timers.current.clear();
+      currentTimers.forEach(timerId => clearTimeout(timerId));
+      currentTimers.clear();
     };
   }, []);
 

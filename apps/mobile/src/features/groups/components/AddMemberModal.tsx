@@ -4,22 +4,17 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import {
-  View,
-  Modal,
-  TouchableOpacity,
-  StyleSheet,
-  TextInput,
-  FlatList,
-  ActivityIndicator,
-  Image,
-} from 'react-native';
+import { View, TouchableOpacity, StyleSheet, ActivityIndicator, Image } from 'react-native';
+import ActionSheet, { SheetManager, SheetProps, FlatList } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text, useToast } from '@rallia/shared-components';
-import { useThemeStyles, useAuth } from '../../../hooks';
+import { lightHaptic, successHaptic } from '@rallia/shared-utils';
+import { useThemeStyles, useAuth, useTranslation } from '../../../hooks';
 import { useDebounce, useAddGroupMember } from '@rallia/shared-hooks';
 import { supabase } from '@rallia/shared-services';
+import { radiusPixels, spacingPixels } from '@rallia/design-system';
+import { SearchBar } from '../../../components/SearchBar';
 
 interface PlayerProfile {
   id: string;
@@ -30,25 +25,16 @@ interface PlayerProfile {
   profile_picture_url: string | null;
 }
 
-interface AddMemberModalProps {
-  visible: boolean;
-  onClose: () => void;
-  groupId: string;
-  currentMemberIds: string[];
-  onSuccess: () => void;
-}
+export function AddMemberActionSheet({ payload }: SheetProps<'add-member'>) {
+  const groupId = payload?.groupId ?? '';
+  const currentMemberIds = payload?.currentMemberIds ?? [];
+  const onSuccess = payload?.onSuccess;
 
-export function AddMemberModal({
-  visible,
-  onClose,
-  groupId,
-  currentMemberIds,
-  onSuccess,
-}: AddMemberModalProps) {
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
   const playerId = session?.user?.id;
   const toast = useToast();
+  const { t } = useTranslation();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestedPlayers, setSuggestedPlayers] = useState<PlayerProfile[]>([]);
@@ -59,10 +45,16 @@ export function AddMemberModal({
 
   const addMemberMutation = useAddGroupMember();
 
+  const handleClose = useCallback(() => {
+    setSearchQuery('');
+    setSearchResults([]);
+    SheetManager.hide('add-member');
+  }, []);
+
   // Load suggested players when modal opens
   useEffect(() => {
     const loadSuggestedPlayers = async () => {
-      if (!visible || !playerId) return;
+      if (!playerId) return;
 
       setIsLoadingSuggestions(true);
       try {
@@ -104,7 +96,7 @@ export function AddMemberModal({
     };
 
     loadSuggestedPlayers();
-  }, [visible, playerId]);
+  }, [playerId]);
 
   // Search players when query changes
   useEffect(() => {
@@ -164,28 +156,26 @@ export function AddMemberModal({
     return sourceList.filter(player => !currentMemberIds.includes(player.id));
   }, [searchResults, suggestedPlayers, currentMemberIds, searchQuery]);
 
-  const handleClose = useCallback(() => {
-    setSearchQuery('');
-    setSearchResults([]);
-    onClose();
-  }, [onClose]);
-
   const handleAddMember = useCallback(
     async (memberPlayerId: string) => {
       if (!playerId) return;
 
-    try {
-      await addMemberMutation.mutateAsync({
-        groupId,
-        inviterId: playerId,
-        playerIdToAdd: memberPlayerId,
-      });
-      toast.success('Member added to the group');
-      onSuccess();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to add member');
-    }
-  }, [groupId, playerId, addMemberMutation, onSuccess, toast]);
+      lightHaptic();
+      try {
+        await addMemberMutation.mutateAsync({
+          groupId,
+          inviterId: playerId,
+          playerIdToAdd: memberPlayerId,
+        });
+        successHaptic();
+        toast.success(t('groups.memberAddedToGroup'));
+        onSuccess?.();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : t('groups.failedToAddMember'));
+      }
+    },
+    [groupId, playerId, addMemberMutation, onSuccess, toast, t]
+  );
 
   const renderPlayerItem = useCallback(
     ({ item }: { item: PlayerProfile }) => (
@@ -194,7 +184,7 @@ export function AddMemberModal({
           {item.profile_picture_url ? (
             <Image source={{ uri: item.profile_picture_url }} style={styles.avatarImage} />
           ) : (
-            <Ionicons name="person" size={24} color={colors.textMuted} />
+            <Ionicons name="person-outline" size={24} color={colors.textMuted} />
           )}
         </View>
         <View style={styles.playerInfo}>
@@ -217,7 +207,7 @@ export function AddMemberModal({
           {addMemberMutation.isPending ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
-            <Ionicons name="add" size={20} color="#FFFFFF" />
+            <Ionicons name="add-outline" size={20} color="#FFFFFF" />
           )}
         </TouchableOpacity>
       </View>
@@ -226,101 +216,94 @@ export function AddMemberModal({
   );
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
-      <View style={styles.overlay}>
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={handleClose} />
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+    >
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <Text weight="semibold" size="lg" style={{ color: colors.text }}>
+            {t('groups.addMember')}
+          </Text>
+          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
 
-        <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
-          {/* Header */}
-          <View style={[styles.header, { borderBottomColor: colors.border }]}>
-            <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-              Add Member
+        {/* Search */}
+        <View style={styles.searchContainer}>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder={t('groups.searchPlayers')}
+            colors={colors}
+            autoFocus
+          />
+        </View>
+
+        {/* Results */}
+        {isLoadingSuggestions || isSearching ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : filteredResults.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="person-outline" size={48} color={colors.textMuted} />
+            <Text style={{ color: colors.textSecondary, marginTop: 12 }}>
+              {searchQuery.length >= 2
+                ? t('groups.noPlayersFound')
+                : t('groups.noPlayersAvailable')}
             </Text>
-            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={colors.text} />
-            </TouchableOpacity>
           </View>
-
-          {/* Search */}
-          <View style={styles.searchContainer}>
-            <View
-              style={[
-                styles.searchInput,
-                { backgroundColor: colors.inputBackground, borderColor: colors.border },
-              ]}
-            >
-              <Ionicons name="search" size={20} color={colors.textMuted} />
-              <TextInput
-                style={[styles.searchTextInput, { color: colors.text }]}
-                placeholder="Search players..."
-                placeholderTextColor={colors.textMuted}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                autoFocus
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <Ionicons name="close-circle" size={20} color={colors.textMuted} />
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-
-          {/* Results */}
-          <View style={styles.resultsContainer}>
-            {isLoadingSuggestions || isSearching ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={colors.primary} />
-              </View>
-            ) : filteredResults.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Ionicons name="person-outline" size={48} color={colors.textMuted} />
-                <Text style={{ color: colors.textSecondary, marginTop: 12 }}>
-                  {searchQuery.length >= 2 ? 'No players found' : 'No players available'}
+        ) : (
+          <>
+            {searchQuery.length < 2 && (
+              <View style={styles.suggestedHeader}>
+                <Text
+                  size="sm"
+                  style={{
+                    color: colors.textSecondary,
+                    paddingHorizontal: spacingPixels[4],
+                    paddingVertical: spacingPixels[2],
+                  }}
+                >
+                  {t('groups.suggestedPlayers')}
                 </Text>
               </View>
-            ) : (
-              <>
-                {searchQuery.length < 2 && (
-                  <Text
-                    size="sm"
-                    style={{
-                      color: colors.textSecondary,
-                      paddingHorizontal: 16,
-                      paddingVertical: 8,
-                    }}
-                  >
-                    Suggested Players
-                  </Text>
-                )}
-                <FlatList
-                  data={filteredResults}
-                  renderItem={renderPlayerItem}
-                  keyExtractor={item => item.id}
-                  showsVerticalScrollIndicator={false}
-                />
-              </>
             )}
-          </View>
-        </View>
+            <FlatList
+              data={filteredResults}
+              renderItem={renderPlayerItem}
+              keyExtractor={item => item.id}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.listContent}
+            />
+          </>
+        )}
       </View>
-    </Modal>
+    </ActionSheet>
   );
 }
 
+// Keep old export for backwards compatibility during migration
+export const AddMemberModal = AddMemberActionSheet;
+
 const styles = StyleSheet.create({
-  overlay: {
+  sheetBackground: {
     flex: 1,
-    justifyContent: 'flex-end',
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
   },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
   },
   container: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    height: '70%',
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -335,21 +318,11 @@ const styles = StyleSheet.create({
   searchContainer: {
     padding: 16,
   },
-  searchInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    gap: 8,
+  suggestedHeader: {
+    paddingTop: spacingPixels[2],
   },
-  searchTextInput: {
-    flex: 1,
-    fontSize: 16,
-  },
-  resultsContainer: {
-    flex: 1,
+  listContent: {
+    paddingBottom: spacingPixels[4],
   },
   loadingContainer: {
     flex: 1,

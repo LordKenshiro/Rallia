@@ -1,9 +1,9 @@
 /**
  * Group Service - Main Barrel File
- * 
+ *
  * Re-exports all group-related functions and types from modular service files.
  * This maintains backward compatibility with existing imports.
- * 
+ *
  * Module Structure:
  * - groupTypes.ts          - Type definitions
  * - groupCrudService.ts    - Group CRUD operations
@@ -68,11 +68,7 @@ export {
 // ACTIVITY & STATS
 // ============================================================================
 
-export {
-  logGroupActivity,
-  getGroupActivity,
-  getGroupStats,
-} from './groupActivityService';
+export { logGroupActivity, getGroupActivity, getGroupStats } from './groupActivityService';
 
 // ============================================================================
 // INVITE OPERATIONS
@@ -104,8 +100,10 @@ export {
 export {
   createPlayedMatch,
   getSportIdByName,
+  submitMatchResultForMatch,
   getPendingScoreConfirmations,
   confirmMatchScore,
   disputeMatchScore,
   notifyOpponentsOfPendingScore,
+  type SubmitMatchResultForMatchParams,
 } from './playedMatchService';

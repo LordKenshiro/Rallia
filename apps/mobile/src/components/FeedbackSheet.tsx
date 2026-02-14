@@ -10,7 +10,7 @@ import { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { BottomSheetModal, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
-import { lightTheme, darkTheme, radiusPixels } from '@rallia/design-system';
+import { lightTheme, darkTheme, radiusPixels, spacingPixels } from '@rallia/design-system';
 import { selectionHaptic } from '@rallia/shared-utils';
 import { useTheme } from '@rallia/shared-hooks';
 import { useFeedbackSheet } from '../context/FeedbackSheetContext';
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radiusPixels['2xl'],
   },
   handleIndicator: {
-    width: 40,
+    width: spacingPixels[10],
   },
   container: {
     flex: 1,

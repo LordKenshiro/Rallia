@@ -15,14 +15,21 @@ import {
   AppState,
   Linking,
   Animated,
+  Keyboard,
+  Platform,
 } from 'react-native';
 import { UseFormReturn, useWatch } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Text } from '@rallia/shared-components';
+import { SearchBar } from '../../../../components/SearchBar';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
-import { getOrCreateCourt, parseCourtNumber } from '@rallia/shared-services';
+import {
+  getOrCreateCourt,
+  parseCourtNumber,
+  getFacilityWithDetails,
+} from '@rallia/shared-services';
 import {
   useFacilitySearch,
   usePreferredFacility,
@@ -36,10 +43,9 @@ import type {
   PlacePrediction,
   MatchWithDetails,
 } from '@rallia/shared-types';
+import { SheetManager } from 'react-native-actions-sheet';
 import type { TranslationKey, TranslationOptions } from '../../../../hooks/useTranslation';
 import { useUserLocation } from '../../../../hooks/useUserLocation';
-import { BookingConfirmationSheet } from '../BookingConfirmationSheet';
-import { CourtSelectionSheet } from '../CourtSelectionSheet';
 
 // =============================================================================
 // TYPES
@@ -286,17 +292,23 @@ const FacilityItem: React.FC<FacilityItemProps> = ({
   isDark,
   isPreferred = false,
 }) => {
-  // Fetch availability using the provider system
-  const { slotsByDate, isLoading, hasProvider } = useCourtAvailability({
+  // Fetch availability using the unified system (local-first, then external provider)
+  const { slotsByDate, isLoading } = useCourtAvailability({
     facilityId: facility.id,
     dataProviderId: facility.data_provider_id,
     dataProviderType: facility.data_provider_type,
     externalProviderId: facility.external_provider_id,
     bookingUrlTemplate: facility.booking_url_template,
+    facilityTimezone: facility.timezone,
   });
 
+  // Determine if slot is actionable (has booking URL or is a local slot)
+  const isSlotActionable = (slot: FormattedSlot): boolean => {
+    return !!slot.bookingUrl || !!slot.isLocalSlot;
+  };
+
   const handleSlotPress = (slot: FormattedSlot) => {
-    if (onSlotPress) {
+    if (onSlotPress && isSlotActionable(slot)) {
       lightHaptic();
       onSlotPress(facility, slot);
     }
@@ -328,7 +340,7 @@ const FacilityItem: React.FC<FacilityItemProps> = ({
                 >
                   <Ionicons name="star" size={10} color={colors.buttonActive} />
                   <Text size="xs" weight="semibold" color={colors.buttonActive}>
-                    {t('matchCreation.fields.preferredFacility' as TranslationKey)}
+                    {t('matchCreation.fields.preferredFacility')}
                   </Text>
                 </View>
               )}
@@ -347,10 +359,10 @@ const FacilityItem: React.FC<FacilityItemProps> = ({
         </View>
 
         {/* Skeleton slots while loading */}
-        {hasProvider && isLoading && <SkeletonSlots colors={colors} />}
+        {isLoading && <SkeletonSlots colors={colors} />}
 
         {/* Date-sectioned slots with horizontal scroll */}
-        {hasProvider && slotsByDate.length > 0 && !isLoading && (
+        {slotsByDate.length > 0 && !isLoading && (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -368,68 +380,75 @@ const FacilityItem: React.FC<FacilityItemProps> = ({
                   {dateGroup.dateLabel}
                 </Text>
                 <View style={styles.dateSlotsRow}>
-                  {dateGroup.slots.map((slot, index) => (
-                    <TouchableOpacity
-                      key={`${slot.facilityScheduleId}-${index}`}
-                      style={[
-                        styles.slotChip,
-                        {
-                          backgroundColor: slot.bookingUrl
-                            ? `${colors.buttonActive}15`
-                            : colors.buttonInactive,
-                          borderColor: slot.bookingUrl ? colors.buttonActive : colors.border,
-                        },
-                      ]}
-                      onPress={() => slot.bookingUrl && handleSlotPress(slot)}
-                      disabled={!slot.bookingUrl}
-                      activeOpacity={0.7}
-                    >
-                      <Text
-                        size="xs"
-                        weight="medium"
-                        color={slot.bookingUrl ? colors.buttonActive : colors.textMuted}
+                  {dateGroup.slots.map((slot, index) => {
+                    // Slot is tappable if it has a booking URL (external) or is a local slot
+                    const isTappable = !!slot.bookingUrl || !!slot.isLocalSlot;
+                    return (
+                      <TouchableOpacity
+                        key={`${slot.facilityScheduleId}-${index}`}
+                        style={[
+                          styles.slotChip,
+                          {
+                            backgroundColor: isTappable
+                              ? `${colors.buttonActive}15`
+                              : colors.buttonInactive,
+                            borderColor: isTappable ? colors.buttonActive : colors.border,
+                          },
+                        ]}
+                        onPress={() => isTappable && handleSlotPress(slot)}
+                        disabled={!isTappable}
+                        activeOpacity={0.7}
                       >
-                        {slot.time}
-                      </Text>
-                      {slot.courtCount > 0 && (
-                        <View
-                          style={[
-                            styles.courtCountBadge,
-                            {
-                              backgroundColor: slot.bookingUrl
-                                ? colors.buttonActive
-                                : isDark
-                                  ? colors.border
-                                  : colors.textMuted,
-                            },
-                          ]}
+                        <Text
+                          size="xs"
+                          weight="medium"
+                          color={isTappable ? colors.buttonActive : colors.textMuted}
                         >
-                          <Text
-                            size="xs"
-                            weight="bold"
-                            color={
-                              slot.bookingUrl ? colors.buttonTextActive : colors.buttonInactive
-                            }
-                            style={styles.courtCountText}
-                          >
-                            {slot.courtCount}
-                          </Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  ))}
+                          {slot.time}
+                        </Text>
+                        {/* Show court count badge for external slots, building icon for local */}
+                        {slot.isLocalSlot ? (
+                          <Ionicons name="business-outline" size={10} color={colors.buttonActive} />
+                        ) : (
+                          slot.courtCount > 0 && (
+                            <View
+                              style={[
+                                styles.courtCountBadge,
+                                {
+                                  backgroundColor: isTappable
+                                    ? colors.buttonActive
+                                    : isDark
+                                      ? colors.border
+                                      : colors.textMuted,
+                                },
+                              ]}
+                            >
+                              <Text
+                                size="xs"
+                                weight="bold"
+                                color={isTappable ? colors.buttonTextActive : colors.buttonInactive}
+                                style={styles.courtCountText}
+                              >
+                                {slot.courtCount}
+                              </Text>
+                            </View>
+                          )
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </View>
             ))}
           </ScrollView>
         )}
 
-        {/* Empty state when no slots available */}
-        {hasProvider && slotsByDate.length === 0 && !isLoading && (
+        {/* Empty state when no slots available - only show if we fetched but got no results */}
+        {slotsByDate.length === 0 && !isLoading && (
           <View style={styles.emptySlots}>
             <Ionicons name="calendar-clear-outline" size={14} color={colors.textMuted} />
             <Text size="xs" color={colors.textMuted}>
-              {t('matchCreation.booking.noSlotsAvailable' as TranslationKey)}
+              {t('matchCreation.booking.noSlotsAvailable')}
             </Text>
           </View>
         )}
@@ -465,7 +484,7 @@ const SelectedFacility: React.FC<SelectedFacilityProps> = ({
     ]}
   >
     <View style={styles.selectedFacilityContent}>
-      <Ionicons name="business" size={20} color={colors.buttonActive} />
+      <Ionicons name="business-outline" size={20} color={colors.buttonActive} />
       <View style={styles.selectedFacilityText}>
         <View style={styles.selectedFacilityHeader}>
           <Text size="base" weight="semibold" color={colors.text}>
@@ -478,7 +497,7 @@ const SelectedFacility: React.FC<SelectedFacilityProps> = ({
         {bookedCourtNumber !== null && bookedCourtNumber !== undefined && (
           <View style={[styles.courtNumberBadge, { backgroundColor: `${colors.buttonActive}20` }]}>
             <Text size="xs" weight="semibold" color={colors.buttonActive}>
-              {t('matchCreation.fields.courtNumber' as TranslationKey, {
+              {t('matchCreation.fields.courtNumber', {
                 number: bookedCourtNumber,
               })}
             </Text>
@@ -611,6 +630,43 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   const [bookedCourtNumber, setBookedCourtNumber] = useState<number | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const addressFieldRef = useRef<View>(null);
+  const facilitySearchRef = useRef<View>(null);
+  const placeSearchRef = useRef<View>(null);
+
+  // Track which field is focused for keyboard handling
+  const [focusedField, setFocusedField] = useState<'facility' | 'place' | 'address' | null>(null);
+
+  // Listen for keyboard events and scroll to focused field
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const keyboardShowListener = Keyboard.addListener(showEvent, () => {
+      // Scroll to the focused field when keyboard shows
+      if (focusedField && scrollViewRef.current) {
+        // Use a timeout to ensure the keyboard is fully shown
+        setTimeout(() => {
+          // Scroll positions based on which field is focused
+          const scrollPositions = {
+            facility: 200, // Facility search is near top
+            place: 200, // Place search is similar position
+            address: 400, // Address field is lower in the form
+          };
+          const scrollY = scrollPositions[focusedField] || 200;
+          scrollViewRef.current?.scrollTo({ y: scrollY, animated: true });
+        }, 100);
+      }
+    });
+
+    const keyboardHideListener = Keyboard.addListener(hideEvent, () => {
+      setFocusedField(null);
+    });
+
+    return () => {
+      keyboardShowListener.remove();
+      keyboardHideListener.remove();
+    };
+  }, [focusedField]);
 
   // Local state for custom location search
   const [placeSearchQuery, setPlaceSearchQuery] = useState('');
@@ -622,14 +678,14 @@ export const WhereStep: React.FC<WhereStepProps> = ({
     slot: FormattedSlot;
     selectedCourt?: CourtOption;
   } | null>(null);
-  const [showBookingConfirmation, setShowBookingConfirmation] = useState(false);
-
   // Court selection state (when multiple courts available at same time)
-  const [showCourtSelection, setShowCourtSelection] = useState(false);
   const [courtSelectionData, setCourtSelectionData] = useState<{
     facility: FacilitySearchResult;
     slot: FormattedSlot;
   } | null>(null);
+
+  // Get user location (needed for fetching facility details)
+  const { location, loading: locationLoading, error: locationError } = useUserLocation();
 
   // Track if edit mode initialization has been done
   const hasInitializedFromEdit = useRef(false);
@@ -676,27 +732,101 @@ export const WhereStep: React.FC<WhereStepProps> = ({
     }
   }, [editMatch]);
 
-  // Listen for app returning to foreground after external booking
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', nextAppState => {
-      if (nextAppState === 'active' && pendingBookingSlot) {
-        // User returned from booking site, show confirmation
-        setShowBookingConfirmation(true);
-      }
-    });
+  // Handle court booking success - called when booking sheet completes
+  const handleCourtBookingSuccess = useCallback(
+    (
+      facility: FacilitySearchResult,
+      slot: FormattedSlot,
+      data: { facilityId: string; courtId: string; courtNumber: number | null }
+    ) => {
+      // Update form with facility
+      setValue('facilityId', data.facilityId);
+      setValue('courtId', data.courtId);
+      setValue('courtStatus', 'booked');
+      setSelectedFacility(facility);
+      setBookedCourtNumber(data.courtNumber);
 
-    return () => subscription.remove();
-  }, [pendingBookingSlot]);
+      // Extract slot data for auto-filling date/time/duration
+      const matchDate = formatDateLocal(slot.datetime);
+      const startTime = formatTime24(slot.datetime);
+      const endTime = formatTime24(slot.endDateTime);
+      const durationMins = calculateDurationMinutes(slot.datetime, slot.endDateTime);
+      const facilityTimezone = facility.timezone || deviceTimezone;
 
-  // Handle slot press - show court selection or open external booking URL
+      // Call parent callback with booking data
+      onSlotBooked?.({
+        matchDate,
+        startTime,
+        endTime,
+        duration: mapDurationToFormValue(durationMins),
+        customDurationMinutes: durationMins,
+        timezone: facilityTimezone,
+      });
+
+      // Also set location name/address for display
+      setValue('locationName', facility.name, { shouldDirty: true });
+      const fullAddress = [facility.address, facility.city].filter(Boolean).join(', ');
+      setValue('locationAddress', fullAddress || undefined, { shouldDirty: true });
+
+      successHaptic();
+    },
+    [setValue, deviceTimezone, onSlotBooked]
+  );
+
+  // Handle slot press - different behavior for local vs external slots
   const handleSlotPress = useCallback(
     async (facility: FacilitySearchResult, slot: FormattedSlot) => {
+      // === LOCAL SLOT: Open court booking sheet ===
+      if (slot.isLocalSlot) {
+        lightHaptic();
+
+        try {
+          // Fetch full facility details needed for booking sheet
+          const facilityDetails = await getFacilityWithDetails({
+            facilityId: facility.id,
+            sportId: sportId || '',
+            latitude: location?.latitude,
+            longitude: location?.longitude,
+          });
+
+          if (!facilityDetails) {
+            console.warn('[WhereStep] Failed to fetch facility details');
+            return;
+          }
+
+          // Open court booking sheet with full facility data
+          SheetManager.show('court-booking', {
+            payload: {
+              facility: facilityDetails,
+              slot,
+              courts: facilityDetails.courts,
+              onSuccess: (data: {
+                facilityId: string;
+                courtId: string;
+                courtNumber: number | null;
+              }) => handleCourtBookingSuccess(facility, slot, data),
+            },
+          });
+        } catch (error) {
+          console.error('[WhereStep] Error fetching facility details:', error);
+        }
+        return;
+      }
+
+      // === EXTERNAL SLOT: Open external booking URL ===
       if (!slot.bookingUrl) return;
 
       // If multiple courts available, show selection modal
       if (slot.courtOptions.length > 1) {
         setCourtSelectionData({ facility, slot });
-        setShowCourtSelection(true);
+        SheetManager.show('court-selection', {
+          payload: {
+            courts: slot.courtOptions ?? [],
+            timeLabel: slot.time ?? '',
+            onSelect: (court: unknown) => handleCourtSelect(court as CourtOption),
+            onCancel: handleCourtSelectionCancel,
+          },
+        });
         return;
       }
 
@@ -715,18 +845,22 @@ export const WhereStep: React.FC<WhereStepProps> = ({
         setPendingBookingSlot(null);
       }
     },
-    []
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sportId, location, handleCourtBookingSuccess]
   );
 
-  // Handle court selection from modal
+  // Handle court selection from modal (external slots only - local slots use court-booking sheet)
   const handleCourtSelect = useCallback(
     async (court: CourtOption) => {
       if (!courtSelectionData) return;
 
       const { facility, slot } = courtSelectionData;
 
-      // Close the court selection modal
-      setShowCourtSelection(false);
+      // External slots: Open booking URL
+      if (!court.bookingUrl) {
+        setCourtSelectionData(null);
+        return;
+      }
 
       // Store the pending booking info with selected court
       setPendingBookingSlot({ facility, slot, selectedCourt: court });
@@ -746,7 +880,6 @@ export const WhereStep: React.FC<WhereStepProps> = ({
 
   // Handle court selection cancel
   const handleCourtSelectionCancel = useCallback(() => {
-    setShowCourtSelection(false);
     setCourtSelectionData(null);
   }, []);
 
@@ -811,15 +944,26 @@ export const WhereStep: React.FC<WhereStepProps> = ({
 
       successHaptic();
     }
-    setShowBookingConfirmation(false);
     setPendingBookingSlot(null);
   }, [pendingBookingSlot, setValue, deviceTimezone, onSlotBooked]);
 
   // Handle booking cancel
   const handleBookingCancel = useCallback(() => {
-    setShowBookingConfirmation(false);
     setPendingBookingSlot(null);
   }, []);
+
+  // Listen for app returning to foreground after external booking
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (nextAppState === 'active' && pendingBookingSlot) {
+        SheetManager.show('booking-confirmation', {
+          payload: { onConfirm: handleBookingConfirm, onCancel: handleBookingCancel },
+        });
+      }
+    });
+
+    return () => subscription.remove();
+  }, [pendingBookingSlot, handleBookingConfirm, handleBookingCancel]);
 
   // Track previous sportId to only reset on actual sport changes (not initial mount)
   const prevSportIdRef = useRef<string | undefined>(sportId);
@@ -839,8 +983,6 @@ export const WhereStep: React.FC<WhereStepProps> = ({
     setPlaceSearchQuery('');
     setHasSelectedPlace(false);
     setPendingBookingSlot(null);
-    setShowBookingConfirmation(false);
-    setShowCourtSelection(false);
     setCourtSelectionData(null);
   }, [sportId]);
 
@@ -850,9 +992,6 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       setHasSelectedPlace(true);
     }
   }, [locationType, locationName, hasSelectedPlace]);
-
-  // Get user location
-  const { location, loading: locationLoading, error: locationError } = useUserLocation();
 
   // Facility search hook
   const {
@@ -872,7 +1011,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   });
 
   // Preferred facility hook - fetch the player's preferred facility
-  const { preferredFacility, isLoading: _preferredFacilityLoading } = usePreferredFacility({
+  const { preferredFacility } = usePreferredFacility({
     preferredFacilityId,
     sportId,
     latitude: location?.latitude,
@@ -908,7 +1047,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   });
 
   // State for fetching place details
-  const [_isFetchingPlaceDetails, setIsFetchingPlaceDetails] = useState(false);
+  const [, setIsFetchingPlaceDetails] = useState(false);
 
   // Handle facility selection
   const handleSelectFacility = useCallback(
@@ -921,8 +1060,11 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       // Combine address and city for locationAddress
       const fullAddress = [facility.address, facility.city].filter(Boolean).join(', ');
       setValue('locationAddress', fullAddress || undefined, { shouldDirty: true });
+      // Update timezone to facility's timezone when set, otherwise keep device timezone
+      const facilityTimezone = facility.timezone || deviceTimezone;
+      setValue('timezone', facilityTimezone, { shouldDirty: true });
     },
-    [setValue]
+    [setValue, deviceTimezone]
   );
 
   // Handle clearing selected facility
@@ -948,7 +1090,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       setValue('locationName', place.name, { shouldValidate: true, shouldDirty: true });
       setValue('locationAddress', place.address || undefined, { shouldDirty: true });
 
-      // Fetch place details to get coordinates
+      // Fetch place details to get coordinates and timezone
       setIsFetchingPlaceDetails(true);
       try {
         const details = await getPlaceDetails(place.placeId);
@@ -960,6 +1102,9 @@ export const WhereStep: React.FC<WhereStepProps> = ({
           // Store coordinates
           setValue('customLatitude', details.latitude, { shouldDirty: true });
           setValue('customLongitude', details.longitude, { shouldDirty: true });
+          // Update timezone to place's timezone (from Google Time Zone API) or device timezone
+          const placeTimezone = details.timezone || deviceTimezone;
+          setValue('timezone', placeTimezone, { shouldDirty: true });
         }
       } catch (error) {
         console.error('Failed to fetch place details:', error);
@@ -968,7 +1113,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
         setIsFetchingPlaceDetails(false);
       }
     },
-    [setValue, clearPredictions, getPlaceDetails]
+    [setValue, clearPredictions, getPlaceDetails, deviceTimezone]
   );
 
   // Handle clearing selected place
@@ -1047,8 +1192,8 @@ export const WhereStep: React.FC<WhereStepProps> = ({
           <ActivityIndicator size="small" color={colors.buttonActive} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
             {locationLoading
-              ? t('matchCreation.fields.gettingLocation' as TranslationKey)
-              : t('matchCreation.fields.searchingFacilities' as TranslationKey)}
+              ? t('matchCreation.fields.gettingLocation')
+              : t('matchCreation.fields.searchingFacilities')}
           </Text>
         </View>
       );
@@ -1059,7 +1204,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
         <View style={styles.emptyState}>
           <Ionicons name="location-outline" size={32} color={colors.textMuted} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('matchCreation.fields.locationAccessNeeded' as TranslationKey)}
+            {t('matchCreation.fields.locationAccessNeeded')}
           </Text>
         </View>
       );
@@ -1070,7 +1215,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
         <View style={styles.emptyState}>
           <Ionicons name="alert-circle-outline" size={32} color={colors.textMuted} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('matchCreation.fields.failedToLoadFacilities' as TranslationKey)}
+            {t('matchCreation.fields.failedToLoadFacilities')}
           </Text>
         </View>
       );
@@ -1081,7 +1226,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
         <View style={styles.emptyState}>
           <Ionicons name="search-outline" size={32} color={colors.textMuted} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('matchCreation.fields.noFacilitiesFound' as TranslationKey, { query: searchQuery })}
+            {t('matchCreation.fields.noFacilitiesFound', { query: searchQuery })}
           </Text>
         </View>
       );
@@ -1092,13 +1237,14 @@ export const WhereStep: React.FC<WhereStepProps> = ({
         <View style={styles.emptyState}>
           <Ionicons name="business-outline" size={32} color={colors.textMuted} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('matchCreation.fields.noFacilitiesAvailable' as TranslationKey)}
+            {t('matchCreation.fields.noFacilitiesAvailable')}
           </Text>
         </View>
       );
     }
 
     return null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     isLoadingFacilities,
     locationLoading,
@@ -1112,7 +1258,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   ]);
 
   return (
-    <ScrollView
+    <BottomSheetScrollView
       ref={scrollViewRef}
       style={styles.container}
       contentContainerStyle={[
@@ -1128,26 +1274,24 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       {/* Step title */}
       <View style={styles.stepHeader}>
         <Text size="lg" weight="bold" color={colors.text}>
-          {t('matchCreation.step1Title' as TranslationKey)}
+          {t('matchCreation.step1Title')}
         </Text>
         <Text size="sm" color={colors.textMuted}>
-          {t('matchCreation.step1Description' as TranslationKey)}
+          {t('matchCreation.step1Description')}
         </Text>
       </View>
 
       {/* Location type selection */}
       <View style={styles.fieldGroup}>
         <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-          {t('matchCreation.fields.locationType' as TranslationKey)}
+          {t('matchCreation.fields.locationType')}
         </Text>
 
         <View style={styles.locationCards}>
           <LocationTypeCard
             icon="business-outline"
-            title={t('matchCreation.fields.locationTypeFacility' as TranslationKey)}
-            description={t(
-              'matchCreation.fields.locationTypeFacilityDescription' as TranslationKey
-            )}
+            title={t('matchCreation.fields.locationTypeFacility')}
+            description={t('matchCreation.fields.locationTypeFacilityDescription')}
             selected={locationType === 'facility'}
             onPress={() => handleLocationTypeChange('facility')}
             colors={colors}
@@ -1155,8 +1299,8 @@ export const WhereStep: React.FC<WhereStepProps> = ({
 
           <LocationTypeCard
             icon="location-outline"
-            title={t('matchCreation.fields.locationTypeCustom' as TranslationKey)}
-            description={t('matchCreation.fields.locationTypeCustomDescription' as TranslationKey)}
+            title={t('matchCreation.fields.locationTypeCustom')}
+            description={t('matchCreation.fields.locationTypeCustomDescription')}
             selected={locationType === 'custom'}
             onPress={() => handleLocationTypeChange('custom')}
             colors={colors}
@@ -1164,8 +1308,8 @@ export const WhereStep: React.FC<WhereStepProps> = ({
 
           <LocationTypeCard
             icon="help-circle-outline"
-            title={t('matchCreation.fields.locationTypeTbd' as TranslationKey)}
-            description={t('matchCreation.fields.locationTypeTbdDescription' as TranslationKey)}
+            title={t('matchCreation.fields.locationTypeTbd')}
+            description={t('matchCreation.fields.locationTypeTbdDescription')}
             selected={locationType === 'tbd'}
             onPress={() => handleLocationTypeChange('tbd')}
             colors={colors}
@@ -1177,7 +1321,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       {locationType === 'facility' && (
         <View style={styles.fieldGroup}>
           <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-            {t('matchCreation.fields.facility' as TranslationKey)}
+            {t('matchCreation.fields.facility')}
           </Text>
 
           {/* Show selected facility or search UI */}
@@ -1192,30 +1336,15 @@ export const WhereStep: React.FC<WhereStepProps> = ({
           ) : (
             <>
               {/* Search input */}
-              <View
-                style={[
-                  styles.searchInputContainer,
-                  { borderColor: colors.border, backgroundColor: colors.buttonInactive },
-                ]}
-              >
-                <Ionicons name="search-outline" size={20} color={colors.textMuted} />
-                <BottomSheetTextInput
-                  style={[styles.searchInput, { color: colors.text }]}
+              <View ref={facilitySearchRef}>
+                <SearchBar
                   value={searchQuery}
                   onChangeText={setSearchQuery}
-                  placeholder={t('matchCreation.fields.facilityPlaceholder' as TranslationKey)}
-                  placeholderTextColor={colors.textMuted}
-                  autoCorrect={false}
-                  autoCapitalize="none"
+                  placeholder={t('matchCreation.fields.facilityPlaceholder')}
+                  colors={colors}
+                  InputComponent={BottomSheetTextInput}
+                  onFocus={() => setFocusedField('facility')}
                 />
-                {searchQuery.length > 0 && (
-                  <TouchableOpacity
-                    onPress={() => setSearchQuery('')}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <Ionicons name="close-circle" size={18} color={colors.textMuted} />
-                  </TouchableOpacity>
-                )}
               </View>
 
               {/* Facility list */}
@@ -1251,7 +1380,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       {locationType === 'custom' && (
         <View style={styles.fieldGroup}>
           <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-            {t('matchCreation.fields.searchLocation' as TranslationKey)}
+            {t('matchCreation.fields.searchLocation')}
           </Text>
 
           {/* Show selected place or search UI */}
@@ -1265,37 +1394,19 @@ export const WhereStep: React.FC<WhereStepProps> = ({
           ) : (
             <>
               {/* Search input */}
-              <View
-                style={[
-                  styles.searchInputContainer,
-                  {
-                    borderColor: errors.locationName ? '#ef4444' : colors.border,
-                    backgroundColor: colors.buttonInactive,
-                  },
-                ]}
-              >
-                <Ionicons name="search-outline" size={20} color={colors.textMuted} />
-                <BottomSheetTextInput
-                  style={[styles.searchInput, { color: colors.text }]}
+              <View ref={placeSearchRef}>
+                <SearchBar
                   value={placeSearchQuery}
-                  onChangeText={setPlaceSearchQuery}
-                  placeholder={t(
-                    'matchCreation.fields.searchLocationPlaceholder' as TranslationKey
-                  )}
-                  placeholderTextColor={colors.textMuted}
-                  autoCorrect={false}
+                  onChangeText={text => {
+                    setPlaceSearchQuery(text);
+                    if (!text) clearPredictions();
+                  }}
+                  placeholder={t('matchCreation.fields.searchLocationPlaceholder')}
+                  colors={colors}
+                  InputComponent={BottomSheetTextInput}
+                  onFocus={() => setFocusedField('place')}
+                  borderColor={errors.locationName ? '#ef4444' : undefined}
                 />
-                {placeSearchQuery.length > 0 && (
-                  <TouchableOpacity
-                    onPress={() => {
-                      setPlaceSearchQuery('');
-                      clearPredictions();
-                    }}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <Ionicons name="close-circle" size={18} color={colors.textMuted} />
-                  </TouchableOpacity>
-                )}
               </View>
               {errors.locationName && (
                 <Text size="xs" color="#ef4444" style={styles.errorText}>
@@ -1308,7 +1419,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
                 <View style={styles.emptyState}>
                   <ActivityIndicator size="small" color={colors.buttonActive} />
                   <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-                    {t('matchCreation.fields.searchingPlaces' as TranslationKey)}
+                    {t('matchCreation.fields.searchingPlaces')}
                   </Text>
                 </View>
               )}
@@ -1318,7 +1429,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
                 <View style={styles.emptyState}>
                   <Ionicons name="alert-circle-outline" size={32} color={colors.textMuted} />
                   <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-                    {t('matchCreation.fields.failedToSearchPlaces' as TranslationKey)}
+                    {t('matchCreation.fields.failedToSearchPlaces')}
                   </Text>
                 </View>
               )}
@@ -1345,7 +1456,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
                   <View style={styles.emptyState}>
                     <Ionicons name="search-outline" size={32} color={colors.textMuted} />
                     <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-                      {t('matchCreation.fields.noPlacesFound' as TranslationKey)}
+                      {t('matchCreation.fields.noPlacesFound')}
                     </Text>
                   </View>
                 )}
@@ -1355,7 +1466,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
                 <View style={styles.hintContainer}>
                   <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />
                   <Text size="xs" color={colors.textMuted}>
-                    {t('matchCreation.fields.searchLocationHint' as TranslationKey)}
+                    {t('matchCreation.fields.searchLocationHint')}
                   </Text>
                 </View>
               )}
@@ -1366,7 +1477,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
           {hasSelectedPlace && (
             <View ref={addressFieldRef} style={styles.addressEditContainer}>
               <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-                {t('matchCreation.fields.locationAddress' as TranslationKey)}
+                {t('matchCreation.fields.locationAddress')}
               </Text>
               <BottomSheetTextInput
                 style={[
@@ -1379,27 +1490,11 @@ export const WhereStep: React.FC<WhereStepProps> = ({
                 ]}
                 value={locationAddress ?? ''}
                 onChangeText={text => setValue('locationAddress', text, { shouldDirty: true })}
-                placeholder={t('matchCreation.fields.locationAddressPlaceholder' as TranslationKey)}
+                placeholder={t('matchCreation.fields.locationAddressPlaceholder')}
                 placeholderTextColor={colors.textMuted}
                 multiline
                 numberOfLines={2}
-                onFocus={() => {
-                  // Scroll to address field with extra offset to ensure it's well above keyboard
-                  setTimeout(() => {
-                    addressFieldRef.current?.measureLayout(
-                      scrollViewRef.current as unknown as number,
-                      (x: number, y: number, _width: number, _height: number) => {
-                        scrollViewRef.current?.scrollTo({
-                          y: Math.max(0, y - 200),
-                          animated: true,
-                        });
-                      },
-                      () => {
-                        scrollViewRef.current?.scrollToEnd({ animated: true });
-                      }
-                    );
-                  }, 300);
-                }}
+                onFocus={() => setFocusedField('address')}
               />
             </View>
           )}
@@ -1416,39 +1511,11 @@ export const WhereStep: React.FC<WhereStepProps> = ({
         >
           <Ionicons name="information-circle-outline" size={20} color={colors.buttonActive} />
           <Text size="sm" color={colors.textSecondary} style={styles.infoText}>
-            {t('matchCreation.fields.tbdLocationInfo' as TranslationKey)}
+            {t('matchCreation.fields.tbdLocationInfo')}
           </Text>
         </View>
       )}
-
-      {/* Court Selection Sheet */}
-      <CourtSelectionSheet
-        visible={showCourtSelection}
-        courts={courtSelectionData?.slot.courtOptions ?? []}
-        timeLabel={courtSelectionData?.slot.time ?? ''}
-        onSelect={handleCourtSelect}
-        onCancel={handleCourtSelectionCancel}
-        colors={{
-          ...colors,
-          background: isDark ? '#000000' : '#ffffff',
-        }}
-        t={t}
-        isDark={isDark}
-      />
-
-      {/* Booking Confirmation Sheet */}
-      <BookingConfirmationSheet
-        visible={showBookingConfirmation}
-        onConfirm={handleBookingConfirm}
-        onCancel={handleBookingCancel}
-        colors={{
-          ...colors,
-          background: isDark ? '#000000' : '#ffffff',
-        }}
-        t={t}
-        isDark={isDark}
-      />
-    </ScrollView>
+    </BottomSheetScrollView>
   );
 };
 
@@ -1462,6 +1529,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: spacingPixels[4],
+    paddingBottom: spacingPixels[16], // Base padding for scrolling
   },
   contentContainerWithKeyboard: {
     paddingBottom: spacingPixels[32], // Extra padding when custom location is selected to allow scrolling above keyboard
@@ -1495,19 +1563,6 @@ const styles = StyleSheet.create({
   },
   locationTextContainer: {
     flex: 1,
-  },
-  searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-    gap: spacingPixels[2],
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    paddingVertical: spacingPixels[1],
   },
   facilityListContainer: {
     marginTop: spacingPixels[3],

@@ -38,21 +38,17 @@ export { Spinner } from './feedback/Spinner.native';
 export { ErrorMessage } from './feedback/ErrorMessage.native';
 export { Badge } from './feedback/Badge.native';
 export { ErrorBoundary } from './ErrorBoundary';
-export { 
-  Skeleton, 
-  SkeletonText, 
-  SkeletonAvatar, 
-  SkeletonCard, 
+export {
+  Skeleton,
+  SkeletonText,
+  SkeletonAvatar,
+  SkeletonCard,
   SkeletonList,
   SkeletonMatchCard,
   SkeletonPlayerCard,
   SkeletonConversation,
 } from './feedback/Skeleton.native';
-export {
-  Toast,
-  ToastProvider,
-  useToast,
-} from './feedback/Toast.native';
+export { Toast, ToastProvider, useToast } from './feedback/Toast.native';
 export {
   OfflineIndicator,
   NetworkProvider,
@@ -63,11 +59,11 @@ export {
 export type { SpinnerProps } from './feedback/Spinner.native';
 export type { ErrorMessageProps } from './feedback/ErrorMessage.native';
 export type { BadgeProps } from './feedback/Badge.native';
-export type { 
-  SkeletonProps, 
-  SkeletonTextProps, 
-  SkeletonAvatarProps, 
-  SkeletonCardProps, 
+export type {
+  SkeletonProps,
+  SkeletonTextProps,
+  SkeletonAvatarProps,
+  SkeletonCardProps,
   SkeletonListProps,
   SkeletonMatchCardProps,
   SkeletonPlayerCardProps,
@@ -97,7 +93,7 @@ export {
 export type { LocationSelectorProps, LocationMode } from './headers';
 
 // Overlays
-export { PermissionOverlay, LocationPermissionOverlay, CalendarAccessOverlay } from './overlays';
+export { PermissionOverlay, LocationPermissionOverlay } from './overlays';
 
 export type { PermissionType } from './overlays';
 

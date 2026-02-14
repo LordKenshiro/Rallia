@@ -18,6 +18,7 @@ import {
 import { useAuth, useThemeStyles, useTranslation, useEffectiveLocation } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { useMatchDetailSheet, useSport, useUserHomeLocation } from '../../../context';
+import { SportIcon } from '../../../components/SportIcon';
 import { Logger } from '@rallia/shared-services';
 import { spacingPixels } from '@rallia/design-system';
 import { SearchBar, MatchFiltersBar } from '../components';
@@ -33,27 +34,28 @@ interface EmptyStateProps {
 }
 
 function EmptyState({ hasActiveFilters, colors, t }: EmptyStateProps) {
+  const { selectedSport } = useSport();
   return (
     <View style={styles.emptyContainer}>
       <View style={[styles.emptyIconContainer, { backgroundColor: colors.card }]}>
-        <Ionicons
-          name={hasActiveFilters ? 'search-outline' : 'tennisball-outline'}
-          size={48}
-          color={colors.textMuted}
-        />
+        {hasActiveFilters ? (
+          <Ionicons name="search-outline" size={48} color={colors.textMuted} />
+        ) : (
+          <SportIcon
+            sportName={selectedSport?.name ?? 'tennis'}
+            size={48}
+            color={colors.textMuted}
+          />
+        )}
       </View>
       <Text size="lg" weight="semibold" color={colors.text} style={styles.emptyTitle}>
-        {t(
-          hasActiveFilters
-            ? ('publicMatches.empty.title' as TranslationKey)
-            : ('publicMatches.empty.noFilters.title' as TranslationKey)
-        )}
+        {t(hasActiveFilters ? 'publicMatches.empty.title' : 'publicMatches.empty.noFilters.title')}
       </Text>
       <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
         {t(
           hasActiveFilters
-            ? ('publicMatches.empty.description' as TranslationKey)
-            : ('publicMatches.empty.noFilters.description' as TranslationKey)
+            ? 'publicMatches.empty.description'
+            : 'publicMatches.empty.noFilters.description'
         )}
       </Text>
     </View>
@@ -193,8 +195,8 @@ export default function PublicMatches() {
         <View style={styles.resultsContainer}>
           <Text size="sm" color={colors.textMuted}>
             {filteredMatches.length === 1
-              ? t('publicMatches.results.countSingular' as TranslationKey)
-              : t('publicMatches.results.count' as TranslationKey, {
+              ? t('publicMatches.results.countSingular')
+              : t('publicMatches.results.count', {
                   count: filteredMatches.length,
                 })}
           </Text>
@@ -242,7 +244,7 @@ export default function PublicMatches() {
         <View style={styles.loadingContainer}>
           <Ionicons name="location-outline" size={48} color={colors.textMuted} />
           <Text size="base" color={colors.textMuted} style={styles.noLocationText}>
-            {t('home.nearbyEmpty.title' as TranslationKey)}
+            {t('home.nearbyEmpty.title')}
           </Text>
         </View>
       </SafeAreaView>
@@ -259,7 +261,7 @@ export default function PublicMatches() {
             <SearchBar
               value={filters.searchQuery}
               onChangeText={setSearchQuery}
-              placeholder={t('publicMatches.searchPlaceholder' as TranslationKey)}
+              placeholder={t('publicMatches.searchPlaceholder')}
               isLoading={isFetching && debouncedSearchQuery !== filters.searchQuery}
               onClear={clearSearch}
             />

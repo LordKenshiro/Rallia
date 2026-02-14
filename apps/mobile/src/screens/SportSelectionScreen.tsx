@@ -546,12 +546,12 @@ export function SportSelectionScreen() {
                                 {selectionOrder}
                               </Text>
                             ) : (
-                              <Ionicons name="checkmark" size={18} color={BASE_WHITE} />
+                              <Ionicons name="checkmark-outline" size={18} color={BASE_WHITE} />
                             )}
                           </View>
                         ) : (
                           <View style={styles.addButton}>
-                            <Ionicons name="add" size={22} color={BASE_WHITE} />
+                            <Ionicons name="add-outline" size={22} color={BASE_WHITE} />
                           </View>
                         )}
                       </View>
@@ -591,7 +591,7 @@ export function SportSelectionScreen() {
               />
               <Text size="sm" color={isDark ? primary[300] : primary[700]} style={styles.hintText}>
                 {t('sportSelectionOverlay.selectionHint', {
-                  sport: orderedSelection[0].display_name,
+                  sport: orderedSelection[0].display_name.toLowerCase(),
                 })}
               </Text>
             </View>

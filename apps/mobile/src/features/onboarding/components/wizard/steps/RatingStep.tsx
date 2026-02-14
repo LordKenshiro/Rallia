@@ -10,13 +10,13 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
   Linking,
   Alert,
 } from 'react-native';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, useToast } from '@rallia/shared-components';
+import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import DatabaseService, { Logger } from '@rallia/shared-services';
 import { selectionHaptic } from '@rallia/shared-utils';
@@ -45,41 +45,55 @@ interface Rating {
 }
 
 /**
- * Maps NTRP score value to a user-friendly skill level name
+ * Maps NTRP score value to a translation key
  */
-const getNtrpSkillLabel = (scoreValue: number): string => {
-  const mapping: Record<number, string> = {
-    1.5: 'Beginner 1',
-    2.0: 'Beginner 2',
-    2.5: 'Beginner 3',
-    3.0: 'Intermediate 1',
-    3.5: 'Intermediate 2',
-    4.0: 'Intermediate 3',
-    4.5: 'Advanced 1',
-    5.0: 'Advanced 2',
-    5.5: 'Advanced 3',
-    6.0: 'Professional',
+const getNtrpSkillLabelKey = (scoreValue: number): TranslationKey => {
+  const mapping: Record<number, TranslationKey> = {
+    1.5: 'onboarding.ratingStep.skillLevels.beginner1',
+    2.0: 'onboarding.ratingStep.skillLevels.beginner2',
+    2.5: 'onboarding.ratingStep.skillLevels.beginner3',
+    3.0: 'onboarding.ratingStep.skillLevels.intermediate1',
+    3.5: 'onboarding.ratingStep.skillLevels.intermediate2',
+    4.0: 'onboarding.ratingStep.skillLevels.intermediate3',
+    4.5: 'onboarding.ratingStep.skillLevels.advanced1',
+    5.0: 'onboarding.ratingStep.skillLevels.advanced2',
+    5.5: 'onboarding.ratingStep.skillLevels.advanced3',
+    6.0: 'onboarding.ratingStep.skillLevels.professional',
   };
-  return mapping[scoreValue] || `Level ${scoreValue}`;
+  return mapping[scoreValue] || '';
 };
 
 /**
- * Maps DUPR score value to a user-friendly skill level name
+ * Maps DUPR score value to a translation key
  */
-const getDuprSkillLabel = (scoreValue: number): string => {
-  const mapping: Record<number, string> = {
-    1.0: 'Beginner 1',
-    2.0: 'Beginner 2',
-    2.5: 'Beginner 3',
-    3.0: 'Intermediate 1',
-    3.5: 'Intermediate 2',
-    4.0: 'Intermediate 3',
-    4.5: 'Advanced 1',
-    5.0: 'Advanced 2',
-    5.5: 'Advanced 3',
-    6.0: 'Professional',
+const getDuprSkillLabelKey = (scoreValue: number): TranslationKey => {
+  const mapping: Record<number, TranslationKey> = {
+    1.0: 'onboarding.ratingStep.skillLevels.beginner1',
+    2.0: 'onboarding.ratingStep.skillLevels.beginner2',
+    2.5: 'onboarding.ratingStep.skillLevels.beginner3',
+    3.0: 'onboarding.ratingStep.skillLevels.intermediate1',
+    3.5: 'onboarding.ratingStep.skillLevels.intermediate2',
+    4.0: 'onboarding.ratingStep.skillLevels.intermediate3',
+    4.5: 'onboarding.ratingStep.skillLevels.advanced1',
+    5.0: 'onboarding.ratingStep.skillLevels.advanced2',
+    5.5: 'onboarding.ratingStep.skillLevels.advanced3',
+    6.0: 'onboarding.ratingStep.skillLevels.professional',
   };
-  return mapping[scoreValue] || `Level ${scoreValue}`;
+  return mapping[scoreValue] || '';
+};
+
+/**
+ * Maps NTRP score value to a description translation key
+ */
+const getNtrpDescriptionKey = (scoreValue: number): TranslationKey => {
+  return `onboarding.ratingStep.ntrpDescriptions.${scoreValue.toFixed(1).replace('.', '_')}` as TranslationKey;
+};
+
+/**
+ * Maps DUPR score value to a description translation key
+ */
+const getDuprDescriptionKey = (scoreValue: number): TranslationKey => {
+  return `onboarding.ratingStep.duprDescriptions.${scoreValue.toFixed(1).replace('.', '_')}` as TranslationKey;
 };
 
 /**
@@ -109,20 +123,16 @@ export const RatingStep: React.FC<RatingStepProps> = ({
   onContinue: _onContinue,
   colors,
   t,
-  isDark,
 }) => {
-  const toast = useToast();
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const isTennis = sport === 'tennis';
   const ratingSystem = isTennis ? 'ntrp' : 'dupr';
-  const sportDisplayName = isTennis
-    ? t('onboarding.tennis' as TranslationKey)
-    : t('onboarding.pickleball' as TranslationKey);
+  const sportDisplayName = isTennis ? t('onboarding.tennis') : t('onboarding.pickleball');
   const ratingSystemName = isTennis
-    ? t('onboarding.ratingStep.ntrpSubtitle' as TranslationKey)
-    : t('onboarding.ratingStep.duprSubtitle' as TranslationKey);
+    ? t('onboarding.ratingStep.ntrpSubtitle')
+    : t('onboarding.ratingStep.duprSubtitle');
   const selectedRatingId = isTennis ? formData.tennisRatingId : formData.pickleballRatingId;
   const ratingFieldKey = isTennis ? 'tennisRatingId' : 'pickleballRatingId';
 
@@ -141,7 +151,7 @@ export const RatingStep: React.FC<RatingStepProps> = ({
             sport,
             system: ratingSystem,
           });
-          Alert.alert('Error', 'Failed to load ratings. Please try again.');
+          Alert.alert(t('alerts.error'), t('onboarding.validation.failedToLoadRatings'));
           return;
         }
 
@@ -156,13 +166,14 @@ export const RatingStep: React.FC<RatingStepProps> = ({
         setRatings(transformedRatings);
       } catch (error) {
         Logger.error(`Unexpected error loading ${sport} ratings`, error as Error);
-        toast.error('An unexpected error occurred. Please try again.');
+        Alert.alert(t('alerts.error'), t('onboarding.validation.unexpectedError'));
       } finally {
         setIsLoading(false);
       }
     };
 
     loadRatings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sport, ratingSystem]);
 
   const handleRatingSelect = (ratingId: string) => {
@@ -184,17 +195,16 @@ export const RatingStep: React.FC<RatingStepProps> = ({
   };
 
   return (
-    <ScrollView
+    <BottomSheetScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
-      contentInsetAdjustmentBehavior="automatic"
     >
       {/* Title */}
       <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
-        {t('onboarding.ratingStep.tennisTitle' as TranslationKey)}
+        {t('onboarding.ratingStep.tennisTitle')}
       </Text>
 
       {/* Sport Badge */}
@@ -214,7 +224,7 @@ export const RatingStep: React.FC<RatingStepProps> = ({
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.buttonActive} />
           <Text size="sm" color={colors.textMuted} style={styles.loadingText}>
-            {t('common.loading' as TranslationKey)}
+            {t('common.loading')}
           </Text>
         </View>
       ) : (
@@ -249,9 +259,11 @@ export const RatingStep: React.FC<RatingStepProps> = ({
                     weight="bold"
                     color={isSelected ? colors.buttonActive : colors.text}
                   >
-                    {isTennis
-                      ? getNtrpSkillLabel(rating.score_value)
-                      : getDuprSkillLabel(rating.score_value)}
+                    {t(
+                      isTennis
+                        ? getNtrpSkillLabelKey(rating.score_value)
+                        : getDuprSkillLabelKey(rating.score_value)
+                    )}
                   </Text>
                 </View>
                 <Text
@@ -267,7 +279,11 @@ export const RatingStep: React.FC<RatingStepProps> = ({
                   color={isSelected ? colors.text : colors.textSecondary}
                   style={styles.ratingDescription}
                 >
-                  {rating.description}
+                  {t(
+                    isTennis
+                      ? getNtrpDescriptionKey(rating.score_value)
+                      : getDuprDescriptionKey(rating.score_value)
+                  )}
                 </Text>
               </TouchableOpacity>
             );
@@ -282,10 +298,14 @@ export const RatingStep: React.FC<RatingStepProps> = ({
         activeOpacity={0.7}
       >
         <Text size="sm" color={colors.buttonActive}>
-          Learn more about the {ratingSystem.toUpperCase()} rating system
+          {t(
+            isTennis
+              ? 'onboarding.ratingOverlay.learnMoreNtrp'
+              : 'onboarding.ratingOverlay.learnMoreDupr'
+          )}
         </Text>
       </TouchableOpacity>
-    </ScrollView>
+    </BottomSheetScrollView>
   );
 };
 

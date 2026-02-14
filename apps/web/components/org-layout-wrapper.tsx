@@ -1,7 +1,38 @@
 'use client';
 
-import { usePathname } from '@/i18n/navigation';
 import { OrgSidebar } from '@/components/org-sidebar';
+import { SidebarProvider, useSidebar } from '@/components/sidebar-context';
+import { OrganizationProvider } from '@/components/organization-context';
+import { QueryProvider } from '@/components/query-provider';
+import { usePathname } from '@/i18n/navigation';
+import { TooltipProvider } from './ui/tooltip';
+
+function LayoutContent({
+  children,
+  showSidebar,
+}: {
+  children: React.ReactNode;
+  showSidebar: boolean;
+}) {
+  // Sidebar context is used to re-render on collapse state changes
+  useSidebar();
+
+  return (
+    <div className="flex min-h-screen">
+      {showSidebar && <OrgSidebar />}
+      <main
+        className={`flex-1 overflow-auto ${showSidebar ? '' : 'mx-auto max-w-4xl'} relative transition-all duration-200`}
+        style={{
+          marginLeft: showSidebar ? 0 : undefined,
+        }}
+      >
+        <div className={`${showSidebar ? 'max-w-7xl' : 'w-full'} mx-auto py-8 px-6`}>
+          {children}
+        </div>
+      </main>
+    </div>
+  );
+}
 
 export function OrgLayoutWrapper({
   children,
@@ -17,13 +48,14 @@ export function OrgLayoutWrapper({
   const showSidebar = hasOrg && !isOnboardingPage;
 
   return (
-    <div className="flex min-h-screen">
-      {showSidebar && <OrgSidebar />}
-      <main className={`flex-1 overflow-auto ${showSidebar ? '' : 'mx-auto max-w-4xl'} relative`}>
-        <div className={`${showSidebar ? 'max-w-7xl' : 'w-full'} mx-auto py-8 px-6`}>
-          {children}
-        </div>
-      </main>
-    </div>
+    <QueryProvider>
+      <SidebarProvider>
+        <OrganizationProvider>
+          <TooltipProvider delayDuration={100}>
+            <LayoutContent showSidebar={showSidebar}>{children}</LayoutContent>
+          </TooltipProvider>
+        </OrganizationProvider>
+      </SidebarProvider>
+    </QueryProvider>
   );
 }

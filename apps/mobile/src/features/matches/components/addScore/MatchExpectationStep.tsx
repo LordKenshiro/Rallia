@@ -5,14 +5,10 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../../hooks';
+import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
 import { primary } from '@rallia/design-system';
 import { useAddScore } from './AddScoreContext';
 import type { MatchExpectation } from './types';
@@ -23,6 +19,7 @@ interface MatchExpectationStepProps {
 
 export function MatchExpectationStep({ onContinue }: MatchExpectationStepProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const { formData, updateFormData } = useAddScore();
 
   const [expectation, setExpectation] = useState<MatchExpectation>(
@@ -37,14 +34,14 @@ export function MatchExpectationStep({ onContinue }: MatchExpectationStepProps) 
   }[] = [
     {
       value: 'friendly',
-      label: 'Friendly',
-      description: 'Fun without scores',
+      label: t('addScore.matchExpectation.friendly'),
+      description: t('addScore.matchExpectation.friendlyDescription'),
       icon: 'happy',
     },
     {
       value: 'competitive',
-      label: 'Competitive',
-      description: 'Score matters',
+      label: t('addScore.matchExpectation.competitive'),
+      description: t('addScore.matchExpectation.competitiveDescription'),
       icon: 'trophy',
     },
   ];
@@ -58,15 +55,15 @@ export function MatchExpectationStep({ onContinue }: MatchExpectationStepProps) 
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Title */}
       <Text weight="bold" size="xl" style={[styles.title, { color: colors.text }]}>
-        Pick a match type
+        {t('addScore.matchExpectation.title')}
       </Text>
       <Text size="sm" style={[styles.subtitle, { color: colors.textSecondary }]}>
-        Have you played this match
+        {t('addScore.matchExpectation.subtitle')}
       </Text>
 
       {/* Options */}
       <View style={styles.options}>
-        {options.map((option) => {
+        {options.map(option => {
           const isSelected = expectation === option.value;
           return (
             <TouchableOpacity
@@ -75,7 +72,9 @@ export function MatchExpectationStep({ onContinue }: MatchExpectationStepProps) 
                 styles.optionButton,
                 {
                   backgroundColor: isSelected
-                    ? isDark ? primary[900] : primary[50]
+                    ? isDark
+                      ? primary[900]
+                      : primary[50]
                     : colors.cardBackground,
                   borderColor: isSelected ? colors.primary : colors.border,
                 },
@@ -83,10 +82,12 @@ export function MatchExpectationStep({ onContinue }: MatchExpectationStepProps) 
               onPress={() => setExpectation(option.value)}
               activeOpacity={0.7}
             >
-              <View style={[
-                styles.iconContainer,
-                { backgroundColor: isSelected ? colors.primary : isDark ? '#2C2C2E' : '#F0F0F0' }
-              ]}>
+              <View
+                style={[
+                  styles.iconContainer,
+                  { backgroundColor: isSelected ? colors.primary : isDark ? '#2C2C2E' : '#F0F0F0' },
+                ]}
+              >
                 <Ionicons
                   name={option.icon as keyof typeof Ionicons.glyphMap}
                   size={28}
@@ -101,16 +102,13 @@ export function MatchExpectationStep({ onContinue }: MatchExpectationStepProps) 
                 >
                   {option.label}
                 </Text>
-                <Text
-                  size="sm"
-                  style={{ color: colors.textSecondary, marginTop: 2 }}
-                >
+                <Text size="sm" style={{ color: colors.textSecondary, marginTop: 2 }}>
                   {option.description}
                 </Text>
               </View>
               {isSelected && (
                 <View style={[styles.checkmark, { backgroundColor: colors.primary }]}>
-                  <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                  <Ionicons name="checkmark-outline" size={16} color="#FFFFFF" />
                 </View>
               )}
             </TouchableOpacity>
@@ -121,7 +119,7 @@ export function MatchExpectationStep({ onContinue }: MatchExpectationStepProps) 
       {/* Continue button */}
       <View style={styles.bottomButton}>
         <Button variant="primary" onPress={handleContinue}>
-          Continue
+          {t('addScore.matchExpectation.continue')}
         </Button>
       </View>
     </View>

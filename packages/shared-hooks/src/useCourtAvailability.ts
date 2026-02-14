@@ -1,13 +1,14 @@
 /**
  * useCourtAvailability Hook
  *
- * Fetches court availability using the provider system.
- * Supports both the new provider-based approach and legacy endpoints.
+ * Fetches court availability using the unified availability system.
+ * Supports both local (org-managed) availability and external providers,
+ * with local availability taking priority.
  */
 
 import { useQuery } from '@tanstack/react-query';
 import {
-  fetchAvailability,
+  fetchUnifiedAvailability,
   filterFutureSlots,
   isToday,
   formatSlotTime,
@@ -29,6 +30,8 @@ export interface UseCourtAvailabilityOptions {
   externalProviderId: string | null;
   /** Booking URL template with placeholders */
   bookingUrlTemplate: string | null;
+  /** Facility timezone (IANA format, e.g., "America/Toronto") for accurate future slot filtering */
+  facilityTimezone?: string | null;
   /** Dates to fetch availability for (defaults to today and tomorrow) */
   dates?: string[];
   /** Enable/disable the query (default: true) */
@@ -43,14 +46,18 @@ export interface CourtOption {
   courtName: string;
   /** Court number extracted from the name (e.g., 1, 2, 3) for translated display */
   courtNumber?: number;
-  /** Booking URL for this specific court */
-  bookingUrl: string;
+  /** Booking URL for this specific court (null for local slots) */
+  bookingUrl: string | null;
   /** Schedule ID (for tracking) */
   facilityScheduleId: string;
   /** External court ID from the provider (e.g., Montreal's facility.id like "172601") */
   externalCourtId: string;
   /** Optional price */
   price?: number;
+  /** Court UUID for local slots (for in-app booking) */
+  courtId?: string;
+  /** Whether this is a local (org-managed) slot */
+  isLocalSlot?: boolean;
 }
 
 export interface FormattedSlot {
@@ -62,7 +69,7 @@ export interface FormattedSlot {
   courtCount: number;
   /** Whether this slot is today */
   isToday: boolean;
-  /** Booking URL for this specific slot (first available) */
+  /** Booking URL for this specific slot (first available, null for local slots) */
   bookingUrl: string | null;
   /** Schedule ID (for tracking) */
   facilityScheduleId: string;
@@ -76,6 +83,17 @@ export interface FormattedSlot {
   price?: number;
   /** Available court options when multiple courts at same time */
   courtOptions: CourtOption[];
+
+  // =========================================================================
+  // LOCAL SLOT FIELDS (for org-managed availability)
+  // =========================================================================
+
+  /** Whether this is a local (org-managed) slot */
+  isLocalSlot?: boolean;
+  /** Court UUID for local slots (for in-app booking) */
+  courtId?: string;
+  /** Template source for local slots */
+  templateSource?: 'court' | 'facility' | 'one_time';
 }
 
 /** Slots grouped by date for sectioned display */
@@ -224,6 +242,8 @@ interface GroupedSlot extends AvailabilitySlot {
  * Group slots by datetime and endDateTime, collecting unique court options.
  * This prevents duplicate time displays when multiple courts are available at the same time.
  * Courts are deduplicated by facilityScheduleId to ensure each court only appears once.
+ *
+ * Handles both external slots (with booking URLs) and local slots (with courtId).
  */
 function groupSlotsByTime(slots: AvailabilitySlot[]): GroupedSlot[] {
   // Create a map keyed by datetime and endDateTime
@@ -233,17 +253,21 @@ function groupSlotsByTime(slots: AvailabilitySlot[]): GroupedSlot[] {
     // Create a unique key from datetime and endDateTime timestamps
     const key = `${slot.datetime.getTime()}-${slot.endDateTime.getTime()}`;
 
-    // Create court option if this slot has a booking URL
+    // Create court option for this slot
+    // Local slots may not have booking URLs but should still be included
     // Use shortCourtName for display (e.g., "Court 1") instead of full name
-    // slot.facilityId is the external court ID from the provider (e.g., Montreal's "172601")
-    const courtOption: CourtOption | null = slot.bookingUrl
+    const hasBookableOption = slot.bookingUrl || slot.isLocalSlot;
+    const courtOption: CourtOption | null = hasBookableOption
       ? {
           courtName: slot.shortCourtName || slot.courtName || `Court ${slot.facilityScheduleId}`,
           courtNumber: slot.courtNumber,
-          bookingUrl: slot.bookingUrl,
+          bookingUrl: slot.bookingUrl ?? null,
           facilityScheduleId: slot.facilityScheduleId,
           externalCourtId: slot.facilityId,
           price: slot.price,
+          // Local slot fields
+          courtId: slot.courtId,
+          isLocalSlot: slot.isLocalSlot,
         }
       : null;
 
@@ -293,11 +317,12 @@ function groupSlotsByTime(slots: AvailabilitySlot[]): GroupedSlot[] {
 // =============================================================================
 
 /**
- * Hook for fetching court availability using the provider system.
+ * Hook for fetching court availability using the unified availability system.
  *
  * Features:
- * - Uses the provider registry for API-specific fetching
- * - Returns slots with booking URLs
+ * - Local-first priority: org-managed templates take precedence over external providers
+ * - Falls back to external providers (e.g., Loisir Montreal) if no local templates
+ * - Returns slots with booking URLs (external) or courtId (local)
  * - Graceful degradation on errors
  * - Short cache time (30s) since availability changes frequently
  *
@@ -321,6 +346,7 @@ export function useCourtAvailability(
     dataProviderType,
     externalProviderId,
     bookingUrlTemplate: _bookingUrlTemplate,
+    facilityTimezone,
     dates = getDefaultDates(),
     enabled = true,
     maxSlots = 20, // Increased to show more slots for date-sectioned display
@@ -334,18 +360,17 @@ export function useCourtAvailability(
   const query = useQuery<AvailabilitySlot[], Error>({
     queryKey: courtAvailabilityKeys.facilityWithDates(facilityId, dates),
     queryFn: async () => {
-      if (!dataProviderId || !externalProviderId) {
-        return [];
-      }
-
       try {
-        const result = await fetchAvailability(dataProviderId, {
+        // Use unified availability service (local-first)
+        const result = await fetchUnifiedAvailability({
+          facilityId,
           dates,
-          siteId: parseInt(externalProviderId, 10),
+          dataProviderId,
+          externalProviderId,
         });
 
         if (!result.success) {
-          console.warn(`[useCourtAvailability] Provider returned error: ${result.error}`);
+          console.warn(`[useCourtAvailability] Unified fetch error: ${result.error}`);
           return [];
         }
 
@@ -355,7 +380,8 @@ export function useCourtAvailability(
         return []; // Graceful degradation
       }
     },
-    enabled: enabled && hasProvider,
+    // Always enabled - unified service handles both local and external
+    enabled: enabled,
     staleTime: 30 * 1000, // 30 seconds
     gcTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
@@ -364,8 +390,9 @@ export function useCourtAvailability(
   });
 
   // Get future slots, group by time, then limit to maxSlots
+  // Use facility timezone to correctly filter slots based on current time at the facility
   const rawSlots = query.data ?? [];
-  const futureSlots = filterFutureSlots(rawSlots).sort(
+  const futureSlots = filterFutureSlots(rawSlots, facilityTimezone).sort(
     (a, b) => a.datetime.getTime() - b.datetime.getTime()
   );
 
@@ -387,6 +414,10 @@ export function useCourtAvailability(
     endDateTime: slot.endDateTime,
     price: slot.price,
     courtOptions: slot.courtOptions,
+    // Local slot fields
+    isLocalSlot: slot.isLocalSlot,
+    courtId: slot.courtId,
+    templateSource: slot.templateSource,
   }));
 
   // Group slots by date for sectioned display

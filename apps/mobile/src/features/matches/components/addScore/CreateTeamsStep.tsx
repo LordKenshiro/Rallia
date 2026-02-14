@@ -6,16 +6,10 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
-  ScrollView,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../../hooks';
+import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
 import { primary } from '@rallia/design-system';
 import { useAddScore } from './AddScoreContext';
 import type { SelectedPlayer } from './types';
@@ -26,6 +20,7 @@ interface CreateTeamsStepProps {
 
 export function CreateTeamsStep({ onContinue }: CreateTeamsStepProps) {
   const { colors, isDark } = useThemeStyles();
+  const { t } = useTranslation();
   const { formData, updateFormData } = useAddScore();
   const opponents = formData.opponents || [];
 
@@ -33,13 +28,16 @@ export function CreateTeamsStep({ onContinue }: CreateTeamsStepProps) {
     formData.partner || null
   );
 
-  const handleSelectPartner = useCallback((player: SelectedPlayer) => {
-    if (selectedPartner?.id === player.id) {
-      setSelectedPartner(null);
-    } else {
-      setSelectedPartner(player);
-    }
-  }, [selectedPartner]);
+  const handleSelectPartner = useCallback(
+    (player: SelectedPlayer) => {
+      if (selectedPartner?.id === player.id) {
+        setSelectedPartner(null);
+      } else {
+        setSelectedPartner(player);
+      }
+    },
+    [selectedPartner]
+  );
 
   const handleContinue = useCallback(() => {
     if (selectedPartner) {
@@ -61,7 +59,9 @@ export function CreateTeamsStep({ onContinue }: CreateTeamsStepProps) {
           styles.playerItem,
           {
             backgroundColor: isSelected
-              ? isDark ? primary[900] : primary[50]
+              ? isDark
+                ? primary[900]
+                : primary[50]
               : colors.cardBackground,
             borderColor: isSelected ? colors.primary : colors.border,
           },
@@ -83,7 +83,7 @@ export function CreateTeamsStep({ onContinue }: CreateTeamsStepProps) {
         </Text>
         {isSelected && (
           <View style={[styles.checkmark, { backgroundColor: colors.primary }]}>
-            <Ionicons name="checkmark" size={16} color="#fff" />
+            <Ionicons name="checkmark-outline" size={16} color="#fff" />
           </View>
         )}
       </TouchableOpacity>
@@ -98,36 +98,50 @@ export function CreateTeamsStep({ onContinue }: CreateTeamsStepProps) {
     >
       {/* Title */}
       <Text weight="bold" size="xl" style={[styles.title, { color: colors.text }]}>
-        Create teams
+        {t('addScore.createTeams.title')}
       </Text>
       <Text size="sm" style={[styles.subtitle, { color: colors.textSecondary }]}>
-        Pick a player as your partner
+        {t('addScore.createTeams.pickPartner')}
       </Text>
 
       {/* Player list */}
-      <View style={styles.playerList}>
-        {opponents.map(renderPlayerItem)}
-      </View>
+      <View style={styles.playerList}>{opponents.map(renderPlayerItem)}</View>
 
       {/* Team preview */}
       {selectedPartner && (
         <View style={styles.teamPreview}>
           <Text weight="semibold" style={[styles.previewTitle, { color: colors.text }]}>
-            Teams Preview
+            {t('addScore.createTeams.teamsPreview')}
           </Text>
 
           {/* Your Team */}
-          <View style={[styles.teamCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+          <View
+            style={[
+              styles.teamCard,
+              { backgroundColor: colors.cardBackground, borderColor: colors.border },
+            ]}
+          >
             <Text size="sm" weight="medium" style={[styles.teamLabel, { color: colors.primary }]}>
-              Your Team
+              {t('addScore.createTeams.yourTeam')}
             </Text>
             <View style={styles.teamAvatars}>
-              <View style={[styles.previewAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-                <Ionicons name="person" size={20} color={colors.primary} />
+              <View
+                style={[styles.previewAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}
+              >
+                <Ionicons name="person-outline" size={20} color={colors.primary} />
               </View>
-              <View style={[styles.previewAvatar, styles.previewAvatarOverlap, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+              <View
+                style={[
+                  styles.previewAvatar,
+                  styles.previewAvatarOverlap,
+                  { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
+                ]}
+              >
                 {selectedPartner.profilePictureUrl ? (
-                  <Image source={{ uri: selectedPartner.profilePictureUrl }} style={styles.previewAvatarImage} />
+                  <Image
+                    source={{ uri: selectedPartner.profilePictureUrl }}
+                    style={styles.previewAvatarImage}
+                  />
                 ) : (
                   <Text weight="semibold" style={{ color: colors.primary }}>
                     {(selectedPartner.firstName || 'P')[0].toUpperCase()}
@@ -136,18 +150,29 @@ export function CreateTeamsStep({ onContinue }: CreateTeamsStepProps) {
               </View>
             </View>
             <Text size="sm" style={{ color: colors.textSecondary }}>
-              You & {selectedPartner.firstName}
+              {t('addScore.createTeams.youAnd', {
+                name: selectedPartner.firstName,
+              })}
             </Text>
           </View>
 
           {/* Opponent Team */}
-          <View style={[styles.teamCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-            <Text size="sm" weight="medium" style={[styles.teamLabel, { color: colors.textSecondary }]}>
-              Opponents
+          <View
+            style={[
+              styles.teamCard,
+              { backgroundColor: colors.cardBackground, borderColor: colors.border },
+            ]}
+          >
+            <Text
+              size="sm"
+              weight="medium"
+              style={[styles.teamLabel, { color: colors.textSecondary }]}
+            >
+              {t('addScore.createTeams.opponents')}
             </Text>
             <View style={styles.teamAvatars}>
               {opponents
-                .filter((p) => p.id !== selectedPartner.id)
+                .filter(p => p.id !== selectedPartner.id)
                 .map((player, index) => (
                   <View
                     key={player.id}
@@ -158,7 +183,10 @@ export function CreateTeamsStep({ onContinue }: CreateTeamsStepProps) {
                     ]}
                   >
                     {player.profilePictureUrl ? (
-                      <Image source={{ uri: player.profilePictureUrl }} style={styles.previewAvatarImage} />
+                      <Image
+                        source={{ uri: player.profilePictureUrl }}
+                        style={styles.previewAvatarImage}
+                      />
                     ) : (
                       <Text weight="semibold" style={{ color: colors.textMuted }}>
                         {(player.firstName || 'P')[0].toUpperCase()}
@@ -169,8 +197,8 @@ export function CreateTeamsStep({ onContinue }: CreateTeamsStepProps) {
             </View>
             <Text size="sm" style={{ color: colors.textSecondary }}>
               {opponents
-                .filter((p) => p.id !== selectedPartner.id)
-                .map((p) => p.firstName)
+                .filter(p => p.id !== selectedPartner.id)
+                .map(p => p.firstName)
                 .join(' & ')}
             </Text>
           </View>

@@ -24,7 +24,8 @@ async function findExistingMatch(
   // Get all matches on this date for this sport
   const { data: matches, error } = await supabase
     .from('match')
-    .select(`
+    .select(
+      `
       id,
       sport_id,
       match_date,
@@ -36,7 +37,8 @@ async function findExistingMatch(
       result:match_result (
         id
       )
-    `)
+    `
+    )
     .eq('sport_id', sportId)
     .eq('match_date', matchDate)
     .is('cancelled_at', null);
@@ -51,21 +53,22 @@ async function findExistingMatch(
   // Find a match with the exact same players
   for (const match of matches) {
     const participants = match.participants as Array<{ player_id: string; team_number: number }>;
-    
+
     if (!participants || participants.length === 0) continue;
 
     // Get all participant player IDs
     const matchPlayerIds = participants.map(p => p.player_id).sort();
 
     // Check if all players match (same players in match)
-    if (matchPlayerIds.length === allPlayerIds.length &&
-        matchPlayerIds.every((id, idx) => id === allPlayerIds[idx])) {
-      
+    if (
+      matchPlayerIds.length === allPlayerIds.length &&
+      matchPlayerIds.every((id, idx) => id === allPlayerIds[idx])
+    ) {
       // Found a match with the same players!
       // Check if it has a result
       const result = match.result as Array<{ id: string }> | null;
       const hasResult = Array.isArray(result) && result.length > 0;
-      
+
       return {
         matchId: match.id,
         hasResult,
@@ -83,7 +86,7 @@ async function findExistingMatch(
 /**
  * Create a played match with results
  * This is for recording past games that have already been played
- * 
+ *
  * SMART MATCHING: If a scheduled match exists with the same players and date,
  * we add the result to that match instead of creating a duplicate.
  */
@@ -124,7 +127,7 @@ export async function createPlayedMatch(
       // If the match already has a result, we shouldn't overwrite it
       if (existingMatch.hasResult) {
         console.warn(`Match ${matchId} already has a result. Skipping result creation.`);
-        
+
         // Still post to group if requested
         if (networkId) {
           try {
@@ -133,7 +136,7 @@ export async function createPlayedMatch(
             console.error('Error posting to group:', postError);
           }
         }
-        
+
         return { matchId, success: true };
       }
     } else {
@@ -178,7 +181,7 @@ export async function createPlayedMatch(
       }));
 
       // 4. Create match participants for Team 2
-      const team2Participants = team2PlayerIds.map((playerId) => ({
+      const team2Participants = team2PlayerIds.map(playerId => ({
         match_id: matchId,
         player_id: playerId,
         team_number: 2,
@@ -203,8 +206,8 @@ export async function createPlayedMatch(
       // Calculate total scores (sets won)
       let team1Total = 0;
       let team2Total = 0;
-      
-      sets.forEach((set) => {
+
+      sets.forEach(set => {
         if (set.team1Score !== null && set.team2Score !== null) {
           if (set.team1Score > set.team2Score) {
             team1Total++;
@@ -245,9 +248,7 @@ export async function createPlayedMatch(
             team2_score: set.team2Score,
           }));
 
-          const { error: setsError } = await supabase
-            .from('match_set')
-            .insert(setsToInsert);
+          const { error: setsError } = await supabase.from('match_set').insert(setsToInsert);
 
           if (setsError) {
             console.error('Error creating match sets:', setsError);
@@ -288,9 +289,7 @@ export async function createPlayedMatch(
 /**
  * Get sport ID by name
  */
-export async function getSportIdByName(
-  sportName: 'tennis' | 'pickleball'
-): Promise<string | null> {
+export async function getSportIdByName(sportName: 'tennis' | 'pickleball'): Promise<string | null> {
   const { data, error } = await supabase
     .from('sport')
     .select('id')
@@ -315,8 +314,9 @@ export async function getSportIdByName(
 export async function getPendingScoreConfirmations(
   playerId: string
 ): Promise<PendingScoreConfirmation[]> {
-  const { data, error } = await supabase
-    .rpc('get_pending_score_confirmations', { p_player_id: playerId });
+  const { data, error } = await supabase.rpc('get_pending_score_confirmations', {
+    p_player_id: playerId,
+  });
 
   if (error) {
     console.error('Error fetching pending confirmations:', error);
@@ -327,17 +327,52 @@ export async function getPendingScoreConfirmations(
 }
 
 /**
+ * Set score payload for submit_match_result_for_match RPC
+ */
+export interface SubmitMatchResultForMatchParams {
+  matchId: string;
+  submittedByPlayerId: string;
+  winningTeam: 1 | 2;
+  sets: Array<{ team1_score: number; team2_score: number }>;
+}
+
+/**
+ * Submit match result for a specific match (e.g. from match detail during feedback window).
+ * Caller must be a joined participant; match must have ended and be within 48h.
+ * Returns the new match_result id.
+ */
+export async function submitMatchResultForMatch(
+  params: SubmitMatchResultForMatchParams
+): Promise<string> {
+  const { matchId, submittedByPlayerId, winningTeam, sets } = params;
+  const p_sets = sets.map(s => ({
+    team1_score: s.team1_score,
+    team2_score: s.team2_score,
+  }));
+
+  const { data, error } = await supabase.rpc('submit_match_result_for_match', {
+    p_match_id: matchId,
+    p_submitted_by: submittedByPlayerId,
+    p_winning_team: winningTeam,
+    p_sets,
+  });
+
+  if (error) {
+    console.error('Error submitting match result:', error);
+    throw new Error(error.message);
+  }
+
+  return data as string;
+}
+
+/**
  * Confirm a match score
  */
-export async function confirmMatchScore(
-  matchResultId: string,
-  playerId: string
-): Promise<boolean> {
-  const { data, error } = await supabase
-    .rpc('confirm_match_score', {
-      p_match_result_id: matchResultId,
-      p_player_id: playerId,
-    });
+export async function confirmMatchScore(matchResultId: string, playerId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('confirm_match_score', {
+    p_match_result_id: matchResultId,
+    p_player_id: playerId,
+  });
 
   if (error) {
     console.error('Error confirming score:', error);
@@ -355,12 +390,11 @@ export async function disputeMatchScore(
   playerId: string,
   reason?: string
 ): Promise<boolean> {
-  const { data, error } = await supabase
-    .rpc('dispute_match_score', {
-      p_match_result_id: matchResultId,
-      p_player_id: playerId,
-      p_reason: reason || null,
-    });
+  const { data, error } = await supabase.rpc('dispute_match_score', {
+    p_match_result_id: matchResultId,
+    p_player_id: playerId,
+    p_reason: reason || null,
+  });
 
   if (error) {
     console.error('Error disputing score:', error);
@@ -385,13 +419,14 @@ export async function notifyOpponentsOfPendingScore(
     .eq('id', submittedBy)
     .single();
 
-  const submitterName = submitterProfile?.display_name ||
+  const submitterName =
+    submitterProfile?.display_name ||
     `${submitterProfile?.first_name || ''} ${submitterProfile?.last_name || ''}`.trim() ||
     'A player';
 
   // Create notifications for each opponent using the correct schema columns
   // Schema: user_id, type, target_id, title, body, payload, read_at, expires_at
-  const notifications = opponentIds.map((opponentId) => ({
+  const notifications = opponentIds.map(opponentId => ({
     user_id: opponentId,
     type: 'score_confirmation' as const,
     target_id: matchId,
@@ -400,9 +435,7 @@ export async function notifyOpponentsOfPendingScore(
     payload: { match_id: matchId, submitted_by: submittedBy },
   }));
 
-  const { error } = await supabase
-    .from('notification')
-    .insert(notifications);
+  const { error } = await supabase.from('notification').insert(notifications);
 
   if (error) {
     console.error('Error sending score confirmation notifications:', error);

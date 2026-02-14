@@ -28,13 +28,15 @@ interface UsePlacesAutocompleteOptions {
   minQueryLength?: number;
 }
 
-/** Place details with coordinates */
+/** Place details with coordinates and optional timezone (from Google Time Zone API) */
 export interface PlaceDetails {
   placeId: string;
   name: string;
   address: string;
   latitude: number;
   longitude: number;
+  /** IANA timezone (e.g. America/New_York) when available from Google Time Zone API */
+  timezone?: string;
 }
 
 interface UsePlacesAutocompleteReturn {
@@ -58,6 +60,7 @@ interface UsePlacesAutocompleteReturn {
 
 const GOOGLE_PLACES_API_URL = 'https://places.googleapis.com/v1/places:autocomplete';
 const GOOGLE_PLACE_DETAILS_URL = 'https://places.googleapis.com/v1/places';
+const GOOGLE_TIMEZONE_API_URL = 'https://maps.googleapis.com/maps/api/timezone/json';
 
 // Get API key from environment
 // In Expo, environment variables prefixed with EXPO_PUBLIC_ are embedded at build time
@@ -182,12 +185,35 @@ export function usePlacesAutocomplete(
         return null;
       }
 
+      const lat = data.location.latitude;
+      const lng = data.location.longitude;
+
+      // Fetch timezone from Google Time Zone API (same key as Places)
+      let timezone: string | undefined;
+      try {
+        const timestamp = Math.floor(Date.now() / 1000);
+        const timezoneUrl = `${GOOGLE_TIMEZONE_API_URL}?location=${lat},${lng}&timestamp=${timestamp}&key=${apiKey}`;
+        const tzResponse = await fetch(timezoneUrl);
+        if (tzResponse.ok) {
+          const tzData = (await tzResponse.json()) as {
+            status?: string;
+            timeZoneId?: string;
+          };
+          if (tzData.status === 'OK' && tzData.timeZoneId) {
+            timezone = tzData.timeZoneId;
+          }
+        }
+      } catch (tzErr) {
+        // Non-critical: continue without timezone
+      }
+
       return {
         placeId,
         name: data.displayName?.text || '',
         address: data.formattedAddress || '',
-        latitude: data.location.latitude,
-        longitude: data.location.longitude,
+        latitude: lat,
+        longitude: lng,
+        ...(timezone && { timezone }),
       };
     } catch (err) {
       console.error('Place details fetch error:', err);

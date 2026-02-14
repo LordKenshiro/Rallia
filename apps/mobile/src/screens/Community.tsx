@@ -7,13 +7,27 @@
  */
 
 import React, { useMemo, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  ScrollView,
+  useWindowDimensions,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { useAuth, useThemeStyles } from '../hooks';
+import { lightHaptic } from '@rallia/shared-utils';
+import {
+  useAuth,
+  useThemeStyles,
+  useTranslation,
+  useNavigateToPlayerProfile,
+  type TranslationKey,
+} from '../hooks';
 import { useSport } from '../context';
 import { spacingPixels } from '@rallia/design-system';
 import { primary, neutral } from '@rallia/design-system';
@@ -35,10 +49,12 @@ interface ActionButton {
 }
 
 const Community = () => {
+  const { width: windowWidth } = useWindowDimensions();
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
   const { selectedSport } = useSport();
   const navigation = useNavigation<CommunityNavigationProp>();
+  const { t } = useTranslation();
 
   // Theme colors for components
   const themeColors = useMemo(
@@ -66,22 +82,28 @@ const Community = () => {
 
   // Action button handlers
   const handleShareLists = useCallback(() => {
+    lightHaptic();
     navigation.navigate('ShareLists');
   }, [navigation]);
 
   const handleGroups = useCallback(() => {
+    lightHaptic();
     navigation.navigate('Groups');
   }, [navigation]);
 
   const handleCommunities = useCallback(() => {
-    // TODO: Implement communities functionality
-    Alert.alert('Communities', 'This feature is coming soon!');
-  }, []);
+    lightHaptic();
+    navigation.navigate('Communities');
+  }, [navigation]);
 
-  const handleTournaments = useCallback(() => {
-    // TODO: Implement tournaments functionality
-    Alert.alert('Tournaments', 'This feature is coming soon!');
-  }, []);
+  // const handleTournaments = useCallback(() => {
+  //   lightHaptic();
+  //   // TODO: Implement tournaments functionality
+  //   Alert.alert(
+  //     t('community.tournaments'),
+  //     t('community.tournamentsComingSoon')
+  //   );
+  // }, [t]);
 
   // Action buttons configuration
   const actionButtons: ActionButton[] = useMemo(
@@ -89,45 +111,47 @@ const Community = () => {
       {
         id: 'share-lists',
         icon: 'paper-plane-outline',
-        label: 'Share Lists',
+        label: t('community.shareLists'),
         onPress: handleShareLists,
       },
       {
         id: 'groups',
         icon: 'people-outline',
-        label: 'Groups',
+        label: t('community.groups'),
         onPress: handleGroups,
       },
       {
         id: 'communities',
         icon: 'globe-outline',
-        label: 'Communities',
+        label: t('community.communities'),
         onPress: handleCommunities,
       },
-      {
-        id: 'tournaments',
-        icon: 'trophy-outline',
-        label: 'Tournaments',
-        onPress: handleTournaments,
-      },
+      // {
+      //   id: 'tournaments',
+      //   icon: 'trophy-outline',
+      //   label: t('community.tournaments'),
+      //   onPress: handleTournaments,
+      // },
     ],
-    [handleShareLists, handleGroups, handleCommunities, handleTournaments]
+    [handleShareLists, handleGroups, handleCommunities, t]
   );
 
+  const navigateToPlayerProfile = useNavigateToPlayerProfile();
   const handlePlayerPress = useCallback(
     (player: PlayerSearchResult) => {
-      // Navigate to player profile screen with selected sport
-      navigation.navigate('PlayerProfile', {
-        playerId: player.id,
-        sportId: selectedSport?.id,
-      });
+      navigateToPlayerProfile(player.id, selectedSport?.id);
     },
-    [navigation, selectedSport?.id]
+    [navigateToPlayerProfile, selectedSport?.id]
   );
 
   // Render action buttons row
   const renderActionButtons = () => (
-    <View style={styles.actionButtonsContainer}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={styles.actionButtonsScrollView}
+      contentContainerStyle={[styles.actionButtonsContainer, { minWidth: windowWidth }]}
+    >
       {actionButtons.map(button => (
         <TouchableOpacity
           key={button.id}
@@ -143,7 +167,7 @@ const Community = () => {
           </Text>
         </TouchableOpacity>
       ))}
-    </View>
+    </ScrollView>
   );
 
   return (
@@ -153,9 +177,8 @@ const Community = () => {
 
       {/* Find a Partner Section Header */}
       <View style={styles.sectionHeader}>
-        <Ionicons name="tennisball-outline" size={20} color={colors.primary} />
         <Text size="lg" weight="bold" color={colors.text} style={styles.sectionTitle}>
-          Find a Partner
+          {t('community.findPartner')}
         </Text>
       </View>
 
@@ -175,13 +198,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  actionButtonsScrollView: {
+    flexGrow: 0,
+    paddingTop: spacingPixels[2],
+    flexShrink: 0,
+  },
   actionButtonsContainer: {
     flexDirection: 'row',
-    justifyContent: 'flex-start',
-    paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[3],
+    justifyContent: 'space-evenly',
+    paddingHorizontal: spacingPixels[2],
+    paddingTop: spacingPixels[2],
     paddingBottom: spacingPixels[2],
-    gap: spacingPixels[6],
   },
   actionButton: {
     alignItems: 'center',

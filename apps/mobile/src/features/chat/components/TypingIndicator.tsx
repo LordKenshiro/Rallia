@@ -3,11 +3,11 @@
  * Shows when other users are typing in a conversation
  */
 
-import React, { memo, useEffect, useRef } from 'react';
+import React, { memo, useEffect, useRef, useMemo } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary } from '@rallia/design-system';
 import type { TypingIndicator as TypingIndicatorType } from '@rallia/shared-services';
 
@@ -17,14 +17,18 @@ interface TypingIndicatorProps {
 
 function TypingIndicatorComponent({ typingUsers }: TypingIndicatorProps) {
   const { colors } = useThemeStyles();
-  const dot1 = useRef(new Animated.Value(0)).current;
-  const dot2 = useRef(new Animated.Value(0)).current;
-  const dot3 = useRef(new Animated.Value(0)).current;
+  const { t } = useTranslation();
+  // Animation values - using useMemo for stable instances
+  const dot1 = useMemo(() => new Animated.Value(0), []);
+  const dot2 = useMemo(() => new Animated.Value(0), []);
+  const dot3 = useMemo(() => new Animated.Value(0), []);
+  const animationRef = useRef<Animated.CompositeAnimation | null>(null);
 
   useEffect(() => {
     if (typingUsers.length === 0) return;
 
-    const animateDots = () => {
+    // Create a looping animation with proper cleanup
+    const dotAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(dot1, {
           toValue: 1,
@@ -56,12 +60,18 @@ function TypingIndicatorComponent({ typingUsers }: TypingIndicatorProps) {
           duration: 200,
           useNativeDriver: true,
         }),
-      ]).start(animateDots);
-    };
+      ])
+    );
 
-    animateDots();
+    animationRef.current = dotAnimation;
+    dotAnimation.start();
 
     return () => {
+      // Properly stop the animation loop on cleanup
+      if (animationRef.current) {
+        animationRef.current.stop();
+        animationRef.current = null;
+      }
       dot1.setValue(0);
       dot2.setValue(0);
       dot3.setValue(0);
@@ -73,11 +83,17 @@ function TypingIndicatorComponent({ typingUsers }: TypingIndicatorProps) {
   // Build the typing message
   let typingText = '';
   if (typingUsers.length === 1) {
-    typingText = `${typingUsers[0].player_name} is typing`;
+    typingText = t('chat.typing.one', { name: typingUsers[0].player_name });
   } else if (typingUsers.length === 2) {
-    typingText = `${typingUsers[0].player_name} and ${typingUsers[1].player_name} are typing`;
+    typingText = t('chat.typing.two', {
+      name1: typingUsers[0].player_name,
+      name2: typingUsers[1].player_name,
+    });
   } else {
-    typingText = `${typingUsers[0].player_name} and ${typingUsers.length - 1} others are typing`;
+    typingText = t('chat.typing.many', {
+      name: typingUsers[0].player_name,
+      count: typingUsers.length - 1,
+    });
   }
 
   const dotStyle = (anim: Animated.Value) => ({
@@ -98,9 +114,7 @@ function TypingIndicatorComponent({ typingUsers }: TypingIndicatorProps) {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <Text style={[styles.text, { color: colors.textMuted }]}>
-          {typingText}
-        </Text>
+        <Text style={[styles.text, { color: colors.textMuted }]}>{typingText}</Text>
         <View style={styles.dotsContainer}>
           <Animated.View style={[styles.dot, { backgroundColor: primary[500] }, dotStyle(dot1)]} />
           <Animated.View style={[styles.dot, { backgroundColor: primary[500] }, dotStyle(dot2)]} />

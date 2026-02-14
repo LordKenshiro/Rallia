@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image, Modal, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -57,10 +57,11 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   const { profile, refetch: refetchProfile } = useProfile();
   const { playerSports, refetch: refetchPlayerSports } = usePlayerSports(profile?.id);
 
-  const [userSports, setUserSports] = useState<Sport[]>([]);
-  const [selectedSport, setSelectedSport] = useState<Sport | null>(null);
+  // Store explicit user selection (null means use default/first sport)
+  const [userSelectedSportId, setUserSelectedSportId] = useState<string | null>(null);
   const [showSportDropdown, setShowSportDropdown] = useState(false);
-  const [imageLoadError, setImageLoadError] = useState(false);
+  // Track which URL had an error (instead of boolean) to auto-reset when URL changes
+  const [erroredImageUrl, setErroredImageUrl] = useState<string | null>(null);
 
   // Check if user is logged in (profile exists)
   const isLoggedIn = !!profile;
@@ -72,40 +73,38 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     [profile?.profile_picture_url]
   );
 
-  // Reset error state when profile picture URL changes
-  useEffect(() => {
-    if (profile) {
-      setImageLoadError(false);
+  // Only consider it an error if the current URL matches the errored URL
+  const imageLoadError = erroredImageUrl === profilePictureUrl && !!profilePictureUrl;
+
+  // Process player sports data when it changes - use useMemo instead of useState + useEffect
+  const userSports = useMemo(() => {
+    if (!playerSports || playerSports.length === 0) {
+      return [];
     }
-  }, [profile, profilePictureUrl]);
 
-  // Process player sports data when it changes
-  useEffect(() => {
-    if (playerSports && playerSports.length > 0) {
-      const sports: Sport[] = [];
-
-      playerSports.forEach(ps => {
-        const sportData = Array.isArray(ps.sport) ? ps.sport[0] : ps.sport;
-        if (sportData && typeof sportData === 'object') {
-          sports.push({
-            id: sportData.id,
-            name: sportData.name,
-            display_name: sportData.display_name,
-          });
-        }
-      });
-
-      setUserSports(sports);
-
-      // Set first sport as default if none selected
-      if (!selectedSport && sports.length > 0) {
-        setSelectedSport(sports[0]);
+    const sports: Sport[] = [];
+    playerSports.forEach(ps => {
+      const sportData = Array.isArray(ps.sport) ? ps.sport[0] : ps.sport;
+      if (sportData && typeof sportData === 'object') {
+        sports.push({
+          id: sportData.id,
+          name: sportData.name,
+          display_name: sportData.display_name,
+        });
       }
-    } else {
-      setUserSports([]);
-      setSelectedSport(null);
+    });
+
+    return sports;
+  }, [playerSports]);
+
+  // Derive selected sport: use explicit selection if valid, otherwise default to first sport
+  const selectedSport = useMemo(() => {
+    if (userSelectedSportId) {
+      const found = userSports.find(s => s.id === userSelectedSportId);
+      if (found) return found;
     }
-  }, [playerSports, selectedSport]);
+    return userSports.length > 0 ? userSports[0] : null;
+  }, [userSelectedSportId, userSports]);
 
   // Refetch data whenever the screen comes into focus
   useFocusEffect(
@@ -116,7 +115,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   );
 
   const handleSportSelect = (sport: Sport) => {
-    setSelectedSport(sport);
+    setUserSelectedSportId(sport.id);
     setShowSportDropdown(false);
   };
 
@@ -153,10 +152,10 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                       '❌ AppHeader - Failed to load profile image:',
                       error.nativeEvent.error
                     );
-                    setImageLoadError(true);
+                    setErroredImageUrl(profilePictureUrl);
                   }}
                   onLoad={() => {
-                    setImageLoadError(false);
+                    setErroredImageUrl(null);
                   }}
                 />
               ) : (
@@ -175,12 +174,12 @@ const AppHeader: React.FC<AppHeaderProps> = ({
               style={[styles.sportSelector, { backgroundColor: colors.primary }]}
               onPress={() => setShowSportDropdown(!showSportDropdown)}
             >
-              <Text color={colors.primaryForeground} weight="semibold" size="sm">
+              <Text color={colors.primaryForeground} weight="semibold" size="sm" numberOfLines={1}>
                 {selectedSport.display_name}
               </Text>
               <Ionicons
                 name={showSportDropdown ? 'chevron-up' : 'chevron-down'}
-                size={16}
+                size={14}
                 color={colors.primaryForeground}
               />
             </TouchableOpacity>
@@ -285,10 +284,11 @@ const styles = StyleSheet.create({
   sportSelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
+    alignSelf: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+    gap: 4,
     // backgroundColor will be set dynamically
   },
   rightIcons: {

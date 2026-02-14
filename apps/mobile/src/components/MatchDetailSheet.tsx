@@ -59,19 +59,25 @@ import { useMatchDetailSheet } from '../context/MatchDetailSheetContext';
 import { useActionsSheet } from '../context/ActionsSheetContext';
 import { usePlayerInviteSheet } from '../context/PlayerInviteSheetContext';
 import { useFeedbackSheet } from '../context/FeedbackSheetContext';
-import { useTranslation, usePermissions, type TranslationKey } from '../hooks';
+import {
+  useTranslation,
+  usePermissions,
+  useRequireOnboarding,
+  type TranslationKey,
+} from '../hooks';
 import { useTheme, usePlayer, useMatchActions } from '@rallia/shared-hooks';
-import { getMatchChat } from '@rallia/shared-services';
+import { getMatchChat, getMatchWithDetails } from '@rallia/shared-services';
+import { SheetManager } from 'react-native-actions-sheet';
 import { shareMatch } from '../utils';
 import type { MatchDetailData } from '../context/MatchDetailSheetContext';
 import { ConfirmationModal } from './ConfirmationModal';
 import { RequesterDetailsModal } from './RequesterDetailsModal';
+import { useAppNavigation } from '../navigation';
 import type {
   PlayerWithProfile,
   MatchParticipantWithPlayer,
   OpponentForFeedback,
 } from '@rallia/shared-types';
-import { navigationRef } from '../navigation';
 
 // Use base.white from design system for consistency
 
@@ -107,47 +113,6 @@ function getMatchTier(courtStatus: string | null, creatorReputationScore?: numbe
  * - readyToPlay: secondary (coral/red) - court ready, energetic
  * - regular: primary (teal) - standard matches
  */
-const TIER_PALETTES = {
-  // Most Wanted - accent palette (amber/gold - premium, highly desirable)
-  mostWanted: {
-    light: {
-      background: accent[50],
-      accentStart: accent[500],
-      accentEnd: accent[400],
-    },
-    dark: {
-      background: '#3d2b10',
-      accentStart: accent[400],
-      accentEnd: accent[300],
-    },
-  },
-  // Ready to Play - secondary palette (coral/red tones)
-  readyToPlay: {
-    light: {
-      background: secondary[50],
-      accentStart: secondary[500],
-      accentEnd: secondary[400],
-    },
-    dark: {
-      background: secondary[900],
-      accentStart: secondary[400],
-      accentEnd: secondary[300],
-    },
-  },
-  // Regular - primary palette (teal/mint - fresh, standard)
-  regular: {
-    light: {
-      background: primary[50],
-      accentStart: primary[500],
-      accentEnd: primary[400],
-    },
-    dark: {
-      background: primary[950],
-      accentStart: primary[400],
-      accentEnd: primary[300],
-    },
-  },
-} as const;
 
 // =============================================================================
 // TYPES
@@ -206,7 +171,7 @@ function getRelativeTimeDisplay(
   // Use translation for Today/Tomorrow, otherwise use the formatted date
   let dateLabel: string;
   if (dateResult.translationKey) {
-    dateLabel = t(dateResult.translationKey as TranslationKey);
+    dateLabel = t(dateResult.translationKey);
   } else {
     dateLabel = dateResult.label;
   }
@@ -215,7 +180,7 @@ function getRelativeTimeDisplay(
   const startResult = formatTimeInTimezone(dateString, startTime, tz, locale);
   const endResult = formatTimeInTimezone(dateString, endTime, tz, locale);
   const timeRange = `${startResult.formattedTime} - ${endResult.formattedTime}`;
-  const separator = t('common.time.timeSeparator' as TranslationKey);
+  const separator = t('common.time.timeSeparator');
 
   return { label: `${dateLabel}${separator}${timeRange}`, isUrgent };
 }
@@ -424,7 +389,7 @@ function willCancelAffectReputation(match: MatchDetailData): boolean {
 // =============================================================================
 
 interface InfoRowProps {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon?: keyof typeof Ionicons.glyphMap;
   iconColor?: string;
   children: React.ReactNode;
   colors: ThemeColors;
@@ -432,9 +397,11 @@ interface InfoRowProps {
 
 const InfoRow: React.FC<InfoRowProps> = ({ icon, iconColor, children, colors }) => (
   <View style={styles.infoRow}>
-    <View style={styles.infoIconContainer}>
-      <Ionicons name={icon} size={20} color={iconColor || colors.iconMuted} />
-    </View>
+    {icon != null && (
+      <View style={styles.infoIconContainer}>
+        <Ionicons name={icon} size={20} color={iconColor || colors.iconMuted} />
+      </View>
+    )}
     <View style={styles.infoContent}>{children}</View>
   </View>
 );
@@ -509,9 +476,9 @@ const ParticipantAvatar: React.FC<ParticipantAvatarProps> = ({
         {!isEmpty && avatarUrl ? (
           <Image source={{ uri: avatarUrl }} style={styles.participantAvatarImage} />
         ) : !isEmpty ? (
-          <Ionicons name="person" size={18} color={isDark ? neutral[400] : neutral[500]} />
+          <Ionicons name="person-outline" size={18} color={isDark ? neutral[400] : neutral[500]} />
         ) : (
-          <Ionicons name="add" size={20} color={colors.slotEmptyBorder} />
+          <Ionicons name="add-outline" size={20} color={colors.slotEmptyBorder} />
         )}
       </View>
       {isHost && (
@@ -521,7 +488,7 @@ const ParticipantAvatar: React.FC<ParticipantAvatarProps> = ({
       )}
       {isCheckedIn && (
         <View style={[styles.checkedInBadge, { backgroundColor: status.success.DEFAULT }]}>
-          <Ionicons name="checkmark" size={8} color={base.white} />
+          <Ionicons name="checkmark-outline" size={8} color={base.white} />
         </View>
       )}
     </View>
@@ -600,7 +567,7 @@ const CheckInButton: React.FC<CheckInButtonProps> = ({
       });
     } catch (error) {
       errorHaptic();
-      toast.error(t('matchDetail.checkInLocationError' as TranslationKey));
+      toast.error(t('matchDetail.checkInLocationError'));
     } finally {
       setIsGettingLocation(false);
     }
@@ -619,7 +586,7 @@ const CheckInButton: React.FC<CheckInButtonProps> = ({
       disabled={isLoading}
       leftIcon={<Ionicons name="checkmark-circle-outline" size={18} color={base.white} />}
     >
-      {t('matchDetail.checkIn' as TranslationKey)}
+      {t('matchDetail.checkIn')}
     </Button>
   );
 };
@@ -630,9 +597,10 @@ const CheckInButton: React.FC<CheckInButtonProps> = ({
 
 export const MatchDetailSheet: React.FC = () => {
   const { sheetRef, closeSheet, selectedMatch, updateSelectedMatch } = useMatchDetailSheet();
-  const { openSheet: openAuthSheet, openSheetForEdit } = useActionsSheet();
+  const { openSheetForEdit } = useActionsSheet();
   const { openSheet: openInviteSheet } = usePlayerInviteSheet();
   const { openSheet: openFeedbackSheet } = useFeedbackSheet();
+  const { guardAction } = useRequireOnboarding();
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
   const { player } = usePlayer();
@@ -640,6 +608,17 @@ export const MatchDetailSheet: React.FC = () => {
   const isDark = theme === 'dark';
   const toast = useToast();
   const playerId = player?.id;
+  const navigation = useAppNavigation();
+
+  // Navigate to player profile or open auth sheet if not signed in / onboarding incomplete.
+  const handleParticipantProfilePress = useCallback(
+    (targetPlayerId: string) => {
+      closeSheet();
+      if (!guardAction()) return;
+      navigation.navigate('PlayerProfile', { playerId: targetPlayerId });
+    },
+    [closeSheet, guardAction, navigation]
+  );
 
   // Confirmation modal states
   const [showLeaveModal, setShowLeaveModal] = useState(false);
@@ -714,25 +693,24 @@ export const MatchDetailSheet: React.FC = () => {
     isCancellingRequest,
     isKicking,
     isCancellingInvite,
-    isResendingInvite,
     isCheckingIn,
   } = useMatchActions(selectedMatch?.id, {
     onJoinSuccess: result => {
       successHaptic();
       closeSheet();
       if (result.status === 'joined') {
-        toast.success(t('matchActions.joinSuccess' as TranslationKey));
+        toast.success(t('matchActions.joinSuccess'));
       } else if (result.status === 'waitlisted') {
-        toast.success(t('matchActions.waitlistSuccess' as TranslationKey));
+        toast.success(t('matchActions.waitlistSuccess'));
       } else {
-        toast.success(t('matchActions.requestSent' as TranslationKey));
+        toast.success(t('matchActions.requestSent'));
       }
     },
     onJoinError: error => {
       errorHaptic();
       // Handle specific error types with user-friendly messages
       if (error.message === 'GENDER_MISMATCH') {
-        toast.error(t('matchActions.genderMismatch' as TranslationKey));
+        toast.error(t('matchActions.genderMismatch'));
       } else {
         toast.error(error.message);
       }
@@ -741,7 +719,7 @@ export const MatchDetailSheet: React.FC = () => {
       successHaptic();
       setShowLeaveModal(false);
       closeSheet();
-      toast.success(t('matchActions.leaveSuccess' as TranslationKey));
+      toast.success(t('matchActions.leaveSuccess'));
     },
     onLeaveError: error => {
       errorHaptic();
@@ -752,7 +730,7 @@ export const MatchDetailSheet: React.FC = () => {
       successHaptic();
       setShowCancelModal(false);
       closeSheet();
-      toast.success(t('matchActions.cancelSuccess' as TranslationKey));
+      toast.success(t('matchActions.cancelSuccess'));
     },
     onCancelError: error => {
       errorHaptic();
@@ -770,7 +748,7 @@ export const MatchDetailSheet: React.FC = () => {
           ),
         });
       }
-      toast.success(t('matchActions.acceptSuccess' as TranslationKey));
+      toast.success(t('matchActions.acceptSuccess'));
     },
     onAcceptError: error => {
       errorHaptic();
@@ -789,7 +767,7 @@ export const MatchDetailSheet: React.FC = () => {
           ),
         });
       }
-      toast.success(t('matchActions.rejectSuccess' as TranslationKey));
+      toast.success(t('matchActions.rejectSuccess'));
     },
     onRejectError: error => {
       errorHaptic();
@@ -801,7 +779,7 @@ export const MatchDetailSheet: React.FC = () => {
       successHaptic();
       setShowCancelRequestModal(false);
       closeSheet();
-      toast.success(t('matchActions.cancelRequestSuccess' as TranslationKey));
+      toast.success(t('matchActions.cancelRequestSuccess'));
     },
     onCancelRequestError: error => {
       errorHaptic();
@@ -820,7 +798,7 @@ export const MatchDetailSheet: React.FC = () => {
           ),
         });
       }
-      toast.success(t('matchActions.kickSuccess' as TranslationKey));
+      toast.success(t('matchActions.kickSuccess'));
     },
     onKickError: error => {
       errorHaptic();
@@ -840,7 +818,7 @@ export const MatchDetailSheet: React.FC = () => {
           ),
         });
       }
-      toast.success(t('matchActions.cancelInviteSuccess' as TranslationKey));
+      toast.success(t('matchActions.cancelInviteSuccess'));
     },
     onCancelInviteError: error => {
       errorHaptic();
@@ -859,7 +837,7 @@ export const MatchDetailSheet: React.FC = () => {
           ),
         });
       }
-      toast.success(t('matchActions.resendInviteSuccess' as TranslationKey));
+      toast.success(t('matchActions.resendInviteSuccess'));
     },
     onResendInviteError: error => {
       errorHaptic();
@@ -878,17 +856,19 @@ export const MatchDetailSheet: React.FC = () => {
           participants: updatedParticipants,
         });
       }
-      toast.success(t('matchDetail.checkInSuccess' as TranslationKey));
+      toast.success(t('matchDetail.checkInSuccess'));
     },
     onCheckInError: result => {
       errorHaptic();
       if (result.error === 'too_far') {
-        toast.error(t('matchDetail.checkInTooFar' as TranslationKey));
+        toast.error(t('matchDetail.checkInTooFar'));
+      } else if (result.error === 'no_location') {
+        toast.error(t('matchDetail.checkInNoLocation'));
       } else if (result.error === 'already_checked_in') {
         // Already checked in - just refresh the UI
-        toast.info(t('matchDetail.alreadyCheckedIn' as TranslationKey));
+        toast.info(t('matchDetail.alreadyCheckedIn'));
       } else {
-        toast.error(t('matchDetail.checkInError' as TranslationKey));
+        toast.error(t('matchDetail.checkInError'));
       }
     },
   });
@@ -939,6 +919,21 @@ export const MatchDetailSheet: React.FC = () => {
     closeSheet();
   }, [closeSheet]);
 
+  // Handle register score (from match detail during feedback window)
+  const handleRegisterScore = useCallback(() => {
+    if (!selectedMatch) return;
+    mediumHaptic();
+    SheetManager.show('register-match-score', {
+      payload: {
+        match: selectedMatch,
+        onSuccess: async () => {
+          const refreshed = await getMatchWithDetails(selectedMatch.id);
+          if (refreshed) updateSelectedMatch(refreshed as MatchDetailData);
+        },
+      },
+    });
+  }, [selectedMatch, updateSelectedMatch]);
+
   // Handle share - uses rich message with match details and deep link
   const handleShare = useCallback(async () => {
     if (!selectedMatch) return;
@@ -954,50 +949,48 @@ export const MatchDetailSheet: React.FC = () => {
   const handleOpenChat = useCallback(() => {
     if (!matchConversationId || !selectedMatch) return;
 
+    // Guard action: require auth and onboarding to access chat
+    if (!guardAction()) {
+      closeSheet();
+      return;
+    }
+
     lightHaptic();
     closeSheet();
 
     // Generate chat title from match info (sport name + date)
+    const dateResult = formatIntuitiveDateInTimezone(
+      selectedMatch.match_date,
+      selectedMatch.timezone,
+      locale
+    );
+    const dateLabel = dateResult.translationKey ? t(dateResult.translationKey) : dateResult.label;
     const chatTitle = selectedMatch.sport?.name
-      ? `${selectedMatch.sport.name} - ${formatIntuitiveDateInTimezone(selectedMatch.match_date, selectedMatch.timezone, locale)}`
-      : t('matchDetail.title' as TranslationKey);
+      ? `${selectedMatch.sport.name} - ${dateLabel}`
+      : t('matchDetail.title');
 
-    // Use setTimeout to ensure navigation happens after sheet close animation
-    // Navigate through the Chat tab to the specific conversation
+    // Short delay so navigation runs after sheet close animation.
+    // Navigate to the Chat conversation screen (full screen, no tabs)
     setTimeout(() => {
-      if (navigationRef.isReady()) {
-        navigationRef.navigate('Main', {
-          screen: 'Chat',
-          params: {
-            screen: 'ChatScreen',
-            params: {
-              conversationId: matchConversationId,
-              title: chatTitle,
-            },
-          },
-        });
-      }
+      navigation.navigate('ChatConversation', {
+        conversationId: matchConversationId,
+        title: chatTitle,
+      });
     }, 100);
-  }, [matchConversationId, selectedMatch, closeSheet, locale, t]);
-
-  // Helper to redirect to auth sheet if user is not authenticated
-  const requireAuth = useCallback((): boolean => {
-    if (!playerId) {
-      // Close detail sheet and open auth sheet
-      closeSheet();
-      openAuthSheet();
-      return false;
-    }
-    return true;
-  }, [playerId, closeSheet, openAuthSheet]);
+  }, [matchConversationId, selectedMatch, guardAction, closeSheet, locale, t, navigation]);
 
   // Handle join match
   const handleJoinMatch = useCallback(() => {
     if (!selectedMatch) return;
-    if (!requireAuth()) return;
+    // Guard action: if user is not authenticated or not onboarded,
+    // close this sheet and open auth/onboarding sheet
+    if (!guardAction()) {
+      closeSheet();
+      return;
+    }
     mediumHaptic();
     joinMatch(playerId!);
-  }, [selectedMatch, requireAuth, playerId, joinMatch]);
+  }, [selectedMatch, guardAction, closeSheet, playerId, joinMatch]);
 
   // Handle leave match - opens confirmation modal
   const handleLeaveMatch = useCallback(() => {
@@ -1334,7 +1327,6 @@ export const MatchDetailSheet: React.FC = () => {
   // Determine match tier and get tier-specific accent colors
   const creatorReputationScore = match.created_by_player?.reputation_score;
   const tier = getMatchTier(match.court_status, creatorReputationScore);
-  const tierPaletteColors = TIER_PALETTES[tier][isDark ? 'dark' : 'light'];
 
   // Tier-aware accent colors
   const tierAccent = (() => {
@@ -1378,7 +1370,7 @@ export const MatchDetailSheet: React.FC = () => {
   const creatorName =
     `${creatorProfile?.first_name || ''} ${creatorProfile?.last_name || ''}`.trim() ||
     creatorProfile?.display_name ||
-    t('matchDetail.host' as TranslationKey);
+    t('matchDetail.host');
   const isFull = participantInfo.spotsLeft === 0;
   const isCreator = playerId === match.created_by;
   // Check if user is an active participant (not left, declined, refused, or kicked)
@@ -1414,6 +1406,9 @@ export const MatchDetailSheet: React.FC = () => {
   const isInProgress = derivedStatus === 'in_progress';
   const hasMatchEnded = derivedStatus === 'completed';
   const hasResult = !!match.result;
+
+  // Check if match is expired (started or ended but not full)
+  const isExpired = (isInProgress || hasMatchEnded) && !isFull;
 
   // Determine animation type for time indicator:
   // - isInProgress = live indicator
@@ -1549,7 +1544,7 @@ export const MatchDetailSheet: React.FC = () => {
         const fullName =
           `${p.player?.profile?.first_name || ''} ${p.player?.profile?.last_name || ''}`.trim() ||
           p.player?.profile?.display_name ||
-          t('matchDetail.host' as TranslationKey);
+          t('matchDetail.host');
         // Get sport rating info if available (label and value)
         const playerWithRating = p.player as PlayerWithProfile | undefined;
         const ratingLabel = playerWithRating?.sportRatingLabel;
@@ -1577,7 +1572,7 @@ export const MatchDetailSheet: React.FC = () => {
         const fullName =
           `${p.player?.profile?.first_name || ''} ${p.player?.profile?.last_name || ''}`.trim() ||
           p.player?.profile?.display_name ||
-          t('matchDetail.host' as TranslationKey);
+          t('matchDetail.host');
         return {
           id: p.id,
           playerId: p.player_id,
@@ -1595,7 +1590,7 @@ export const MatchDetailSheet: React.FC = () => {
         const fullName =
           `${p.player?.profile?.first_name || ''} ${p.player?.profile?.last_name || ''}`.trim() ||
           p.player?.profile?.display_name ||
-          t('matchDetail.host' as TranslationKey);
+          t('matchDetail.host');
         return {
           id: p.id,
           playerId: p.player_id,
@@ -1610,9 +1605,9 @@ export const MatchDetailSheet: React.FC = () => {
 
   // Cost display
   const costDisplay = match.is_court_free
-    ? t('matchDetail.free' as TranslationKey)
+    ? t('matchDetail.free')
     : match.estimated_cost
-      ? `$${Math.ceil(match.estimated_cost / participantInfo.total)} ${t('matchDetail.perPerson' as TranslationKey)}`
+      ? `$${Math.ceil(match.estimated_cost / participantInfo.total)} ${t('matchDetail.perPerson')}`
       : null;
 
   // Location display
@@ -1630,16 +1625,16 @@ export const MatchDetailSheet: React.FC = () => {
   // 6. Request mode → "Request to Join" button
   // 7. Default → "Join Now" button
   const renderActionButtons = () => {
-    // CTA colors matching MatchCard for consistency:
-    // - Positive (Join/Check-in/Feedback): primary (teal)
+    // CTA colors matching MatchCreationWizard (nextButton): same buttonActive / primary as wizard
+    // - Positive (Join/Check-in/Feedback): primary (teal) – primary[500] dark / primary[600] light
     // - Destructive (Leave/Cancel): secondary (coral)
     // - Edit: accent (amber)
     // - Pending/Waitlisted: neutral bg with secondary text
-    const ctaPositive = isDark ? primary[400] : primary[500];
+    const ctaPositive = isDark ? primary[500] : primary[600];
     const ctaDestructive = isDark ? secondary[400] : secondary[500];
     const ctaAccent = isDark ? accent[400] : accent[500];
 
-    // Prepare theme colors for Button component - primary/teal for join actions
+    // Prepare theme colors for Button component – match MatchCreationWizard nextButton
     const successThemeColors = {
       primary: ctaPositive,
       primaryForeground: base.white,
@@ -1701,19 +1696,54 @@ export const MatchDetailSheet: React.FC = () => {
         <View style={styles.matchEndedContainer}>
           <Ionicons name="close-circle-outline" size={20} color={colors.textMuted} />
           <Text size="sm" weight="medium" color={colors.textMuted} style={styles.matchEndedText}>
-            {t('matchDetail.matchCancelled' as TranslationKey)}
+            {t('matchDetail.matchCancelled')}
           </Text>
         </View>
       );
     }
 
-    // Match has results → No actions available
-    if (hasResult) {
+    // Match has results → Show "Match completed" unless current player still needs to give feedback
+    if (hasResult && match.result) {
+      if (isWithinFeedbackWindow && playerNeedsFeedback && currentPlayerParticipant) {
+        return (
+          <Button
+            variant="primary"
+            onPress={() => {
+              mediumHaptic();
+              const opponents: OpponentForFeedback[] = (match.participants ?? [])
+                .filter(p => p.player_id !== playerId && p.status === 'joined')
+                .map(p => {
+                  const profile = p.player?.profile;
+                  const firstName = profile?.first_name || '';
+                  const lastName = profile?.last_name || '';
+                  const displayName = profile?.display_name;
+                  const name = displayName || firstName || 'Player';
+                  const fullName = displayName || `${firstName} ${lastName}`.trim() || 'Player';
+                  return {
+                    participantId: p.id,
+                    playerId: p.player_id,
+                    name,
+                    fullName,
+                    avatarUrl: profile?.profile_picture_url || null,
+                    hasExistingFeedback: false,
+                  };
+                });
+              openFeedbackSheet(match.id, playerId!, currentPlayerParticipant.id, opponents);
+            }}
+            style={styles.actionButton}
+            themeColors={successThemeColors}
+            isDark={isDark}
+            leftIcon={<Ionicons name="star-outline" size={18} color={base.white} />}
+          >
+            {t('matchDetail.provideFeedback')}
+          </Button>
+        );
+      }
       return (
         <View style={styles.matchEndedContainer}>
           <Ionicons name="trophy-outline" size={20} color={colors.textMuted} />
           <Text size="sm" weight="medium" color={colors.textMuted} style={styles.matchEndedText}>
-            {t('matchDetail.matchCompleted' as TranslationKey)}
+            {t('matchDetail.matchCompleted')}
           </Text>
         </View>
       );
@@ -1725,7 +1755,7 @@ export const MatchDetailSheet: React.FC = () => {
         <View style={styles.matchEndedContainer}>
           <Ionicons name="time-outline" size={20} color={colors.textMuted} />
           <Text size="sm" weight="medium" color={colors.textMuted} style={styles.matchEndedText}>
-            {t('matchDetail.matchExpired' as TranslationKey)}
+            {t('matchDetail.matchExpired')}
           </Text>
         </View>
       );
@@ -1735,14 +1765,64 @@ export const MatchDetailSheet: React.FC = () => {
     if (hasMatchEnded) {
       // Within 48h window
       if (isWithinFeedbackWindow) {
-        // Current player needs to provide feedback → Show CTA button
+        // No result yet + participant + full → Show Register score (and optionally Provide Feedback)
+        if (!hasResult && currentPlayerParticipant && isFull) {
+          return (
+            <>
+              <Button
+                variant="primary"
+                onPress={handleRegisterScore}
+                style={styles.actionButton}
+                themeColors={successThemeColors}
+                isDark={isDark}
+                leftIcon={<Ionicons name="trophy-outline" size={18} color={base.white} />}
+              >
+                {t('matchDetail.registerScore')}
+              </Button>
+              {playerNeedsFeedback && (
+                <Button
+                  variant="primary"
+                  onPress={() => {
+                    mediumHaptic();
+                    const opponents: OpponentForFeedback[] = (match.participants ?? [])
+                      .filter(p => p.player_id !== playerId && p.status === 'joined')
+                      .map(p => {
+                        const profile = p.player?.profile;
+                        const firstName = profile?.first_name || '';
+                        const lastName = profile?.last_name || '';
+                        const displayName = profile?.display_name;
+                        const name = displayName || firstName || 'Player';
+                        const fullName =
+                          displayName || `${firstName} ${lastName}`.trim() || 'Player';
+                        return {
+                          participantId: p.id,
+                          playerId: p.player_id,
+                          name,
+                          fullName,
+                          avatarUrl: profile?.profile_picture_url || null,
+                          hasExistingFeedback: false,
+                        };
+                      });
+                    openFeedbackSheet(match.id, playerId!, currentPlayerParticipant.id, opponents);
+                  }}
+                  style={styles.actionButton}
+                  themeColors={successThemeColors}
+                  isDark={isDark}
+                  leftIcon={<Ionicons name="star-outline" size={18} color={base.white} />}
+                >
+                  {t('matchDetail.provideFeedback')}
+                </Button>
+              )}
+            </>
+          );
+        }
+        // Current player needs to provide feedback (but can't register score) → Show CTA button
         if (playerNeedsFeedback && currentPlayerParticipant) {
           return (
             <Button
               variant="primary"
               onPress={() => {
                 mediumHaptic();
-                // Build opponents list from match participants (excluding current player)
                 const opponents: OpponentForFeedback[] = (match.participants ?? [])
                   .filter(p => p.player_id !== playerId && p.status === 'joined')
                   .map(p => {
@@ -1758,7 +1838,7 @@ export const MatchDetailSheet: React.FC = () => {
                       name,
                       fullName,
                       avatarUrl: profile?.profile_picture_url || null,
-                      hasExistingFeedback: false, // Will be checked by the hook
+                      hasExistingFeedback: false,
                     };
                   });
                 openFeedbackSheet(match.id, playerId!, currentPlayerParticipant.id, opponents);
@@ -1768,7 +1848,7 @@ export const MatchDetailSheet: React.FC = () => {
               isDark={isDark}
               leftIcon={<Ionicons name="star-outline" size={18} color={base.white} />}
             >
-              {t('matchDetail.provideFeedback' as TranslationKey)}
+              {t('matchDetail.provideFeedback')}
             </Button>
           );
         }
@@ -1777,7 +1857,7 @@ export const MatchDetailSheet: React.FC = () => {
           <View style={styles.matchEndedContainer}>
             <Ionicons name="checkmark-circle-outline" size={20} color={colors.textMuted} />
             <Text size="sm" weight="medium" color={colors.textMuted} style={styles.matchEndedText}>
-              {t('matchDetail.matchCompleted' as TranslationKey)}
+              {t('matchDetail.matchCompleted')}
             </Text>
           </View>
         );
@@ -1788,7 +1868,7 @@ export const MatchDetailSheet: React.FC = () => {
         <View style={styles.matchEndedContainer}>
           <Ionicons name="lock-closed-outline" size={20} color={colors.textMuted} />
           <Text size="sm" weight="medium" color={colors.textMuted} style={styles.matchEndedText}>
-            {t('matchDetail.matchClosed' as TranslationKey)}
+            {t('matchDetail.matchClosed')}
           </Text>
         </View>
       );
@@ -1821,7 +1901,7 @@ export const MatchDetailSheet: React.FC = () => {
             color={status.warning.DEFAULT}
             style={styles.matchEndedText}
           >
-            {t('matchDetail.matchInProgress' as TranslationKey)}
+            {t('matchDetail.matchInProgress')}
           </Text>
         </View>
       );
@@ -1833,7 +1913,7 @@ export const MatchDetailSheet: React.FC = () => {
         <View style={styles.matchEndedContainer}>
           <Ionicons name="checkmark-circle" size={20} color={ctaPositive} />
           <Text size="sm" weight="medium" color={ctaPositive} style={styles.matchEndedText}>
-            {t('matchDetail.checkedIn' as TranslationKey)}
+            {t('matchDetail.checkedIn')}
           </Text>
         </View>
       );
@@ -1851,7 +1931,7 @@ export const MatchDetailSheet: React.FC = () => {
             isDark={isDark}
             leftIcon={<Ionicons name="create-outline" size={18} color={base.white} />}
           >
-            {t('common.edit' as TranslationKey)}
+            {t('common.edit')}
           </Button>
           <Button
             variant="primary"
@@ -1862,7 +1942,7 @@ export const MatchDetailSheet: React.FC = () => {
             loading={isCancelling}
             leftIcon={<Ionicons name="close-circle-outline" size={18} color={base.white} />}
           >
-            {t('matches.cancelMatch' as TranslationKey)}
+            {t('matches.cancelMatch')}
           </Button>
         </>
       );
@@ -1880,7 +1960,7 @@ export const MatchDetailSheet: React.FC = () => {
           loading={isCancellingRequest}
           leftIcon={<Ionicons name="close-outline" size={18} color={ctaDestructive} />}
         >
-          {t('matchActions.cancelRequest' as TranslationKey)}
+          {t('matchActions.cancelRequest')}
         </Button>
       );
     }
@@ -1899,7 +1979,7 @@ export const MatchDetailSheet: React.FC = () => {
           disabled={isJoining}
           leftIcon={<Ionicons name="checkmark-circle-outline" size={18} color={base.white} />}
         >
-          {t('match.cta.acceptInvitation' as TranslationKey)}
+          {t('match.cta.acceptInvitation')}
         </Button>
       );
     }
@@ -1916,7 +1996,7 @@ export const MatchDetailSheet: React.FC = () => {
           loading={isLeaving}
           leftIcon={<Ionicons name="exit-outline" size={18} color={ctaDestructive} />}
         >
-          {t('matchActions.leaveWaitlist' as TranslationKey)}
+          {t('matchActions.leaveWaitlist')}
         </Button>
       );
     }
@@ -1935,7 +2015,7 @@ export const MatchDetailSheet: React.FC = () => {
             disabled={isJoining}
             leftIcon={<Ionicons name="hand-left-outline" size={18} color={base.white} />}
           >
-            {t('matchDetail.requestToJoin' as TranslationKey)}
+            {t('matchDetail.requestToJoin')}
           </Button>
         );
       }
@@ -1951,7 +2031,7 @@ export const MatchDetailSheet: React.FC = () => {
           disabled={isJoining}
           leftIcon={<Ionicons name="add-circle-outline" size={18} color={base.white} />}
         >
-          {t('matchDetail.joinNow' as TranslationKey)}
+          {t('matchDetail.joinNow')}
         </Button>
       );
     }
@@ -1962,7 +2042,7 @@ export const MatchDetailSheet: React.FC = () => {
         <View style={styles.matchEndedContainer}>
           <Ionicons name="checkmark-circle" size={20} color={ctaPositive} />
           <Text size="sm" weight="medium" color={ctaPositive} style={styles.matchEndedText}>
-            {t('matchDetail.checkedIn' as TranslationKey)}
+            {t('matchDetail.checkedIn')}
           </Text>
         </View>
       );
@@ -1980,7 +2060,7 @@ export const MatchDetailSheet: React.FC = () => {
           loading={isLeaving}
           leftIcon={<Ionicons name="log-out-outline" size={18} color={base.white} />}
         >
-          {t('matches.leaveMatch' as TranslationKey)}
+          {t('matches.leaveMatch')}
         </Button>
       );
     }
@@ -1998,7 +2078,7 @@ export const MatchDetailSheet: React.FC = () => {
           disabled={isJoining}
           leftIcon={<Ionicons name="list-outline" size={18} color={base.white} />}
         >
-          {t('matchActions.joinWaitlist' as TranslationKey)}
+          {t('matchActions.joinWaitlist')}
         </Button>
       );
     }
@@ -2016,7 +2096,7 @@ export const MatchDetailSheet: React.FC = () => {
           disabled={isJoining}
           leftIcon={<Ionicons name="hand-left-outline" size={18} color={base.white} />}
         >
-          {t('matchDetail.requestToJoin' as TranslationKey)}
+          {t('matchDetail.requestToJoin')}
         </Button>
       );
     }
@@ -2033,7 +2113,7 @@ export const MatchDetailSheet: React.FC = () => {
         disabled={isJoining}
         leftIcon={<Ionicons name="add-circle-outline" size={18} color={base.white} />}
       >
-        {t('matchDetail.joinNow' as TranslationKey)}
+        {t('matchDetail.joinNow')}
       </Button>
     );
   };
@@ -2062,8 +2142,8 @@ export const MatchDetailSheet: React.FC = () => {
           <View style={styles.headerTitleSection}>
             {/* Match Date/Time - same format as cards with live/urgent indicators */}
             <View style={styles.dateRow}>
-              {/* "Live" indicator for ongoing matches */}
-              {isOngoing && (
+              {/* "Live" indicator for ongoing matches (not shown when expired) */}
+              {isOngoing && !isExpired && (
                 <View style={styles.liveIndicatorContainer}>
                   {/* Expanding ring that fades out */}
                   <Animated.View
@@ -2088,8 +2168,8 @@ export const MatchDetailSheet: React.FC = () => {
                   />
                 </View>
               )}
-              {/* Bouncing chevron for starting soon */}
-              {isStartingSoon && (
+              {/* Bouncing chevron for starting soon (not shown when expired) */}
+              {isStartingSoon && !isExpired && (
                 <Animated.View
                   style={[
                     styles.countdownIndicator,
@@ -2103,15 +2183,39 @@ export const MatchDetailSheet: React.FC = () => {
                 </Animated.View>
               )}
               <Ionicons
-                name={isOngoing ? 'radio' : isStartingSoon ? 'time' : 'calendar-outline'}
+                name={
+                  isExpired
+                    ? 'close-circle-outline'
+                    : isOngoing
+                      ? 'radio'
+                      : isStartingSoon
+                        ? 'time'
+                        : 'calendar-outline'
+                }
                 size={20}
-                color={isOngoing ? liveColor : isStartingSoon ? soonColor : tierAccent}
+                color={
+                  isExpired
+                    ? colors.textMuted
+                    : isOngoing
+                      ? liveColor
+                      : isStartingSoon
+                        ? soonColor
+                        : tierAccent
+                }
                 style={styles.calendarIcon}
               />
               <Text
                 size="xl"
                 weight="bold"
-                color={isOngoing ? liveColor : isStartingSoon ? soonColor : colors.text}
+                color={
+                  isExpired
+                    ? colors.textMuted
+                    : isOngoing
+                      ? liveColor
+                      : isStartingSoon
+                        ? soonColor
+                        : colors.text
+                }
               >
                 {timeLabel}
               </Text>
@@ -2120,11 +2224,11 @@ export const MatchDetailSheet: React.FC = () => {
           <View style={styles.headerRight}>
             <TouchableOpacity
               onPress={handleCloseSheet}
-              style={[styles.closeButton, { backgroundColor: themeColors.muted }]}
+              style={styles.closeButton}
               activeOpacity={0.7}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons name="close" size={20} color={colors.text} />
+              <Ionicons name="close-outline" size={24} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
         </View>
@@ -2152,7 +2256,7 @@ export const MatchDetailSheet: React.FC = () => {
               color={status.warning.DEFAULT}
               style={styles.pendingBannerText}
             >
-              {t('matchActions.requestPending' as TranslationKey)}
+              {t('matchActions.requestPending')}
             </Text>
           </View>
         )}
@@ -2181,9 +2285,7 @@ export const MatchDetailSheet: React.FC = () => {
               color={isFull ? status.info.DEFAULT : isDark ? primary[400] : primary[500]}
               style={styles.pendingBannerText}
             >
-              {isFull
-                ? t('matchActions.waitlistedInfo' as TranslationKey)
-                : t('matchActions.spotOpenedUp' as TranslationKey)}
+              {isFull ? t('matchActions.waitlistedInfo') : t('matchActions.spotOpenedUp')}
             </Text>
           </View>
         )}
@@ -2191,11 +2293,17 @@ export const MatchDetailSheet: React.FC = () => {
         {/* Match Info Grid - Moved up for context */}
         {hasAnyBadges && (
           <View style={[styles.section, { borderBottomColor: colors.border }]}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="information-circle-outline" size={20} color={colors.iconMuted} />
+              <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
+                {t('matchDetail.title')}
+              </Text>
+            </View>
             <View style={styles.badgesGrid}>
               {/* Court Booked badge - uses secondary (coral) for important callout */}
               {(tier === 'mostWanted' || tier === 'readyToPlay') && (
                 <Badge
-                  label={t('match.courtStatus.courtBooked' as TranslationKey)}
+                  label={t('match.courtStatus.courtBooked')}
                   bgColor={isDark ? `${secondary[400]}25` : `${secondary[500]}15`}
                   textColor={isDark ? secondary[400] : secondary[600]}
                   icon="checkmark-circle"
@@ -2207,8 +2315,8 @@ export const MatchDetailSheet: React.FC = () => {
                 <Badge
                   label={
                     match.player_expectation === 'competitive'
-                      ? t('matchDetail.competitive' as TranslationKey)
-                      : t('matchDetail.casual' as TranslationKey)
+                      ? t('matchDetail.competitive')
+                      : t('matchDetail.casual')
                   }
                   bgColor={
                     match.player_expectation === 'competitive'
@@ -2247,10 +2355,10 @@ export const MatchDetailSheet: React.FC = () => {
                 <Badge
                   label={
                     match.preferred_opponent_gender === 'male'
-                      ? t('match.gender.menOnly' as TranslationKey)
+                      ? t('match.gender.menOnly')
                       : match.preferred_opponent_gender === 'female'
-                        ? t('match.gender.womenOnly' as TranslationKey)
-                        : t('match.gender.other' as TranslationKey)
+                        ? t('match.gender.womenOnly')
+                        : t('match.gender.other')
                   }
                   bgColor={isDark ? neutral[800] : neutral[100]}
                   textColor={isDark ? neutral[300] : neutral[600]}
@@ -2261,7 +2369,7 @@ export const MatchDetailSheet: React.FC = () => {
               {/* Join mode - neutral style for filter info */}
               {match.join_mode === 'request' && (
                 <Badge
-                  label={t('match.joinMode.request' as TranslationKey)}
+                  label={t('match.joinMode.request')}
                   bgColor={isDark ? neutral[800] : neutral[100]}
                   textColor={isDark ? neutral[300] : neutral[600]}
                   icon="hand-left"
@@ -2273,8 +2381,8 @@ export const MatchDetailSheet: React.FC = () => {
                 <Badge
                   label={
                     match.visibility === 'public'
-                      ? t('matchCreation.fields.visibilityPublic' as TranslationKey)
-                      : t('matchCreation.fields.visibilityPrivate' as TranslationKey)
+                      ? t('matchCreation.fields.visibilityPublic')
+                      : t('matchCreation.fields.visibilityPrivate')
                   }
                   bgColor={
                     match.visibility === 'public'
@@ -2304,11 +2412,22 @@ export const MatchDetailSheet: React.FC = () => {
         {/* Participants Section - with host inline (marked with star) */}
         <View style={[styles.section, { borderBottomColor: colors.border }]}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="people" size={20} color={colors.iconMuted} />
-            <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
-              {t('matchDetail.participants' as TranslationKey)} ({participantInfo.current}/
-              {participantInfo.total})
-            </Text>
+            <View style={styles.sectionHeaderTitleRow}>
+              <Ionicons name="people-outline" size={20} color={colors.iconMuted} />
+              <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
+                {t('matchDetail.participants')} ({participantInfo.current}/{participantInfo.total})
+              </Text>
+            </View>
+            {currentPlayerParticipant && matchConversationId && (
+              <TouchableOpacity
+                onPress={handleOpenChat}
+                style={styles.participantsSectionChatButton}
+                activeOpacity={0.7}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="chatbubble-outline" size={22} color={colors.primary} />
+              </TouchableOpacity>
+            )}
           </View>
           <View style={styles.participantsRow}>
             {participantAvatars.map((p, _index) => (
@@ -2316,9 +2435,8 @@ export const MatchDetailSheet: React.FC = () => {
                 <View style={styles.participantAvatarWithAction}>
                   <TouchableOpacity
                     onPress={() => {
-                      if (!p.isEmpty && p.playerId && navigationRef.isReady()) {
-                        closeSheet();
-                        navigationRef.navigate('PlayerProfile', { playerId: p.playerId });
+                      if (!p.isEmpty && p.playerId) {
+                        handleParticipantProfilePress(p.playerId);
                       }
                     }}
                     activeOpacity={p.isEmpty ? 1 : 0.7}
@@ -2353,7 +2471,7 @@ export const MatchDetailSheet: React.FC = () => {
                         activeOpacity={0.7}
                         hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
                       >
-                        <Ionicons name="close" size={10} color={base.white} />
+                        <Ionicons name="close-outline" size={10} color={base.white} />
                       </TouchableOpacity>
                     )}
                 </View>
@@ -2374,8 +2492,8 @@ export const MatchDetailSheet: React.FC = () => {
           {participantInfo.spotsLeft > 0 && (
             <Text size="sm" weight="medium" color={colors.statusOpen} style={styles.spotsText}>
               {participantInfo.spotsLeft === 1
-                ? t('match.slots.oneLeft' as TranslationKey)
-                : t('match.slots.left' as TranslationKey, { count: participantInfo.spotsLeft })}
+                ? t('match.slots.oneLeft')
+                : t('match.slots.left', { count: participantInfo.spotsLeft })}
             </Text>
           )}
 
@@ -2403,7 +2521,7 @@ export const MatchDetailSheet: React.FC = () => {
                   color={colors.primary}
                   style={styles.inviteButtonText}
                 >
-                  {t('matchCreation.invite.title' as TranslationKey)}
+                  {t('matchCreation.invite.title')}
                 </Text>
               </TouchableOpacity>
             )}
@@ -2418,7 +2536,7 @@ export const MatchDetailSheet: React.FC = () => {
                   color={colors.secondary}
                   style={styles.pendingRequestsTitle}
                 >
-                  {t('matchActions.pendingRequests' as TranslationKey)} ({pendingRequests.length})
+                  {t('matchActions.pendingRequests')} ({pendingRequests.length})
                 </Text>
                 {isFull && (
                   <View
@@ -2431,7 +2549,7 @@ export const MatchDetailSheet: React.FC = () => {
                       color={status.info.DEFAULT}
                       style={styles.matchFullBadgeText}
                     >
-                      {t('matchActions.matchFullCannotAccept' as TranslationKey)}
+                      {t('matchActions.matchFullCannotAccept')}
                     </Text>
                   </View>
                 )}
@@ -2449,7 +2567,7 @@ export const MatchDetailSheet: React.FC = () => {
                       color={status.warning.DEFAULT}
                       style={styles.matchFullBadgeText}
                     >
-                      {t('matchDetail.matchInProgress' as TranslationKey)}
+                      {t('matchDetail.matchInProgress')}
                     </Text>
                   </View>
                 )}
@@ -2479,7 +2597,7 @@ export const MatchDetailSheet: React.FC = () => {
                           style={styles.pendingRequestAvatarImage}
                         />
                       ) : (
-                        <Ionicons name="person" size={16} color={base.white} />
+                        <Ionicons name="person-outline" size={16} color={base.white} />
                       )}
                     </View>
                     <View style={styles.pendingRequestNameContainer}>
@@ -2542,7 +2660,7 @@ export const MatchDetailSheet: React.FC = () => {
                       }
                       activeOpacity={0.7}
                     >
-                      <Ionicons name="checkmark" size={18} color={base.white} />
+                      <Ionicons name="checkmark-outline" size={18} color={base.white} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[
@@ -2554,7 +2672,7 @@ export const MatchDetailSheet: React.FC = () => {
                       disabled={isAccepting || isRejecting}
                       activeOpacity={0.7}
                     >
-                      <Ionicons name="close" size={18} color={base.white} />
+                      <Ionicons name="close-outline" size={18} color={base.white} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -2571,8 +2689,8 @@ export const MatchDetailSheet: React.FC = () => {
                 >
                   <Text size="sm" weight="medium" color={colors.primary}>
                     {showAllRequests
-                      ? t('common.showLess' as TranslationKey)
-                      : t('matchActions.showMoreRequests' as TranslationKey, {
+                      ? t('common.showLess')
+                      : t('matchActions.showMoreRequests', {
                           count: pendingRequests.length - 3,
                         })}
                   </Text>
@@ -2597,7 +2715,7 @@ export const MatchDetailSheet: React.FC = () => {
                   color={colors.primary}
                   style={styles.pendingRequestsTitle}
                 >
-                  {t('matchActions.invitations' as TranslationKey)} ({allInvitations.length})
+                  {t('matchActions.invitations')} ({allInvitations.length})
                 </Text>
               </View>
               {(showAllInvitations ? allInvitations : allInvitations.slice(0, 3)).map(
@@ -2605,8 +2723,8 @@ export const MatchDetailSheet: React.FC = () => {
                   const isPending = pendingInvitations.some(p => p.id === invitation.id);
                   const statusColor = isPending ? status.warning.DEFAULT : neutral[400];
                   const statusLabel = isPending
-                    ? t('matchActions.participantStatus.pending' as TranslationKey)
-                    : t('matchActions.participantStatus.declined' as TranslationKey);
+                    ? t('matchActions.participantStatus.pending')
+                    : t('matchActions.participantStatus.declined');
 
                   return (
                     <View
@@ -2633,7 +2751,7 @@ export const MatchDetailSheet: React.FC = () => {
                               style={styles.pendingRequestAvatarImage}
                             />
                           ) : (
-                            <Ionicons name="person" size={16} color={base.white} />
+                            <Ionicons name="person-outline" size={16} color={base.white} />
                           )}
                         </View>
                         <View style={styles.pendingRequestNameContainer}>
@@ -2702,7 +2820,7 @@ export const MatchDetailSheet: React.FC = () => {
                               }
                               activeOpacity={0.7}
                             >
-                              <Ionicons name="close" size={18} color={base.white} />
+                              <Ionicons name="close-outline" size={18} color={base.white} />
                             </TouchableOpacity>
                           </>
                         ) : (
@@ -2747,8 +2865,8 @@ export const MatchDetailSheet: React.FC = () => {
                 >
                   <Text size="sm" weight="medium" color={colors.primary}>
                     {showAllInvitations
-                      ? t('common.showLess' as TranslationKey)
-                      : t('matchActions.showMoreInvitations' as TranslationKey, {
+                      ? t('common.showLess')
+                      : t('matchActions.showMoreInvitations', {
                           count: allInvitations.length - 3,
                         })}
                   </Text>
@@ -2771,14 +2889,17 @@ export const MatchDetailSheet: React.FC = () => {
           activeOpacity={hasLocationData ? 0.7 : 1}
           disabled={!hasLocationData}
         >
+          <View style={styles.sectionHeader}>
+            <Ionicons name="location-outline" size={20} color={colors.iconMuted} />
+            <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
+              {t('matchDetail.location')}
+            </Text>
+          </View>
           <View style={styles.locationRow}>
             <View style={[styles.infoRow, { flex: 1, minWidth: 0 }]}>
-              <View style={styles.infoIconContainer}>
-                <Ionicons name="location" size={20} color={colors.primary} />
-              </View>
               <View style={styles.infoContent}>
                 <Text size="base" weight="semibold" color={colors.text}>
-                  {facilityName || t('matchDetail.locationTBD' as TranslationKey)}
+                  {facilityName || t('matchDetail.locationTBD')}
                   {courtName && ` - ${courtName}`}
                 </Text>
                 {address && (
@@ -2793,7 +2914,7 @@ export const MatchDetailSheet: React.FC = () => {
                     color={colors.primary}
                     style={styles.distanceText}
                   >
-                    {distanceDisplay} {t('matchDetail.away' as TranslationKey)}
+                    {distanceDisplay} {t('matchDetail.away')}
                   </Text>
                 )}
               </View>
@@ -2809,14 +2930,20 @@ export const MatchDetailSheet: React.FC = () => {
         {/* Cost Section */}
         {costDisplay && (
           <View style={[styles.section, { borderBottomColor: colors.border }]}>
-            <InfoRow
-              icon={match.is_court_free ? 'checkmark-circle' : 'cash-outline'}
-              iconColor={match.is_court_free ? status.success.DEFAULT : colors.primary}
-              colors={colors}
-            >
+            <View style={styles.sectionHeader}>
+              <Ionicons
+                name={match.is_court_free ? 'checkmark-circle-outline' : 'cash-outline'}
+                size={20}
+                color={match.is_court_free ? status.success.DEFAULT : colors.iconMuted}
+              />
+              <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
+                {t('matchDetail.estimatedCost')}
+              </Text>
+            </View>
+            <InfoRow colors={colors}>
               <View>
                 <Text size="sm" color={colors.textMuted}>
-                  {t('matchDetail.courtEstimatedCost' as TranslationKey)}
+                  {t('matchDetail.courtEstimatedCost')}
                 </Text>
                 <Text
                   size="base"
@@ -2830,13 +2957,110 @@ export const MatchDetailSheet: React.FC = () => {
           </View>
         )}
 
+        {/* Score Section - when match has a result */}
+        {hasResult &&
+          match.result &&
+          (() => {
+            const rawResult = Array.isArray(match.result) ? match.result[0] : match.result;
+            const result = rawResult as {
+              team1_score?: number | null;
+              team2_score?: number | null;
+              is_verified?: boolean | null;
+              disputed?: boolean | null;
+              submitted_by?: string | null;
+              sets?: Array<{ set_number: number; team1_score: number; team2_score: number }>;
+            };
+            const team1Sets = result.team1_score ?? 0;
+            const team2Sets = result.team2_score ?? 0;
+            const setsList = result.sets;
+            const isVerified = result.is_verified === true;
+            const isDisputed = result.disputed === true;
+            const statusKey = isDisputed
+              ? 'matchDetail.scoreDisputed'
+              : isVerified
+                ? 'matchDetail.scoreVerified'
+                : 'matchDetail.scorePendingConfirmation';
+            const statusIcon = isDisputed
+              ? 'warning-outline'
+              : isVerified
+                ? 'checkmark-circle-outline'
+                : 'time-outline';
+            const isCurrentUserTeam1 = !!(
+              playerId &&
+              result.submitted_by &&
+              playerId === result.submitted_by
+            );
+            const useYourTeamLabels = !!playerId && !!result.submitted_by;
+            const isSingles = match.format === 'singles';
+            const yourScore = isCurrentUserTeam1 ? team1Sets : team2Sets;
+            const oppScore = isCurrentUserTeam1 ? team2Sets : team1Sets;
+            const leftLabel = useYourTeamLabels
+              ? isSingles
+                ? t('matchDetail.you')
+                : t('matchDetail.yourTeam')
+              : t('matchDetail.team1');
+            const rightLabel = useYourTeamLabels
+              ? isSingles
+                ? t('matchDetail.opponent')
+                : t('matchDetail.opponents')
+              : t('matchDetail.team2');
+            return (
+              <View style={[styles.section, { borderBottomColor: colors.border }]}>
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="trophy-outline" size={20} color={colors.iconMuted} />
+                  <Text
+                    size="base"
+                    weight="semibold"
+                    color={colors.text}
+                    style={styles.sectionTitle}
+                  >
+                    {t('matchDetail.registerScore')}
+                  </Text>
+                </View>
+                <View style={styles.scoreSectionContent}>
+                  <View style={styles.scoreSectionRow}>
+                    <Text size="sm" weight="medium" color={colors.textMuted}>
+                      {leftLabel}
+                    </Text>
+                    <Text size="lg" weight="bold" color={colors.text}>
+                      {useYourTeamLabels
+                        ? `${yourScore} – ${oppScore}`
+                        : `${team1Sets} – ${team2Sets}`}
+                    </Text>
+                    <Text size="sm" weight="medium" color={colors.textMuted}>
+                      {rightLabel}
+                    </Text>
+                  </View>
+                  {setsList && setsList.length > 0 && (
+                    <Text size="sm" color={colors.textMuted} style={styles.scoreSetsText}>
+                      {setsList
+                        .sort((a, b) => a.set_number - b.set_number)
+                        .map(s =>
+                          useYourTeamLabels && !isCurrentUserTeam1
+                            ? `${s.team2_score}-${s.team1_score}`
+                            : `${s.team1_score}-${s.team2_score}`
+                        )
+                        .join(', ')}
+                    </Text>
+                  )}
+                  <View style={styles.scoreSectionStatusRow}>
+                    <Ionicons name={statusIcon} size={18} color={colors.textMuted} />
+                    <Text size="sm" color={colors.textMuted} style={styles.scoreSectionStatusText}>
+                      {t(statusKey)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            );
+          })()}
+
         {/* Notes Section */}
         {match.notes && (
           <View style={[styles.section, { borderBottomColor: colors.border }]}>
             <View style={styles.sectionHeader}>
               <Ionicons name="document-text-outline" size={20} color={colors.iconMuted} />
               <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
-                {t('matchDetail.notes' as TranslationKey)}
+                {t('matchDetail.notes')}
               </Text>
             </View>
             <Text size="sm" color={colors.textMuted} style={styles.notesText}>
@@ -2877,29 +3101,9 @@ export const MatchDetailSheet: React.FC = () => {
             <Ionicons name="share-social" size={18} color={base.white} />
             {!isCreator && (
               <Text size="sm" weight="semibold" color={base.white} numberOfLines={1}>
-                {t('matchDetail.inviteFriends' as TranslationKey)}
+                {t('matchDetail.inviteFriends')}
               </Text>
             )}
-          </TouchableOpacity>
-        )}
-        {/* Chat Button - only for joined participants when conversation exists */}
-        {currentPlayerParticipant && matchConversationId && (
-          <TouchableOpacity
-            style={[
-              styles.chatButton,
-              {
-                backgroundColor: isDark ? primary[600] : primary[500],
-                shadowColor: primary[600],
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.25,
-                shadowRadius: 4,
-                elevation: 4,
-              },
-            ]}
-            onPress={handleOpenChat}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="chatbubble" size={18} color={base.white} />
           </TouchableOpacity>
         )}
       </View>
@@ -2909,15 +3113,15 @@ export const MatchDetailSheet: React.FC = () => {
         visible={showLeaveModal}
         onClose={() => setShowLeaveModal(false)}
         onConfirm={handleConfirmLeave}
-        title={t('matchActions.leaveConfirmTitle' as TranslationKey)}
-        message={t('matchActions.leaveConfirmMessage' as TranslationKey)}
+        title={t('matchActions.leaveConfirmTitle')}
+        message={t('matchActions.leaveConfirmMessage')}
         additionalInfo={
           selectedMatch && willLeaveAffectReputation(selectedMatch)
-            ? t('matchActions.leaveReputationWarning' as TranslationKey)
+            ? t('matchActions.leaveReputationWarning')
             : undefined
         }
-        confirmLabel={t('matches.leaveMatch' as TranslationKey)}
-        cancelLabel={t('common.cancel' as TranslationKey)}
+        confirmLabel={t('matches.leaveMatch')}
+        cancelLabel={t('common.cancel')}
         destructive
         isLoading={isLeaving}
       />
@@ -2927,28 +3131,28 @@ export const MatchDetailSheet: React.FC = () => {
         visible={showCancelModal}
         onClose={() => setShowCancelModal(false)}
         onConfirm={handleConfirmCancel}
-        title={t('matchActions.cancelConfirmTitle' as TranslationKey)}
-        message={t('matchActions.cancelConfirmMessage' as TranslationKey, {
+        title={t('matchActions.cancelConfirmTitle')}
+        message={t('matchActions.cancelConfirmMessage', {
           count: participantInfo.current,
         })}
         additionalInfo={(() => {
           const warnings: string[] = [];
           // Add reputation warning if applicable
           if (selectedMatch && willCancelAffectReputation(selectedMatch)) {
-            warnings.push(t('matchActions.cancelReputationWarning' as TranslationKey));
+            warnings.push(t('matchActions.cancelReputationWarning'));
           }
           // Add participant notification warning if there are other participants
           if (participantInfo.current > 1) {
             warnings.push(
-              t('matchActions.cancelWarning' as TranslationKey, {
+              t('matchActions.cancelWarning', {
                 count: participantInfo.current - 1,
               })
             );
           }
           return warnings.length > 0 ? warnings.join('\n\n') : undefined;
         })()}
-        confirmLabel={t('matches.cancelMatch' as TranslationKey)}
-        cancelLabel={t('common.goBack' as TranslationKey)}
+        confirmLabel={t('matches.cancelMatch')}
+        cancelLabel={t('common.goBack')}
         destructive
         isLoading={isCancelling}
       />
@@ -2961,10 +3165,10 @@ export const MatchDetailSheet: React.FC = () => {
           setRejectingParticipantId(null);
         }}
         onConfirm={handleConfirmReject}
-        title={t('matchActions.rejectConfirmTitle' as TranslationKey)}
-        message={t('matchActions.rejectConfirmMessage' as TranslationKey)}
-        confirmLabel={t('matchActions.rejectRequest' as TranslationKey)}
-        cancelLabel={t('common.cancel' as TranslationKey)}
+        title={t('matchActions.rejectConfirmTitle')}
+        message={t('matchActions.rejectConfirmMessage')}
+        confirmLabel={t('matchActions.rejectRequest')}
+        cancelLabel={t('common.cancel')}
         destructive
         isLoading={isRejecting}
       />
@@ -2974,10 +3178,10 @@ export const MatchDetailSheet: React.FC = () => {
         visible={showCancelRequestModal}
         onClose={() => setShowCancelRequestModal(false)}
         onConfirm={handleConfirmCancelRequest}
-        title={t('matchActions.cancelRequestConfirmTitle' as TranslationKey)}
-        message={t('matchActions.cancelRequestConfirmMessage' as TranslationKey)}
-        confirmLabel={t('matchActions.cancelRequest' as TranslationKey)}
-        cancelLabel={t('common.goBack' as TranslationKey)}
+        title={t('matchActions.cancelRequestConfirmTitle')}
+        message={t('matchActions.cancelRequestConfirmMessage')}
+        confirmLabel={t('matchActions.cancelRequest')}
+        cancelLabel={t('common.goBack')}
         destructive
         isLoading={isCancellingRequest}
       />
@@ -3002,10 +3206,10 @@ export const MatchDetailSheet: React.FC = () => {
           setKickingParticipantId(null);
         }}
         onConfirm={handleConfirmKick}
-        title={t('matchActions.kickConfirmTitle' as TranslationKey)}
-        message={t('matchActions.kickConfirmMessage' as TranslationKey)}
-        confirmLabel={t('matchActions.kickParticipant' as TranslationKey)}
-        cancelLabel={t('common.cancel' as TranslationKey)}
+        title={t('matchActions.kickConfirmTitle')}
+        message={t('matchActions.kickConfirmMessage')}
+        confirmLabel={t('matchActions.kickParticipant')}
+        cancelLabel={t('common.cancel')}
         destructive
         isLoading={isKicking}
       />
@@ -3018,10 +3222,10 @@ export const MatchDetailSheet: React.FC = () => {
           setCancellingInvitationId(null);
         }}
         onConfirm={handleConfirmCancelInvite}
-        title={t('matchActions.cancelInviteConfirmTitle' as TranslationKey)}
-        message={t('matchActions.cancelInviteConfirmMessage' as TranslationKey)}
-        confirmLabel={t('matchActions.cancelInvite' as TranslationKey)}
-        cancelLabel={t('common.cancel' as TranslationKey)}
+        title={t('matchActions.cancelInviteConfirmTitle')}
+        message={t('matchActions.cancelInviteConfirmMessage')}
+        confirmLabel={t('matchActions.cancelInvite')}
+        cancelLabel={t('common.cancel')}
         destructive
         isLoading={isCancellingInvite}
       />
@@ -3074,7 +3278,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: spacingPixels[10],
+    paddingBottom: spacingPixels[4],
   },
   pendingBanner: {
     flexDirection: 'row',
@@ -3124,11 +3328,7 @@ const styles = StyleSheet.create({
     gap: spacingPixels[2],
   },
   closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: spacingPixels[1],
   },
 
   // Sections
@@ -3142,7 +3342,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacingPixels[3],
   },
+  sectionHeaderTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    minWidth: 0,
+  },
   sectionTitle: {
+    marginLeft: spacingPixels[2],
+  },
+  participantsSectionChatButton: {
+    padding: spacingPixels[1],
     marginLeft: spacingPixels[2],
   },
 
@@ -3411,7 +3621,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[4],
-    paddingBottom: spacingPixels[6],
+    paddingBottom: spacingPixels[8],
     gap: spacingPixels[2],
     borderTopWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
@@ -3422,41 +3632,45 @@ const styles = StyleSheet.create({
     gap: spacingPixels[2],
     minWidth: 0, // Allow shrinking
   },
+  // Footer buttons: same pattern as MatchCreationWizard nextButton – paddingVertical, no fixed height, so content is not clipped
   actionButton: {
     flex: 1,
-    minWidth: 0, // Allow shrinking
+    minWidth: 0,
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[2],
   },
   cancelButton: {
     flex: 1,
-    minWidth: 0, // Allow shrinking
+    minWidth: 0,
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[2],
     paddingHorizontal: spacingPixels[2],
   },
   shareButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'stretch',
     gap: spacingPixels[1.5],
     paddingHorizontal: spacingPixels[4],
-    minHeight: spacingPixels[11], // 44px - balanced size between 40px and 48px
+    paddingVertical: spacingPixels[4],
     borderRadius: radiusPixels.lg,
-    flexShrink: 0, // Don't shrink the share button
+    flexShrink: 0,
   },
   shareButtonCompact: {
     paddingHorizontal: 0,
-    width: spacingPixels[11], // Square icon-only button, same as minHeight (44px)
-    minHeight: spacingPixels[11], // 44px - balanced size
-    gap: 0, // No gap when icon-only
-  },
-  chatButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[1.5],
-    paddingHorizontal: spacingPixels[4],
-    minHeight: spacingPixels[11], // 44px - same as share button
-    borderRadius: radiusPixels.lg,
-    flexShrink: 0,
-    marginLeft: spacingPixels[2],
+    width: spacingPixels[12],
+    paddingVertical: spacingPixels[4],
+    alignSelf: 'stretch',
+    gap: 0,
   },
   matchEndedContainer: {
     flex: 1,
@@ -3468,6 +3682,39 @@ const styles = StyleSheet.create({
   },
   matchEndedText: {
     textAlign: 'center',
+  },
+  scoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[2],
+  },
+  scoreStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  // Score section (in scroll view) – aligned with other section content
+  scoreSectionContent: {
+    marginTop: 0,
+  },
+  scoreSectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[3],
+    marginBottom: spacingPixels[2],
+  },
+  scoreSetsText: {
+    marginTop: spacingPixels[1],
+    marginBottom: spacingPixels[2],
+  },
+  scoreSectionStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacingPixels[2],
+  },
+  scoreSectionStatusText: {
+    marginLeft: spacingPixels[2],
   },
 });
 

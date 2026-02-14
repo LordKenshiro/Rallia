@@ -82,8 +82,8 @@ export interface PlayersPage {
 export interface SearchPlayersParams {
   /** Sport ID to filter players by (required - only shows active players in this sport) */
   sportId: string;
-  /** Current user ID to exclude from results */
-  currentUserId: string;
+  /** Current user ID to exclude from results (optional - for guest users) */
+  currentUserId?: string;
   /** Search query for name matching */
   searchQuery?: string;
   /** Pagination offset */
@@ -126,12 +126,16 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
 
   // Step 1: Get player IDs that are active in this sport
   // Using player_sport table which links players to their sports
-  const sportQuery = supabase
+  let sportQuery = supabase
     .from('player_sport')
     .select('player_id')
     .eq('sport_id', sportId)
-    .neq('player_id', currentUserId)
     .or('is_active.is.null,is_active.eq.true'); // Include null (default) or true
+
+  // Exclude current user if provided (for authenticated users)
+  if (currentUserId) {
+    sportQuery = sportQuery.neq('player_id', currentUserId);
+  }
 
   const { data: playerSports, error: sportError } = await sportQuery;
 

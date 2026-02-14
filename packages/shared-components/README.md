@@ -6,7 +6,7 @@ Reusable UI components for Rallia mobile and web apps.
 
 ```typescript
 import { Overlay, MatchCard, AppHeader } from '@rallia/shared-components';
-import { LocationPermissionOverlay, CalendarAccessOverlay } from '@rallia/shared-components';
+import { LocationPermissionOverlay } from '@rallia/shared-components';
 ```
 
 ## Components
@@ -16,7 +16,6 @@ import { LocationPermissionOverlay, CalendarAccessOverlay } from '@rallia/shared
 - **AppHeader**: Navigation header with logo (pass as prop)
 - **PermissionOverlay**: Generic permission request UI
 - **LocationPermissionOverlay**: Location-specific permission
-- **CalendarAccessOverlay**: Calendar-specific permission
 
 ## Platform-Specific Files
 

@@ -3,101 +3,115 @@
  * Modal for editing a message
  */
 
-import React, { useState, useCallback, useEffect, memo } from 'react';
+import React, { useState, useCallback, useEffect, memo, useRef } from 'react';
 import {
   View,
   StyleSheet,
-  Modal,
-  TextInput,
   TouchableOpacity,
+  TextInput,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
+  ScrollView,
 } from 'react-native';
+import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
-import { spacingPixels, fontSizePixels, primary, neutral } from '@rallia/design-system';
-import type { MessageWithSender } from '@rallia/shared-services';
+import { useThemeStyles, useTranslation } from '../../../hooks';
+import {
+  spacingPixels,
+  fontSizePixels,
+  primary,
+  neutral,
+  radiusPixels,
+} from '@rallia/design-system';
 
-interface EditMessageModalProps {
-  visible: boolean;
-  message: MessageWithSender | null;
-  onClose: () => void;
-  onSave: (newContent: string) => void;
-  isSaving?: boolean;
-}
+function EditMessageModalComponent({ payload }: SheetProps<'edit-message'>) {
+  const message = payload?.message ?? null;
+  const onSave = payload?.onSave;
+  const isSaving = payload?.isSaving ?? false;
 
-function EditMessageModalComponent({
-  visible,
-  message,
-  onClose,
-  onSave,
-  isSaving = false,
-}: EditMessageModalProps) {
   const { colors, isDark } = useThemeStyles();
-  const [editedContent, setEditedContent] = useState('');
+  const { t } = useTranslation();
+  const inputRef = useRef<TextInput>(null);
+  const [textValue, setTextValue] = useState('');
+  const [charCount, setCharCount] = useState(0);
 
-  // Reset content when modal opens with a new message
+  // Initialize content when modal opens with a new message (defer setState to avoid synchronous setState-in-effect)
   useEffect(() => {
-    if (visible && message) {
-      setEditedContent(message.content);
+    if (message) {
+      const content = message.content;
+      queueMicrotask(() => {
+        setTextValue(content);
+        setCharCount(content.length);
+      });
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 300);
+      return () => clearTimeout(timer);
     }
-  }, [visible, message]);
+  }, [message]);
+
+  const handleClose = useCallback(() => {
+    inputRef.current?.blur();
+    SheetManager.hide('edit-message');
+  }, []);
+
+  const handleTextChange = useCallback((text: string) => {
+    setTextValue(text);
+    setCharCount(text.length);
+  }, []);
 
   const handleSave = useCallback(() => {
-    const trimmed = editedContent.trim();
+    inputRef.current?.blur();
+    const trimmed = textValue.trim();
     if (trimmed && trimmed !== message?.content) {
-      onSave(trimmed);
-    } else {
-      onClose();
+      onSave?.(trimmed);
     }
-  }, [editedContent, message, onSave, onClose]);
+    SheetManager.hide('edit-message');
+  }, [message, onSave, textValue]);
 
-  const canSave = editedContent.trim().length > 0 && 
-                  editedContent.trim() !== message?.content &&
-                  !isSaving;
+  const canSave = textValue.trim().length > 0 && textValue.trim() !== message?.content && !isSaving;
 
   if (!message) return null;
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
       <KeyboardAvoidingView
-        style={styles.overlay}
+        style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
       >
-        <Pressable style={styles.backdrop} onPress={onClose} />
-        
-        <View style={[styles.container, { backgroundColor: colors.card }]}>
-          {/* Header */}
-          <View style={[styles.header, { borderBottomColor: colors.border }]}>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={colors.text} />
-            </TouchableOpacity>
-            <Text style={[styles.title, { color: colors.text }]}>Edit Message</Text>
-            <TouchableOpacity 
-              onPress={handleSave} 
-              style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
-              disabled={!canSave}
-            >
-              <Text style={[
-                styles.saveButtonText, 
-                { color: canSave ? primary[500] : colors.textMuted }
-              ]}>
-                {isSaving ? 'Saving...' : 'Save'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={styles.headerSpacer} />
+          <Text style={[styles.title, { color: colors.text }]}>{t('chat.editMessage')}</Text>
+          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
 
+        {/* Scrollable content */}
+        <ScrollView
+          style={styles.scrollContent}
+          contentContainerStyle={styles.scrollContentContainer}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           {/* Original message preview */}
-          <View style={[styles.originalContainer, { backgroundColor: isDark ? neutral[800] : neutral[100] }]}>
-            <Text style={[styles.originalLabel, { color: colors.textMuted }]}>Original:</Text>
+          <View
+            style={[
+              styles.originalContainer,
+              { backgroundColor: isDark ? neutral[800] : neutral[100] },
+            ]}
+          >
+            <Text style={[styles.originalLabel, { color: colors.textMuted }]}>
+              {t('chat.original')}:
+            </Text>
             <Text style={[styles.originalText, { color: colors.textMuted }]} numberOfLines={2}>
               {message.content}
             </Text>
@@ -106,52 +120,74 @@ function EditMessageModalComponent({
           {/* Edit input */}
           <View style={styles.inputContainer}>
             <TextInput
+              key={message.id}
+              ref={inputRef}
               style={[
-                styles.input, 
-                { 
-                  color: colors.text, 
+                styles.input,
+                {
+                  color: colors.text,
                   backgroundColor: isDark ? neutral[800] : neutral[100],
                   borderColor: colors.border,
-                }
+                },
               ]}
-              value={editedContent}
-              onChangeText={setEditedContent}
-              placeholder="Edit your message..."
+              value={textValue}
+              onChangeText={handleTextChange}
+              placeholder={t('chat.editYourMessage')}
               placeholderTextColor={colors.textMuted}
               multiline
               maxLength={2000}
-              autoFocus
               textAlignVertical="top"
             />
           </View>
 
           {/* Character count */}
-          <Text style={[styles.charCount, { color: colors.textMuted }]}>
-            {editedContent.length} / 2000
-          </Text>
+          <Text style={[styles.charCount, { color: colors.textMuted }]}>{charCount} / 2000</Text>
+        </ScrollView>
+
+        {/* Sticky Save button */}
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
+          <TouchableOpacity
+            onPress={handleSave}
+            style={[
+              styles.saveButtonBottom,
+              { backgroundColor: canSave ? primary[500] : colors.border },
+              !canSave && styles.saveButtonDisabled,
+            ]}
+            disabled={!canSave}
+          >
+            <Text
+              size="lg"
+              weight="semibold"
+              color={canSave ? colors.buttonTextActive : colors.textMuted}
+            >
+              {isSaving ? t('common.saving') : t('common.save')}
+            </Text>
+          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </Modal>
+    </ActionSheet>
   );
 }
 
-export const EditMessageModal = memo(EditMessageModalComponent);
+export const EditMessageActionSheet = memo(EditMessageModalComponent);
+
+// Keep old export for backwards compatibility during migration
+export const EditMessageModal = EditMessageActionSheet;
 
 const styles = StyleSheet.create({
-  overlay: {
+  sheetBackground: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
   },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
   },
   container: {
-    width: '90%',
-    maxWidth: 400,
-    borderRadius: 16,
-    overflow: 'hidden',
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -161,22 +197,39 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[3],
     borderBottomWidth: 1,
   },
+  headerSpacer: {
+    width: 24 + spacingPixels[1] * 2, // Match close button width
+  },
   closeButton: {
     padding: spacingPixels[1],
   },
   title: {
     fontSize: fontSizePixels.lg,
     fontWeight: '600',
+    flex: 1,
+    textAlign: 'center',
   },
-  saveButton: {
-    padding: spacingPixels[1],
+  scrollContent: {
+    flex: 1,
+  },
+  scrollContentContainer: {
+    paddingBottom: spacingPixels[4],
+  },
+  footer: {
+    padding: spacingPixels[4],
+    borderTopWidth: 1,
+    paddingBottom: spacingPixels[4],
+  },
+  saveButtonBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    gap: spacingPixels[2],
   },
   saveButtonDisabled: {
     opacity: 0.5,
-  },
-  saveButtonText: {
-    fontSize: fontSizePixels.base,
-    fontWeight: '600',
   },
   originalContainer: {
     marginHorizontal: spacingPixels[4],
@@ -208,6 +261,5 @@ const styles = StyleSheet.create({
     fontSize: fontSizePixels.xs,
     textAlign: 'right',
     paddingHorizontal: spacingPixels[4],
-    paddingBottom: spacingPixels[4],
   },
 });

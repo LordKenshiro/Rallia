@@ -72,6 +72,10 @@ export interface CreateMatchInput {
 
   // Visibility & access
   visibility?: 'public' | 'private';
+  /** When private: whether the match is visible in groups the creator is part of */
+  visibleInGroups?: boolean;
+  /** When private: whether the match is visible in communities the creator is part of */
+  visibleInCommunities?: boolean;
   joinMode?: 'direct' | 'request';
 
   // Additional info
@@ -132,6 +136,8 @@ export async function createMatch(input: CreateMatchInput): Promise<Match> {
     preferred_opponent_gender:
       input.preferredOpponentGender === 'any' ? null : input.preferredOpponentGender,
     visibility: input.visibility ?? 'public',
+    visible_in_groups: input.visibleInGroups ?? true,
+    visible_in_communities: input.visibleInCommunities ?? true,
     join_mode: input.joinMode ?? 'direct',
     notes: emptyToNull(input.notes),
   };
@@ -212,6 +218,25 @@ export async function getMatchWithDetails(matchId: string) {
           privacy_show_age,
           privacy_show_location,
           privacy_show_stats
+        )
+      ),
+      result:match_result (
+        id,
+        winning_team,
+        team1_score,
+        team2_score,
+        is_verified,
+        disputed,
+        submitted_by,
+        confirmation_deadline,
+        confirmed_by,
+        verified_at,
+        created_at,
+        updated_at,
+        sets:match_set (
+          set_number,
+          team1_score,
+          team2_score
         )
       )
     `
@@ -761,6 +786,9 @@ export async function updateMatch(
     updateData.preferred_opponent_gender =
       updates.preferredOpponentGender === 'any' ? null : updates.preferredOpponentGender;
   if (updates.visibility !== undefined) updateData.visibility = updates.visibility;
+  if (updates.visibleInGroups !== undefined) updateData.visible_in_groups = updates.visibleInGroups;
+  if (updates.visibleInCommunities !== undefined)
+    updateData.visible_in_communities = updates.visibleInCommunities;
   if (updates.joinMode !== undefined) updateData.join_mode = updates.joinMode;
   if (updates.notes !== undefined) updateData.notes = emptyToNull(updates.notes);
 
@@ -1157,12 +1185,21 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
   // If they have an active participation, they can't join again
   // Allow joining/re-joining if:
   // - 'pending': invited by host, accepting the invitation
+  // - 'cancelled': invitation was cancelled by host; user can still join the public match
   // - 'left': previously left the match
   // - 'declined': previously declined an invitation
   // - 'refused': host previously rejected their join request
   // - 'kicked': previously kicked from the match
   // - 'waitlisted': on waitlist, spots may have opened up
-  const allowedStatuses = ['pending', 'left', 'declined', 'refused', 'kicked', 'waitlisted'];
+  const allowedStatuses = [
+    'pending',
+    'cancelled',
+    'left',
+    'declined',
+    'refused',
+    'kicked',
+    'waitlisted',
+  ];
   if (existingParticipant && !allowedStatuses.includes(existingParticipant.status)) {
     throw new Error('You are already in this match');
   }
@@ -2315,6 +2352,25 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
           privacy_show_location,
           privacy_show_stats
         )
+      ),
+      result:match_result (
+        id,
+        winning_team,
+        team1_score,
+        team2_score,
+        is_verified,
+        disputed,
+        submitted_by,
+        confirmation_deadline,
+        confirmed_by,
+        verified_at,
+        created_at,
+        updated_at,
+        sets:match_set (
+          set_number,
+          team1_score,
+          team2_score
+        )
       )
     `
     )
@@ -2622,6 +2678,25 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
           privacy_show_location,
           privacy_show_stats
         )
+      ),
+      result:match_result (
+        id,
+        winning_team,
+        team1_score,
+        team2_score,
+        is_verified,
+        disputed,
+        submitted_by,
+        confirmation_deadline,
+        confirmed_by,
+        verified_at,
+        created_at,
+        updated_at,
+        sets:match_set (
+          set_number,
+          team1_score,
+          team2_score
+        )
       )
     `
     )
@@ -2814,6 +2889,8 @@ export interface SearchPublicMatchesParams {
   specificDate?: string | null;
   /** The viewing user's gender for eligibility filtering */
   userGender?: string | null;
+  /** Filter by specific facility ID - when set, only returns matches at that facility */
+  facilityId?: string | null;
   limit?: number;
   offset?: number;
 }
@@ -2852,6 +2929,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     courtStatus = 'all',
     specificDate,
     userGender,
+    facilityId,
     limit = 20,
     offset = 0,
   } = params;
@@ -2880,6 +2958,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     p_limit: limit + 1, // Fetch one extra to check if more exist
     p_offset: offset,
     p_user_gender: userGender || null, // Pass user's gender for eligibility filtering
+    p_facility_id: facilityId || null, // Filter by specific facility
   });
 
   if (rpcError) {
@@ -2952,6 +3031,25 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
           privacy_show_age,
           privacy_show_location,
           privacy_show_stats
+        )
+      ),
+      result:match_result (
+        id,
+        winning_team,
+        team1_score,
+        team2_score,
+        is_verified,
+        disputed,
+        submitted_by,
+        confirmation_deadline,
+        confirmed_by,
+        verified_at,
+        created_at,
+        updated_at,
+        sets:match_set (
+          set_number,
+          team1_score,
+          team2_score
         )
       )
     `
@@ -3611,20 +3709,41 @@ export interface PendingFeedbackMatch {
  * @param userId - The user's player ID
  * @returns The most recently ended match needing feedback, or null if none
  */
+const GET_MATCH_NEEDING_FEEDBACK_RPC_PARAMS = {
+  p_player_id: '' as string,
+  p_time_filter: 'past' as const,
+  p_sport_id: null as null,
+  p_limit: 50,
+  p_offset: 0,
+};
+
+async function callGetPlayerMatchesForFeedback(userId: string) {
+  return supabase.rpc('get_player_matches', {
+    ...GET_MATCH_NEEDING_FEEDBACK_RPC_PARAMS,
+    p_player_id: userId,
+  });
+}
+
 export async function getMatchNeedingFeedback(
   userId: string
 ): Promise<PendingFeedbackMatch | null> {
   // Fetch past matches where user is a joined participant with feedback_completed = false
-  const { data: matchIdResults, error: rpcError } = await supabase.rpc('get_player_matches', {
-    p_player_id: userId,
-    p_time_filter: 'past',
-    p_sport_id: null,
-    p_limit: 50, // Get recent past matches
-    p_offset: 0,
-  });
+  let { data: matchIdResults, error: rpcError } = await callGetPlayerMatchesForFeedback(userId);
+
+  // Retry once on upstream/invalid response (common after db reset or transient PostgREST issues)
+  if (rpcError?.message?.includes('upstream') || rpcError?.message?.includes('invalid response')) {
+    console.warn('[getMatchNeedingFeedback] RPC upstream error, retrying once:', rpcError.message);
+    const retry = await callGetPlayerMatchesForFeedback(userId);
+    rpcError = retry.error;
+    matchIdResults = retry.data;
+  }
 
   if (rpcError) {
-    console.error('[getMatchNeedingFeedback] RPC error:', rpcError);
+    console.error(
+      '[getMatchNeedingFeedback] RPC error:',
+      rpcError?.message,
+      rpcError?.details ?? rpcError
+    );
     return null;
   }
 

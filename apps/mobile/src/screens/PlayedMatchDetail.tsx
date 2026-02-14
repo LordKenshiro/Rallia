@@ -4,14 +4,7 @@
  */
 
 import React, { useMemo } from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  Image,
-  TouchableOpacity,
-  Platform,
-} from 'react-native';
+import { View, StyleSheet, ScrollView, Image, TouchableOpacity, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -19,8 +12,16 @@ import type { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../hooks';
-import { spacingPixels, fontSizePixels, radiusPixels, primary, status } from '@rallia/design-system';
+import { useThemeStyles, useNavigateToPlayerProfile } from '../hooks';
+import { SportIcon } from '../components/SportIcon';
+import { getSafeAreaEdges } from '../utils';
+import {
+  spacingPixels,
+  fontSizePixels,
+  radiusPixels,
+  primary,
+  status,
+} from '@rallia/design-system';
 import type { RootStackParamList } from '../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -104,38 +105,33 @@ export default function PlayedMatchDetailScreen() {
   const formattedDate = useMemo(() => {
     if (!matchData?.match_date) return 'Unknown date';
     const date = new Date(matchData.match_date);
-    return date.toLocaleDateString('en-US', { 
-      month: 'long', 
+    return date.toLocaleDateString('en-US', {
+      month: 'long',
       day: 'numeric',
     });
-  }, [matchData?.match_date]);
+  }, [matchData]);
 
   const formattedTime = useMemo(() => {
     if (!matchData?.start_time) return 'Unknown time';
     const [hours, minutes] = matchData.start_time.split(':');
     const date = new Date();
     date.setHours(parseInt(hours, 10), parseInt(minutes, 10));
-    return date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
       minute: '2-digit',
       hour12: true,
     });
-  }, [matchData?.start_time]);
+  }, [matchData]);
 
-  // Get sport icon
-  const sportIcon = useMemo(() => {
-    const sportName = matchData?.sport?.name?.toLowerCase();
-    if (sportName === 'tennis') return 'tennisball';
-    if (sportName === 'pickleball') return 'tennisball-outline';
-    return 'american-football';
-  }, [matchData?.sport]);
+  // Sport name for icon (SportIcon uses tennis/pickleball SVGs; others fallback to tennis)
+  const sportNameForIcon = matchData?.sport?.name ?? 'tennis';
 
   // Organize participants by team
   const { team1, team2 } = useMemo(() => {
     const participants = matchData?.participants || [];
     const t1: typeof participants = [];
     const t2: typeof participants = [];
-    
+
     participants.forEach(p => {
       if (p.team_number === 1) t1.push(p);
       else if (p.team_number === 2) t2.push(p);
@@ -145,27 +141,26 @@ export default function PlayedMatchDetailScreen() {
         else t2.push(p);
       }
     });
-    
+
     return { team1: t1, team2: t2 };
   }, [matchData]);
 
   // Determine winner
   const winningTeam = matchData?.result?.winning_team;
   const matchSets = matchData?.result?.sets || [];
-  
+
   // Format set scores for display (e.g., "6  4  7" for three sets)
   const getSetScoresDisplay = (teamNumber: 1 | 2): string => {
     if (matchSets.length === 0) {
       // Fallback to total score if no individual sets
-      const totalScore = teamNumber === 1 
-        ? matchData?.result?.team1_score 
-        : matchData?.result?.team2_score;
+      const totalScore =
+        teamNumber === 1 ? matchData?.result?.team1_score : matchData?.result?.team2_score;
       return totalScore?.toString() ?? '-';
     }
-    
+
     return matchSets
       .sort((a, b) => a.set_number - b.set_number)
-      .map(set => teamNumber === 1 ? set.team1_score : set.team2_score)
+      .map(set => (teamNumber === 1 ? set.team1_score : set.team2_score))
       .join('  ');
   };
 
@@ -186,9 +181,9 @@ export default function PlayedMatchDetailScreen() {
     navigation.goBack();
   };
 
-  // Navigate to player profile
+  const navigateToPlayerProfile = useNavigateToPlayerProfile();
   const handlePlayerPress = (playerId: string) => {
-    navigation.navigate('PlayerProfile', { playerId });
+    navigateToPlayerProfile(playerId);
   };
 
   // Render a player row (list style like the design)
@@ -200,31 +195,28 @@ export default function PlayedMatchDetailScreen() {
     <View style={styles.playerRow}>
       {/* Trophy icon for winner */}
       <View style={styles.trophyContainer}>
-        {isWinner && (
-          <Ionicons name="trophy" size={20} color="#F59E0B" />
-        )}
+        {isWinner && <Ionicons name="trophy-outline" size={20} color="#F59E0B" />}
       </View>
-      
+
       {/* Avatar(s) - Show overlapping avatars for doubles, tappable to view profile */}
       <View style={styles.teamAvatarsContainer}>
         {participants.map((participant, index) => (
-          <TouchableOpacity 
+          <TouchableOpacity
             key={participant.id}
             style={[
               styles.playerAvatarSmall,
-              index > 0 && { marginLeft: -12, zIndex: participants.length - index }
+              index > 0 && { marginLeft: -12, zIndex: participants.length - index },
             ]}
             onPress={() => participant.player_id && handlePlayerPress(participant.player_id)}
             activeOpacity={0.7}
           >
             {getPlayerAvatar(participant) ? (
-              <Image 
-                source={{ uri: getPlayerAvatar(participant)! }} 
-                style={styles.avatarSmall} 
-              />
+              <Image source={{ uri: getPlayerAvatar(participant)! }} style={styles.avatarSmall} />
             ) : (
               <View style={[styles.avatarPlaceholderSmall, { backgroundColor: primary[100] }]}>
-                <Text style={{ color: primary[500], fontWeight: '600', fontSize: fontSizePixels.sm }}>
+                <Text
+                  style={{ color: primary[500], fontWeight: '600', fontSize: fontSizePixels.sm }}
+                >
                   {getPlayerName(participant).charAt(0).toUpperCase()}
                 </Text>
               </View>
@@ -232,23 +224,22 @@ export default function PlayedMatchDetailScreen() {
           </TouchableOpacity>
         ))}
       </View>
-      
+
       {/* Player name(s) */}
-      <Text 
-        style={[
-          styles.playerNameRow, 
-          { color: colors.text, fontWeight: isWinner ? '600' : '400' },
-        ]} 
+      <Text
+        style={[styles.playerNameRow, { color: colors.text, fontWeight: isWinner ? '600' : '400' }]}
         numberOfLines={1}
       >
         {participants.map(p => getPlayerName(p)).join(' & ')}
       </Text>
-      
+
       {/* Score - show individual set scores */}
-      <Text style={[
-        styles.scoreText, 
-        { color: isWinner ? '#F59E0B' : colors.textMuted, fontWeight: isWinner ? '700' : '400' },
-      ]}>
+      <Text
+        style={[
+          styles.scoreText,
+          { color: isWinner ? '#F59E0B' : colors.textMuted, fontWeight: isWinner ? '700' : '400' },
+        ]}
+      >
         {getSetScoresDisplay(teamNumber)}
       </Text>
     </View>
@@ -264,36 +255,43 @@ export default function PlayedMatchDetailScreen() {
           defaultSource={require('../../assets/images/tennis.jpg')}
         />
         <View style={styles.headerOverlay} />
-        
+
         {/* Back button */}
-        <SafeAreaView edges={['top']} style={styles.headerContent}>
+        <SafeAreaView edges={getSafeAreaEdges(['top'])} style={styles.headerContent}>
           <TouchableOpacity style={styles.backButton} onPress={handleBack}>
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          
+
           {/* Status badge */}
           <View style={[styles.statusBadge, { backgroundColor: status.info.DEFAULT }]}>
             <Text style={styles.statusText}>Played</Text>
           </View>
-          
+
           {/* Match title */}
           <Text style={styles.matchTitle}>{matchData?.sport?.name || 'Match'}</Text>
-          <Text style={styles.matchSubtitle}>{formattedDate} • {formattedTime}</Text>
+          <Text style={styles.matchSubtitle}>
+            {formattedDate} • {formattedTime}
+          </Text>
         </SafeAreaView>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
         {/* Players Section */}
-        <View style={[styles.section, { backgroundColor: isDark ? colors.card : '#FFFFFF', borderRadius: radiusPixels.lg }]}>
+        <View
+          style={[
+            styles.section,
+            { backgroundColor: isDark ? colors.card : '#FFFFFF', borderRadius: radiusPixels.lg },
+          ]}
+        >
           <View style={styles.sectionHeader}>
             <Ionicons name="people-outline" size={20} color={colors.text} />
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Players</Text>
           </View>
-          
+
           {/* Player rows */}
           <View style={styles.playersListContainer}>
             {renderPlayerRow(team1, 1, winningTeam === 1)}
@@ -317,7 +315,7 @@ export default function PlayedMatchDetailScreen() {
         {/* Sport */}
         <View style={styles.detailRow}>
           <View style={styles.detailIcon}>
-            <Ionicons name={sportIcon as keyof typeof Ionicons.glyphMap} size={20} color={colors.textMuted} />
+            <SportIcon sportName={sportNameForIcon} size={20} color={colors.textMuted} />
           </View>
           <View style={styles.detailContent}>
             <Text style={[styles.detailLabel, { color: colors.text }]}>Sport</Text>
@@ -330,17 +328,24 @@ export default function PlayedMatchDetailScreen() {
         {/* Match Style */}
         <View style={styles.detailRow}>
           <View style={styles.detailIcon}>
-            <Ionicons 
-              name={matchData?.player_expectation === 'competitive' ? 'trophy-outline' : 'fitness-outline'} 
-              size={20} 
-              color={colors.textMuted} 
+            <Ionicons
+              name={
+                matchData?.player_expectation === 'competitive'
+                  ? 'trophy-outline'
+                  : 'fitness-outline'
+              }
+              size={20}
+              color={colors.textMuted}
             />
           </View>
           <View style={styles.detailContent}>
             <Text style={[styles.detailLabel, { color: colors.text }]}>Match style</Text>
             <Text style={[styles.detailValue, { color: colors.textMuted }]}>
-              {matchData?.player_expectation === 'competitive' ? 'Competitive' : 
-               matchData?.player_expectation === 'practice' ? 'Practice' : 'Both'}
+              {matchData?.player_expectation === 'competitive'
+                ? 'Competitive'
+                : matchData?.player_expectation === 'practice'
+                  ? 'Practice'
+                  : 'Both'}
             </Text>
           </View>
         </View>
@@ -352,12 +357,8 @@ export default function PlayedMatchDetailScreen() {
           </View>
           <View style={styles.detailContent}>
             <Text style={[styles.detailLabel, { color: colors.text }]}>Date</Text>
-            <Text style={[styles.detailValue, { color: colors.textMuted }]}>
-              {formattedDate}
-            </Text>
-            <Text style={[styles.detailValue, { color: colors.textMuted }]}>
-              {formattedTime}
-            </Text>
+            <Text style={[styles.detailValue, { color: colors.textMuted }]}>{formattedDate}</Text>
+            <Text style={[styles.detailValue, { color: colors.textMuted }]}>{formattedTime}</Text>
           </View>
         </View>
 

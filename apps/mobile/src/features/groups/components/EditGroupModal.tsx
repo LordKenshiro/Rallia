@@ -6,72 +6,63 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
-  Modal,
   TouchableOpacity,
   StyleSheet,
   TextInput,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
   Alert,
   Image,
-  ScrollView,
 } from 'react-native';
+import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles, useAuth } from '../../../hooks';
+import { useThemeStyles, useAuth, useTranslation } from '../../../hooks';
 import { useUpdateGroup, type Group } from '@rallia/shared-hooks';
 import { uploadImage, replaceImage } from '../../../services/imageUpload';
-import { primary } from '@rallia/design-system';
+import { primary, radiusPixels, spacingPixels } from '@rallia/design-system';
 
-interface EditGroupModalProps {
-  visible: boolean;
-  onClose: () => void;
-  group: Group;
-  onSuccess: () => void;
-}
+export function EditGroupActionSheet({ payload }: SheetProps<'edit-group'>) {
+  const group = payload?.group as Group;
+  const onSuccess = payload?.onSuccess;
 
-export function EditGroupModal({ visible, onClose, group, onSuccess }: EditGroupModalProps) {
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
+  const { t } = useTranslation();
   const playerId = session?.user?.id;
 
-  const [name, setName] = useState(group.name);
-  const [description, setDescription] = useState(group.description || '');
-  const [coverImage, setCoverImage] = useState<string | null>(group.cover_image_url || null);
+  const [name, setName] = useState(group?.name ?? '');
+  const [description, setDescription] = useState(group?.description || '');
+  const [coverImage, setCoverImage] = useState<string | null>(group?.cover_image_url || null);
   const [newCoverImage, setNewCoverImage] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const updateGroupMutation = useUpdateGroup();
 
-  // Reset form when modal opens
+  // Reset form when group changes
   useEffect(() => {
-    if (visible) {
+    if (group) {
       setName(group.name);
       setDescription(group.description || '');
       setCoverImage(group.cover_image_url || null);
       setNewCoverImage(null);
       setError(null);
     }
-  }, [visible, group]);
+  }, [group]);
 
   const handleClose = useCallback(() => {
     setError(null);
     setNewCoverImage(null);
-    onClose();
-  }, [onClose]);
+    SheetManager.hide('edit-group');
+  }, []);
 
   const handlePickImage = useCallback(async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(
-          'Permission Required',
-          'Please allow access to your photos to change the group image.'
-        );
+        Alert.alert(t('groups.permissionRequired'), t('groups.photoAccessRequiredEdit'));
         return;
       }
 
@@ -87,9 +78,9 @@ export function EditGroupModal({ visible, onClose, group, onSuccess }: EditGroup
       }
     } catch (err) {
       console.error('Error picking image:', err);
-      Alert.alert('Error', 'Failed to pick image');
+      Alert.alert(t('common.error'), t('groups.failedToPickImage'));
     }
-  }, []);
+  }, [t]);
 
   const handleRemoveImage = useCallback(() => {
     setCoverImage(null);
@@ -100,17 +91,17 @@ export function EditGroupModal({ visible, onClose, group, onSuccess }: EditGroup
     if (!playerId) return;
 
     if (!name.trim()) {
-      setError('Group name is required');
+      setError(t('groups.nameRequired'));
       return;
     }
 
     if (name.trim().length < 2) {
-      setError('Group name must be at least 2 characters');
+      setError(t('groups.nameTooShort'));
       return;
     }
 
     if (name.trim().length > 50) {
-      setError('Group name must be less than 50 characters');
+      setError(t('groups.nameTooLong'));
       return;
     }
 
@@ -131,7 +122,7 @@ export function EditGroupModal({ visible, onClose, group, onSuccess }: EditGroup
           );
           if (uploadError) {
             console.error('Error replacing image:', uploadError);
-            Alert.alert('Warning', 'Failed to update group image.');
+            Alert.alert(t('common.warning'), t('groups.failedToUpdateImage'));
           } else {
             coverImageUrl = url;
           }
@@ -140,7 +131,7 @@ export function EditGroupModal({ visible, onClose, group, onSuccess }: EditGroup
           const { url, error: uploadError } = await uploadImage(newCoverImage, 'group-images');
           if (uploadError) {
             console.error('Error uploading image:', uploadError);
-            Alert.alert('Warning', 'Failed to upload group image.');
+            Alert.alert(t('common.warning'), t('groups.failedToUploadImage'));
           } else if (url) {
             coverImageUrl = url;
           }
@@ -165,9 +156,12 @@ export function EditGroupModal({ visible, onClose, group, onSuccess }: EditGroup
           ...(coverImageUrl !== undefined && { cover_image_url: coverImageUrl || undefined }),
         },
       });
-      onSuccess();
+      onSuccess?.();
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to update group');
+      Alert.alert(
+        t('common.error'),
+        err instanceof Error ? err.message : t('groups.failedToUpdateGroup')
+      );
     }
   }, [
     name,
@@ -179,6 +173,7 @@ export function EditGroupModal({ visible, onClose, group, onSuccess }: EditGroup
     onSuccess,
     newCoverImage,
     coverImage,
+    t,
   ]);
 
   const hasChanges =
@@ -190,174 +185,179 @@ export function EditGroupModal({ visible, onClose, group, onSuccess }: EditGroup
   const displayImage = newCoverImage || coverImage;
   const isSubmitting = updateGroupMutation.isPending || isUploadingImage;
 
+  if (!group) return null;
+
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
-      <KeyboardAvoidingView
-        style={styles.overlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={handleClose} />
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+    >
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <Text weight="semibold" size="lg" style={{ color: colors.text }}>
+            {t('groups.editGroup')}
+          </Text>
+          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
 
-        <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
-          {/* Header */}
-          <View style={[styles.header, { borderBottomColor: colors.border }]}>
-            <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-              Edit Group
+        {/* Content */}
+        <ScrollView
+          style={styles.scrollContent}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Cover Image Picker */}
+          <View style={styles.inputGroup}>
+            <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
+              {t('groups.groupImage')}
             </Text>
-            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={colors.text} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Content */}
-          <ScrollView style={styles.scrollContent} contentContainerStyle={styles.content}>
-            {/* Cover Image Picker */}
-            <View style={styles.inputGroup}>
-              <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
-                Group Image
-              </Text>
-              {displayImage ? (
-                <View style={styles.imagePreviewContainer}>
-                  <Image source={{ uri: displayImage }} style={styles.imagePreview} />
-                  <TouchableOpacity
-                    style={[styles.removeImageButton, { backgroundColor: colors.cardBackground }]}
-                    onPress={handleRemoveImage}
-                  >
-                    <Ionicons name="close" size={20} color={colors.text} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.changeImageButton, { backgroundColor: colors.primary }]}
-                    onPress={handlePickImage}
-                  >
-                    <Ionicons name="camera" size={16} color="#FFFFFF" />
-                    <Text size="xs" weight="semibold" style={{ color: '#FFFFFF', marginLeft: 4 }}>
-                      Change
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
+            {displayImage ? (
+              <View style={styles.imagePreviewContainer}>
+                <Image source={{ uri: displayImage }} style={styles.imagePreview} />
                 <TouchableOpacity
-                  style={[
-                    styles.imagePicker,
-                    {
-                      backgroundColor: isDark ? primary[900] : primary[100],
-                      borderColor: colors.border,
-                    },
-                  ]}
+                  style={[styles.removeImageButton, { backgroundColor: colors.cardBackground }]}
+                  onPress={handleRemoveImage}
+                >
+                  <Ionicons name="close-outline" size={20} color={colors.text} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.changeImageButton, { backgroundColor: colors.primary }]}
                   onPress={handlePickImage}
                 >
-                  <View
-                    style={[styles.imagePickerIcon, { backgroundColor: colors.cardBackground }]}
-                  >
-                    <Ionicons name="camera" size={24} color={colors.primary} />
-                  </View>
-                  <Text size="sm" style={{ color: colors.textSecondary, marginTop: 8 }}>
-                    Add a cover image
+                  <Ionicons name="camera-outline" size={16} color="#FFFFFF" />
+                  <Text size="xs" weight="semibold" style={{ color: '#FFFFFF', marginLeft: 4 }}>
+                    {t('common.change')}
                   </Text>
                 </TouchableOpacity>
-              )}
-            </View>
-            <View style={styles.inputGroup}>
-              <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
-                Group Name *
-              </Text>
-              <TextInput
+              </View>
+            ) : (
+              <TouchableOpacity
                 style={[
-                  styles.input,
+                  styles.imagePicker,
                   {
-                    backgroundColor: colors.inputBackground,
-                    color: colors.text,
-                    borderColor: error ? '#FF3B30' : colors.border,
-                  },
-                ]}
-                placeholder="Enter group name..."
-                placeholderTextColor={colors.textMuted}
-                value={name}
-                onChangeText={setName}
-                maxLength={50}
-              />
-              {error && (
-                <Text size="xs" style={{ color: '#FF3B30', marginTop: 4 }}>
-                  {error}
-                </Text>
-              )}
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
-                Description (optional)
-              </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  styles.textArea,
-                  {
-                    backgroundColor: colors.inputBackground,
-                    color: colors.text,
+                    backgroundColor: isDark ? primary[900] : primary[100],
                     borderColor: colors.border,
                   },
                 ]}
-                placeholder="What's this group about?"
-                placeholderTextColor={colors.textMuted}
-                value={description}
-                onChangeText={setDescription}
-                maxLength={200}
-                multiline
-                numberOfLines={3}
-                textAlignVertical="top"
-              />
-              <Text size="xs" style={{ color: colors.textMuted, marginTop: 4, textAlign: 'right' }}>
-                {description.length}/200
-              </Text>
-            </View>
-          </ScrollView>
-
-          {/* Footer */}
-          <View style={[styles.footer, { borderTopColor: colors.border }]}>
-            <TouchableOpacity
-              style={[styles.cancelButton, { borderColor: colors.border }]}
-              onPress={handleClose}
-              disabled={isSubmitting}
-            >
-              <Text style={{ color: colors.text }}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.submitButton,
-                { backgroundColor: colors.primary },
-                (!hasChanges || isSubmitting) && { opacity: 0.7 },
-              ]}
-              onPress={handleSubmit}
-              disabled={!hasChanges || isSubmitting || !name.trim()}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text weight="semibold" style={{ color: '#FFFFFF' }}>
-                  Save Changes
+                onPress={handlePickImage}
+              >
+                <View style={[styles.imagePickerIcon, { backgroundColor: colors.cardBackground }]}>
+                  <Ionicons name="camera-outline" size={24} color={colors.primary} />
+                </View>
+                <Text size="sm" style={{ color: colors.textSecondary, marginTop: 8 }}>
+                  {t('groups.addCoverImage')}
                 </Text>
-              )}
-            </TouchableOpacity>
+              </TouchableOpacity>
+            )}
           </View>
+          <View style={styles.inputGroup}>
+            <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
+              {t('groups.groupName')} *
+            </Text>
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.inputBackground,
+                  color: colors.text,
+                  borderColor: error ? '#FF3B30' : colors.border,
+                },
+              ]}
+              placeholder={t('groups.enterGroupName')}
+              placeholderTextColor={colors.textMuted}
+              value={name}
+              onChangeText={setName}
+              maxLength={50}
+            />
+            {error && (
+              <Text size="xs" style={{ color: '#FF3B30', marginTop: 4 }}>
+                {error}
+              </Text>
+            )}
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
+              {t('groups.descriptionOptional')}
+            </Text>
+            <TextInput
+              style={[
+                styles.input,
+                styles.textArea,
+                {
+                  backgroundColor: colors.inputBackground,
+                  color: colors.text,
+                  borderColor: colors.border,
+                },
+              ]}
+              placeholder={t('groups.descriptionPlaceholder')}
+              placeholderTextColor={colors.textMuted}
+              value={description}
+              onChangeText={setDescription}
+              maxLength={200}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+            <Text size="xs" style={{ color: colors.textMuted, marginTop: 4, textAlign: 'right' }}>
+              {description.length}/200
+            </Text>
+          </View>
+        </ScrollView>
+
+        {/* Footer */}
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
+          <TouchableOpacity
+            style={[styles.cancelButton, { borderColor: colors.border }]}
+            onPress={handleClose}
+            disabled={isSubmitting}
+          >
+            <Text style={{ color: colors.text }}>{t('common.cancel')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              { backgroundColor: colors.primary },
+              (!hasChanges || isSubmitting) && { opacity: 0.7 },
+            ]}
+            onPress={handleSubmit}
+            disabled={!hasChanges || isSubmitting || !name.trim()}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator size="small" color={colors.buttonTextActive} />
+            ) : (
+              <Text size="lg" weight="semibold" color={colors.buttonTextActive}>
+                {t('common.saveChanges')}
+              </Text>
+            )}
+          </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
-    </Modal>
+      </View>
+    </ActionSheet>
   );
 }
 
+// Keep old export for backwards compatibility during migration
+export const EditGroupModal = EditGroupActionSheet;
+
 const styles = StyleSheet.create({
-  overlay: {
+  sheetBackground: {
     flex: 1,
-    justifyContent: 'flex-end',
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
   },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
   },
   container: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '85%',
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   scrollContent: {
-    maxHeight: 400,
+    flex: 1,
   },
   content: {
     padding: 16,
@@ -442,21 +442,26 @@ const styles = StyleSheet.create({
   },
   footer: {
     flexDirection: 'row',
-    padding: 16,
-    gap: 12,
+    padding: spacingPixels[4],
     borderTopWidth: 1,
+    paddingBottom: spacingPixels[4],
+    gap: spacingPixels[3],
   },
   cancelButton: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
     borderWidth: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   submitButton: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    gap: spacingPixels[2],
   },
 });

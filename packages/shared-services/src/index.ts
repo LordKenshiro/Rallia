@@ -20,8 +20,14 @@ export * from './reputation';
 export * from './shared-contacts';
 export * from './match-share';
 export * from './groups';
+export * from './communities';
 export * from './chat';
 export * from './reports';
+// Bookings - client-safe exports (types, validation, status, policy)
+// For server-side functions (createBooking, cancelBooking), use web app's lib/bookings
+export * from './bookings';
+export * from './programs';
+export * from './tour';
 
 // Export default DatabaseService
 export { default } from './database';

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Overlay from '../Overlay.native';
 import { COLORS } from '@rallia/shared-constants';
 
-export type PermissionType = 'location' | 'calendar' | 'camera' | 'notification';
+export type PermissionType = 'location' | 'camera' | 'notification';
 
 interface PermissionConfig {
   title: string;
@@ -16,11 +16,6 @@ const PERMISSION_CONFIGS: Record<PermissionType, PermissionConfig> = {
     title: 'Location Access',
     description:
       'Allow access to your location to show\nnearby events and improve\nrecommendations.',
-  },
-  calendar: {
-    title: 'Calendar Access',
-    description:
-      'Allow access to your calendar to sync\nyour events and avoid scheduling\nconflicts.',
   },
   camera: {
     title: 'Camera Access',

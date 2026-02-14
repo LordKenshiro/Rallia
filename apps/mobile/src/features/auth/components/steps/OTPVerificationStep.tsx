@@ -45,6 +45,10 @@ interface OTPVerificationStepProps {
   errorMessage: string;
   onVerify: () => void;
   onResendCode: () => void;
+  /** Seconds remaining before resend is allowed */
+  resendCooldown?: number;
+  /** Whether resend button is enabled */
+  canResend?: boolean;
   colors: ThemeColors;
   t: (key: TranslationKey) => string;
   isDark: boolean;
@@ -57,9 +61,11 @@ export const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
   code,
   onCodeChange,
   isLoading,
-  errorMessage,
+  errorMessage: _errorMessage,
   onVerify,
   onResendCode,
+  resendCooldown = 0,
+  canResend = true,
   colors,
   t,
   isDark,
@@ -110,7 +116,8 @@ export const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
 
       {/* Description */}
       <Text size="base" color={colors.textSecondary} style={styles.description}>
-        We sent an email verification code to{'\n'}
+        {t('auth.codeSentTo')}
+        {'\n'}
         <Text size="base" weight="semibold" color={colors.text}>
           {email}
         </Text>
@@ -158,23 +165,29 @@ export const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
       <TouchableOpacity
         style={[
           styles.resendButton,
-          { backgroundColor: isDark ? colors.buttonInactive : `${colors.buttonActive}15` },
+          {
+            backgroundColor: canResend
+              ? isDark
+                ? colors.buttonInactive
+                : `${colors.buttonActive}15`
+              : colors.buttonInactive,
+            opacity: canResend ? 1 : 0.6,
+          },
         ]}
         onPress={onResendCode}
-        activeOpacity={0.8}
-        disabled={isLoading}
+        activeOpacity={canResend ? 0.8 : 1}
+        disabled={!canResend || isLoading}
       >
-        <Text size="base" weight="semibold" color={colors.buttonActive}>
-          {t('auth.resendCode')}
+        <Text
+          size="base"
+          weight="semibold"
+          color={canResend ? colors.buttonActive : colors.textMuted}
+        >
+          {resendCooldown > 0
+            ? `${t('auth.resendCode')} (${resendCooldown}s)`
+            : t('auth.resendCode')}
         </Text>
       </TouchableOpacity>
-
-      {/* Error Message */}
-      {errorMessage ? (
-        <Text size="sm" color={colors.error} style={styles.errorText}>
-          {errorMessage}
-        </Text>
-      ) : null}
 
       {/* Continue Button */}
       <TouchableOpacity
@@ -246,10 +259,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacingPixels[4],
-  },
-  errorText: {
-    textAlign: 'center',
-    marginBottom: spacingPixels[2],
   },
   continueButton: {
     borderRadius: radiusPixels.lg,

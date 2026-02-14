@@ -10,24 +10,28 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   Platform,
   Modal,
   Image,
   Pressable,
+  Keyboard,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import {
+  BottomSheetTextInput,
+  BottomSheetScrollView,
+  type BottomSheetScrollViewMethods,
+} from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, PhoneInput } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { OnboardingService, Logger } from '@rallia/shared-services';
 import {
   validateFullName,
   validateUsername,
   lightHaptic,
   selectionHaptic,
 } from '@rallia/shared-utils';
+import { GENDER_VALUES } from '@rallia/shared-types';
 import type { TranslationKey } from '@rallia/shared-translations';
 import type { OnboardingFormData } from '../../../hooks/useOnboardingWizard';
 
@@ -65,44 +69,34 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
 }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempDate, setTempDate] = useState<Date>(formData.dateOfBirth || new Date(2000, 0, 1));
-  const [genderOptions, setGenderOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   // Refs for keyboard visibility handling
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<BottomSheetScrollViewMethods>(null);
   const firstNameFieldRef = useRef<View>(null);
   const lastNameFieldRef = useRef<View>(null);
   const usernameFieldRef = useRef<View>(null);
   const phoneNumberFieldRef = useRef<View>(null);
+  // Y positions of each field within scroll content (from onLayout), used to scroll only enough to bring field into view
+  const fieldYOffsets = useRef<Record<string, number>>({});
+  const SCROLL_TO_FIELD_TOP_PADDING = 24;
 
-  // Fetch gender options from database
+  // Listen for keyboard events to adjust padding dynamically
   useEffect(() => {
-    const fetchGenderOptions = async () => {
-      try {
-        const { data, error } = await OnboardingService.getGenderTypes();
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
-        if (error) {
-          Logger.error('Failed to fetch gender types from database', error as Error);
-          setGenderOptions([
-            { value: 'male', label: 'Male' },
-            { value: 'female', label: 'Female' },
-            { value: 'other', label: 'Other' },
-            //{ value: 'prefer_not_to_say', label: 'Prefer not to say' },
-          ]);
-        } else if (data) {
-          setGenderOptions(data);
-        }
-      } catch (error) {
-        Logger.error('Unexpected error fetching gender types', error as Error);
-        setGenderOptions([
-          { value: 'male', label: 'Male' },
-          { value: 'female', label: 'Female' },
-          { value: 'other', label: 'Other' },
-          //{ value: 'prefer_not_to_say', label: 'Prefer not to say' },
-        ]);
-      }
+    const keyboardShowListener = Keyboard.addListener(showEvent, e => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const keyboardHideListener = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      keyboardShowListener.remove();
+      keyboardHideListener.remove();
     };
-
-    fetchGenderOptions();
   }, []);
 
   const handleFirstNameChange = (text: string) => {
@@ -158,19 +152,32 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
     return `${month}/${day}/${year}`;
   };
 
+  const scrollToField = useCallback((fieldKey: string) => {
+    const delay = Platform.OS === 'ios' ? 300 : 100;
+    setTimeout(() => {
+      const y = fieldYOffsets.current[fieldKey];
+      if (y !== undefined && scrollViewRef.current) {
+        const targetY = Math.max(0, y - SCROLL_TO_FIELD_TOP_PADDING);
+        scrollViewRef.current.scrollTo({ y: targetY, animated: true });
+      }
+    }, delay);
+  }, []);
+
   return (
-    <ScrollView
+    <BottomSheetScrollView
       ref={scrollViewRef}
       style={styles.container}
-      contentContainerStyle={styles.contentContainer}
+      contentContainerStyle={[
+        styles.contentContainer,
+        { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 20 : spacingPixels[8] },
+      ]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
-      contentInsetAdjustmentBehavior="automatic"
     >
       {/* Title */}
       <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
-        {t('onboarding.personalInfoStep.title' as TranslationKey)}
+        {t('onboarding.personalInfoStep.title')}
       </Text>
 
       {/* Profile Picture */}
@@ -185,43 +192,28 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
         {formData.profileImage ? (
           <Image source={{ uri: formData.profileImage }} style={styles.profileImage} />
         ) : (
-          <Ionicons name="camera" size={32} color={colors.buttonActive} />
+          <Ionicons name="camera-outline" size={32} color={colors.buttonActive} />
         )}
       </TouchableOpacity>
 
       {/* First Name */}
-      <View ref={firstNameFieldRef} style={styles.inputContainer}>
+      <View
+        ref={firstNameFieldRef}
+        style={styles.inputContainer}
+        onLayout={e => {
+          fieldYOffsets.current.firstName = e.nativeEvent.layout.y;
+        }}
+      >
         <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-          {t('onboarding.personalInfoStep.firstName' as TranslationKey)}{' '}
-          <Text color={colors.error}>
-            {t('onboarding.personalInfoStep.required' as TranslationKey)}
-          </Text>
+          {t('onboarding.personalInfoStep.firstName')}{' '}
+          <Text color={colors.error}>{t('onboarding.personalInfoStep.required')}</Text>
         </Text>
         <BottomSheetTextInput
-          placeholder={t('onboarding.personalInfoStep.firstNamePlaceholder' as TranslationKey)}
+          placeholder={t('onboarding.personalInfoStep.firstNamePlaceholder')}
           placeholderTextColor={colors.textMuted}
           value={formData.firstName}
           onChangeText={handleFirstNameChange}
-          onFocus={() => {
-            // Scroll to first name field when focused to ensure it's visible above keyboard
-            // Use a delay to allow keyboard animation to start
-            setTimeout(() => {
-              firstNameFieldRef.current?.measureLayout(
-                scrollViewRef.current as unknown as number,
-                (x: number, y: number, _width: number, _height: number) => {
-                  // Scroll to show the field with extra padding above it (200px)
-                  scrollViewRef.current?.scrollTo({
-                    y: Math.max(0, y - 200),
-                    animated: true,
-                  });
-                },
-                () => {
-                  // Fallback: scroll to end if measure fails
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
-                }
-              );
-            }, 300);
-          }}
+          onFocus={() => scrollToField('firstName')}
           style={[
             styles.input,
             {
@@ -234,38 +226,23 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
       </View>
 
       {/* Last Name */}
-      <View ref={lastNameFieldRef} style={styles.inputContainer}>
+      <View
+        ref={lastNameFieldRef}
+        style={styles.inputContainer}
+        onLayout={e => {
+          fieldYOffsets.current.lastName = e.nativeEvent.layout.y;
+        }}
+      >
         <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-          {t('onboarding.personalInfoStep.lastName' as TranslationKey)}{' '}
-          <Text color={colors.error}>
-            {t('onboarding.personalInfoStep.required' as TranslationKey)}
-          </Text>
+          {t('onboarding.personalInfoStep.lastName')}{' '}
+          <Text color={colors.error}>{t('onboarding.personalInfoStep.required')}</Text>
         </Text>
         <BottomSheetTextInput
-          placeholder={t('onboarding.personalInfoStep.lastNamePlaceholder' as TranslationKey)}
+          placeholder={t('onboarding.personalInfoStep.lastNamePlaceholder')}
           placeholderTextColor={colors.textMuted}
           value={formData.lastName}
           onChangeText={handleLastNameChange}
-          onFocus={() => {
-            // Scroll to last name field when focused to ensure it's visible above keyboard
-            // Use a delay to allow keyboard animation to start
-            setTimeout(() => {
-              lastNameFieldRef.current?.measureLayout(
-                scrollViewRef.current as unknown as number,
-                (x: number, y: number, _width: number, _height: number) => {
-                  // Scroll to show the field with extra padding above it (200px)
-                  scrollViewRef.current?.scrollTo({
-                    y: Math.max(0, y - 200),
-                    animated: true,
-                  });
-                },
-                () => {
-                  // Fallback: scroll to end if measure fails
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
-                }
-              );
-            }, 300);
-          }}
+          onFocus={() => scrollToField('lastName')}
           style={[
             styles.input,
             {
@@ -278,39 +255,24 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
       </View>
 
       {/* Username */}
-      <View ref={usernameFieldRef} style={styles.inputContainer}>
+      <View
+        ref={usernameFieldRef}
+        style={styles.inputContainer}
+        onLayout={e => {
+          fieldYOffsets.current.username = e.nativeEvent.layout.y;
+        }}
+      >
         <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-          {t('onboarding.personalInfoStep.username' as TranslationKey)}{' '}
-          <Text color={colors.error}>
-            {t('onboarding.personalInfoStep.required' as TranslationKey)}
-          </Text>
+          {t('onboarding.personalInfoStep.username')}{' '}
+          <Text color={colors.error}>{t('onboarding.personalInfoStep.required')}</Text>
         </Text>
         <BottomSheetTextInput
-          placeholder={t('onboarding.personalInfoStep.usernamePlaceholder' as TranslationKey)}
+          placeholder={t('onboarding.personalInfoStep.usernamePlaceholder')}
           placeholderTextColor={colors.textMuted}
           value={formData.username}
           onChangeText={handleUsernameChange}
           maxLength={10}
-          onFocus={() => {
-            // Scroll to username field when focused to ensure it's visible above keyboard
-            // Use a delay to allow keyboard animation to start
-            setTimeout(() => {
-              usernameFieldRef.current?.measureLayout(
-                scrollViewRef.current as unknown as number,
-                (x: number, y: number, _width: number, _height: number) => {
-                  // Scroll to show the field with extra padding above it (200px)
-                  scrollViewRef.current?.scrollTo({
-                    y: Math.max(0, y - 200),
-                    animated: true,
-                  });
-                },
-                () => {
-                  // Fallback: scroll to end if measure fails
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
-                }
-              );
-            }, 300);
-          }}
+          onFocus={() => scrollToField('username')}
           style={[
             styles.input,
             {
@@ -322,7 +284,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
         />
         <View style={styles.inputFooter}>
           <Text size="xs" color={colors.textSecondary}>
-            {t('onboarding.personalInfoStep.usernameHelper' as TranslationKey)}
+            {t('onboarding.personalInfoStep.usernameHelper')}
           </Text>
           <Text size="xs" color={colors.textSecondary}>
             {formData.username.length}/10
@@ -333,10 +295,8 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
       {/* Date of Birth */}
       <View style={styles.inputContainer}>
         <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-          {t('onboarding.personalInfoStep.dateOfBirth' as TranslationKey)}{' '}
-          <Text color={colors.error}>
-            {t('onboarding.personalInfoStep.required' as TranslationKey)}
-          </Text>
+          {t('onboarding.personalInfoStep.dateOfBirth')}{' '}
+          <Text color={colors.error}>{t('onboarding.personalInfoStep.required')}</Text>
         </Text>
         <TouchableOpacity
           style={[
@@ -353,9 +313,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
         >
           <Ionicons name="calendar-outline" size={20} color={colors.buttonActive} />
           <Text color={formData.dateOfBirth ? colors.text : colors.textMuted} style={{ flex: 1 }}>
-            {formData.dateOfBirth
-              ? formatDate(formData.dateOfBirth)
-              : t('common.select' as TranslationKey)}
+            {formData.dateOfBirth ? formatDate(formData.dateOfBirth) : t('common.select')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -379,15 +337,15 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
               <View style={[styles.datePickerHeader, { borderBottomColor: colors.border }]}>
                 <TouchableOpacity onPress={handleDateCancel} style={styles.pickerHeaderButton}>
                   <Text size="base" color={colors.textMuted}>
-                    {t('common.cancel' as TranslationKey)}
+                    {t('common.cancel')}
                   </Text>
                 </TouchableOpacity>
                 <Text size="base" weight="semibold" color={colors.text}>
-                  {t('onboarding.personalInfoStep.dateOfBirth' as TranslationKey)}
+                  {t('onboarding.personalInfoStep.dateOfBirth')}
                 </Text>
                 <TouchableOpacity onPress={handleDateDone} style={styles.pickerHeaderButton}>
                   <Text size="base" weight="semibold" color={colors.buttonActive}>
-                    {t('common.done' as TranslationKey)}
+                    {t('common.done')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -418,24 +376,18 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
         />
       )}
 
-      {/* Gender - Horizontal Scrollable Options */}
+      {/* Gender - Full-width Options */}
       <View style={styles.inputContainer}>
         <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-          {t('onboarding.personalInfoStep.gender' as TranslationKey)}{' '}
-          <Text color={colors.error}>
-            {t('onboarding.personalInfoStep.required' as TranslationKey)}
-          </Text>
+          {t('onboarding.personalInfoStep.gender')}{' '}
+          <Text color={colors.error}>{t('onboarding.personalInfoStep.required')}</Text>
         </Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.genderRow}
-        >
-          {genderOptions.map(option => {
-            const isSelected = formData.gender === option.value;
+        <View style={styles.genderRow}>
+          {GENDER_VALUES.map(value => {
+            const isSelected = formData.gender === value;
             return (
               <TouchableOpacity
-                key={option.value}
+                key={value}
                 style={[
                   styles.genderOption,
                   {
@@ -445,7 +397,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
                 ]}
                 onPress={() => {
                   selectionHaptic();
-                  onUpdateFormData({ gender: option.value });
+                  onUpdateFormData({ gender: value });
                 }}
                 activeOpacity={0.7}
               >
@@ -454,21 +406,27 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
                   weight={isSelected ? 'semibold' : 'regular'}
                   color={isSelected ? colors.buttonTextActive : colors.text}
                 >
-                  {option.label}
+                  {t(`profile.genderValues.${value}`)}
                 </Text>
               </TouchableOpacity>
             );
           })}
-        </ScrollView>
+        </View>
       </View>
 
       {/* Phone Number */}
-      <View ref={phoneNumberFieldRef} style={styles.inputContainer}>
+      <View
+        ref={phoneNumberFieldRef}
+        style={styles.inputContainer}
+        onLayout={e => {
+          fieldYOffsets.current.phoneNumber = e.nativeEvent.layout.y;
+        }}
+      >
         <PhoneInput
           value={formData.phoneNumber}
           onChangePhone={handlePhoneNumberChange}
-          label={t('onboarding.personalInfoStep.phoneNumber' as TranslationKey)}
-          placeholder={t('onboarding.personalInfoStep.phoneNumber' as TranslationKey)}
+          label={t('onboarding.personalInfoStep.phoneNumber')}
+          placeholder={t('onboarding.personalInfoStep.phoneNumber')}
           required
           maxLength={15}
           showCharCount
@@ -483,27 +441,11 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
             error: colors.error,
             card: colors.cardBackground,
           }}
-          onFocus={() => {
-            // Scroll to phone number field when focused to ensure it's visible above keyboard
-            setTimeout(() => {
-              phoneNumberFieldRef.current?.measureLayout(
-                scrollViewRef.current as unknown as number,
-                (x: number, y: number, _width: number, _height: number) => {
-                  scrollViewRef.current?.scrollTo({
-                    y: Math.max(0, y - 200),
-                    animated: true,
-                  });
-                },
-                () => {
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
-                }
-              );
-            }, 300);
-          }}
+          onFocus={() => scrollToField('phoneNumber')}
           TextInputComponent={BottomSheetTextInput}
         />
       </View>
-    </ScrollView>
+    </BottomSheetScrollView>
   );
 };
 
@@ -563,14 +505,13 @@ const styles = StyleSheet.create({
   genderRow: {
     flexDirection: 'row',
     gap: spacingPixels[2],
-    paddingRight: spacingPixels[2],
   },
   genderOption: {
+    flex: 1,
     paddingVertical: spacingPixels[3],
     paddingHorizontal: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
-    minWidth: 70,
     alignItems: 'center',
   },
   modalOverlay: {

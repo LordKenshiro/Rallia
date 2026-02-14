@@ -12,6 +12,7 @@ import {
   duration,
 } from '@rallia/design-system';
 import { lightHaptic, selectionHaptic } from '@rallia/shared-utils';
+import { TranslationKey } from '@rallia/shared-translations';
 
 export type LocationMode = 'current' | 'home';
 
@@ -27,7 +28,7 @@ export interface LocationSelectorProps {
   /** Whether dark mode is enabled */
   isDark?: boolean;
   /** Translation function */
-  t: (key: string) => string;
+  t: (key: TranslationKey) => string;
 }
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -137,20 +138,20 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
   // Location options
   const locationOptions: Array<{
     mode: LocationMode;
-    icon: 'navigate' | 'home';
-    labelKey: string;
-    descriptionKey?: string;
+    icon: 'navigate-outline' | 'home-outline';
+    labelKey: TranslationKey;
+    descriptionKey?: TranslationKey;
     disabled?: boolean;
   }> = [
     {
       mode: 'current',
-      icon: 'navigate',
+      icon: 'navigate-outline',
       labelKey: 'home.location.current',
       descriptionKey: 'home.location.currentDescription',
     },
     {
       mode: 'home',
-      icon: 'home',
+      icon: 'home-outline',
       labelKey: 'home.location.home',
       descriptionKey: homeLocationLabel ? undefined : 'home.location.homeNotSet',
       disabled: !hasHomeLocation,
@@ -181,12 +182,12 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
           activeOpacity={0.85}
         >
           <Ionicons
-            name={selectedOption?.icon === 'home' ? 'home' : 'navigate'}
+            name={selectedOption?.icon === 'home-outline' ? 'home-outline' : 'navigate-outline'}
             size={14}
             color={colors.selectorText}
           />
           <Ionicons
-            name={showDropdown ? 'chevron-up' : 'chevron-down'}
+            name={showDropdown ? 'chevron-up-outline' : 'chevron-down-outline'}
             size={12}
             color={colors.selectorText}
           />
@@ -230,7 +231,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
                 onPress={handleClose}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Ionicons name="close" size={22} color={themeColors.mutedForeground} />
+                <Ionicons name="close-outline" size={22} color={themeColors.mutedForeground} />
               </TouchableOpacity>
             </View>
 
@@ -300,7 +301,11 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
                     {/* Checkmark for selected */}
                     {isSelected && !isDisabled && (
                       <View style={styles.checkContainer}>
-                        <Ionicons name="checkmark-circle" size={22} color={colors.checkmark} />
+                        <Ionicons
+                          name="checkmark-circle-outline"
+                          size={22}
+                          color={colors.checkmark}
+                        />
                       </View>
                     )}
                   </TouchableOpacity>

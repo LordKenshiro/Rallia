@@ -10,6 +10,7 @@ import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { primary, neutral, status } from '@rallia/design-system';
 import type { SharedContact } from '@rallia/shared-services';
+import { useTranslation, type TranslationKey } from '../../../hooks';
 
 interface ThemeColors {
   background: string;
@@ -30,6 +31,7 @@ interface ContactCardProps {
 }
 
 const ContactCard: React.FC<ContactCardProps> = ({ contact, colors, isDark, onEdit, onDelete }) => {
+  const { t } = useTranslation();
   // Get initials from name
   const getInitials = (name: string) => {
     const parts = name.trim().split(' ');
@@ -84,7 +86,9 @@ const ContactCard: React.FC<ContactCardProps> = ({ contact, colors, isDark, onEd
               color={colors.textMuted}
             />
             <Text size="xs" color={colors.textMuted}>
-              {contact.source === 'phone_book' ? 'From contacts' : 'Manual'}
+              {contact.source === 'phone_book'
+                ? t('sharedLists.contact.fromContacts')
+                : t('sharedLists.contact.manual')}
             </Text>
           </View>
         </View>

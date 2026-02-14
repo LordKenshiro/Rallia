@@ -289,6 +289,8 @@ export interface CreateNotificationInput {
   scheduledAt?: Date;
   /** Expiration time */
   expiresAt?: Date;
+  /** Organization ID for org-context notifications */
+  organizationId?: string;
 }
 
 /**
@@ -305,6 +307,7 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
   match_join_accepted: 'high',
   match_join_rejected: 'high',
   match_player_joined: 'high',
+  match_new_available: 'high',
   player_kicked: 'high',
   player_left: 'high',
 
@@ -326,6 +329,35 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
   feedback_request: 'normal',
   feedback_reminder: 'normal',
   score_confirmation: 'normal',
+
+  // Organization staff notifications
+  booking_created: 'normal',
+  booking_cancelled_by_player: 'high',
+  booking_modified: 'normal',
+  new_member_joined: 'normal',
+  member_left: 'normal',
+  member_role_changed: 'normal',
+  payment_received: 'normal',
+  payment_failed: 'high',
+  refund_processed: 'normal',
+  daily_summary: 'low',
+  weekly_report: 'low',
+
+  // Organization member notifications
+  booking_confirmed: 'normal',
+  booking_reminder: 'high',
+  booking_cancelled_by_org: 'high',
+  membership_approved: 'normal',
+  org_announcement: 'normal',
+
+  // Program notifications
+  program_registration_confirmed: 'normal',
+  program_registration_cancelled: 'high',
+  program_session_reminder: 'high',
+  program_session_cancelled: 'high',
+  program_waitlist_promoted: 'normal',
+  program_payment_due: 'high',
+  program_payment_received: 'normal',
 };
 
 /**
@@ -339,6 +371,7 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   match_join_accepted: "You're In!",
   match_join_rejected: 'Request Declined',
   match_player_joined: 'Player Joined!',
+  match_new_available: 'New Game in Group',
   match_cancelled: 'Game Cancelled',
   match_updated: 'Game Updated',
   match_starting_soon: 'Get Ready!',
@@ -356,6 +389,35 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   feedback_request: 'How Was Your Game?',
   feedback_reminder: "Don't Forget to Rate Your Game",
   score_confirmation: 'Confirm Match Score',
+
+  // Organization staff notifications
+  booking_created: 'New Booking',
+  booking_cancelled_by_player: 'Booking Cancelled',
+  booking_modified: 'Booking Modified',
+  new_member_joined: 'New Member',
+  member_left: 'Member Left',
+  member_role_changed: 'Role Updated',
+  payment_received: 'Payment Received',
+  payment_failed: 'Payment Failed',
+  refund_processed: 'Refund Processed',
+  daily_summary: 'Daily Summary',
+  weekly_report: 'Weekly Report',
+
+  // Organization member notifications
+  booking_confirmed: 'Booking Confirmed',
+  booking_reminder: 'Upcoming Booking',
+  booking_cancelled_by_org: 'Booking Cancelled',
+  membership_approved: 'Membership Approved',
+  org_announcement: 'Announcement',
+
+  // Program notifications
+  program_registration_confirmed: 'Registration Confirmed',
+  program_registration_cancelled: 'Registration Cancelled',
+  program_session_reminder: 'Session Reminder',
+  program_session_cancelled: 'Session Cancelled',
+  program_waitlist_promoted: "You're In!",
+  program_payment_due: 'Payment Due',
+  program_payment_received: 'Payment Received',
 };
 
 /**
@@ -371,6 +433,8 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   match_join_rejected:
     "Your request to join the {sportName} game wasn't accepted this time. Check out other games nearby!",
   match_player_joined: '{playerName} joined your {sportName} game. {spotsLeft} spot(s) left!',
+  match_new_available:
+    'A new {sportName} game was created in a group you belong to. Tap to view and join!',
   match_cancelled:
     'The {sportName} game on {matchDate} at {locationName} has been cancelled. We hope to see you on the court soon!',
   match_updated: 'Your {sportName} game on {matchDate} has new details. Tap to review the changes.',
@@ -395,6 +459,45 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
     'Your {sportName} game feedback closes in 24 hours. Rate your experience with {opponentNames}!',
   score_confirmation:
     '{playerName} submitted the score for your {sportName} game. Please confirm or dispute.',
+
+  // Organization staff notifications
+  booking_created: '{playerName} booked {resourceName} on {bookingDate}{startTime}.',
+  booking_cancelled_by_player:
+    '{playerName} cancelled their booking for {resourceName} on {bookingDate}.',
+  booking_modified: '{playerName} modified their booking for {resourceName} on {bookingDate}.',
+  new_member_joined: '{memberName} has joined your organization.',
+  member_left: '{memberName} has left your organization.',
+  member_role_changed: "{memberName}'s role has been changed to {newRole}.",
+  payment_received: 'Payment of {amount} received from {playerName}.',
+  payment_failed: 'Payment of {amount} from {playerName} failed.',
+  refund_processed: 'Refund of {amount} has been processed for {playerName}.',
+  daily_summary: 'Your daily activity summary is ready to view.',
+  weekly_report: 'Your weekly report is ready to view.',
+
+  // Organization member notifications
+  booking_confirmed:
+    'Your booking for {resourceName} on {bookingDate}{startTime} has been confirmed.',
+  booking_reminder:
+    'Reminder: Your booking for {resourceName} is coming up on {bookingDate}{startTime}.',
+  booking_cancelled_by_org:
+    'Your booking for {resourceName} on {bookingDate} has been cancelled by the organization.',
+  membership_approved: 'Your membership at {organizationName} has been approved!',
+  org_announcement: '{organizationName}: {message}',
+
+  // Program notifications
+  program_registration_confirmed:
+    'Your registration for {programName} has been confirmed. See you at the first session!',
+  program_registration_cancelled:
+    'Your registration for {programName} has been cancelled. Contact the organization if this was unexpected.',
+  program_session_reminder:
+    'Reminder: Your {programName} session is coming up on {sessionDate} at {startTime}.',
+  program_session_cancelled:
+    'Your {programName} session on {sessionDate} has been cancelled. Check the program for updates.',
+  program_waitlist_promoted:
+    "Great news! A spot opened up in {programName} and you've been promoted from the waitlist.",
+  program_payment_due:
+    'Payment for {programName} is due. Please complete payment to secure your spot.',
+  program_payment_received: 'Payment for {programName} has been received. Thank you!',
 };
 
 /**
@@ -529,7 +632,18 @@ function interpolateTemplate(template: string, payload?: NotificationPayload): s
  * Fetches user's preferred locale to generate localized title and body
  */
 export async function createNotification(input: CreateNotificationInput): Promise<Notification> {
-  const { type, userId, targetId, title, body, payload, priority, scheduledAt, expiresAt } = input;
+  const {
+    type,
+    userId,
+    targetId,
+    title,
+    body,
+    payload,
+    priority,
+    scheduledAt,
+    expiresAt,
+    organizationId,
+  } = input;
 
   // Normalize payload to ensure sport names are lowercase
   const normalizedPayload = normalizePayload(payload);
@@ -553,6 +667,7 @@ export async function createNotification(input: CreateNotificationInput): Promis
     p_priority: finalPriority,
     p_scheduled_at: scheduledAt?.toISOString() ?? null,
     p_expires_at: expiresAt?.toISOString() ?? null,
+    p_organization_id: organizationId ?? null,
   });
 
   if (error) {
@@ -575,8 +690,18 @@ export async function createNotifications(
   const userLocales = await getUserLocales(userIds);
 
   const insertData = inputs.map(input => {
-    const { type, userId, targetId, title, body, payload, priority, scheduledAt, expiresAt } =
-      input;
+    const {
+      type,
+      userId,
+      targetId,
+      title,
+      body,
+      payload,
+      priority,
+      scheduledAt,
+      expiresAt,
+      organizationId,
+    } = input;
 
     // Normalize payload to ensure sport names are lowercase
     const normalizedPayload = normalizePayload(payload);
@@ -596,6 +721,7 @@ export async function createNotifications(
       priority: finalPriority,
       scheduled_at: scheduledAt?.toISOString() ?? null,
       expires_at: expiresAt?.toISOString() ?? null,
+      organization_id: organizationId ?? null,
     };
   });
 

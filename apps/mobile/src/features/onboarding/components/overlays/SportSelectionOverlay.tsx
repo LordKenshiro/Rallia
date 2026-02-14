@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -9,12 +9,13 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Overlay, Text, Heading, Button, Spinner, useToast } from '@rallia/shared-components';
+import { Overlay, Text, Heading, Button, Spinner } from '@rallia/shared-components';
 import { Sport } from '@rallia/shared-types';
 import DatabaseService, { Logger } from '@rallia/shared-services';
 import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles } from '../../../../hooks';
+import { useThemeStyles, useTranslation } from '../../../../hooks';
+import { SportIcon } from '../../../../components/SportIcon';
 
 interface SportSelectionOverlayProps {
   visible: boolean;
@@ -34,15 +35,15 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
   totalSteps = 8,
 }) => {
   const { colors } = useThemeStyles();
-  const toast = useToast();
+  const { t } = useTranslation();
   const [selectedSportIds, setSelectedSportIds] = useState<string[]>([]); // Store IDs for database operations
   const [sports, setSports] = useState<Sport[]>([]);
   const [isLoadingSports, setIsLoadingSports] = useState(true);
   const [playerId, setPlayerId] = useState<string | null>(null);
 
   // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
+  const fadeAnim = useMemo(() => new Animated.Value(0), []);
+  const slideAnim = useMemo(() => new Animated.Value(50), []);
 
   // Fetch player ID when overlay becomes visible
   useEffect(() => {
@@ -70,7 +71,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
 
       if (error) {
         Logger.error('Failed to fetch sports', error as Error);
-        Alert.alert('Error', 'Failed to load sports. Please try again.');
+        Alert.alert(t('common.error'), t('onboarding.validation.failedToLoadSports'));
         // Fallback to hardcoded sports if fetch fails
         setSports([
           {
@@ -110,7 +111,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
     if (visible) {
       fetchSports();
     }
-  }, [visible]);
+  }, [visible, t]);
 
   // Load already selected sports from database
   useEffect(() => {
@@ -148,13 +149,14 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
         }),
       ]).start();
     }
-  }, [visible, fadeAnim, slideAnim]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
 
   const toggleSport = async (sportId: string) => {
     selectionHaptic();
 
     if (!playerId) {
-      toast.error('Player not found. Please try again.');
+      Alert.alert(t('common.error'), t('onboarding.validation.playerNotFound'));
       return;
     }
 
@@ -190,7 +192,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
           return [...prev, sportId];
         }
       });
-      toast.error('Failed to update sport selection. Please try again.');
+      Alert.alert(t('common.error'), t('onboarding.validation.failedToUpdateSportSelection'));
     }
   };
 
@@ -288,13 +290,25 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
                     <View style={styles.sportImageOverlay} />
                   </View>
 
-                  {/* Sport Name */}
+                  {/* Sport icon + name */}
                   <View style={styles.sportNameContainer}>
-                    <Text size="xl" weight="bold" color={colors.primaryForeground}>
-                      {sport.display_name}
-                    </Text>
+                    <View style={styles.sportNameRow}>
+                      <SportIcon
+                        sportName={sport.name}
+                        size={28}
+                        color={colors.primaryForeground}
+                        style={styles.sportCardIcon}
+                      />
+                      <Text size="xl" weight="bold" color={colors.primaryForeground}>
+                        {sport.display_name}
+                      </Text>
+                    </View>
                     {isSelected && (
-                      <Ionicons name="checkmark" size={24} color={colors.primaryForeground} />
+                      <Ionicons
+                        name="checkmark-outline"
+                        size={24}
+                        color={colors.primaryForeground}
+                      />
                     )}
                   </View>
                 </TouchableOpacity>
@@ -380,6 +394,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  sportNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  sportCardIcon: {
+    marginRight: 2,
   },
   continueButton: {
     marginTop: 10,

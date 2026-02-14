@@ -26,7 +26,7 @@ import type { TranslationKey } from '@rallia/shared-translations';
 import { useMatchDetailSheet, useDeepLink, useSport } from '../../../context';
 import { Logger } from '@rallia/shared-services';
 import { PlayerMatchFilterChips } from '../components';
-import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
+import { spacingPixels } from '@rallia/design-system';
 
 // =============================================================================
 // TYPES
@@ -62,15 +62,15 @@ function getUpcomingDateSectionKey(
   const matchDateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
   if (matchDateOnly.getTime() === today.getTime()) {
-    return t('playerMatches.time.today' as TranslationKey);
+    return t('playerMatches.time.today');
   } else if (matchDateOnly.getTime() === tomorrow.getTime()) {
-    return t('playerMatches.time.tomorrow' as TranslationKey);
+    return t('playerMatches.time.tomorrow');
   } else if (matchDateOnly < thisWeekEnd) {
-    return t('playerMatches.time.thisWeek' as TranslationKey);
+    return t('playerMatches.time.thisWeek');
   } else if (matchDateOnly < nextWeekEnd) {
-    return t('playerMatches.time.nextWeek' as TranslationKey);
+    return t('playerMatches.time.nextWeek');
   } else {
-    return t('playerMatches.time.later' as TranslationKey);
+    return t('playerMatches.time.later');
   }
 }
 
@@ -94,13 +94,13 @@ function getPastDateSectionKey(
 
   // Check for today first (matches that ended earlier today)
   if (matchDateOnly.getTime() === today.getTime()) {
-    return t('playerMatches.time.today' as TranslationKey);
+    return t('playerMatches.time.today');
   } else if (matchDateOnly.getTime() === yesterday.getTime()) {
-    return t('playerMatches.time.yesterday' as TranslationKey);
+    return t('playerMatches.time.yesterday');
   } else if (matchDateOnly >= lastWeekStart) {
-    return t('playerMatches.time.lastWeek' as TranslationKey);
+    return t('playerMatches.time.lastWeek');
   } else {
-    return t('playerMatches.time.earlier' as TranslationKey);
+    return t('playerMatches.time.earlier');
   }
 }
 
@@ -119,17 +119,17 @@ function groupMatchesByDate(
   const order =
     timeFilter === 'upcoming'
       ? [
-          t('playerMatches.time.today' as TranslationKey),
-          t('playerMatches.time.tomorrow' as TranslationKey),
-          t('playerMatches.time.thisWeek' as TranslationKey),
-          t('playerMatches.time.nextWeek' as TranslationKey),
-          t('playerMatches.time.later' as TranslationKey),
+          t('playerMatches.time.today'),
+          t('playerMatches.time.tomorrow'),
+          t('playerMatches.time.thisWeek'),
+          t('playerMatches.time.nextWeek'),
+          t('playerMatches.time.later'),
         ]
       : [
-          t('playerMatches.time.today' as TranslationKey),
-          t('playerMatches.time.yesterday' as TranslationKey),
-          t('playerMatches.time.lastWeek' as TranslationKey),
-          t('playerMatches.time.earlier' as TranslationKey),
+          t('playerMatches.time.today'),
+          t('playerMatches.time.yesterday'),
+          t('playerMatches.time.lastWeek'),
+          t('playerMatches.time.earlier'),
         ];
 
   const groups: Record<string, MatchWithDetails[]> = {};
@@ -230,15 +230,6 @@ export default function PlayerMatches() {
   }, [deepLinkMatch, isLoadingDeepLinkMatch, openMatchDetail]);
 
   // Theme colors
-  const tabColors = useMemo(
-    () => ({
-      activeBackground: isDark ? primary[600] : primary[500],
-      activeText: '#ffffff',
-      inactiveBackground: isDark ? neutral[800] : neutral[100],
-      inactiveText: isDark ? neutral[400] : neutral[600],
-    }),
-    [isDark]
-  );
 
   // Fetch matches based on active tab and filter
   const {
@@ -347,16 +338,16 @@ export default function PlayerMatches() {
       if (!isFiltered) {
         const emptyKey = activeTab === 'upcoming' ? 'emptyUpcoming' : 'emptyPast';
         return {
-          title: t(`playerMatches.${emptyKey}.title` as TranslationKey),
-          description: t(`playerMatches.${emptyKey}.description` as TranslationKey),
+          title: t(`playerMatches.${emptyKey}.title`),
+          description: t(`playerMatches.${emptyKey}.description`),
         };
       }
       // Filter-specific empty state
       return {
-        title: t(`playerMatches.emptyFiltered.title` as TranslationKey),
-        description: t(`playerMatches.emptyFiltered.description` as TranslationKey, {
+        title: t(`playerMatches.emptyFiltered.title`),
+        description: t(`playerMatches.emptyFiltered.description`, {
           filter: t(
-            `playerMatches.filters.${currentStatusFilter === 'needs_players' ? 'needsPlayers' : currentStatusFilter === 'ready_to_play' ? 'readyToPlay' : currentStatusFilter === 'feedback_needed' ? 'feedbackNeeded' : currentStatusFilter === 'as_participant' ? 'asParticipant' : currentStatusFilter}` as TranslationKey
+            `playerMatches.filters.${currentStatusFilter === 'needs_players' ? 'needsPlayers' : currentStatusFilter === 'ready_to_play' ? 'readyToPlay' : currentStatusFilter === 'feedback_needed' ? 'feedbackNeeded' : currentStatusFilter === 'as_participant' ? 'asParticipant' : currentStatusFilter}`
           ),
         }),
       };
@@ -387,39 +378,58 @@ export default function PlayerMatches() {
     );
   };
 
-  // Render tab bar
+  // Render tab bar (pill style – matches Communities)
   const renderTabBar = () => (
-    <View style={[styles.tabBar, { backgroundColor: tabColors.inactiveBackground }]}>
+    <View style={[styles.tabBar, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
       <TouchableOpacity
         style={[
           styles.tab,
-          activeTab === 'upcoming' && { backgroundColor: tabColors.activeBackground },
+          activeTab === 'upcoming' && [
+            styles.activeTab,
+            { backgroundColor: colors.cardBackground },
+          ],
         ]}
         onPress={() => handleTabChange('upcoming')}
         activeOpacity={0.8}
       >
+        <Ionicons
+          name="calendar-outline"
+          size={18}
+          color={activeTab === 'upcoming' ? colors.primary : colors.textMuted}
+        />
         <Text
           size="sm"
-          weight="semibold"
-          color={activeTab === 'upcoming' ? tabColors.activeText : tabColors.inactiveText}
+          weight={activeTab === 'upcoming' ? 'semibold' : 'medium'}
+          style={{
+            color: activeTab === 'upcoming' ? colors.primary : colors.textMuted,
+            marginLeft: 6,
+          }}
         >
-          {t('playerMatches.tabs.upcoming' as TranslationKey)}
+          {t('playerMatches.tabs.upcoming')}
         </Text>
       </TouchableOpacity>
       <TouchableOpacity
         style={[
           styles.tab,
-          activeTab === 'past' && { backgroundColor: tabColors.activeBackground },
+          activeTab === 'past' && [styles.activeTab, { backgroundColor: colors.cardBackground }],
         ]}
         onPress={() => handleTabChange('past')}
         activeOpacity={0.8}
       >
+        <Ionicons
+          name="time-outline"
+          size={18}
+          color={activeTab === 'past' ? colors.primary : colors.textMuted}
+        />
         <Text
           size="sm"
-          weight="semibold"
-          color={activeTab === 'past' ? tabColors.activeText : tabColors.inactiveText}
+          weight={activeTab === 'past' ? 'semibold' : 'medium'}
+          style={{
+            color: activeTab === 'past' ? colors.primary : colors.textMuted,
+            marginLeft: 6,
+          }}
         >
-          {t('playerMatches.tabs.past' as TranslationKey)}
+          {t('playerMatches.tabs.past')}
         </Text>
       </TouchableOpacity>
     </View>
@@ -494,18 +504,26 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    marginHorizontal: spacingPixels[4],
+    marginHorizontal: 16,
     marginTop: spacingPixels[3],
-    marginBottom: spacingPixels[2],
-    borderRadius: radiusPixels.lg,
-    padding: spacingPixels[1],
+    marginBottom: 12,
+    borderRadius: 12,
+    padding: 4,
   },
   tab: {
     flex: 1,
-    paddingVertical: spacingPixels[2.5],
-    alignItems: 'center',
+    flexDirection: 'row',
     justifyContent: 'center',
-    borderRadius: radiusPixels.md,
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  activeTab: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   listContent: {
     paddingTop: spacingPixels[2],

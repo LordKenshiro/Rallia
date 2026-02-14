@@ -5,7 +5,7 @@
  */
 import './src/lib/supabase';
 
-import { useEffect, useState, useCallback, type PropsWithChildren } from 'react';
+import { useEffect, useState, useCallback, useRef, type PropsWithChildren } from 'react';
 import { Linking } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -16,8 +16,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AppNavigator from './src/navigation/AppNavigator';
 import { navigationRef } from './src/navigation';
 import { ActionsBottomSheet } from './src/components/ActionsBottomSheet';
-import { MatchDetailSheet } from './src/components/MatchDetailSheet';
-import { PlayerInviteSheet } from './src/components/PlayerInviteSheet';
 import { FeedbackSheet } from './src/components/FeedbackSheet';
 import { SplashOverlay } from './src/components/SplashOverlay';
 import {
@@ -28,6 +26,8 @@ import {
   useNotificationRealtime,
   usePendingFeedbackCheck,
 } from '@rallia/shared-hooks';
+import { WelcomeTourModal } from './src/components/WelcomeTourModal';
+import { TourCompleteModal } from './src/components/TourCompleteModal';
 import { ErrorBoundary, ToastProvider, NetworkProvider } from '@rallia/shared-components';
 import { Logger } from './src/services/logger';
 import {
@@ -48,11 +48,18 @@ import {
   UserLocationProvider,
   useUserHomeLocation,
   LocationModeProvider,
+  useTour,
+  TourProvider,
 } from './src/context';
 import { usePushNotifications } from './src/hooks';
+import { StripeProvider } from '@stripe/stripe-react-native';
+import { SheetProvider } from 'react-native-actions-sheet';
+import { Sheets } from './src/context/sheets';
+import { useToast } from '@rallia/shared-components';
 
 // Import NativeWind global styles
 import './global.css';
+import MatchDetailSheet from './src/components/MatchDetailSheet';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -194,6 +201,41 @@ function HomeLocationSync({ userId }: { userId: string | undefined }) {
 }
 
 /**
+ * SessionExpiryHandler - Shows toast when session expires unexpectedly.
+ * Monitors the sessionExpired flag from AuthContext and notifies the user.
+ * Must be rendered inside both AuthProvider and ToastProvider.
+ */
+function SessionExpiryHandler() {
+  const { sessionExpired, clearSessionExpired } = useAuth();
+  const { isSplashComplete } = useOverlay();
+  const toast = useToast();
+  const hasShownToastRef = useRef(false);
+
+  useEffect(() => {
+    // Only show toast once after splash is complete and session has expired
+    if (sessionExpired && isSplashComplete && !hasShownToastRef.current) {
+      hasShownToastRef.current = true;
+
+      // Show toast after a brief delay to ensure UI is ready
+      const timer = setTimeout(() => {
+        Logger.info('Session expired - showing notification to user');
+        toast.warning('Your session has expired. Please sign in again.');
+        clearSessionExpired();
+      }, 500);
+
+      return () => clearTimeout(timer);
+    }
+
+    // Reset the flag when session expired flag is cleared
+    if (!sessionExpired) {
+      hasShownToastRef.current = false;
+    }
+  }, [sessionExpired, isSplashComplete, clearSessionExpired, toast]);
+
+  return null;
+}
+
+/**
  * PendingFeedbackHandler - Opens FeedbackSheet for pending feedback on app launch.
  * Checks for matches in the 48h feedback window where user hasn't completed feedback.
  */
@@ -223,24 +265,38 @@ function PendingFeedbackHandler() {
 
 function AppContent() {
   const { theme } = useTheme();
-  const { setSplashComplete } = useOverlay();
+  const { setSplashComplete, isSplashComplete, permissionsHandled } = useOverlay();
+  const { showCompletionModal, dismissCompletionModal, lastCompletedTourId } = useTour();
 
   return (
     <>
       <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
       <NavigationContainer ref={navigationRef}>
-        <AppNavigator />
+        <SheetProvider>
+          <Sheets />
+          <AppNavigator />
+        </SheetProvider>
+        {/* Match Detail Bottom Sheet - shows when match card is pressed */}
+        <MatchDetailSheet />
+        {/* Actions Bottom Sheet - renders above navigation */}
+        <ActionsBottomSheet />
+        {/* Feedback Bottom Sheet - shows when providing post-match feedback */}
+        <FeedbackSheet />
       </NavigationContainer>
-      {/* Actions Bottom Sheet - renders above navigation */}
-      <ActionsBottomSheet />
-      {/* Match Detail Bottom Sheet - shows when match card is pressed */}
-      <MatchDetailSheet />
-      {/* Player Invite Bottom Sheet - shows when host invites players */}
-      <PlayerInviteSheet />
-      {/* Feedback Bottom Sheet - shows when providing post-match feedback */}
-      <FeedbackSheet />
+
       {/* Pending Feedback Handler - auto-opens FeedbackSheet on app launch if needed */}
       <PendingFeedbackHandler />
+      {/* Session Expiry Handler - shows toast when session expires */}
+      <SessionExpiryHandler />
+
+      {/* Welcome Tour Modal - shows for new users after splash/permissions */}
+      <WelcomeTourModal splashComplete={isSplashComplete} permissionsHandled={permissionsHandled} />
+      {/* Tour Completion Modal - shows after completing main navigation tour */}
+      <TourCompleteModal
+        visible={showCompletionModal}
+        onDismiss={dismissCompletionModal}
+        tourId={lastCompletedTourId || undefined}
+      />
       {/* Splash overlay - renders on top of everything */}
       <SplashOverlay onAnimationComplete={() => setSplashComplete(true)} />
     </>
@@ -262,29 +318,38 @@ export default function App() {
           <QueryClientProvider client={queryClient}>
             <LocaleProvider>
               <ThemeProvider>
-                <NetworkProvider>
-                  <ToastProvider>
-                    <DeepLinkProvider>
-                      <OverlayProvider>
-                        <AuthProvider>
-                          <AuthenticatedProviders>
-                            <ActionsSheetProvider>
-                              <MatchDetailSheetProvider>
-                                <PlayerInviteSheetProvider>
-                                  <FeedbackSheetProvider>
-                                    <BottomSheetModalProvider>
-                                      <AppContent />
-                                    </BottomSheetModalProvider>
-                                  </FeedbackSheetProvider>
-                                </PlayerInviteSheetProvider>
-                              </MatchDetailSheetProvider>
-                            </ActionsSheetProvider>
-                          </AuthenticatedProviders>
-                        </AuthProvider>
-                      </OverlayProvider>
-                    </DeepLinkProvider>       
-                  </ToastProvider>
-                </NetworkProvider>
+                <TourProvider>
+                  <NetworkProvider>
+                    <ToastProvider>
+                      <DeepLinkProvider>
+                        <OverlayProvider>
+                          <AuthProvider>
+                            <AuthenticatedProviders>
+                              <ActionsSheetProvider>
+                                <MatchDetailSheetProvider>
+                                  <PlayerInviteSheetProvider>
+                                    <FeedbackSheetProvider>
+                                      <StripeProvider
+                                        publishableKey={
+                                          process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
+                                        }
+                                        merchantIdentifier="merchant.com.rallia"
+                                      >
+                                        <BottomSheetModalProvider>
+                                          <AppContent />
+                                        </BottomSheetModalProvider>
+                                      </StripeProvider>
+                                    </FeedbackSheetProvider>
+                                  </PlayerInviteSheetProvider>
+                                </MatchDetailSheetProvider>
+                              </ActionsSheetProvider>
+                            </AuthenticatedProviders>
+                          </AuthProvider>
+                        </OverlayProvider>
+                      </DeepLinkProvider>
+                    </ToastProvider>
+                  </NetworkProvider>
+                </TourProvider>
               </ThemeProvider>
             </LocaleProvider>
           </QueryClientProvider>

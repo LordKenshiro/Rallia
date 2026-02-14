@@ -106,7 +106,7 @@ export async function generateMetadata({
         description: organization.description || t('descriptionMeta'),
       };
     }
-  } catch (error) {
+  } catch {
     // Fallback metadata
   }
 
