@@ -13,8 +13,14 @@
 -- - service_role_key: Service role key for authentication
 -- ============================================================================
 
--- Enable pg_cron extension (if not already enabled)
-CREATE EXTENSION IF NOT EXISTS pg_cron WITH SCHEMA extensions;
+-- Enable pg_cron extension (only if not already installed anywhere)
+-- Using DO block to avoid "dependent privileges exist" when extension exists in another schema
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+    CREATE EXTENSION pg_cron WITH SCHEMA extensions;
+  END IF;
+END $$;
 
 -- Grant usage to postgres user
 GRANT USAGE ON SCHEMA cron TO postgres;

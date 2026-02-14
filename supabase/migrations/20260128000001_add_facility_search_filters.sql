@@ -1,9 +1,12 @@
 -- Migration: Add filters to facility search RPC
--- Description: Extends search_facilities_nearby with distance, facility_type, 
+-- Description: Extends search_facilities_nearby with distance, facility_type,
 --              surface_type, and court_type filters
 
--- Drop existing function first (required to change signature)
+-- Drop existing overloads first (required to change signature)
+-- 6-param: sport_id, lat, long, query, limit, offset
 DROP FUNCTION IF EXISTS search_facilities_nearby(UUID, DOUBLE PRECISION, DOUBLE PRECISION, TEXT, INT, INT);
+-- 10-param: in case this migration is re-run after already applying
+DROP FUNCTION IF EXISTS search_facilities_nearby(UUID, DOUBLE PRECISION, DOUBLE PRECISION, TEXT, DOUBLE PRECISION, TEXT[], TEXT[], TEXT[], INT, INT);
 
 -- Recreate function with filter parameters
 -- Note: p_court_types uses 'indoor'/'outdoor' values which map to the court.indoor boolean
@@ -112,8 +115,8 @@ BEGIN
 END;
 $$;
 
--- Update comment
-COMMENT ON FUNCTION search_facilities_nearby IS 
+-- Update comment (full signature required when multiple overloads exist)
+COMMENT ON FUNCTION search_facilities_nearby(UUID, DOUBLE PRECISION, DOUBLE PRECISION, TEXT, DOUBLE PRECISION, TEXT[], TEXT[], TEXT[], INT, INT) IS
 'Search for facilities near a location that support a specific sport.
 Supports filtering by:
 - Distance (max km from location)
