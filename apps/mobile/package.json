@@ -5,8 +5,12 @@
   "scripts": {
     "dev": "expo start",
     "start": "expo start",
-    "android": "expo run:android",
+    "update-env-host": "node scripts/update-env-host.mjs",
+    "run": "node scripts/update-env-host.mjs && npx expo run",
+    "preios": "node scripts/update-env-host.mjs",
     "ios": "expo run:ios",
+    "preandroid": "node scripts/update-env-host.mjs",
+    "android": "expo run:android",
     "web": "expo start --web",
     "build": "tsc --noEmit",
     "export": "expo export --platform all",
