@@ -49,16 +49,16 @@ CREATE TABLE IF NOT EXISTS organization_notification_preference (
     recipient_roles role_enum[] DEFAULT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-    
+
     -- Unique constraint: one preference per org/type/channel combination
     CONSTRAINT uq_org_notification_preference UNIQUE (organization_id, notification_type, channel)
 );
 
 -- Indexes for efficient preference lookups
-CREATE INDEX IF NOT EXISTS idx_org_notification_preference_org 
+CREATE INDEX IF NOT EXISTS idx_org_notification_preference_org
     ON organization_notification_preference(organization_id);
 
-CREATE INDEX IF NOT EXISTS idx_org_notification_preference_org_type 
+CREATE INDEX IF NOT EXISTS idx_org_notification_preference_org_type
     ON organization_notification_preference(organization_id, notification_type);
 
 -- ============================================================================
@@ -75,19 +75,19 @@ CREATE TABLE IF NOT EXISTS organization_notification_recipient (
     enabled BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-    
+
     -- Unique constraint: one entry per org/type/user combination
     CONSTRAINT uq_org_notification_recipient UNIQUE (organization_id, notification_type, user_id)
 );
 
 -- Indexes for efficient recipient lookups
-CREATE INDEX IF NOT EXISTS idx_org_notification_recipient_org 
+CREATE INDEX IF NOT EXISTS idx_org_notification_recipient_org
     ON organization_notification_recipient(organization_id);
 
-CREATE INDEX IF NOT EXISTS idx_org_notification_recipient_org_type 
+CREATE INDEX IF NOT EXISTS idx_org_notification_recipient_org_type
     ON organization_notification_recipient(organization_id, notification_type);
 
-CREATE INDEX IF NOT EXISTS idx_org_notification_recipient_user 
+CREATE INDEX IF NOT EXISTS idx_org_notification_recipient_user
     ON organization_notification_recipient(user_id);
 
 -- ============================================================================
@@ -95,17 +95,17 @@ CREATE INDEX IF NOT EXISTS idx_org_notification_recipient_user
 -- ============================================================================
 
 -- Add organization_id column to notification table for org-context notifications
-ALTER TABLE notification 
+ALTER TABLE notification
     ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organization(id) ON DELETE CASCADE;
 
 -- Index for efficient org notification queries
-CREATE INDEX IF NOT EXISTS idx_notification_organization 
-    ON notification(organization_id) 
+CREATE INDEX IF NOT EXISTS idx_notification_organization
+    ON notification(organization_id)
     WHERE organization_id IS NOT NULL;
 
 -- Composite index for org + user queries
-CREATE INDEX IF NOT EXISTS idx_notification_org_user 
-    ON notification(organization_id, user_id) 
+CREATE INDEX IF NOT EXISTS idx_notification_org_user
+    ON notification(organization_id, user_id)
     WHERE organization_id IS NOT NULL;
 
 -- ============================================================================
@@ -119,6 +119,11 @@ ALTER TABLE organization_notification_recipient ENABLE ROW LEVEL SECURITY;
 -- ============================================================================
 -- organization_notification_preference policies
 -- ============================================================================
+
+DROP POLICY IF EXISTS "org_notification_preference_select_org_members" ON organization_notification_preference;
+DROP POLICY IF EXISTS "org_notification_preference_insert_org_admin" ON organization_notification_preference;
+DROP POLICY IF EXISTS "org_notification_preference_update_org_admin" ON organization_notification_preference;
+DROP POLICY IF EXISTS "org_notification_preference_delete_org_admin" ON organization_notification_preference;
 
 -- Org members can view their organization's notification preferences
 CREATE POLICY "org_notification_preference_select_org_members"
@@ -174,6 +179,11 @@ CREATE POLICY "org_notification_preference_delete_org_admin"
 -- ============================================================================
 -- organization_notification_recipient policies
 -- ============================================================================
+
+DROP POLICY IF EXISTS "org_notification_recipient_select_org_members" ON organization_notification_recipient;
+DROP POLICY IF EXISTS "org_notification_recipient_insert_org_admin" ON organization_notification_recipient;
+DROP POLICY IF EXISTS "org_notification_recipient_update_org_admin" ON organization_notification_recipient;
+DROP POLICY IF EXISTS "org_notification_recipient_delete_org_admin" ON organization_notification_recipient;
 
 -- Org members can view their organization's notification recipients
 CREATE POLICY "org_notification_recipient_select_org_members"
@@ -233,6 +243,7 @@ CREATE POLICY "org_notification_recipient_delete_org_admin"
 -- Add policy for org members to view org notifications they're recipients of
 -- Note: The existing notification RLS allows users to see their own notifications
 -- This adds support for the organization context in the payload
+DROP POLICY IF EXISTS "notification_select_org_context" ON notification;
 CREATE POLICY "notification_select_org_context"
     ON notification FOR SELECT
     USING (
@@ -257,12 +268,14 @@ CREATE POLICY "notification_select_org_context"
 -- ============================================================================
 
 -- Create trigger for organization_notification_preference updated_at
+DROP TRIGGER IF EXISTS update_org_notification_preference_updated_at ON organization_notification_preference;
 CREATE TRIGGER update_org_notification_preference_updated_at
     BEFORE UPDATE ON organization_notification_preference
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
 -- Create trigger for organization_notification_recipient updated_at
+DROP TRIGGER IF EXISTS update_org_notification_recipient_updated_at ON organization_notification_recipient;
 CREATE TRIGGER update_org_notification_recipient_updated_at
     BEFORE UPDATE ON organization_notification_recipient
     FOR EACH ROW
@@ -297,23 +310,23 @@ DECLARE
     v_recipient_roles role_enum[];
 BEGIN
     -- Check if this notification type/channel is enabled for the org
-    SELECT enabled, recipient_roles 
+    SELECT enabled, recipient_roles
     INTO v_preference_enabled, v_recipient_roles
     FROM organization_notification_preference
     WHERE organization_id = p_organization_id
         AND notification_type = p_notification_type
         AND channel = p_channel;
-    
+
     -- Default to enabled if no explicit preference exists
     IF v_preference_enabled IS NULL THEN
         v_preference_enabled := TRUE;
     END IF;
-    
+
     -- If disabled, return empty
     IF NOT v_preference_enabled THEN
         RETURN;
     END IF;
-    
+
     -- First check for explicit recipients
     IF EXISTS (
         SELECT 1 FROM organization_notification_recipient onr
@@ -362,7 +375,7 @@ SET search_path = public
 AS $$
 BEGIN
     -- Staff notifications (admins/owners only, email enabled by default)
-    INSERT INTO organization_notification_preference 
+    INSERT INTO organization_notification_preference
         (organization_id, notification_type, channel, enabled, recipient_roles)
     VALUES
         -- Booking notifications for staff
@@ -392,29 +405,29 @@ GRANT EXECUTE ON FUNCTION seed_org_notification_defaults(UUID) TO service_role;
 -- COMMENTS
 -- ============================================================================
 
-COMMENT ON TABLE organization_notification_preference IS 
+COMMENT ON TABLE organization_notification_preference IS
     'Stores organization-level notification preferences per type and channel. Uses sparse storage where missing rows use system defaults.';
 
-COMMENT ON COLUMN organization_notification_preference.notification_type IS 
+COMMENT ON COLUMN organization_notification_preference.notification_type IS
     'The type of notification this preference applies to';
 
-COMMENT ON COLUMN organization_notification_preference.channel IS 
+COMMENT ON COLUMN organization_notification_preference.channel IS
     'The delivery channel (email, push, sms) this preference applies to';
 
-COMMENT ON COLUMN organization_notification_preference.enabled IS 
+COMMENT ON COLUMN organization_notification_preference.enabled IS
     'Whether this notification type should be delivered via this channel';
 
-COMMENT ON COLUMN organization_notification_preference.recipient_roles IS 
+COMMENT ON COLUMN organization_notification_preference.recipient_roles IS
     'Array of roles that should receive this notification. NULL means all org members.';
 
-COMMENT ON TABLE organization_notification_recipient IS 
+COMMENT ON TABLE organization_notification_recipient IS
     'Override recipients for specific notification types. When entries exist, only these users receive the notification instead of role-based filtering.';
 
-COMMENT ON COLUMN notification.organization_id IS 
+COMMENT ON COLUMN notification.organization_id IS
     'Organization context for org-related notifications. NULL for player-to-player notifications.';
 
-COMMENT ON FUNCTION get_org_notification_recipients IS 
+COMMENT ON FUNCTION get_org_notification_recipients IS
     'Returns list of users who should receive a notification for an organization based on preferences and role/recipient overrides.';
 
-COMMENT ON FUNCTION seed_org_notification_defaults IS 
+COMMENT ON FUNCTION seed_org_notification_defaults IS
     'Seeds default notification preferences for a new organization. Called when organization is created.';

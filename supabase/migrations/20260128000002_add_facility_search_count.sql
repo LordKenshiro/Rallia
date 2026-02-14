@@ -76,8 +76,8 @@ BEGIN
 END;
 $$;
 
--- Update comment
-COMMENT ON FUNCTION search_facilities_nearby_count IS 
+-- Update comment (full signature required when multiple overloads exist)
+COMMENT ON FUNCTION search_facilities_nearby_count(UUID, DOUBLE PRECISION, DOUBLE PRECISION, TEXT, DOUBLE PRECISION, TEXT[], TEXT[], TEXT[]) IS
 'Get total count of facilities matching search criteria without pagination.
 Uses the same filtering logic as search_facilities_nearby for consistency.
 Returns the total number of facilities that match the search filters.';

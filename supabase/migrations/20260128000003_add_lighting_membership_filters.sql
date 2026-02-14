@@ -3,7 +3,9 @@
 
 -- Drop existing functions to update signature
 DROP FUNCTION IF EXISTS search_facilities_nearby(UUID, DOUBLE PRECISION, DOUBLE PRECISION, TEXT, DOUBLE PRECISION, TEXT[], TEXT[], TEXT[], INT, INT);
+DROP FUNCTION IF EXISTS search_facilities_nearby(UUID, DOUBLE PRECISION, DOUBLE PRECISION, TEXT, DOUBLE PRECISION, TEXT[], TEXT[], TEXT[], BOOLEAN, BOOLEAN, INT, INT);
 DROP FUNCTION IF EXISTS search_facilities_nearby_count(UUID, DOUBLE PRECISION, DOUBLE PRECISION, TEXT, DOUBLE PRECISION, TEXT[], TEXT[], TEXT[]);
+DROP FUNCTION IF EXISTS search_facilities_nearby_count(UUID, DOUBLE PRECISION, DOUBLE PRECISION, TEXT, DOUBLE PRECISION, TEXT[], TEXT[], TEXT[], BOOLEAN, BOOLEAN);
 
 -- Recreate main search function with new filter parameters
 CREATE OR REPLACE FUNCTION search_facilities_nearby(
@@ -219,8 +221,8 @@ BEGIN
 END;
 $$;
 
--- Update comments
-COMMENT ON FUNCTION search_facilities_nearby IS 
+-- Update comments (full signatures required when multiple overloads exist)
+COMMENT ON FUNCTION search_facilities_nearby(UUID, DOUBLE PRECISION, DOUBLE PRECISION, TEXT, DOUBLE PRECISION, TEXT[], TEXT[], TEXT[], BOOLEAN, BOOLEAN, INT, INT) IS
 'Search for facilities near a location that support a specific sport.
 Supports filtering by:
 - Distance (max km from location)
@@ -231,7 +233,7 @@ Supports filtering by:
 - Membership required (public vs members-only)
 Returns facility info with provider details for court availability fetching.';
 
-COMMENT ON FUNCTION search_facilities_nearby_count IS 
+COMMENT ON FUNCTION search_facilities_nearby_count(UUID, DOUBLE PRECISION, DOUBLE PRECISION, TEXT, DOUBLE PRECISION, TEXT[], TEXT[], TEXT[], BOOLEAN, BOOLEAN) IS
 'Get total count of facilities matching search criteria without pagination.
 Uses the same filtering logic as search_facilities_nearby for consistency.
 Returns the total number of facilities that match the search filters.';
