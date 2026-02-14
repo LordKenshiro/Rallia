@@ -88,7 +88,7 @@ const UserProfile = () => {
   const [loadingReferenceRequests, setLoadingReferenceRequests] = useState(true);
 
   // Profile screen tour - triggers after main navigation tour is completed
-  const { shouldShowTour: _shouldShowProfileTour } = useTourSequence({
+  useTourSequence({
     screenId: 'profile',
     isReady: !loadingCore,
     delay: 800,
@@ -103,9 +103,7 @@ const UserProfile = () => {
   });
 
   // Player reputation data
-  const { display: reputationDisplay, loading: reputationLoading } = usePlayerReputation(
-    player?.id
-  );
+  usePlayerReputation(player?.id);
 
   // Check authentication on mount and fetch section data once. Profile/player come from
   // context (fetched by providers). We only refetch after mutations (onSave in sheets, etc.).
@@ -603,8 +601,7 @@ const UserProfile = () => {
                     t('profile.user')}
                 </Text>
                 <Text style={[styles.username, { color: colors.textMuted }]}>
-                  @
-                  {profile?.display_name?.toLowerCase().replace(/\s/g, '') || t('profile.username')}
+                  @{profile?.display_name?.replace(/\s/g, '') || t('profile.username')}
                 </Text>
 
                 {/* Joined Date */}

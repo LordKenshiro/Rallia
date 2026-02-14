@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -10,12 +10,10 @@ import {
 import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
-import { Button, Heading, Text, useToast } from '@rallia/shared-components';
-import { COLORS } from '@rallia/shared-constants';
+import { Text, useToast } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, usePlayer, useProfile, useTranslation } from '../../../../hooks';
-import type { TranslationKey } from '@rallia/shared-translations';
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
 
 export function PlayerInformationActionSheet({ payload }: SheetProps<'player-information'>) {
@@ -27,7 +25,6 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
   const toast = useToast();
   const { refetch: refetchPlayer } = usePlayer();
   const { refetch: refetchProfile } = useProfile();
-  const [username, setUsername] = useState(initialData?.username || '');
   const [bio, setBio] = useState(initialData?.bio || '');
   const [preferredPlayingHand, setPreferredPlayingHand] = useState<string>(
     initialData?.preferredPlayingHand || ''
@@ -36,18 +33,6 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
     initialData?.maximumTravelDistance || 5
   );
   const [isSaving, setIsSaving] = useState(false);
-
-  // Update local state when initialData changes
-  // This pattern syncs controlled props to local state - React 18+ batches these updates automatically
-  useEffect(() => {
-    if (initialData) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional sync of controlled props to local state
-      setUsername(initialData.username || '');
-      setBio(initialData.bio || '');
-      setPreferredPlayingHand(initialData.preferredPlayingHand || '');
-      setMaximumTravelDistance(initialData.maximumTravelDistance || 5);
-    }
-  }, [initialData]);
 
   const handleSave = async () => {
     if (isSaving) return;
@@ -66,11 +51,10 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
         return;
       }
 
-      // Update profile table (username and bio)
+      // Update profile table (bio)
       const { error: profileUpdateError } = await supabase
         .from('profile')
         .update({
-          display_name: username,
           bio: bio,
           updated_at: new Date().toISOString(),
         })
@@ -99,19 +83,6 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
         return;
       }
 
-      // Sync display_name to auth.users metadata
-      const { error: authUpdateError } = await supabase.auth.updateUser({
-        data: { display_name: username },
-      });
-
-      if (authUpdateError) {
-        Logger.warn('Failed to sync display_name to auth.users', {
-          error: authUpdateError,
-          userId: user.id,
-        });
-        // Don't block the save - profile table is already updated
-      }
-
       // Refetch player and profile data to update all consumers
       await refetchPlayer();
       await refetchProfile();
@@ -132,7 +103,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
     }
   };
 
-  const isFormValid = username.trim() !== '';
+  const isFormValid = true;
 
   return (
     <ActionSheet
@@ -160,28 +131,6 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Username Input */}
-          <View style={styles.inputContainer}>
-            <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-              {t('onboarding.personalInfoStep.username')}
-            </Text>
-            <View
-              style={[
-                styles.input,
-                { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder },
-              ]}
-            >
-              <TextInput
-                placeholder={t('profile.editSheets.usernamePlaceholder')}
-                placeholderTextColor={colors.textMuted}
-                value={username}
-                onChangeText={setUsername}
-                maxLength={20}
-                style={[styles.inputField, { color: colors.text }]}
-              />
-            </View>
-          </View>
-
           {/* Bio Input */}
           <View style={styles.inputContainer}>
             <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
