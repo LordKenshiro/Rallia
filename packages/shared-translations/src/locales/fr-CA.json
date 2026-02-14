@@ -1124,6 +1124,7 @@
       "pm": "PM",
       "eve": "SOIR",
       "minimumSelected": "{count} / {minimum} minimum sélectionnés",
+      "selected": "{count} disponibilités sélectionnées",
       "saveButton": "Enregistrer",
       "complete": "Terminer",
       "days": {

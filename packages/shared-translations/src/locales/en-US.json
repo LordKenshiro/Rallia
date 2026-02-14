@@ -1124,6 +1124,7 @@
       "pm": "PM",
       "eve": "EVE",
       "minimumSelected": "{count} / {minimum} minimum selected",
+      "selected": "{count} availabilities selected",
       "saveButton": "Save",
       "complete": "Complete",
       "days": {
