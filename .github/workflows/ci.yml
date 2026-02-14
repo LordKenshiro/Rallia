@@ -1,3 +1,4 @@
+# Dummy change to test GitHub Actions (can be reverted)
 name: CI - Lint, Type Check, Test, Build
 
 on:
