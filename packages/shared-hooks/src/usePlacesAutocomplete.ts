@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import type { PlacePrediction } from '@rallia/shared-types';
+import type { PlacePrediction, AddressComponent } from '@rallia/shared-types';
 import { useDebounce } from './useDebounce';
 
 // =============================================================================
@@ -37,6 +37,12 @@ export interface PlaceDetails {
   longitude: number;
   /** IANA timezone (e.g. America/New_York) when available from Google Time Zone API */
   timezone?: string;
+  /** Structured address components from Google Places API */
+  addressComponents?: AddressComponent[];
+  /** Extracted city name from address components */
+  city?: string;
+  /** Extracted postal code from address components */
+  postalCode?: string;
 }
 
 interface UsePlacesAutocompleteReturn {
@@ -164,7 +170,7 @@ export function usePlacesAutocomplete(
         headers: {
           'Content-Type': 'application/json',
           'X-Goog-Api-Key': apiKey,
-          'X-Goog-FieldMask': 'displayName,formattedAddress,location',
+          'X-Goog-FieldMask': 'displayName,formattedAddress,location,addressComponents',
         },
       });
 
@@ -207,6 +213,27 @@ export function usePlacesAutocomplete(
         // Non-critical: continue without timezone
       }
 
+      // Parse structured address components
+      const components: AddressComponent[] = (data.addressComponents || []).map(
+        (c: { longText?: string; shortText?: string; types?: string[] }) => ({
+          longText: c.longText || '',
+          shortText: c.shortText || '',
+          types: c.types || [],
+        })
+      );
+
+      // Extract city and postal code from structured components
+      const getComponent = (types: string[]): string => {
+        const component = components.find(c => types.some(type => c.types.includes(type)));
+        return component?.longText || '';
+      };
+
+      const city =
+        getComponent(['locality']) ||
+        getComponent(['administrative_area_level_3']) ||
+        getComponent(['sublocality_level_1']);
+      const postalCode = getComponent(['postal_code']);
+
       return {
         placeId,
         name: data.displayName?.text || '',
@@ -214,6 +241,9 @@ export function usePlacesAutocomplete(
         latitude: lat,
         longitude: lng,
         ...(timezone && { timezone }),
+        addressComponents: components.length > 0 ? components : undefined,
+        ...(city && { city }),
+        ...(postalCode && { postalCode }),
       };
     } catch (err) {
       console.error('Place details fetch error:', err);

@@ -258,9 +258,11 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
         successHaptic();
         const newFacilities = [...selectedFacilities, facility];
         onUpdateFormData({ favoriteFacilities: newFacilities });
+        // Clear search input after selecting a facility
+        setSearchQuery('');
       }
     },
-    [isFacilitySelected, selectedFacilities, onUpdateFormData]
+    [isFacilitySelected, selectedFacilities, onUpdateFormData, setSearchQuery]
   );
 
   // Handle removing a selected facility

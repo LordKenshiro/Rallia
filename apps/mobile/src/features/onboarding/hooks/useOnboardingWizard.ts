@@ -149,8 +149,8 @@ function isStepComplete(stepId: OnboardingStepId, formData: OnboardingFormData):
       );
 
     case 'location':
-      // City is mandatory, address and postal code are optional
-      return !!formData.city.trim();
+      // Postal code is required (pre-populated from pre-onboarding), address is optional
+      return !!formData.postalCode.trim();
 
     case 'sports':
       return formData.selectedSportIds.length > 0;

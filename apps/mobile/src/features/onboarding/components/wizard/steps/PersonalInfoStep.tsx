@@ -5,7 +5,7 @@
  * Migrated from PersonalInformationOverlay with theme-aware colors.
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -15,6 +15,7 @@ import {
   Image,
   Pressable,
   Keyboard,
+  ActivityIndicator,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {
@@ -23,7 +24,8 @@ import {
   type BottomSheetScrollViewMethods,
 } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, PhoneInput } from '@rallia/shared-components';
+import { Text } from '@rallia/shared-components';
+import { PhoneInput } from '../../../../../components/PhoneInput';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import {
   validateFullName,
@@ -32,8 +34,11 @@ import {
   selectionHaptic,
 } from '@rallia/shared-utils';
 import { GENDER_VALUES } from '@rallia/shared-types';
+import { supabase } from '@rallia/shared-services';
 import type { TranslationKey } from '@rallia/shared-translations';
+import type { Locale } from '@rallia/shared-translations';
 import type { OnboardingFormData } from '../../../hooks/useOnboardingWizard';
+import { useLocale } from '../../../../../context';
 
 interface ThemeColors {
   background: string;
@@ -59,6 +64,26 @@ interface PersonalInfoStepProps {
   isDark: boolean;
 }
 
+interface FieldErrors {
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  phoneNumber?: string;
+}
+
+type ValidationStatus = 'idle' | 'valid' | 'invalid' | 'checking';
+
+const MINIMUM_AGE = 13;
+
+// Calculate minimum date of birth (13 years ago)
+const getMinimumDateOfBirth = (): Date => {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() - MINIMUM_AGE);
+  return date;
+};
+
 export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
   formData,
   onUpdateFormData,
@@ -71,6 +96,13 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
   const [tempDate, setTempDate] = useState<Date>(formData.dateOfBirth || new Date(2000, 0, 1));
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
+  // Field validation errors
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+
+  // Username uniqueness check state
+  const [usernameStatus, setUsernameStatus] = useState<ValidationStatus>('idle');
+  const [usernameCheckTimeout, setUsernameCheckTimeout] = useState<NodeJS.Timeout | null>(null);
+
   // Refs for keyboard visibility handling
   const scrollViewRef = useRef<BottomSheetScrollViewMethods>(null);
   const firstNameFieldRef = useRef<View>(null);
@@ -80,6 +112,9 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
   // Y positions of each field within scroll content (from onLayout), used to scroll only enough to bring field into view
   const fieldYOffsets = useRef<Record<string, number>>({});
   const SCROLL_TO_FIELD_TOP_PADDING = 24;
+
+  const minimumDateOfBirth = useMemo(() => getMinimumDateOfBirth(), []);
+  const minimumDateSelectable = useMemo(() => new Date(1900, 0, 1), []);
 
   // Listen for keyboard events to adjust padding dynamically
   useEffect(() => {
@@ -99,24 +134,167 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
     };
   }, []);
 
+  // Validation functions
+  const validateFirstName = (value: string): string | undefined => {
+    if (!value.trim()) {
+      return 'First name is required';
+    }
+    return undefined;
+  };
+
+  const validateLastName = (value: string): string | undefined => {
+    if (!value.trim()) {
+      return 'Last name is required';
+    }
+    return undefined;
+  };
+
+  const checkUsernameUniqueness = useCallback(async (username: string) => {
+    if (!username.trim()) return;
+
+    setUsernameStatus('checking');
+
+    try {
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
+
+      let query = supabase
+        .from('profile')
+        .select('display_name')
+        .ilike('display_name', username.trim());
+
+      if (currentUser) {
+        query = query.neq('id', currentUser.id);
+      }
+
+      const { data, error } = await query.maybeSingle();
+
+      if (error) {
+        console.error('Username check error:', error);
+        setUsernameStatus('idle');
+      } else if (data) {
+        setUsernameStatus('invalid');
+      } else {
+        setUsernameStatus('valid');
+      }
+    } catch {
+      setUsernameStatus('idle');
+    }
+  }, []);
+
+  const validateUsernameField = (value: string): string | undefined => {
+    if (!value.trim()) {
+      return 'Username is required';
+    }
+    if (value.length < 3) {
+      return 'Username must be at least 3 characters';
+    }
+    return undefined;
+  };
+
+  const validateDateOfBirth = (date: Date | null): string | undefined => {
+    if (!date) {
+      return 'Date of birth is required';
+    }
+    if (date > minimumDateOfBirth) {
+      return `You must be at least ${MINIMUM_AGE} years old`;
+    }
+    return undefined;
+  };
+
+  const validatePhoneNumber = (value: string): string | undefined => {
+    if (!value.trim()) {
+      return 'Phone number is required';
+    }
+    // Basic phone validation - at least 8 digits
+    const digitsOnly = value.replace(/\D/g, '');
+    if (digitsOnly.length < 8) {
+      return 'Please enter a valid phone number';
+    }
+    return undefined;
+  };
+
+  const clearFieldError = (field: keyof FieldErrors) => {
+    setFieldErrors(prev => ({ ...prev, [field]: undefined }));
+  };
+
   const handleFirstNameChange = (text: string) => {
-    onUpdateFormData({ firstName: validateFullName(text) });
+    const validatedText = validateFullName(text);
+    onUpdateFormData({ firstName: validatedText });
+    if (fieldErrors.firstName) {
+      clearFieldError('firstName');
+    }
+  };
+
+  const handleFirstNameBlur = () => {
+    const error = validateFirstName(formData.firstName);
+    if (error) {
+      setFieldErrors(prev => ({ ...prev, firstName: error }));
+    }
   };
 
   const handleLastNameChange = (text: string) => {
-    onUpdateFormData({ lastName: validateFullName(text) });
+    const validatedText = validateFullName(text);
+    onUpdateFormData({ lastName: validatedText });
+    if (fieldErrors.lastName) {
+      clearFieldError('lastName');
+    }
+  };
+
+  const handleLastNameBlur = () => {
+    const error = validateLastName(formData.lastName);
+    if (error) {
+      setFieldErrors(prev => ({ ...prev, lastName: error }));
+    }
   };
 
   const handleUsernameChange = (text: string) => {
-    onUpdateFormData({ username: validateUsername(text) });
+    const validatedText = validateUsername(text);
+    onUpdateFormData({ username: validatedText });
+
+    // Clear errors
+    if (fieldErrors.username) {
+      clearFieldError('username');
+    }
+    setUsernameStatus('idle');
+
+    // Debounced uniqueness check
+    if (usernameCheckTimeout) {
+      clearTimeout(usernameCheckTimeout);
+    }
+
+    if (validatedText.length >= 3) {
+      const timeout = setTimeout(() => {
+        checkUsernameUniqueness(validatedText);
+      }, 500);
+      setUsernameCheckTimeout(timeout);
+    }
+  };
+
+  const handleUsernameBlur = () => {
+    const error = validateUsernameField(formData.username);
+    if (error) {
+      setFieldErrors(prev => ({ ...prev, username: error }));
+    }
   };
 
   const handlePhoneNumberChange = useCallback(
     (fullNumber: string, _countryCode: string, _localNumber: string) => {
       onUpdateFormData({ phoneNumber: fullNumber });
+      if (fieldErrors.phoneNumber) {
+        clearFieldError('phoneNumber');
+      }
     },
-    [onUpdateFormData]
+    [onUpdateFormData, fieldErrors.phoneNumber]
   );
+
+  const handlePhoneNumberBlur = () => {
+    const error = validatePhoneNumber(formData.phoneNumber);
+    if (error) {
+      setFieldErrors(prev => ({ ...prev, phoneNumber: error }));
+    }
+  };
 
   // Get the current date value for the picker
   const dateValue = formData.dateOfBirth || new Date(2000, 0, 1);
@@ -134,7 +312,14 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
   };
 
   const handleDateDone = () => {
-    onUpdateFormData({ dateOfBirth: tempDate });
+    // Validate age before saving
+    const error = validateDateOfBirth(tempDate);
+    if (error) {
+      setFieldErrors(prev => ({ ...prev, dateOfBirth: error }));
+    } else {
+      onUpdateFormData({ dateOfBirth: tempDate });
+      clearFieldError('dateOfBirth');
+    }
     setShowDatePicker(false);
     lightHaptic();
   };
@@ -144,12 +329,23 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
     setShowDatePicker(false);
   };
 
+  const { locale: appLocale } = useLocale();
+
   const formatDate = (date: Date | null): string => {
     if (!date) return '';
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${month}/${day}/${year}`;
+    try {
+      return new Intl.DateTimeFormat(appLocale as Locale, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      }).format(date);
+    } catch {
+      // Fallback to US format if Intl not available
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${month}/${day}/${year}`;
+    }
   };
 
   const scrollToField = useCallback((fieldKey: string) => {
@@ -195,6 +391,11 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
           <Ionicons name="camera-outline" size={32} color={colors.buttonActive} />
         )}
       </TouchableOpacity>
+      <Text size="sm" color={colors.textSecondary} style={styles.photoLabel}>
+        {formData.profileImage
+          ? t('profile.changePhoto' as TranslationKey)
+          : t('chat.addPhoto' as TranslationKey)}
+      </Text>
 
       {/* First Name */}
       <View
@@ -213,16 +414,22 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
           placeholderTextColor={colors.textMuted}
           value={formData.firstName}
           onChangeText={handleFirstNameChange}
+          onBlur={handleFirstNameBlur}
           onFocus={() => scrollToField('firstName')}
           style={[
             styles.input,
             {
               backgroundColor: colors.inputBackground,
-              borderColor: colors.inputBorder,
+              borderColor: fieldErrors.firstName ? colors.error : colors.inputBorder,
               color: colors.text,
             },
           ]}
         />
+        {fieldErrors.firstName && (
+          <Text size="xs" color={colors.error} style={styles.errorText}>
+            {fieldErrors.firstName}
+          </Text>
+        )}
       </View>
 
       {/* Last Name */}
@@ -242,16 +449,22 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
           placeholderTextColor={colors.textMuted}
           value={formData.lastName}
           onChangeText={handleLastNameChange}
+          onBlur={handleLastNameBlur}
           onFocus={() => scrollToField('lastName')}
           style={[
             styles.input,
             {
               backgroundColor: colors.inputBackground,
-              borderColor: colors.inputBorder,
+              borderColor: fieldErrors.lastName ? colors.error : colors.inputBorder,
               color: colors.text,
             },
           ]}
         />
+        {fieldErrors.lastName && (
+          <Text size="xs" color={colors.error} style={styles.errorText}>
+            {fieldErrors.lastName}
+          </Text>
+        )}
       </View>
 
       {/* Username */}
@@ -266,25 +479,48 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
           {t('onboarding.personalInfoStep.username')}{' '}
           <Text color={colors.error}>{t('onboarding.personalInfoStep.required')}</Text>
         </Text>
-        <BottomSheetTextInput
-          placeholder={t('onboarding.personalInfoStep.usernamePlaceholder')}
-          placeholderTextColor={colors.textMuted}
-          value={formData.username}
-          onChangeText={handleUsernameChange}
-          maxLength={10}
-          onFocus={() => scrollToField('username')}
-          style={[
-            styles.input,
-            {
-              backgroundColor: colors.inputBackground,
-              borderColor: colors.inputBorder,
-              color: colors.text,
-            },
-          ]}
-        />
+        <View style={styles.inputWithStatus}>
+          <BottomSheetTextInput
+            placeholder={t('onboarding.personalInfoStep.usernamePlaceholder')}
+            placeholderTextColor={colors.textMuted}
+            value={formData.username}
+            onChangeText={handleUsernameChange}
+            onBlur={handleUsernameBlur}
+            maxLength={10}
+            onFocus={() => scrollToField('username')}
+            style={[
+              styles.input,
+              styles.inputWithIcon,
+              {
+                backgroundColor: colors.inputBackground,
+                borderColor: fieldErrors.username ? colors.error : colors.inputBorder,
+                color: colors.text,
+              },
+            ]}
+          />
+          {usernameStatus === 'checking' && (
+            <ActivityIndicator size="small" color={colors.buttonActive} style={styles.statusIcon} />
+          )}
+          {usernameStatus === 'valid' && (
+            <Ionicons
+              name="checkmark-circle"
+              size={20}
+              color={colors.buttonActive}
+              style={styles.statusIcon}
+            />
+          )}
+          {usernameStatus === 'invalid' && (
+            <Ionicons
+              name="close-circle"
+              size={20}
+              color={colors.error}
+              style={styles.statusIcon}
+            />
+          )}
+        </View>
         <View style={styles.inputFooter}>
-          <Text size="xs" color={colors.textSecondary}>
-            {t('onboarding.personalInfoStep.usernameHelper')}
+          <Text size="xs" color={fieldErrors.username ? colors.error : colors.textSecondary}>
+            {fieldErrors.username || t('onboarding.personalInfoStep.usernameHelper')}
           </Text>
           <Text size="xs" color={colors.textSecondary}>
             {formData.username.length}/10
@@ -302,7 +538,10 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
           style={[
             styles.input,
             styles.dateInput,
-            { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder },
+            {
+              backgroundColor: colors.inputBackground,
+              borderColor: fieldErrors.dateOfBirth ? colors.error : colors.inputBorder,
+            },
           ]}
           onPress={() => {
             lightHaptic();
@@ -316,6 +555,11 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
             {formData.dateOfBirth ? formatDate(formData.dateOfBirth) : t('common.select')}
           </Text>
         </TouchableOpacity>
+        {fieldErrors.dateOfBirth && (
+          <Text size="xs" color={colors.error} style={styles.errorText}>
+            {fieldErrors.dateOfBirth}
+          </Text>
+        )}
       </View>
 
       {/* iOS Date Picker Modal */}
@@ -354,8 +598,8 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
                 mode="date"
                 display="spinner"
                 onChange={handleDateChange}
-                maximumDate={new Date()}
-                minimumDate={new Date(1900, 0, 1)}
+                maximumDate={minimumDateOfBirth}
+                minimumDate={minimumDateSelectable}
                 themeVariant={isDark ? 'dark' : 'light'}
                 style={styles.iosPicker}
               />
@@ -371,8 +615,8 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
           mode="date"
           display="default"
           onChange={handleDateChange}
-          maximumDate={new Date()}
-          minimumDate={new Date(1900, 0, 1)}
+          maximumDate={minimumDateOfBirth}
+          minimumDate={minimumDateSelectable}
         />
       )}
 
@@ -428,22 +672,26 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
           label={t('onboarding.personalInfoStep.phoneNumber')}
           placeholder={t('onboarding.personalInfoStep.phoneNumber')}
           required
-          maxLength={15}
-          showCharCount
           colors={{
             text: colors.text,
             textMuted: colors.textMuted,
             textSecondary: colors.textSecondary,
             background: colors.background,
             inputBackground: colors.inputBackground,
-            inputBorder: colors.inputBorder,
+            inputBorder: fieldErrors.phoneNumber ? colors.error : colors.inputBorder,
             primary: colors.buttonActive,
             error: colors.error,
             card: colors.cardBackground,
           }}
           onFocus={() => scrollToField('phoneNumber')}
+          onBlur={handlePhoneNumberBlur}
           TextInputComponent={BottomSheetTextInput}
         />
+        {fieldErrors.phoneNumber && (
+          <Text size="xs" color={colors.error} style={styles.errorText}>
+            {fieldErrors.phoneNumber}
+          </Text>
+        )}
       </View>
     </BottomSheetScrollView>
   );
@@ -479,8 +727,16 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 40,
   },
+  photoLabel: {
+    textAlign: 'center',
+    marginTop: -spacingPixels[4],
+    marginBottom: spacingPixels[6],
+  },
   inputContainer: {
     marginBottom: spacingPixels[3],
+  },
+  errorText: {
+    marginTop: spacingPixels[1],
   },
   inputLabel: {
     marginBottom: spacingPixels[2],
@@ -501,6 +757,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: spacingPixels[1],
+  },
+  inputWithStatus: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  inputWithIcon: {
+    flex: 1,
+    paddingRight: spacingPixels[10],
+  },
+  statusIcon: {
+    position: 'absolute',
+    right: spacingPixels[3],
   },
   genderRow: {
     flexDirection: 'row',

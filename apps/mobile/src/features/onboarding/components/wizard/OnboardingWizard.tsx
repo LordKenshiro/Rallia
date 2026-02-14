@@ -274,8 +274,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   // Track the last uploaded profile picture URL to clean up old uploads
   const [lastUploadedProfileUrl, setLastUploadedProfileUrl] = useState<string | null>(null);
-  // Show city error only after user attempted to continue on location step (not on first load)
-  const [locationStepShowErrors, setLocationStepShowErrors] = useState(false);
 
   // Profile hook to refetch profile when onboarding completes
   const { refetch: refetchProfile } = useProfile();
@@ -382,27 +380,52 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     });
   }, [currentStepIndex, translateX]);
 
-  // Reset location step error state when leaving the step
-  useEffect(() => {
-    if (currentStepId !== 'location') {
-      setLocationStepShowErrors(false);
-    }
-  }, [currentStepId]);
-
   // Validate and save current step data
   const validateAndSaveStep = useCallback(async (): Promise<boolean> => {
     switch (currentStepId) {
-      case 'personal':
+      case 'personal': {
         // Validate personal info
         if (
           !formData.firstName.trim() ||
           !formData.lastName.trim() ||
           !formData.username.trim() ||
+          formData.username.length < 3 ||
           !formData.dateOfBirth ||
           !formData.gender ||
           !formData.phoneNumber.trim()
         ) {
           Alert.alert(t('alerts.error'), t('onboarding.validation.fillRequiredFields'));
+          warningHaptic();
+          return false;
+        }
+
+        // Check minimum age (13 years)
+        const minimumDateOfBirth = new Date();
+        minimumDateOfBirth.setFullYear(minimumDateOfBirth.getFullYear() - 13);
+        if (formData.dateOfBirth > minimumDateOfBirth) {
+          Alert.alert(t('alerts.error'), `You must be at least 13 years old`);
+          warningHaptic();
+          return false;
+        }
+
+        // Check username uniqueness (case-insensitive), excluding current user
+        const {
+          data: { user: currentUser },
+        } = await supabase.auth.getUser();
+
+        let usernameQuery = supabase
+          .from('profile')
+          .select('display_name')
+          .ilike('display_name', formData.username.trim());
+
+        if (currentUser) {
+          usernameQuery = usernameQuery.neq('id', currentUser.id);
+        }
+
+        const { data: existingUser } = await usernameQuery.maybeSingle();
+
+        if (existingUser) {
+          Alert.alert(t('alerts.error'), 'This username is already taken. Please choose another.');
           warningHaptic();
           return false;
         }
@@ -460,12 +483,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           setIsSaving(false);
           return false;
         }
+      }
 
       case 'location': {
-        // City is mandatory
-        if (!formData.city.trim()) {
-          setLocationStepShowErrors(true);
-          Alert.alert(t('alerts.error'), t('onboarding.validation.cityRequired'));
+        // Postal code is required (pre-populated from pre-onboarding)
+        if (!formData.postalCode.trim()) {
+          Alert.alert(t('alerts.error'), t('onboarding.validation.postalCodeRequired'));
           warningHaptic();
           return false;
         }
@@ -483,8 +506,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
             const { error } = await OnboardingService.saveLocationInfo({
               address: formData.address || null,
-              city: formData.city,
-              postal_code: formData.postalCode || null,
+              city: formData.city || null,
+              postal_code: formData.postalCode,
               latitude: formData.latitude,
               longitude: formData.longitude,
             });
@@ -506,30 +529,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           }
         };
 
-        // If no address provided, warn user about limited match search
-        if (!formData.address.trim()) {
-          return new Promise<boolean>(resolve => {
-            Alert.alert(
-              t('onboarding.locationStep.warningTitle'),
-              t('onboarding.locationStep.warningMessage'),
-              [
-                {
-                  text: t('common.goBack'),
-                  style: 'cancel',
-                  onPress: () => resolve(false),
-                },
-                {
-                  text: t('common.continue'),
-                  onPress: async () => {
-                    const success = await saveLocationData();
-                    resolve(success);
-                  },
-                },
-              ]
-            );
-          });
-        }
-
+        // Save location data directly - no warning needed since postal code is always present
         return await saveLocationData();
       }
 
@@ -870,7 +870,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             colors={colors}
             t={t}
             isDark={isDark}
-            showCityError={locationStepShowErrors && !formData.city.trim()}
           />
         );
       case 'sports':

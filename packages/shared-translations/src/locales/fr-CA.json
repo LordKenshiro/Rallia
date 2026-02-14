@@ -1061,10 +1061,10 @@
       "subtitle": "Sélectionnez tous ceux qui s'appliquent"
     },
     "ratingStep": {
-      "tennisTitle": "Parlez-nous de votre jeu",
-      "pickleballTitle": "Parlez-nous de votre jeu",
-      "ntrpSubtitle": "Classement NTRP",
-      "duprSubtitle": "Classement DUPR",
+      "tennisTitle": "Parlez-nous de votre niveau au tennis",
+      "pickleballTitle": "Parlez-nous de votre niveau au pickleball",
+      "ntrpBadge": "Classement NTRP",
+      "duprBadge": "Classement DUPR",
       "skillLevels": {
         "beginner1": "Débutant",
         "beginner2": "Débutant",
@@ -1124,6 +1124,7 @@
       "pm": "PM",
       "eve": "SOIR",
       "minimumSelected": "{count} / {minimum} minimum sélectionnés",
+      "selected": "{count} disponibilités sélectionnées",
       "saveButton": "Enregistrer",
       "complete": "Terminer",
       "days": {
@@ -1161,6 +1162,7 @@
       "authFailed": "Échec de l'authentification - veuillez réessayer",
       "verificationCodeSent": "Code de vérification envoyé!",
       "cityRequired": "Veuillez entrer votre ville",
+      "postalCodeRequired": "Le code postal est requis. Veuillez retourner et compléter la configuration de l'emplacement.",
       "failedToSaveLocation": "Échec de l'enregistrement de votre localisation. Veuillez réessayer."
     },
     "successMessages": {
@@ -1177,10 +1179,14 @@
     },
     "complete": "Terminer",
     "locationStep": {
-      "title": "Où êtes-vous situé?",
-      "subtitle": "Aidez-nous à trouver des terrains et des joueurs près de chez vous",
-      "address": "Adresse",
-      "addressPlaceholder": "Entrez votre adresse",
+      "title": "Confirmez votre emplacement",
+      "subtitle": "Ajoutez votre adresse pour des matchs plus précis, ou continuez avec votre code postal",
+      "savedPostalCode": "Votre emplacement enregistré",
+      "editPostalCode": "Modifier",
+      "postalCodeUpdated": "Code postal mis à jour",
+      "address": "Adresse précise",
+      "addressPlaceholder": "Recherchez votre adresse",
+      "addressHint": "Ajouter votre adresse nous aide à trouver des parties plus près de chez vous",
       "city": "Ville",
       "cityPlaceholder": "Entrez votre ville",
       "postalCode": "Code postal",

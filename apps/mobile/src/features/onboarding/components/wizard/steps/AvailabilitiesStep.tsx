@@ -114,9 +114,11 @@ export const AvailabilitiesStep: React.FC<AvailabilitiesStepProps> = ({
           weight="semibold"
           color={hasMinimum ? colors.buttonActive : colors.textMuted}
         >
-          {t('onboarding.availabilityStep.minimumSelected')
-            .replace('{count}', String(totalSelections))
-            .replace('{minimum}', String(MIN_SELECTIONS))}
+          {totalSelections > MIN_SELECTIONS
+            ? t('onboarding.availabilityStep.selected').replace('{count}', String(totalSelections))
+            : t('onboarding.availabilityStep.minimumSelected')
+                .replace('{count}', String(totalSelections))
+                .replace('{minimum}', String(MIN_SELECTIONS))}
         </Text>
       </View>
 

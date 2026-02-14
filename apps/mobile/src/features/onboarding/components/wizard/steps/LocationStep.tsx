@@ -1,9 +1,11 @@
 /**
  * LocationStep Component
  *
- * Second step of onboarding - collects location information (address, city, postal code).
+ * Second step of onboarding - collects optional address information.
  * Uses Google Places Autocomplete for address suggestions.
- * City is mandatory, address and postal code are optional.
+ * Postal code is pre-populated from pre-onboarding with an inline editor for corrections.
+ * User can optionally add a specific address for more precise matching.
+ * City and postal code are extracted from structured Google Places address components.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -13,18 +15,18 @@ import {
   TouchableOpacity,
   Platform,
   Keyboard,
-  FlatList,
   ActivityIndicator,
 } from 'react-native';
 import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, lightTheme, darkTheme } from '@rallia/design-system';
 import { usePlacesAutocomplete } from '@rallia/shared-hooks';
 import { selectionHaptic } from '@rallia/shared-utils';
 import type { TranslationKey } from '@rallia/shared-translations';
 import type { PlacePrediction } from '@rallia/shared-types';
 import type { OnboardingFormData } from '../../../hooks/useOnboardingWizard';
+import { useUserHomeLocation } from '../../../../../context/UserLocationContext';
 
 interface ThemeColors {
   background: string;
@@ -47,8 +49,6 @@ interface LocationStepProps {
   colors: ThemeColors;
   t: (key: TranslationKey) => string;
   isDark: boolean;
-  /** Show error state on city field (only after user attempted to continue with empty city) */
-  showCityError?: boolean;
 }
 
 export const LocationStep: React.FC<LocationStepProps> = ({
@@ -57,11 +57,17 @@ export const LocationStep: React.FC<LocationStepProps> = ({
   colors,
   t,
   isDark,
-  showCityError = false,
 }) => {
+  // Get the pre-saved postal code from pre-onboarding
+  const { homeLocation } = useUserHomeLocation();
   const [addressQuery, setAddressQuery] = useState(formData.address || '');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [isEditingPostalCode, setIsEditingPostalCode] = useState(false);
+  const [editedPostalCode, setEditedPostalCode] = useState('');
+
+  // The displayed postal code: prefer form data (which reflects user edits) over homeLocation
+  const displayPostalCode = formData.postalCode || homeLocation?.postalCode || '';
 
   // Google Places Autocomplete hook
   const {
@@ -94,12 +100,65 @@ export const LocationStep: React.FC<LocationStepProps> = ({
     };
   }, []);
 
+  // Sync the pre-populated postal code and coordinates to form data on mount
+  useEffect(() => {
+    if (homeLocation && !formData.postalCode) {
+      onUpdateFormData({
+        postalCode: homeLocation.postalCode,
+        latitude: homeLocation.latitude,
+        longitude: homeLocation.longitude,
+      });
+    }
+  }, [homeLocation, formData.postalCode, onUpdateFormData]);
+
+  // Handle postal code editing
+  const handleStartEditPostalCode = () => {
+    setEditedPostalCode(formData.postalCode || displayPostalCode);
+    setIsEditingPostalCode(true);
+  };
+
+  const handlePostalCodeChange = (text: string) => {
+    // Strip everything except alphanumeric
+    const raw = text.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    // Auto-format Canadian postal codes: A1A 1A1
+    const isCanadianPattern = /^[A-Z]\d[A-Z]/.test(raw);
+    let formatted: string;
+    if (isCanadianPattern && raw.length > 3) {
+      formatted = `${raw.slice(0, 3)} ${raw.slice(3, 6)}`;
+    } else {
+      formatted = raw;
+    }
+
+    setEditedPostalCode(formatted);
+  };
+
+  const handleSavePostalCode = () => {
+    const trimmed = editedPostalCode.trim();
+    if (trimmed) {
+      onUpdateFormData({ postalCode: trimmed });
+    }
+    setIsEditingPostalCode(false);
+  };
+
+  const handleCancelEditPostalCode = () => {
+    setIsEditingPostalCode(false);
+    setEditedPostalCode('');
+  };
+
   // Handle address input change
   const handleAddressChange = (text: string) => {
     setAddressQuery(text);
-    setShowSuggestions(true);
+    setShowSuggestions(text.length >= 3);
     onUpdateFormData({ address: text });
   };
+
+  // Dismiss suggestions when tapping outside the address input area
+  const handleDismissSuggestions = useCallback(() => {
+    if (showSuggestions) {
+      setShowSuggestions(false);
+    }
+  }, [showSuggestions]);
 
   // Handle selecting a place from suggestions
   const handleSelectPlace = useCallback(
@@ -115,59 +174,33 @@ export const LocationStep: React.FC<LocationStepProps> = ({
       setAddressQuery(fullAddress);
       onUpdateFormData({ address: fullAddress });
 
-      // Fetch place details to get coordinates and parse city/postal code
+      // Fetch place details to get coordinates and structured address components
       try {
         const details = await getPlaceDetails(prediction.placeId);
         if (details) {
-          onUpdateFormData({
+          const updates: Partial<OnboardingFormData> = {
             address: details.address,
             latitude: details.latitude,
             longitude: details.longitude,
-          });
+          };
           setAddressQuery(details.address);
 
-          // Try to extract city and postal code from the address
-          // Format is usually: "Street, City, Province PostalCode, Country"
-          const addressParts = details.address.split(',').map(part => part.trim());
-          if (addressParts.length >= 2) {
-            // City is usually the second-to-last part (before country)
-            // For Canadian addresses: "123 Main St, Montreal, QC H1A 1A1, Canada"
-            const cityPart =
-              addressParts.length >= 3 ? addressParts[addressParts.length - 3] : addressParts[0];
-
-            // Postal code is usually in the second-to-last part with province
-            const provincePostalPart =
-              addressParts.length >= 2 ? addressParts[addressParts.length - 2] : '';
-            const postalMatch = provincePostalPart.match(
-              /[A-Z]\d[A-Z]\s?\d[A-Z]\d|^\d{5}(-\d{4})?$/i
-            );
-
-            if (cityPart && !formData.city) {
-              onUpdateFormData({ city: cityPart });
-            }
-            if (postalMatch && !formData.postalCode) {
-              onUpdateFormData({ postalCode: postalMatch[0] });
-            }
+          // Use structured address components (city, postal code) from Google Places API
+          if (details.city) {
+            updates.city = details.city;
           }
+          if (details.postalCode) {
+            updates.postalCode = details.postalCode;
+          }
+
+          onUpdateFormData(updates);
         }
       } catch (error) {
         console.error('Failed to get place details:', error);
       }
     },
-    [clearPredictions, getPlaceDetails, onUpdateFormData, formData.city, formData.postalCode]
+    [clearPredictions, getPlaceDetails, onUpdateFormData]
   );
-
-  // Handle city input change
-  const handleCityChange = (text: string) => {
-    onUpdateFormData({ city: text });
-  };
-
-  // Handle postal code input change
-  const handlePostalCodeChange = (text: string) => {
-    // Format Canadian postal code (A1A 1A1) or US zip code
-    const formatted = text.toUpperCase().replace(/[^A-Z0-9\s-]/g, '');
-    onUpdateFormData({ postalCode: formatted });
-  };
 
   // Render a single place suggestion
   const renderPrediction = ({ item }: { item: PlacePrediction }) => (
@@ -206,6 +239,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
+      onScrollBeginDrag={handleDismissSuggestions}
     >
       {/* Title */}
       <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
@@ -217,7 +251,91 @@ export const LocationStep: React.FC<LocationStepProps> = ({
         {t('onboarding.locationStep.subtitle')}
       </Text>
 
-      {/* Address Field with Autocomplete */}
+      {/* Pre-populated Postal Code Display with Edit */}
+      {(displayPostalCode || isEditingPostalCode) && (
+        <View
+          style={[
+            styles.postalCodeBadge,
+            { backgroundColor: isDark ? darkTheme.card : lightTheme.backgroundSecondary },
+          ]}
+        >
+          {isEditingPostalCode ? (
+            <View style={styles.postalCodeEditContainer}>
+              <Text
+                size="sm"
+                weight="semibold"
+                color={colors.text}
+                style={styles.postalCodeEditLabel}
+              >
+                {t('onboarding.locationStep.postalCode')}
+              </Text>
+              <View style={styles.postalCodeEditRow}>
+                <BottomSheetTextInput
+                  style={[
+                    styles.postalCodeEditInput,
+                    {
+                      backgroundColor: colors.inputBackground,
+                      borderColor: colors.inputBorder,
+                      color: colors.text,
+                    },
+                  ]}
+                  value={editedPostalCode}
+                  onChangeText={handlePostalCodeChange}
+                  placeholder={t('onboarding.locationStep.postalCodePlaceholder')}
+                  placeholderTextColor={colors.textMuted}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  maxLength={10}
+                  autoFocus
+                />
+                <TouchableOpacity
+                  style={[styles.postalCodeActionButton, { backgroundColor: colors.buttonActive }]}
+                  onPress={handleSavePostalCode}
+                >
+                  <Ionicons name="checkmark" size={18} color={colors.buttonTextActive} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.postalCodeActionButton,
+                    {
+                      backgroundColor: colors.inputBackground,
+                      borderWidth: 1,
+                      borderColor: colors.inputBorder,
+                    },
+                  ]}
+                  onPress={handleCancelEditPostalCode}
+                >
+                  <Ionicons name="close" size={18} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.postalCodeBadgeContent}>
+              <Ionicons name="checkmark-circle" size={20} color={colors.buttonActive} />
+              <View style={styles.postalCodeTextContainer}>
+                <Text size="sm" weight="semibold" color={colors.text}>
+                  {t('onboarding.locationStep.savedPostalCode')}
+                </Text>
+                <Text size="lg" weight="bold" color={colors.buttonActive}>
+                  {displayPostalCode}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.postalCodeEditButton}
+                onPress={handleStartEditPostalCode}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="pencil" size={16} color={colors.buttonActive} />
+                <Text size="xs" weight="medium" color={colors.buttonActive}>
+                  {t('onboarding.locationStep.editPostalCode')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* Optional Address Field with Autocomplete */}
       <View style={styles.inputContainer}>
         <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.inputLabel}>
           {t('onboarding.locationStep.address')}
@@ -225,6 +343,9 @@ export const LocationStep: React.FC<LocationStepProps> = ({
             {' '}
             ({t('common.optional')})
           </Text>
+        </Text>
+        <Text size="xs" color={colors.textMuted} style={styles.addressHint}>
+          {t('onboarding.locationStep.addressHint')}
         </Text>
         <View style={styles.addressInputWrapper}>
           <BottomSheetTextInput
@@ -241,10 +362,6 @@ export const LocationStep: React.FC<LocationStepProps> = ({
             value={addressQuery}
             onChangeText={handleAddressChange}
             onFocus={() => setShowSuggestions(true)}
-            onBlur={() => {
-              // Delay hiding suggestions to allow tap on suggestion
-              setTimeout(() => setShowSuggestions(false), 200);
-            }}
             autoCapitalize="words"
             autoCorrect={false}
           />
@@ -268,74 +385,17 @@ export const LocationStep: React.FC<LocationStepProps> = ({
               },
             ]}
           >
-            <FlatList
-              data={predictions}
-              keyExtractor={item => item.placeId}
-              renderItem={renderPrediction}
-              keyboardShouldPersistTaps="handled"
-              scrollEnabled={false}
-            />
+            {predictions.map(item => (
+              <React.Fragment key={item.placeId}>{renderPrediction({ item })}</React.Fragment>
+            ))}
           </View>
         )}
       </View>
 
-      {/* City Field (Mandatory) */}
-      <View style={styles.inputContainer}>
-        <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.inputLabel}>
-          {t('onboarding.locationStep.city')}
-          <Text size="xs" color={colors.error}>
-            {' '}
-            *
-          </Text>
-        </Text>
-        <BottomSheetTextInput
-          style={[
-            styles.input,
-            {
-              backgroundColor: colors.inputBackground,
-              borderColor: showCityError ? colors.error : colors.inputBorder,
-              color: colors.text,
-            },
-          ]}
-          placeholder={t('onboarding.locationStep.cityPlaceholder')}
-          placeholderTextColor={colors.textMuted}
-          value={formData.city}
-          onChangeText={handleCityChange}
-          autoCapitalize="words"
-          autoCorrect={false}
-        />
-      </View>
-
-      {/* Postal Code Field */}
-      <View style={styles.inputContainer}>
-        <Text size="sm" weight="medium" color={colors.textSecondary} style={styles.inputLabel}>
-          {t('onboarding.locationStep.postalCode')}
-          <Text size="xs" color={colors.textMuted}>
-            {' '}
-            ({t('common.optional')})
-          </Text>
-        </Text>
-        <BottomSheetTextInput
-          style={[
-            styles.input,
-            {
-              backgroundColor: colors.inputBackground,
-              borderColor: colors.inputBorder,
-              color: colors.text,
-            },
-          ]}
-          placeholder={t('onboarding.locationStep.postalCodePlaceholder')}
-          placeholderTextColor={colors.textMuted}
-          value={formData.postalCode}
-          onChangeText={handlePostalCodeChange}
-          autoCapitalize="characters"
-          autoCorrect={false}
-          maxLength={10}
-        />
-      </View>
-
       {/* Privacy Info Box */}
-      <View style={[styles.infoBox, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
+      <View
+        style={[styles.infoBox, { backgroundColor: isDark ? darkTheme.card : lightTheme.muted }]}
+      >
         <Ionicons name="shield-checkmark" size={24} color={colors.buttonActive} />
         <View style={styles.infoTextContainer}>
           <Text size="sm" weight="semibold" color={colors.text} style={styles.infoTitle}>
@@ -367,12 +427,62 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacingPixels[6],
   },
+  postalCodeBadge: {
+    padding: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    marginBottom: spacingPixels[5],
+  },
+  postalCodeBadgeContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+  },
+  postalCodeTextContainer: {
+    flex: 1,
+  },
+  postalCodeEditButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    paddingVertical: spacingPixels[1],
+  },
+  postalCodeEditContainer: {
+    gap: spacingPixels[2],
+  },
+  postalCodeEditLabel: {
+    marginBottom: spacingPixels[1],
+  },
+  postalCodeEditRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+  },
+  postalCodeEditInput: {
+    flex: 1,
+    borderRadius: radiusPixels.md,
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[2],
+    fontSize: 16,
+    fontWeight: '600' as const,
+    borderWidth: 1,
+  },
+  postalCodeActionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: radiusPixels.md,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+  },
   inputContainer: {
     marginBottom: spacingPixels[4],
     zIndex: 1,
   },
   inputLabel: {
+    marginBottom: spacingPixels[1],
+  },
+  addressHint: {
     marginBottom: spacingPixels[2],
+    lineHeight: 16,
   },
   addressInputWrapper: {
     position: 'relative',

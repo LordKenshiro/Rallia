@@ -1061,10 +1061,10 @@
       "subtitle": "Select all that apply"
     },
     "ratingStep": {
-      "tennisTitle": "Tell us about your game",
-      "pickleballTitle": "Tell us about your game",
-      "ntrpSubtitle": "NTRP Rating",
-      "duprSubtitle": "DUPR Rating",
+      "tennisTitle": "Tell us about your tennis level",
+      "pickleballTitle": "Tell us about your pickleball level",
+      "ntrpBadge": "NTRP Rating",
+      "duprBadge": "DUPR Rating",
       "skillLevels": {
         "beginner1": "Beginner",
         "beginner2": "Beginner",
@@ -1124,6 +1124,7 @@
       "pm": "PM",
       "eve": "EVE",
       "minimumSelected": "{count} / {minimum} minimum selected",
+      "selected": "{count} availabilities selected",
       "saveButton": "Save",
       "complete": "Complete",
       "days": {
@@ -1161,6 +1162,7 @@
       "authFailed": "Authentication failed - please try again",
       "verificationCodeSent": "Verification code sent!",
       "cityRequired": "Please enter your city",
+      "postalCodeRequired": "Postal code is required. Please go back and complete the location setup.",
       "failedToSaveLocation": "Failed to save your location. Please try again."
     },
     "successMessages": {
@@ -1177,10 +1179,14 @@
     },
     "complete": "Complete",
     "locationStep": {
-      "title": "Where are you located?",
-      "subtitle": "Help us find courts and players near you",
-      "address": "Address",
-      "addressPlaceholder": "Enter your address",
+      "title": "Confirm your location",
+      "subtitle": "Add your address for more precise match finding, or continue with your postal code",
+      "savedPostalCode": "Your saved location",
+      "editPostalCode": "Edit",
+      "postalCodeUpdated": "Postal code updated",
+      "address": "Specific address",
+      "addressPlaceholder": "Search for your address",
+      "addressHint": "Adding your address helps us find games closer to you",
       "city": "City",
       "cityPlaceholder": "Enter your city",
       "postalCode": "Postal Code",
