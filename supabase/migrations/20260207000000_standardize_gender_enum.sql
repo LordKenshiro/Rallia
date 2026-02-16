@@ -11,8 +11,25 @@
 -- STEP 1: Update any rows using 'prefer_not_to_say' to 'other'
 -- =============================================================================
 
-UPDATE player SET gender = 'other' WHERE gender = 'prefer_not_to_say';
-UPDATE match SET preferred_opponent_gender = 'other' WHERE preferred_opponent_gender = 'prefer_not_to_say';
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'player' AND column_name = 'gender'
+  ) THEN
+    UPDATE player SET gender = 'other' WHERE gender::text = 'prefer_not_to_say';
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'match' AND column_name = 'preferred_opponent_gender'
+  ) THEN
+    UPDATE match SET preferred_opponent_gender = 'other' WHERE preferred_opponent_gender::text = 'prefer_not_to_say';
+  END IF;
+END $$;
 
 -- =============================================================================
 -- STEP 2: Drop the old gender_enum (M/F/O/prefer_not_to_say) — not used by any columns
@@ -31,15 +48,31 @@ DROP TYPE IF EXISTS "public"."gender_enum" CASCADE;
 -- Create the new consolidated enum
 CREATE TYPE "public"."gender_enum" AS ENUM ('male', 'female', 'other');
 
--- Alter player.gender column: cast through text to new enum
-ALTER TABLE player
-  ALTER COLUMN gender TYPE "public"."gender_enum"
-  USING (gender::text::"public"."gender_enum");
+-- Alter player.gender column: cast through text to new enum (if column exists)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'player' AND column_name = 'gender'
+  ) THEN
+    ALTER TABLE player
+      ALTER COLUMN gender TYPE "public"."gender_enum"
+      USING (gender::text::"public"."gender_enum");
+  END IF;
+END $$;
 
--- Alter match.preferred_opponent_gender column
-ALTER TABLE match
-  ALTER COLUMN preferred_opponent_gender TYPE "public"."gender_enum"
-  USING (preferred_opponent_gender::text::"public"."gender_enum");
+-- Alter match.preferred_opponent_gender column (if column exists)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'match' AND column_name = 'preferred_opponent_gender'
+  ) THEN
+    ALTER TABLE match
+      ALTER COLUMN preferred_opponent_gender TYPE "public"."gender_enum"
+      USING (preferred_opponent_gender::text::"public"."gender_enum");
+  END IF;
+END $$;
 
 -- Drop the old gender_type enum
 DROP TYPE IF EXISTS "public"."gender_type" CASCADE;
