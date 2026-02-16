@@ -446,26 +446,6 @@ END $$;
 
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'notification') THEN
-    CREATE POLICY "notification_select_org_context" ON notification
-      FOR SELECT USING (
-        auth.uid() = user_id
-        OR (
-          organization_id IS NOT NULL
-          AND EXISTS (
-            SELECT 1 FROM organization_member om
-            WHERE om.organization_id = notification.organization_id
-              AND om.user_id = auth.uid()
-              AND om.role IN ('admin', 'owner')
-              AND om.left_at IS NULL
-          )
-        )
-      );
-  END IF;
-END $$;
-
-DO $$
-BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'instructor_profile') THEN
     CREATE POLICY "org_admins_manage_instructors" ON instructor_profile
       FOR ALL USING (
