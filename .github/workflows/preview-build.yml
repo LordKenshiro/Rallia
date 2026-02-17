@@ -3,7 +3,7 @@ name: Scheduled Preview Build
 on:
   schedule:
     # 01:00 UTC on days 1, 4, 7, 10... of each month (every 3 days)
-    - cron: "0 1 */3 * *"
+    - cron: '0 1 */3 * *'
   workflow_dispatch:
     # Allow manual trigger
 
@@ -25,8 +25,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: '20'
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
@@ -34,8 +34,69 @@ jobs:
       - name: Setup Expo
         uses: expo/expo-github-action@v8
         with:
-          eas-version: "16"
+          eas-version: '16'
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Build preview
-        run: cd apps/mobile && eas build --platform all --profile preview --non-interactive
+        id: build
+        continue-on-error: true
+        run: |
+          cd apps/mobile
+          eas build --platform all --profile preview --non-interactive --json \
+            | tee build-result.json
+
+      - name: Notify Discord
+        if: always()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          BUILD_FILE="apps/mobile/build-result.json"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          SHORT_SHA="${GITHUB_SHA::7}"
+
+          if [ "${{ steps.build.outcome }}" = "success" ]; then
+            COLOR=3066993
+            TITLE="Preview Build Completed"
+          else
+            COLOR=15158332
+            TITLE="Preview Build Failed"
+          fi
+
+          IOS_FIELD=""
+          ANDROID_FIELD=""
+
+          if [ -f "$BUILD_FILE" ] && jq empty "$BUILD_FILE" 2>/dev/null; then
+            IOS_URL=$(jq -r '.[] | select(.platform == "IOS") | .buildDetailsPageUrl // empty' "$BUILD_FILE")
+            IOS_STATUS=$(jq -r '.[] | select(.platform == "IOS") | .status // empty' "$BUILD_FILE")
+            ANDROID_URL=$(jq -r '.[] | select(.platform == "ANDROID") | .buildDetailsPageUrl // empty' "$BUILD_FILE")
+            ANDROID_STATUS=$(jq -r '.[] | select(.platform == "ANDROID") | .status // empty' "$BUILD_FILE")
+
+            if [ -n "$IOS_URL" ]; then
+              IOS_FIELD="{\"name\": \"iOS\", \"value\": \"[${IOS_STATUS:-Build}](${IOS_URL})\", \"inline\": true}"
+            fi
+            if [ -n "$ANDROID_URL" ]; then
+              ANDROID_FIELD="{\"name\": \"Android\", \"value\": \"[${ANDROID_STATUS:-Build}](${ANDROID_URL})\", \"inline\": true}"
+            fi
+          fi
+
+          FIELDS="["
+          if [ -n "$IOS_FIELD" ]; then
+            FIELDS="${FIELDS}${IOS_FIELD},"
+          fi
+          if [ -n "$ANDROID_FIELD" ]; then
+            FIELDS="${FIELDS}${ANDROID_FIELD},"
+          fi
+          FIELDS="${FIELDS}{\"name\": \"Commit\", \"value\": \"\`${SHORT_SHA}\`\", \"inline\": true},"
+          FIELDS="${FIELDS}{\"name\": \"Workflow\", \"value\": \"[View Logs](${RUN_URL})\", \"inline\": true}"
+          FIELDS="${FIELDS}]"
+
+          TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          PAYLOAD=$(jq -n \
+            --arg title "$TITLE" \
+            --argjson color "$COLOR" \
+            --arg timestamp "$TIMESTAMP" \
+            --argjson fields "$FIELDS" \
+            '{embeds: [{title: $title, color: $color, fields: $fields, timestamp: $timestamp}]}')
+
+          curl -sf -H "Content-Type: application/json" -d "$PAYLOAD" "$DISCORD_WEBHOOK_URL"
