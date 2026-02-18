@@ -14,7 +14,7 @@
 --       conversations, notifications, bookings, etc.)
 --
 -- This script is designed to be idempotent (safe to re-run).
--- It uses ON CONFLICT DO NOTHING and existence checks throughout.
+-- It deletes all previous seed data first, then re-inserts fresh data.
 -- All FK references are resolved dynamically via subqueries.
 -- =============================================================================
 
@@ -54,7 +54,170 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- 2. Create Test Users in auth.users
+-- 2. Clean Up Previous Seed Data
+-- ============================================================================
+-- Delete all previously-seeded data so the script is safe to re-run.
+-- We delete in reverse-dependency order, then cascade from auth.users.
+-- Deterministic UUIDs make it possible to target only seed data.
+-- ============================================================================
+DO $$
+DECLARE
+  fake_ids UUID[] := ARRAY[
+    'a1000000-0000-0000-0000-000000000001'::uuid,
+    'a1000000-0000-0000-0000-000000000002'::uuid,
+    'a1000000-0000-0000-0000-000000000003'::uuid,
+    'a1000000-0000-0000-0000-000000000004'::uuid,
+    'a1000000-0000-0000-0000-000000000005'::uuid,
+    'a1000000-0000-0000-0000-000000000006'::uuid,
+    'a1000000-0000-0000-0000-000000000007'::uuid,
+    'a1000000-0000-0000-0000-000000000008'::uuid,
+    'a1000000-0000-0000-0000-000000000009'::uuid
+  ];
+  match_ids UUID[] := ARRAY[
+    'b1000000-0000-0000-0000-000000000001'::uuid, 'b1000000-0000-0000-0000-000000000002'::uuid,
+    'b1000000-0000-0000-0000-000000000003'::uuid, 'b1000000-0000-0000-0000-000000000004'::uuid,
+    'b1000000-0000-0000-0000-000000000005'::uuid, 'b1000000-0000-0000-0000-000000000006'::uuid,
+    'b1000000-0000-0000-0000-000000000007'::uuid, 'b1000000-0000-0000-0000-000000000008'::uuid,
+    'b1000000-0000-0000-0000-000000000009'::uuid, 'b1000000-0000-0000-0000-000000000010'::uuid,
+    'b1000000-0000-0000-0000-000000000011'::uuid, 'b1000000-0000-0000-0000-000000000012'::uuid,
+    'b1000000-0000-0000-0000-000000000013'::uuid, 'b1000000-0000-0000-0000-000000000014'::uuid,
+    'b1000000-0000-0000-0000-000000000015'::uuid, 'b1000000-0000-0000-0000-000000000016'::uuid,
+    'b1000000-0000-0000-0000-000000000017'::uuid
+  ];
+  group_ids UUID[] := ARRAY[
+    'd1000000-0000-0000-0000-000000000001'::uuid,
+    'd1000000-0000-0000-0000-000000000002'::uuid,
+    'd1000000-0000-0000-0000-000000000003'::uuid
+  ];
+  conv_ids UUID[] := ARRAY[
+    'e1000000-0000-0000-0000-000000000001'::uuid,
+    'e1000000-0000-0000-0000-000000000002'::uuid,
+    'e1000000-0000-0000-0000-000000000003'::uuid
+  ];
+  logged_in_user UUID;
+BEGIN
+  -- Identify the logged-in dev user (non-fake)
+  SELECT id INTO logged_in_user FROM auth.users
+  WHERE id != ALL(fake_ids)
+  ORDER BY created_at LIMIT 1;
+
+  -- Disable reputation triggers to avoid side-effects during cleanup
+  ALTER TABLE reputation_event DISABLE TRIGGER reputation_event_recalculate;
+  ALTER TABLE reference_request DISABLE TRIGGER check_reference_threshold_trigger;
+
+  -- Delete seeded matches (cascades to match_participant, match_result, match_set)
+  DELETE FROM match WHERE id = ANY(match_ids);
+
+  -- Delete seeded networks/groups (cascades to network_member)
+  DELETE FROM network WHERE id = ANY(group_ids);
+
+  -- Delete seeded conversations (cascades to conversation_participant, message)
+  DELETE FROM conversation WHERE id = ANY(conv_ids);
+
+  -- Delete seeded contact lists (cascades to shared_contact)
+  DELETE FROM shared_contact_list WHERE id IN (
+    'f4000000-0000-0000-0000-000000000001'::uuid,
+    'f4000000-0000-0000-0000-000000000002'::uuid,
+    'f4000000-0000-0000-0000-000000000003'::uuid
+  );
+
+  -- Delete seeded rating proofs, peer rating requests, rating reference requests, reference requests
+  DELETE FROM rating_proof WHERE id IN (
+    'f1000000-0000-0000-0000-000000000001'::uuid, 'f1000000-0000-0000-0000-000000000002'::uuid,
+    'f1000000-0000-0000-0000-000000000003'::uuid, 'f1000000-0000-0000-0000-000000000004'::uuid
+  );
+  DELETE FROM peer_rating_request WHERE id IN (
+    'f2000000-0000-0000-0000-000000000001'::uuid, 'f2000000-0000-0000-0000-000000000002'::uuid,
+    'f2000000-0000-0000-0000-000000000003'::uuid, 'f2000000-0000-0000-0000-000000000004'::uuid
+  );
+  DELETE FROM reference_request WHERE id IN (
+    'f3000000-0000-0000-0000-000000000001'::uuid, 'f3000000-0000-0000-0000-000000000002'::uuid,
+    'f3000000-0000-0000-0000-000000000003'::uuid
+  );
+  DELETE FROM rating_reference_request WHERE id IN (
+    'f6000000-0000-0000-0000-000000000001'::uuid, 'f6000000-0000-0000-0000-000000000002'::uuid,
+    'f6000000-0000-0000-0000-000000000003'::uuid
+  );
+
+  -- Delete seeded reputation events
+  DELETE FROM reputation_event WHERE id IN (
+    'e0000000-0000-0000-0000-000000000001'::uuid, 'e0000000-0000-0000-0000-000000000002'::uuid,
+    'e0000000-0000-0000-0000-000000000003'::uuid, 'e0000000-0000-0000-0000-000000000004'::uuid,
+    'e0000000-0000-0000-0000-000000000005'::uuid, 'e0000000-0000-0000-0000-000000000006'::uuid,
+    'e0000000-0000-0000-0000-000000000007'::uuid, 'e0000000-0000-0000-0000-000000000008'::uuid,
+    'e0000000-0000-0000-0000-000000000009'::uuid, 'e0000000-0000-0000-0000-000000000010'::uuid,
+    'e0000000-0000-0000-0000-000000000011'::uuid, 'e0000000-0000-0000-0000-000000000012'::uuid,
+    'e0000000-0000-0000-0000-000000000013'::uuid, 'e0000000-0000-0000-0000-000000000014'::uuid,
+    'e0000000-0000-0000-0000-000000000015'::uuid, 'e0000000-0000-0000-0000-000000000016'::uuid,
+    'e0000000-0000-0000-0000-000000000017'::uuid, 'e0000000-0000-0000-0000-000000000018'::uuid,
+    'e0000000-0000-0000-0000-000000000019'::uuid, 'e0000000-0000-0000-0000-000000000020'::uuid,
+    'e0000000-0000-0000-0000-000000000021'::uuid, 'e0000000-0000-0000-0000-000000000022'::uuid,
+    'e0000000-0000-0000-0000-000000000023'::uuid, 'e0000000-0000-0000-0000-000000000024'::uuid,
+    'e0000000-0000-0000-0000-000000000025'::uuid, 'e0000000-0000-0000-0000-000000000026'::uuid,
+    'e0000000-0000-0000-0000-000000000027'::uuid
+  );
+
+  -- Delete bookings created by fake users or logged-in user at seeded facilities
+  DELETE FROM booking WHERE player_id = ANY(fake_ids);
+  IF logged_in_user IS NOT NULL THEN
+    DELETE FROM booking WHERE player_id = logged_in_user;
+  END IF;
+
+  -- Delete notifications for the logged-in user (seed deletes them anyway)
+  IF logged_in_user IS NOT NULL THEN
+    DELETE FROM notification WHERE user_id = logged_in_user;
+  END IF;
+
+  -- Delete player favorites (both player and facility)
+  DELETE FROM player_favorite WHERE player_id = ANY(fake_ids)
+    OR favorite_player_id = ANY(fake_ids);
+  DELETE FROM player_favorite_facility WHERE player_id = ANY(fake_ids);
+  IF logged_in_user IS NOT NULL THEN
+    DELETE FROM player_favorite WHERE player_id = logged_in_user;
+    DELETE FROM player_favorite_facility WHERE player_id = logged_in_user;
+  END IF;
+
+  -- Delete player reputation for fake users
+  DELETE FROM player_reputation WHERE player_id = ANY(fake_ids);
+
+  -- Delete player sport play styles/attributes, player sports, player rating scores for fake users
+  DELETE FROM player_sport_play_style WHERE player_sport_id IN (
+    SELECT id FROM player_sport WHERE player_id = ANY(fake_ids)
+  );
+  DELETE FROM player_sport_play_attribute WHERE player_sport_id IN (
+    SELECT id FROM player_sport WHERE player_id = ANY(fake_ids)
+  );
+  DELETE FROM player_rating_score WHERE player_id = ANY(fake_ids);
+  DELETE FROM player_availability WHERE player_id = ANY(fake_ids);
+  DELETE FROM player_sport WHERE player_id = ANY(fake_ids);
+
+  -- Clean up logged-in user's player-related seed data too
+  IF logged_in_user IS NOT NULL THEN
+    DELETE FROM player_sport_play_style WHERE player_sport_id IN (
+      SELECT id FROM player_sport WHERE player_id = logged_in_user
+    );
+    DELETE FROM player_sport_play_attribute WHERE player_sport_id IN (
+      SELECT id FROM player_sport WHERE player_id = logged_in_user
+    );
+    DELETE FROM player_rating_score WHERE player_id = logged_in_user;
+    DELETE FROM player_availability WHERE player_id = logged_in_user;
+    DELETE FROM player_reputation WHERE player_id = logged_in_user;
+    DELETE FROM player WHERE id = logged_in_user;
+  END IF;
+
+  -- Delete fake users from auth (cascades: profile → player → remaining FKs)
+  DELETE FROM auth.identities WHERE user_id = ANY(fake_ids);
+  DELETE FROM auth.users WHERE id = ANY(fake_ids);
+
+  -- Re-enable triggers
+  ALTER TABLE reputation_event ENABLE TRIGGER reputation_event_recalculate;
+  ALTER TABLE reference_request ENABLE TRIGGER check_reference_threshold_trigger;
+
+  RAISE NOTICE 'Cleaned up all previous seed data';
+END $$;
+
+-- ============================================================================
+-- 3. Create Test Users in auth.users (re-creates after cleanup)
 -- ============================================================================
 -- The logged-in user is created by Supabase auth when you sign up locally.
 -- We create 9 additional fake users so the app has players to interact with.
@@ -108,13 +271,26 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- 3. Create Profiles for All Auth Users
+-- 4. Create Profiles for All Auth Users
 -- ============================================================================
-INSERT INTO profile (id, first_name, last_name, email, onboarding_completed, bio, birth_date, postal_code, city, province, country, preferred_locale)
+INSERT INTO profile (id, first_name, last_name, display_name, email, onboarding_completed, bio, birth_date, postal_code, city, province, country, preferred_locale)
 SELECT
   id,
   COALESCE(raw_user_meta_data->>'first_name', SPLIT_PART(COALESCE(raw_user_meta_data->>'full_name', 'Test User'), ' ', 1)),
   COALESCE(raw_user_meta_data->>'last_name', NULLIF(SPLIT_PART(COALESCE(raw_user_meta_data->>'full_name', ''), ' ', 2), '')),
+  -- Display name (nickname / handle)
+  CASE
+    WHEN email = 'marc.dupont@test.com' THEN 'MarcD_Tennis'
+    WHEN email = 'sophie.tremblay@test.com' THEN 'Sophie_PB'
+    WHEN email = 'jean.lavoie@test.com' THEN 'JeanL_MTL'
+    WHEN email = 'isabelle.gagnon@test.com' THEN 'Isa_G'
+    WHEN email = 'philippe.roy@test.com' THEN 'Phil_LaFontaine'
+    WHEN email = 'camille.bouchard@test.com' THEN 'Camille_B'
+    WHEN email = 'alexandre.morin@test.com' THEN 'Alex_Morin45'
+    WHEN email = 'marie.cote@test.com' THEN 'Marie_Doubles'
+    WHEN email = 'david.belanger@test.com' THEN 'DavidB_NewMTL'
+    ELSE NULL
+  END,
   email,
   true,
   -- Give fake users bios
@@ -161,11 +337,22 @@ SELECT
   'CA',
   'fr-CA'
 FROM auth.users
-WHERE NOT EXISTS (SELECT 1 FROM profile WHERE profile.id = auth.users.id)
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET
+  first_name = COALESCE(EXCLUDED.first_name, profile.first_name),
+  last_name = COALESCE(EXCLUDED.last_name, profile.last_name),
+  display_name = COALESCE(EXCLUDED.display_name, profile.display_name),
+  onboarding_completed = EXCLUDED.onboarding_completed,
+  bio = COALESCE(EXCLUDED.bio, profile.bio),
+  birth_date = COALESCE(EXCLUDED.birth_date, profile.birth_date),
+  postal_code = COALESCE(EXCLUDED.postal_code, profile.postal_code),
+  city = COALESCE(EXCLUDED.city, profile.city),
+  province = COALESCE(EXCLUDED.province, profile.province),
+  country = COALESCE(EXCLUDED.country, profile.country),
+  preferred_locale = COALESCE(EXCLUDED.preferred_locale, profile.preferred_locale),
+  updated_at = NOW();
 
 -- ============================================================================
--- 4. Create Player Records
+-- 5. Create Player Records
 -- ============================================================================
 DO $$
 DECLARE
@@ -196,13 +383,24 @@ BEGIN
       lngs[idx],
       true, true, true, true
     )
-    ON CONFLICT (id) DO NOTHING;
+    ON CONFLICT (id) DO UPDATE SET
+      gender = EXCLUDED.gender,
+      playing_hand = EXCLUDED.playing_hand,
+      max_travel_distance = EXCLUDED.max_travel_distance,
+      postal_code = EXCLUDED.postal_code,
+      postal_code_country = EXCLUDED.postal_code_country,
+      postal_code_lat = EXCLUDED.postal_code_lat,
+      postal_code_long = EXCLUDED.postal_code_long,
+      push_notifications_enabled = EXCLUDED.push_notifications_enabled,
+      notification_match_requests = EXCLUDED.notification_match_requests,
+      notification_messages = EXCLUDED.notification_messages,
+      notification_reminders = EXCLUDED.notification_reminders;
   END LOOP;
   RAISE NOTICE 'Created player records for all users';
 END $$;
 
 -- ============================================================================
--- 5. Player Sports + Rating Scores
+-- 6. Player Sports + Rating Scores
 -- ============================================================================
 DO $$
 DECLARE
@@ -215,6 +413,12 @@ DECLARE
   dupr_levels NUMERIC[] := ARRAY[3.5, 4.0, 3.0, 2.5, 3.5, 4.5, 3.0, 3.5, 2.5];
   -- Which players play which sports: 1=tennis only, 2=pickleball only, 3=both
   sport_mix INT[] := ARRAY[3, 3, 1, 3, 1, 2, 1, 3, 3];
+  -- Tennis play styles per player (by ORDER BY email index):
+  --   1=aggressive_baseliner, 2=counterpuncher, 3=serve_and_volley, 4=all_court
+  tennis_styles play_style_enum[] := ARRAY[
+    'aggressive_baseliner', 'counterpuncher', 'serve_and_volley', 'all_court',
+    'aggressive_baseliner', 'counterpuncher', 'serve_and_volley', 'all_court', 'counterpuncher'
+  ];
   idx INT := 0;
   player_sport_uuid UUID;
   rating_score_uuid UUID;
@@ -235,10 +439,11 @@ BEGIN
 
     -- Tennis
     IF sport_mix[idx] IN (1, 3) THEN
-      INSERT INTO player_sport (player_id, sport_id, is_primary, is_active, preferred_match_duration, preferred_match_type)
+      INSERT INTO player_sport (player_id, sport_id, is_primary, is_active, preferred_match_duration, preferred_match_type, preferred_play_style)
       VALUES (u.id, tennis_sport_id, true, true,
         CASE WHEN idx % 3 = 0 THEN '60'::match_duration_enum ELSE '90'::match_duration_enum END,
-        CASE WHEN idx % 2 = 0 THEN 'casual'::match_type_enum ELSE 'competitive'::match_type_enum END
+        CASE WHEN idx % 2 = 0 THEN 'casual'::match_type_enum ELSE 'competitive'::match_type_enum END,
+        tennis_styles[idx]
       )
       ON CONFLICT DO NOTHING
       RETURNING id INTO player_sport_uuid;
@@ -284,7 +489,157 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- 6. Player Availability
+-- 6b. Player Sport Play Styles + Play Attributes (junction tables)
+-- ============================================================================
+-- Seeds player_sport_play_style and player_sport_play_attribute for each
+-- player's sport. These reference the play_style and play_attribute tables
+-- populated by migration 20260126100000.
+-- ============================================================================
+DO $$
+DECLARE
+  tennis_sport_id UUID;
+  pickleball_sport_id UUID;
+  u RECORD;
+  ps_id UUID;
+  style_id UUID;
+  attr_id UUID;
+  -- Which players play which sports (same as section 5): 1=tennis, 2=pickleball, 3=both
+  sport_mix INT[] := ARRAY[3, 3, 1, 3, 1, 2, 1, 3, 3];
+  -- Tennis play style names per player (by ORDER BY email index)
+  tennis_style_names TEXT[] := ARRAY[
+    'aggressive_baseliner', 'counterpuncher', 'serve_and_volley', 'all_court',
+    'aggressive_baseliner', 'counterpuncher', 'serve_and_volley', 'all_court', 'counterpuncher'
+  ];
+  -- Pickleball play style names per player (only for those who play pickleball)
+  pickleball_style_names TEXT[] := ARRAY[
+    'banger', 'soft_game', NULL, 'hybrid', NULL, 'speedup_specialist', NULL, 'hybrid', 'soft_game'
+  ];
+  -- Tennis play attribute sets per player (2-4 attributes each)
+  -- Indexes reference: 1=alex.m, 2=camille, 3=david, 4=isabelle, 5=jean, 6=marc, 7=marie, 8=philippe, 9=sophie
+  tennis_attrs_1 TEXT[] := ARRAY['big_serve', 'heavy_topspin_forehand', 'court_coverage'];           -- alex (aggressive_baseliner)
+  tennis_attrs_2 TEXT[] := ARRAY['backhand_slice', 'consistent', 'court_coverage'];                   -- camille (counterpuncher) - pickleball only, skipped
+  tennis_attrs_3 TEXT[] := ARRAY['endurance', 'consistent', 'clutch_performer'];                      -- david (counterpuncher)
+  tennis_attrs_4 TEXT[] := ARRAY['court_coverage', 'quick_reflexes'];                                 -- isabelle (all_court)
+  tennis_attrs_5 TEXT[] := ARRAY['one_handed_backhand', 'backhand_slice', 'strong_volleyer', 'clutch_performer']; -- jean (serve_and_volley)
+  tennis_attrs_6 TEXT[] := ARRAY['heavy_topspin_forehand', 'flat_forehand', 'big_serve'];             -- marc (aggressive_baseliner)
+  tennis_attrs_7 TEXT[] := ARRAY['strong_volleyer', 'overhead_smash', 'quick_reflexes'];              -- marie (all_court)
+  tennis_attrs_8 TEXT[] := ARRAY['inside_out_forehand', 'court_coverage', 'endurance'];               -- philippe (aggressive_baseliner)
+  tennis_attrs_9 TEXT[] := ARRAY['consistent', 'backhand_slice', 'court_coverage'];                   -- sophie (counterpuncher)
+  -- Pickleball play attribute sets per player
+  pickleball_attrs_1 TEXT[] := ARRAY['drive_specialist', 'speedup_attack', 'quick_hands'];            -- alex (banger)
+  pickleball_attrs_2 TEXT[] := ARRAY['dink_master', 'drop_shot', 'patient'];                          -- camille - pickleball only, skipped for tennis
+  pickleball_attrs_4 TEXT[] := ARRAY['reset_specialist', 'court_mobility', 'patient'];                -- isabelle (hybrid)
+  pickleball_attrs_6 TEXT[] := ARRAY['speedup_attack', 'erne_specialist', 'quick_hands'];             -- camille/actual p6 (speedup_specialist)
+  pickleball_attrs_7 TEXT[] := ARRAY['dink_master', 'drop_shot', 'strategic'];                        -- marie (hybrid)
+  pickleball_attrs_9 TEXT[] := ARRAY['drop_shot', 'reset_specialist', 'patient', 'strategic'];        -- sophie (soft_game)
+  -- Temporary arrays for iteration
+  current_attrs TEXT[];
+  attr_name TEXT;
+  idx INT := 0;
+BEGIN
+  SELECT id INTO tennis_sport_id FROM sport WHERE slug = 'tennis';
+  SELECT id INTO pickleball_sport_id FROM sport WHERE slug = 'pickleball';
+
+  IF tennis_sport_id IS NULL THEN
+    RAISE NOTICE 'Sports not found, skipping play style/attribute seeding';
+    RETURN;
+  END IF;
+
+  FOR u IN SELECT id, email FROM auth.users ORDER BY email LOOP
+    idx := idx + 1;
+    IF idx > 9 THEN idx := 9; END IF;
+
+    -- ---- Tennis play style + attributes ----
+    IF sport_mix[idx] IN (1, 3) THEN
+      -- Get the player_sport ID for this player's tennis
+      SELECT ps.id INTO ps_id FROM player_sport ps
+      WHERE ps.player_id = u.id AND ps.sport_id = tennis_sport_id LIMIT 1;
+
+      IF ps_id IS NOT NULL THEN
+        -- Insert into player_sport_play_style junction table
+        SELECT pst.id INTO style_id FROM play_style pst
+        WHERE pst.sport_id = tennis_sport_id AND pst.name = tennis_style_names[idx];
+
+        IF style_id IS NOT NULL THEN
+          INSERT INTO player_sport_play_style (player_sport_id, play_style_id)
+          VALUES (ps_id, style_id)
+          ON CONFLICT DO NOTHING;
+        END IF;
+
+        -- Insert play attributes
+        current_attrs := CASE idx
+          WHEN 1 THEN tennis_attrs_1
+          WHEN 2 THEN tennis_attrs_2
+          WHEN 3 THEN tennis_attrs_3
+          WHEN 4 THEN tennis_attrs_4
+          WHEN 5 THEN tennis_attrs_5
+          WHEN 6 THEN tennis_attrs_6
+          WHEN 7 THEN tennis_attrs_7
+          WHEN 8 THEN tennis_attrs_8
+          WHEN 9 THEN tennis_attrs_9
+          ELSE ARRAY[]::TEXT[]
+        END;
+
+        FOREACH attr_name IN ARRAY current_attrs LOOP
+          SELECT pa.id INTO attr_id FROM play_attribute pa
+          WHERE pa.sport_id = tennis_sport_id AND pa.name = attr_name;
+
+          IF attr_id IS NOT NULL THEN
+            INSERT INTO player_sport_play_attribute (player_sport_id, play_attribute_id)
+            VALUES (ps_id, attr_id)
+            ON CONFLICT DO NOTHING;
+          END IF;
+        END LOOP;
+      END IF;
+    END IF;
+
+    -- ---- Pickleball play style + attributes ----
+    IF sport_mix[idx] IN (2, 3) AND pickleball_style_names[idx] IS NOT NULL THEN
+      -- Get the player_sport ID for this player's pickleball
+      SELECT ps.id INTO ps_id FROM player_sport ps
+      WHERE ps.player_id = u.id AND ps.sport_id = pickleball_sport_id LIMIT 1;
+
+      IF ps_id IS NOT NULL THEN
+        -- Insert into player_sport_play_style junction table
+        SELECT pst.id INTO style_id FROM play_style pst
+        WHERE pst.sport_id = pickleball_sport_id AND pst.name = pickleball_style_names[idx];
+
+        IF style_id IS NOT NULL THEN
+          INSERT INTO player_sport_play_style (player_sport_id, play_style_id)
+          VALUES (ps_id, style_id)
+          ON CONFLICT DO NOTHING;
+        END IF;
+
+        -- Insert pickleball play attributes
+        current_attrs := CASE idx
+          WHEN 1 THEN pickleball_attrs_1
+          WHEN 2 THEN pickleball_attrs_2
+          WHEN 4 THEN pickleball_attrs_4
+          WHEN 6 THEN pickleball_attrs_6
+          WHEN 7 THEN pickleball_attrs_7  -- mapped to p8 (marie)
+          WHEN 8 THEN pickleball_attrs_7
+          WHEN 9 THEN pickleball_attrs_9
+          ELSE ARRAY[]::TEXT[]
+        END;
+
+        FOREACH attr_name IN ARRAY current_attrs LOOP
+          SELECT pa.id INTO attr_id FROM play_attribute pa
+          WHERE pa.sport_id = pickleball_sport_id AND pa.name = attr_name;
+
+          IF attr_id IS NOT NULL THEN
+            INSERT INTO player_sport_play_attribute (player_sport_id, play_attribute_id)
+            VALUES (ps_id, attr_id)
+            ON CONFLICT DO NOTHING;
+          END IF;
+        END LOOP;
+      END IF;
+    END IF;
+  END LOOP;
+  RAISE NOTICE 'Created player_sport_play_style and player_sport_play_attribute records';
+END $$;
+
+-- ============================================================================
+-- 7. Player Availability
 -- ============================================================================
 DO $$
 DECLARE
@@ -324,7 +679,7 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- 7. Matches (17 total: 15 at Montreal park facilities + 2 at custom locations)
+-- 8. Matches (17 total: 15 at Montreal park facilities + 2 at custom locations)
 -- ============================================================================
 DO $$
 DECLARE
@@ -885,7 +1240,7 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- 8. Networks (Groups)
+-- 9. Networks (Groups)
 -- ============================================================================
 -- Ensure the player_group network type exists (not seeded in any migration)
 INSERT INTO network_type (name, display_name, description, is_active)
@@ -974,7 +1329,7 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- 9. Conversations + Messages
+-- 10. Conversations + Messages
 -- ============================================================================
 DO $$
 DECLARE
@@ -1058,7 +1413,7 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- 10. Notifications (30 varied notifications for the logged-in user)
+-- 11. Notifications (30 varied notifications for the logged-in user)
 -- ============================================================================
 DO $$
 DECLARE
@@ -1139,7 +1494,7 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- 11. Player Favorites
+-- 12. Player Favorites
 -- ============================================================================
 DO $$
 DECLARE
@@ -1187,7 +1542,7 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- 12. Player Reputation
+-- 13. Player Reputation
 -- ============================================================================
 DO $$
 DECLARE
@@ -1221,7 +1576,7 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- 13. Player Favorite Facilities
+-- 14. Player Favorite Facilities
 -- ============================================================================
 DO $$
 DECLARE
@@ -1288,7 +1643,7 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- 14. Bookings (3 bookings at Montreal facilities)
+-- 15. Bookings (3 bookings at Montreal facilities)
 -- NOTE: Montreal facilities get availability from the Loisir Montreal API
 -- (data_provider), not from local court_slot records.
 -- ============================================================================
@@ -1363,7 +1718,7 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- 15. Reputation Events
+-- 16. Reputation Events
 -- ============================================================================
 -- Disable the recalculate trigger to preserve section 12's player_reputation values
 ALTER TABLE reputation_event DISABLE TRIGGER reputation_event_recalculate;
@@ -1438,7 +1793,7 @@ END $$;
 ALTER TABLE reputation_event ENABLE TRIGGER reputation_event_recalculate;
 
 -- ============================================================================
--- 16. Rating Proofs
+-- 17. Rating Proofs
 -- ============================================================================
 -- Player rating assignments (from section 5, ORDER BY email):
 --   p7 → NTRP 4.0, DUPR 3.5  |  p3 → NTRP 3.5  |  p8 → NTRP 4.5
@@ -1517,7 +1872,7 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- 17. Peer Rating Requests
+-- 18. Peer Rating Requests
 -- ============================================================================
 DO $$
 DECLARE
@@ -1570,7 +1925,7 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- 18. Rating Reference Requests + Reference Requests
+-- 19. Rating Reference Requests + Reference Requests
 -- ============================================================================
 -- rating_reference_request uses player_rating_score_id (resolved dynamically)
 -- Actual ratings (from section 5 ORDER BY email):
@@ -1689,7 +2044,7 @@ END $$;
 ALTER TABLE reference_request ENABLE TRIGGER check_reference_threshold_trigger;
 
 -- ============================================================================
--- 19. Shared Contact Lists + Shared Contacts
+-- 20. Shared Contact Lists + Shared Contacts
 -- ============================================================================
 DO $$
 DECLARE
@@ -1738,6 +2093,8 @@ DECLARE
   cnt_profiles INT;
   cnt_players INT;
   cnt_player_sports INT;
+  cnt_play_styles INT;
+  cnt_play_attrs INT;
   cnt_matches INT;
   cnt_participants INT;
   cnt_networks INT;
@@ -1752,10 +2109,14 @@ DECLARE
   cnt_reference_reqs INT;
   cnt_contact_lists INT;
   cnt_contacts INT;
+  cnt_fav_facilities INT;
+  cnt_reputations INT;
 BEGIN
   SELECT COUNT(*) INTO cnt_profiles FROM profile;
   SELECT COUNT(*) INTO cnt_players FROM player;
   SELECT COUNT(*) INTO cnt_player_sports FROM player_sport;
+  SELECT COUNT(*) INTO cnt_play_styles FROM player_sport_play_style;
+  SELECT COUNT(*) INTO cnt_play_attrs FROM player_sport_play_attribute;
   SELECT COUNT(*) INTO cnt_matches FROM match;
   SELECT COUNT(*) INTO cnt_participants FROM match_participant;
   SELECT COUNT(*) INTO cnt_networks FROM network;
@@ -1770,25 +2131,31 @@ BEGIN
   SELECT COUNT(*) INTO cnt_reference_reqs FROM reference_request;
   SELECT COUNT(*) INTO cnt_contact_lists FROM shared_contact_list;
   SELECT COUNT(*) INTO cnt_contacts FROM shared_contact;
+  SELECT COUNT(*) INTO cnt_fav_facilities FROM player_favorite_facility;
+  SELECT COUNT(*) INTO cnt_reputations FROM player_reputation;
 
   RAISE NOTICE '';
   RAISE NOTICE '=== SEED VERIFICATION ===';
-  RAISE NOTICE 'Profiles:       %', cnt_profiles;
-  RAISE NOTICE 'Players:        %', cnt_players;
-  RAISE NOTICE 'Player Sports:  %', cnt_player_sports;
-  RAISE NOTICE 'Matches:        %', cnt_matches;
-  RAISE NOTICE 'Participants:   %', cnt_participants;
-  RAISE NOTICE 'Networks:       %', cnt_networks;
-  RAISE NOTICE 'Conversations:  %', cnt_conversations;
-  RAISE NOTICE 'Messages:       %', cnt_messages;
-  RAISE NOTICE 'Notifications:  %', cnt_notifications;
-  RAISE NOTICE 'Bookings:       %', cnt_bookings;
-  RAISE NOTICE 'Rep. Events:    %', cnt_rep_events;
-  RAISE NOTICE 'Rating Proofs:  %', cnt_rating_proofs;
+  RAISE NOTICE 'Profiles:         %', cnt_profiles;
+  RAISE NOTICE 'Players:          %', cnt_players;
+  RAISE NOTICE 'Player Sports:    %', cnt_player_sports;
+  RAISE NOTICE 'Play Styles:      %', cnt_play_styles;
+  RAISE NOTICE 'Play Attributes:  %', cnt_play_attrs;
+  RAISE NOTICE 'Matches:          %', cnt_matches;
+  RAISE NOTICE 'Participants:     %', cnt_participants;
+  RAISE NOTICE 'Networks:         %', cnt_networks;
+  RAISE NOTICE 'Conversations:    %', cnt_conversations;
+  RAISE NOTICE 'Messages:         %', cnt_messages;
+  RAISE NOTICE 'Notifications:    %', cnt_notifications;
+  RAISE NOTICE 'Bookings:         %', cnt_bookings;
+  RAISE NOTICE 'Rep. Events:      %', cnt_rep_events;
+  RAISE NOTICE 'Reputations:      %', cnt_reputations;
+  RAISE NOTICE 'Rating Proofs:    %', cnt_rating_proofs;
   RAISE NOTICE 'Peer Rating Reqs: %', cnt_peer_rating_reqs;
   RAISE NOTICE 'Rating Ref Reqs:  %', cnt_rating_ref_reqs;
   RAISE NOTICE 'Reference Reqs:   %', cnt_reference_reqs;
-  RAISE NOTICE 'Contact Lists:  %', cnt_contact_lists;
-  RAISE NOTICE 'Contacts:       %', cnt_contacts;
+  RAISE NOTICE 'Fav. Facilities:  %', cnt_fav_facilities;
+  RAISE NOTICE 'Contact Lists:    %', cnt_contact_lists;
+  RAISE NOTICE 'Contacts:         %', cnt_contacts;
   RAISE NOTICE '=========================';
 END $$;
