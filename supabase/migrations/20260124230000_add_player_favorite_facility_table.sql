@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS player_favorite_facility (
   display_order INT NOT NULL DEFAULT 1,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  
+
   -- Each player can only favorite a facility once
   CONSTRAINT player_favorite_facility_unique UNIQUE(player_id, facility_id),
   -- Display order must be between 1 and 3 (max 3 favorites)
@@ -24,7 +24,11 @@ CREATE INDEX IF NOT EXISTS idx_player_favorite_facility_facility_id ON player_fa
 -- Enable RLS
 ALTER TABLE player_favorite_facility ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies
+-- RLS Policies (drop first for idempotency when re-running migration)
+DROP POLICY IF EXISTS "Players can view own favorite facilities" ON player_favorite_facility;
+DROP POLICY IF EXISTS "Players can insert own favorite facilities" ON player_favorite_facility;
+DROP POLICY IF EXISTS "Players can update own favorite facilities" ON player_favorite_facility;
+DROP POLICY IF EXISTS "Players can delete own favorite facilities" ON player_favorite_facility;
 
 -- Players can view their own favorite facilities
 CREATE POLICY "Players can view own favorite facilities"
@@ -55,6 +59,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS player_favorite_facility_updated_at ON player_favorite_facility;
 CREATE TRIGGER player_favorite_facility_updated_at
   BEFORE UPDATE ON player_favorite_facility
   FOR EACH ROW

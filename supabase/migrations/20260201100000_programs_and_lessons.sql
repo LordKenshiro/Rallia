@@ -6,27 +6,26 @@
 -- =============================================================================
 
 -- =============================================================================
--- ENUMS
+-- ENUMS (create only if not exists for idempotency)
 -- =============================================================================
 
--- Program type (multi-session vs single lesson)
-CREATE TYPE program_type_enum AS ENUM ('program', 'lesson');
-
--- Program status
-CREATE TYPE program_status_enum AS ENUM ('draft', 'published', 'cancelled', 'completed');
-
--- Registration status
-CREATE TYPE registration_status_enum AS ENUM ('pending', 'confirmed', 'cancelled', 'refunded');
-
--- Payment plan type
-CREATE TYPE payment_plan_enum AS ENUM ('full', 'installment');
-
--- Registration payment status
-CREATE TYPE registration_payment_status_enum AS ENUM ('pending', 'succeeded', 'failed', 'refunded', 'cancelled');
-
--- Booking type (extend booking table to distinguish program blocks)
 DO $$
 BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'program_type_enum') THEN
+    CREATE TYPE program_type_enum AS ENUM ('program', 'lesson');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'program_status_enum') THEN
+    CREATE TYPE program_status_enum AS ENUM ('draft', 'published', 'cancelled', 'completed');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'registration_status_enum') THEN
+    CREATE TYPE registration_status_enum AS ENUM ('pending', 'confirmed', 'cancelled', 'refunded');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'payment_plan_enum') THEN
+    CREATE TYPE payment_plan_enum AS ENUM ('full', 'installment');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'registration_payment_status_enum') THEN
+    CREATE TYPE registration_payment_status_enum AS ENUM ('pending', 'succeeded', 'failed', 'refunded', 'cancelled');
+  END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'booking_type_enum') THEN
     CREATE TYPE booking_type_enum AS ENUM ('player', 'program_session', 'maintenance');
   END IF;
@@ -36,36 +35,36 @@ END$$;
 -- INSTRUCTOR PROFILE TABLE
 -- =============================================================================
 
-CREATE TABLE instructor_profile (
+CREATE TABLE IF NOT EXISTS instructor_profile (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
   organization_member_id UUID REFERENCES organization_member(id) ON DELETE SET NULL,
-  
+
   -- Profile info
   display_name VARCHAR(255) NOT NULL,
   bio TEXT,
   avatar_url TEXT,
   email VARCHAR(255),
   phone VARCHAR(30),
-  
+
   -- Rates and qualifications
   hourly_rate_cents INTEGER,
   currency VARCHAR(3) DEFAULT 'CAD',
   certifications JSONB DEFAULT '[]'::jsonb,
   specializations JSONB DEFAULT '[]'::jsonb,
-  
+
   -- Status
   is_external BOOLEAN NOT NULL DEFAULT FALSE,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
-  
+
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Indexes
-CREATE INDEX idx_instructor_profile_org ON instructor_profile(organization_id);
-CREATE INDEX idx_instructor_profile_member ON instructor_profile(organization_member_id);
-CREATE INDEX idx_instructor_profile_active ON instructor_profile(organization_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_instructor_profile_org ON instructor_profile(organization_id);
+CREATE INDEX IF NOT EXISTS idx_instructor_profile_member ON instructor_profile(organization_member_id);
+CREATE INDEX IF NOT EXISTS idx_instructor_profile_active ON instructor_profile(organization_id, is_active);
 
 -- Comments
 COMMENT ON TABLE instructor_profile IS 'Instructor/coach profiles for organizations';
@@ -78,49 +77,49 @@ COMMENT ON COLUMN instructor_profile.specializations IS 'Array of specialization
 -- PROGRAM TABLE
 -- =============================================================================
 
-CREATE TABLE program (
+CREATE TABLE IF NOT EXISTS program (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
   facility_id UUID REFERENCES facility(id) ON DELETE SET NULL,
   sport_id UUID REFERENCES sport(id) ON DELETE SET NULL,
-  
+
   -- Basic info
   type program_type_enum NOT NULL DEFAULT 'program',
   status program_status_enum NOT NULL DEFAULT 'draft',
   name VARCHAR(255) NOT NULL,
   description TEXT,
-  
+
   -- Schedule
   start_date DATE NOT NULL,
   end_date DATE,
   registration_opens_at TIMESTAMPTZ,
   registration_deadline TIMESTAMPTZ,
-  
+
   -- Capacity
   min_participants INTEGER DEFAULT 1,
   max_participants INTEGER,
   current_participants INTEGER NOT NULL DEFAULT 0,
-  
+
   -- Pricing
   price_cents INTEGER NOT NULL,
   currency VARCHAR(3) NOT NULL DEFAULT 'CAD',
   allow_installments BOOLEAN NOT NULL DEFAULT FALSE,
   installment_count INTEGER DEFAULT 1,
   deposit_cents INTEGER,
-  
+
   -- Court blocking
   auto_block_courts BOOLEAN NOT NULL DEFAULT FALSE,
-  
+
   -- Waitlist
   waitlist_enabled BOOLEAN NOT NULL DEFAULT TRUE,
   waitlist_limit INTEGER,
-  
+
   -- Eligibility
   age_min INTEGER,
   age_max INTEGER,
   skill_level_min VARCHAR(50),
   skill_level_max VARCHAR(50),
-  
+
   -- Policy
   cancellation_policy JSONB DEFAULT '{
     "full_refund_days_before_start": 7,
@@ -129,11 +128,11 @@ CREATE TABLE program (
     "no_refund_after_start": true,
     "prorate_by_sessions_attended": true
   }'::jsonb,
-  
+
   -- Metadata
   cover_image_url TEXT,
   metadata JSONB DEFAULT '{}'::jsonb,
-  
+
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   published_at TIMESTAMPTZ,
@@ -141,12 +140,12 @@ CREATE TABLE program (
 );
 
 -- Indexes
-CREATE INDEX idx_program_org ON program(organization_id);
-CREATE INDEX idx_program_facility ON program(facility_id);
-CREATE INDEX idx_program_status ON program(status);
-CREATE INDEX idx_program_dates ON program(start_date, end_date);
-CREATE INDEX idx_program_org_status ON program(organization_id, status);
-CREATE INDEX idx_program_published ON program(organization_id, status, start_date) WHERE status = 'published';
+CREATE INDEX IF NOT EXISTS idx_program_org ON program(organization_id);
+CREATE INDEX IF NOT EXISTS idx_program_facility ON program(facility_id);
+CREATE INDEX IF NOT EXISTS idx_program_status ON program(status);
+CREATE INDEX IF NOT EXISTS idx_program_dates ON program(start_date, end_date);
+CREATE INDEX IF NOT EXISTS idx_program_org_status ON program(organization_id, status);
+CREATE INDEX IF NOT EXISTS idx_program_published ON program(organization_id, status, start_date) WHERE status = 'published';
 
 -- Comments
 COMMENT ON TABLE program IS 'Multi-session programs (clinics, camps) and single lessons';
@@ -159,34 +158,43 @@ COMMENT ON COLUMN program.cancellation_policy IS 'JSON policy for refund calcula
 -- PROGRAM SESSION TABLE
 -- =============================================================================
 
-CREATE TABLE program_session (
+CREATE TABLE IF NOT EXISTS program_session (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   program_id UUID NOT NULL REFERENCES program(id) ON DELETE CASCADE,
   session_number INTEGER NOT NULL DEFAULT 1,
-  
+
   -- Schedule
   date DATE NOT NULL,
   start_time TIME NOT NULL,
   end_time TIME NOT NULL,
-  
+
   -- Location (off-site override only, courts are in junction table)
   location_override TEXT,
-  
+
   -- Status
   notes TEXT,
   is_cancelled BOOLEAN NOT NULL DEFAULT FALSE,
   cancelled_at TIMESTAMPTZ,
-  
+
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  
+
   CONSTRAINT valid_session_times CHECK (end_time > start_time)
 );
 
 -- Indexes
-CREATE INDEX idx_program_session_program ON program_session(program_id);
-CREATE INDEX idx_program_session_date ON program_session(date);
-CREATE UNIQUE INDEX idx_program_session_number ON program_session(program_id, session_number);
+CREATE INDEX IF NOT EXISTS idx_program_session_program ON program_session(program_id);
+CREATE INDEX IF NOT EXISTS idx_program_session_date ON program_session(date);
+-- Only create if session_number exists (column removed in 20260202000000_remove_session_number)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'program_session' AND column_name = 'session_number'
+  ) THEN
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_program_session_number ON program_session(program_id, session_number);
+  END IF;
+END $$;
 
 -- Comments
 COMMENT ON TABLE program_session IS 'Individual sessions within a program';
@@ -196,20 +204,20 @@ COMMENT ON COLUMN program_session.location_override IS 'Custom location text for
 -- PROGRAM SESSION COURT (MANY-TO-MANY) - Supports multiple courts per session
 -- =============================================================================
 
-CREATE TABLE program_session_court (
+CREATE TABLE IF NOT EXISTS program_session_court (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id UUID NOT NULL REFERENCES program_session(id) ON DELETE CASCADE,
   court_id UUID NOT NULL REFERENCES court(id) ON DELETE CASCADE,
   booking_id UUID REFERENCES booking(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  
+
   CONSTRAINT uq_session_court UNIQUE (session_id, court_id)
 );
 
 -- Indexes
-CREATE INDEX idx_program_session_court_session ON program_session_court(session_id);
-CREATE INDEX idx_program_session_court_court ON program_session_court(court_id);
-CREATE INDEX idx_program_session_court_booking ON program_session_court(booking_id);
+CREATE INDEX IF NOT EXISTS idx_program_session_court_session ON program_session_court(session_id);
+CREATE INDEX IF NOT EXISTS idx_program_session_court_court ON program_session_court(court_id);
+CREATE INDEX IF NOT EXISTS idx_program_session_court_booking ON program_session_court(booking_id);
 
 -- Comments
 COMMENT ON TABLE program_session_court IS 'Links program sessions to courts (supports multiple courts per session)';
@@ -219,19 +227,19 @@ COMMENT ON COLUMN program_session_court.booking_id IS 'Reference to booking crea
 -- PROGRAM INSTRUCTOR (MANY-TO-MANY)
 -- =============================================================================
 
-CREATE TABLE program_instructor (
+CREATE TABLE IF NOT EXISTS program_instructor (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   program_id UUID NOT NULL REFERENCES program(id) ON DELETE CASCADE,
   instructor_id UUID NOT NULL REFERENCES instructor_profile(id) ON DELETE CASCADE,
   is_primary BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  
+
   CONSTRAINT uq_program_instructor UNIQUE (program_id, instructor_id)
 );
 
 -- Indexes
-CREATE INDEX idx_program_instructor_program ON program_instructor(program_id);
-CREATE INDEX idx_program_instructor_instructor ON program_instructor(instructor_id);
+CREATE INDEX IF NOT EXISTS idx_program_instructor_program ON program_instructor(program_id);
+CREATE INDEX IF NOT EXISTS idx_program_instructor_instructor ON program_instructor(instructor_id);
 
 -- Comments
 COMMENT ON TABLE program_instructor IS 'Links programs to their assigned instructors';
@@ -241,47 +249,47 @@ COMMENT ON COLUMN program_instructor.is_primary IS 'Primary/lead instructor for 
 -- PROGRAM REGISTRATION TABLE
 -- =============================================================================
 
-CREATE TABLE program_registration (
+CREATE TABLE IF NOT EXISTS program_registration (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   program_id UUID NOT NULL REFERENCES program(id) ON DELETE CASCADE,
   player_id UUID NOT NULL REFERENCES player(id) ON DELETE CASCADE,
   registered_by UUID NOT NULL REFERENCES profile(id) ON DELETE CASCADE,
-  
+
   -- Status
   status registration_status_enum NOT NULL DEFAULT 'pending',
   payment_plan payment_plan_enum NOT NULL DEFAULT 'full',
-  
+
   -- Payment tracking
   total_amount_cents INTEGER NOT NULL,
   paid_amount_cents INTEGER NOT NULL DEFAULT 0,
   refund_amount_cents INTEGER NOT NULL DEFAULT 0,
   currency VARCHAR(3) NOT NULL DEFAULT 'CAD',
-  
+
   -- Stripe
   stripe_customer_id VARCHAR(255),
-  
+
   -- Notes
   notes TEXT,
   emergency_contact_name VARCHAR(255),
   emergency_contact_phone VARCHAR(30),
-  
+
   -- Timestamps
   registered_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   confirmed_at TIMESTAMPTZ,
   cancelled_at TIMESTAMPTZ,
   refunded_at TIMESTAMPTZ,
-  
+
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  
+
   CONSTRAINT uq_program_player UNIQUE (program_id, player_id)
 );
 
 -- Indexes
-CREATE INDEX idx_program_registration_program ON program_registration(program_id);
-CREATE INDEX idx_program_registration_player ON program_registration(player_id);
-CREATE INDEX idx_program_registration_status ON program_registration(status);
-CREATE INDEX idx_program_registration_program_status ON program_registration(program_id, status);
+CREATE INDEX IF NOT EXISTS idx_program_registration_program ON program_registration(program_id);
+CREATE INDEX IF NOT EXISTS idx_program_registration_player ON program_registration(player_id);
+CREATE INDEX IF NOT EXISTS idx_program_registration_status ON program_registration(status);
+CREATE INDEX IF NOT EXISTS idx_program_registration_program_status ON program_registration(program_id, status);
 
 -- Comments
 COMMENT ON TABLE program_registration IS 'Player registrations for programs';
@@ -292,45 +300,45 @@ COMMENT ON COLUMN program_registration.paid_amount_cents IS 'Total amount paid s
 -- REGISTRATION PAYMENT TABLE
 -- =============================================================================
 
-CREATE TABLE registration_payment (
+CREATE TABLE IF NOT EXISTS registration_payment (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   registration_id UUID NOT NULL REFERENCES program_registration(id) ON DELETE CASCADE,
-  
+
   -- Payment details
   amount_cents INTEGER NOT NULL,
   currency VARCHAR(3) NOT NULL DEFAULT 'CAD',
   installment_number INTEGER NOT NULL DEFAULT 1,
   total_installments INTEGER NOT NULL DEFAULT 1,
-  
+
   -- Stripe
   stripe_payment_intent_id VARCHAR(255),
   stripe_customer_id VARCHAR(255),
   stripe_charge_id VARCHAR(255),
-  
+
   -- Status
   status registration_payment_status_enum NOT NULL DEFAULT 'pending',
   due_date DATE NOT NULL,
   paid_at TIMESTAMPTZ,
   failed_at TIMESTAMPTZ,
   failure_reason TEXT,
-  
+
   -- Refund tracking
   refund_amount_cents INTEGER DEFAULT 0,
   refunded_at TIMESTAMPTZ,
-  
+
   -- Retry tracking
   retry_count INTEGER NOT NULL DEFAULT 0,
   next_retry_at TIMESTAMPTZ,
-  
+
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Indexes
-CREATE INDEX idx_registration_payment_registration ON registration_payment(registration_id);
-CREATE INDEX idx_registration_payment_due ON registration_payment(due_date, status);
-CREATE INDEX idx_registration_payment_status ON registration_payment(status);
-CREATE INDEX idx_registration_payment_stripe ON registration_payment(stripe_payment_intent_id);
+CREATE INDEX IF NOT EXISTS idx_registration_payment_registration ON registration_payment(registration_id);
+CREATE INDEX IF NOT EXISTS idx_registration_payment_due ON registration_payment(due_date, status);
+CREATE INDEX IF NOT EXISTS idx_registration_payment_status ON registration_payment(status);
+CREATE INDEX IF NOT EXISTS idx_registration_payment_stripe ON registration_payment(stripe_payment_intent_id);
 
 -- Comments
 COMMENT ON TABLE registration_payment IS 'Payment records for program registrations (supports installments)';
@@ -341,36 +349,36 @@ COMMENT ON COLUMN registration_payment.retry_count IS 'Number of failed payment 
 -- PROGRAM WAITLIST TABLE
 -- =============================================================================
 
-CREATE TABLE program_waitlist (
+CREATE TABLE IF NOT EXISTS program_waitlist (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   program_id UUID NOT NULL REFERENCES program(id) ON DELETE CASCADE,
   player_id UUID NOT NULL REFERENCES player(id) ON DELETE CASCADE,
   added_by UUID NOT NULL REFERENCES profile(id) ON DELETE CASCADE,
-  
+
   -- Position tracking
   position INTEGER NOT NULL,
-  
+
   -- Promotion tracking
   promoted_at TIMESTAMPTZ,
   promotion_expires_at TIMESTAMPTZ,
   registration_id UUID REFERENCES program_registration(id) ON DELETE SET NULL,
-  
+
   -- Contact
   notification_sent_at TIMESTAMPTZ,
-  
+
   notes TEXT,
-  
+
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  
+
   CONSTRAINT uq_waitlist_program_player UNIQUE (program_id, player_id)
 );
 
 -- Indexes
-CREATE INDEX idx_program_waitlist_program ON program_waitlist(program_id);
-CREATE INDEX idx_program_waitlist_player ON program_waitlist(player_id);
-CREATE INDEX idx_program_waitlist_position ON program_waitlist(program_id, position);
-CREATE INDEX idx_program_waitlist_promotion ON program_waitlist(promotion_expires_at) WHERE promoted_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_program_waitlist_program ON program_waitlist(program_id);
+CREATE INDEX IF NOT EXISTS idx_program_waitlist_player ON program_waitlist(player_id);
+CREATE INDEX IF NOT EXISTS idx_program_waitlist_position ON program_waitlist(program_id, position);
+CREATE INDEX IF NOT EXISTS idx_program_waitlist_promotion ON program_waitlist(promotion_expires_at) WHERE promoted_at IS NOT NULL;
 
 -- Comments
 COMMENT ON TABLE program_waitlist IS 'Waitlist entries for full programs';
@@ -381,24 +389,24 @@ COMMENT ON COLUMN program_waitlist.promotion_expires_at IS 'Deadline to claim sp
 -- SESSION ATTENDANCE TABLE (OPTIONAL TRACKING)
 -- =============================================================================
 
-CREATE TABLE session_attendance (
+CREATE TABLE IF NOT EXISTS session_attendance (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id UUID NOT NULL REFERENCES program_session(id) ON DELETE CASCADE,
   registration_id UUID NOT NULL REFERENCES program_registration(id) ON DELETE CASCADE,
-  
+
   attended BOOLEAN,
   marked_at TIMESTAMPTZ,
   marked_by UUID REFERENCES profile(id) ON DELETE SET NULL,
   notes TEXT,
-  
+
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  
+
   CONSTRAINT uq_session_attendance UNIQUE (session_id, registration_id)
 );
 
 -- Indexes
-CREATE INDEX idx_session_attendance_session ON session_attendance(session_id);
-CREATE INDEX idx_session_attendance_registration ON session_attendance(registration_id);
+CREATE INDEX IF NOT EXISTS idx_session_attendance_session ON session_attendance(session_id);
+CREATE INDEX IF NOT EXISTS idx_session_attendance_registration ON session_attendance(registration_id);
 
 -- Comments
 COMMENT ON TABLE session_attendance IS 'Optional attendance tracking for program sessions';
@@ -408,7 +416,7 @@ COMMENT ON TABLE session_attendance IS 'Optional attendance tracking for program
 -- =============================================================================
 
 -- Add booking_type and metadata columns to existing booking table
-ALTER TABLE booking 
+ALTER TABLE booking
   ADD COLUMN IF NOT EXISTS booking_type booking_type_enum NOT NULL DEFAULT 'player',
   ADD COLUMN IF NOT EXISTS metadata JSONB;
 
@@ -429,27 +437,33 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Apply triggers
+-- Apply triggers (drop first for idempotency)
+DROP TRIGGER IF EXISTS set_instructor_profile_updated_at ON instructor_profile;
 CREATE TRIGGER set_instructor_profile_updated_at
   BEFORE UPDATE ON instructor_profile
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS set_program_updated_at ON program;
 CREATE TRIGGER set_program_updated_at
   BEFORE UPDATE ON program
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS set_program_session_updated_at ON program_session;
 CREATE TRIGGER set_program_session_updated_at
   BEFORE UPDATE ON program_session
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS set_program_registration_updated_at ON program_registration;
 CREATE TRIGGER set_program_registration_updated_at
   BEFORE UPDATE ON program_registration
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS set_registration_payment_updated_at ON registration_payment;
 CREATE TRIGGER set_registration_payment_updated_at
   BEFORE UPDATE ON registration_payment
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS set_program_waitlist_updated_at ON program_waitlist;
 CREATE TRIGGER set_program_waitlist_updated_at
   BEFORE UPDATE ON program_waitlist
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -462,26 +476,27 @@ CREATE OR REPLACE FUNCTION update_program_participant_count()
 RETURNS TRIGGER AS $$
 BEGIN
   IF TG_OP = 'INSERT' AND NEW.status = 'confirmed' THEN
-    UPDATE program SET current_participants = current_participants + 1 
+    UPDATE program SET current_participants = current_participants + 1
     WHERE id = NEW.program_id;
   ELSIF TG_OP = 'UPDATE' THEN
     -- Handle status changes
     IF OLD.status != 'confirmed' AND NEW.status = 'confirmed' THEN
-      UPDATE program SET current_participants = current_participants + 1 
+      UPDATE program SET current_participants = current_participants + 1
       WHERE id = NEW.program_id;
     ELSIF OLD.status = 'confirmed' AND NEW.status != 'confirmed' THEN
-      UPDATE program SET current_participants = GREATEST(current_participants - 1, 0) 
+      UPDATE program SET current_participants = GREATEST(current_participants - 1, 0)
       WHERE id = NEW.program_id;
     END IF;
   ELSIF TG_OP = 'DELETE' AND OLD.status = 'confirmed' THEN
-    UPDATE program SET current_participants = GREATEST(current_participants - 1, 0) 
+    UPDATE program SET current_participants = GREATEST(current_participants - 1, 0)
     WHERE id = OLD.program_id;
   END IF;
-  
+
   RETURN COALESCE(NEW, OLD);
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS update_program_participants ON program_registration;
 CREATE TRIGGER update_program_participants
   AFTER INSERT OR UPDATE OR DELETE ON program_registration
   FOR EACH ROW EXECUTE FUNCTION update_program_participant_count();
@@ -502,6 +517,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS set_waitlist_position ON program_waitlist;
 CREATE TRIGGER set_waitlist_position
   BEFORE INSERT ON program_waitlist
   FOR EACH ROW EXECUTE FUNCTION assign_waitlist_position();
@@ -522,14 +538,18 @@ ALTER TABLE program_waitlist ENABLE ROW LEVEL SECURITY;
 ALTER TABLE session_attendance ENABLE ROW LEVEL SECURITY;
 
 -- -----------------------------------------------------------------------------
--- INSTRUCTOR PROFILE POLICIES
+-- INSTRUCTOR PROFILE POLICIES (drop first for idempotency)
 -- -----------------------------------------------------------------------------
+
+DROP POLICY IF EXISTS "org_members_view_instructors" ON instructor_profile;
+DROP POLICY IF EXISTS "org_admins_manage_instructors" ON instructor_profile;
+DROP POLICY IF EXISTS "instructors_view_own" ON instructor_profile;
 
 -- Organization members can view instructors in their organization
 CREATE POLICY "org_members_view_instructors" ON instructor_profile
   FOR SELECT USING (
     organization_id IN (
-      SELECT organization_id FROM organization_member 
+      SELECT organization_id FROM organization_member
       WHERE user_id = auth.uid()
     )
   );
@@ -538,8 +558,8 @@ CREATE POLICY "org_members_view_instructors" ON instructor_profile
 CREATE POLICY "org_admins_manage_instructors" ON instructor_profile
   FOR ALL USING (
     organization_id IN (
-      SELECT organization_id FROM organization_member 
-      WHERE user_id = auth.uid() 
+      SELECT organization_id FROM organization_member
+      WHERE user_id = auth.uid()
       AND role IN ('admin', 'owner')
     )
   );
@@ -556,6 +576,10 @@ CREATE POLICY "instructors_view_own" ON instructor_profile
 -- PROGRAM POLICIES
 -- -----------------------------------------------------------------------------
 
+DROP POLICY IF EXISTS "public_view_published_programs" ON program;
+DROP POLICY IF EXISTS "org_members_view_all_programs" ON program;
+DROP POLICY IF EXISTS "org_staff_manage_programs" ON program;
+
 -- Anyone can view published programs
 CREATE POLICY "public_view_published_programs" ON program
   FOR SELECT USING (status = 'published');
@@ -564,7 +588,7 @@ CREATE POLICY "public_view_published_programs" ON program
 CREATE POLICY "org_members_view_all_programs" ON program
   FOR SELECT USING (
     organization_id IN (
-      SELECT organization_id FROM organization_member 
+      SELECT organization_id FROM organization_member
       WHERE user_id = auth.uid()
     )
   );
@@ -573,8 +597,8 @@ CREATE POLICY "org_members_view_all_programs" ON program
 CREATE POLICY "org_staff_manage_programs" ON program
   FOR ALL USING (
     organization_id IN (
-      SELECT organization_id FROM organization_member 
-      WHERE user_id = auth.uid() 
+      SELECT organization_id FROM organization_member
+      WHERE user_id = auth.uid()
       AND role IN ('admin', 'owner', 'staff')
     )
   );
@@ -582,6 +606,9 @@ CREATE POLICY "org_staff_manage_programs" ON program
 -- -----------------------------------------------------------------------------
 -- PROGRAM SESSION POLICIES
 -- -----------------------------------------------------------------------------
+
+DROP POLICY IF EXISTS "view_sessions" ON program_session;
+DROP POLICY IF EXISTS "org_staff_manage_sessions" ON program_session;
 
 -- View sessions for published programs or if org member
 CREATE POLICY "view_sessions" ON program_session
@@ -602,8 +629,8 @@ CREATE POLICY "org_staff_manage_sessions" ON program_session
   FOR ALL USING (
     program_id IN (
       SELECT id FROM program WHERE organization_id IN (
-        SELECT organization_id FROM organization_member 
-        WHERE user_id = auth.uid() 
+        SELECT organization_id FROM organization_member
+        WHERE user_id = auth.uid()
         AND role IN ('admin', 'owner', 'staff')
       )
     )
@@ -612,6 +639,9 @@ CREATE POLICY "org_staff_manage_sessions" ON program_session
 -- -----------------------------------------------------------------------------
 -- PROGRAM SESSION COURT POLICIES
 -- -----------------------------------------------------------------------------
+
+DROP POLICY IF EXISTS "view_session_courts" ON program_session_court;
+DROP POLICY IF EXISTS "org_staff_manage_session_courts" ON program_session_court;
 
 -- View session courts for viewable sessions
 CREATE POLICY "view_session_courts" ON program_session_court
@@ -637,8 +667,8 @@ CREATE POLICY "org_staff_manage_session_courts" ON program_session_court
       SELECT ps.id FROM program_session ps
       JOIN program p ON ps.program_id = p.id
       WHERE p.organization_id IN (
-        SELECT organization_id FROM organization_member 
-        WHERE user_id = auth.uid() 
+        SELECT organization_id FROM organization_member
+        WHERE user_id = auth.uid()
         AND role IN ('admin', 'owner', 'staff')
       )
     )
@@ -647,6 +677,9 @@ CREATE POLICY "org_staff_manage_session_courts" ON program_session_court
 -- -----------------------------------------------------------------------------
 -- PROGRAM INSTRUCTOR POLICIES
 -- -----------------------------------------------------------------------------
+
+DROP POLICY IF EXISTS "view_program_instructors" ON program_instructor;
+DROP POLICY IF EXISTS "org_staff_manage_program_instructors" ON program_instructor;
 
 -- View instructor assignments for viewable programs
 CREATE POLICY "view_program_instructors" ON program_instructor
@@ -667,8 +700,8 @@ CREATE POLICY "org_staff_manage_program_instructors" ON program_instructor
   FOR ALL USING (
     program_id IN (
       SELECT id FROM program WHERE organization_id IN (
-        SELECT organization_id FROM organization_member 
-        WHERE user_id = auth.uid() 
+        SELECT organization_id FROM organization_member
+        WHERE user_id = auth.uid()
         AND role IN ('admin', 'owner', 'staff')
       )
     )
@@ -677,6 +710,12 @@ CREATE POLICY "org_staff_manage_program_instructors" ON program_instructor
 -- -----------------------------------------------------------------------------
 -- PROGRAM REGISTRATION POLICIES
 -- -----------------------------------------------------------------------------
+
+DROP POLICY IF EXISTS "players_view_own_registrations" ON program_registration;
+DROP POLICY IF EXISTS "players_create_registrations" ON program_registration;
+DROP POLICY IF EXISTS "players_cancel_own_registrations" ON program_registration;
+DROP POLICY IF EXISTS "org_staff_view_registrations" ON program_registration;
+DROP POLICY IF EXISTS "org_staff_manage_registrations" ON program_registration;
 
 -- Players can view their own registrations
 CREATE POLICY "players_view_own_registrations" ON program_registration
@@ -702,8 +741,8 @@ CREATE POLICY "org_staff_view_registrations" ON program_registration
   FOR SELECT USING (
     program_id IN (
       SELECT id FROM program WHERE organization_id IN (
-        SELECT organization_id FROM organization_member 
-        WHERE user_id = auth.uid() 
+        SELECT organization_id FROM organization_member
+        WHERE user_id = auth.uid()
         AND role IN ('admin', 'owner', 'staff')
       )
     )
@@ -714,8 +753,8 @@ CREATE POLICY "org_staff_manage_registrations" ON program_registration
   FOR ALL USING (
     program_id IN (
       SELECT id FROM program WHERE organization_id IN (
-        SELECT organization_id FROM organization_member 
-        WHERE user_id = auth.uid() 
+        SELECT organization_id FROM organization_member
+        WHERE user_id = auth.uid()
         AND role IN ('admin', 'owner', 'staff')
       )
     )
@@ -725,11 +764,14 @@ CREATE POLICY "org_staff_manage_registrations" ON program_registration
 -- REGISTRATION PAYMENT POLICIES
 -- -----------------------------------------------------------------------------
 
+DROP POLICY IF EXISTS "players_view_own_payments" ON registration_payment;
+DROP POLICY IF EXISTS "org_staff_manage_payments" ON registration_payment;
+
 -- Players can view their own payments
 CREATE POLICY "players_view_own_payments" ON registration_payment
   FOR SELECT USING (
     registration_id IN (
-      SELECT id FROM program_registration 
+      SELECT id FROM program_registration
       WHERE player_id = auth.uid() OR registered_by = auth.uid()
     )
   );
@@ -741,8 +783,8 @@ CREATE POLICY "org_staff_manage_payments" ON registration_payment
       SELECT pr.id FROM program_registration pr
       JOIN program p ON pr.program_id = p.id
       WHERE p.organization_id IN (
-        SELECT organization_id FROM organization_member 
-        WHERE user_id = auth.uid() 
+        SELECT organization_id FROM organization_member
+        WHERE user_id = auth.uid()
         AND role IN ('admin', 'owner', 'staff')
       )
     )
@@ -751,6 +793,11 @@ CREATE POLICY "org_staff_manage_payments" ON registration_payment
 -- -----------------------------------------------------------------------------
 -- PROGRAM WAITLIST POLICIES
 -- -----------------------------------------------------------------------------
+
+DROP POLICY IF EXISTS "players_view_own_waitlist" ON program_waitlist;
+DROP POLICY IF EXISTS "players_join_waitlist" ON program_waitlist;
+DROP POLICY IF EXISTS "players_leave_waitlist" ON program_waitlist;
+DROP POLICY IF EXISTS "org_staff_manage_waitlist" ON program_waitlist;
 
 -- Players can view their own waitlist entries
 CREATE POLICY "players_view_own_waitlist" ON program_waitlist
@@ -769,8 +816,8 @@ CREATE POLICY "org_staff_manage_waitlist" ON program_waitlist
   FOR ALL USING (
     program_id IN (
       SELECT id FROM program WHERE organization_id IN (
-        SELECT organization_id FROM organization_member 
-        WHERE user_id = auth.uid() 
+        SELECT organization_id FROM organization_member
+        WHERE user_id = auth.uid()
         AND role IN ('admin', 'owner', 'staff')
       )
     )
@@ -780,11 +827,14 @@ CREATE POLICY "org_staff_manage_waitlist" ON program_waitlist
 -- SESSION ATTENDANCE POLICIES
 -- -----------------------------------------------------------------------------
 
+DROP POLICY IF EXISTS "players_view_own_attendance" ON session_attendance;
+DROP POLICY IF EXISTS "org_staff_manage_attendance" ON session_attendance;
+
 -- Players can view their own attendance
 CREATE POLICY "players_view_own_attendance" ON session_attendance
   FOR SELECT USING (
     registration_id IN (
-      SELECT id FROM program_registration 
+      SELECT id FROM program_registration
       WHERE player_id = auth.uid() OR registered_by = auth.uid()
     )
   );
@@ -796,8 +846,8 @@ CREATE POLICY "org_staff_manage_attendance" ON session_attendance
       SELECT ps.id FROM program_session ps
       JOIN program p ON ps.program_id = p.id
       WHERE p.organization_id IN (
-        SELECT organization_id FROM organization_member 
-        WHERE user_id = auth.uid() 
+        SELECT organization_id FROM organization_member
+        WHERE user_id = auth.uid()
         AND role IN ('admin', 'owner', 'staff')
       )
     )
@@ -831,6 +881,16 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- =============================================================================
 -- SERVICE ROLE BYPASS POLICIES
 -- =============================================================================
+
+DROP POLICY IF EXISTS "service_role_all_instructor_profile" ON instructor_profile;
+DROP POLICY IF EXISTS "service_role_all_program" ON program;
+DROP POLICY IF EXISTS "service_role_all_program_session" ON program_session;
+DROP POLICY IF EXISTS "service_role_all_program_session_court" ON program_session_court;
+DROP POLICY IF EXISTS "service_role_all_program_instructor" ON program_instructor;
+DROP POLICY IF EXISTS "service_role_all_program_registration" ON program_registration;
+DROP POLICY IF EXISTS "service_role_all_registration_payment" ON registration_payment;
+DROP POLICY IF EXISTS "service_role_all_program_waitlist" ON program_waitlist;
+DROP POLICY IF EXISTS "service_role_all_session_attendance" ON session_attendance;
 
 -- Allow service role to bypass RLS for cron jobs
 CREATE POLICY "service_role_all_instructor_profile" ON instructor_profile
