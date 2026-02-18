@@ -20,11 +20,34 @@ CREATE TYPE rating_system_code_enum AS ENUM (
 COMMENT ON TYPE rating_system_code_enum IS 'Enum for standardized rating system codes across sports';
 
 -- ============================================
+-- PHASE 1.5: SEED RATING SYSTEMS
+-- ============================================
+-- Insert the 5 rating systems if they don't already exist.
+-- Uses ON CONFLICT on the unique code column to be idempotent.
+-- Codes are inserted as lowercase (matching the enum values).
+
+INSERT INTO rating_system (sport_id, code, name, description, min_value, max_value, step, default_initial_value, min_for_referral, is_active)
+VALUES
+  ((SELECT id FROM sport WHERE slug = 'tennis'), 'ntrp', 'NTRP', 'National Tennis Rating Program', 1.0, 7.0, 0.5, 3.0, 3.0, true),
+  ((SELECT id FROM sport WHERE slug = 'tennis'), 'utr', 'UTR', 'Universal Tennis Rating', 1.0, 16.5, 0.01, 5.0, 4.0, true),
+  ((SELECT id FROM sport WHERE slug = 'tennis'), 'self_tennis', 'Self Assessment (Tennis)', 'Player self-assessed tennis skill level', 1.0, 7.0, 0.5, 3.0, NULL, true),
+  ((SELECT id FROM sport WHERE slug = 'pickleball'), 'dupr', 'DUPR', 'Dynamic Universal Pickleball Rating', 1.0, 8.0, 0.5, 3.0, 3.0, true),
+  ((SELECT id FROM sport WHERE slug = 'pickleball'), 'self_pickle', 'Self Assessment (Pickleball)', 'Player self-assessed pickleball skill level', 1.0, 5.5, 0.5, 2.5, NULL, true)
+ON CONFLICT (code) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  min_value = EXCLUDED.min_value,
+  max_value = EXCLUDED.max_value,
+  step = EXCLUDED.step,
+  default_initial_value = EXCLUDED.default_initial_value,
+  min_for_referral = EXCLUDED.min_for_referral;
+
+-- ============================================
 -- PHASE 2: UPDATE EXISTING DATA
 -- ============================================
 
 -- Update existing rating_system rows to use lowercase values
--- (The seed data used uppercase like 'NTRP', 'DUPR', etc.)
+-- (Any previously-inserted data may have used uppercase like 'NTRP', 'DUPR', etc.)
 UPDATE rating_system SET code = LOWER(code) WHERE code IS NOT NULL;
 
 -- ============================================
