@@ -324,7 +324,7 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- 7. Matches (15 total at Montreal facilities)
+-- 7. Matches (17 total: 15 at Montreal park facilities + 2 at custom locations)
 -- ============================================================================
 DO $$
 DECLARE
@@ -340,9 +340,10 @@ DECLARE
   p7 UUID := 'a1000000-0000-0000-0000-000000000007';
   p8 UUID := 'a1000000-0000-0000-0000-000000000008';
   p9 UUID := 'a1000000-0000-0000-0000-000000000009';
-  -- Facility IDs (fetched dynamically from Montreal facilities)
-  fac1 UUID; fac2 UUID; fac3 UUID; fac4 UUID; fac5 UUID;
-  fac_court1 UUID; fac_court2 UUID; fac_court3 UUID;
+  -- Facility IDs (specific Montreal parks populated by rallia-facilities)
+  -- Jeanne-Mance, Martin-Luther-King, La Fontaine
+  fac_jm UUID; fac_mlk UUID; fac_lf UUID;
+  court_jm UUID; court_mlk UUID; court_lf UUID;
   -- Match IDs (deterministic for participant references)
   m1 UUID := 'b1000000-0000-0000-0000-000000000001';
   m2 UUID := 'b1000000-0000-0000-0000-000000000002';
@@ -359,12 +360,15 @@ DECLARE
   m13 UUID := 'b1000000-0000-0000-0000-000000000013';
   m14 UUID := 'b1000000-0000-0000-0000-000000000014';
   m15 UUID := 'b1000000-0000-0000-0000-000000000015';
+  m16 UUID := 'b1000000-0000-0000-0000-000000000016';  -- custom: Stade IGA
+  m17 UUID := 'b1000000-0000-0000-0000-000000000017';  -- custom: CEPSUM
   -- Match result IDs
   mr1 UUID := 'c1000000-0000-0000-0000-000000000001';
   mr2 UUID := 'c1000000-0000-0000-0000-000000000002';
   mr3 UUID := 'c1000000-0000-0000-0000-000000000003';
   mr4 UUID := 'c1000000-0000-0000-0000-000000000004';
   mr5 UUID := 'c1000000-0000-0000-0000-000000000005';
+  mr6 UUID := 'c1000000-0000-0000-0000-000000000006';
   -- Dates
   today DATE := CURRENT_DATE;
   logged_in_user UUID;
@@ -392,43 +396,29 @@ BEGIN
   VALUES (logged_in_user, 'male', 25, 'H2T 1S4', 'CA', 45.5236, -73.5865, true)
   ON CONFLICT (id) DO NOTHING;
 
-  -- Pick 5 Montreal facilities (with courts)
-  SELECT f.id INTO fac1 FROM facility f
-    JOIN court c ON c.facility_id = f.id
-    WHERE f.city = 'Montreal' AND f.is_active = true
-    ORDER BY f.name LIMIT 1;
-  SELECT f.id INTO fac2 FROM facility f
-    JOIN court c ON c.facility_id = f.id
-    WHERE f.city = 'Montreal' AND f.is_active = true
-    ORDER BY f.name OFFSET 1 LIMIT 1;
-  SELECT f.id INTO fac3 FROM facility f
-    JOIN court c ON c.facility_id = f.id
-    WHERE f.city = 'Montreal' AND f.is_active = true
-    ORDER BY f.name OFFSET 2 LIMIT 1;
-  SELECT f.id INTO fac4 FROM facility f
-    JOIN court c ON c.facility_id = f.id
-    WHERE f.city = 'Montreal' AND f.is_active = true
-    ORDER BY f.name OFFSET 3 LIMIT 1;
-  SELECT f.id INTO fac5 FROM facility f
-    JOIN court c ON c.facility_id = f.id
-    WHERE f.city = 'Montreal' AND f.is_active = true
-    ORDER BY f.name OFFSET 4 LIMIT 1;
+  -- Look up the 3 specific Montreal facilities seeded by rallia-facilities.
+  -- These are well-known parks: Jeanne-Mance, Martin-Luther-King, La Fontaine.
+  -- Looked up by name since rallia-facilities generates new UUIDs on each import.
+  SELECT id INTO fac_jm  FROM facility WHERE name = 'Terrains de tennis du parc Jeanne-Mance' LIMIT 1;
+  SELECT id INTO fac_mlk FROM facility WHERE name = 'Terrains de tennis et de pickleball du parc Martin-Luther-King' LIMIT 1;
+  SELECT id INTO fac_lf  FROM facility WHERE name = 'Terrains de tennis du parc La Fontaine' LIMIT 1;
 
-  -- Get a court for each of the first 3 facilities
-  SELECT c.id INTO fac_court1 FROM court c WHERE c.facility_id = fac1 LIMIT 1;
-  SELECT c.id INTO fac_court2 FROM court c WHERE c.facility_id = fac2 LIMIT 1;
-  SELECT c.id INTO fac_court3 FROM court c WHERE c.facility_id = fac3 LIMIT 1;
+  -- Get a court at each facility
+  SELECT c.id INTO court_jm  FROM court c WHERE c.facility_id = fac_jm  LIMIT 1;
+  SELECT c.id INTO court_mlk FROM court c WHERE c.facility_id = fac_mlk LIMIT 1;
+  SELECT c.id INTO court_lf  FROM court c WHERE c.facility_id = fac_lf  LIMIT 1;
 
-  -- If no facilities found, use custom locations
-  IF fac1 IS NULL THEN
-    RAISE NOTICE 'No Montreal facilities found, matches will use custom locations. Run rallia-facilities first!';
+  -- Facilities are required -- rallia-facilities must be run before seeding
+  IF fac_jm IS NULL OR fac_mlk IS NULL OR fac_lf IS NULL THEN
+    RAISE NOTICE 'Montreal park facilities not found, skipping match seeding. Run rallia-facilities first! (See seeding workflow at top of file)';
+    RETURN;
   END IF;
 
   -- -----------------------------------------------------------------------
   -- UPCOMING OPEN MATCHES (5) -- public, joinable
   -- -----------------------------------------------------------------------
 
-  -- Match 1: Tennis singles, tomorrow evening, at facility 1
+  -- Match 1: Tennis singles, tomorrow evening, at Jeanne-Mance
   INSERT INTO match (id, sport_id, created_by, match_date, start_time, end_time, timezone,
     player_expectation, format, visibility, join_mode, duration,
     location_type, facility_id, court_id, court_status,
@@ -440,14 +430,13 @@ BEGIN
     ((today + 1)::date + TIME '19:30')::timestamptz,
     'America/Montreal',
     'casual', 'singles', 'public', 'direct', '90',
-    CASE WHEN fac1 IS NOT NULL THEN 'facility'::location_type_enum ELSE 'custom'::location_type_enum END,
-    fac1, fac_court1, 'to_reserve',
-    COALESCE((SELECT name FROM facility WHERE id = fac1), 'Parc Jeanne-Mance'),
-    COALESCE((SELECT address FROM facility WHERE id = fac1), '4999 Avenue Esplanade, Montreal'),
+    'facility', fac_jm, court_jm, 'to_reserve',
+    (SELECT name FROM facility WHERE id = fac_jm),
+    (SELECT address FROM facility WHERE id = fac_jm),
     'Looking for a casual rally partner! All levels welcome.'
   WHERE NOT EXISTS (SELECT 1 FROM match WHERE id = m1);
 
-  -- Match 2: Pickleball doubles, day after tomorrow morning
+  -- Match 2: Pickleball doubles, day after tomorrow morning, at Martin-Luther-King
   INSERT INTO match (id, sport_id, created_by, match_date, start_time, end_time, timezone,
     player_expectation, format, visibility, join_mode, duration,
     location_type, facility_id,
@@ -459,14 +448,13 @@ BEGIN
     ((today + 2)::date + TIME '10:00')::timestamptz,
     'America/Montreal',
     'casual', 'doubles', 'public', 'direct', '60',
-    CASE WHEN fac2 IS NOT NULL THEN 'facility'::location_type_enum ELSE 'custom'::location_type_enum END,
-    fac2,
-    COALESCE((SELECT name FROM facility WHERE id = fac2), 'Parc La Fontaine'),
-    COALESCE((SELECT address FROM facility WHERE id = fac2), 'Parc La Fontaine, Montreal'),
+    'facility', fac_mlk,
+    (SELECT name FROM facility WHERE id = fac_mlk),
+    (SELECT address FROM facility WHERE id = fac_mlk),
     'Need 2 more for doubles! Intermediate level preferred.'
   WHERE NOT EXISTS (SELECT 1 FROM match WHERE id = m2);
 
-  -- Match 3: Tennis singles competitive, 3 days out
+  -- Match 3: Tennis singles competitive, 3 days out, at La Fontaine
   INSERT INTO match (id, sport_id, created_by, match_date, start_time, end_time, timezone,
     player_expectation, format, visibility, join_mode, duration,
     location_type, facility_id,
@@ -478,14 +466,13 @@ BEGIN
     ((today + 3)::date + TIME '19:00')::timestamptz,
     'America/Montreal',
     'competitive', 'singles', 'public', 'request', '120',
-    CASE WHEN fac3 IS NOT NULL THEN 'facility'::location_type_enum ELSE 'custom'::location_type_enum END,
-    fac3,
-    COALESCE((SELECT name FROM facility WHERE id = fac3), 'Parc Jarry'),
-    COALESCE((SELECT address FROM facility WHERE id = fac3), 'Parc Jarry, Montreal'),
+    'facility', fac_lf,
+    (SELECT name FROM facility WHERE id = fac_lf),
+    (SELECT address FROM facility WHERE id = fac_lf),
     'Competitive match, NTRP 4.0+ please. Let''s have a good game!'
   WHERE NOT EXISTS (SELECT 1 FROM match WHERE id = m3);
 
-  -- Match 4: Pickleball doubles, 4 days out
+  -- Match 4: Pickleball doubles, 4 days out, at Martin-Luther-King
   INSERT INTO match (id, sport_id, created_by, match_date, start_time, end_time, timezone,
     player_expectation, format, visibility, join_mode, duration,
     location_type, facility_id,
@@ -496,13 +483,12 @@ BEGIN
     ((today + 4)::date + TIME '11:00')::timestamptz,
     'America/Montreal',
     'both', 'doubles', 'public', 'direct', '60',
-    CASE WHEN fac4 IS NOT NULL THEN 'facility'::location_type_enum ELSE 'custom'::location_type_enum END,
-    fac4,
-    COALESCE((SELECT name FROM facility WHERE id = fac4), 'Parc Kent'),
-    COALESCE((SELECT address FROM facility WHERE id = fac4), 'Parc Kent, Montreal')
+    'facility', fac_mlk,
+    (SELECT name FROM facility WHERE id = fac_mlk),
+    (SELECT address FROM facility WHERE id = fac_mlk)
   WHERE NOT EXISTS (SELECT 1 FROM match WHERE id = m4);
 
-  -- Match 5: Tennis doubles, this weekend
+  -- Match 5: Tennis doubles, this weekend, at La Fontaine
   INSERT INTO match (id, sport_id, created_by, match_date, start_time, end_time, timezone,
     player_expectation, format, visibility, join_mode, duration,
     location_type, facility_id,
@@ -514,10 +500,9 @@ BEGIN
     ((today + (6 - EXTRACT(DOW FROM today)::int + 7)::int % 7 + 1)::date + TIME '15:30')::timestamptz,
     'America/Montreal',
     'casual', 'doubles', 'public', 'direct', '90',
-    CASE WHEN fac5 IS NOT NULL THEN 'facility'::location_type_enum ELSE 'custom'::location_type_enum END,
-    fac5,
-    COALESCE((SELECT name FROM facility WHERE id = fac5), 'Parc Beaubien'),
-    COALESCE((SELECT address FROM facility WHERE id = fac5), 'Parc Beaubien, Montreal'),
+    'facility', fac_lf,
+    (SELECT name FROM facility WHERE id = fac_lf),
+    (SELECT address FROM facility WHERE id = fac_lf),
     'Weekend doubles! Bring your A game (or just bring snacks).'
   WHERE NOT EXISTS (SELECT 1 FROM match WHERE id = m5);
 
@@ -525,7 +510,7 @@ BEGIN
   -- UPCOMING FULL MATCHES (3) -- logged-in user is a participant
   -- -----------------------------------------------------------------------
 
-  -- Match 6: Logged-in user's upcoming match (tennis singles, tomorrow)
+  -- Match 6: Logged-in user's upcoming match (tennis singles, tomorrow), at Jeanne-Mance
   INSERT INTO match (id, sport_id, created_by, match_date, start_time, end_time, timezone,
     player_expectation, format, visibility, join_mode, duration,
     location_type, facility_id, court_id, court_status,
@@ -536,13 +521,12 @@ BEGIN
     ((today + 1)::date + TIME '11:30')::timestamptz,
     'America/Montreal',
     'competitive', 'singles', 'private', 'direct', '90',
-    CASE WHEN fac1 IS NOT NULL THEN 'facility'::location_type_enum ELSE 'custom'::location_type_enum END,
-    fac1, fac_court1, 'reserved',
-    COALESCE((SELECT name FROM facility WHERE id = fac1), 'Parc Jeanne-Mance'),
-    COALESCE((SELECT address FROM facility WHERE id = fac1), '4999 Avenue Esplanade, Montreal')
+    'facility', fac_jm, court_jm, 'reserved',
+    (SELECT name FROM facility WHERE id = fac_jm),
+    (SELECT address FROM facility WHERE id = fac_jm)
   WHERE NOT EXISTS (SELECT 1 FROM match WHERE id = m6);
 
-  -- Match 7: Logged-in user invited to doubles, in 2 days
+  -- Match 7: Logged-in user invited to doubles, in 2 days, at La Fontaine
   INSERT INTO match (id, sport_id, created_by, match_date, start_time, end_time, timezone,
     player_expectation, format, visibility, join_mode, duration,
     location_type, facility_id,
@@ -553,13 +537,12 @@ BEGIN
     ((today + 2)::date + TIME '17:30')::timestamptz,
     'America/Montreal',
     'casual', 'doubles', 'private', 'direct', '90',
-    CASE WHEN fac2 IS NOT NULL THEN 'facility'::location_type_enum ELSE 'custom'::location_type_enum END,
-    fac2,
-    COALESCE((SELECT name FROM facility WHERE id = fac2), 'Parc La Fontaine'),
-    COALESCE((SELECT address FROM facility WHERE id = fac2), 'Parc La Fontaine, Montreal')
+    'facility', fac_lf,
+    (SELECT name FROM facility WHERE id = fac_lf),
+    (SELECT address FROM facility WHERE id = fac_lf)
   WHERE NOT EXISTS (SELECT 1 FROM match WHERE id = m7);
 
-  -- Match 8: Pickleball match, logged-in user joined, in 5 days
+  -- Match 8: Pickleball match, logged-in user joined, in 5 days, at Martin-Luther-King
   INSERT INTO match (id, sport_id, created_by, match_date, start_time, end_time, timezone,
     player_expectation, format, visibility, join_mode, duration,
     location_type, facility_id,
@@ -570,17 +553,16 @@ BEGIN
     ((today + 5)::date + TIME '12:00')::timestamptz,
     'America/Montreal',
     'casual', 'doubles', 'public', 'direct', '60',
-    CASE WHEN fac3 IS NOT NULL THEN 'facility'::location_type_enum ELSE 'custom'::location_type_enum END,
-    fac3,
-    COALESCE((SELECT name FROM facility WHERE id = fac3), 'Parc Jarry'),
-    COALESCE((SELECT address FROM facility WHERE id = fac3), 'Parc Jarry, Montreal')
+    'facility', fac_mlk,
+    (SELECT name FROM facility WHERE id = fac_mlk),
+    (SELECT address FROM facility WHERE id = fac_mlk)
   WHERE NOT EXISTS (SELECT 1 FROM match WHERE id = m8);
 
   -- -----------------------------------------------------------------------
   -- PAST COMPLETED MATCHES (5)
   -- -----------------------------------------------------------------------
 
-  -- Match 9: Completed 3 days ago
+  -- Match 9: Completed 3 days ago, at Jeanne-Mance
   INSERT INTO match (id, sport_id, created_by, match_date, start_time, end_time, timezone,
     player_expectation, format, visibility, duration,
     location_type, facility_id,
@@ -592,14 +574,13 @@ BEGIN
     ((today - 3)::date + TIME '19:30')::timestamptz,
     'America/Montreal',
     'competitive', 'singles', 'public', '90',
-    CASE WHEN fac1 IS NOT NULL THEN 'facility'::location_type_enum ELSE 'custom'::location_type_enum END,
-    fac1,
-    COALESCE((SELECT name FROM facility WHERE id = fac1), 'Parc Jeanne-Mance'),
-    COALESCE((SELECT address FROM facility WHERE id = fac1), 'Montreal'),
+    'facility', fac_jm,
+    (SELECT name FROM facility WHERE id = fac_jm),
+    (SELECT address FROM facility WHERE id = fac_jm),
     ((today - 3)::date + TIME '19:30')::timestamptz
   WHERE NOT EXISTS (SELECT 1 FROM match WHERE id = m9);
 
-  -- Match 10: Completed 5 days ago
+  -- Match 10: Completed 5 days ago, at La Fontaine
   INSERT INTO match (id, sport_id, created_by, match_date, start_time, end_time, timezone,
     player_expectation, format, visibility, duration,
     location_type, facility_id,
@@ -611,14 +592,13 @@ BEGIN
     ((today - 5)::date + TIME '11:30')::timestamptz,
     'America/Montreal',
     'casual', 'singles', 'private', '90',
-    CASE WHEN fac2 IS NOT NULL THEN 'facility'::location_type_enum ELSE 'custom'::location_type_enum END,
-    fac2,
-    COALESCE((SELECT name FROM facility WHERE id = fac2), 'Parc La Fontaine'),
-    COALESCE((SELECT address FROM facility WHERE id = fac2), 'Montreal'),
+    'facility', fac_lf,
+    (SELECT name FROM facility WHERE id = fac_lf),
+    (SELECT address FROM facility WHERE id = fac_lf),
     ((today - 5)::date + TIME '11:30')::timestamptz
   WHERE NOT EXISTS (SELECT 1 FROM match WHERE id = m10);
 
-  -- Match 11: Completed 7 days ago (pickleball doubles)
+  -- Match 11: Completed 7 days ago (pickleball doubles), at Martin-Luther-King
   INSERT INTO match (id, sport_id, created_by, match_date, start_time, end_time, timezone,
     player_expectation, format, visibility, duration,
     location_type, facility_id,
@@ -630,14 +610,13 @@ BEGIN
     ((today - 7)::date + TIME '10:00')::timestamptz,
     'America/Montreal',
     'casual', 'doubles', 'public', '60',
-    CASE WHEN fac3 IS NOT NULL THEN 'facility'::location_type_enum ELSE 'custom'::location_type_enum END,
-    fac3,
-    COALESCE((SELECT name FROM facility WHERE id = fac3), 'Parc Jarry'),
-    COALESCE((SELECT address FROM facility WHERE id = fac3), 'Montreal'),
+    'facility', fac_mlk,
+    (SELECT name FROM facility WHERE id = fac_mlk),
+    (SELECT address FROM facility WHERE id = fac_mlk),
     ((today - 7)::date + TIME '10:00')::timestamptz
   WHERE NOT EXISTS (SELECT 1 FROM match WHERE id = m11);
 
-  -- Match 12: Completed 10 days ago
+  -- Match 12: Completed 10 days ago, at La Fontaine
   INSERT INTO match (id, sport_id, created_by, match_date, start_time, end_time, timezone,
     player_expectation, format, visibility, duration,
     location_type, facility_id,
@@ -649,14 +628,13 @@ BEGIN
     ((today - 10)::date + TIME '19:00')::timestamptz,
     'America/Montreal',
     'competitive', 'singles', 'public', '120',
-    CASE WHEN fac4 IS NOT NULL THEN 'facility'::location_type_enum ELSE 'custom'::location_type_enum END,
-    fac4,
-    COALESCE((SELECT name FROM facility WHERE id = fac4), 'Parc Kent'),
-    COALESCE((SELECT address FROM facility WHERE id = fac4), 'Montreal'),
+    'facility', fac_lf,
+    (SELECT name FROM facility WHERE id = fac_lf),
+    (SELECT address FROM facility WHERE id = fac_lf),
     ((today - 10)::date + TIME '19:00')::timestamptz
   WHERE NOT EXISTS (SELECT 1 FROM match WHERE id = m12);
 
-  -- Match 13: Completed 14 days ago (logged-in user participated)
+  -- Match 13: Completed 14 days ago (logged-in user participated), at Jeanne-Mance
   INSERT INTO match (id, sport_id, created_by, match_date, start_time, end_time, timezone,
     player_expectation, format, visibility, duration,
     location_type, facility_id,
@@ -668,10 +646,9 @@ BEGIN
     ((today - 14)::date + TIME '15:30')::timestamptz,
     'America/Montreal',
     'casual', 'doubles', 'private', '90',
-    CASE WHEN fac5 IS NOT NULL THEN 'facility'::location_type_enum ELSE 'custom'::location_type_enum END,
-    fac5,
-    COALESCE((SELECT name FROM facility WHERE id = fac5), 'Parc Beaubien'),
-    COALESCE((SELECT address FROM facility WHERE id = fac5), 'Montreal'),
+    'facility', fac_jm,
+    (SELECT name FROM facility WHERE id = fac_jm),
+    (SELECT address FROM facility WHERE id = fac_jm),
     ((today - 14)::date + TIME '15:30')::timestamptz
   WHERE NOT EXISTS (SELECT 1 FROM match WHERE id = m13);
 
@@ -679,7 +656,7 @@ BEGIN
   -- CANCELLED MATCHES (2)
   -- -----------------------------------------------------------------------
 
-  -- Match 14: Cancelled due to weather, was 2 days ago
+  -- Match 14: Cancelled due to weather, was 2 days ago, at Martin-Luther-King
   INSERT INTO match (id, sport_id, created_by, match_date, start_time, end_time, timezone,
     player_expectation, format, visibility, duration,
     location_type, facility_id,
@@ -691,14 +668,13 @@ BEGIN
     ((today - 2)::date + TIME '16:30')::timestamptz,
     'America/Montreal',
     'casual', 'singles', 'public', '90',
-    CASE WHEN fac1 IS NOT NULL THEN 'facility'::location_type_enum ELSE 'custom'::location_type_enum END,
-    fac1,
-    COALESCE((SELECT name FROM facility WHERE id = fac1), 'Parc Jeanne-Mance'),
-    COALESCE((SELECT address FROM facility WHERE id = fac1), 'Montreal'),
+    'facility', fac_mlk,
+    (SELECT name FROM facility WHERE id = fac_mlk),
+    (SELECT address FROM facility WHERE id = fac_mlk),
     ((today - 2)::date + TIME '12:00')::timestamptz
   WHERE NOT EXISTS (SELECT 1 FROM match WHERE id = m14);
 
-  -- Match 15: Mutually cancelled, was 4 days ago
+  -- Match 15: Mutually cancelled, was 4 days ago, at La Fontaine
   INSERT INTO match (id, sport_id, created_by, match_date, start_time, end_time, timezone,
     player_expectation, format, visibility, duration,
     location_type, facility_id,
@@ -710,13 +686,54 @@ BEGIN
     ((today - 4)::date + TIME '19:30')::timestamptz,
     'America/Montreal',
     'competitive', 'singles', 'private', '90',
-    CASE WHEN fac2 IS NOT NULL THEN 'facility'::location_type_enum ELSE 'custom'::location_type_enum END,
-    fac2,
-    COALESCE((SELECT name FROM facility WHERE id = fac2), 'Parc La Fontaine'),
-    COALESCE((SELECT address FROM facility WHERE id = fac2), 'Montreal'),
+    'facility', fac_lf,
+    (SELECT name FROM facility WHERE id = fac_lf),
+    (SELECT address FROM facility WHERE id = fac_lf),
     ((today - 4)::date + TIME '10:00')::timestamptz,
     true
   WHERE NOT EXISTS (SELECT 1 FROM match WHERE id = m15);
+
+  -- -----------------------------------------------------------------------
+  -- CUSTOM LOCATION MATCHES (2) -- not linked to a facility
+  -- -----------------------------------------------------------------------
+
+  -- Match 16: Upcoming tennis singles at Stade IGA (custom location), in 6 days
+  INSERT INTO match (id, sport_id, created_by, match_date, start_time, end_time, timezone,
+    player_expectation, format, visibility, join_mode, duration,
+    location_type,
+    location_name, location_address,
+    notes)
+  SELECT m16, tennis_id, p7,
+    (today + 6),
+    ((today + 6)::date + TIME '15:00')::timestamptz,
+    ((today + 6)::date + TIME '17:00')::timestamptz,
+    'America/Montreal',
+    'competitive', 'singles', 'public', 'request', '120',
+    'custom',
+    'Stade IGA',
+    '285 Rue Gary-Carter, Montreal, QC H2R 2W1',
+    'Let''s play on the big stage! I have a court reserved at IGA Stadium.'
+  WHERE NOT EXISTS (SELECT 1 FROM match WHERE id = m16);
+
+  -- Match 17: Completed tennis doubles at CEPSUM, 6 days ago (logged-in user participated)
+  INSERT INTO match (id, sport_id, created_by, match_date, start_time, end_time, timezone,
+    player_expectation, format, visibility, duration,
+    location_type,
+    location_name, location_address,
+    closed_at,
+    notes)
+  SELECT m17, tennis_id, logged_in_user,
+    (today - 6),
+    ((today - 6)::date + TIME '19:00')::timestamptz,
+    ((today - 6)::date + TIME '20:30')::timestamptz,
+    'America/Montreal',
+    'casual', 'doubles', 'private', '90',
+    'custom',
+    'CEPSUM - Centre d''education physique et des sports de l''Universite de Montreal',
+    '2100, boul. Edouard-Montpetit, Montreal, QC H3T 1J4',
+    ((today - 6)::date + TIME '20:30')::timestamptz,
+    'Indoor courts at CEPSUM. Meet at the front desk.'
+  WHERE NOT EXISTS (SELECT 1 FROM match WHERE id = m17);
 
   -- -----------------------------------------------------------------------
   -- MATCH PARTICIPANTS
@@ -801,6 +818,17 @@ BEGIN
     (m15, logged_in_user, 'cancelled', true, 'other'), (m15, p1, 'cancelled', false, 'other')
   ON CONFLICT DO NOTHING;
 
+  -- Custom match 16 (Stade IGA): p7 hosts, looking for opponent
+  INSERT INTO match_participant (match_id, player_id, status, is_host) VALUES
+    (m16, p7, 'joined', true)
+  ON CONFLICT DO NOTHING;
+
+  -- Custom match 17 (CEPSUM): completed doubles, logged-in+p5 vs p3+p9
+  INSERT INTO match_participant (match_id, player_id, status, is_host, team_number, match_outcome, feedback_completed) VALUES
+    (m17, logged_in_user, 'joined', true, 1, 'played', true), (m17, p5, 'joined', false, 1, 'played', true),
+    (m17, p3, 'joined', false, 2, 'played', true), (m17, p9, 'joined', false, 2, 'played', true)
+  ON CONFLICT DO NOTHING;
+
   -- -----------------------------------------------------------------------
   -- MATCH RESULTS + SETS (for completed matches)
   -- -----------------------------------------------------------------------
@@ -845,7 +873,15 @@ BEGIN
     (mr5, 1, 4, 6), (mr5, 2, 7, 5), (mr5, 3, 6, 3)
   ON CONFLICT DO NOTHING;
 
-  RAISE NOTICE 'Created 15 matches with participants and results';
+  -- Match 17 result (CEPSUM): team 1 (logged_in+p5) won 6-3, 7-6
+  INSERT INTO match_result (id, match_id, winning_team, team1_score, team2_score, submitted_by, is_verified, verified_at)
+  VALUES (mr6, m17, 1, 2, 0, logged_in_user, true, ((today - 6)::date + TIME '21:00')::timestamptz)
+  ON CONFLICT DO NOTHING;
+  INSERT INTO match_set (match_result_id, set_number, team1_score, team2_score) VALUES
+    (mr6, 1, 6, 3), (mr6, 2, 7, 6)
+  ON CONFLICT DO NOTHING;
+
+  RAISE NOTICE 'Created 17 matches with participants and results';
 END $$;
 
 -- ============================================================================
@@ -1204,64 +1240,49 @@ BEGIN
   ORDER BY created_at LIMIT 1;
   IF logged_in_user IS NULL THEN logged_in_user := p1; END IF;
 
-  -- Get up to 5 Montreal facilities
-  SELECT ARRAY_AGG(id ORDER BY name) INTO fac_ids
-  FROM (SELECT id, name FROM facility WHERE city = 'Montreal' AND is_active = true LIMIT 5) sub;
+  -- Look up the 3 specific Montreal parks by name (rallia-facilities generates new UUIDs each import)
+  SELECT ARRAY_AGG(id ORDER BY name) INTO fac_ids FROM facility WHERE name IN (
+    'Terrains de tennis du parc Jeanne-Mance',
+    'Terrains de tennis et de pickleball du parc Martin-Luther-King',
+    'Terrains de tennis du parc La Fontaine'
+  );
 
-  IF fac_ids IS NULL OR array_length(fac_ids, 1) IS NULL THEN
-    RAISE NOTICE 'No Montreal facilities found, skipping favorite facility seeding';
+  IF fac_ids IS NULL OR array_length(fac_ids, 1) < 3 THEN
+    RAISE NOTICE 'Montreal park facilities not found, skipping favorite facility seeding. Run rallia-facilities first!';
     RETURN;
   END IF;
 
-  -- Logged-in user favorites 3 facilities
-  IF array_length(fac_ids, 1) >= 1 THEN
-    INSERT INTO player_favorite_facility (player_id, facility_id, display_order)
-    VALUES (logged_in_user, fac_ids[1], 1) ON CONFLICT DO NOTHING;
-  END IF;
-  IF array_length(fac_ids, 1) >= 2 THEN
-    INSERT INTO player_favorite_facility (player_id, facility_id, display_order)
-    VALUES (logged_in_user, fac_ids[2], 2) ON CONFLICT DO NOTHING;
-  END IF;
-  IF array_length(fac_ids, 1) >= 3 THEN
-    INSERT INTO player_favorite_facility (player_id, facility_id, display_order)
-    VALUES (logged_in_user, fac_ids[3], 3) ON CONFLICT DO NOTHING;
-  END IF;
+  -- ORDER BY name: [1]=Jeanne-Mance, [2]=La Fontaine, [3]=Martin-Luther-King
 
-  -- Marc favorites 2 facilities
-  IF array_length(fac_ids, 1) >= 1 THEN
-    INSERT INTO player_favorite_facility (player_id, facility_id, display_order)
-    VALUES (p1, fac_ids[1], 1) ON CONFLICT DO NOTHING;
-  END IF;
-  IF array_length(fac_ids, 1) >= 3 THEN
-    INSERT INTO player_favorite_facility (player_id, facility_id, display_order)
-    VALUES (p1, fac_ids[3], 2) ON CONFLICT DO NOTHING;
-  END IF;
+  -- Logged-in user favorites all 3 parks
+  INSERT INTO player_favorite_facility (player_id, facility_id, display_order)
+  VALUES (logged_in_user, fac_ids[1], 1) ON CONFLICT DO NOTHING;  -- Jeanne-Mance
+  INSERT INTO player_favorite_facility (player_id, facility_id, display_order)
+  VALUES (logged_in_user, fac_ids[2], 2) ON CONFLICT DO NOTHING;  -- La Fontaine
+  INSERT INTO player_favorite_facility (player_id, facility_id, display_order)
+  VALUES (logged_in_user, fac_ids[3], 3) ON CONFLICT DO NOTHING;  -- Martin-Luther-King
 
-  -- Sophie favorites 1 facility
-  IF array_length(fac_ids, 1) >= 2 THEN
-    INSERT INTO player_favorite_facility (player_id, facility_id, display_order)
-    VALUES (p2, fac_ids[2], 1) ON CONFLICT DO NOTHING;
-  END IF;
+  -- Marc favorites Jeanne-Mance and La Fontaine
+  INSERT INTO player_favorite_facility (player_id, facility_id, display_order)
+  VALUES (p1, fac_ids[1], 1) ON CONFLICT DO NOTHING;  -- Jeanne-Mance
+  INSERT INTO player_favorite_facility (player_id, facility_id, display_order)
+  VALUES (p1, fac_ids[2], 2) ON CONFLICT DO NOTHING;  -- La Fontaine
 
-  -- Philippe favorites 2 facilities
-  IF array_length(fac_ids, 1) >= 4 THEN
-    INSERT INTO player_favorite_facility (player_id, facility_id, display_order)
-    VALUES (p5, fac_ids[4], 1) ON CONFLICT DO NOTHING;
-  END IF;
-  IF array_length(fac_ids, 1) >= 1 THEN
-    INSERT INTO player_favorite_facility (player_id, facility_id, display_order)
-    VALUES (p5, fac_ids[1], 2) ON CONFLICT DO NOTHING;
-  END IF;
+  -- Sophie favorites Martin-Luther-King
+  INSERT INTO player_favorite_facility (player_id, facility_id, display_order)
+  VALUES (p2, fac_ids[3], 1) ON CONFLICT DO NOTHING;  -- Martin-Luther-King
 
-  -- Alexandre favorites 2 facilities
-  IF array_length(fac_ids, 1) >= 5 THEN
-    INSERT INTO player_favorite_facility (player_id, facility_id, display_order)
-    VALUES (p7, fac_ids[5], 1) ON CONFLICT DO NOTHING;
-  END IF;
-  IF array_length(fac_ids, 1) >= 2 THEN
-    INSERT INTO player_favorite_facility (player_id, facility_id, display_order)
-    VALUES (p7, fac_ids[2], 2) ON CONFLICT DO NOTHING;
-  END IF;
+  -- Philippe favorites Jeanne-Mance and La Fontaine
+  INSERT INTO player_favorite_facility (player_id, facility_id, display_order)
+  VALUES (p5, fac_ids[1], 1) ON CONFLICT DO NOTHING;  -- Jeanne-Mance
+  INSERT INTO player_favorite_facility (player_id, facility_id, display_order)
+  VALUES (p5, fac_ids[2], 2) ON CONFLICT DO NOTHING;  -- La Fontaine
+
+  -- Alexandre favorites Martin-Luther-King and La Fontaine
+  INSERT INTO player_favorite_facility (player_id, facility_id, display_order)
+  VALUES (p7, fac_ids[3], 1) ON CONFLICT DO NOTHING;  -- Martin-Luther-King
+  INSERT INTO player_favorite_facility (player_id, facility_id, display_order)
+  VALUES (p7, fac_ids[2], 2) ON CONFLICT DO NOTHING;  -- La Fontaine
 
   RAISE NOTICE 'Created player favorite facility records';
 END $$;
@@ -1290,15 +1311,15 @@ BEGIN
   ) ORDER BY created_at LIMIT 1;
   IF logged_in_user IS NULL THEN logged_in_user := p1; END IF;
 
-  -- Find a Montreal facility with a court
+  -- Use Jeanne-Mance park (seeded by rallia-facilities), looked up by name
   SELECT f.id, f.organization_id, c.id INTO fac_id, org_id, court_id
   FROM facility f
   JOIN court c ON c.facility_id = f.id
-  WHERE f.city = 'Montreal' AND f.is_active = true
-  ORDER BY f.name LIMIT 1;
+  WHERE f.name = 'Terrains de tennis du parc Jeanne-Mance'
+  LIMIT 1;
 
   IF fac_id IS NULL THEN
-    RAISE NOTICE 'No Montreal facilities found, skipping booking seeding';
+    RAISE NOTICE 'Jeanne-Mance facility not found, skipping booking seeding. Run rallia-facilities first!';
     RETURN;
   END IF;
 
@@ -1342,6 +1363,374 @@ BEGIN
 END $$;
 
 -- ============================================================================
+-- 15. Reputation Events
+-- ============================================================================
+-- Disable the recalculate trigger to preserve section 12's player_reputation values
+ALTER TABLE reputation_event DISABLE TRIGGER reputation_event_recalculate;
+
+DO $$
+DECLARE
+  p1 UUID := 'a1000000-0000-0000-0000-000000000001';
+  p2 UUID := 'a1000000-0000-0000-0000-000000000002';
+  p3 UUID := 'a1000000-0000-0000-0000-000000000003';
+  p4 UUID := 'a1000000-0000-0000-0000-000000000004';
+  p5 UUID := 'a1000000-0000-0000-0000-000000000005';
+  p6 UUID := 'a1000000-0000-0000-0000-000000000006';
+  p7 UUID := 'a1000000-0000-0000-0000-000000000007';
+  p8 UUID := 'a1000000-0000-0000-0000-000000000008';
+  p9 UUID := 'a1000000-0000-0000-0000-000000000009';
+  m9  UUID := 'b1000000-0000-0000-0000-000000000009';
+  m10 UUID := 'b1000000-0000-0000-0000-000000000010';
+  m11 UUID := 'b1000000-0000-0000-0000-000000000011';
+  m12 UUID := 'b1000000-0000-0000-0000-000000000012';
+  m13 UUID := 'b1000000-0000-0000-0000-000000000013';
+  m14 UUID := 'b1000000-0000-0000-0000-000000000014';
+  m17 UUID := 'b1000000-0000-0000-0000-000000000017';
+  today DATE := CURRENT_DATE;
+  logged_in_user UUID;
+BEGIN
+  SELECT id INTO logged_in_user FROM auth.users
+  WHERE id NOT IN (p1,p2,p3,p4,p5,p6,p7,p8,p9)
+  ORDER BY created_at LIMIT 1;
+  IF logged_in_user IS NULL THEN logged_in_user := p1; END IF;
+
+  INSERT INTO reputation_event (id, player_id, event_type, base_impact, match_id, caused_by_player_id, event_occurred_at) VALUES
+    -- Match 9 (p1 vs p7, 3 days ago): both completed + on time
+    ('e0000000-0000-0000-0000-000000000001', p1, 'match_completed', 25, m9, NULL, (today - 3)::date + TIME '19:30'),
+    ('e0000000-0000-0000-0000-000000000002', p7, 'match_completed', 25, m9, NULL, (today - 3)::date + TIME '19:30'),
+    ('e0000000-0000-0000-0000-000000000003', p1, 'match_on_time', 5, m9, NULL, (today - 3)::date + TIME '18:00'),
+    ('e0000000-0000-0000-0000-000000000004', p7, 'match_on_time', 5, m9, NULL, (today - 3)::date + TIME '18:00'),
+    -- Match 10 (logged_in vs p3, 5 days ago): both completed, p3 late
+    ('e0000000-0000-0000-0000-000000000005', logged_in_user, 'match_completed', 25, m10, NULL, (today - 5)::date + TIME '11:30'),
+    ('e0000000-0000-0000-0000-000000000006', p3, 'match_completed', 25, m10, NULL, (today - 5)::date + TIME '11:30'),
+    ('e0000000-0000-0000-0000-000000000007', logged_in_user, 'match_on_time', 5, m10, NULL, (today - 5)::date + TIME '10:00'),
+    ('e0000000-0000-0000-0000-000000000008', p3, 'match_late', -10, m10, logged_in_user, (today - 5)::date + TIME '10:15'),
+    -- Match 11 (p2+p4 vs p8+p9, 7 days ago): all completed + on time
+    ('e0000000-0000-0000-0000-000000000009', p2, 'match_completed', 25, m11, NULL, (today - 7)::date + TIME '10:00'),
+    ('e0000000-0000-0000-0000-000000000010', p4, 'match_completed', 25, m11, NULL, (today - 7)::date + TIME '10:00'),
+    ('e0000000-0000-0000-0000-000000000011', p8, 'match_completed', 25, m11, NULL, (today - 7)::date + TIME '10:00'),
+    ('e0000000-0000-0000-0000-000000000012', p9, 'match_completed', 25, m11, NULL, (today - 7)::date + TIME '10:00'),
+    ('e0000000-0000-0000-0000-000000000013', p2, 'match_on_time', 5, m11, NULL, (today - 7)::date + TIME '09:00'),
+    ('e0000000-0000-0000-0000-000000000014', p4, 'match_on_time', 5, m11, NULL, (today - 7)::date + TIME '09:00'),
+    -- Match 12 (p7 vs p5, 10 days ago): both completed + on time
+    ('e0000000-0000-0000-0000-000000000015', p7, 'match_completed', 25, m12, NULL, (today - 10)::date + TIME '19:00'),
+    ('e0000000-0000-0000-0000-000000000016', p5, 'match_completed', 25, m12, NULL, (today - 10)::date + TIME '19:00'),
+    ('e0000000-0000-0000-0000-000000000017', p7, 'match_on_time', 5, m12, NULL, (today - 10)::date + TIME '17:00'),
+    ('e0000000-0000-0000-0000-000000000018', p5, 'match_on_time', 5, m12, NULL, (today - 10)::date + TIME '17:00'),
+    -- Match 13 (p5+logged_in vs p1+p9, 14 days ago): all completed
+    ('e0000000-0000-0000-0000-000000000019', p5, 'match_completed', 25, m13, NULL, (today - 14)::date + TIME '15:30'),
+    ('e0000000-0000-0000-0000-000000000020', logged_in_user, 'match_completed', 25, m13, NULL, (today - 14)::date + TIME '15:30'),
+    ('e0000000-0000-0000-0000-000000000021', p1, 'match_completed', 25, m13, NULL, (today - 14)::date + TIME '15:30'),
+    -- Match 14 cancelled late by p4
+    ('e0000000-0000-0000-0000-000000000022', p4, 'match_cancelled_late', -25, m14, NULL, (today - 2)::date + TIME '12:00'),
+    -- First match bonus for p9
+    ('e0000000-0000-0000-0000-000000000023', p9, 'first_match_bonus', 10, NULL, NULL, (today - 7)::date + TIME '10:00'),
+    -- Match 17 (CEPSUM: logged_in+p5 vs p3+p9, 6 days ago): all completed + on time
+    ('e0000000-0000-0000-0000-000000000024', logged_in_user, 'match_completed', 25, m17, NULL, (today - 6)::date + TIME '20:30'),
+    ('e0000000-0000-0000-0000-000000000025', p5, 'match_completed', 25, m17, NULL, (today - 6)::date + TIME '20:30'),
+    ('e0000000-0000-0000-0000-000000000026', p3, 'match_completed', 25, m17, NULL, (today - 6)::date + TIME '20:30'),
+    ('e0000000-0000-0000-0000-000000000027', p9, 'match_completed', 25, m17, NULL, (today - 6)::date + TIME '20:30')
+  ON CONFLICT (id) DO NOTHING;
+
+  RAISE NOTICE 'Created 27 reputation events';
+END $$;
+
+ALTER TABLE reputation_event ENABLE TRIGGER reputation_event_recalculate;
+
+-- ============================================================================
+-- 16. Rating Proofs
+-- ============================================================================
+-- Player rating assignments (from section 5, ORDER BY email):
+--   p7 → NTRP 4.0, DUPR 3.5  |  p3 → NTRP 3.5  |  p8 → NTRP 4.5
+--   p1 → DUPR 4.5             |  p2 → NTRP 3.5, DUPR 2.5
+DO $$
+DECLARE
+  p1 UUID := 'a1000000-0000-0000-0000-000000000001';
+  p2 UUID := 'a1000000-0000-0000-0000-000000000002';
+  p3 UUID := 'a1000000-0000-0000-0000-000000000003';
+  p7 UUID := 'a1000000-0000-0000-0000-000000000007';
+  p8 UUID := 'a1000000-0000-0000-0000-000000000008';
+  ntrp_system_id UUID;
+  dupr_system_id UUID;
+  prs_p7_ntrp UUID;  -- p7 has NTRP 4.0
+  prs_p3_ntrp UUID;  -- p3 has NTRP 3.5
+  prs_p8_ntrp UUID;  -- p8 has NTRP 4.5
+  prs_p1_dupr UUID;  -- p1 has DUPR 4.5
+  rs_p7_ntrp UUID;
+  rs_p3_ntrp UUID;
+  rs_p8_ntrp UUID;
+  rs_p1_dupr UUID;
+BEGIN
+  SELECT id INTO ntrp_system_id FROM rating_system WHERE code = 'ntrp';
+  SELECT id INTO dupr_system_id FROM rating_system WHERE code = 'dupr';
+
+  -- Resolve via dynamic lookup: find each player's actual rating_score
+  SELECT prs.id, prs.rating_score_id INTO prs_p7_ntrp, rs_p7_ntrp
+    FROM player_rating_score prs
+    JOIN rating_score rs ON rs.id = prs.rating_score_id
+    WHERE prs.player_id = p7 AND rs.rating_system_id = ntrp_system_id LIMIT 1;
+
+  SELECT prs.id, prs.rating_score_id INTO prs_p3_ntrp, rs_p3_ntrp
+    FROM player_rating_score prs
+    JOIN rating_score rs ON rs.id = prs.rating_score_id
+    WHERE prs.player_id = p3 AND rs.rating_system_id = ntrp_system_id LIMIT 1;
+
+  SELECT prs.id, prs.rating_score_id INTO prs_p8_ntrp, rs_p8_ntrp
+    FROM player_rating_score prs
+    JOIN rating_score rs ON rs.id = prs.rating_score_id
+    WHERE prs.player_id = p8 AND rs.rating_system_id = ntrp_system_id LIMIT 1;
+
+  SELECT prs.id, prs.rating_score_id INTO prs_p1_dupr, rs_p1_dupr
+    FROM player_rating_score prs
+    JOIN rating_score rs ON rs.id = prs.rating_score_id
+    WHERE prs.player_id = p1 AND rs.rating_system_id = dupr_system_id LIMIT 1;
+
+  IF prs_p7_ntrp IS NULL THEN
+    RAISE NOTICE 'player_rating_score records not found, skipping rating proof seeding';
+    RETURN;
+  END IF;
+
+  INSERT INTO rating_proof (id, player_rating_score_id, rating_score_id, proof_type, external_url, title, description, status, reviewed_at) VALUES
+    -- p7 NTRP 4.0 approved proof
+    ('f1000000-0000-0000-0000-000000000001', prs_p7_ntrp, rs_p7_ntrp,
+     'external_link', 'https://tenniscanada.com/player/alexandre-morin',
+     'Tennis Canada Profile', 'Official Tennis Canada profile showing NTRP rating',
+     'approved', NOW() - INTERVAL '10 days'),
+    -- p3 NTRP 3.5 approved proof
+    ('f1000000-0000-0000-0000-000000000002', prs_p3_ntrp, rs_p3_ntrp,
+     'external_link', 'https://tenniscanada.com/player/jean-lavoie',
+     'Tennis Canada Profile', 'Tennis Canada profile confirming rating',
+     'approved', NOW() - INTERVAL '8 days'),
+    -- p8 NTRP 4.5 pending proof
+    ('f1000000-0000-0000-0000-000000000003', prs_p8_ntrp, rs_p8_ntrp,
+     'external_link', 'https://tenniscanada.com/player/marie-cote',
+     'Tennis Canada Profile', 'Pending verification of NTRP rating',
+     'pending', NULL),
+    -- p1 DUPR 4.5 approved proof
+    ('f1000000-0000-0000-0000-000000000004', prs_p1_dupr, rs_p1_dupr,
+     'external_link', 'https://www.dupr.com/player/marc-dupont',
+     'DUPR Rating', 'Official DUPR rating page',
+     'approved', NOW() - INTERVAL '5 days')
+  ON CONFLICT (id) DO NOTHING;
+
+  RAISE NOTICE 'Created 4 rating proofs';
+END $$;
+
+-- ============================================================================
+-- 17. Peer Rating Requests
+-- ============================================================================
+DO $$
+DECLARE
+  p2 UUID := 'a1000000-0000-0000-0000-000000000002';
+  p3 UUID := 'a1000000-0000-0000-0000-000000000003';
+  p4 UUID := 'a1000000-0000-0000-0000-000000000004';
+  p6 UUID := 'a1000000-0000-0000-0000-000000000006';
+  p7 UUID := 'a1000000-0000-0000-0000-000000000007';
+  p8 UUID := 'a1000000-0000-0000-0000-000000000008';
+  ntrp_system_id UUID;
+  dupr_system_id UUID;
+  rs_ntrp_40 UUID;
+  rs_ntrp_45 UUID;
+BEGIN
+  SELECT id INTO ntrp_system_id FROM rating_system WHERE code = 'ntrp';
+  SELECT id INTO dupr_system_id FROM rating_system WHERE code = 'dupr';
+
+  SELECT id INTO rs_ntrp_40 FROM rating_score WHERE rating_system_id = ntrp_system_id AND value = 4.0;
+  SELECT id INTO rs_ntrp_45 FROM rating_score WHERE rating_system_id = ntrp_system_id AND value = 4.5;
+
+  IF ntrp_system_id IS NULL THEN
+    RAISE NOTICE 'Rating systems not found, skipping peer rating request seeding';
+    RETURN;
+  END IF;
+
+  -- UNIQUE constraint: (requester_id, rating_system_id, evaluator_id)
+  INSERT INTO peer_rating_request (id, requester_id, evaluator_id, rating_system_id, message, status, assigned_rating_score_id, response_message, responded_at, expires_at) VALUES
+    -- p7 asks p3 to evaluate NTRP tennis (completed, assigned 4.0)
+    ('f2000000-0000-0000-0000-000000000001', p7, p3, ntrp_system_id,
+     'Salut Jean, on a joué ensemble plusieurs fois. Peux-tu évaluer mon niveau?',
+     'completed', rs_ntrp_40, 'Alexandre joue un bon 4.0, service solide et bons coups de fond.',
+     NOW() - INTERVAL '12 days', NOW() + INTERVAL '18 days'),
+    -- p4 asks p7 to evaluate NTRP tennis (pending)
+    ('f2000000-0000-0000-0000-000000000002', p4, p7, ntrp_system_id,
+     'Alexandre, j''aimerais que tu évalues mon niveau de tennis.',
+     'pending', NULL, NULL, NULL, NOW() + INTERVAL '25 days'),
+    -- p2 asks p6 to evaluate DUPR pickleball (declined)
+    ('f2000000-0000-0000-0000-000000000003', p2, p6, dupr_system_id,
+     'Camille, peux-tu évaluer mon niveau de pickleball?',
+     'declined', NULL, 'Désolée, on n''a pas assez joué ensemble pour que je puisse évaluer.',
+     NOW() - INTERVAL '5 days', NOW() + INTERVAL '20 days'),
+    -- p8 asks p3 to evaluate NTRP tennis (completed, assigned 4.5)
+    ('f2000000-0000-0000-0000-000000000004', p8, p3, ntrp_system_id,
+     'Jean, peux-tu évaluer mon niveau?',
+     'completed', rs_ntrp_45, 'Marie joue autour de 4.5, bon potentiel.',
+     NOW() - INTERVAL '8 days', NOW() + INTERVAL '22 days')
+  ON CONFLICT (id) DO NOTHING;
+
+  RAISE NOTICE 'Created 4 peer rating requests';
+END $$;
+
+-- ============================================================================
+-- 18. Rating Reference Requests + Reference Requests
+-- ============================================================================
+-- rating_reference_request uses player_rating_score_id (resolved dynamically)
+-- Actual ratings (from section 5 ORDER BY email):
+--   p7 → NTRP 4.0   |  p5 → NTRP 3.0, DUPR 3.5  |  p9 → NTRP 4.5
+DO $$
+DECLARE
+  p1 UUID := 'a1000000-0000-0000-0000-000000000001';
+  p2 UUID := 'a1000000-0000-0000-0000-000000000002';
+  p5 UUID := 'a1000000-0000-0000-0000-000000000005';
+  p7 UUID := 'a1000000-0000-0000-0000-000000000007';
+  p8 UUID := 'a1000000-0000-0000-0000-000000000008';
+  p9 UUID := 'a1000000-0000-0000-0000-000000000009';
+  ntrp_system_id UUID;
+  dupr_system_id UUID;
+  prs_p7_ntrp UUID;
+  prs_p5_ntrp UUID;
+  prs_p5_dupr UUID;
+BEGIN
+  SELECT id INTO ntrp_system_id FROM rating_system WHERE code = 'ntrp';
+  SELECT id INTO dupr_system_id FROM rating_system WHERE code = 'dupr';
+
+  -- Resolve player_rating_score IDs dynamically
+  SELECT prs.id INTO prs_p7_ntrp
+    FROM player_rating_score prs
+    JOIN rating_score rs ON rs.id = prs.rating_score_id
+    WHERE prs.player_id = p7 AND rs.rating_system_id = ntrp_system_id LIMIT 1;
+
+  SELECT prs.id INTO prs_p5_ntrp
+    FROM player_rating_score prs
+    JOIN rating_score rs ON rs.id = prs.rating_score_id
+    WHERE prs.player_id = p5 AND rs.rating_system_id = ntrp_system_id LIMIT 1;
+
+  SELECT prs.id INTO prs_p5_dupr
+    FROM player_rating_score prs
+    JOIN rating_score rs ON rs.id = prs.rating_score_id
+    WHERE prs.player_id = p5 AND rs.rating_system_id = dupr_system_id LIMIT 1;
+
+  IF prs_p7_ntrp IS NULL THEN
+    RAISE NOTICE 'player_rating_score records not found, skipping reference request seeding';
+    RETURN;
+  END IF;
+
+  -- Rating Reference Requests
+  INSERT INTO rating_reference_request (id, requester_id, player_rating_score_id, referee_id, message, status, rating_supported, response_message, responded_at, expires_at) VALUES
+    -- p7 asks p2 to validate NTRP 4.0 (completed, supported)
+    ('f6000000-0000-0000-0000-000000000001', p7, prs_p7_ntrp, p2,
+     'Sophie, peux-tu confirmer que je joue à un niveau NTRP 4.0?',
+     'completed', true, 'Oui, Alexandre est définitivement un 4.0.',
+     NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days'),
+    -- p5 asks p1 to validate NTRP (pending)
+    ('f6000000-0000-0000-0000-000000000002', p5, prs_p5_ntrp, p1,
+     'Marc, est-ce que tu peux valider mon niveau NTRP?',
+     'pending', false, NULL, NULL, NOW() + INTERVAL '25 days'),
+    -- p5 asks p8 to validate DUPR (declined)
+    ('f6000000-0000-0000-0000-000000000003', p5, prs_p5_dupr, p8,
+     'Marie, peux-tu valider mon DUPR 3.5?',
+     'declined', false, 'Désolée Philippe, je ne connais pas assez le système DUPR.',
+     NOW() - INTERVAL '3 days', NOW() + INTERVAL '20 days')
+  ON CONFLICT (id) DO NOTHING;
+
+  RAISE NOTICE 'Created 3 rating reference requests';
+END $$;
+
+-- Disable the reference threshold trigger to prevent auto-certification side effects
+ALTER TABLE reference_request DISABLE TRIGGER check_reference_threshold_trigger;
+
+DO $$
+DECLARE
+  p3 UUID := 'a1000000-0000-0000-0000-000000000003';
+  p5 UUID := 'a1000000-0000-0000-0000-000000000005';
+  p6 UUID := 'a1000000-0000-0000-0000-000000000006';
+  p7 UUID := 'a1000000-0000-0000-0000-000000000007';
+  p9 UUID := 'a1000000-0000-0000-0000-000000000009';
+  tennis_id UUID;
+  pickleball_id UUID;
+  ntrp_system_id UUID;
+  dupr_system_id UUID;
+  rs_ntrp_40 UUID;
+  rs_ntrp_30 UUID;
+  rs_dupr_25 UUID;
+BEGIN
+  SELECT id INTO tennis_id FROM sport WHERE slug = 'tennis';
+  SELECT id INTO pickleball_id FROM sport WHERE slug = 'pickleball';
+  SELECT id INTO ntrp_system_id FROM rating_system WHERE code = 'ntrp';
+  SELECT id INTO dupr_system_id FROM rating_system WHERE code = 'dupr';
+
+  SELECT id INTO rs_ntrp_40 FROM rating_score WHERE rating_system_id = ntrp_system_id AND value = 4.0;
+  SELECT id INTO rs_ntrp_30 FROM rating_score WHERE rating_system_id = ntrp_system_id AND value = 3.0;
+  SELECT id INTO rs_dupr_25 FROM rating_score WHERE rating_system_id = dupr_system_id AND value = 2.5;
+
+  IF tennis_id IS NULL THEN
+    RAISE NOTICE 'Sports not found, skipping reference request seeding';
+    RETURN;
+  END IF;
+
+  -- Reference Requests (requester_id/referee_id → profile.id, claimed_rating_score_id → rating_score.id)
+  -- UNIQUE constraint: (requester_id, referee_id, sport_id, status)
+  INSERT INTO reference_request (id, requester_id, referee_id, sport_id, claimed_rating_score_id, status, reference_rating_value, referee_comment, expires_at, responded_at, completed_at) VALUES
+    -- p7 asks p3 for tennis reference (completed, confirmed 4.0)
+    ('f3000000-0000-0000-0000-000000000001', p7, p3, tennis_id, rs_ntrp_40,
+     'completed', 4.0, 'Alexandre est un vrai 4.0, jeu complet.',
+     NOW() + INTERVAL '20 days', NOW() - INTERVAL '10 days', NOW() - INTERVAL '10 days'),
+    -- p5 asks p9 for tennis reference (pending)
+    ('f3000000-0000-0000-0000-000000000002', p5, p9, tennis_id, rs_ntrp_30,
+     'pending', NULL, NULL,
+     NOW() + INTERVAL '25 days', NULL, NULL),
+    -- p9 asks p6 for pickleball reference (expired)
+    ('f3000000-0000-0000-0000-000000000003', p9, p6, COALESCE(pickleball_id, tennis_id), rs_dupr_25,
+     'expired', NULL, NULL,
+     NOW() - INTERVAL '5 days', NULL, NULL)
+  ON CONFLICT (id) DO NOTHING;
+
+  RAISE NOTICE 'Created 3 reference requests';
+END $$;
+
+ALTER TABLE reference_request ENABLE TRIGGER check_reference_threshold_trigger;
+
+-- ============================================================================
+-- 19. Shared Contact Lists + Shared Contacts
+-- ============================================================================
+DO $$
+DECLARE
+  p1 UUID := 'a1000000-0000-0000-0000-000000000001';
+  p2 UUID := 'a1000000-0000-0000-0000-000000000002';
+  cl1 UUID := 'f4000000-0000-0000-0000-000000000001';
+  cl2 UUID := 'f4000000-0000-0000-0000-000000000002';
+  cl3 UUID := 'f4000000-0000-0000-0000-000000000003';
+BEGIN
+  -- Contact Lists (trigger will auto-update contact_count)
+  INSERT INTO shared_contact_list (id, player_id, name, description) VALUES
+    (cl1, p1, 'Tennis Buddies', 'My regular tennis partners'),
+    (cl2, p1, 'Collègues de travail', 'Collègues qui jouent au tennis'),
+    (cl3, p2, 'Pickleball Friends', 'Pickleball crew from the Plateau')
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Contacts (trigger auto-updates contact_count on the list)
+  INSERT INTO shared_contact (id, list_id, name, phone, email, notes, source, device_contact_id) VALUES
+    -- Tennis Buddies (3 contacts)
+    ('f5000000-0000-0000-0000-000000000001', cl1, 'Luc Bergeron', '+15145551234', NULL,
+     'Joue au parc Jeanne-Mance', 'phone_book', 'contact-001'),
+    ('f5000000-0000-0000-0000-000000000002', cl1, 'Nathalie Fortin', '+15145555678', 'nathalie.fortin@email.com',
+     'Disponible les weekends', 'phone_book', 'contact-002'),
+    ('f5000000-0000-0000-0000-000000000003', cl1, 'Éric Simard', NULL, 'eric.simard@email.com',
+     'Débutant motivé', 'manual', NULL),
+    -- Collègues de travail (2 contacts)
+    ('f5000000-0000-0000-0000-000000000004', cl2, 'Julie Martin', '+15145559012', 'julie.martin@work.com',
+     NULL, 'phone_book', 'contact-003'),
+    ('f5000000-0000-0000-0000-000000000005', cl2, 'François Dubé', NULL, 'francois.dube@work.com',
+     'Niveau intermédiaire', 'manual', NULL),
+    -- Pickleball Friends (2 contacts)
+    ('f5000000-0000-0000-0000-000000000006', cl3, 'Sarah Chen', '+15145553456', 'sarah.chen@email.com',
+     'Joueuse DUPR 3.5', 'phone_book', 'contact-004'),
+    ('f5000000-0000-0000-0000-000000000007', cl3, 'Miguel Santos', '+15145557890', NULL,
+     'Nouveau au pickleball', 'manual', NULL)
+  ON CONFLICT (id) DO NOTHING;
+
+  RAISE NOTICE 'Created 3 contact lists with 7 contacts';
+END $$;
+
+-- ============================================================================
 -- Verification Summary
 -- ============================================================================
 DO $$
@@ -1356,6 +1745,13 @@ DECLARE
   cnt_messages INT;
   cnt_notifications INT;
   cnt_bookings INT;
+  cnt_rep_events INT;
+  cnt_rating_proofs INT;
+  cnt_peer_rating_reqs INT;
+  cnt_rating_ref_reqs INT;
+  cnt_reference_reqs INT;
+  cnt_contact_lists INT;
+  cnt_contacts INT;
 BEGIN
   SELECT COUNT(*) INTO cnt_profiles FROM profile;
   SELECT COUNT(*) INTO cnt_players FROM player;
@@ -1367,6 +1763,13 @@ BEGIN
   SELECT COUNT(*) INTO cnt_messages FROM message;
   SELECT COUNT(*) INTO cnt_notifications FROM notification;
   SELECT COUNT(*) INTO cnt_bookings FROM booking;
+  SELECT COUNT(*) INTO cnt_rep_events FROM reputation_event;
+  SELECT COUNT(*) INTO cnt_rating_proofs FROM rating_proof;
+  SELECT COUNT(*) INTO cnt_peer_rating_reqs FROM peer_rating_request;
+  SELECT COUNT(*) INTO cnt_rating_ref_reqs FROM rating_reference_request;
+  SELECT COUNT(*) INTO cnt_reference_reqs FROM reference_request;
+  SELECT COUNT(*) INTO cnt_contact_lists FROM shared_contact_list;
+  SELECT COUNT(*) INTO cnt_contacts FROM shared_contact;
 
   RAISE NOTICE '';
   RAISE NOTICE '=== SEED VERIFICATION ===';
@@ -1380,5 +1783,12 @@ BEGIN
   RAISE NOTICE 'Messages:       %', cnt_messages;
   RAISE NOTICE 'Notifications:  %', cnt_notifications;
   RAISE NOTICE 'Bookings:       %', cnt_bookings;
+  RAISE NOTICE 'Rep. Events:    %', cnt_rep_events;
+  RAISE NOTICE 'Rating Proofs:  %', cnt_rating_proofs;
+  RAISE NOTICE 'Peer Rating Reqs: %', cnt_peer_rating_reqs;
+  RAISE NOTICE 'Rating Ref Reqs:  %', cnt_rating_ref_reqs;
+  RAISE NOTICE 'Reference Reqs:   %', cnt_reference_reqs;
+  RAISE NOTICE 'Contact Lists:  %', cnt_contact_lists;
+  RAISE NOTICE 'Contacts:       %', cnt_contacts;
   RAISE NOTICE '=========================';
 END $$;
