@@ -14,7 +14,11 @@ import { Text, Button, Spinner } from '@rallia/shared-components';
 import { SportIcon } from '../../components/SportIcon';
 import { spacingPixels, radiusPixels, primary, neutral, status } from '@rallia/design-system';
 import { usePostalCodeGeocode } from '@rallia/shared-hooks';
-import { selectionHaptic, isPostalCodeInGreaterMontreal } from '@rallia/shared-utils';
+import {
+  selectionHaptic,
+  isPostalCodeInGreaterMontreal,
+  formatPostalCodeInput,
+} from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../hooks';
 import { useUserHomeLocation } from '../../context';
 
@@ -111,21 +115,7 @@ export function PostalCodeStep({ onContinue, isActive = true }: PostalCodeStepPr
   }, [postalCode, validateFormat, geocode, clearResult]);
 
   const handlePostalCodeChange = useCallback((text: string) => {
-    // Auto-format Canadian postal codes
-    let formatted = text.toUpperCase();
-
-    // Remove any existing spaces/dashes for consistent formatting
-    const cleaned = formatted.replace(/[\s-]/g, '');
-
-    // If it looks like a Canadian postal code (6 chars, alternating letter-digit),
-    // auto-insert space after 3rd character
-    if (cleaned.length >= 3 && /^[A-Z]\d[A-Z]/.test(cleaned)) {
-      formatted = cleaned.slice(0, 3) + (cleaned.length > 3 ? ' ' + cleaned.slice(3, 6) : '');
-    } else {
-      formatted = cleaned;
-    }
-
-    setPostalCode(formatted);
+    setPostalCode(formatPostalCodeInput(text));
   }, []);
 
   const handleContinue = useCallback(async () => {
@@ -301,7 +291,7 @@ export function PostalCodeStep({ onContinue, isActive = true }: PostalCodeStepPr
               placeholderTextColor={isDark ? neutral[500] : neutral[400]}
               autoCapitalize="characters"
               autoCorrect={false}
-              maxLength={10}
+              maxLength={7}
               returnKeyType="done"
               onSubmitEditing={Keyboard.dismiss}
               onFocus={() => setIsInputFocused(true)}

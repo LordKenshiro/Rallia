@@ -38,7 +38,7 @@ import { useActionsSheet, useSport, useOverlay } from '../context';
 import SportSelector from '../components/SportSelector';
 import TennisIcon from '../../assets/icons/tennis.svg';
 import PickleballIcon from '../../assets/icons/pickleball.svg';
-import StadiumIcon from '../../assets/icons/stadium.svg';
+import TennisCourtIcon from '../../assets/icons/tennis-court.svg';
 import { useUnreadNotificationCount, useProfile, useTotalUnreadCount } from '@rallia/shared-hooks';
 import { useAuth, useThemeStyles, useTranslation, useRequireOnboarding } from '../hooks';
 import { useTheme } from '@rallia/shared-hooks';
@@ -284,7 +284,6 @@ function ProfilePictureButtonWithAuth() {
     <CopilotStep text={t('tour.header.profile.description')} order={6} name="header-profile">
       <WalkthroughableView style={{ flexDirection: 'row', alignItems: 'center' }}>
         <ProfilePictureButton onPress={handlePress} isDark={isDark} />
-        <ThemeLogo width={100} height={30} />
       </WalkthroughableView>
     </CopilotStep>
   );
@@ -342,9 +341,21 @@ function MainTabHeader() {
           paddingHorizontal: spacingPixels[1],
         }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <ProfilePictureButtonWithAuth />
           <SportSelectorWithContext />
+        </View>
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            alignItems: 'center',
+            paddingBottom: 4,
+          }}
+        >
+          <ThemeLogo width={100} height={30} />
         </View>
         <HeaderRightButtons />
       </View>
@@ -703,7 +714,7 @@ function HomeTabIcon({ color, size }: { color: string; size: number }) {
 }
 
 /**
- * Courts/Games tab icon with tour step. Uses stadium.svg.
+ * Courts/Games tab icon with tour step. Uses tennis-court.svg.
  */
 function CourtsTabIcon({ color, size }: { color: string; size: number }) {
   const { t } = useTranslation();
@@ -717,7 +728,9 @@ function CourtsTabIcon({ color, size }: { color: string; size: number }) {
           justifyContent: 'center',
         }}
       >
-        <StadiumIcon width={size} height={size} fill={color} />
+        <View style={{ transform: [{ rotate: '90deg' }] }}>
+          <TennisCourtIcon width={size} height={size} stroke={color} />
+        </View>
       </WalkthroughableView>
     </CopilotStep>
   );
