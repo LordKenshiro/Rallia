@@ -1288,6 +1288,7 @@
       "failedToUpdate": "Failed to update community",
       "failedToDelete": "Failed to delete community",
       "failedToLeave": "Failed to leave community",
+      "failedToJoin": "Failed to send join request",
       "failedToAddMember": "Failed to add member",
       "failedToRemoveMember": "Failed to remove member",
       "failedToApprove": "Failed to approve request",
@@ -1306,6 +1307,21 @@
       "leave": "Are you sure you want to leave this community?",
       "delete": "Are you sure you want to delete this community? This action cannot be undone.",
       "removeMember": "Are you sure you want to remove this member?"
+    },
+    "access": {
+      "membershipRequired": "Membership Required",
+      "membershipRequiredDescription": "You need to be a member of this community to access its features. Request to join to participate in games, leaderboards, and discussions.",
+      "requestPending": "Request Pending",
+      "requestPendingDescription": "Your request to join this community is pending moderator approval. You'll be notified once it's reviewed.",
+      "noModerator": "Community Unavailable",
+      "noModeratorDescription": "This community currently has no active moderators to approve new members. Please try again later or contact support."
+    },
+    "actions": {
+      "requestToJoin": "Request to Join"
+    },
+    "joinRequest": {
+      "sent": "Request Sent",
+      "sentDescription": "Your request to join has been sent. A moderator will review it shortly."
     },
     "permissionRequired": "Permission Required",
     "photoAccessRequired": "Please allow access to your photos to add a community image.",
@@ -1563,8 +1579,8 @@
       "wasAddedBy": "{actorName} was added by {addedByName}",
       "joinedTheGroup": "{actorName} joined the group",
       "leftTheGroup": "{actorName} left the group",
-      "promotedMember": "{actorName} promoted a member to moderator",
-      "demotedMember": "{actorName} demoted a moderator to member",
+      "promotedMember": "{actorName} was promoted to moderator",
+      "demotedMember": "{actorName} was demoted to member",
       "createdGame": "{actorName} created a new game",
       "sentMessage": "{actorName} sent a message",
       "updatedGroup": "{actorName} updated the group",
@@ -1630,8 +1646,18 @@
       "selectSkillLevel": "Select Skill Level",
       "selectMaxDistance": "Select Max Distance",
       "selectAvailability": "Select Availability",
+      "selectDay": "Select Day",
       "selectPlayStyle": "Select Play Style",
-      "sortPlayersBy": "Sort Players By"
+      "sortPlayersBy": "Sort Players By",
+      "day": "Day",
+      "dayAll": "All",
+      "dayMonday": "Monday",
+      "dayTuesday": "Tuesday",
+      "dayWednesday": "Wednesday",
+      "dayThursday": "Thursday",
+      "dayFriday": "Friday",
+      "daySaturday": "Saturday",
+      "daySunday": "Sunday"
     }
   },
   "sharedLists": {

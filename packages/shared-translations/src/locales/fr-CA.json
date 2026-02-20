@@ -1330,6 +1330,7 @@
       "failedToUpdate": "Échec de la mise à jour de la communauté",
       "failedToDelete": "Échec de la suppression de la communauté",
       "failedToLeave": "Échec de la sortie de la communauté",
+      "failedToJoin": "Échec de l'envoi de la demande d'adhésion",
       "failedToAddMember": "Échec de l'ajout du membre",
       "failedToRemoveMember": "Échec du retrait du membre",
       "failedToApprove": "Échec de l'approbation de la demande",
@@ -1348,6 +1349,21 @@
       "leave": "Êtes-vous sûr de vouloir quitter cette communauté?",
       "delete": "Êtes-vous sûr de vouloir supprimer cette communauté? Cette action est irréversible.",
       "removeMember": "Êtes-vous sûr de vouloir retirer ce membre?"
+    },
+    "access": {
+      "membershipRequired": "Adhésion requise",
+      "membershipRequiredDescription": "Vous devez être membre de cette communauté pour accéder à ses fonctionnalités. Demandez à rejoindre pour participer aux parties, classements et discussions.",
+      "requestPending": "Demande en attente",
+      "requestPendingDescription": "Votre demande d'adhésion est en attente d'approbation par un modérateur. Vous serez notifié une fois qu'elle sera examinée.",
+      "noModerator": "Communauté non disponible",
+      "noModeratorDescription": "Cette communauté n'a actuellement aucun modérateur actif pour approuver les nouveaux membres. Veuillez réessayer plus tard ou contacter le support."
+    },
+    "actions": {
+      "requestToJoin": "Demander à rejoindre"
+    },
+    "joinRequest": {
+      "sent": "Demande envoyée",
+      "sentDescription": "Votre demande d'adhésion a été envoyée. Un modérateur l'examinera sous peu."
     },
     "permissionRequired": "Permission requise",
     "photoAccessRequired": "Veuillez autoriser l'accès à vos photos pour ajouter une image de communauté.",
@@ -1605,8 +1621,8 @@
       "wasAddedBy": "{actorName} a été ajouté(e) par {addedByName}",
       "joinedTheGroup": "{actorName} a rejoint le groupe",
       "leftTheGroup": "{actorName} a quitté le groupe",
-      "promotedMember": "{actorName} a promu un membre au rôle de modérateur",
-      "demotedMember": "{actorName} a rétrogradé un modérateur au rôle de membre",
+      "promotedMember": "{actorName} a été promu(e) modérateur",
+      "demotedMember": "{actorName} a été rétrogradé(e) membre",
       "createdGame": "{actorName} a créé une nouvelle partie",
       "sentMessage": "{actorName} a envoyé un message",
       "updatedGroup": "{actorName} a mis à jour le groupe",
@@ -1672,8 +1688,18 @@
       "selectSkillLevel": "Sélectionner le niveau",
       "selectMaxDistance": "Sélectionner la distance max",
       "selectAvailability": "Sélectionner la disponibilité",
+      "selectDay": "Sélectionner le jour",
       "selectPlayStyle": "Sélectionner le style de jeu",
-      "sortPlayersBy": "Trier les joueurs par"
+      "sortPlayersBy": "Trier les joueurs par",
+      "day": "Jour",
+      "dayAll": "Tous",
+      "dayMonday": "Lundi",
+      "dayTuesday": "Mardi",
+      "dayWednesday": "Mercredi",
+      "dayThursday": "Jeudi",
+      "dayFriday": "Vendredi",
+      "daySaturday": "Samedi",
+      "daySunday": "Dimanche"
     }
   },
   "sharedLists": {

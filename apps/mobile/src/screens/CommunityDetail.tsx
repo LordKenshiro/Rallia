@@ -25,7 +25,7 @@ import type { RouteProp } from '@react-navigation/native';
 import Svg, { Circle } from 'react-native-svg';
 
 import { Text } from '@rallia/shared-components';
-import { lightHaptic, mediumHaptic, selectionHaptic } from '@rallia/shared-utils';
+import { lightHaptic, mediumHaptic, selectionHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
 import { useThemeStyles, useAuth, useTranslation, type TranslationKey } from '../hooks';
 import {
   useCommunityWithMembers,
@@ -37,6 +37,8 @@ import {
   useRejectCommunityMember,
   useCommunityRealtime,
   usePendingRequestsRealtime,
+  useCommunityAccess,
+  useRequestToJoinCommunity,
   useGroupStats,
   useGroupActivity,
   useGroupLeaderboard,
@@ -115,6 +117,7 @@ export default function CommunityDetailScreen() {
 
   const { data: community, isLoading, refetch } = useCommunityWithMembers(communityId);
   const { data: isModerator } = useIsCommunityModerator(communityId, playerId);
+  const { data: accessInfo } = useCommunityAccess(communityId, playerId);
   const { data: pendingRequests, refetch: refetchPendingRequests } = usePendingCommunityMembers(
     isModerator ? communityId : undefined,
     playerId
@@ -134,6 +137,7 @@ export default function CommunityDetailScreen() {
   const deleteCommunityMutation = useDeleteCommunity();
   const approveMemberMutation = useApproveCommunityMember();
   const rejectMemberMutation = useRejectCommunityMember();
+  const requestToJoinMutation = useRequestToJoinCommunity();
 
   const handleOpenChat = useCallback(() => {
     if (community?.conversation_id) {
@@ -499,9 +503,9 @@ export default function CommunityDetailScreen() {
                         {index + 1}.
                       </Text>
                       <View style={[styles.smallAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-                        {entry.player?.profile?.profile_picture_url ? (
+                        {getProfilePictureUrl(entry.player?.profile?.profile_picture_url) ? (
                           <Image
-                            source={{ uri: entry.player.profile.profile_picture_url }}
+                            source={{ uri: getProfilePictureUrl(entry.player?.profile?.profile_picture_url)! }}
                             style={styles.avatarImage}
                           />
                         ) : (
@@ -707,9 +711,9 @@ export default function CommunityDetailScreen() {
                                 onPress={() => participant.player_id && navigation.navigate('PlayerProfile', { playerId: participant.player_id })}
                                 activeOpacity={0.7}
                               >
-                                {participant.player?.profile?.profile_picture_url ? (
+                                {getProfilePictureUrl(participant.player?.profile?.profile_picture_url) ? (
                                   <Image
-                                    source={{ uri: participant.player.profile.profile_picture_url }}
+                                    source={{ uri: getProfilePictureUrl(participant.player?.profile?.profile_picture_url)! }}
                                     style={styles.teamAvatarImage}
                                   />
                                 ) : (
@@ -784,9 +788,9 @@ export default function CommunityDetailScreen() {
                                 onPress={() => participant.player_id && navigation.navigate('PlayerProfile', { playerId: participant.player_id })}
                                 activeOpacity={0.7}
                               >
-                                {participant.player?.profile?.profile_picture_url ? (
+                                {getProfilePictureUrl(participant.player?.profile?.profile_picture_url) ? (
                                   <Image
-                                    source={{ uri: participant.player.profile.profile_picture_url }}
+                                    source={{ uri: getProfilePictureUrl(participant.player?.profile?.profile_picture_url)! }}
                                     style={styles.teamAvatarImage}
                                   />
                                 ) : (
@@ -890,9 +894,9 @@ export default function CommunityDetailScreen() {
                       )}
                     </View>
                     <View style={[styles.leaderboardAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-                      {entry.player?.profile?.profile_picture_url ? (
+                      {getProfilePictureUrl(entry.player?.profile?.profile_picture_url) ? (
                         <Image
-                          source={{ uri: entry.player.profile.profile_picture_url }}
+                          source={{ uri: getProfilePictureUrl(entry.player?.profile?.profile_picture_url)! }}
                           style={styles.leaderboardAvatarImage}
                         />
                       ) : (
@@ -946,6 +950,16 @@ export default function CommunityDetailScreen() {
                       message = `${actorName} left the community`;
                       icon = 'exit';
                       iconColor = '#FF3B30';
+                      break;
+                    case 'member_promoted':
+                      message = `${actorName} was promoted to moderator`;
+                      icon = 'arrow-up-circle';
+                      iconColor = '#34C759';
+                      break;
+                    case 'member_demoted':
+                      message = `${actorName} was demoted to member`;
+                      icon = 'arrow-down-circle';
+                      iconColor = '#FF9500';
                       break;
                     case 'game_created':
                       message = `${actorName} created a new game`;
@@ -1056,6 +1070,127 @@ export default function CommunityDetailScreen() {
     );
   }
 
+  // Show restricted view for non-members who cannot access full features
+  if (accessInfo && !accessInfo.canAccess && !accessInfo.isMember) {
+    const isPending = accessInfo.membershipStatus === 'pending';
+    const hasNoModerator = !accessInfo.hasActiveModerator;
+    
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+        <View style={styles.restrictedContainer}>
+          {/* Back Button */}
+          <TouchableOpacity
+            style={styles.restrictedBackButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+
+          {/* Community Header */}
+          {community.cover_image_url ? (
+            <Image
+              source={{ uri: community.cover_image_url }}
+              style={styles.restrictedCoverImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={[styles.restrictedHeaderPlaceholder, { backgroundColor: isDark ? primary[900] : primary[100] }]}>
+              <Ionicons name="globe" size={64} color={colors.primary} />
+            </View>
+          )}
+
+          {/* Community Info */}
+          <View style={styles.restrictedInfoCard}>
+            <Text weight="bold" size="xl" style={{ color: colors.text, textAlign: 'center' }}>
+              {community.name}
+            </Text>
+            
+            {community.description && (
+              <Text size="sm" style={{ color: colors.textSecondary, textAlign: 'center', marginTop: 8 }}>
+                {community.description}
+              </Text>
+            )}
+            
+            <Text size="sm" style={{ color: colors.textMuted, marginTop: 12 }}>
+              {t('common.memberCount', { count: community.member_count })}
+            </Text>
+          </View>
+
+          {/* Access Gate Message */}
+          <View style={[styles.accessGateCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <Ionicons 
+              name={isPending ? 'time-outline' : hasNoModerator ? 'alert-circle-outline' : 'lock-closed-outline'} 
+              size={48} 
+              color={isPending ? colors.warning : hasNoModerator ? colors.error : colors.textMuted} 
+            />
+            
+            <Text weight="semibold" size="lg" style={{ color: colors.text, marginTop: 16, textAlign: 'center' }}>
+              {isPending 
+                ? t('community.access.requestPending' as TranslationKey)
+                : hasNoModerator
+                  ? t('community.access.noModerator' as TranslationKey)
+                  : t('community.access.membershipRequired' as TranslationKey)
+              }
+            </Text>
+            
+            <Text size="sm" style={{ color: colors.textSecondary, marginTop: 8, textAlign: 'center', paddingHorizontal: 20 }}>
+              {isPending
+                ? t('community.access.requestPendingDescription' as TranslationKey)
+                : hasNoModerator
+                  ? t('community.access.noModeratorDescription' as TranslationKey)
+                  : t('community.access.membershipRequiredDescription' as TranslationKey)
+              }
+            </Text>
+
+            {/* Join/Request Button (only show if not pending and has moderator) */}
+            {!isPending && !hasNoModerator && playerId && (
+              <TouchableOpacity
+                style={[styles.joinButton, { backgroundColor: colors.primary }]}
+                onPress={async () => {
+                  try {
+                    mediumHaptic();
+                    await requestToJoinMutation.mutateAsync({ communityId, playerId });
+                    Alert.alert(
+                      t('community.joinRequest.sent' as TranslationKey),
+                      t('community.joinRequest.sentDescription' as TranslationKey)
+                    );
+                  } catch (error) {
+                    Alert.alert(
+                      t('common.error'),
+                      error instanceof Error ? error.message : t('community.errors.failedToJoin' as TranslationKey)
+                    );
+                  }
+                }}
+                disabled={requestToJoinMutation.isPending}
+              >
+                {requestToJoinMutation.isPending ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Ionicons name="person-add-outline" size={20} color="#FFFFFF" />
+                    <Text weight="semibold" style={{ color: '#FFFFFF', marginLeft: 8 }}>
+                      {t('community.actions.requestToJoin' as TranslationKey)}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+
+            {/* Go Back Button */}
+            <TouchableOpacity
+              style={[styles.goBackButton, { borderColor: colors.border }]}
+              onPress={() => navigation.goBack()}
+            >
+              <Text weight="medium" style={{ color: colors.textSecondary }}>
+                {t('common.goBack')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <ScrollView
@@ -1130,9 +1265,9 @@ export default function CommunityDetailScreen() {
                     },
                   ]}
                 >
-                  {member.player?.profile?.profile_picture_url ? (
+                  {getProfilePictureUrl(member.player?.profile?.profile_picture_url) ? (
                     <Image
-                      source={{ uri: member.player.profile.profile_picture_url }}
+                      source={{ uri: getProfilePictureUrl(member.player?.profile?.profile_picture_url)! }}
                       style={styles.memberAvatarImage}
                     />
                   ) : (
@@ -1998,5 +2133,59 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
+  },
+  // Restricted Access Styles
+  restrictedContainer: {
+    flex: 1,
+  },
+  restrictedBackButton: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  restrictedCoverImage: {
+    width: '100%',
+    height: 180,
+  },
+  restrictedHeaderPlaceholder: {
+    width: '100%',
+    height: 180,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  restrictedInfoCard: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  accessGateCard: {
+    marginHorizontal: 16,
+    padding: 24,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  joinButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginTop: 24,
+    width: '100%',
+  },
+  goBackButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 12,
   },
 });

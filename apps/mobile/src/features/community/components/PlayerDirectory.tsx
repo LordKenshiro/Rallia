@@ -98,6 +98,7 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
       filters.gender !== 'all' ||
       filters.skillLevel !== 'all' ||
       filters.availability !== 'all' ||
+      filters.day !== 'all' ||
       filters.playStyle !== 'all' ||
       filters.maxDistance !== 'all' ||
       (filters.sortBy && filters.sortBy !== 'name_asc')
@@ -111,6 +112,7 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     gender: filters.gender,
     skillLevel: filters.skillLevel,
     availability: filters.availability,
+    day: filters.day,
     playStyle: filters.playStyle,
     maxDistance: filters.maxDistance,
     sortBy: filters.sortBy,

@@ -23,7 +23,7 @@ import type { RouteProp } from '@react-navigation/native';
 import Svg, { Circle } from 'react-native-svg';
 
 import { Text } from '@rallia/shared-components';
-import { lightHaptic, selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
+import { lightHaptic, selectionHaptic, mediumHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
 import { useThemeStyles, useAuth, useTranslation, type TranslationKey } from '../hooks';
 import {
   useGroupWithMembers,
@@ -511,9 +511,9 @@ export default function GroupDetailScreen() {
                         {index + 1}.
                       </Text>
                       <View style={[styles.smallAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-                        {entry.player?.profile?.profile_picture_url ? (
+                        {getProfilePictureUrl(entry.player?.profile?.profile_picture_url) ? (
                           <Image
-                            source={{ uri: entry.player.profile.profile_picture_url }}
+                            source={{ uri: getProfilePictureUrl(entry.player?.profile?.profile_picture_url)! }}
                             style={styles.avatarImage}
                           />
                         ) : (
@@ -635,9 +635,9 @@ export default function GroupDetailScreen() {
                                 onPress={() => participant.player_id && navigation.navigate('PlayerProfile', { playerId: participant.player_id })}
                                 activeOpacity={0.7}
                               >
-                                {participant.player?.profile?.profile_picture_url ? (
+                                {getProfilePictureUrl(participant.player?.profile?.profile_picture_url) ? (
                                   <Image
-                                    source={{ uri: participant.player.profile.profile_picture_url }}
+                                    source={{ uri: getProfilePictureUrl(participant.player?.profile?.profile_picture_url)! }}
                                     style={styles.teamAvatarImage}
                                   />
                                 ) : (
@@ -712,9 +712,9 @@ export default function GroupDetailScreen() {
                                 onPress={() => participant.player_id && navigation.navigate('PlayerProfile', { playerId: participant.player_id })}
                                 activeOpacity={0.7}
                               >
-                                {participant.player?.profile?.profile_picture_url ? (
+                                {getProfilePictureUrl(participant.player?.profile?.profile_picture_url) ? (
                                   <Image
-                                    source={{ uri: participant.player.profile.profile_picture_url }}
+                                    source={{ uri: getProfilePictureUrl(participant.player?.profile?.profile_picture_url)! }}
                                     style={styles.teamAvatarImage}
                                   />
                                 ) : (
@@ -803,9 +803,9 @@ export default function GroupDetailScreen() {
                       {/* 2nd Place */}
                       <View style={styles.podiumItem}>
                         <View style={[styles.podiumAvatar, styles.podiumAvatar2nd, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-                          {leaderboard[1].player?.profile?.profile_picture_url ? (
+                          {getProfilePictureUrl(leaderboard[1].player?.profile?.profile_picture_url) ? (
                             <Image
-                              source={{ uri: leaderboard[1].player.profile.profile_picture_url }}
+                              source={{ uri: getProfilePictureUrl(leaderboard[1].player?.profile?.profile_picture_url)! }}
                               style={styles.avatarImage}
                             />
                           ) : (
@@ -820,9 +820,9 @@ export default function GroupDetailScreen() {
                       {/* 1st Place */}
                       <View style={styles.podiumItem}>
                         <View style={[styles.podiumAvatar, styles.podiumAvatar1st, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-                          {leaderboard[0].player?.profile?.profile_picture_url ? (
+                          {getProfilePictureUrl(leaderboard[0].player?.profile?.profile_picture_url) ? (
                             <Image
-                              source={{ uri: leaderboard[0].player.profile.profile_picture_url }}
+                              source={{ uri: getProfilePictureUrl(leaderboard[0].player?.profile?.profile_picture_url)! }}
                               style={styles.avatarImage}
                             />
                           ) : (
@@ -837,9 +837,9 @@ export default function GroupDetailScreen() {
                       {/* 3rd Place */}
                       <View style={styles.podiumItem}>
                         <View style={[styles.podiumAvatar, styles.podiumAvatar3rd, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-                          {leaderboard[2].player?.profile?.profile_picture_url ? (
+                          {getProfilePictureUrl(leaderboard[2].player?.profile?.profile_picture_url) ? (
                             <Image
-                              source={{ uri: leaderboard[2].player.profile.profile_picture_url }}
+                              source={{ uri: getProfilePictureUrl(leaderboard[2].player?.profile?.profile_picture_url)! }}
                               style={styles.avatarImage}
                             />
                           ) : (
@@ -875,9 +875,9 @@ export default function GroupDetailScreen() {
                         )}
                       </View>
                       <View style={[styles.leaderboardAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-                        {entry.player?.profile?.profile_picture_url ? (
+                        {getProfilePictureUrl(entry.player?.profile?.profile_picture_url) ? (
                           <Image
-                            source={{ uri: entry.player.profile.profile_picture_url }}
+                            source={{ uri: getProfilePictureUrl(entry.player?.profile?.profile_picture_url)! }}
                             style={styles.avatarImage}
                           />
                         ) : (
@@ -935,9 +935,9 @@ export default function GroupDetailScreen() {
                       activeOpacity={0.7}
                     >
                       <View style={[styles.activityAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-                        {activity.actor?.profile?.profile_picture_url ? (
+                        {getProfilePictureUrl(activity.actor?.profile?.profile_picture_url) ? (
                           <Image
-                            source={{ uri: activity.actor.profile.profile_picture_url }}
+                            source={{ uri: getProfilePictureUrl(activity.actor?.profile?.profile_picture_url)! }}
                             style={styles.avatarImage}
                           />
                         ) : (
@@ -1049,9 +1049,9 @@ export default function GroupDetailScreen() {
                     },
                   ]}
                 >
-                  {member.player?.profile?.profile_picture_url ? (
+                  {getProfilePictureUrl(member.player?.profile?.profile_picture_url) ? (
                     <Image
-                      source={{ uri: member.player.profile.profile_picture_url }}
+                      source={{ uri: getProfilePictureUrl(member.player?.profile?.profile_picture_url)! }}
                       style={styles.memberAvatarImage}
                     />
                   ) : (
@@ -1073,17 +1073,15 @@ export default function GroupDetailScreen() {
 
           {/* Action Buttons Row */}
           <View style={styles.actionButtonsRow}>
-            {group.member_count < group.max_members && (
-              <TouchableOpacity
-                style={[styles.addMemberButton, { borderColor: colors.primary, flex: 1 }]}
-                onPress={() => setShowAddMemberModal(true)}
-              >
-                <Ionicons name="person-add" size={18} color={colors.primary} />
-                <Text weight="semibold" style={{ color: colors.primary, marginLeft: 8 }}>
-                  {t('groups.detail.addMember' as TranslationKey)}
-                </Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={[styles.addMemberButton, { borderColor: colors.primary, flex: 1 }]}
+              onPress={() => setShowAddMemberModal(true)}
+            >
+              <Ionicons name="person-add" size={18} color={colors.primary} />
+              <Text weight="semibold" style={{ color: colors.primary, marginLeft: 8 }}>
+                {t('groups.detail.addMember' as TranslationKey)}
+              </Text>
+            </TouchableOpacity>
             <TouchableOpacity
               style={[styles.menuButton, { borderColor: colors.border }]}
               onPress={handleShowOptions}

@@ -117,7 +117,9 @@ function AddScoreContent({
       }
 
       // Get opponent IDs
-      const opponentIds = (formData.opponents || []).map((p) => p.id);
+      // Filter out current user from opponents (safety check)
+      const validOpponents = (formData.opponents || []).filter((p) => p.id !== user.id);
+      const opponentIds = validOpponents.map((p) => p.id);
       
       // Build team player IDs based on singles vs doubles
       let team1PlayerIds: string[];
@@ -125,8 +127,10 @@ function AddScoreContent({
       
       if (formData.matchType === 'double' && formData.partner) {
         // Doubles: Team 1 = current user + partner, Team 2 = remaining 2 opponents
-        team1PlayerIds = [user.id, formData.partner.id];
-        team2PlayerIds = (formData.opponents || [])
+        // Ensure partner is not the current user (safety check)
+        const validPartner = formData.partner.id !== user.id ? formData.partner : null;
+        team1PlayerIds = validPartner ? [user.id, validPartner.id] : [user.id];
+        team2PlayerIds = validOpponents
           .filter((p) => p.id !== formData.partner?.id)
           .map((p) => p.id);
       } else {

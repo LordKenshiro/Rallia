@@ -290,6 +290,7 @@ export function usePromoteMember() {
       promoteMember(groupId, moderatorId, playerIdToPromote),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: groupKeys.withMembers(variables.groupId) });
+      queryClient.invalidateQueries({ queryKey: groupKeys.activity(variables.groupId) });
     },
   });
 }
@@ -305,6 +306,7 @@ export function useDemoteMember() {
       demoteMember(groupId, moderatorId, playerIdToDemote),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: groupKeys.withMembers(variables.groupId) });
+      queryClient.invalidateQueries({ queryKey: groupKeys.activity(variables.groupId) });
     },
   });
 }

@@ -17,6 +17,7 @@ import {
   isCommunityMember,
   isCommunityModerator,
   getCommunityMembershipStatus,
+  checkCommunityAccess,
   // Membership operations
   requestToJoinCommunity,
   requestToJoinCommunityByInviteCode,
@@ -59,6 +60,7 @@ export const communityKeys = {
   isModerator: (communityId: string, playerId: string) => [...communityKeys.detail(communityId), 'moderator', playerId] as const,
   isMember: (communityId: string, playerId: string) => [...communityKeys.detail(communityId), 'member', playerId] as const,
   membershipStatus: (communityId: string, playerId: string) => [...communityKeys.detail(communityId), 'status', playerId] as const,
+  access: (communityId: string, playerId?: string) => [...communityKeys.detail(communityId), 'access', playerId] as const,
   pendingRequests: (communityId: string) => [...communityKeys.detail(communityId), 'pending'] as const,
 };
 
@@ -139,6 +141,18 @@ export function useCommunityMembershipStatus(communityId: string | undefined, pl
     queryKey: communityKeys.membershipStatus(communityId || '', playerId || ''),
     queryFn: () => getCommunityMembershipStatus(communityId!, playerId!),
     enabled: !!communityId && !!playerId,
+  });
+}
+
+/**
+ * Check if a player can access a community's full features
+ * Returns access status, membership info, and reason if denied
+ */
+export function useCommunityAccess(communityId: string | undefined, playerId: string | undefined) {
+  return useQuery({
+    queryKey: communityKeys.access(communityId || '', playerId),
+    queryFn: () => checkCommunityAccess(communityId!, playerId),
+    enabled: !!communityId,
   });
 }
 
@@ -418,6 +432,8 @@ export function usePromoteCommunityMember() {
     }) => promoteCommunityMember(communityId, playerId, promoterId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: communityKeys.withMembers(variables.communityId) });
+      // Also invalidate group activity since communities use the same activity table
+      queryClient.invalidateQueries({ queryKey: ['groups', 'activity', variables.communityId] });
     },
   });
 }
@@ -440,6 +456,8 @@ export function useDemoteCommunityMember() {
     }) => demoteCommunityMember(communityId, playerId, demoterId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: communityKeys.withMembers(variables.communityId) });
+      // Also invalidate group activity since communities use the same activity table
+      queryClient.invalidateQueries({ queryKey: ['groups', 'activity', variables.communityId] });
     },
   });
 }

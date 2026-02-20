@@ -16,6 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
+import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import type { GroupMatch } from '@rallia/shared-hooks';
 
@@ -127,9 +128,9 @@ export function RecentGamesModal({
                   onPress={() => participant.player_id && onPlayerPress?.(participant.player_id)}
                   activeOpacity={0.7}
                 >
-                  {participant.player?.profile?.profile_picture_url ? (
+                  {getProfilePictureUrl(participant.player?.profile?.profile_picture_url) ? (
                     <Image
-                      source={{ uri: participant.player.profile.profile_picture_url }}
+                      source={{ uri: getProfilePictureUrl(participant.player?.profile?.profile_picture_url)! }}
                       style={styles.avatarImage}
                     />
                   ) : (
@@ -196,9 +197,9 @@ export function RecentGamesModal({
                   onPress={() => participant.player_id && onPlayerPress?.(participant.player_id)}
                   activeOpacity={0.7}
                 >
-                  {participant.player?.profile?.profile_picture_url ? (
+                  {getProfilePictureUrl(participant.player?.profile?.profile_picture_url) ? (
                     <Image
-                      source={{ uri: participant.player.profile.profile_picture_url }}
+                      source={{ uri: getProfilePictureUrl(participant.player?.profile?.profile_picture_url)! }}
                       style={styles.avatarImage}
                     />
                   ) : (
