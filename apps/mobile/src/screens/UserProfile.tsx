@@ -853,6 +853,123 @@ const UserProfile = () => {
           )}
         </View>
 
+        {/* My Location */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+              {t('profile.sections.location')}
+            </Text>
+            {!loadingCore && (
+              <TouchableOpacity
+                style={styles.editIconButton}
+                onPress={() => {
+                  SheetManager.show('player-location', {
+                    payload: {
+                      initialData: {
+                        postalCode: player?.postal_code || '',
+                        address: player?.address || '',
+                        city: player?.city || '',
+                        province: player?.province || '',
+                        latitude: player?.latitude,
+                        longitude: player?.longitude,
+                      },
+                      onSave: () => {
+                        refetchPlayer();
+                      },
+                    },
+                  });
+                }}
+              >
+                <Ionicons name="create-outline" size={20} color={colors.primary} />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {loadingCore ? (
+            <View
+              style={[
+                styles.card,
+                styles.skeletonCard,
+                { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
+            >
+              <Skeleton
+                width={80}
+                height={14}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
+              />
+              <View style={{ marginTop: 8, gap: 8 }}>
+                <Skeleton
+                  width="100%"
+                  height={40}
+                  borderRadius={8}
+                  backgroundColor={skeletonBg}
+                  highlightColor={skeletonHighlight}
+                />
+                <Skeleton
+                  width="100%"
+                  height={40}
+                  borderRadius={8}
+                  backgroundColor={skeletonBg}
+                  highlightColor={skeletonHighlight}
+                />
+                <View style={styles.horizontalFieldsContainer}>
+                  <Skeleton
+                    width="100%"
+                    height={40}
+                    borderRadius={8}
+                    backgroundColor={skeletonBg}
+                    highlightColor={skeletonHighlight}
+                    style={{ flex: 1 }}
+                  />
+                  <Skeleton
+                    width="100%"
+                    height={40}
+                    borderRadius={8}
+                    backgroundColor={skeletonBg}
+                    highlightColor={skeletonHighlight}
+                    style={{ flex: 1 }}
+                  />
+                </View>
+              </View>
+            </View>
+          ) : (
+            <View style={[styles.card, { backgroundColor: colors.card }]}>
+              {player?.address ? (
+                <View style={styles.compactRow}>
+                  <Text style={[styles.label, { color: colors.textMuted }]}>
+                    {t('profile.fields.address')}
+                  </Text>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={[styles.value, { color: colors.text }]} numberOfLines={1}>
+                      {[player.address.split(',')[0].trim(), player?.city]
+                        .filter(Boolean)
+                        .join(', ')}
+                    </Text>
+                    {(player?.province || player?.postal_code) && (
+                      <Text style={[styles.value, { color: colors.textMuted }]} numberOfLines={1}>
+                        {[player?.province, player?.postal_code, 'Canada']
+                          .filter(Boolean)
+                          .join(', ')}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.compactRow}>
+                  <Text style={[styles.label, { color: colors.textMuted }]}>
+                    {t('profile.fields.postalCode')}
+                  </Text>
+                  <Text style={[styles.value, { color: colors.text }]}>
+                    {player?.postal_code || '-'}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+        </View>
+
         {/* My Sports - Horizontal Cards with Chevrons - Wrapped with CopilotStep */}
         <CopilotStep
           text={t('tour.profileScreen.sports.description')}

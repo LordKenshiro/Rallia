@@ -81,9 +81,10 @@ export default function PublicMatches() {
   const { player, loading: playerLoading } = usePlayer();
   const { selectedSport, isLoading: sportLoading } = useSport();
 
-  // Get a short label for the home location (postal code or city)
-  const homeLocationLabel =
-    homeLocation?.postalCode || homeLocation?.formattedAddress?.split(',')[0];
+  // Get a short label for the home location (full address if available, otherwise postal code)
+  const homeLocationLabel = player?.address
+    ? [player.address.split(',')[0].trim(), player.city].filter(Boolean).join(', ')
+    : homeLocation?.postalCode || homeLocation?.formattedAddress?.split(',')[0];
 
   // Filter state - default is no distance filter (shows all location types)
   const {

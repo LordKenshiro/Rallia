@@ -273,7 +273,7 @@ END $$;
 -- ============================================================================
 -- 4. Create Profiles for All Auth Users
 -- ============================================================================
-INSERT INTO profile (id, first_name, last_name, display_name, email, onboarding_completed, bio, birth_date, postal_code, city, province, country, preferred_locale)
+INSERT INTO profile (id, first_name, last_name, display_name, email, onboarding_completed, bio, birth_date, preferred_locale)
 SELECT
   id,
   COALESCE(raw_user_meta_data->>'first_name', SPLIT_PART(COALESCE(raw_user_meta_data->>'full_name', 'Test User'), ' ', 1)),
@@ -319,22 +319,6 @@ SELECT
     WHEN email = 'david.belanger@test.com' THEN '1993-08-07'::date
     ELSE NULL
   END,
-  -- Montreal postal codes
-  CASE
-    WHEN email = 'marc.dupont@test.com' THEN 'H2T 1S4'
-    WHEN email = 'sophie.tremblay@test.com' THEN 'H2X 1Y6'
-    WHEN email = 'jean.lavoie@test.com' THEN 'H3A 1B9'
-    WHEN email = 'isabelle.gagnon@test.com' THEN 'H2W 2E1'
-    WHEN email = 'philippe.roy@test.com' THEN 'H2J 3K5'
-    WHEN email = 'camille.bouchard@test.com' THEN 'H2R 2N2'
-    WHEN email = 'alexandre.morin@test.com' THEN 'H3H 1P3'
-    WHEN email = 'marie.cote@test.com' THEN 'H4A 1T2'
-    WHEN email = 'david.belanger@test.com' THEN 'H1V 3R2'
-    ELSE NULL
-  END,
-  'Montreal',
-  'QC',
-  'CA',
   'fr-CA'
 FROM auth.users
 ON CONFLICT (id) DO UPDATE SET
@@ -344,10 +328,6 @@ ON CONFLICT (id) DO UPDATE SET
   onboarding_completed = EXCLUDED.onboarding_completed,
   bio = COALESCE(EXCLUDED.bio, profile.bio),
   birth_date = COALESCE(EXCLUDED.birth_date, profile.birth_date),
-  postal_code = COALESCE(EXCLUDED.postal_code, profile.postal_code),
-  city = COALESCE(EXCLUDED.city, profile.city),
-  province = COALESCE(EXCLUDED.province, profile.province),
-  country = COALESCE(EXCLUDED.country, profile.country),
   preferred_locale = COALESCE(EXCLUDED.preferred_locale, profile.preferred_locale),
   updated_at = NOW();
 
@@ -359,6 +339,8 @@ DECLARE
   u RECORD;
   genders gender_enum[] := ARRAY['male', 'female', 'male', 'female', 'male', 'female', 'male', 'female', 'male'];
   hands playing_hand[] := ARRAY['right', 'right', 'left', 'right', 'right', 'both', 'right', 'left', 'right'];
+  -- Montreal postal codes
+  postal_codes TEXT[] := ARRAY['H2T 1S4', 'H2X 1Y6', 'H3A 1B9', 'H2W 2E1', 'H2J 3K5', 'H2R 2N2', 'H3H 1P3', 'H4A 1T2', 'H1V 3R2'];
   -- Montreal lat/longs for different neighborhoods
   lats NUMERIC[] := ARRAY[45.5236, 45.5148, 45.5017, 45.5225, 45.5306, 45.5445, 45.4968, 45.4727, 45.5554];
   lngs NUMERIC[] := ARRAY[-73.5865, -73.5691, -73.5673, -73.5775, -73.5537, -73.5975, -73.5768, -73.6416, -73.5482];
@@ -370,17 +352,21 @@ BEGIN
 
     INSERT INTO player (
       id, gender, playing_hand, max_travel_distance,
-      postal_code, postal_code_country, postal_code_lat, postal_code_long,
+      postal_code, country, latitude, longitude,
+      address, city, province,
       push_notifications_enabled, notification_match_requests, notification_messages, notification_reminders
     ) VALUES (
       u.id,
       genders[idx],
       hands[idx],
       (10 + (idx * 3)),  -- 13-40 km range
-      (SELECT postal_code FROM profile WHERE id = u.id),
+      postal_codes[idx],
       'CA',
       lats[idx],
       lngs[idx],
+      NULL,  -- address
+      'Montreal',
+      'QC',
       true, true, true, true
     )
     ON CONFLICT (id) DO UPDATE SET
@@ -388,9 +374,12 @@ BEGIN
       playing_hand = EXCLUDED.playing_hand,
       max_travel_distance = EXCLUDED.max_travel_distance,
       postal_code = EXCLUDED.postal_code,
-      postal_code_country = EXCLUDED.postal_code_country,
-      postal_code_lat = EXCLUDED.postal_code_lat,
-      postal_code_long = EXCLUDED.postal_code_long,
+      country = EXCLUDED.country,
+      latitude = EXCLUDED.latitude,
+      longitude = EXCLUDED.longitude,
+      address = EXCLUDED.address,
+      city = EXCLUDED.city,
+      province = EXCLUDED.province,
       push_notifications_enabled = EXCLUDED.push_notifications_enabled,
       notification_match_requests = EXCLUDED.notification_match_requests,
       notification_messages = EXCLUDED.notification_messages,

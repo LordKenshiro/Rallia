@@ -336,25 +336,48 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     return { players: [], hasMore: false, nextOffset: null };
   }
 
-  // Step 7: Fetch profiles with search filter
-  // Join with player table to get gender
-  let profileQuery = supabase
-    .from('profile')
-    .select('id, first_name, last_name, display_name, profile_picture_url, city')
-    .in('id', playerIds)
-    .or('is_active.is.null,is_active.eq.true') // Include null (default) or true
-    .order('first_name', { ascending: true })
-    .range(offset, offset + limit); // Fetch one extra to check if more exist
-
-  // Apply search filter if provided (searches name AND city)
+  // Step 7: If searching, find player IDs matching city and union with name-matched profile IDs
   if (searchQuery && searchQuery.trim().length > 0) {
     const searchTerm = `%${searchQuery.trim()}%`;
-    profileQuery = profileQuery.or(
-      `first_name.ilike.${searchTerm},last_name.ilike.${searchTerm},display_name.ilike.${searchTerm},city.ilike.${searchTerm}`
-    );
+
+    // Find IDs matching city in player table
+    const { data: cityMatches } = await supabase
+      .from('player')
+      .select('id')
+      .in('id', playerIds)
+      .ilike('city', searchTerm);
+
+    // Find IDs matching name in profile table
+    const { data: nameMatches } = await supabase
+      .from('profile')
+      .select('id')
+      .in('id', playerIds)
+      .or('is_active.is.null,is_active.eq.true')
+      .or(
+        `first_name.ilike.${searchTerm},last_name.ilike.${searchTerm},display_name.ilike.${searchTerm}`
+      );
+
+    // Union the matched IDs
+    const matchedIds = new Set<string>();
+    cityMatches?.forEach(p => matchedIds.add(p.id));
+    nameMatches?.forEach(p => matchedIds.add(p.id));
+
+    // Narrow playerIds to only matched ones
+    playerIds = playerIds.filter(id => matchedIds.has(id));
+
+    if (playerIds.length === 0) {
+      return { players: [], hasMore: false, nextOffset: null };
+    }
   }
 
-  const { data: profiles, error: profileError } = await profileQuery;
+  // Step 8: Fetch profiles (paginated)
+  const { data: profiles, error: profileError } = await supabase
+    .from('profile')
+    .select('id, first_name, last_name, display_name, profile_picture_url')
+    .in('id', playerIds)
+    .or('is_active.is.null,is_active.eq.true')
+    .order('first_name', { ascending: true })
+    .range(offset, offset + limit); // Fetch one extra to check if more exist
 
   if (profileError) {
     throw new Error(`Failed to fetch profiles: ${profileError.message}`);
@@ -369,27 +392,29 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
   const resultsToReturn = hasMore ? profiles.slice(0, limit) : profiles;
   const profileIdsToFetch = resultsToReturn.map(p => p.id);
 
-  // Fetch gender data for profiles
+  // Fetch gender and city data for profiles
   const genderMap: Record<string, string | null> = {};
+  const cityMap: Record<string, string | null> = {};
   const { data: playerData, error: playerError } = await supabase
     .from('player')
-    .select('id, gender')
+    .select('id, gender, city')
     .in('id', profileIdsToFetch);
 
   if (!playerError && playerData) {
     playerData.forEach(p => {
       genderMap[p.id] = p.gender;
+      cityMap[p.id] = p.city;
     });
   }
 
-  // Step 8: Combine profiles with ratings and gender
+  // Step 9: Combine profiles with ratings, gender, and city
   const players: PlayerSearchResult[] = resultsToReturn.map(profile => ({
     id: profile.id,
     first_name: profile.first_name,
     last_name: profile.last_name,
     display_name: profile.display_name,
     profile_picture_url: profile.profile_picture_url,
-    city: profile.city,
+    city: cityMap[profile.id] ?? null,
     gender: genderMap[profile.id] ?? null,
     rating: ratingsMap[profile.id] ?? null,
   }));
@@ -422,11 +447,9 @@ export async function syncHomeLocation(
       .from('player')
       .update({
         postal_code: location.postalCode,
-        postal_code_country: location.country,
-        postal_code_lat: location.latitude,
-        postal_code_long: location.longitude,
-        // PostGIS point: ST_MakePoint(longitude, latitude)
-        postal_code_location: `POINT(${location.longitude} ${location.latitude})`,
+        country: location.country,
+        latitude: location.latitude,
+        longitude: location.longitude,
       })
       .eq('id', playerId);
 
@@ -453,7 +476,7 @@ export async function getHomeLocation(playerId: string): Promise<HomeLocation | 
   try {
     const { data, error } = await supabase
       .from('player')
-      .select('postal_code, postal_code_country, postal_code_lat, postal_code_long')
+      .select('postal_code, country, latitude, longitude')
       .eq('id', playerId)
       .single();
 
@@ -461,20 +484,15 @@ export async function getHomeLocation(playerId: string): Promise<HomeLocation | 
       return null;
     }
 
-    if (
-      !data.postal_code ||
-      !data.postal_code_country ||
-      !data.postal_code_lat ||
-      !data.postal_code_long
-    ) {
+    if (!data.postal_code || !data.country || !data.latitude || !data.longitude) {
       return null;
     }
 
     return {
       postalCode: data.postal_code,
-      country: data.postal_code_country as 'CA' | 'US',
-      latitude: data.postal_code_lat,
-      longitude: data.postal_code_long,
+      country: data.country as 'CA' | 'US',
+      latitude: data.latitude,
+      longitude: data.longitude,
     };
   } catch (error) {
     console.error('[PlayerService] Error fetching home location:', error);

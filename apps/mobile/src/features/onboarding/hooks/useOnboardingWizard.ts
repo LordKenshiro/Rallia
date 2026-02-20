@@ -36,6 +36,7 @@ export interface OnboardingFormData {
   // Location Info
   address: string;
   city: string;
+  province: string;
   postalCode: string;
   latitude: number | null;
   longitude: number | null;
@@ -115,6 +116,7 @@ const INITIAL_FORM_DATA: OnboardingFormData = {
   savedProfilePictureUrl: null,
   address: '',
   city: '',
+  province: '',
   postalCode: '',
   latitude: null,
   longitude: null,
@@ -251,17 +253,17 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
             updates.savedProfilePictureUrl = profileRes.data.profile_picture_url;
             updates.profileImage = profileRes.data.profile_picture_url;
           }
-          // Location data
-          updates.address = profileRes.data.address || '';
-          updates.city = profileRes.data.city || '';
-          updates.postalCode = profileRes.data.postal_code || '';
         }
 
-        // Player data (gender, preferences, location coordinates)
+        // Player data (gender, preferences, location)
         if (playerRes.data) {
-          // Location coordinates are stored in player table
-          updates.latitude = playerRes.data.postal_code_lat || null;
-          updates.longitude = playerRes.data.postal_code_long || null;
+          // Location data is stored in player table
+          updates.address = playerRes.data.address || '';
+          updates.city = playerRes.data.city || '';
+          updates.province = playerRes.data.province || '';
+          updates.postalCode = playerRes.data.postal_code || '';
+          updates.latitude = playerRes.data.latitude || null;
+          updates.longitude = playerRes.data.longitude || null;
           updates.gender = playerRes.data.gender || '';
           if (playerRes.data.playing_hand) {
             updates.playingHand = playerRes.data.playing_hand as 'left' | 'right' | 'both';

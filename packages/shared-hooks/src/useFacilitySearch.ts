@@ -67,7 +67,7 @@ export const facilityKeys = {
   all: ['facilities'] as const,
   search: () => [...facilityKeys.all, 'search'] as const,
   searchWithParams: (
-    sportId: string | undefined,
+    sportIds: string[] | undefined,
     latitude: number | undefined,
     longitude: number | undefined,
     query: string,
@@ -80,7 +80,7 @@ export const facilityKeys = {
   ) =>
     [
       ...facilityKeys.search(),
-      sportId,
+      sportIds,
       latitude,
       longitude,
       query,
@@ -114,8 +114,8 @@ export const DEFAULT_FACILITY_FILTERS: FacilityFilters = {
 };
 
 interface UseFacilitySearchOptions {
-  /** Sport ID to filter facilities by */
-  sportId: string | undefined;
+  /** Sport IDs to filter facilities by */
+  sportIds: string[] | undefined;
   /** User's latitude */
   latitude: number | undefined;
   /** User's longitude */
@@ -157,7 +157,7 @@ interface UseFacilitySearchReturn {
  */
 export function useFacilitySearch(options: UseFacilitySearchOptions): UseFacilitySearchReturn {
   const {
-    sportId,
+    sportIds,
     latitude,
     longitude,
     searchQuery,
@@ -170,13 +170,13 @@ export function useFacilitySearch(options: UseFacilitySearchOptions): UseFacilit
   const debouncedQuery = useDebounce(searchQuery, debounceMs);
 
   // Check if we have all required params
-  const hasRequiredParams = !!sportId && latitude !== undefined && longitude !== undefined;
+  const hasRequiredParams = !!sportIds?.length && latitude !== undefined && longitude !== undefined;
 
   const query = useInfiniteQuery<FacilitiesPage, Error>({
     // Include actual values (including undefined) in query key so React Query properly tracks changes
     // This ensures the query refetches when location/sport loads
     queryKey: facilityKeys.searchWithParams(
-      sportId,
+      sportIds,
       latitude,
       longitude,
       debouncedQuery ?? '',
@@ -188,7 +188,7 @@ export function useFacilitySearch(options: UseFacilitySearchOptions): UseFacilit
       filters.membership
     ),
     queryFn: async ({ pageParam }) => {
-      if (!sportId || latitude === undefined || longitude === undefined) {
+      if (!sportIds?.length || latitude === undefined || longitude === undefined) {
         return { facilities: [], hasMore: false, nextOffset: null };
       }
 
@@ -201,7 +201,7 @@ export function useFacilitySearch(options: UseFacilitySearchOptions): UseFacilit
         filters.membership === 'all' ? undefined : filters.membership === 'members_only';
 
       return searchFacilitiesNearby({
-        sportId,
+        sportIds,
         latitude,
         longitude,
         searchQuery: debouncedQuery || undefined,

@@ -43,7 +43,7 @@ export type LightingFilter = 'all' | 'with_lights' | 'no_lights';
 export type MembershipFilter = 'all' | 'public' | 'members_only';
 
 export interface SearchFacilitiesParams {
-  sportId: string;
+  sportIds: string[];
   latitude: number;
   longitude: number;
   searchQuery?: string;
@@ -211,7 +211,7 @@ export async function searchFacilitiesNearby(
   params: SearchFacilitiesParams
 ): Promise<FacilitiesPage> {
   const {
-    sportId,
+    sportIds,
     latitude,
     longitude,
     searchQuery,
@@ -228,7 +228,7 @@ export async function searchFacilitiesNearby(
   // Fetch facilities and total count in parallel
   const [facilitiesResult, countResult] = await Promise.all([
     supabase.rpc('search_facilities_nearby', {
-      p_sport_id: sportId,
+      p_sport_ids: sportIds,
       p_latitude: latitude,
       p_longitude: longitude,
       p_search_query: searchQuery || null,
@@ -244,7 +244,7 @@ export async function searchFacilitiesNearby(
     // Only fetch count on first page (offset === 0) to avoid unnecessary queries
     offset === 0
       ? supabase.rpc('search_facilities_nearby_count', {
-          p_sport_id: sportId,
+          p_sport_ids: sportIds,
           p_latitude: latitude,
           p_longitude: longitude,
           p_search_query: searchQuery || null,

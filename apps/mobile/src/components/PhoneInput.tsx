@@ -56,10 +56,7 @@ export interface PhoneInputProps {
 /**
  * Find the best matching country for given dial digits (exact match only).
  */
-function findCountryByDialDigits(
-  digits: string,
-  localeCountryCode: string | undefined
-): Country | undefined {
+function findCountryByDialDigits(digits: string): Country | undefined {
   if (!digits) return undefined;
 
   const withPlus = `+${digits}`;
@@ -68,13 +65,9 @@ function findCountryByDialDigits(
   if (exactMatches.length === 0) return undefined;
   if (exactMatches.length === 1) return exactMatches[0];
 
-  // Multiple exact matches (e.g., +1 for US/CA) - prefer locale
-  if (localeCountryCode) {
-    const localeMatch = exactMatches.find(
-      c => c.code.toUpperCase() === localeCountryCode.toUpperCase()
-    );
-    if (localeMatch) return localeMatch;
-  }
+  // Multiple exact matches (e.g., +1 for US/CA) - always prefer Canada for +1
+  const canadaMatch = exactMatches.find(c => c.code === 'CA');
+  if (canadaMatch) return canadaMatch;
   return exactMatches[0];
 }
 
@@ -123,10 +116,7 @@ function extractDigits(text: string): string {
  * Parse an international phone number (e.g., "+15551234567") into dial code and local number.
  * Tries to match the longest possible dial code.
  */
-function parsePhoneNumber(
-  fullNumber: string,
-  localeCountryCode: string | undefined
-): { dialDigits: string; phoneDigits: string } {
+function parsePhoneNumber(fullNumber: string): { dialDigits: string; phoneDigits: string } {
   if (!fullNumber) {
     return { dialDigits: '', phoneDigits: '' };
   }
@@ -138,7 +128,7 @@ function parsePhoneNumber(
   // Dial codes can be 1-4 digits
   for (let len = Math.min(4, digits.length); len >= 1; len--) {
     const potentialDialCode = digits.slice(0, len);
-    const country = findCountryByDialDigits(potentialDialCode, localeCountryCode);
+    const country = findCountryByDialDigits(potentialDialCode);
     if (country) {
       return {
         dialDigits: potentialDialCode,
@@ -171,13 +161,6 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   const themeColors = isDark ? darkTheme : lightTheme;
   const { locale } = useLocale();
 
-  // Extract country code from locale (e.g. 'fr-CA' -> 'CA')
-  const localeCountryCode = useMemo(() => {
-    if (!locale) return undefined;
-    const parts = locale.split('-');
-    return parts.length > 1 ? parts[parts.length - 1].toUpperCase() : undefined;
-  }, [locale]);
-
   const colors = useMemo(
     () => ({
       text: customColors?.text || themeColors.foreground,
@@ -197,7 +180,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   const [dialDigits, setDialDigits] = useState<string>(() => {
     // If value is provided, parse it; otherwise use locale default
     if (value) {
-      const parsed = parsePhoneNumber(value, localeCountryCode);
+      const parsed = parsePhoneNumber(value);
       return parsed.dialDigits || getLocaleCountry(locale)?.dialCode.replace('+', '') || '';
     }
     const localeCountry = getLocaleCountry(locale);
@@ -206,7 +189,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
 
   const [phoneDigits, setPhoneDigits] = useState<string>(() => {
     if (value) {
-      const parsed = parsePhoneNumber(value, localeCountryCode);
+      const parsed = parsePhoneNumber(value);
       return parsed.phoneDigits;
     }
     return '';
@@ -225,7 +208,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
     prevValueRef.current = value;
 
     // Parse the incoming value
-    const parsed = parsePhoneNumber(value || '', localeCountryCode);
+    const parsed = parsePhoneNumber(value || '');
 
     // Use a callback to defer state updates outside of effect execution
     const updateState = () => {
@@ -235,13 +218,10 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
       setPhoneDigits(parsed.phoneDigits);
     };
     setImmediate(updateState);
-  }, [value, localeCountryCode]);
+  }, [value]);
 
   // Derive country from dial digits
-  const selectedCountry = useMemo(
-    () => findCountryByDialDigits(dialDigits, localeCountryCode),
-    [dialDigits, localeCountryCode]
-  );
+  const selectedCountry = useMemo(() => findCountryByDialDigits(dialDigits), [dialDigits]);
 
   // Format phone digits for display
   const formattedPhone = useMemo(
@@ -259,11 +239,11 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
       setDialDigits(digits);
 
       // Emit change
-      const country = findCountryByDialDigits(digits, localeCountryCode);
+      const country = findCountryByDialDigits(digits);
       const fullNumber = phoneDigits ? `+${digits}${phoneDigits}` : '';
       onChangePhone(fullNumber, country?.code || '', phoneDigits);
     },
-    [phoneDigits, localeCountryCode, onChangePhone]
+    [phoneDigits, onChangePhone]
   );
 
   // Handle phone number changes

@@ -42,6 +42,7 @@ import { CreateGroupChatActionSheet } from '../features/chat/components/CreateGr
 // Onboarding/Profile components
 import { PersonalInformationActionSheet } from '../features/onboarding/components/overlays/PersonalInformationOverlay';
 import { PlayerInformationActionSheet } from '../features/onboarding/components/overlays/PlayerInformationOverlay';
+import { LocationActionSheet } from '../features/onboarding/components/overlays/LocationOverlay';
 import { PlayerAvailabilitiesActionSheet } from '../features/onboarding/components/overlays/PlayerAvailabilitiesOverlay';
 import { TennisRatingActionSheet } from '../features/onboarding/components/overlays/TennisRatingOverlay';
 import { PickleballRatingActionSheet } from '../features/onboarding/components/overlays/PickleballRatingOverlay';
@@ -355,6 +356,19 @@ declare module 'react-native-actions-sheet' {
         onSave?: () => void;
       };
     }>;
+    'player-location': SheetDefinition<{
+      payload: {
+        initialData?: {
+          postalCode?: string;
+          address?: string;
+          city?: string;
+          province?: string;
+          latitude?: number | null;
+          longitude?: number | null;
+        };
+        onSave?: () => void;
+      };
+    }>;
     'player-availabilities': SheetDefinition<{
       payload: {
         mode?: 'onboarding' | 'edit';
@@ -543,6 +557,7 @@ export const Sheets = () => {
         // Profile/Onboarding sheets
         'personal-information': PersonalInformationActionSheet,
         'player-information': PlayerInformationActionSheet,
+        'player-location': LocationActionSheet,
         'player-availabilities': PlayerAvailabilitiesActionSheet,
         'tennis-rating': TennisRatingActionSheet,
         'pickleball-rating': PickleballRatingActionSheet,
