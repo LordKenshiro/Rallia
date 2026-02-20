@@ -36,11 +36,14 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_STAGING_ACCESS_TOKEN }}
         run: |
+          echo "Linking to Supabase project..."
+          npx supabase link --project-ref ahbaeewecdeguxtxtvhr
+
           echo "Pushing database migrations..."
-          npx supabase db push --project-ref ahbaeewecdeguxtxtvhr
+          npx supabase db push
 
           echo "Deploying edge functions..."
-          npx supabase functions deploy --project-ref ahbaeewecdeguxtxtvhr
+          npx supabase functions deploy
 
       - name: Setup Expo
         uses: expo/expo-github-action@v8
