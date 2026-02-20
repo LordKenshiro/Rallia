@@ -117,7 +117,8 @@
     "publicMatches": "Public Games",
     "playerMatches": "My Games",
     "group": "Group",
-    "groups": "Groups"
+    "groups": "Groups",
+    "feedback": "Feedback"
   },
   "notifications": {
     "title": "Notifications",
@@ -308,7 +309,39 @@
     "darkMode": "Dark Mode",
     "lightMode": "Light Mode",
     "systemTheme": "System",
-    "permissions": "Permissions"
+    "permissions": "Permissions",
+    "feedback": "Feedback & Suggestions"
+  },
+  "feedback": {
+    "title": "Feedback & Suggestions",
+    "description": "Help us improve Rallia! Share your ideas, report bugs, or suggest new features.",
+    "categoryLabel": "Category",
+    "categories": {
+      "bug": "Bug Report",
+      "feature": "Feature Request",
+      "improvement": "Improvement",
+      "other": "Other"
+    },
+    "subjectLabel": "Subject",
+    "subjectPlaceholder": "Brief summary of your feedback",
+    "messageLabel": "Message",
+    "messagePlaceholder": "Describe your feedback in detail...",
+    "anonymousNotice": "Sign in to help us follow up on your feedback.",
+    "identifiedNotice": "Your feedback will be associated with your account to help us follow up if needed.",
+    "minCharsHint": "Minimum {min} characters",
+    "screenshotsLabel": "Screenshots (Optional)",
+    "screenshotsHint": "Add up to {max} screenshots to help us understand the issue better.",
+    "addScreenshot": "Add Photo",
+    "selectImageSource": "Add Screenshot",
+    "screenshotUploadError": "Failed to upload screenshot. Please try again.",
+    "maxScreenshotsReached": "Maximum {max} screenshots allowed.",
+    "submitButton": "Submit Feedback",
+    "submitSuccess": "Thank you! Your feedback has been submitted.",
+    "submitError": "Failed to submit feedback. Please try again.",
+    "successTitle": "Thank You!",
+    "successMessage": "Your feedback has been received. We appreciate you taking the time to help us improve Rallia.",
+    "referenceId": "Reference:",
+    "submitAnother": "Submit Another"
   },
   "permissions": {
     "description": "Manage app permissions to enable features like notifications, finding games near you, and calendar sync.",

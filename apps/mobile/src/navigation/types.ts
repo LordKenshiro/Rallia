@@ -35,6 +35,7 @@ export type RootStackParamList = {
   Notifications: undefined;
   NotificationPreferences: undefined;
   Permissions: undefined;
+  Feedback: undefined; // Feedback/Suggestion box
   Map: { focusLocation?: { lat: number; lng: number } } | undefined;
   RatingProofs: RatingProofsScreenParams;
   IncomingReferenceRequests: undefined; // Incoming reference requests from other players

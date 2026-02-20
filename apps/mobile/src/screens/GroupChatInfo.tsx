@@ -37,7 +37,8 @@ import {
 } from '../hooks';
 import type { RootStackParamList } from '../navigation/types';
 import { spacingPixels, fontSizePixels, primary, status, neutral } from '@rallia/design-system';
-import { AddMembersToGroupModal } from '../features/chat';
+import { AddMembersToGroupModal, ChatMemberOptionsModal } from '../features/chat';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type GroupChatInfoRouteProp = RouteProp<RootStackParamList, 'GroupChatInfo'>;
@@ -100,8 +101,16 @@ export default function GroupChatInfoScreen() {
     setShowAddMemberModal,
     handleAddMember,
     handleMembersAdded,
-    handleRemoveMember,
-    handleMemberLongPress,
+    // New modal-based member management
+    showMemberOptionsModal,
+    selectedMember,
+    closeMemberOptionsModal,
+    showConfirmationModal,
+    confirmationConfig,
+    closeConfirmationModal,
+    handleMemberPress,
+    handleLeaveGroup,
+    getMemberOptions,
   } = useGroupMemberManagement({
     conversationId,
     playerId,
@@ -146,10 +155,28 @@ export default function GroupChatInfoScreen() {
     // Alert removed - would use Alert.alert here
   }, []);
 
-  // Navigate to member profile
-  const handleMemberPress = useCallback((memberId: string) => {
-    navigation.navigate('PlayerProfile', { playerId: memberId });
-  }, [navigation]);
+  // Navigate to member profile from member options modal
+  const handleNavigateToProfile = useCallback(() => {
+    if (selectedMember?.playerId) {
+      closeMemberOptionsModal();
+      navigation.navigate('PlayerProfile', { playerId: selectedMember.playerId });
+    }
+  }, [selectedMember, closeMemberOptionsModal, navigation]);
+
+  // Handle member item tap - show options modal
+  const handleMemberItemPress = useCallback((item: ParticipantInfo) => {
+    const profile = item.player?.profile;
+    const displayName = profile 
+      ? `${profile.first_name}${profile.last_name ? ` ${profile.last_name}` : ''}`
+      : 'Unknown User';
+    
+    handleMemberPress({
+      playerId: item.player_id,
+      name: displayName,
+      profilePictureUrl: profile?.profile_picture_url || null,
+      isAdmin: isParticipantAdmin(item.player_id),
+    });
+  }, [handleMemberPress, isParticipantAdmin]);
 
   // Render member item
   const renderMemberItem = useCallback(({ item }: { item: ParticipantInfo }) => {
@@ -163,8 +190,7 @@ export default function GroupChatInfoScreen() {
     return (
       <TouchableOpacity
         style={[styles.memberItem, { borderBottomColor: colors.border }]}
-        onPress={() => handleMemberPress(item.player_id)}
-        onLongPress={() => handleMemberLongPress(item.player_id, isMemberAdmin)}
+        onPress={() => handleMemberItemPress(item)}
       >
         {/* Avatar */}
         {profile?.profile_picture_url ? (
@@ -188,18 +214,11 @@ export default function GroupChatInfoScreen() {
           )}
         </View>
 
-        {/* More options button (for admin to manage members) */}
-        {isAdmin && !isCurrentUser && (
-          <TouchableOpacity
-            style={styles.moreButton}
-            onPress={() => handleMemberLongPress(item.player_id, isMemberAdmin)}
-          >
-            <Ionicons name="ellipsis-vertical" size={20} color={colors.textMuted} />
-          </TouchableOpacity>
-        )}
+        {/* More options icon */}
+        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
       </TouchableOpacity>
     );
-  }, [colors, playerId, isAdmin, isParticipantAdmin, handleMemberPress, handleMemberLongPress]);
+  }, [colors, playerId, isParticipantAdmin, handleMemberItemPress]);
 
   if (isLoading) {
     return (
@@ -298,7 +317,7 @@ export default function GroupChatInfoScreen() {
             </TouchableOpacity>
           )}
           <Text style={[styles.memberCount, { color: colors.textMuted }]}>
-            {t('groupChat.groupMemberCount' as TranslationKey, { count: memberCount })}
+            {t('chat.groupChat.groupMemberCount' as TranslationKey, { count: memberCount })}
           </Text>
         </View>
 
@@ -311,7 +330,7 @@ export default function GroupChatInfoScreen() {
               </View>
               <View style={styles.sectionContent}>
                 <Text style={[styles.sectionLabel, { color: colors.text }]}>
-                  {networkInfo.description || t('groupChat.addGroupDescription' as TranslationKey)}
+                  {networkInfo.description || t('chat.groupChat.addGroupDescription' as TranslationKey)}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
@@ -327,7 +346,7 @@ export default function GroupChatInfoScreen() {
               <Ionicons name="person-add" size={20} color={primary[500]} />
             </View>
             <View style={styles.sectionContent}>
-              <Text style={[styles.sectionLabel, { color: colors.text }]}>{t('groupChat.addMembers' as TranslationKey)}</Text>
+              <Text style={[styles.sectionLabel, { color: colors.text }]}>{t('chat.groupChat.addMembers' as TranslationKey)}</Text>
             </View>
           </TouchableOpacity>
 
@@ -340,7 +359,7 @@ export default function GroupChatInfoScreen() {
               <Ionicons name="qr-code" size={20} color={primary[500]} />
             </View>
             <View style={styles.sectionContent}>
-              <Text style={[styles.sectionLabel, { color: colors.text }]}>{t('groupChat.inviteViaLinkOrQR' as TranslationKey)}</Text>
+              <Text style={[styles.sectionLabel, { color: colors.text }]}>{t('chat.groupChat.inviteViaLinkOrQR' as TranslationKey)}</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -369,7 +388,7 @@ export default function GroupChatInfoScreen() {
           <View style={[styles.section, { backgroundColor: isDark ? colors.card : '#FFFFFF', marginTop: spacingPixels[4] }]}>
             <TouchableOpacity 
               style={[styles.sectionRow, { borderBottomWidth: 0 }]} 
-              onPress={() => handleRemoveMember(playerId)}
+              onPress={handleLeaveGroup}
             >
               <View style={[styles.sectionIcon, { backgroundColor: status.error.light }]}>
                 <Ionicons name="exit-outline" size={20} color={status.error.DEFAULT} />
@@ -400,6 +419,35 @@ export default function GroupChatInfoScreen() {
         existingMemberIds={participants.map(p => p.player_id)}
         currentUserId={playerId}
       />
+
+      {/* Member Options Modal */}
+      <ChatMemberOptionsModal
+        visible={showMemberOptionsModal}
+        onClose={closeMemberOptionsModal}
+        member={selectedMember}
+        options={getMemberOptions().map(opt => ({
+          ...opt,
+          icon: opt.icon as keyof typeof Ionicons.glyphMap,
+          onPress: opt.id === 'view-profile' ? handleNavigateToProfile : opt.onPress,
+        }))}
+        onAvatarPress={handleNavigateToProfile}
+        isLoading={isMemberUpdating}
+      />
+
+      {/* Confirmation Modal */}
+      {confirmationConfig && (
+        <ConfirmationModal
+          visible={showConfirmationModal}
+          onClose={closeConfirmationModal}
+          onConfirm={confirmationConfig.onConfirm}
+          title={confirmationConfig.title}
+          message={confirmationConfig.message}
+          confirmLabel={confirmationConfig.confirmLabel}
+          cancelLabel={t('common.cancel')}
+          destructive={confirmationConfig.destructive}
+          isLoading={isMemberUpdating}
+        />
+      )}
     </SafeAreaView>
   );
 }

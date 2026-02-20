@@ -10,7 +10,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   FlatList,
-  Alert,
   Image,
   TextInput,
 } from 'react-native';
@@ -26,6 +25,7 @@ import {
   type GroupMember,
 } from '@rallia/shared-hooks';
 import { MemberOptionsModal } from './MemberOptionsModal';
+import { ConfirmationModal } from '../../../components/ConfirmationModal';
 
 interface MemberListModalProps {
   visible: boolean;
@@ -76,15 +76,6 @@ function formatLastActive(dateStr: string | null | undefined): { text: string; i
   return { text: `Active ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`, isOnline: false };
 }
 
-interface MemberListModalProps {
-  visible: boolean;
-  onClose: () => void;
-  group: GroupWithMembers;
-  currentUserId: string;
-  isModerator: boolean;
-  onMemberRemoved: () => void;
-}
-
 export function MemberListModal({
   visible,
   onClose,
@@ -94,6 +85,10 @@ export function MemberListModal({
   onMemberRemoved,
   onPlayerPress,
 }: MemberListModalProps) {
+  // Check if current user is the group creator (admin)
+  const isAdmin = group.created_by === currentUserId;
+  // Admin or moderator can manage members
+  const canManageMembers = isAdmin || isModerator;
   const { colors, isDark } = useThemeStyles();
   const toast = useToast();
   const { t } = useTranslation();
@@ -101,7 +96,9 @@ export function MemberListModal({
   const [selectedMember, setSelectedMember] = useState<GroupMember | null>(null);
   const [showMemberOptions, setShowMemberOptions] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-
+  const [showRemoveConfirmation, setShowRemoveConfirmation] = useState(false);
+  const [memberToRemove, setMemberToRemove] = useState<GroupMember | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
   // Clear search when modal closes
   useEffect(() => {
     if (!visible) {
@@ -134,14 +131,26 @@ export function MemberListModal({
   const memberOptions = useMemo(() => {
     if (!selectedMember) return [];
 
-    const isCreator = group.created_by === selectedMember.player_id;
+    const isSelectedMemberCreator = group.created_by === selectedMember.player_id;
     const isSelf = selectedMember.player_id === currentUserId;
     const memberIsModerator = selectedMember.role === 'moderator';
 
     const options: { id: string; label: string; icon: keyof typeof Ionicons.glyphMap; onPress: () => void; destructive?: boolean }[] = [];
 
-    // Only moderators can manage members
-    if (isModerator && !isSelf && !isCreator) {
+    // Add "View Profile" option for everyone
+    options.push({
+      id: 'view-profile',
+      label: t('common.viewProfile' as any),
+      icon: 'person-outline',
+      onPress: () => {
+        if (onPlayerPress) {
+          onPlayerPress(selectedMember.player_id);
+        }
+      },
+    });
+
+    // Admins (creator) and moderators can manage members (but not themselves or the creator)
+    if (canManageMembers && !isSelf && !isSelectedMemberCreator) {
       if (!memberIsModerator) {
         options.push({
           id: 'promote',
@@ -188,30 +197,8 @@ export function MemberListModal({
         icon: 'person-remove-outline',
         destructive: true,
         onPress: () => {
-          Alert.alert(
-            t('groups.removeMember' as any),
-            t('groups.removeMemberConfirm' as any, { name: selectedMember.player?.profile?.first_name || t('groups.thisMember' as any) }),
-            [
-              { text: t('common.cancel' as any), style: 'cancel' },
-              {
-                text: t('common.remove' as any),
-                style: 'destructive',
-                onPress: async () => {
-                  try {
-                    await removeGroupMemberMutation.mutateAsync({
-                      groupId: group.id,
-                      moderatorId: currentUserId,
-                      playerIdToRemove: selectedMember.player_id,
-                    });
-                    toast.success(t('groups.memberRemoved' as any));
-                    onMemberRemoved();
-                  } catch (error) {
-                    toast.error(error instanceof Error ? error.message : t('groups.failedToRemoveMember' as any));
-                  }
-                },
-              },
-            ]
-          );
+          setMemberToRemove(selectedMember);
+          setShowRemoveConfirmation(true);
         },
       });
     }
@@ -221,14 +208,36 @@ export function MemberListModal({
     selectedMember,
     group,
     currentUserId,
-    isModerator,
-    removeGroupMemberMutation,
+    canManageMembers,
     promoteMemberMutation,
     demoteMemberMutation,
     onMemberRemoved,
     toast,
     t,
+    onPlayerPress,
   ]);
+
+  // Handle member removal confirmation
+  const handleConfirmRemove = useCallback(async () => {
+    if (!memberToRemove) return;
+    
+    setIsRemoving(true);
+    try {
+      await removeGroupMemberMutation.mutateAsync({
+        groupId: group.id,
+        moderatorId: currentUserId,
+        playerIdToRemove: memberToRemove.player_id,
+      });
+      toast.success(t('groups.memberRemoved' as any));
+      setShowRemoveConfirmation(false);
+      setMemberToRemove(null);
+      onMemberRemoved();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('groups.failedToRemoveMember' as any));
+    } finally {
+      setIsRemoving(false);
+    }
+  }, [memberToRemove, group.id, currentUserId, removeGroupMemberMutation, toast, t, onMemberRemoved]);
 
   // Get member info for the options modal
   const selectedMemberInfo = useMemo(() => {
@@ -245,9 +254,10 @@ export function MemberListModal({
   }, [selectedMember, group]);
 
   const renderMemberItem = useCallback(({ item }: { item: GroupMember }) => {
-    const isCreator = group.created_by === item.player_id;
+    const isItemCreator = group.created_by === item.player_id;
     const isSelf = item.player_id === currentUserId;
-    const canManage = isModerator && !isSelf && !isCreator;
+    // Admin or moderator can manage, but not self or creator
+    const canManage = canManageMembers && !isSelf && !isItemCreator;
     const lastActive = formatLastActive(item.player?.profile?.last_active_at);
     const joinDate = formatJoinDate(item.joined_at);
 
@@ -255,8 +265,7 @@ export function MemberListModal({
       <TouchableOpacity
         style={[styles.memberItem, { borderBottomColor: colors.border }]}
         onPress={() => handleMemberOptions(item)}
-        disabled={!canManage}
-        activeOpacity={canManage ? 0.7 : 1}
+        activeOpacity={0.7}
       >
         <View style={styles.avatarContainer}>
           <View style={[styles.memberAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
@@ -300,7 +309,7 @@ export function MemberListModal({
                 </Text>
               </View>
             )}
-            {isCreator && (
+            {isItemCreator && (
               <View style={[styles.badge, { backgroundColor: isDark ? colors.primary : '#E8F5E9' }]}>
                 <Text size="xs" style={{ color: isDark ? '#FFFFFF' : colors.primary }}>
                   {t('groups.creator' as any)}
@@ -315,7 +324,7 @@ export function MemberListModal({
         )}
       </TouchableOpacity>
     );
-  }, [colors, isDark, group, currentUserId, isModerator, handleMemberOptions]);
+  }, [colors, isDark, group, currentUserId, canManageMembers, handleMemberOptions, t]);
 
   return (
     <>
@@ -392,6 +401,24 @@ export function MemberListModal({
           setSelectedMember(null);
           onPlayerPress?.(playerId);
         }}
+      />
+
+      {/* Remove Member Confirmation Modal */}
+      <ConfirmationModal
+        visible={showRemoveConfirmation}
+        onClose={() => {
+          setShowRemoveConfirmation(false);
+          setMemberToRemove(null);
+        }}
+        onConfirm={handleConfirmRemove}
+        title={t('groups.removeMember' as any)}
+        message={t('groups.removeMemberConfirm' as any, { 
+          name: memberToRemove?.player?.profile?.first_name || t('common.thisMember' as any)
+        })}
+        confirmLabel={t('common.remove' as any)}
+        cancelLabel={t('common.cancel')}
+        destructive={true}
+        isLoading={isRemoving}
       />
     </>
   );

@@ -21,6 +21,7 @@ export * from './communities';
 export * from './chat';
 export * from './reports';
 export * from './tour';
+export * from './feedback';
 
 // Export default DatabaseService
 export { default } from './database';

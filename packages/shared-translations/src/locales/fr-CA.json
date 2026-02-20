@@ -117,7 +117,8 @@
     "publicMatches": "Parties publiques",
     "playerMatches": "Mes parties",
     "group": "Groupe",
-    "groups": "Groupes"
+    "groups": "Groupes",
+    "feedback": "Commentaires"
   },
   "notifications": {
     "title": "Notifications",
@@ -308,7 +309,39 @@
     "darkMode": "Mode sombre",
     "lightMode": "Mode clair",
     "systemTheme": "Système",
-    "permissions": "Permissions"
+    "permissions": "Permissions",
+    "feedback": "Commentaires et suggestions"
+  },
+  "feedback": {
+    "title": "Commentaires et suggestions",
+    "description": "Aidez-nous à améliorer Rallia! Partagez vos idées, signalez des bogues ou suggérez de nouvelles fonctionnalités.",
+    "categoryLabel": "Catégorie",
+    "categories": {
+      "bug": "Signalement de bogue",
+      "feature": "Demande de fonctionnalité",
+      "improvement": "Amélioration",
+      "other": "Autre"
+    },
+    "subjectLabel": "Sujet",
+    "subjectPlaceholder": "Bref résumé de votre commentaire",
+    "messageLabel": "Message",
+    "messagePlaceholder": "Décrivez votre commentaire en détail...",
+    "anonymousNotice": "Connectez-vous pour nous permettre de faire un suivi de votre commentaire.",
+    "identifiedNotice": "Votre commentaire sera associé à votre compte pour nous permettre de faire un suivi si nécessaire.",
+    "minCharsHint": "Minimum {min} caractères",
+    "screenshotsLabel": "Captures d'écran (Optionnel)",
+    "screenshotsHint": "Ajoutez jusqu'à {max} captures d'écran pour nous aider à mieux comprendre le problème.",
+    "addScreenshot": "Ajouter une photo",
+    "selectImageSource": "Ajouter une capture",
+    "screenshotUploadError": "Échec du téléchargement. Veuillez réessayer.",
+    "maxScreenshotsReached": "Maximum {max} captures d'écran autorisées.",
+    "submitButton": "Envoyer le commentaire",
+    "submitSuccess": "Merci! Votre commentaire a été soumis.",
+    "submitError": "Échec de l'envoi du commentaire. Veuillez réessayer.",
+    "successTitle": "Merci!",
+    "successMessage": "Votre commentaire a été reçu. Nous apprécions que vous preniez le temps de nous aider à améliorer Rallia.",
+    "referenceId": "Référence:",
+    "submitAnother": "Soumettre un autre"
   },
   "permissions": {
     "description": "Gérez les permissions de l'application pour activer les notifications, la recherche de parties près de chez vous et la synchronisation du calendrier.",

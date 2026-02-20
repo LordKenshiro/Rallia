@@ -9,11 +9,25 @@
 -- Note: pg_cron must be enabled in your Supabase project settings
 -- Go to Database > Extensions > Enable pg_cron
 
--- Create the cron extension if it doesn't exist
-CREATE EXTENSION IF NOT EXISTS pg_cron;
+-- Create the cron extension if it doesn't exist (wrapped to handle errors)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+    CREATE EXTENSION pg_cron;
+  END IF;
+EXCEPTION WHEN OTHERS THEN
+  -- Extension already exists or other issue, continue
+  RAISE NOTICE 'pg_cron extension check: %', SQLERRM;
+END $$;
 
--- Grant usage to postgres
-GRANT USAGE ON SCHEMA cron TO postgres;
+-- Grant usage to postgres (ignore if already granted)
+DO $$
+BEGIN
+  GRANT USAGE ON SCHEMA cron TO postgres;
+EXCEPTION WHEN OTHERS THEN
+  -- Grant already exists or other issue, continue
+  NULL;
+END $$;
 
 -- ============================================
 -- CREATE CRON JOB FOR WEEKLY MATCH GENERATION

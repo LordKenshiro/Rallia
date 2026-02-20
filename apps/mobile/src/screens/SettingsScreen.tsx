@@ -120,6 +120,12 @@ const SettingsScreen: React.FC = () => {
     Logger.logUserAction('permissions_pressed');
   };
 
+  const handleFeedback = () => {
+    lightHaptic();
+    navigation.navigate('Feedback');
+    Logger.logUserAction('feedback_pressed');
+  };
+
   const handleResetTour = () => {
     lightHaptic();
     Alert.alert(
@@ -259,6 +265,11 @@ const SettingsScreen: React.FC = () => {
               icon="refresh-outline"
               title={t('tour.settings.restartTour')}
               onPress={handleResetTour}
+            />
+            <SettingsItem
+              icon="chatbox-ellipses-outline"
+              title={t('settings.feedback')}
+              onPress={handleFeedback}
             />
           </View>
         )}

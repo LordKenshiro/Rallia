@@ -59,6 +59,7 @@ import GroupChatInfo from '../screens/GroupChatInfo';
 import PlayedMatchDetail from '../screens/PlayedMatchDetail';
 import Communities from '../screens/Communities';
 import CommunityDetail from '../screens/CommunityDetail';
+import FeedbackScreen from '../screens/FeedbackScreen';
 
 // Components
 import { ThemeLogo } from '../components/ThemeLogo';
@@ -897,6 +898,16 @@ export default function AppNavigator() {
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('screens.permissions'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="Feedback"
+        component={FeedbackScreen}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('screens.feedback'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />
