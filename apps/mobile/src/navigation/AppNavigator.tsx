@@ -284,7 +284,6 @@ function ProfilePictureButtonWithAuth() {
     <CopilotStep text={t('tour.header.profile.description')} order={6} name="header-profile">
       <WalkthroughableView style={{ flexDirection: 'row', alignItems: 'center' }}>
         <ProfilePictureButton onPress={handlePress} isDark={isDark} />
-        <ThemeLogo width={100} height={30} />
       </WalkthroughableView>
     </CopilotStep>
   );
@@ -342,9 +341,21 @@ function MainTabHeader() {
           paddingHorizontal: spacingPixels[1],
         }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <ProfilePictureButtonWithAuth />
           <SportSelectorWithContext />
+        </View>
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            alignItems: 'center',
+            paddingBottom: 4,
+          }}
+        >
+          <ThemeLogo width={100} height={30} />
         </View>
         <HeaderRightButtons />
       </View>
@@ -707,7 +718,6 @@ function HomeTabIcon({ color, size }: { color: string; size: number }) {
  */
 function CourtsTabIcon({ color, size }: { color: string; size: number }) {
   const { t } = useTranslation();
-  const adjustedSize = size * 1.15;
   return (
     <CopilotStep text={t('tour.mainNavigation.matches.description')} order={2} name="courts-tab">
       <WalkthroughableView
@@ -718,7 +728,9 @@ function CourtsTabIcon({ color, size }: { color: string; size: number }) {
           justifyContent: 'center',
         }}
       >
-        <TennisCourtIcon width={adjustedSize} height={adjustedSize} stroke={color} />
+        <View style={{ transform: [{ rotate: '90deg' }] }}>
+          <TennisCourtIcon width={size} height={size} stroke={color} />
+        </View>
       </WalkthroughableView>
     </CopilotStep>
   );
