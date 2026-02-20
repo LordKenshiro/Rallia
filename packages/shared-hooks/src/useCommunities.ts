@@ -430,10 +430,10 @@ export function usePromoteCommunityMember() {
       playerId: string;
       promoterId: string;
     }) => promoteCommunityMember(communityId, playerId, promoterId),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: communityKeys.withMembers(variables.communityId) });
-      // Also invalidate group activity since communities use the same activity table
-      queryClient.invalidateQueries({ queryKey: ['groups', 'activity', variables.communityId] });
+    onSuccess: async (_, variables) => {
+      await queryClient.invalidateQueries({ queryKey: communityKeys.withMembers(variables.communityId) });
+      // Force refetch activity to show the promotion/demotion immediately
+      await queryClient.refetchQueries({ queryKey: ['groups', 'activity', variables.communityId] });
     },
   });
 }
@@ -454,10 +454,10 @@ export function useDemoteCommunityMember() {
       playerId: string;
       demoterId: string;
     }) => demoteCommunityMember(communityId, playerId, demoterId),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: communityKeys.withMembers(variables.communityId) });
-      // Also invalidate group activity since communities use the same activity table
-      queryClient.invalidateQueries({ queryKey: ['groups', 'activity', variables.communityId] });
+    onSuccess: async (_, variables) => {
+      await queryClient.invalidateQueries({ queryKey: communityKeys.withMembers(variables.communityId) });
+      // Force refetch activity to show the promotion/demotion immediately
+      await queryClient.refetchQueries({ queryKey: ['groups', 'activity', variables.communityId] });
     },
   });
 }

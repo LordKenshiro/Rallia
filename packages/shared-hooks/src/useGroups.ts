@@ -288,9 +288,11 @@ export function usePromoteMember() {
   return useMutation({
     mutationFn: ({ groupId, moderatorId, playerIdToPromote }: { groupId: string; moderatorId: string; playerIdToPromote: string }) =>
       promoteMember(groupId, moderatorId, playerIdToPromote),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: groupKeys.withMembers(variables.groupId) });
-      queryClient.invalidateQueries({ queryKey: groupKeys.activity(variables.groupId) });
+    onSuccess: async (_, variables) => {
+      // Invalidate and refetch to ensure UI updates immediately
+      await queryClient.invalidateQueries({ queryKey: groupKeys.withMembers(variables.groupId) });
+      // Force refetch activity to show the promotion/demotion immediately
+      await queryClient.refetchQueries({ queryKey: groupKeys.activity(variables.groupId) });
     },
   });
 }
@@ -304,9 +306,11 @@ export function useDemoteMember() {
   return useMutation({
     mutationFn: ({ groupId, moderatorId, playerIdToDemote }: { groupId: string; moderatorId: string; playerIdToDemote: string }) =>
       demoteMember(groupId, moderatorId, playerIdToDemote),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: groupKeys.withMembers(variables.groupId) });
-      queryClient.invalidateQueries({ queryKey: groupKeys.activity(variables.groupId) });
+    onSuccess: async (_, variables) => {
+      // Invalidate and refetch to ensure UI updates immediately
+      await queryClient.invalidateQueries({ queryKey: groupKeys.withMembers(variables.groupId) });
+      // Force refetch activity to show the promotion/demotion immediately
+      await queryClient.refetchQueries({ queryKey: groupKeys.activity(variables.groupId) });
     },
   });
 }
