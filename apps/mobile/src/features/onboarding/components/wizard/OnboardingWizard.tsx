@@ -41,10 +41,10 @@ import {
   DatabaseService,
   supabase,
 } from '@rallia/shared-services';
-import { useProfile, usePlayer } from '@rallia/shared-hooks';
+import { useProfile, usePlayer, usePostalCodeGeocode } from '@rallia/shared-hooks';
 import { replaceImage } from '../../../../services/imageUpload';
 import { useImagePicker } from '../../../../hooks';
-import { useSport } from '../../../../context';
+import { useSport, useUserHomeLocation } from '../../../../context';
 import type { TranslationKey } from '@rallia/shared-translations';
 import type {
   OnboardingPlayerPreferences,
@@ -284,6 +284,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   // Without this refetch, the player stays null until sign out/sign in.
   const { refetch: refetchPlayer } = usePlayer();
 
+  // Home location context to sync postal code to local storage
+  const { setHomeLocation } = useUserHomeLocation();
+  const { geocode } = usePostalCodeGeocode();
+
   // Sport context to refetch player sports when onboarding completes
   const { refetch: refetchSports, setSelectedSport, selectedSport } = useSport();
 
@@ -504,12 +508,26 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               return false;
             }
 
+            // Determine coordinates: if a valid address is selected, use its
+            // coordinates (already in formData). Otherwise, always geocode the
+            // postal code so lat/long are guaranteed to be fresh.
+            let { latitude, longitude } = formData;
+            if (!formData.address) {
+              const location = await geocode(formData.postalCode);
+              if (location) {
+                latitude = location.latitude;
+                longitude = location.longitude;
+                updateFormData({ latitude, longitude });
+              }
+            }
+
             const { error } = await OnboardingService.saveLocationInfo({
               address: formData.address || null,
               city: formData.city || null,
+              province: formData.province || null,
               postal_code: formData.postalCode,
-              latitude: formData.latitude,
-              longitude: formData.longitude,
+              latitude,
+              longitude,
             });
 
             if (error) {
@@ -517,6 +535,17 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               Alert.alert(t('alerts.error'), t('onboarding.validation.failedToSaveLocation'));
               setIsSaving(false);
               return false;
+            }
+
+            // Sync updated postal code and coordinates to local device storage
+            if (formData.postalCode && latitude && longitude) {
+              await setHomeLocation({
+                postalCode: formData.postalCode,
+                country: 'CA',
+                formattedAddress: formData.address || formData.postalCode,
+                latitude,
+                longitude,
+              });
             }
 
             setIsSaving(false);
@@ -926,7 +955,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             colors={colors}
             t={t}
             isDark={isDark}
-            sportId={formData.selectedSportIds[0]}
+            sportIds={formData.selectedSportIds}
             latitude={formData.latitude}
             longitude={formData.longitude}
           />

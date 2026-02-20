@@ -16,10 +16,6 @@ import { useDebounce } from './useDebounce';
 interface UsePlacesAutocompleteOptions {
   /** Search query string */
   searchQuery: string;
-  /** User's latitude for location bias (optional) */
-  latitude?: number;
-  /** User's longitude for location bias (optional) */
-  longitude?: number;
   /** Debounce delay in ms (default: 300) */
   debounceMs?: number;
   /** Whether the hook is enabled */
@@ -41,6 +37,8 @@ export interface PlaceDetails {
   addressComponents?: AddressComponent[];
   /** Extracted city name from address components */
   city?: string;
+  /** Extracted province/state code from address components (e.g. "QC", "ON") */
+  province?: string;
   /** Extracted postal code from address components */
   postalCode?: string;
 }
@@ -113,14 +111,7 @@ function generateSessionToken(): string {
 export function usePlacesAutocomplete(
   options: UsePlacesAutocompleteOptions
 ): UsePlacesAutocompleteReturn {
-  const {
-    searchQuery,
-    latitude,
-    longitude,
-    debounceMs = 300,
-    enabled = true,
-    minQueryLength = 2,
-  } = options;
+  const { searchQuery, debounceMs = 300, enabled = true, minQueryLength = 2 } = options;
 
   // State
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
@@ -222,16 +213,17 @@ export function usePlacesAutocomplete(
         })
       );
 
-      // Extract city and postal code from structured components
-      const getComponent = (types: string[]): string => {
+      // Extract city, province, and postal code from structured components
+      const getComponent = (types: string[], useShort = false): string => {
         const component = components.find(c => types.some(type => c.types.includes(type)));
-        return component?.longText || '';
+        return (useShort ? component?.shortText : component?.longText) || '';
       };
 
       const city =
         getComponent(['locality']) ||
         getComponent(['administrative_area_level_3']) ||
         getComponent(['sublocality_level_1']);
+      const province = getComponent(['administrative_area_level_1'], true);
       const postalCode = getComponent(['postal_code']);
 
       return {
@@ -243,6 +235,7 @@ export function usePlacesAutocomplete(
         ...(timezone && { timezone }),
         addressComponents: components.length > 0 ? components : undefined,
         ...(city && { city }),
+        ...(province && { province }),
         ...(postalCode && { postalCode }),
       };
     } catch (err) {
@@ -282,24 +275,22 @@ export function usePlacesAutocomplete(
       setError(null);
 
       try {
-        // Build request body
+        // Build request body with GMA restriction
         const requestBody: Record<string, unknown> = {
           input: query,
           sessionToken: sessionTokenRef.current,
-        };
-
-        // Add location bias if coordinates are available
-        if (latitude !== undefined && longitude !== undefined) {
-          requestBody.locationBias = {
-            circle: {
-              center: {
-                latitude,
-                longitude,
-              },
-              radius: 50000, // 50km radius bias
+          includedRegionCodes: ['ca'],
+          // Hard restriction to Greater Montreal Area (CMM) bounding box
+          // Covers H1-H9, J3-J7 FSAs: Montreal, Laval, South Shore, North Shore
+          // SW: south of Saint-Jean-sur-Richelieu, west of Mirabel
+          // NE: north of Mirabel, east of Mont-Saint-Hilaire
+          locationRestriction: {
+            rectangle: {
+              low: { latitude: 45.25, longitude: -74.2 },
+              high: { latitude: 45.75, longitude: -73.1 },
             },
-          };
-        }
+          },
+        };
 
         const response = await fetch(GOOGLE_PLACES_API_URL, {
           method: 'POST',
@@ -358,7 +349,7 @@ export function usePlacesAutocomplete(
         setIsLoading(false);
       }
     },
-    [latitude, longitude, minQueryLength]
+    [minQueryLength]
   );
 
   // Effect to trigger search when debounced query changes

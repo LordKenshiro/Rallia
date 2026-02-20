@@ -48,6 +48,7 @@ import type { NearbyMatch } from '@rallia/shared-hooks';
 import type { MatchWithDetails } from '@rallia/shared-types';
 import { Logger } from '@rallia/shared-services';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { SportIcon } from '../components/SportIcon';
 import { useHomeNavigation, useAppNavigation } from '../navigation/hooks';
 
 const Home = () => {
@@ -278,9 +279,10 @@ const Home = () => {
   // Render section header with "Soon & Nearby" title and "View All" button
   // Wrapped with CopilotStep for home screen tour
   const renderSectionHeader = useCallback(() => {
-    // Get a short label for the home location (postal code or city)
-    const homeLocationLabel =
-      homeLocation?.postalCode || homeLocation?.formattedAddress?.split(',')[0];
+    // Get a short label for the home location (full address if available, otherwise postal code)
+    const homeLocationLabel = player?.address
+      ? [player.address.split(',')[0].trim(), player.city].filter(Boolean).join(', ')
+      : homeLocation?.postalCode || homeLocation?.formattedAddress?.split(',')[0];
 
     return (
       <View style={[styles.sectionHeader]}>
@@ -333,6 +335,8 @@ const Home = () => {
     hasBothLocationOptions,
     homeLocation,
     isDark,
+    player?.address,
+    player?.city,
   ]);
 
   // Render "My Matches" section with horizontal scroll
@@ -499,6 +503,12 @@ const Home = () => {
             },
           ]}
         >
+          <SportIcon
+            sportName={selectedSport?.name ?? 'tennis'}
+            size={32}
+            color={colors.text}
+            style={styles.matchesSectionIcon}
+          />
           <Heading level={3}>{t('home.yourMatches')}</Heading>
           <Text size="sm" color={colors.textMuted} style={styles.sectionSubtitle}>
             {t('home.signInPrompt')}
@@ -521,6 +531,12 @@ const Home = () => {
             },
           ]}
         >
+          <SportIcon
+            sportName={selectedSport?.name ?? 'tennis'}
+            size={32}
+            color={colors.text}
+            style={styles.matchesSectionIcon}
+          />
           <Heading level={3}>{t('home.yourMatches')}</Heading>
           <Text size="sm" color={colors.textMuted} style={styles.sectionSubtitle}>
             {t('home.onboardingPrompt')}
@@ -578,6 +594,7 @@ const Home = () => {
     openSheet,
     welcomeOpacity,
     displayName,
+    selectedSport,
     renderMyMatchesSection,
     renderSectionHeader,
   ]);
@@ -791,6 +808,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   welcomeText: {
+    marginBottom: spacingPixels[2],
+  },
+  matchesSectionIcon: {
     marginBottom: spacingPixels[2],
   },
   sectionSubtitle: {

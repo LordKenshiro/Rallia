@@ -768,6 +768,7 @@ export interface OnboardingPersonalInfo {
 export interface OnboardingLocationInfo {
   address: string | null;
   city: string | null;
+  province: string | null;
   postal_code: string | null;
   latitude: number | null;
   longitude: number | null;
