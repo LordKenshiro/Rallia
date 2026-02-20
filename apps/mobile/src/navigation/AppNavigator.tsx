@@ -38,7 +38,7 @@ import { useActionsSheet, useSport, useOverlay } from '../context';
 import SportSelector from '../components/SportSelector';
 import TennisIcon from '../../assets/icons/tennis.svg';
 import PickleballIcon from '../../assets/icons/pickleball.svg';
-import StadiumIcon from '../../assets/icons/stadium.svg';
+import TennisCourtIcon from '../../assets/icons/tennis-court.svg';
 import { useUnreadNotificationCount, useProfile, useTotalUnreadCount } from '@rallia/shared-hooks';
 import { useAuth, useThemeStyles, useTranslation, useRequireOnboarding } from '../hooks';
 import { useTheme } from '@rallia/shared-hooks';
@@ -703,10 +703,11 @@ function HomeTabIcon({ color, size }: { color: string; size: number }) {
 }
 
 /**
- * Courts/Games tab icon with tour step. Uses stadium.svg.
+ * Courts/Games tab icon with tour step. Uses tennis-court.svg.
  */
 function CourtsTabIcon({ color, size }: { color: string; size: number }) {
   const { t } = useTranslation();
+  const adjustedSize = size * 1.15;
   return (
     <CopilotStep text={t('tour.mainNavigation.matches.description')} order={2} name="courts-tab">
       <WalkthroughableView
@@ -717,7 +718,7 @@ function CourtsTabIcon({ color, size }: { color: string; size: number }) {
           justifyContent: 'center',
         }}
       >
-        <StadiumIcon width={size} height={size} fill={color} />
+        <TennisCourtIcon width={adjustedSize} height={adjustedSize} stroke={color} />
       </WalkthroughableView>
     </CopilotStep>
   );
