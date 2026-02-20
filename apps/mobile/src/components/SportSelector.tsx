@@ -172,9 +172,9 @@ const SportSelector: React.FC<SportSelectorProps> = ({
             color={colors.selectorText}
             style={styles.selectorIcon}
           />
-          <Text color={colors.selectorText} weight="semibold" size="xs" numberOfLines={1}>
+          {/* <Text color={colors.selectorText} weight="semibold" size="xs" numberOfLines={1}>
             {selectedSport.display_name}
-          </Text>
+          </Text> */}
           {hasMultipleSports && (
             <Ionicons
               name={showDropdown ? 'chevron-up' : 'chevron-down'}
@@ -382,8 +382,9 @@ const styles = StyleSheet.create({
   selector: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 8,
     borderRadius: radiusPixels.full,
     shadowColor: primary[500],
     shadowOffset: { width: 0, height: 1 },
