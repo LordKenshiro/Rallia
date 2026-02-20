@@ -1003,7 +1003,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
     fetchNextPage,
     error: facilitiesError,
   } = useFacilitySearch({
-    sportId,
+    sportIds: sportId ? [sportId] : undefined,
     latitude: location?.latitude,
     longitude: location?.longitude,
     searchQuery,
@@ -1041,8 +1041,6 @@ export const WhereStep: React.FC<WhereStepProps> = ({
     getPlaceDetails,
   } = usePlacesAutocomplete({
     searchQuery: placeSearchQuery,
-    latitude: location?.latitude,
-    longitude: location?.longitude,
     enabled: locationType === 'custom' && !hasSelectedPlace,
   });
 

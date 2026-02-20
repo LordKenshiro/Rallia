@@ -42,8 +42,8 @@ interface FavoriteSitesStepProps {
   colors: ThemeColors;
   t: (key: TranslationKey) => string;
   isDark: boolean;
-  /** Sport ID for filtering facilities (uses first selected sport) */
-  sportId: string | undefined;
+  /** Sport IDs for filtering facilities */
+  sportIds: string[] | undefined;
   /** User's latitude for distance calculation */
   latitude: number | null;
   /** User's longitude for distance calculation */
@@ -190,7 +190,7 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
   colors,
   t,
   isDark: _isDark,
-  sportId,
+  sportIds,
   latitude: propLatitude,
   longitude: propLongitude,
 }) => {
@@ -212,11 +212,11 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
     fetchNextPage,
     isFetchingNextPage,
   } = useFacilitySearch({
-    sportId,
+    sportIds,
     latitude: latitude ?? undefined,
     longitude: longitude ?? undefined,
     searchQuery,
-    enabled: !!sportId && latitude !== null && longitude !== null,
+    enabled: !!sportIds?.length && latitude !== null && longitude !== null,
   });
 
   // Combined loading state
@@ -314,7 +314,7 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
       );
     }
 
-    if (!sportId) {
+    if (!sportIds?.length) {
       return (
         <View style={styles.emptyState}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />

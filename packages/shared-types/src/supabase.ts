@@ -2847,73 +2847,82 @@ export type Database = {
       };
       player: {
         Row: {
+          address: string | null;
           chat_rules_agreed_at: string | null;
+          city: string | null;
+          country: string | null;
           created_at: string | null;
           expo_push_token: string | null;
           gender: Database['public']['Enums']['gender_enum'] | null;
           id: string;
           last_seen_at: string | null;
+          latitude: number | null;
+          location: unknown;
+          longitude: number | null;
           max_travel_distance: number | null;
           notification_match_requests: boolean | null;
           notification_messages: boolean | null;
           notification_reminders: boolean | null;
           playing_hand: Database['public']['Enums']['playing_hand'] | null;
           postal_code: string | null;
-          postal_code_country: string | null;
-          postal_code_lat: number | null;
-          postal_code_location: unknown;
-          postal_code_long: number | null;
           privacy_show_age: boolean | null;
           privacy_show_location: boolean | null;
           privacy_show_stats: boolean | null;
+          province: string | null;
           push_notifications_enabled: boolean | null;
           reputation_score: number;
           updated_at: string | null;
         };
         Insert: {
+          address?: string | null;
           chat_rules_agreed_at?: string | null;
+          city?: string | null;
+          country?: string | null;
           created_at?: string | null;
           expo_push_token?: string | null;
           gender?: Database['public']['Enums']['gender_enum'] | null;
           id: string;
           last_seen_at?: string | null;
+          latitude?: number | null;
+          location?: unknown;
+          longitude?: number | null;
           max_travel_distance?: number | null;
           notification_match_requests?: boolean | null;
           notification_messages?: boolean | null;
           notification_reminders?: boolean | null;
           playing_hand?: Database['public']['Enums']['playing_hand'] | null;
           postal_code?: string | null;
-          postal_code_country?: string | null;
-          postal_code_lat?: number | null;
-          postal_code_location?: unknown;
-          postal_code_long?: number | null;
           privacy_show_age?: boolean | null;
           privacy_show_location?: boolean | null;
           privacy_show_stats?: boolean | null;
+          province?: string | null;
           push_notifications_enabled?: boolean | null;
           reputation_score?: number;
           updated_at?: string | null;
         };
         Update: {
+          address?: string | null;
           chat_rules_agreed_at?: string | null;
+          city?: string | null;
+          country?: string | null;
           created_at?: string | null;
           expo_push_token?: string | null;
           gender?: Database['public']['Enums']['gender_enum'] | null;
           id?: string;
           last_seen_at?: string | null;
+          latitude?: number | null;
+          location?: unknown;
+          longitude?: number | null;
           max_travel_distance?: number | null;
           notification_match_requests?: boolean | null;
           notification_messages?: boolean | null;
           notification_reminders?: boolean | null;
           playing_hand?: Database['public']['Enums']['playing_hand'] | null;
           postal_code?: string | null;
-          postal_code_country?: string | null;
-          postal_code_lat?: number | null;
-          postal_code_location?: unknown;
-          postal_code_long?: number | null;
           privacy_show_age?: boolean | null;
           privacy_show_location?: boolean | null;
           privacy_show_stats?: boolean | null;
+          province?: string | null;
           push_notifications_enabled?: boolean | null;
           reputation_score?: number;
           updated_at?: string | null;
@@ -3527,11 +3536,8 @@ export type Database = {
       profile: {
         Row: {
           account_status: Database['public']['Enums']['account_status'] | null;
-          address: string | null;
           bio: string | null;
           birth_date: string | null;
-          city: string | null;
-          country: string | null;
           created_at: string | null;
           display_name: string | null;
           email: string;
@@ -3544,19 +3550,14 @@ export type Database = {
           onboarding_completed: boolean | null;
           phone: string | null;
           phone_verified: boolean | null;
-          postal_code: string | null;
           preferred_locale: Database['public']['Enums']['locale_enum'] | null;
           profile_picture_url: string | null;
-          province: string | null;
           updated_at: string | null;
         };
         Insert: {
           account_status?: Database['public']['Enums']['account_status'] | null;
-          address?: string | null;
           bio?: string | null;
           birth_date?: string | null;
-          city?: string | null;
-          country?: string | null;
           created_at?: string | null;
           display_name?: string | null;
           email: string;
@@ -3569,19 +3570,14 @@ export type Database = {
           onboarding_completed?: boolean | null;
           phone?: string | null;
           phone_verified?: boolean | null;
-          postal_code?: string | null;
           preferred_locale?: Database['public']['Enums']['locale_enum'] | null;
           profile_picture_url?: string | null;
-          province?: string | null;
           updated_at?: string | null;
         };
         Update: {
           account_status?: Database['public']['Enums']['account_status'] | null;
-          address?: string | null;
           bio?: string | null;
           birth_date?: string | null;
-          city?: string | null;
-          country?: string | null;
           created_at?: string | null;
           display_name?: string | null;
           email?: string;
@@ -3594,10 +3590,8 @@ export type Database = {
           onboarding_completed?: boolean | null;
           phone?: string | null;
           phone_verified?: boolean | null;
-          postal_code?: string | null;
           preferred_locale?: Database['public']['Enums']['locale_enum'] | null;
           profile_picture_url?: string | null;
-          province?: string | null;
           updated_at?: string | null;
         };
         Relationships: [];
@@ -5317,7 +5311,7 @@ export type Database = {
           p_membership_required?: boolean;
           p_offset?: number;
           p_search_query?: string;
-          p_sport_id: string;
+          p_sport_ids: string[];
           p_surface_types?: string[];
         };
         Returns: {
@@ -5344,7 +5338,7 @@ export type Database = {
           p_max_distance_km?: number;
           p_membership_required?: boolean;
           p_search_query?: string;
-          p_sport_id: string;
+          p_sport_ids: string[];
           p_surface_types?: string[];
         };
         Returns: number;
@@ -5367,7 +5361,10 @@ export type Database = {
       search_public_matches: {
         Args: {
           p_cost?: string;
+          p_court_status?: string;
           p_date_range?: string;
+          p_duration?: string;
+          p_facility_id?: string;
           p_format?: string;
           p_gender?: string;
           p_join_mode?: string;
@@ -5379,6 +5376,7 @@ export type Database = {
           p_offset?: number;
           p_search_query?: string;
           p_skill_level?: string;
+          p_specific_date?: string;
           p_sport_id: string;
           p_time_of_day?: string;
           p_user_gender?: string;

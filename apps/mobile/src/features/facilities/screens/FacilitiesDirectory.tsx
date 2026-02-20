@@ -200,9 +200,10 @@ export default function FacilitiesDirectory() {
     enabled: !!session?.user?.id,
   });
 
-  // Home location label for display
-  const homeLocationLabel =
-    homeLocation?.postalCode || homeLocation?.formattedAddress?.split(',')[0];
+  // Home location label for display (full address if available, otherwise postal code)
+  const homeLocationLabel = player?.address
+    ? [player.address.split(',')[0].trim(), player.city].filter(Boolean).join(', ')
+    : homeLocation?.postalCode || homeLocation?.formattedAddress?.split(',')[0];
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -249,7 +250,7 @@ export default function FacilitiesDirectory() {
     refetch,
     error: queryError,
   } = useFacilitySearch({
-    sportId: selectedSport?.id,
+    sportIds: selectedSport?.id ? [selectedSport.id] : undefined,
     latitude: location?.latitude,
     longitude: location?.longitude,
     searchQuery: debouncedSearchQuery,

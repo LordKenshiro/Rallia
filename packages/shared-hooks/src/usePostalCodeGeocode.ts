@@ -6,6 +6,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { normalizePostalCode } from '@rallia/shared-utils';
 
 // =============================================================================
 // TYPES
@@ -36,19 +37,16 @@ interface UsePostalCodeGeocodeReturn {
   /** Clear the current result and error */
   clearResult: () => void;
   /** Validate postal code format without geocoding */
-  validateFormat: (postalCode: string) => { isValid: boolean; country: 'CA' | 'US' | null; normalized: string | null };
+  validateFormat: (postalCode: string) => {
+    isValid: boolean;
+    country: 'CA' | 'US' | null;
+    normalized: string | null;
+  };
 }
 
 // =============================================================================
 // CONSTANTS
 // =============================================================================
-
-// Canadian postal code: A1A 1A1 or A1A1A1 (letter-digit-letter digit-letter-digit)
-// First letter cannot be D, F, I, O, Q, U, W, Z (reserved/unused)
-const CA_POSTAL_REGEX = /^[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z][ -]?\d[ABCEGHJ-NPRSTV-Z]\d$/i;
-
-// US ZIP code: 12345 or 12345-6789
-const US_ZIP_REGEX = /^\d{5}(-\d{4})?$/;
 
 const GOOGLE_GEOCODING_API_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
 
@@ -71,27 +69,6 @@ const getApiKey = (): string | null => {
 };
 
 // =============================================================================
-// HELPER FUNCTIONS
-// =============================================================================
-
-/**
- * Normalize a Canadian postal code to uppercase with space in middle
- */
-function normalizeCanadianPostalCode(postalCode: string): string {
-  // Remove spaces and dashes, uppercase
-  const cleaned = postalCode.replace(/[\s-]/g, '').toUpperCase();
-  // Insert space in middle: A1A1A1 -> A1A 1A1
-  return `${cleaned.slice(0, 3)} ${cleaned.slice(3)}`;
-}
-
-/**
- * Normalize a US ZIP code (just trim whitespace)
- */
-function normalizeUSZipCode(postalCode: string): string {
-  return postalCode.trim();
-}
-
-// =============================================================================
 // HOOK IMPLEMENTATION
 // =============================================================================
 
@@ -101,31 +78,18 @@ export function usePostalCodeGeocode(): UsePostalCodeGeocodeReturn {
   const [result, setResult] = useState<PostalCodeLocation | null>(null);
 
   /**
-   * Validate postal code format without making an API call
+   * Validate postal code format without making an API call.
+   * Uses centralized validation from @rallia/shared-utils.
    */
   const validateFormat = useCallback(
     (
       postalCode: string
     ): { isValid: boolean; country: 'CA' | 'US' | null; normalized: string | null } => {
-      const trimmed = postalCode.trim();
-
-      if (CA_POSTAL_REGEX.test(trimmed)) {
-        return {
-          isValid: true,
-          country: 'CA',
-          normalized: normalizeCanadianPostalCode(trimmed),
-        };
+      const result = normalizePostalCode(postalCode);
+      if (!result) {
+        return { isValid: false, country: null, normalized: null };
       }
-
-      if (US_ZIP_REGEX.test(trimmed)) {
-        return {
-          isValid: true,
-          country: 'US',
-          normalized: normalizeUSZipCode(trimmed),
-        };
-      }
-
-      return { isValid: false, country: null, normalized: null };
+      return { isValid: true, country: result.country, normalized: result.normalized };
     },
     []
   );
@@ -147,8 +111,7 @@ export function usePostalCodeGeocode(): UsePostalCodeGeocodeReturn {
 
       if (!apiKey) {
         const errorMsg =
-          'Google API key not configured. ' +
-          'Ensure EXPO_PUBLIC_GOOGLE_PLACES_API_KEY is set.';
+          'Google API key not configured. ' + 'Ensure EXPO_PUBLIC_GOOGLE_PLACES_API_KEY is set.';
         console.error(errorMsg);
         setError(errorMsg);
         return null;

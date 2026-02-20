@@ -940,41 +940,31 @@ export const OnboardingService = {
   /**
    * Save location information from LocationStep
    */
-  async saveLocationInfo(info: OnboardingLocationInfo): Promise<DatabaseResponse<Profile>> {
+  async saveLocationInfo(info: OnboardingLocationInfo): Promise<DatabaseResponse<Player>> {
     try {
       const userId = await getCurrentUserId();
       if (!userId) {
         throw new Error('User not authenticated');
       }
 
-      // Update profile with location data (address, city, postal_code)
-      const { data: profile, error: profileError } = await supabase
-        .from('profile')
+      // Update player with all location data
+      const { data: player, error: playerError } = await supabase
+        .from('player')
         .update({
           address: info.address,
           city: info.city,
+          province: info.province,
           postal_code: info.postal_code,
+          latitude: info.latitude,
+          longitude: info.longitude,
         })
         .eq('id', userId)
         .select()
         .single();
 
-      if (profileError) throw profileError;
+      if (playerError) throw playerError;
 
-      // If we have coordinates, also update the player table
-      if (info.latitude !== undefined && info.longitude !== undefined) {
-        const { error: playerError } = await supabase
-          .from('player')
-          .update({
-            postal_code_lat: info.latitude,
-            postal_code_long: info.longitude,
-          })
-          .eq('id', userId);
-
-        if (playerError) throw playerError;
-      }
-
-      return { data: profile, error: null };
+      return { data: player, error: null };
     } catch (error) {
       return { data: null, error: handleError(error) };
     }

@@ -678,7 +678,8 @@
       "sports": "MY SPORTS",
       "availabilities": "MY AVAILABILITIES",
       "rating": "MY RATING",
-      "preferences": "MY PREFERENCES"
+      "preferences": "MY PREFERENCES",
+      "location": "MY LOCATION"
     },
     "fields": {
       "firstName": "First Name",
@@ -694,7 +695,11 @@
       "facility": "Facility",
       "favoriteFacilities": "Favorite Courts",
       "playingStyle": "Playing Style",
-      "playAttributes": "Play Attributes"
+      "playAttributes": "Play Attributes",
+      "postalCode": "Postal Code",
+      "address": "Address",
+      "city": "City",
+      "province": "Province"
     },
     "editSheets": {
       "personalInfoTitle": "Personal info",
@@ -702,7 +707,8 @@
       "emailReadOnlyHelp": "This information cannot be modified",
       "phonePlaceholder": "Enter phone number",
       "usernamePlaceholder": "Enter your username",
-      "bioPlaceholder": "Tell us about yourself..."
+      "bioPlaceholder": "Tell us about yourself...",
+      "locationTitle": "Edit location"
     },
     "status": {
       "active": "Active",
@@ -1170,7 +1176,8 @@
       "playerInfoUpdated": "Successfully updated Player Information",
       "preferencesUpdated": "Preferences updated successfully",
       "availabilityUpdated": "Availability updated successfully",
-      "ratingUpdated": "Rating updated successfully"
+      "ratingUpdated": "Rating updated successfully",
+      "locationUpdated": "Location updated successfully"
     },
     "success": {
       "title": "Welcome to Rallia!",
@@ -2840,7 +2847,7 @@
   },
   "home": {
     "welcomeBack": "Welcome back! 👋",
-    "yourMatches": "🎾 Your Games",
+    "yourMatches": "Your Games",
     "signInPrompt": "Please sign in to create and access your games",
     "onboardingPrompt": "Complete your profile to create and access your games",
     "completeProfile": "Complete Profile",
@@ -5814,7 +5821,7 @@
     "hero": {
       "badge": "Exclusive Access",
       "headline": "Become a Beta Tester",
-      "subheadline": "Join our group of privileged testers and help shape the future of tennis and pickleball in Quebec."
+      "subheadline": "Join our group of privileged testers and help shape the future of tennis and pickleball in Canada."
     },
     "benefits": {
       "priority": {

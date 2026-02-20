@@ -678,7 +678,8 @@
       "sports": "MES SPORTS",
       "availabilities": "MES DISPONIBILITÉS",
       "rating": "MON CLASSEMENT",
-      "preferences": "MES PRÉFÉRENCES"
+      "preferences": "MES PRÉFÉRENCES",
+      "location": "MA LOCALISATION"
     },
     "fields": {
       "firstName": "Prénom",
@@ -694,7 +695,11 @@
       "facility": "Site de jeu",
       "favoriteFacilities": "Sites favoris",
       "playingStyle": "Style de jeu",
-      "playAttributes": "Attributs de jeu"
+      "playAttributes": "Attributs de jeu",
+      "postalCode": "Code postal",
+      "address": "Adresse",
+      "city": "Ville",
+      "province": "Province"
     },
     "editSheets": {
       "personalInfoTitle": "Infos personnelles",
@@ -702,7 +707,8 @@
       "emailReadOnlyHelp": "Cette information ne peut pas être modifiée",
       "phonePlaceholder": "Entrez votre numéro de téléphone",
       "usernamePlaceholder": "Entrez votre nom d'utilisateur",
-      "bioPlaceholder": "Parlez-nous de vous..."
+      "bioPlaceholder": "Parlez-nous de vous...",
+      "locationTitle": "Modifier la localisation"
     },
     "status": {
       "active": "Actif",
@@ -1170,7 +1176,8 @@
       "playerInfoUpdated": "Informations du joueur mises à jour avec succès",
       "preferencesUpdated": "Préférences mises à jour avec succès",
       "availabilityUpdated": "Disponibilités mises à jour avec succès",
-      "ratingUpdated": "Classement mis à jour avec succès"
+      "ratingUpdated": "Classement mis à jour avec succès",
+      "locationUpdated": "Localisation mise à jour avec succès"
     },
     "success": {
       "title": "Bienvenue sur Rallia!",
@@ -2840,7 +2847,7 @@
   },
   "home": {
     "welcomeBack": "Bon retour! 👋",
-    "yourMatches": "🎾 Vos parties",
+    "yourMatches": "Vos parties",
     "signInPrompt": "Veuillez vous connecter pour créer et accéder à vos parties",
     "onboardingPrompt": "Complétez votre profil pour créer et accéder à vos parties",
     "completeProfile": "Compléter le profil",
@@ -5816,7 +5823,7 @@
     "hero": {
       "badge": "Accès Exclusif",
       "headline": "Devenez Beta Testeur",
-      "subheadline": "Rejoignez notre groupe de testeurs privilégiés et contribuez à façonner l'avenir du tennis et du pickleball au Québec."
+      "subheadline": "Rejoignez notre groupe de testeurs privilégiés et contribuez à façonner l'avenir du tennis et du pickleball au Canada."
     },
     "benefits": {
       "priority": {

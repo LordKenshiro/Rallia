@@ -139,7 +139,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   return (
     <>
       <View style={[styles.container, { backgroundColor }]}>
-        {/* Left - Profile Picture and Logo */}
+        {/* Left - Profile Picture and Sport Selector */}
         <View style={styles.leftSection}>
           {isLoggedIn && (
             <TouchableOpacity style={styles.iconButton} onPress={handleProfilePress}>
@@ -164,11 +164,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             </TouchableOpacity>
           )}
 
-          {Logo && <Logo width={100} height={30} />}
-        </View>
-
-        {/* Center - Sport Selector */}
-        <View style={styles.centerSection}>
           {selectedSport && userSports.length > 0 && (
             <TouchableOpacity
               style={[styles.sportSelector, { backgroundColor: colors.primary }]}
@@ -185,6 +180,9 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Center - Logo */}
+        <View style={styles.centerSection}>{Logo && <Logo width={100} height={30} />}</View>
 
         {/* Right - Notification and Settings Icons */}
         <View style={styles.rightIcons}>
@@ -262,7 +260,7 @@ const styles = StyleSheet.create({
   leftSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 0,
+    gap: 8,
   },
   centerSection: {
     position: 'absolute',

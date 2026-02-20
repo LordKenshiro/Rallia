@@ -198,7 +198,7 @@ export const FavoriteFacilitiesSelector: React.FC<FavoriteFacilitiesSelectorProp
 
   // Facility search
   const { facilities: searchResults, isLoading: searchLoading } = useFacilitySearch({
-    sportId,
+    sportIds: sportId ? [sportId] : undefined,
     latitude: latitude ?? undefined,
     longitude: longitude ?? undefined,
     searchQuery,
