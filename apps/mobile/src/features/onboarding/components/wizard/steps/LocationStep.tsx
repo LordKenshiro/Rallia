@@ -22,7 +22,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, lightTheme, darkTheme } from '@rallia/design-system';
 import { usePlacesAutocomplete } from '@rallia/shared-hooks';
-import { selectionHaptic } from '@rallia/shared-utils';
+import {
+  selectionHaptic,
+  isValidCanadianPostalCode,
+  isPostalCodeInGreaterMontreal,
+  formatPostalCodeInput,
+} from '@rallia/shared-utils';
 import type { TranslationKey } from '@rallia/shared-translations';
 import type { PlacePrediction } from '@rallia/shared-types';
 import type { OnboardingFormData } from '../../../hooks/useOnboardingWizard';
@@ -65,6 +70,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [isEditingPostalCode, setIsEditingPostalCode] = useState(false);
   const [editedPostalCode, setEditedPostalCode] = useState('');
+  const [postalCodeError, setPostalCodeError] = useState<string | null>(null);
 
   // The displayed postal code: prefer form data (which reflects user edits) over homeLocation
   const displayPostalCode = formData.postalCode || homeLocation?.postalCode || '';
@@ -118,32 +124,36 @@ export const LocationStep: React.FC<LocationStepProps> = ({
   };
 
   const handlePostalCodeChange = (text: string) => {
-    // Strip everything except alphanumeric
-    const raw = text.toUpperCase().replace(/[^A-Z0-9]/g, '');
-
-    // Auto-format Canadian postal codes: A1A 1A1
-    const isCanadianPattern = /^[A-Z]\d[A-Z]/.test(raw);
-    let formatted: string;
-    if (isCanadianPattern && raw.length > 3) {
-      formatted = `${raw.slice(0, 3)} ${raw.slice(3, 6)}`;
-    } else {
-      formatted = raw;
-    }
-
-    setEditedPostalCode(formatted);
+    setEditedPostalCode(formatPostalCodeInput(text));
+    setPostalCodeError(null);
   };
 
   const handleSavePostalCode = () => {
     const trimmed = editedPostalCode.trim();
-    if (trimmed) {
-      onUpdateFormData({ postalCode: trimmed });
+    if (!trimmed) {
+      setIsEditingPostalCode(false);
+      return;
     }
+
+    if (!isValidCanadianPostalCode(trimmed)) {
+      setPostalCodeError(t('preOnboarding.postalCode.errors.invalid'));
+      return;
+    }
+
+    if (!isPostalCodeInGreaterMontreal(trimmed, 'CA')) {
+      setPostalCodeError(t('preOnboarding.postalCode.errors.outOfCoverage'));
+      return;
+    }
+
+    onUpdateFormData({ postalCode: trimmed });
+    setPostalCodeError(null);
     setIsEditingPostalCode(false);
   };
 
   const handleCancelEditPostalCode = () => {
     setIsEditingPostalCode(false);
     setEditedPostalCode('');
+    setPostalCodeError(null);
   };
 
   // Handle address input change
@@ -285,7 +295,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
                   placeholderTextColor={colors.textMuted}
                   autoCapitalize="characters"
                   autoCorrect={false}
-                  maxLength={10}
+                  maxLength={7}
                   autoFocus
                 />
                 <TouchableOpacity
@@ -308,6 +318,14 @@ export const LocationStep: React.FC<LocationStepProps> = ({
                   <Ionicons name="close" size={18} color={colors.textSecondary} />
                 </TouchableOpacity>
               </View>
+              {postalCodeError && (
+                <View style={styles.postalCodeErrorContainer}>
+                  <Ionicons name="alert-circle-outline" size={14} color={colors.error} />
+                  <Text size="xs" color={colors.error} style={styles.postalCodeErrorText}>
+                    {postalCodeError}
+                  </Text>
+                </View>
+              )}
             </View>
           ) : (
             <View style={styles.postalCodeBadgeContent}>
@@ -456,6 +474,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[2],
+  },
+  postalCodeErrorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacingPixels[1],
+    gap: spacingPixels[1],
+  },
+  postalCodeErrorText: {
+    flex: 1,
   },
   postalCodeEditInput: {
     flex: 1,

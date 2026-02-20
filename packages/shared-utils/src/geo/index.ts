@@ -3,7 +3,14 @@
  * Functions for geographic calculations and coverage zones
  */
 
-export { isValidCanadianPostalCode, isPostalCodeInGreaterMontreal } from './coverageZones';
+export {
+  isValidCanadianPostalCode,
+  isValidUSZipCode,
+  detectPostalCodeCountry,
+  normalizePostalCode,
+  formatPostalCodeInput,
+  isPostalCodeInGreaterMontreal,
+} from './coverageZones';
 
 /**
  * Earth's radius in meters
