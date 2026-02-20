@@ -44,6 +44,16 @@ export type RootStackParamList = {
   GroupChatInfo: { conversationId: string }; // Group chat info/settings view
   Chat: { conversationId: string; title?: string }; // Direct chat navigation
   PlayedMatchDetail: { match: unknown }; // Played match detail view
+
+  // Admin screens - accessible only to users with admin role
+  AdminPanel: undefined; // Admin dashboard entry point
+  AdminDashboard: undefined; // Analytics dashboard
+  AdminUsers: undefined; // User management list
+  AdminUserDetail: { userId: string }; // User detail view
+  AdminActivityLog: undefined; // Audit trail / activity log
+  AdminAlerts: undefined; // Admin alerts and notifications
+  AdminSettings: undefined; // Admin settings and preferences
+  AdminModeration: undefined; // Moderation - reports and bans management
 };
 
 // =============================================================================

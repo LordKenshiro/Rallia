@@ -49,6 +49,12 @@ export function navigateToCommunityScreen<T extends keyof CommunityStackParamLis
 // Main navigator
 export { default as AppNavigator } from './AppNavigator';
 
+// Linking configuration
+export { linking, isAdminRoute, getRouteFromUrl, generateDeepLink } from './linking';
+
+// Deep link security guard
+export { useAdminDeepLinkGuard } from './useAdminDeepLinkGuard';
+
 // Typed hooks
 export {
   useAppNavigation,

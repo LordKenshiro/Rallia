@@ -22,6 +22,7 @@ export * from './chat';
 export * from './reports';
 export * from './tour';
 export * from './feedback';
+export * from './admin';
 
 // Export default DatabaseService
 export { default } from './database';

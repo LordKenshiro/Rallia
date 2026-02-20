@@ -60,6 +60,14 @@ import PlayedMatchDetail from '../screens/PlayedMatchDetail';
 import Communities from '../screens/Communities';
 import CommunityDetail from '../screens/CommunityDetail';
 import FeedbackScreen from '../screens/FeedbackScreen';
+import AdminPanelScreen from '../screens/AdminPanelScreen';
+import AdminDashboardScreen from '../screens/AdminDashboardScreen';
+import AdminUsersScreen from '../screens/AdminUsersScreen';
+import AdminUserDetailScreen from '../screens/AdminUserDetailScreen';
+import AdminActivityLogScreen from '../screens/AdminActivityLogScreen';
+import AdminAlertsScreen from '../screens/AdminAlertsScreen';
+import AdminSettingsScreen from '../screens/AdminSettingsScreen';
+import AdminModerationScreen from '../screens/AdminModerationScreen';
 
 // Components
 import { ThemeLogo } from '../components/ThemeLogo';
@@ -910,6 +918,70 @@ export default function AppNavigator() {
           headerTitle: t('screens.feedback'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
+      />
+
+      <RootStack.Screen
+        name="AdminPanel"
+        component={AdminPanelScreen}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('admin.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="AdminDashboard"
+        component={AdminDashboardScreen}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('admin.analytics.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="AdminUsers"
+        component={AdminUsersScreen}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('admin.users.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="AdminUserDetail"
+        component={AdminUserDetailScreen}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('admin.users.detail.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="AdminActivityLog"
+        component={AdminActivityLogScreen}
+        options={{ headerShown: false }}
+      />
+
+      <RootStack.Screen
+        name="AdminAlerts"
+        component={AdminAlertsScreen}
+        options={{ headerShown: false }}
+      />
+
+      <RootStack.Screen
+        name="AdminSettings"
+        component={AdminSettingsScreen}
+        options={{ headerShown: false }}
+      />
+
+      <RootStack.Screen
+        name="AdminModeration"
+        component={AdminModerationScreen}
+        options={{ headerShown: false }}
       />
 
       <RootStack.Screen

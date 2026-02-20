@@ -8,6 +8,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "scheme": "rallia",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
