@@ -19,6 +19,8 @@ import type { Sport } from '@rallia/shared-types';
 import type { TranslationKey } from '@rallia/shared-translations';
 import type { OnboardingFormData } from '../../../hooks/useOnboardingWizard';
 import { useSport } from '../../../../../context/SportContext';
+import TennisIcon from '../../../../../../assets/icons/tennis.svg';
+import PickleballIcon from '../../../../../../assets/icons/pickleball.svg';
 
 interface ThemeColors {
   background: string;
@@ -299,9 +301,26 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
               </View>
 
               <View style={styles.sportNameContainer}>
-                <Text size="xl" weight="bold" color={BASE_WHITE}>
-                  {sport.display_name}
-                </Text>
+                <View style={styles.sportNameRow}>
+                  {sport.name.toLowerCase() === 'pickleball' ? (
+                    <PickleballIcon
+                      width={24}
+                      height={24}
+                      fill={BASE_WHITE}
+                      style={styles.sportNameIcon}
+                    />
+                  ) : (
+                    <TennisIcon
+                      width={24}
+                      height={24}
+                      fill={BASE_WHITE}
+                      style={styles.sportNameIcon}
+                    />
+                  )}
+                  <Text size="xl" weight="bold" color={BASE_WHITE}>
+                    {sport.display_name}
+                  </Text>
+                </View>
                 {isSelected && <Ionicons name="checkmark-outline" size={24} color={BASE_WHITE} />}
               </View>
             </TouchableOpacity>
@@ -376,6 +395,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  sportNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sportNameIcon: {
+    marginRight: spacingPixels[2],
   },
 });
 

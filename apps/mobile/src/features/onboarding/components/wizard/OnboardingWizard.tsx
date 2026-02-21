@@ -54,7 +54,11 @@ import type {
   GenderEnum,
 } from '@rallia/shared-types';
 
-import { useOnboardingWizard, type OnboardingStepId } from '../../hooks/useOnboardingWizard';
+import {
+  useOnboardingWizard,
+  computeFavoriteSportCounts,
+  type OnboardingStepId,
+} from '../../hooks/useOnboardingWizard';
 import {
   PersonalInfoStep,
   LocationStep,
@@ -366,8 +370,16 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   const isButtonDisabled = useMemo(() => {
     if (isSaving) return true;
     if (currentStepId === 'availabilities' && totalAvailabilitySelections < 5) return true;
+    if (currentStepId === 'favorite-sites') {
+      const bothSports = hasTennis && hasPickleball;
+      if (bothSports) {
+        const counts = computeFavoriteSportCounts(formData);
+        return counts.tennisCount < 2 || counts.pickleballCount < 2;
+      }
+      return formData.favoriteFacilities.length < 3;
+    }
     return false;
-  }, [isSaving, currentStepId, totalAvailabilitySelections]);
+  }, [isSaving, currentStepId, totalAvailabilitySelections, formData, hasTennis, hasPickleball]);
 
   // Animation values
   const translateX = useSharedValue(0);
@@ -712,58 +724,69 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           return false;
         }
 
-      case 'favorite-sites':
-        // Favorite sites is optional - always passes validation
+      case 'favorite-sites': {
+        // Validate per-sport minimums
+        const bothSportsSelected = hasTennis && hasPickleball;
+        if (bothSportsSelected) {
+          const counts = computeFavoriteSportCounts(formData);
+          if (counts.tennisCount < 2 || counts.pickleballCount < 2) {
+            Alert.alert(t('alerts.error'), t('onboarding.favoriteSitesStep.selectMinimumPerSport'));
+            warningHaptic();
+            return false;
+          }
+        } else if (formData.favoriteFacilities.length < 3) {
+          Alert.alert(t('alerts.error'), t('onboarding.favoriteSitesStep.selectMinimum'));
+          warningHaptic();
+          return false;
+        }
+
         // Save the selected favorites to the database
-        if (formData.favoriteFacilities.length > 0) {
-          setIsSaving(true);
-          try {
-            const userId = await DatabaseService.Auth.getCurrentUserId();
-            if (!userId) {
-              Alert.alert(t('alerts.error'), t('onboarding.validation.userNotAuthenticated'));
-              setIsSaving(false);
-              return false;
-            }
-
-            // Delete existing favorites first
-            const { error: deleteError } = await supabase
-              .from('player_favorite_facility')
-              .delete()
-              .eq('player_id', userId);
-
-            if (deleteError) {
-              Logger.warn('Failed to delete existing favorites', { error: deleteError });
-            }
-
-            // Insert new favorites with display order
-            const favoritesToInsert = formData.favoriteFacilities.map((facility, index) => ({
-              player_id: userId,
-              facility_id: facility.id,
-              display_order: index + 1,
-            }));
-
-            const { error: insertError } = await supabase
-              .from('player_favorite_facility')
-              .insert(favoritesToInsert);
-
-            if (insertError) {
-              Logger.error('Failed to save favorite facilities', insertError as Error);
-              Alert.alert(t('alerts.error'), t('onboarding.favoriteSitesStep.failedToSave'));
-              setIsSaving(false);
-              return false;
-            }
-
-            setIsSaving(false);
-            return true;
-          } catch (error) {
-            Logger.error('Unexpected error saving favorite facilities', error as Error);
-            Alert.alert(t('alerts.error'), t('onboarding.validation.unexpectedError'));
+        setIsSaving(true);
+        try {
+          const userId = await DatabaseService.Auth.getCurrentUserId();
+          if (!userId) {
+            Alert.alert(t('alerts.error'), t('onboarding.validation.userNotAuthenticated'));
             setIsSaving(false);
             return false;
           }
+
+          // Delete existing favorites first
+          const { error: deleteError } = await supabase
+            .from('player_favorite_facility')
+            .delete()
+            .eq('player_id', userId);
+
+          if (deleteError) {
+            Logger.warn('Failed to delete existing favorites', { error: deleteError });
+          }
+
+          // Insert new favorites with display order
+          const favoritesToInsert = formData.favoriteFacilities.map((facility, index) => ({
+            player_id: userId,
+            facility_id: facility.id,
+            display_order: index + 1,
+          }));
+
+          const { error: insertError } = await supabase
+            .from('player_favorite_facility')
+            .insert(favoritesToInsert);
+
+          if (insertError) {
+            Logger.error('Failed to save favorite facilities', insertError as Error);
+            Alert.alert(t('alerts.error'), t('onboarding.favoriteSitesStep.failedToSave'));
+            setIsSaving(false);
+            return false;
+          }
+
+          setIsSaving(false);
+          return true;
+        } catch (error) {
+          Logger.error('Unexpected error saving favorite facilities', error as Error);
+          Alert.alert(t('alerts.error'), t('onboarding.validation.unexpectedError'));
+          setIsSaving(false);
+          return false;
         }
-        // No favorites selected - that's okay, just continue
-        return true;
+      }
 
       case 'availabilities':
         setIsSaving(true);
@@ -956,6 +979,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             t={t}
             isDark={isDark}
             sportIds={formData.selectedSportIds}
+            sportNames={formData.selectedSportNames}
+            hasTennis={hasTennis}
+            hasPickleball={hasPickleball}
             latitude={formData.latitude}
             longitude={formData.longitude}
           />

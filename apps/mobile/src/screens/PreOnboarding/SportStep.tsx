@@ -16,6 +16,8 @@ import { SportService, Logger } from '@rallia/shared-services';
 import { selectionHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../hooks';
 import { SportIcon } from '../../components/SportIcon';
+import TennisIcon from '../../../assets/icons/tennis.svg';
+import PickleballIcon from '../../../assets/icons/pickleball.svg';
 import type { Sport as DatabaseSport } from '@rallia/shared-types';
 
 const BASE_WHITE = '#ffffff';
@@ -192,9 +194,26 @@ export function SportStep({ onContinue, isActive = true }: SportStepProps) {
                     {/* Sport Info */}
                     <View style={styles.sportInfoContainer}>
                       <View style={styles.sportNameRow}>
-                        <Text size="xl" weight="bold" color={BASE_WHITE}>
-                          {sport.display_name}
-                        </Text>
+                        <View style={styles.sportNameWithIcon}>
+                          {sport.name.toLowerCase() === 'pickleball' ? (
+                            <PickleballIcon
+                              width={24}
+                              height={24}
+                              fill={BASE_WHITE}
+                              style={styles.sportNameIcon}
+                            />
+                          ) : (
+                            <TennisIcon
+                              width={24}
+                              height={24}
+                              fill={BASE_WHITE}
+                              style={styles.sportNameIcon}
+                            />
+                          )}
+                          <Text size="xl" weight="bold" color={BASE_WHITE}>
+                            {sport.display_name}
+                          </Text>
+                        </View>
 
                         {/* Selection indicator */}
                         {isSelected ? (
@@ -370,6 +389,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  sportNameWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sportNameIcon: {
+    marginRight: spacingPixels[2],
+  },
   tapHint: {
     marginTop: spacingPixels[1],
   },
@@ -404,6 +430,7 @@ const styles = StyleSheet.create({
   hintBanner: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: spacingPixels[3],
     paddingVertical: spacingPixels[3],
     borderRadius: radiusPixels.lg,
@@ -412,8 +439,8 @@ const styles = StyleSheet.create({
   },
   hintText: {
     marginLeft: spacingPixels[2],
-    flex: 1,
     lineHeight: 18,
+    textAlign: 'center',
   },
   continueButton: {
     width: '100%',

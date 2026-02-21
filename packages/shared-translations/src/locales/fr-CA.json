@@ -405,6 +405,8 @@
     "lightMode": "Clair",
     "darkMode": "Sombre",
     "systemTheme": "Système",
+    "termsOfService": "Conditions d'utilisation",
+    "privacyPolicy": "Politique de confidentialité",
     "logout": "Se déconnecter",
     "deleteAccount": "Supprimer le compte",
     "general": {
@@ -1205,8 +1207,13 @@
     },
     "favoriteSitesStep": {
       "title": "Sélectionnez vos terrains favoris",
-      "subtitle": "Choisissez jusqu'à 3 sites de jeu où vous aimez jouer. Cela nous aide à vous trouver de meilleures parties.",
+      "subtitle": "Choisissez au moins 3 sites de jeu où vous aimez jouer. Cela nous aide à vous trouver de meilleures parties.",
+      "subtitleBothSports": "Choisissez au moins 2 sites de jeu par sport. Les sites offrant les deux sports comptent pour chacun.",
       "selected": "sélectionnés",
+      "tennisCount": "Tennis",
+      "pickleballCount": "Pickleball",
+      "selectMinimum": "Veuillez sélectionner au moins 3 sites de jeu favoris.",
+      "selectMinimumPerSport": "Veuillez sélectionner au moins 2 sites de jeu pour chaque sport (tennis et pickleball).",
       "searchLabel": "Rechercher un site de jeu",
       "searchPlaceholder": "Tapez pour rechercher...",
       "loading": "Chargement des sites de jeu à proximité...",

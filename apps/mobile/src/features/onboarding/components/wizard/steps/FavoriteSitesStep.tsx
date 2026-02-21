@@ -1,9 +1,11 @@
 /**
  * FavoriteSitesStep Component
  *
- * Onboarding step to select up to 3 favorite facilities/sites.
+ * Onboarding step to select favorite facilities/sites.
+ * Single sport: at least 3 facilities.
+ * Both sports: at least 3 tennis facilities AND 3 pickleball facilities.
+ * Dual-sport facilities count toward both counters.
  * Uses useFacilitySearch hook for searching facilities by name and location.
- * Placed after PreferencesStep and before AvailabilitiesStep.
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
@@ -16,6 +18,7 @@ import { lightHaptic, selectionHaptic, successHaptic, warningHaptic } from '@ral
 import { useFacilitySearch } from '@rallia/shared-hooks';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 import type { TranslationKey } from '@rallia/shared-translations';
+import { computeFavoriteSportCounts } from '../../../hooks/useOnboardingWizard';
 import type { OnboardingFormData } from '../../../hooks/useOnboardingWizard';
 import { useUserLocation } from '../../../../../hooks/useUserLocation';
 import { SearchBar } from '../../../../../components/SearchBar';
@@ -34,6 +37,7 @@ interface ThemeColors {
   buttonActive: string;
   buttonInactive: string;
   buttonTextActive: string;
+  success?: string;
 }
 
 interface FavoriteSitesStepProps {
@@ -44,6 +48,12 @@ interface FavoriteSitesStepProps {
   isDark: boolean;
   /** Sport IDs for filtering facilities */
   sportIds: string[] | undefined;
+  /** Sport names matching sportIds order */
+  sportNames: string[];
+  /** Whether the user selected tennis */
+  hasTennis: boolean;
+  /** Whether the user selected pickleball */
+  hasPickleball: boolean;
   /** User's latitude for distance calculation */
   latitude: number | null;
   /** User's longitude for distance calculation */
@@ -54,7 +64,8 @@ interface FavoriteSitesStepProps {
 // CONSTANTS
 // =============================================================================
 
-const MAX_FAVORITES = 3;
+const MIN_SINGLE_SPORT = 3;
+const MIN_BOTH_SPORTS = 2;
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -71,6 +82,25 @@ function formatDistance(meters: number | null): string {
   return `${(meters / 1000).toFixed(1)}km`;
 }
 
+/**
+ * Get the display labels for sports a facility supports.
+ */
+function getSportLabels(
+  facility: FacilitySearchResult,
+  sportIds: string[],
+  sportNames: string[]
+): string[] {
+  const facilitySpIds = facility.sport_ids ?? [];
+  const labels: string[] = [];
+  for (let i = 0; i < sportIds.length; i++) {
+    if (facilitySpIds.includes(sportIds[i])) {
+      const name = sportNames[i];
+      labels.push(name.charAt(0).toUpperCase() + name.slice(1));
+    }
+  }
+  return labels;
+}
+
 // =============================================================================
 // SUB-COMPONENTS
 // =============================================================================
@@ -80,9 +110,18 @@ interface FacilityCardProps {
   isSelected: boolean;
   onPress: () => void;
   colors: ThemeColors;
+  showSportTags: boolean;
+  sportLabels: string[];
 }
 
-const FacilityCard: React.FC<FacilityCardProps> = ({ facility, isSelected, onPress, colors }) => (
+const FacilityCard: React.FC<FacilityCardProps> = ({
+  facility,
+  isSelected,
+  onPress,
+  colors,
+  showSportTags,
+  sportLabels,
+}) => (
   <TouchableOpacity
     style={[
       styles.facilityCard,
@@ -122,6 +161,21 @@ const FacilityCard: React.FC<FacilityCardProps> = ({ facility, isSelected, onPre
         <Text size="sm" color={colors.textMuted} numberOfLines={1}>
           {[facility.address, facility.city].filter(Boolean).join(', ')}
         </Text>
+        {/* Sport tags */}
+        {showSportTags && sportLabels.length > 0 && (
+          <View style={styles.sportTagsRow}>
+            {sportLabels.map(label => (
+              <View
+                key={label}
+                style={[styles.sportTag, { backgroundColor: `${colors.buttonActive}20` }]}
+              >
+                <Text size="xs" weight="medium" color={colors.buttonActive}>
+                  {label}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
 
       {/* Distance and selection indicator */}
@@ -181,6 +235,41 @@ const SelectedFacilityBadge: React.FC<SelectedFacilityBadgeProps> = ({
 );
 
 // =============================================================================
+// SPORT COUNTER ROW
+// =============================================================================
+
+interface SportCounterRowProps {
+  label: string;
+  count: number;
+  target: number;
+  colors: ThemeColors;
+}
+
+const SportCounterBadge: React.FC<SportCounterRowProps> = ({ label, count, target, colors }) => {
+  const met = count >= target;
+  const accentColor = met ? (colors.success ?? colors.buttonActive) : colors.textMuted;
+  return (
+    <View
+      style={[
+        styles.sportCounterBadge,
+        {
+          backgroundColor: met ? `${accentColor}15` : 'transparent',
+          borderColor: accentColor,
+        },
+      ]}
+    >
+      {met && <Ionicons name="checkmark-circle" size={16} color={accentColor} />}
+      <Text size="sm" weight="bold" color={accentColor}>
+        {label}
+      </Text>
+      <Text size="sm" weight="semibold" color={accentColor}>
+        {count}/{target}
+      </Text>
+    </View>
+  );
+};
+
+// =============================================================================
 // MAIN COMPONENT
 // =============================================================================
 
@@ -191,10 +280,16 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
   t,
   isDark: _isDark,
   sportIds,
+  sportNames,
+  hasTennis,
+  hasPickleball,
   latitude: propLatitude,
   longitude: propLongitude,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+
+  const bothSports = hasTennis && hasPickleball;
+  const maxFavorites = bothSports ? 6 : 3;
 
   // Get device location as fallback if props don't have coordinates
   // This handles cases where user typed city manually without using autocomplete
@@ -233,6 +328,9 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
     [selectedFacilities]
   );
 
+  // Compute per-sport counts
+  const sportCounts = useMemo(() => computeFavoriteSportCounts(formData), [formData]);
+
   // Check if a facility is selected
   const isFacilitySelected = useCallback(
     (facilityId: string) => selectedFacilityIds.includes(facilityId),
@@ -251,7 +349,7 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
         onUpdateFormData({ favoriteFacilities: newFacilities });
       } else {
         // Add to selection (if under max)
-        if (selectedFacilities.length >= MAX_FAVORITES) {
+        if (selectedFacilities.length >= maxFavorites) {
           warningHaptic();
           return;
         }
@@ -262,7 +360,7 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
         setSearchQuery('');
       }
     },
-    [isFacilitySelected, selectedFacilities, onUpdateFormData, setSearchQuery]
+    [isFacilitySelected, selectedFacilities, onUpdateFormData, maxFavorites, setSearchQuery]
   );
 
   // Handle removing a selected facility
@@ -376,7 +474,9 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
         {t('onboarding.favoriteSitesStep.title')}
       </Text>
       <Text size="base" color={colors.textSecondary} style={styles.subtitle}>
-        {t('onboarding.favoriteSitesStep.subtitle')}
+        {bothSports
+          ? t('onboarding.favoriteSitesStep.subtitleBothSports')
+          : t('onboarding.favoriteSitesStep.subtitle')}
       </Text>
 
       {/* Optional hint - at top so users see it before scrolling */}
@@ -387,15 +487,35 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
         </Text>
       </View>
 
-      {/* Selection counter */}
+      {/* Selection counters */}
       <View style={styles.counterContainer}>
-        <Text
-          size="sm"
-          weight="semibold"
-          color={selectedFacilities.length > 0 ? colors.buttonActive : colors.textMuted}
-        >
-          {selectedFacilities.length} / {MAX_FAVORITES} {t('onboarding.favoriteSitesStep.selected')}
-        </Text>
+        {bothSports ? (
+          <View style={styles.counterRow}>
+            <SportCounterBadge
+              label={t('onboarding.favoriteSitesStep.tennisCount')}
+              count={sportCounts.tennisCount}
+              target={MIN_BOTH_SPORTS}
+              colors={colors}
+            />
+            <SportCounterBadge
+              label={t('onboarding.favoriteSitesStep.pickleballCount')}
+              count={sportCounts.pickleballCount}
+              target={MIN_BOTH_SPORTS}
+              colors={colors}
+            />
+          </View>
+        ) : (
+          <Text
+            size="sm"
+            weight="semibold"
+            color={
+              selectedFacilities.length >= MIN_SINGLE_SPORT ? colors.buttonActive : colors.textMuted
+            }
+          >
+            {selectedFacilities.length} / {MIN_SINGLE_SPORT}{' '}
+            {t('onboarding.favoriteSitesStep.selected')}
+          </Text>
+        )}
       </View>
 
       {/* Selected facilities badges */}
@@ -438,6 +558,10 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
                 isSelected={isFacilitySelected(facility.id)}
                 onPress={() => handleFacilityPress(facility)}
                 colors={colors}
+                showSportTags={bothSports}
+                sportLabels={
+                  bothSports && sportIds ? getSportLabels(facility, sportIds, sportNames) : []
+                }
               />
             ))}
             {isFetchingNextPage && (
@@ -474,7 +598,22 @@ const styles = StyleSheet.create({
     marginBottom: spacingPixels[6],
   },
   counterContainer: {
+    alignItems: 'center',
     marginBottom: spacingPixels[4],
+  },
+  counterRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacingPixels[3],
+  },
+  sportCounterBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    paddingVertical: spacingPixels[2],
+    paddingHorizontal: spacingPixels[3],
+    borderRadius: radiusPixels.md,
+    borderWidth: 1,
   },
   selectedContainer: {
     marginBottom: spacingPixels[6],
@@ -534,6 +673,16 @@ const styles = StyleSheet.create({
   facilityInfo: {
     flex: 1,
     marginRight: spacingPixels[2],
+  },
+  sportTagsRow: {
+    flexDirection: 'row',
+    gap: spacingPixels[1],
+    marginTop: spacingPixels[1],
+  },
+  sportTag: {
+    paddingHorizontal: spacingPixels[2],
+    paddingVertical: 2,
+    borderRadius: radiusPixels.md,
   },
   facilityCardRight: {
     alignItems: 'flex-end',

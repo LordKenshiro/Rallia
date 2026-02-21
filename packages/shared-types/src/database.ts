@@ -711,6 +711,8 @@ export interface FacilitySearchResult {
   external_provider_id: string | null;
   /** IANA timezone identifier (e.g., America/Toronto) */
   timezone: string | null;
+  /** Sport IDs this facility supports (from the requested sport IDs) */
+  sport_ids?: string[];
 }
 
 /** Paginated facilities response */
