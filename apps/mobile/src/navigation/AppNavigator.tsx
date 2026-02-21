@@ -52,7 +52,6 @@ import type {
 
 // Screens
 import Home from '../screens/Home';
-import Map from '../screens/Map';
 import Community from '../screens/Community';
 import Chat from '../screens/Chat';
 import ChatConversation from '../screens/ChatConversation';
@@ -378,24 +377,6 @@ function useMainScreenOptions() {
 // =============================================================================
 
 /**
- * Map icon button for header right
- */
-function MapIconButton() {
-  const navigation = useAppNavigation();
-  const { colors } = useThemeStyles();
-
-  return (
-    <TouchableOpacity
-      onPress={() => navigation.navigate('Map')}
-      style={{ marginRight: spacingPixels[2] }}
-      activeOpacity={0.7}
-    >
-      <Ionicons name="map-outline" size={24} color={colors.headerForeground} />
-    </TouchableOpacity>
-  );
-}
-
-/**
  * Header options for PublicMatches screen
  */
 function usePublicMatchesScreenOptions() {
@@ -410,7 +391,6 @@ function usePublicMatchesScreenOptions() {
     ...sharedOptions,
     headerTitle: t('screens.publicMatches'),
     headerLeft: () => <ThemedBackButton navigation={navigation} />,
-    headerRight: () => <MapIconButton />,
   });
 }
 
@@ -977,7 +957,7 @@ function ThemedBackButton({
  * Structure:
  * - PreOnboarding: First-time wizard (sports, postal code, location permission) for new users
  * - Main: Bottom tabs with minimal stacks (shown after pre-onboarding complete)
- * - Shared screens: UserProfile, SportProfile, Settings, Notifications, Map, RatingProofs
+ * - Shared screens: UserProfile, SportProfile, Settings, Notifications, RatingProofs
  *   These are full-screen (tabs hidden) and accessible from anywhere
  */
 export default function AppNavigator() {
@@ -1072,15 +1052,6 @@ export default function AppNavigator() {
           headerTitle: t('screens.permissions'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
-      />
-
-      <RootStack.Screen
-        name="Map"
-        component={Map}
-        options={{
-          headerShown: false,
-          presentation: 'fullScreenModal' as const,
-        }}
       />
 
       <RootStack.Screen

@@ -405,6 +405,8 @@
     "lightMode": "Light",
     "darkMode": "Dark",
     "systemTheme": "System",
+    "termsOfService": "Terms of Use",
+    "privacyPolicy": "Privacy Policy",
     "logout": "Sign Out",
     "deleteAccount": "Delete Account",
     "general": {
@@ -1205,8 +1207,13 @@
     },
     "favoriteSitesStep": {
       "title": "Select Your Favorite Courts",
-      "subtitle": "Choose up to 3 facilities where you like to play. This helps us find you better matches.",
+      "subtitle": "Choose at least 3 facilities where you like to play. This helps us find you better matches.",
+      "subtitleBothSports": "Choose at least 2 facilities per sport. Facilities offering both sports count toward each.",
       "selected": "selected",
+      "tennisCount": "Tennis",
+      "pickleballCount": "Pickleball",
+      "selectMinimum": "Please select at least 3 favorite facilities.",
+      "selectMinimumPerSport": "Please select at least 2 facilities for each sport (tennis and pickleball).",
       "searchLabel": "Search for a facility",
       "searchPlaceholder": "Type to search...",
       "loading": "Loading nearby facilities...",

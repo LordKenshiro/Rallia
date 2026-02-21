@@ -1,5 +1,5 @@
 -- =============================================================================
--- Rallia Seed File for Local Development
+-- Rallia Seed File
 -- =============================================================================
 --
 -- SEEDING WORKFLOW (run in this order):
@@ -16,11 +16,93 @@
 -- This script is designed to be idempotent (safe to re-run).
 -- It deletes all previous seed data first, then re-inserts fresh data.
 -- All FK references are resolved dynamically via subqueries.
+--
+-- ENVIRONMENT SUPPORT:
+--   Local (default):  npm run db:seed
+--   Staging:          npm run db:seed:staging
+--
+--   The psql variable :seed_env controls environment-specific behavior.
+--   When seed_env='staging', the vault secrets block is skipped (staging
+--   already has its own secrets configured in the Supabase dashboard).
+--
+-- TARGETING A SPECIFIC USER (for beta testers):
+--   SEED_EMAIL=user@example.com npm run db:seed
+--   SEED_EMAIL=user@example.com npm run db:seed:staging
+--
+--   When SEED_EMAIL is set, seed data is associated with that user instead
+--   of the first non-fake auth.users entry. If the email is not found,
+--   a warning is shown and it falls back to the default behavior.
 -- =============================================================================
 
+-- Default seed_env to 'local' if not set (e.g. when run via `supabase db reset`)
+\if :{?seed_env}
+\else
+  \set seed_env 'local'
+\endif
+
+-- Default seed_email to empty if not set
+\if :{?seed_email}
+\else
+  \set seed_email ''
+\endif
+
+-- Store seed_email in a session GUC so PL/pgSQL DO blocks can access it
+-- (psql variables can't be used inside $$ ... $$ blocks)
+SELECT set_config('app.seed_email', :'seed_email', false);
+
+-- Helper: resolve the target user for seeding.
+-- If SEED_EMAIL is set, looks up user by email; otherwise falls back to
+-- the first non-fake auth.users entry (original behavior).
+CREATE OR REPLACE FUNCTION pg_temp.resolve_seed_user() RETURNS UUID AS $$
+DECLARE
+  _email TEXT;
+  _uid   UUID;
+  fake_ids UUID[] := ARRAY[
+    'a1000000-0000-0000-0000-000000000001'::uuid,
+    'a1000000-0000-0000-0000-000000000002'::uuid,
+    'a1000000-0000-0000-0000-000000000003'::uuid,
+    'a1000000-0000-0000-0000-000000000004'::uuid,
+    'a1000000-0000-0000-0000-000000000005'::uuid,
+    'a1000000-0000-0000-0000-000000000006'::uuid,
+    'a1000000-0000-0000-0000-000000000007'::uuid,
+    'a1000000-0000-0000-0000-000000000008'::uuid,
+    'a1000000-0000-0000-0000-000000000009'::uuid
+  ];
+BEGIN
+  _email := current_setting('app.seed_email', true);
+
+  -- If an email was provided, try to find that user
+  IF _email IS NOT NULL AND _email != '' THEN
+    SELECT id INTO _uid FROM auth.users WHERE email = _email;
+    IF _uid IS NOT NULL THEN
+      RAISE NOTICE 'seed: targeting user % (%)', _email, _uid;
+      RETURN _uid;
+    ELSE
+      RAISE WARNING 'seed: SEED_EMAIL=% not found in auth.users — falling back to first non-fake user', _email;
+    END IF;
+  END IF;
+
+  -- Fallback: first non-fake user ordered by creation date
+  SELECT id INTO _uid FROM auth.users
+  WHERE id != ALL(fake_ids)
+  ORDER BY created_at LIMIT 1;
+
+  IF _uid IS NOT NULL THEN
+    RAISE NOTICE 'seed: using first non-fake user %', _uid;
+  END IF;
+
+  RETURN _uid;
+END;
+$$ LANGUAGE plpgsql;
+
 -- ============================================================================
--- 1. Vault Secrets for Edge Functions
+-- 1. Vault Secrets for Edge Functions (local only)
 -- ============================================================================
+-- Skipped when seeding staging/production — those environments already have
+-- their own secrets configured via the Supabase dashboard.
+-- ============================================================================
+SELECT :'seed_env' = 'local' AS is_local \gset
+\if :is_local
 DO $$
 DECLARE
   local_service_role_key TEXT := 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU';
@@ -52,6 +134,7 @@ BEGIN
     PERFORM vault.update_secret(existing_anon_id, local_anon_key, 'anon_key');
   END IF;
 END $$;
+\endif
 
 -- ============================================================================
 -- 2. Clean Up Previous Seed Data
@@ -96,10 +179,8 @@ DECLARE
   ];
   logged_in_user UUID;
 BEGIN
-  -- Identify the logged-in dev user (non-fake)
-  SELECT id INTO logged_in_user FROM auth.users
-  WHERE id != ALL(fake_ids)
-  ORDER BY created_at LIMIT 1;
+  -- Identify the target user for seeding
+  logged_in_user := pg_temp.resolve_seed_user();
 
   -- Disable reputation triggers to avoid side-effects during cleanup
   ALTER TABLE reputation_event DISABLE TRIGGER reputation_event_recalculate;
@@ -725,18 +806,12 @@ BEGIN
     RETURN;
   END IF;
 
-  -- Get the first auth user that is NOT one of our fake users (the logged-in dev user)
-  SELECT id INTO logged_in_user FROM auth.users
-  WHERE id NOT IN (p1,p2,p3,p4,p5,p6,p7,p8,p9)
-  ORDER BY created_at LIMIT 1;
-
-  -- If no real user yet, use p1 as fallback
-  IF logged_in_user IS NULL THEN
-    logged_in_user := p1;
-  END IF;
+  -- Get the target user (by SEED_EMAIL or first non-fake user)
+  logged_in_user := pg_temp.resolve_seed_user();
+  IF logged_in_user IS NULL THEN logged_in_user := p1; END IF;
 
   -- Ensure the logged-in user has a player record too
-  INSERT INTO player (id, gender, max_travel_distance, postal_code, postal_code_country, postal_code_lat, postal_code_long, push_notifications_enabled)
+  INSERT INTO player (id, gender, max_travel_distance, postal_code, country, latitude, longitude, push_notifications_enabled)
   VALUES (logged_in_user, 'male', 25, 'H2T 1S4', 'CA', 45.5236, -73.5865, true)
   ON CONFLICT (id) DO NOTHING;
 
@@ -1258,10 +1333,8 @@ BEGIN
   SELECT id INTO pickleball_id FROM sport WHERE slug = 'pickleball';
   SELECT id INTO group_type_id FROM network_type WHERE name = 'player_group';
 
-  -- Get logged-in user
-  SELECT id INTO logged_in_user FROM auth.users
-  WHERE id NOT IN (p1,p2,p3,'a1000000-0000-0000-0000-000000000004'::uuid,p5,p6,p7,p8,p9)
-  ORDER BY created_at LIMIT 1;
+  -- Get the target user (by SEED_EMAIL or first non-fake user)
+  logged_in_user := pg_temp.resolve_seed_user();
   IF logged_in_user IS NULL THEN logged_in_user := p1; END IF;
 
   IF group_type_id IS NULL THEN
@@ -1331,11 +1404,7 @@ DECLARE
   conv2 UUID := 'e1000000-0000-0000-0000-000000000002';
   conv3 UUID := 'e1000000-0000-0000-0000-000000000003';
 BEGIN
-  SELECT id INTO logged_in_user FROM auth.users
-  WHERE id NOT IN (p1,p2,p3,'a1000000-0000-0000-0000-000000000004'::uuid,
-    'a1000000-0000-0000-0000-000000000005'::uuid,'a1000000-0000-0000-0000-000000000006'::uuid,
-    p7,'a1000000-0000-0000-0000-000000000008'::uuid,'a1000000-0000-0000-0000-000000000009'::uuid)
-  ORDER BY created_at LIMIT 1;
+  logged_in_user := pg_temp.resolve_seed_user();
   IF logged_in_user IS NULL THEN logged_in_user := p1; END IF;
 
   -- Ensure all participants have chat_rules_agreed_at
@@ -1417,15 +1486,8 @@ DECLARE
   is_read boolean;
   created_time timestamptz;
 BEGIN
-  -- Get the first non-fake user, or fall back to first profile
-  SELECT id INTO target_user_id FROM auth.users
-  WHERE id NOT IN (
-    'a1000000-0000-0000-0000-000000000001'::uuid,'a1000000-0000-0000-0000-000000000002'::uuid,
-    'a1000000-0000-0000-0000-000000000003'::uuid,'a1000000-0000-0000-0000-000000000004'::uuid,
-    'a1000000-0000-0000-0000-000000000005'::uuid,'a1000000-0000-0000-0000-000000000006'::uuid,
-    'a1000000-0000-0000-0000-000000000007'::uuid,'a1000000-0000-0000-0000-000000000008'::uuid,
-    'a1000000-0000-0000-0000-000000000009'::uuid
-  ) ORDER BY created_at LIMIT 1;
+  -- Get the target user (by SEED_EMAIL or first non-fake user)
+  target_user_id := pg_temp.resolve_seed_user();
 
   IF target_user_id IS NULL THEN
     SELECT id INTO target_user_id FROM profile LIMIT 1;
@@ -1492,12 +1554,7 @@ DECLARE
   p7 UUID := 'a1000000-0000-0000-0000-000000000007';
   logged_in_user UUID;
 BEGIN
-  SELECT id INTO logged_in_user FROM auth.users
-  WHERE id NOT IN (p1,p2,'a1000000-0000-0000-0000-000000000003'::uuid,
-    'a1000000-0000-0000-0000-000000000004'::uuid,'a1000000-0000-0000-0000-000000000005'::uuid,
-    'a1000000-0000-0000-0000-000000000006'::uuid,p7,
-    'a1000000-0000-0000-0000-000000000008'::uuid,'a1000000-0000-0000-0000-000000000009'::uuid)
-  ORDER BY created_at LIMIT 1;
+  logged_in_user := pg_temp.resolve_seed_user();
   IF logged_in_user IS NULL THEN logged_in_user := p1; END IF;
 
   -- Logged-in user favorites Marc and Alexandre (skip self-favorites)
@@ -1576,12 +1633,7 @@ DECLARE
   logged_in_user UUID;
   fac_ids UUID[];
 BEGIN
-  SELECT id INTO logged_in_user FROM auth.users
-  WHERE id NOT IN (p1,p2,'a1000000-0000-0000-0000-000000000003'::uuid,
-    'a1000000-0000-0000-0000-000000000004'::uuid,p5,
-    'a1000000-0000-0000-0000-000000000006'::uuid,p7,
-    'a1000000-0000-0000-0000-000000000008'::uuid,'a1000000-0000-0000-0000-000000000009'::uuid)
-  ORDER BY created_at LIMIT 1;
+  logged_in_user := pg_temp.resolve_seed_user();
   IF logged_in_user IS NULL THEN logged_in_user := p1; END IF;
 
   -- Look up the 3 specific Montreal parks by name (rallia-facilities generates new UUIDs each import)
@@ -1645,14 +1697,7 @@ DECLARE
   org_id UUID;
   today DATE := CURRENT_DATE;
 BEGIN
-  SELECT id INTO logged_in_user FROM auth.users
-  WHERE id NOT IN (
-    'a1000000-0000-0000-0000-000000000001'::uuid,'a1000000-0000-0000-0000-000000000002'::uuid,
-    'a1000000-0000-0000-0000-000000000003'::uuid,'a1000000-0000-0000-0000-000000000004'::uuid,
-    'a1000000-0000-0000-0000-000000000005'::uuid,'a1000000-0000-0000-0000-000000000006'::uuid,
-    'a1000000-0000-0000-0000-000000000007'::uuid,'a1000000-0000-0000-0000-000000000008'::uuid,
-    'a1000000-0000-0000-0000-000000000009'::uuid
-  ) ORDER BY created_at LIMIT 1;
+  logged_in_user := pg_temp.resolve_seed_user();
   IF logged_in_user IS NULL THEN logged_in_user := p1; END IF;
 
   -- Use Jeanne-Mance park (seeded by rallia-facilities), looked up by name
@@ -1733,10 +1778,14 @@ DECLARE
   today DATE := CURRENT_DATE;
   logged_in_user UUID;
 BEGIN
-  SELECT id INTO logged_in_user FROM auth.users
-  WHERE id NOT IN (p1,p2,p3,p4,p5,p6,p7,p8,p9)
-  ORDER BY created_at LIMIT 1;
+  logged_in_user := pg_temp.resolve_seed_user();
   IF logged_in_user IS NULL THEN logged_in_user := p1; END IF;
+
+  -- Skip if matches weren't seeded (requires rallia-facilities)
+  IF NOT EXISTS (SELECT 1 FROM match WHERE id = m9) THEN
+    RAISE NOTICE 'Matches not found, skipping reputation event seeding.';
+    RETURN;
+  END IF;
 
   INSERT INTO reputation_event (id, player_id, event_type, base_impact, match_id, caused_by_player_id, event_occurred_at) VALUES
     -- Match 9 (p1 vs p7, 3 days ago): both completed + on time

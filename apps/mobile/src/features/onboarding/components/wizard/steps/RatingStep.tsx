@@ -22,6 +22,8 @@ import DatabaseService, { Logger } from '@rallia/shared-services';
 import { selectionHaptic } from '@rallia/shared-utils';
 import type { TranslationKey } from '@rallia/shared-translations';
 import type { OnboardingFormData } from '../../../hooks/useOnboardingWizard';
+import TennisIcon from '../../../../../../assets/icons/tennis.svg';
+import PickleballIcon from '../../../../../../assets/icons/pickleball.svg';
 
 interface ThemeColors {
   background: string;
@@ -204,6 +206,15 @@ export const RatingStep: React.FC<RatingStepProps> = ({
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
     >
+      {/* Sport Icon */}
+      <View style={styles.sportIconContainer}>
+        {isTennis ? (
+          <TennisIcon width={48} height={48} fill={colors.text} />
+        ) : (
+          <PickleballIcon width={48} height={48} fill={colors.text} />
+        )}
+      </View>
+
       {/* Title */}
       <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
         {t(titleKey)}
@@ -320,6 +331,10 @@ const styles = StyleSheet.create({
     padding: spacingPixels[4],
     paddingBottom: spacingPixels[8],
     flexGrow: 1,
+  },
+  sportIconContainer: {
+    alignItems: 'center',
+    marginBottom: spacingPixels[2],
   },
   title: {
     textAlign: 'center',

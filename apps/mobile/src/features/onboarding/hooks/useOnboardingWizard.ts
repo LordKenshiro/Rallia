@@ -58,7 +58,7 @@ export interface OnboardingFormData {
   tennisMatchType: 'casual' | 'competitive' | 'both';
   pickleballMatchType: 'casual' | 'competitive' | 'both';
 
-  // Favorite facilities (up to 3)
+  // Favorite facilities (up to 6 for dual-sport users)
   favoriteFacilities: FacilitySearchResult[];
 
   // Availabilities
@@ -125,7 +125,7 @@ const INITIAL_FORM_DATA: OnboardingFormData = {
   tennisRatingId: null,
   pickleballRatingId: null,
   playingHand: 'right',
-  maxTravelDistance: 6,
+  maxTravelDistance: 15,
   matchDuration: '90', // Legacy field (90 = 1.5h)
   tennisMatchDuration: '90',
   pickleballMatchDuration: '90',
@@ -134,6 +134,46 @@ const INITIAL_FORM_DATA: OnboardingFormData = {
   favoriteFacilities: [],
   availabilities: DEFAULT_AVAILABILITIES,
 };
+
+/**
+ * Compute per-sport favorite counts for the favorite-sites step.
+ * Each facility's sport_ids is compared against the user's selected sport IDs
+ * to determine how many tennis and pickleball facilities have been selected.
+ */
+export function computeFavoriteSportCounts(formData: OnboardingFormData): {
+  tennisCount: number;
+  pickleballCount: number;
+  totalCount: number;
+} {
+  const hasTennis = formData.selectedSportNames.includes('tennis');
+  const hasPickleball = formData.selectedSportNames.includes('pickleball');
+
+  // Map sport names to their IDs
+  const tennisIndex = formData.selectedSportNames.indexOf('tennis');
+  const pickleballIndex = formData.selectedSportNames.indexOf('pickleball');
+  const tennisSportId = tennisIndex >= 0 ? formData.selectedSportIds[tennisIndex] : null;
+  const pickleballSportId =
+    pickleballIndex >= 0 ? formData.selectedSportIds[pickleballIndex] : null;
+
+  let tennisCount = 0;
+  let pickleballCount = 0;
+
+  for (const facility of formData.favoriteFacilities) {
+    const sportIds = facility.sport_ids ?? [];
+    if (hasTennis && tennisSportId && sportIds.includes(tennisSportId)) {
+      tennisCount++;
+    }
+    if (hasPickleball && pickleballSportId && sportIds.includes(pickleballSportId)) {
+      pickleballCount++;
+    }
+  }
+
+  return {
+    tennisCount,
+    pickleballCount,
+    totalCount: formData.favoriteFacilities.length,
+  };
+}
 
 /**
  * Check if a step is complete based on form data
@@ -167,9 +207,17 @@ function isStepComplete(stepId: OnboardingStepId, formData: OnboardingFormData):
       // Preferences have defaults, but check if user has made selections
       return !!(formData.playingHand && formData.maxTravelDistance);
 
-    case 'favorite-sites':
-      // Require exactly 3 favorite facilities to be selected
-      return formData.favoriteFacilities.length === 3;
+    case 'favorite-sites': {
+      // Require at least 3 favorites; when both sports selected, need 3 per sport
+      const bothSports =
+        formData.selectedSportNames.includes('tennis') &&
+        formData.selectedSportNames.includes('pickleball');
+      if (bothSports) {
+        const counts = computeFavoriteSportCounts(formData);
+        return counts.tennisCount >= 2 && counts.pickleballCount >= 2;
+      }
+      return formData.favoriteFacilities.length >= 3;
+    }
 
     case 'availabilities':
       // Availabilities have defaults, check if at least one slot is selected

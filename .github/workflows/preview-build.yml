@@ -82,7 +82,11 @@ jobs:
           DESCRIPTION=""
 
           if [ -f "$BUILD_FILE" ] && jq empty "$BUILD_FILE" 2>/dev/null; then
-            IOS_URL=$(jq -r '.[] | select(.platform == "IOS") | .buildDetailsPageUrl // empty' "$BUILD_FILE")
+            # Extract project info for constructing Expo build page URLs
+            OWNER_NAME=$(jq -r '.[0].project.ownerAccount.name // empty' "$BUILD_FILE")
+            PROJECT_SLUG=$(jq -r '.[0].project.slug // empty' "$BUILD_FILE")
+
+            IOS_ID=$(jq -r '.[] | select(.platform == "IOS") | .id // empty' "$BUILD_FILE")
             IOS_STATUS=$(jq -r '.[] | select(.platform == "IOS") | .status // empty' "$BUILD_FILE")
             IOS_ARTIFACT=$(jq -r '.[] | select(.platform == "IOS") | .artifacts.buildUrl // empty' "$BUILD_FILE")
             IOS_APP_VERSION=$(jq -r '.[] | select(.platform == "IOS") | .appVersion // empty' "$BUILD_FILE")
@@ -90,13 +94,25 @@ jobs:
             IOS_CREATED=$(jq -r '.[] | select(.platform == "IOS") | .createdAt // empty' "$BUILD_FILE")
             IOS_COMPLETED=$(jq -r '.[] | select(.platform == "IOS") | .completedAt // empty' "$BUILD_FILE")
 
-            ANDROID_URL=$(jq -r '.[] | select(.platform == "ANDROID") | .buildDetailsPageUrl // empty' "$BUILD_FILE")
+            ANDROID_ID=$(jq -r '.[] | select(.platform == "ANDROID") | .id // empty' "$BUILD_FILE")
             ANDROID_STATUS=$(jq -r '.[] | select(.platform == "ANDROID") | .status // empty' "$BUILD_FILE")
             ANDROID_ARTIFACT=$(jq -r '.[] | select(.platform == "ANDROID") | .artifacts.buildUrl // empty' "$BUILD_FILE")
             ANDROID_APP_VERSION=$(jq -r '.[] | select(.platform == "ANDROID") | .appVersion // empty' "$BUILD_FILE")
             ANDROID_BUILD_NUMBER=$(jq -r '.[] | select(.platform == "ANDROID") | .appBuildVersion // empty' "$BUILD_FILE")
             ANDROID_CREATED=$(jq -r '.[] | select(.platform == "ANDROID") | .createdAt // empty' "$BUILD_FILE")
             ANDROID_COMPLETED=$(jq -r '.[] | select(.platform == "ANDROID") | .completedAt // empty' "$BUILD_FILE")
+
+            # Construct build details page URLs from project info + build ID
+            IOS_URL=""
+            ANDROID_URL=""
+            if [ -n "$OWNER_NAME" ] && [ -n "$PROJECT_SLUG" ]; then
+              if [ -n "$IOS_ID" ]; then
+                IOS_URL="https://expo.dev/accounts/${OWNER_NAME}/projects/${PROJECT_SLUG}/builds/${IOS_ID}"
+              fi
+              if [ -n "$ANDROID_ID" ]; then
+                ANDROID_URL="https://expo.dev/accounts/${OWNER_NAME}/projects/${PROJECT_SLUG}/builds/${ANDROID_ID}"
+              fi
+            fi
 
             # Build version string if available
             VERSION_STR=""

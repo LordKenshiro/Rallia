@@ -7,6 +7,7 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -368,6 +369,20 @@ const SettingsScreen: React.FC = () => {
               );
             })}
           </View>
+        </View>
+
+        {/* Legal */}
+        <View style={[styles.settingsGroup, { backgroundColor: colors.background }]}>
+          <SettingsItem
+            icon="document-text-outline"
+            title={t('settings.termsOfService')}
+            onPress={() => Linking.openURL('https://rallia.ca/terms')}
+          />
+          <SettingsItem
+            icon="lock-closed-outline"
+            title={t('settings.privacyPolicy')}
+            onPress={() => Linking.openURL('https://rallia.ca/privacy')}
+          />
         </View>
 
         {/* Sign Out & Delete Account */}
