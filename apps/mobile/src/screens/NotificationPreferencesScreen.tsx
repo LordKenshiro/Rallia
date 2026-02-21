@@ -12,6 +12,10 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Switch,
+  Animated,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,11 +28,13 @@ import {
   spacingPixels,
   radiusPixels,
   primary,
+  secondary,
+  accent,
+  status,
   neutral,
 } from '@rallia/design-system';
 import {
   NOTIFICATION_TYPE_ICONS,
-  NOTIFICATION_TYPE_COLORS,
   NOTIFICATION_TYPE_CATEGORIES,
   DELIVERY_CHANNEL_ICONS,
   DEFAULT_NOTIFICATION_PREFERENCES,
@@ -38,7 +44,46 @@ import {
 } from '@rallia/shared-types';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
 
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 const BASE_WHITE = '#ffffff';
+
+// Only show notification types that are actually triggered in the app
+const ACTIVE_NOTIFICATION_TYPES = new Set<ExtendedNotificationTypeEnum>([
+  'match_invitation',
+  'match_join_request',
+  'match_join_accepted',
+  'match_join_rejected',
+  'match_player_joined',
+  'match_cancelled',
+  'match_updated',
+  'player_kicked',
+  'player_left',
+  'feedback_request',
+  'feedback_reminder',
+  'score_confirmation',
+] as ExtendedNotificationTypeEnum[]);
+
+// Design-system colors for active notification types
+// Teal (primary) = invitations/requests, Green (success) = positive outcomes,
+// Red (secondary) = rejections/cancellations, Blue (info) = updates, Amber (accent) = warnings/reminders
+const NOTIFICATION_DS_COLORS: Partial<Record<ExtendedNotificationTypeEnum, string>> = {
+  match_invitation: primary[500],
+  match_join_request: primary[500],
+  match_join_accepted: status.success.light,
+  match_join_rejected: secondary[500],
+  match_player_joined: status.success.light,
+  match_cancelled: secondary[500],
+  match_updated: status.info.DEFAULT,
+  player_kicked: secondary[500],
+  player_left: accent[600],
+  feedback_request: accent[400],
+  feedback_reminder: accent[600],
+  score_confirmation: status.success.light,
+};
 
 // Group notification types by category
 function groupByCategory(): Record<NotificationCategory, ExtendedNotificationTypeEnum[]> {
@@ -50,7 +95,9 @@ function groupByCategory(): Record<NotificationCategory, ExtendedNotificationTyp
   };
 
   for (const [type, category] of Object.entries(NOTIFICATION_TYPE_CATEGORIES)) {
-    groups[category].push(type as ExtendedNotificationTypeEnum);
+    if (ACTIVE_NOTIFICATION_TYPES.has(type as ExtendedNotificationTypeEnum)) {
+      groups[category].push(type as ExtendedNotificationTypeEnum);
+    }
   }
 
   return groups;
@@ -126,7 +173,7 @@ const NotificationTypeRow: React.FC<NotificationTypeRowProps> = ({
   typeLabel,
 }) => {
   const iconName = NOTIFICATION_TYPE_ICONS[notificationType];
-  const iconColor = NOTIFICATION_TYPE_COLORS[notificationType];
+  const iconColor = NOTIFICATION_DS_COLORS[notificationType] ?? neutral[500];
   const channels: DeliveryChannelEnum[] = ['push', 'email', 'sms'];
 
   return (
@@ -193,49 +240,79 @@ const CategorySection: React.FC<CategorySectionProps> = ({
   typeLabels,
 }) => {
   const channels: DeliveryChannelEnum[] = ['push', 'email', 'sms'];
+  const [isExpanded, setIsExpanded] = useState(true);
+  const rotateAnim = useMemo(() => new Animated.Value(1), []);
+
+  const handleToggleExpand = useCallback(() => {
+    lightHaptic();
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setIsExpanded(!isExpanded);
+
+    Animated.timing(rotateAnim, {
+      toValue: isExpanded ? 0 : 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [isExpanded, rotateAnim]);
+
+  const chevronRotation = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '180deg'],
+  });
 
   return (
     <View style={[styles.categorySection, { backgroundColor: colors.cardBackground }]}>
-      <View style={styles.categoryHeader}>
+      <TouchableOpacity
+        onPress={handleToggleExpand}
+        activeOpacity={0.7}
+        style={[styles.categoryHeader, !isExpanded && styles.categoryHeaderCollapsed]}
+      >
         <Text size="base" weight="semibold" color={colors.text}>
           {categoryLabel}
         </Text>
-      </View>
+        <Animated.View style={{ transform: [{ rotate: chevronRotation }] }}>
+          <Ionicons name="chevron-up" size={18} color={colors.textMuted} />
+        </Animated.View>
+      </TouchableOpacity>
 
-      {/* Channel header labels */}
-      <View style={[styles.channelHeaderRow, { borderBottomColor: colors.border }]}>
-        <View style={styles.typeInfo} />
-        <View style={styles.togglesRow}>
-          {channels.map(channel => (
-            <View key={channel} style={styles.toggleCell}>
-              <View style={styles.channelLabel}>
-                <Ionicons
-                  name={DELIVERY_CHANNEL_ICONS[channel] as keyof typeof Ionicons.glyphMap}
-                  size={14}
-                  color={colors.textMuted}
-                />
-                <Text size="xs" color={colors.textMuted}>
-                  {channelLabels[channel]}
-                </Text>
-              </View>
+      {isExpanded && (
+        <>
+          {/* Channel header labels */}
+          <View style={[styles.channelHeaderRow, { borderBottomColor: colors.border }]}>
+            <View style={styles.typeInfo} />
+            <View style={styles.togglesRow}>
+              {channels.map(channel => (
+                <View key={channel} style={styles.toggleCell}>
+                  <View style={styles.channelLabel}>
+                    <Ionicons
+                      name={DELIVERY_CHANNEL_ICONS[channel] as keyof typeof Ionicons.glyphMap}
+                      size={14}
+                      color={colors.textMuted}
+                    />
+                    <Text size="xs" color={colors.textMuted}>
+                      {channelLabels[channel]}
+                    </Text>
+                  </View>
+                </View>
+              ))}
             </View>
-          ))}
-        </View>
-      </View>
+          </View>
 
-      {/* Notification type rows */}
-      {types.map(type => (
-        <NotificationTypeRow
-          key={type}
-          notificationType={type}
-          preferences={preferences[type] ?? {}}
-          onToggle={(channel, enabled) => onToggle(type, channel, enabled)}
-          isUpdating={isUpdating}
-          isDark={isDark}
-          colors={colors}
-          typeLabel={typeLabels[type]}
-        />
-      ))}
+          {/* Notification type rows */}
+          {types.map(type => (
+            <NotificationTypeRow
+              key={type}
+              notificationType={type}
+              preferences={preferences[type] ?? {}}
+              onToggle={(channel, enabled) => onToggle(type, channel, enabled)}
+              isUpdating={isUpdating}
+              isDark={isDark}
+              colors={colors}
+              typeLabel={typeLabels[type]}
+            />
+          ))}
+        </>
+      )}
     </View>
   );
 };
@@ -390,21 +467,23 @@ const NotificationPreferencesScreen: React.FC = () => {
         </View>
 
         {/* Category sections */}
-        {(['match', 'social', 'system'] as NotificationCategory[]).map(category => (
-          <CategorySection
-            key={category}
-            category={category}
-            types={categoryGroups[category]}
-            preferences={preferences ?? {}}
-            onToggle={handleToggle}
-            isUpdating={isUpdating}
-            isDark={isDark}
-            colors={colors}
-            categoryLabel={categoryLabels[category]}
-            channelLabels={channelLabels}
-            typeLabels={typeLabels}
-          />
-        ))}
+        {(['match', 'social', 'system'] as NotificationCategory[])
+          .filter(category => categoryGroups[category].length > 0)
+          .map(category => (
+            <CategorySection
+              key={category}
+              category={category}
+              types={categoryGroups[category]}
+              preferences={preferences ?? {}}
+              onToggle={handleToggle}
+              isUpdating={isUpdating}
+              isDark={isDark}
+              colors={colors}
+              categoryLabel={categoryLabels[category]}
+              channelLabels={channelLabels}
+              typeLabels={typeLabels}
+            />
+          ))}
 
         {/* Reset button */}
         <View style={styles.resetContainer}>
@@ -469,9 +548,15 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   categoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[4],
     paddingBottom: spacingPixels[2],
+  },
+  categoryHeaderCollapsed: {
+    paddingBottom: spacingPixels[4],
   },
   channelHeaderRow: {
     flexDirection: 'row',
