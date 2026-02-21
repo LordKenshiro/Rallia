@@ -2287,6 +2287,11 @@
       "readyToPlay": "Ready to Play",
       "courtBooked": "Court Booked"
     },
+    "tier": {
+      "mostWanted": "Most Wanted",
+      "readyToPlay": "Ready to Play",
+      "mostWantedPlayer": "Top Player"
+    },
     "cta": {
       "join": "Join game",
       "askToJoin": "Request to join",
@@ -2820,7 +2825,7 @@
       "openReservation": "Open Reservation",
       "confirmBooking": "Confirm Booking",
       "didYouBook": "Did you book the court?",
-      "iBookedThisCourt": "I booked this court",
+      "iBookedThisCourt": "I booked it!",
       "notYet": "Not yet",
       "courtBooked": "Court booked!",
       "courtBookedDescription": "The court is marked as booked for this game.",
@@ -2830,7 +2835,7 @@
       "tapToBook": "Tap a slot to book",
       "externalBooking": "You'll be redirected to the booking site",
       "bookingConfirmTitle": "Booking Confirmation",
-      "bookingConfirmMessage": "Did you book a court?",
+      "bookingConfirmMessage": "Did you book the court?",
       "viewMoreSlots": "View more slots",
       "selectCourt": "Select a Court",
       "courtAvailable": "court available",

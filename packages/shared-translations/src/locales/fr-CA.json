@@ -2287,6 +2287,11 @@
       "readyToPlay": "Prêt à jouer",
       "courtBooked": "Terrain Réservé"
     },
+    "tier": {
+      "mostWanted": "Très Convoité",
+      "readyToPlay": "Prêt à Jouer",
+      "mostWantedPlayer": "Joueur Convoité"
+    },
     "cta": {
       "join": "Rejoindre la partie",
       "askToJoin": "Demander à rejoindre",
@@ -2820,7 +2825,7 @@
       "openReservation": "Ouvrir la réservation",
       "confirmBooking": "Confirmer la réservation",
       "didYouBook": "Avez-vous réservé le terrain?",
-      "iBookedThisCourt": "J'ai réservé ce terrain",
+      "iBookedThisCourt": "J'ai réservé!",
       "notYet": "Pas encore",
       "courtBooked": "Terrain réservé!",
       "courtBookedDescription": "Le terrain est marqué comme réservé pour cette partie.",
@@ -2830,7 +2835,7 @@
       "tapToBook": "Appuyez sur un créneau pour réserver",
       "externalBooking": "Vous serez redirigé vers le site de réservation",
       "bookingConfirmTitle": "Confirmation de réservation",
-      "bookingConfirmMessage": "Avez-vous réservé un terrain?",
+      "bookingConfirmMessage": "Avez-vous réservé le terrain?",
       "viewMoreSlots": "Voir plus de créneaux",
       "selectCourt": "Choisir un terrain",
       "courtAvailable": "terrain disponible",
@@ -5428,7 +5433,7 @@
   "facilityDetail": {
     "tabs": {
       "info": "Info",
-      "availability": "Disponibilité",
+      "availability": "Dispos",
       "matches": "Parties"
     },
     "about": "À propos",

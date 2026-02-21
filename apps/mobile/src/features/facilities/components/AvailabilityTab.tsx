@@ -419,11 +419,18 @@ export default function AvailabilityTab({
 
     const { courtIdSet, externalIdSet } = sportCourtIds;
 
-    // If no courts support this sport, return empty
-    if (courtIdSet.size === 0) return [];
+    // If no local courts support this sport, return all external (non-local) slots as-is
+    // External providers already return sport-scoped availability
+    if (courtIdSet.size === 0) {
+      return slots.filter(slot => !slot.isLocalSlot);
+    }
 
     return slots
       .map(slot => {
+        // For external slots (from third-party providers), include them as-is
+        // They are already sport-scoped by the external provider's API
+        if (!slot.isLocalSlot) return slot;
+
         // Filter court options to only sport-supported courts
         const filteredOptions = slot.courtOptions.filter(opt => {
           if (opt.courtId && courtIdSet.has(opt.courtId)) return true;

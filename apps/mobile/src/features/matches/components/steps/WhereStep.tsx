@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import { UseFormReturn, useWatch } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
-import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Text, LocationSelector } from '@rallia/shared-components';
 import { SearchBar } from '../../../../components/SearchBar';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
@@ -44,6 +44,7 @@ import type {
   MatchWithDetails,
 } from '@rallia/shared-types';
 import { SheetManager } from 'react-native-actions-sheet';
+import { ConfirmationModal } from '../../../../components/ConfirmationModal';
 import type { TranslationKey, TranslationOptions } from '../../../../hooks/useTranslation';
 import { useEffectiveLocation } from '../../../../hooks/useEffectiveLocation';
 import { useUserHomeLocation } from '../../../../context';
@@ -679,6 +680,8 @@ export const WhereStep: React.FC<WhereStepProps> = ({
     slot: FormattedSlot;
     selectedCourt?: CourtOption;
   } | null>(null);
+  // Booking confirmation modal visibility (shown when returning from external booking)
+  const [showBookingConfirmation, setShowBookingConfirmation] = useState(false);
   // Court selection state (when multiple courts available at same time)
   const [courtSelectionData, setCourtSelectionData] = useState<{
     facility: FacilitySearchResult;
@@ -839,7 +842,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
           payload: {
             courts: slot.courtOptions ?? [],
             timeLabel: slot.time ?? '',
-            onSelect: (court: unknown) => handleCourtSelect(court as CourtOption),
+            onSelect: (court: unknown) => handleCourtSelect(court as CourtOption, facility, slot),
             onCancel: handleCourtSelectionCancel,
           },
         });
@@ -866,12 +869,9 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   );
 
   // Handle court selection from modal (external slots only - local slots use court-booking sheet)
+  // Takes facility/slot directly to avoid stale closure over courtSelectionData state
   const handleCourtSelect = useCallback(
-    async (court: CourtOption) => {
-      if (!courtSelectionData) return;
-
-      const { facility, slot } = courtSelectionData;
-
+    async (court: CourtOption, facility: FacilitySearchResult, slot: FormattedSlot) => {
       // External slots: Open booking URL
       if (!court.bookingUrl) {
         setCourtSelectionData(null);
@@ -891,7 +891,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
 
       setCourtSelectionData(null);
     },
-    [courtSelectionData]
+    []
   );
 
   // Handle court selection cancel
@@ -961,20 +961,20 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       successHaptic();
     }
     setPendingBookingSlot(null);
+    setShowBookingConfirmation(false);
   }, [pendingBookingSlot, setValue, deviceTimezone, onSlotBooked]);
 
   // Handle booking cancel
   const handleBookingCancel = useCallback(() => {
     setPendingBookingSlot(null);
+    setShowBookingConfirmation(false);
   }, []);
 
   // Listen for app returning to foreground after external booking
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
       if (nextAppState === 'active' && pendingBookingSlot) {
-        SheetManager.show('booking-confirmation', {
-          payload: { onConfirm: handleBookingConfirm, onCancel: handleBookingCancel },
-        });
+        setShowBookingConfirmation(true);
       }
     });
 
@@ -1272,7 +1272,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   ]);
 
   return (
-    <BottomSheetScrollView
+    <ScrollView
       ref={scrollViewRef}
       style={styles.container}
       contentContainerStyle={[
@@ -1516,7 +1516,18 @@ export const WhereStep: React.FC<WhereStepProps> = ({
           </Text>
         </View>
       )}
-    </BottomSheetScrollView>
+
+      {/* Booking confirmation modal (shown when returning from external booking site) */}
+      <ConfirmationModal
+        visible={showBookingConfirmation}
+        onClose={handleBookingCancel}
+        onConfirm={handleBookingConfirm}
+        title={t('matchCreation.booking.bookingConfirmTitle')}
+        message={t('matchCreation.booking.bookingConfirmMessage')}
+        confirmLabel={t('matchCreation.booking.iBookedThisCourt')}
+        cancelLabel={t('matchCreation.booking.notYet')}
+      />
+    </ScrollView>
   );
 };
 

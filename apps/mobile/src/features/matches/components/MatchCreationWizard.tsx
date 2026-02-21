@@ -254,6 +254,8 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
 
   // State
   const [currentStep, setCurrentStep] = useState(1);
+  // Track highest step visited for lazy mounting (avoids mounting all steps on initial render)
+  const [highestStepVisited, setHighestStepVisited] = useState(1);
 
   // Track last saved state to detect unsaved changes
   const lastSavedStep = useRef<number | null>(null);
@@ -506,6 +508,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
           onPress: () => {
             loadFromDraft(draft.data);
             setCurrentStep(draft.currentStep);
+            setHighestStepVisited(draft.currentStep);
             // Mark draft as already saved at this step
             lastSavedStep.current = draft.currentStep;
             hasUnsavedChanges.current = false;
@@ -622,7 +625,9 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     }
 
     if (currentStep < TOTAL_STEPS) {
-      setCurrentStep(prev => prev + 1);
+      const nextStep = currentStep + 1;
+      setCurrentStep(nextStep);
+      setHighestStepVisited(prev => Math.max(prev, nextStep));
     }
   }, [currentStep, validateStep, values, sportId, saveDraft, isEditMode, t, toast]);
 
@@ -1138,6 +1143,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                       setShowInviteStep(false);
                       resetForm();
                       setCurrentStep(1);
+                      setHighestStepVisited(1);
                     }}
                   >
                     <Text size="base" weight="regular" color={colors.textSecondary}>
@@ -1212,29 +1218,33 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
             />
           </View>
 
-          {/* Step 2: When */}
+          {/* Step 2: When (lazy mounted) */}
           <View style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
-            <WhenFormatStep
-              form={form}
-              colors={colors}
-              t={t}
-              isDark={isDark}
-              locale={locale}
-              isLocked={bookedSlotData !== null}
-            />
+            {highestStepVisited >= 2 && (
+              <WhenFormatStep
+                form={form}
+                colors={colors}
+                t={t}
+                isDark={isDark}
+                locale={locale}
+                isLocked={bookedSlotData !== null}
+              />
+            )}
           </View>
 
-          {/* Step 3: Preferences */}
+          {/* Step 3: Preferences (lazy mounted) */}
           <View style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
-            <PreferencesStep
-              form={form}
-              colors={colors}
-              t={t}
-              isDark={isDark}
-              sportName={selectedSport?.name}
-              sportId={selectedSport?.id}
-              userId={session?.user?.id}
-            />
+            {highestStepVisited >= 3 && (
+              <PreferencesStep
+                form={form}
+                colors={colors}
+                t={t}
+                isDark={isDark}
+                sportName={selectedSport?.name}
+                sportId={selectedSport?.id}
+                userId={session?.user?.id}
+              />
+            )}
           </View>
         </Animated.View>
       </View>
