@@ -1,5 +1,5 @@
 -- =============================================================================
--- Rallia Seed File for Local Development
+-- Rallia Seed File
 -- =============================================================================
 --
 -- SEEDING WORKFLOW (run in this order):
@@ -16,11 +16,29 @@
 -- This script is designed to be idempotent (safe to re-run).
 -- It deletes all previous seed data first, then re-inserts fresh data.
 -- All FK references are resolved dynamically via subqueries.
+--
+-- ENVIRONMENT SUPPORT:
+--   Local (default):  npm run db:seed
+--   Staging:          npm run db:seed:staging
+--
+--   The psql variable :seed_env controls environment-specific behavior.
+--   When seed_env='staging', the vault secrets block is skipped (staging
+--   already has its own secrets configured in the Supabase dashboard).
 -- =============================================================================
 
+-- Default seed_env to 'local' if not set (e.g. when run via `supabase db reset`)
+\if :{?seed_env}
+\else
+  \set seed_env 'local'
+\endif
+
 -- ============================================================================
--- 1. Vault Secrets for Edge Functions
+-- 1. Vault Secrets for Edge Functions (local only)
 -- ============================================================================
+-- Skipped when seeding staging/production — those environments already have
+-- their own secrets configured via the Supabase dashboard.
+-- ============================================================================
+\if :seed_env = 'local'
 DO $$
 DECLARE
   local_service_role_key TEXT := 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU';
@@ -52,6 +70,7 @@ BEGIN
     PERFORM vault.update_secret(existing_anon_id, local_anon_key, 'anon_key');
   END IF;
 END $$;
+\endif
 
 -- ============================================================================
 -- 2. Clean Up Previous Seed Data
