@@ -167,7 +167,7 @@ export async function fetchAdminUsers(params: FetchAdminUsersParams): Promise<Ad
 
   try {
     // Build the query for profiles with player data
-    // Note: gender is in player table, not profile
+    // Note: gender, city, country are in player table, not profile
     let query = supabase
       .from('profile')
       .select(`
@@ -177,15 +177,13 @@ export async function fetchAdminUsers(params: FetchAdminUsersParams): Promise<Ad
         last_name,
         display_name,
         profile_picture_url,
-        city,
-        country,
         phone,
         birth_date,
         created_at,
         updated_at,
         last_active_at,
         onboarding_completed,
-        player:player(id, gender)
+        player:player(id, gender, city, country)
       `, { count: 'exact' });
 
     // Apply search filter
@@ -247,8 +245,8 @@ export async function fetchAdminUsers(params: FetchAdminUsersParams): Promise<Ad
           last_name: profile.last_name,
           display_name: profile.display_name,
           profile_picture_url: profile.profile_picture_url,
-          city: profile.city,
-          country: profile.country,
+          city: playerData?.city || null,
+          country: playerData?.country || null,
           phone_number: profile.phone,
           gender: playerData?.gender || null,
           date_of_birth: profile.birth_date,
@@ -296,7 +294,7 @@ export async function fetchAdminUsers(params: FetchAdminUsersParams): Promise<Ad
 export async function fetchAdminUserDetail(userId: string): Promise<AdminUserDetail | null> {
   try {
     // Get profile
-    // Note: gender is in player table, not profile
+    // Note: gender, city, country are in player table, not profile
     const { data: profile, error: profileError } = await supabase
       .from('profile')
       .select(`
@@ -306,15 +304,13 @@ export async function fetchAdminUserDetail(userId: string): Promise<AdminUserDet
         last_name,
         display_name,
         profile_picture_url,
-        city,
-        country,
         phone,
         birth_date,
         created_at,
         updated_at,
         last_active_at,
         onboarding_completed,
-        player:player(id, playing_hand, gender)
+        player:player(id, playing_hand, gender, city, country)
       `)
       .eq('id', userId)
       .single();
@@ -385,8 +381,8 @@ export async function fetchAdminUserDetail(userId: string): Promise<AdminUserDet
       last_name: profile.last_name,
       display_name: profile.display_name,
       profile_picture_url: profile.profile_picture_url,
-      city: profile.city,
-      country: profile.country,
+      city: playerData?.city || null,
+      country: playerData?.country || null,
       phone_number: profile.phone,
       gender: playerData?.gender || null,
       date_of_birth: profile.birth_date,
@@ -743,8 +739,15 @@ export async function updatePlayerProfile(
       }
     );
 
+    // Fetch player data for city/country (these are now on player table)
+    const { data: playerData } = await supabase
+      .from('player')
+      .select('city, country, gender')
+      .eq('id', playerId)
+      .single();
+
     // Return updated user info
-    // Note: gender is in player table, not profile - returning null here since we only updated profile
+    // Note: gender, city, country are in player table, not profile
     return {
       success: true,
       data: {
@@ -754,10 +757,10 @@ export async function updatePlayerProfile(
         last_name: updatedProfile.last_name,
         display_name: updatedProfile.display_name,
         profile_picture_url: updatedProfile.profile_picture_url,
-        city: updatedProfile.city,
-        country: updatedProfile.country,
+        city: playerData?.city || null,
+        country: playerData?.country || null,
         phone_number: updatedProfile.phone,
-        gender: null, // gender is in player table, not updated here
+        gender: playerData?.gender || null,
         date_of_birth: updatedProfile.birth_date,
         created_at: updatedProfile.created_at,
         updated_at: updatedProfile.updated_at,

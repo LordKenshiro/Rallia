@@ -706,14 +706,6 @@ DROP POLICY IF EXISTS "match_network_delete_policy" ON match_network;
 CREATE POLICY "match_network_delete_policy" ON match_network
   FOR DELETE USING (
     posted_by = auth.uid()
-    OR
-    EXISTS (
-      SELECT 1 FROM network_member nm
-      WHERE nm.network_id = match_network.network_id
-      AND nm.player_id = auth.uid()
-      AND nm.role = 'moderator'
-      AND nm.status = 'active'
-    )
   );
 
 -- Message reaction policies
@@ -804,51 +796,87 @@ ON CONFLICT (name) DO NOTHING;
 
 -- =============================================================================
 -- PART 10: FUNCTIONS (from 20260206100000, 20260206110000, 20260214000000)
+-- These functions reference role column and member_count - only create if they exist
 -- =============================================================================
 
--- get_public_communities function
-CREATE OR REPLACE FUNCTION get_public_communities(p_player_id UUID DEFAULT NULL)
-RETURNS TABLE (
-  id UUID,
-  name TEXT,
-  description TEXT,
-  cover_image_url TEXT,
-  member_count INTEGER,
-  created_by UUID,
-  created_at TIMESTAMPTZ,
-  is_member BOOLEAN,
-  membership_status TEXT,
-  membership_role TEXT
-) 
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
+DO $$
 BEGIN
-  RETURN QUERY
-  SELECT 
-    n.id,
-    n.name,
-    n.description,
-    n.cover_image_url,
-    n.member_count,
-    n.created_by,
-    n.created_at,
-    CASE WHEN nm.id IS NOT NULL THEN true ELSE false END as is_member,
-    nm.status::TEXT as membership_status,
-    nm.role::TEXT as membership_role
-  FROM public.network n
-  JOIN public.network_type nt ON n.network_type_id = nt.id
-  LEFT JOIN public.network_member nm ON nm.network_id = n.id 
-    AND nm.player_id = COALESCE(p_player_id, auth.uid())
-  WHERE nt.name = 'community'
-    AND n.is_private = false
-    AND n.member_count > 0
-    AND n.archived_at IS NULL
-  ORDER BY n.member_count DESC, n.created_at DESC;
-END;
-$$;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'network_member' 
+    AND column_name = 'role'
+  ) THEN
+    -- get_public_communities function
+    CREATE OR REPLACE FUNCTION get_public_communities(p_player_id UUID DEFAULT NULL)
+    RETURNS TABLE (
+      id UUID,
+      name TEXT,
+      description TEXT,
+      cover_image_url TEXT,
+      member_count INTEGER,
+      created_by UUID,
+      created_at TIMESTAMPTZ,
+      is_member BOOLEAN,
+      membership_status TEXT,
+      membership_role TEXT
+    ) 
+    LANGUAGE plpgsql
+    SECURITY DEFINER
+    AS $func$
+    BEGIN
+      RETURN QUERY
+      SELECT 
+        n.id,
+        n.name,
+        n.description,
+        n.cover_image_url,
+        n.member_count,
+        n.created_by,
+        n.created_at,
+        CASE WHEN nm.id IS NOT NULL THEN true ELSE false END as is_member,
+        nm.status::TEXT as membership_status,
+        nm.role::TEXT as membership_role
+      FROM public.network n
+      JOIN public.network_type nt ON n.network_type_id = nt.id
+      LEFT JOIN public.network_member nm ON nm.network_id = n.id 
+        AND nm.player_id = COALESCE(p_player_id, auth.uid())
+      WHERE nt.name = 'community'
+        AND n.is_private = false
+        AND n.member_count > 0
+        AND n.archived_at IS NULL
+      ORDER BY n.member_count DESC, n.created_at DESC;
+    END;
+    $func$;
+    RAISE NOTICE 'get_public_communities function created';
+  ELSE
+    RAISE NOTICE 'role column does not exist - skipping get_public_communities function';
+  END IF;
+END $$;
 
 -- check_community_access function (from 20260214100000)
+-- Only create if role column exists
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'network_member' 
+    AND column_name = 'role'
+  ) THEN
+    RAISE NOTICE 'role column does not exist - skipping check_community_access function';
+    RETURN;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'network_member' 
+    AND column_name = 'role'
+  ) THEN
 CREATE OR REPLACE FUNCTION check_community_access(
   p_community_id UUID,
   p_player_id UUID DEFAULT NULL
@@ -864,7 +892,7 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
-AS $$
+AS $func$
 DECLARE
   v_community_exists BOOLEAN;
   v_is_public BOOLEAN;
@@ -1001,9 +1029,18 @@ BEGIN
     END::TEXT;
   RETURN;
 END;
-$$;
+$func$;
+    RAISE NOTICE 'check_community_access function created';
+  END IF;
+END $$;
 
-GRANT EXECUTE ON FUNCTION check_community_access(UUID, UUID) TO authenticated;
+-- Grant access if function exists
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'check_community_access') THEN
+    GRANT EXECUTE ON FUNCTION check_community_access(UUID, UUID) TO authenticated;
+  END IF;
+END $$;
 
 -- handle_orphaned_community function
 CREATE OR REPLACE FUNCTION handle_orphaned_community()
@@ -1023,11 +1060,25 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Only create trigger if member_count column exists
 DROP TRIGGER IF EXISTS trigger_handle_orphaned_community ON public.network;
-CREATE TRIGGER trigger_handle_orphaned_community
-BEFORE UPDATE OF member_count ON public.network
-FOR EACH ROW
-EXECUTE FUNCTION handle_orphaned_community();
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'network' 
+    AND column_name = 'member_count'
+  ) THEN
+    CREATE TRIGGER trigger_handle_orphaned_community
+    BEFORE UPDATE OF member_count ON public.network
+    FOR EACH ROW
+    EXECUTE FUNCTION handle_orphaned_community();
+    RAISE NOTICE 'trigger_handle_orphaned_community created';
+  ELSE
+    RAISE NOTICE 'member_count column does not exist - skipping trigger';
+  END IF;
+END $$;
 
 -- log_member_joined_activity function
 CREATE OR REPLACE FUNCTION log_member_joined_activity()
@@ -1076,7 +1127,8 @@ CREATE TRIGGER trigger_log_member_left
   FOR EACH ROW
   EXECUTE FUNCTION log_member_left_activity();
 
--- get_group_activity function
+-- get_group_activity function (drop first to change return type)
+DROP FUNCTION IF EXISTS get_group_activity(UUID, INTEGER);
 CREATE OR REPLACE FUNCTION get_group_activity(
   p_network_id UUID,
   p_limit INTEGER DEFAULT 50
@@ -1244,33 +1296,72 @@ CREATE TRIGGER trigger_update_network_member_count_delete
 -- =============================================================================
 
 -- Fix existing networks that have no members - add creator as moderator
-INSERT INTO public.network_member (network_id, player_id, role, status, joined_at)
-SELECT 
-  n.id,
-  n.created_by,
-  'moderator',
-  'active',
-  n.created_at
-FROM public.network n
-WHERE NOT EXISTS (
-  SELECT 1 FROM public.network_member nm 
-  WHERE nm.network_id = n.id AND nm.player_id = n.created_by
-)
-AND n.created_by IS NOT NULL
-ON CONFLICT (network_id, player_id) DO NOTHING;
+-- Wrapped in conditional to check for role column existence
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'network_member' 
+    AND column_name = 'role'
+  ) THEN
+    INSERT INTO public.network_member (network_id, player_id, role, status, joined_at)
+    SELECT 
+      n.id,
+      n.created_by,
+      'moderator',
+      'active',
+      n.created_at
+    FROM public.network n
+    WHERE NOT EXISTS (
+      SELECT 1 FROM public.network_member nm 
+      WHERE nm.network_id = n.id AND nm.player_id = n.created_by
+    )
+    AND n.created_by IS NOT NULL
+    ON CONFLICT (network_id, player_id) DO NOTHING;
+    
+    RAISE NOTICE 'Fixed networks with missing creator membership';
+  ELSE
+    RAISE NOTICE 'role column does not exist - skipping network member fix';
+  END IF;
+END $$;
 
--- Recalculate member_count for all networks
-UPDATE public.network n
-SET member_count = COALESCE((
-  SELECT COUNT(*) 
-  FROM public.network_member nm 
-  WHERE nm.network_id = n.id AND nm.status = 'active'
-), 0);
+-- Recalculate member_count for all networks (only if column exists)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'network' 
+    AND column_name = 'member_count'
+  ) THEN
+    UPDATE public.network n
+    SET member_count = COALESCE((
+      SELECT COUNT(*) 
+      FROM public.network_member nm 
+      WHERE nm.network_id = n.id AND nm.status = 'active'
+    ), 0);
+    
+    RAISE NOTICE 'Recalculated member_count for all networks';
+  END IF;
+END $$;
 
--- Ensure max_members has a reasonable default
-UPDATE public.network n
-SET max_members = 10
-WHERE max_members IS NULL OR max_members = 0;
+-- Ensure max_members has a reasonable default (only if column exists)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'network' 
+    AND column_name = 'max_members'
+  ) THEN
+    UPDATE public.network n
+    SET max_members = 10
+    WHERE max_members IS NULL OR max_members = 0;
+    
+    RAISE NOTICE 'Set default max_members for networks';
+  END IF;
+END $$;
 
 -- =============================================================================
 -- COMPLETION

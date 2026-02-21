@@ -1010,32 +1010,30 @@ export const OnboardingService = {
         throw new Error('User not authenticated');
       }
 
-      // Update profile with location data (address, city, postal_code)
-      const { data: profile, error: profileError } = await supabase
-        .from('profile')
+      // Update player with location data (address, city, postal_code are now on player table)
+      const { error: playerError } = await supabase
+        .from('player')
         .update({
           address: info.address,
           city: info.city,
           postal_code: info.postal_code,
+          latitude: info.latitude,
+          longitude: info.longitude,
+          postal_code_lat: info.latitude,
+          postal_code_long: info.longitude,
         })
-        .eq('id', userId)
+        .eq('id', userId);
+
+      if (playerError) throw playerError;
+
+      // Return the profile for consistency with the return type
+      const { data: profile, error: profileError } = await supabase
+        .from('profile')
         .select()
+        .eq('id', userId)
         .single();
 
       if (profileError) throw profileError;
-
-      // If we have coordinates, also update the player table
-      if (info.latitude !== undefined && info.longitude !== undefined) {
-        const { error: playerError } = await supabase
-          .from('player')
-          .update({
-            postal_code_lat: info.latitude,
-            postal_code_long: info.longitude,
-          })
-          .eq('id', userId);
-
-        if (playerError) throw playerError;
-      }
 
       return { data: profile, error: null };
     } catch (error) {

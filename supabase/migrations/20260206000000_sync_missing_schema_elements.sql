@@ -76,6 +76,18 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
+-- Match outcome enum
+DO $$ BEGIN
+  CREATE TYPE match_outcome_enum AS ENUM ('win', 'loss', 'draw');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Cancellation reason enum
+DO $$ BEGIN
+  CREATE TYPE cancellation_reason_enum AS ENUM ('schedule_conflict', 'weather', 'injury', 'other', 'no_show');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
 -- Notification priority enum
 DO $$ BEGIN
   CREATE TYPE notification_priority_enum AS ENUM ('low', 'normal', 'high', 'urgent');
@@ -696,18 +708,11 @@ CREATE POLICY "match_network_insert_policy" ON match_network
   );
 
 DROP POLICY IF EXISTS "match_network_delete_policy" ON match_network;
+-- Note: Only allowing poster to delete for now. Moderator check removed due to
+-- role column not existing at this migration point. A later migration will add
+-- proper moderator support when the role column is added.
 CREATE POLICY "match_network_delete_policy" ON match_network
-  FOR DELETE USING (
-    posted_by = auth.uid()
-    OR
-    EXISTS (
-      SELECT 1 FROM network_member nm
-      WHERE nm.network_id = match_network.network_id
-      AND nm.player_id = auth.uid()
-      AND nm.role = 'moderator'
-      AND nm.status = 'active'
-    )
-  );
+  FOR DELETE USING (posted_by = auth.uid());
 
 -- Message reaction policies
 DROP POLICY IF EXISTS "Users can view reactions in their conversations" ON message_reaction;

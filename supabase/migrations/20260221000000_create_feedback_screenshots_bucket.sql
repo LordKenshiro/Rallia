@@ -18,41 +18,53 @@ ON CONFLICT (id) DO UPDATE SET
 -- Storage policies for feedback-screenshots bucket
 
 -- Allow authenticated users to upload screenshots
-CREATE POLICY "Users can upload feedback screenshots"
-ON storage.objects
-FOR INSERT
-TO authenticated
-WITH CHECK (
-  bucket_id = 'feedback-screenshots'
-);
+DO $$ BEGIN
+  CREATE POLICY "Users can upload feedback screenshots"
+  ON storage.objects
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    bucket_id = 'feedback-screenshots'
+  );
+EXCEPTION WHEN insufficient_privilege OR duplicate_object THEN NULL;
+END $$;
 
 -- Allow public read access (needed for email display)
-CREATE POLICY "Feedback screenshots are publicly accessible"
-ON storage.objects
-FOR SELECT
-TO public
-USING (bucket_id = 'feedback-screenshots');
+DO $$ BEGIN
+  CREATE POLICY "Feedback screenshots are publicly accessible"
+  ON storage.objects
+  FOR SELECT
+  TO public
+  USING (bucket_id = 'feedback-screenshots');
+EXCEPTION WHEN insufficient_privilege OR duplicate_object THEN NULL;
+END $$;
 
 -- Allow users to update their own uploaded screenshots
-CREATE POLICY "Users can update their own feedback screenshots"
-ON storage.objects
-FOR UPDATE
-TO authenticated
-USING (
-  bucket_id = 'feedback-screenshots' 
-  AND (storage.foldername(name))[1] = auth.uid()::text
-)
-WITH CHECK (
-  bucket_id = 'feedback-screenshots'
-  AND (storage.foldername(name))[1] = auth.uid()::text
-);
+DO $$ BEGIN
+  CREATE POLICY "Users can update their own feedback screenshots"
+  ON storage.objects
+  FOR UPDATE
+  TO authenticated
+  USING (
+    bucket_id = 'feedback-screenshots' 
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  )
+  WITH CHECK (
+    bucket_id = 'feedback-screenshots'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+EXCEPTION WHEN insufficient_privilege OR duplicate_object THEN NULL;
+END $$;
 
 -- Allow users to delete their own uploaded screenshots
-CREATE POLICY "Users can delete their own feedback screenshots"
-ON storage.objects
-FOR DELETE
-TO authenticated
-USING (
-  bucket_id = 'feedback-screenshots'
-  AND (storage.foldername(name))[1] = auth.uid()::text
-);
+DO $$ BEGIN
+  CREATE POLICY "Users can delete their own feedback screenshots"
+  ON storage.objects
+  FOR DELETE
+  TO authenticated
+  USING (
+    bucket_id = 'feedback-screenshots'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+EXCEPTION WHEN insufficient_privilege OR duplicate_object THEN NULL;
+END $$;

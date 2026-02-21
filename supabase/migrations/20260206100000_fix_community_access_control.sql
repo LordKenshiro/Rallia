@@ -161,12 +161,24 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create trigger
+-- Create trigger (only if member_count column exists)
 DROP TRIGGER IF EXISTS trigger_handle_orphaned_community ON public.network;
-CREATE TRIGGER trigger_handle_orphaned_community
-BEFORE UPDATE OF member_count ON public.network
-FOR EACH ROW
-EXECUTE FUNCTION handle_orphaned_community();
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'network' 
+    AND column_name = 'member_count'
+  ) THEN
+    CREATE TRIGGER trigger_handle_orphaned_community
+    BEFORE UPDATE OF member_count ON public.network
+    FOR EACH ROW
+    EXECUTE FUNCTION handle_orphaned_community();
+  ELSE
+    RAISE NOTICE 'member_count column does not exist on network - skipping trigger creation';
+  END IF;
+END $$;
 
 -- =============================================================================
 -- FIX 4: Update get_public_communities to also exclude archived communities

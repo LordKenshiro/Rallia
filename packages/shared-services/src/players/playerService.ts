@@ -346,20 +346,20 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
   }
 
   // Step 7: Fetch profiles with search filter
-  // Join with player table to get gender
+  // Note: city is now on player table, not profile table
   let profileQuery = supabase
     .from('profile')
-    .select('id, first_name, last_name, display_name, profile_picture_url, city')
+    .select('id, first_name, last_name, display_name, profile_picture_url')
     .in('id', playerIds)
     .or('is_active.is.null,is_active.eq.true') // Include null (default) or true
     .order('first_name', { ascending: true })
     .range(offset, offset + limit); // Fetch one extra to check if more exist
 
-  // Apply search filter if provided (searches name AND city)
+  // Apply search filter if provided (searches name only - city search handled separately via player table)
   if (searchQuery && searchQuery.trim().length > 0) {
     const searchTerm = `%${searchQuery.trim()}%`;
     profileQuery = profileQuery.or(
-      `first_name.ilike.${searchTerm},last_name.ilike.${searchTerm},display_name.ilike.${searchTerm},city.ilike.${searchTerm}`
+      `first_name.ilike.${searchTerm},last_name.ilike.${searchTerm},display_name.ilike.${searchTerm}`
     );
   }
 
@@ -378,27 +378,29 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
   const resultsToReturn = hasMore ? profiles.slice(0, limit) : profiles;
   const profileIdsToFetch = resultsToReturn.map(p => p.id);
 
-  // Fetch gender data for profiles
+  // Fetch gender and city data from player table (city was moved from profile to player)
   const genderMap: Record<string, string | null> = {};
+  const cityMap: Record<string, string | null> = {};
   const { data: playerData, error: playerError } = await supabase
     .from('player')
-    .select('id, gender')
+    .select('id, gender, city')
     .in('id', profileIdsToFetch);
 
   if (!playerError && playerData) {
     playerData.forEach(p => {
       genderMap[p.id] = p.gender;
+      cityMap[p.id] = p.city;
     });
   }
 
-  // Step 8: Combine profiles with ratings and gender
+  // Step 8: Combine profiles with ratings, gender and city
   const players: PlayerSearchResult[] = resultsToReturn.map(profile => ({
     id: profile.id,
     first_name: profile.first_name,
     last_name: profile.last_name,
     display_name: profile.display_name,
     profile_picture_url: profile.profile_picture_url,
-    city: profile.city,
+    city: cityMap[profile.id] ?? null,
     gender: genderMap[profile.id] ?? null,
     rating: ratingsMap[profile.id] ?? null,
   }));

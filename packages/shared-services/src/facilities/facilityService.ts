@@ -155,7 +155,7 @@ export async function searchFacilitiesNearby(
   } = params;
 
   const { data, error } = await supabase.rpc('search_facilities_nearby', {
-    p_sport_id: sportId,
+    p_sport_ids: [sportId], // Changed from p_sport_id to p_sport_ids (array)
     p_latitude: latitude,
     p_longitude: longitude,
     p_search_query: searchQuery || null,

@@ -251,15 +251,9 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
             updates.savedProfilePictureUrl = profileRes.data.profile_picture_url;
             updates.profileImage = profileRes.data.profile_picture_url;
           }
-          // Location data
-          updates.address = profileRes.data.address || '';
-          updates.city = profileRes.data.city || '';
-          updates.postalCode = profileRes.data.postal_code || '';
-          updates.latitude = profileRes.data.latitude || null;
-          updates.longitude = profileRes.data.longitude || null;
         }
 
-        // Player data (gender, preferences)
+        // Player data (gender, preferences, and location - location fields moved from profile to player)
         if (playerRes.data) {
           updates.gender = playerRes.data.gender || '';
           if (playerRes.data.playing_hand) {
@@ -268,6 +262,12 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
           if (playerRes.data.max_travel_distance) {
             updates.maxTravelDistance = playerRes.data.max_travel_distance;
           }
+          // Location data (now on player table)
+          updates.address = playerRes.data.address || '';
+          updates.city = playerRes.data.city || '';
+          updates.postalCode = playerRes.data.postal_code || '';
+          updates.latitude = playerRes.data.latitude || null;
+          updates.longitude = playerRes.data.longitude || null;
         }
 
         // Sports data
