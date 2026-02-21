@@ -2057,6 +2057,7 @@
     "selectSport": "Select a sport",
     "selectSportDescription": "Choose a sport from the header to view players",
     "chooseSport": "Choose a sport from the header to view players",
+    "nearby": "Nearby",
     "failedToLoad": "Failed to load players",
     "checkConnection": "Please check your connection and try again",
     "filters": {
@@ -2335,6 +2336,9 @@
     "shareMessage": "Check out this game on Rallia!",
     "shareInvite": "Join me for {sport}!",
     "shareDateTime": "{date} at {time}",
+    "shareFormat": "Format: {format}",
+    "shareDuration": "Duration: {duration}",
+    "shareMinLevel": "Minimum level: {level}",
     "distance": "Distance",
     "away": "away",
     "free": "Free",
@@ -2883,7 +2887,7 @@
       "homeNotSet": "Set your home location in settings"
     },
     "header": {
-      "ctaButton": "Join Waitlist"
+      "ctaButton": "Become a Beta Tester"
     },
     "hero": {
       "badge": "Coming Early 2026",
@@ -3319,7 +3323,7 @@
     "title": "Rallia",
     "description": "The platform that will connect tennis and pickleball players for better games, every time.",
     "quickLinks": "Quick Links",
-    "joinWaitlist": "Join Waitlist",
+    "joinBeta": "Become a Beta Tester",
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
     "rights": "All rights reserved.",
@@ -5895,6 +5899,21 @@
       "secure": "Secure data",
       "fast": "Quick signup",
       "premium": "Free premium access"
+    }
+  },
+  "matchPage": {
+    "title": "Match Details",
+    "at": "at",
+    "minutes": "min",
+    "notFound": "Match not found",
+    "notFoundDescription": "This match may have been cancelled or the link is invalid.",
+    "downloadTitle": "Join this match",
+    "downloadDescription": "Download Rallia to join this match and find players near you.",
+    "appStore": "Download on the App Store",
+    "googlePlay": "Get it on Google Play",
+    "format": {
+      "singles": "Singles",
+      "doubles": "Doubles"
     }
   }
 }

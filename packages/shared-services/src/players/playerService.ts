@@ -65,6 +65,12 @@ export interface PlayerSearchResult {
     label: string;
     value: number | null;
   } | null;
+  /** Player's latitude (from home location) */
+  latitude: number | null;
+  /** Player's longitude (from home location) */
+  longitude: number | null;
+  /** Distance in meters from the searching user's location (null if location not provided) */
+  distance_meters: number | null;
 }
 
 /**
@@ -98,6 +104,10 @@ export interface SearchPlayersParams {
   favoritePlayerIds?: string[];
   /** Blocked player IDs (to filter by blocked or exclude blocked) */
   blockedPlayerIds?: string[];
+  /** User's current latitude (for distance calculation) */
+  latitude?: number;
+  /** User's current longitude (for distance calculation) */
+  longitude?: number;
 }
 
 // =============================================================================
@@ -122,6 +132,8 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     filters = {},
     favoritePlayerIds = [],
     blockedPlayerIds = [],
+    latitude,
+    longitude,
   } = params;
 
   // Step 1: Get player IDs that are active in this sport
@@ -392,32 +404,66 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
   const resultsToReturn = hasMore ? profiles.slice(0, limit) : profiles;
   const profileIdsToFetch = resultsToReturn.map(p => p.id);
 
-  // Fetch gender and city data for profiles
+  // Fetch gender, city, and location data for profiles
   const genderMap: Record<string, string | null> = {};
   const cityMap: Record<string, string | null> = {};
+  const latitudeMap: Record<string, number | null> = {};
+  const longitudeMap: Record<string, number | null> = {};
   const { data: playerData, error: playerError } = await supabase
     .from('player')
-    .select('id, gender, city')
+    .select('id, gender, city, latitude, longitude')
     .in('id', profileIdsToFetch);
 
   if (!playerError && playerData) {
     playerData.forEach(p => {
       genderMap[p.id] = p.gender;
       cityMap[p.id] = p.city;
+      latitudeMap[p.id] = p.latitude;
+      longitudeMap[p.id] = p.longitude;
     });
   }
 
-  // Step 9: Combine profiles with ratings, gender, and city
-  const players: PlayerSearchResult[] = resultsToReturn.map(profile => ({
-    id: profile.id,
-    first_name: profile.first_name,
-    last_name: profile.last_name,
-    display_name: profile.display_name,
-    profile_picture_url: profile.profile_picture_url,
-    city: cityMap[profile.id] ?? null,
-    gender: genderMap[profile.id] ?? null,
-    rating: ratingsMap[profile.id] ?? null,
-  }));
+  // Step 9: Combine profiles with ratings, gender, city, and distance
+  const players: PlayerSearchResult[] = resultsToReturn.map(profile => {
+    const playerLat = latitudeMap[profile.id];
+    const playerLon = longitudeMap[profile.id];
+
+    // Calculate distance using Haversine formula if both locations are available
+    let distanceMeters: number | null = null;
+    if (
+      latitude !== undefined &&
+      longitude !== undefined &&
+      playerLat != null &&
+      playerLon != null
+    ) {
+      const R = 6371000; // Earth's radius in meters
+      const lat1Rad = (latitude * Math.PI) / 180;
+      const lat2Rad = (playerLat * Math.PI) / 180;
+      const deltaLat = ((playerLat - latitude) * Math.PI) / 180;
+      const deltaLon = ((playerLon - longitude) * Math.PI) / 180;
+
+      const a =
+        Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+        Math.cos(lat1Rad) * Math.cos(lat2Rad) * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+      distanceMeters = R * c;
+    }
+
+    return {
+      id: profile.id,
+      first_name: profile.first_name,
+      last_name: profile.last_name,
+      display_name: profile.display_name,
+      profile_picture_url: profile.profile_picture_url,
+      city: cityMap[profile.id] ?? null,
+      gender: genderMap[profile.id] ?? null,
+      rating: ratingsMap[profile.id] ?? null,
+      latitude: playerLat ?? null,
+      longitude: playerLon ?? null,
+      distance_meters: distanceMeters,
+    };
+  });
 
   return {
     players,

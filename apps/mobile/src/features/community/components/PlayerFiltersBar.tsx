@@ -6,7 +6,7 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { View, ScrollView, StyleSheet, TouchableOpacity, Modal, Animated } from 'react-native';
-import { Text } from '@rallia/shared-components';
+import { Text, LocationSelector, type LocationMode } from '@rallia/shared-components';
 import { useTheme } from '@rallia/shared-hooks';
 import { useTranslation, type TranslationKey } from '../../../hooks';
 import {
@@ -432,6 +432,11 @@ interface PlayerFiltersBarProps {
   onFiltersChange: (filters: PlayerFilters) => void;
   onReset?: () => void;
   isAuthenticated?: boolean; // Whether the user is signed in (hides favorites/blocked filters for guests)
+  showLocationSelector?: boolean;
+  locationMode?: LocationMode;
+  onLocationModeChange?: (mode: LocationMode) => void;
+  hasHomeLocation?: boolean;
+  homeLocationLabel?: string;
 }
 
 export function PlayerFiltersBar({
@@ -440,6 +445,11 @@ export function PlayerFiltersBar({
   onFiltersChange,
   onReset,
   isAuthenticated = false,
+  showLocationSelector,
+  locationMode,
+  onLocationModeChange,
+  hasHomeLocation,
+  homeLocationLabel,
 }: PlayerFiltersBarProps) {
   const { theme } = useTheme();
   const { t } = useTranslation();
@@ -588,6 +598,20 @@ export function PlayerFiltersBar({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        {/* Location Selector - if both GPS and home are available */}
+        {showLocationSelector && hasHomeLocation && onLocationModeChange && locationMode && (
+          <View style={styles.locationSelectorWrapper}>
+            <LocationSelector
+              selectedMode={locationMode}
+              onSelectMode={onLocationModeChange}
+              hasHomeLocation={hasHomeLocation}
+              homeLocationLabel={homeLocationLabel}
+              isDark={isDark}
+              t={t as (key: string) => string}
+            />
+          </View>
+        )}
+
         {/* Favorites Toggle - Only show for authenticated users */}
         {isAuthenticated && (
           <FilterChip
@@ -785,6 +809,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     gap: spacingPixels[2],
     alignItems: 'center',
+  },
+  locationSelectorWrapper: {
+    marginRight: spacingPixels[1],
   },
   chip: {
     flexDirection: 'row',

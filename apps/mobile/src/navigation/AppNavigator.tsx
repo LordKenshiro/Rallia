@@ -77,7 +77,6 @@ import CommunityDetail from '../screens/CommunityDetail';
 
 // Components
 import { ThemeLogo } from '../components/ThemeLogo';
-import { MatchDetailSheet } from '../components/MatchDetailSheet';
 
 // Types
 import type {
@@ -642,17 +641,12 @@ function ActionsPlaceholder() {
 }
 
 /**
- * Main screen wrapper: tabs + MatchDetailSheet.
- * MatchDetailSheet is rendered inside the navigation tree so it can use useNavigation()
- * for Chat and PlayerProfile without ref-based helpers.
+ * Main screen wrapper: bottom tabs.
+ * MatchDetailSheet, ActionsBottomSheet and FeedbackSheet are rendered
+ * at the top level inside NavigationContainer in App.tsx.
  */
 function MainWithSheets() {
-  return (
-    <>
-      <BottomTabs />
-      <MatchDetailSheet />
-    </>
-  );
+  return <BottomTabs />;
 }
 
 // =============================================================================
