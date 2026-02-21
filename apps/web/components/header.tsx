@@ -16,7 +16,7 @@ export default async function Header() {
           className="button-scale hidden md:inline-flex bg-[var(--secondary-500)] hover:bg-[var(--secondary-600)] text-white"
           asChild
         >
-          <a href="#waitlist">{t('header.ctaButton')}</a>
+          <a href="/beta">{t('header.ctaButton')}</a>
         </Button>
         <LocaleToggle />
         <ModeToggle />

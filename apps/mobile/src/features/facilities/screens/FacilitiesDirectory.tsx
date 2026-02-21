@@ -605,7 +605,7 @@ export default function FacilitiesDirectory() {
         data={sortedFacilities}
         renderItem={renderFacilityCard}
         keyExtractor={item => item.id}
-        ListHeaderComponent={renderListHeader}
+        ListHeaderComponent={renderListHeader()}
         ListEmptyComponent={renderEmptyComponent}
         ListFooterComponent={renderFooter}
         onEndReached={handleEndReached}

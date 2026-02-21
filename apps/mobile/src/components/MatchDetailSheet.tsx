@@ -596,7 +596,8 @@ const CheckInButton: React.FC<CheckInButtonProps> = ({
 // =============================================================================
 
 export const MatchDetailSheet: React.FC = () => {
-  const { sheetRef, closeSheet, selectedMatch, updateSelectedMatch } = useMatchDetailSheet();
+  const { sheetRef, closeSheet, selectedMatch, updateSelectedMatch, handleSheetDismiss } =
+    useMatchDetailSheet();
   const { openSheetForEdit } = useActionsSheet();
   const { openSheet: openInviteSheet } = usePlayerInviteSheet();
   const { openSheet: openFeedbackSheet } = useFeedbackSheet();
@@ -1312,6 +1313,7 @@ export const MatchDetailSheet: React.FC = () => {
         enableDynamicSizing={false}
         backdropComponent={renderBackdrop}
         enablePanDownToClose
+        onDismiss={handleSheetDismiss}
         handleIndicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
         backgroundStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
       >
@@ -2133,6 +2135,7 @@ export const MatchDetailSheet: React.FC = () => {
       enableDynamicSizing={false}
       backdropComponent={renderBackdrop}
       enablePanDownToClose
+      onDismiss={handleSheetDismiss}
       handleIndicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
       backgroundStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
     >

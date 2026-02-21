@@ -2057,6 +2057,7 @@
     "selectSport": "Sélectionnez un sport",
     "selectSportDescription": "Choisissez un sport dans l'en-tête pour voir les joueurs",
     "chooseSport": "Choisissez un sport dans l'en-tête pour voir les joueurs",
+    "nearby": "À proximité",
     "failedToLoad": "Échec du chargement des joueurs",
     "checkConnection": "Veuillez vérifier votre connexion et réessayer",
     "filters": {
@@ -2335,6 +2336,9 @@
     "shareMessage": "Découvrez cette partie sur Rallia!",
     "shareInvite": "Rejoins-moi pour jouer au {sport} !",
     "shareDateTime": "{date} à {time}",
+    "shareFormat": "Format : {format}",
+    "shareDuration": "Durée : {duration}",
+    "shareMinLevel": "Niveau minimum : {level}",
     "distance": "Distance",
     "away": "de distance",
     "free": "Gratuit",
@@ -2883,7 +2887,7 @@
       "homeNotSet": "Définissez votre emplacement domicile dans les paramètres"
     },
     "header": {
-      "ctaButton": "Rejoindre la liste"
+      "ctaButton": "Devenir bêta-testeur"
     },
     "hero": {
       "badge": "Disponible début 2026",
@@ -3319,7 +3323,7 @@
     "title": "Rallia",
     "description": "La plateforme qui connectera les joueurs de tennis et de pickleball pour de meilleures parties, à chaque fois.",
     "quickLinks": "Liens rapides",
-    "joinWaitlist": "Rejoindre la liste",
+    "joinBeta": "Devenir bêta-testeur",
     "privacy": "Politique de confidentialité",
     "terms": "Conditions d'utilisation",
     "rights": "Tous droits réservés.",
@@ -5897,6 +5901,21 @@
       "secure": "Données sécurisées",
       "fast": "Inscription rapide",
       "premium": "Accès premium gratuit"
+    }
+  },
+  "matchPage": {
+    "title": "Détails du match",
+    "at": "à",
+    "minutes": "min",
+    "notFound": "Match introuvable",
+    "notFoundDescription": "Ce match a peut-être été annulé ou le lien est invalide.",
+    "downloadTitle": "Rejoindre ce match",
+    "downloadDescription": "Téléchargez Rallia pour rejoindre ce match et trouver des joueurs près de chez vous.",
+    "appStore": "Télécharger dans l'App Store",
+    "googlePlay": "Télécharger sur Google Play",
+    "format": {
+      "singles": "Simple",
+      "doubles": "Double"
     }
   }
 }

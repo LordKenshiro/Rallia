@@ -32,10 +32,10 @@ export async function Footer() {
             <ul className="space-y-3 text-sm">
               <li>
                 <a
-                  href="#waitlist"
+                  href="/beta"
                   className="text-gray-600 dark:text-gray-400 hover:text-foreground transition-colors"
                 >
-                  {t('joinWaitlist')}
+                  {t('joinBeta')}
                 </a>
               </li>
             </ul>

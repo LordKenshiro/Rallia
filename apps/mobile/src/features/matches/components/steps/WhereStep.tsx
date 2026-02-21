@@ -21,7 +21,7 @@ import {
 import { UseFormReturn, useWatch } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { Text } from '@rallia/shared-components';
+import { Text, LocationSelector } from '@rallia/shared-components';
 import { SearchBar } from '../../../../components/SearchBar';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
@@ -45,7 +45,9 @@ import type {
 } from '@rallia/shared-types';
 import { SheetManager } from 'react-native-actions-sheet';
 import type { TranslationKey, TranslationOptions } from '../../../../hooks/useTranslation';
-import { useUserLocation } from '../../../../hooks/useUserLocation';
+import { useEffectiveLocation } from '../../../../hooks/useEffectiveLocation';
+import { useUserHomeLocation } from '../../../../context';
+import { usePlayer } from '@rallia/shared-hooks';
 
 // =============================================================================
 // TYPES
@@ -629,7 +631,6 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   const [selectedFacility, setSelectedFacility] = useState<FacilitySearchResult | null>(null);
   const [bookedCourtNumber, setBookedCourtNumber] = useState<number | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
-  const addressFieldRef = useRef<View>(null);
   const facilitySearchRef = useRef<View>(null);
   const placeSearchRef = useRef<View>(null);
 
@@ -684,8 +685,23 @@ export const WhereStep: React.FC<WhereStepProps> = ({
     slot: FormattedSlot;
   } | null>(null);
 
-  // Get user location (needed for fetching facility details)
-  const { location, loading: locationLoading, error: locationError } = useUserLocation();
+  // Get effective user location (respects user's home/current preference)
+  const {
+    location,
+    isLoading: locationLoading,
+    locationMode,
+    setLocationMode,
+    hasHomeLocation,
+    hasBothLocationOptions,
+  } = useEffectiveLocation();
+  const locationError = !location && !locationLoading ? 'no_location' : null;
+
+  // Home location label for LocationSelector display
+  const { homeLocation } = useUserHomeLocation();
+  const { player } = usePlayer();
+  const homeLocationLabel = player?.address
+    ? [player.address.split(',')[0].trim(), player.city].filter(Boolean).join(', ')
+    : homeLocation?.postalCode || homeLocation?.formattedAddress?.split(',')[0];
 
   // Track if edit mode initialization has been done
   const hasInitializedFromEdit = useRef(false);
@@ -1333,16 +1349,29 @@ export const WhereStep: React.FC<WhereStepProps> = ({
             />
           ) : (
             <>
-              {/* Search input */}
-              <View ref={facilitySearchRef}>
-                <SearchBar
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  placeholder={t('matchCreation.fields.facilityPlaceholder')}
-                  colors={colors}
-                  InputComponent={BottomSheetTextInput}
-                  onFocus={() => setFocusedField('facility')}
-                />
+              {/* Search input with location selector */}
+              <View ref={facilitySearchRef} style={styles.searchRow}>
+                <View style={styles.searchBarFlex}>
+                  <SearchBar
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    placeholder={t('matchCreation.fields.facilityPlaceholder')}
+                    colors={colors}
+                    InputComponent={BottomSheetTextInput}
+                    onFocus={() => setFocusedField('facility')}
+                    containerStyle={styles.compactSearchContainer}
+                  />
+                </View>
+                {hasBothLocationOptions && (
+                  <LocationSelector
+                    selectedMode={locationMode}
+                    onSelectMode={setLocationMode}
+                    hasHomeLocation={hasHomeLocation}
+                    homeLocationLabel={homeLocationLabel}
+                    isDark={isDark}
+                    t={t}
+                  />
+                )}
               </View>
 
               {/* Facility list */}
@@ -1470,32 +1499,6 @@ export const WhereStep: React.FC<WhereStepProps> = ({
               )}
             </>
           )}
-
-          {/* Manual address edit (when place is selected) */}
-          {hasSelectedPlace && (
-            <View ref={addressFieldRef} style={styles.addressEditContainer}>
-              <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-                {t('matchCreation.fields.locationAddress')}
-              </Text>
-              <BottomSheetTextInput
-                style={[
-                  styles.textInput,
-                  {
-                    borderColor: colors.border,
-                    backgroundColor: colors.buttonInactive,
-                    color: colors.text,
-                  },
-                ]}
-                value={locationAddress ?? ''}
-                onChangeText={text => setValue('locationAddress', text, { shouldDirty: true })}
-                placeholder={t('matchCreation.fields.locationAddressPlaceholder')}
-                placeholderTextColor={colors.textMuted}
-                multiline
-                numberOfLines={2}
-                onFocus={() => setFocusedField('address')}
-              />
-            </View>
-          )}
         </View>
       )}
 
@@ -1561,6 +1564,17 @@ const styles = StyleSheet.create({
   },
   locationTextContainer: {
     flex: 1,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+  },
+  searchBarFlex: {
+    flex: 1,
+  },
+  compactSearchContainer: {
+    paddingVertical: spacingPixels[2],
   },
   facilityListContainer: {
     marginTop: spacingPixels[3],
@@ -1732,9 +1746,6 @@ const styles = StyleSheet.create({
     gap: spacingPixels[2],
     marginTop: spacingPixels[2],
     paddingHorizontal: spacingPixels[1],
-  },
-  addressEditContainer: {
-    marginTop: spacingPixels[4],
   },
 });
 

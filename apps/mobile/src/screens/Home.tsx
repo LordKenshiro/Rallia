@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
+import { useScrollToTop } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -145,6 +146,9 @@ const Home = () => {
     limit: 5,
     enabled: !!session?.user?.id,
   });
+
+  const flatListRef = useRef<FlatList>(null);
+  useScrollToTop(flatListRef);
 
   const [showWelcome, setShowWelcome] = useState(true);
   const welcomeOpacity = useState(new Animated.Value(1))[0];
@@ -700,12 +704,14 @@ const Home = () => {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
         <FlatList
+          ref={flatListRef}
           data={[]}
           renderItem={renderMatchCard}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          ListHeaderComponent={renderListHeader}
+          automaticallyAdjustContentInsets={false}
+          ListHeaderComponent={renderListHeader()}
           ListEmptyComponent={null}
         />
       </SafeAreaView>
@@ -737,14 +743,16 @@ const Home = () => {
         </View>
       ) : (
         <FlatList
+          ref={flatListRef}
           data={matches}
           renderItem={renderMatchCard}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          ListHeaderComponent={renderListHeader}
-          ListEmptyComponent={renderEmptyComponent}
-          ListFooterComponent={renderFooter}
+          automaticallyAdjustContentInsets={false}
+          ListHeaderComponent={renderListHeader()}
+          ListEmptyComponent={renderEmptyComponent()}
+          ListFooterComponent={renderFooter()}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.3}
           refreshControl={
