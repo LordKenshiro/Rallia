@@ -199,6 +199,7 @@ export async function getFacilityById(
     booking_url_template: bookingUrlTemplate,
     external_provider_id: facility.external_provider_id,
     timezone: facility.timezone,
+    sport_ids: [sportId],
   };
 }
 
