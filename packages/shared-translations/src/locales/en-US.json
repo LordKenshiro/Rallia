@@ -148,7 +148,7 @@
     "delete": "Delete",
     "timeAgo": "{time} ago",
     "signInRequired": "Sign In Required",
-    "signInPrompt": "Please sign in to view your notifications",
+    "signInPrompt": "Sign in to view your notifications",
     "onboardingRequired": "Complete Your Profile",
     "onboardingPrompt": "Finish setting up your profile to receive and view notifications",
     "completeOnboarding": "Complete Profile",
@@ -1388,9 +1388,9 @@
     "unknown": "Something unexpected happened. Please try again.",
     "requestTimeout": "This is taking too long. Please try again.",
     "permissionsDenied": "Permission denied",
-    "userNotAuthenticated": "Please sign in to continue",
+    "userNotAuthenticated": "Sign in to continue",
     "noPrimarySport": "Please set up a sport first.",
-    "mustBeLoggedIn": "Please sign in to create a game."
+    "mustBeLoggedIn": "Sign in to create a game."
   },
   "chat": {
     "empty": {
@@ -2864,7 +2864,7 @@
   "home": {
     "welcomeBack": "Welcome back! 👋",
     "yourMatches": "Your Games",
-    "signInPrompt": "Please sign in to create and access your games",
+    "signInPrompt": "Sign in to create and manage your games",
     "onboardingPrompt": "Complete your profile to create and access your games",
     "completeProfile": "Complete Profile",
     "user": "User",
@@ -5470,7 +5470,7 @@
     "hideCourts": "Hide courts",
     "noAvailability": {
       "title": "No Availability",
-      "description": "No time slots are available for the selected dates. Try checking back later.",
+      "description": "This facility doesn't have any available time slots right now.",
       "tryLater": "Check back later for new openings",
       "tryDifferentDate": "Try a different date"
     },
@@ -5494,6 +5494,7 @@
       "asphalt": "Asphalt"
     },
     "openInMaps": "Open in Maps",
+    "facilityImages": "Facility images",
     "noMatches": {
       "title": "No Upcoming Matches",
       "description": "No public matches are scheduled at this facility."
@@ -5516,7 +5517,6 @@
     "lastSpot": "Last spot!",
     "noSlotsForFilter": "No slots available for this time period",
     "showAllSlots": "Show all slots",
-    "checkExternalBooking": "Check External Booking",
     "matchFilters": {
       "all": "All",
       "open": "Open",
@@ -5550,9 +5550,16 @@
     "paidCourtsUnavailable": "{count} paid court(s) unavailable for online booking",
     "available": "Available",
     "duration": "{hours}h",
+    "error": {
+      "generic": "Booking failed. Please try again."
+    },
     "success": {
       "title": "Booking Confirmed",
-      "description": "Your court has been booked successfully."
+      "description": "Your court has been booked successfully.",
+      "stepTitle": "Booking confirmed!",
+      "createGamePrompt": "Create a game from this booking?",
+      "createGame": "Create game",
+      "done": "Done"
     },
     "external": {
       "title": "External Booking",
@@ -5833,6 +5840,10 @@
       "success": "Booking cancelled successfully",
       "error": "Failed to cancel booking. Please try again."
     },
+    "yourBookings": "Your Bookings",
+    "signInPrompt": "Sign in to book courts and manage your reservations",
+    "onboardingPrompt": "Complete your profile to book courts and manage your reservations",
+    "completeProfile": "Complete Profile",
     "facilitiesSection": {
       "title": "My Bookings",
       "viewAll": "View All",

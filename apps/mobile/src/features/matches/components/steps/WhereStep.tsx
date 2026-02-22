@@ -1220,17 +1220,6 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       );
     }
 
-    if (locationError) {
-      return (
-        <View style={styles.emptyState}>
-          <Ionicons name="location-outline" size={32} color={colors.textMuted} />
-          <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('matchCreation.fields.locationAccessNeeded')}
-          </Text>
-        </View>
-      );
-    }
-
     if (facilitiesError) {
       return (
         <View style={styles.emptyState}>
@@ -1269,7 +1258,6 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   }, [
     isLoadingFacilities,
     locationLoading,
-    locationError,
     facilitiesError,
     searchQuery,
     facilities.length,

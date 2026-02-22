@@ -282,8 +282,16 @@ declare module 'react-native-actions-sheet' {
         facility: unknown;
         slot: unknown;
         courts: unknown[];
-        /** Callback when booking is successfully completed */
+        /** Callback when booking is successfully completed (e.g. from wizard WhereStep) */
         onSuccess?: (data: {
+          facilityId: string;
+          courtId: string;
+          courtNumber: number | null;
+        }) => void;
+        /** Callback when user taps "Create game" from success step (e.g. from facility screen) */
+        onCreateGameFromBooking?: (data: {
+          facility: unknown;
+          slot: unknown;
           facilityId: string;
           courtId: string;
           courtNumber: number | null;

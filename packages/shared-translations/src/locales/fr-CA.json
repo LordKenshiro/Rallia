@@ -2864,7 +2864,7 @@
   "home": {
     "welcomeBack": "Bon retour! 👋",
     "yourMatches": "Vos parties",
-    "signInPrompt": "Veuillez vous connecter pour créer et accéder à vos parties",
+    "signInPrompt": "Veuillez vous connecter pour créer et gérer à vos parties",
     "onboardingPrompt": "Complétez votre profil pour créer et accéder à vos parties",
     "completeProfile": "Compléter le profil",
     "user": "Utilisateur",
@@ -5472,7 +5472,7 @@
     "hideCourts": "Masquer les terrains",
     "noAvailability": {
       "title": "Aucune disponibilité",
-      "description": "Aucun créneau horaire disponible pour les dates sélectionnées. Réessayez plus tard.",
+      "description": "Cet établissement n'a aucun créneau horaire disponible pour le moment.",
       "tryLater": "Revenez plus tard pour de nouvelles disponibilités",
       "tryDifferentDate": "Essayez une autre date"
     },
@@ -5496,6 +5496,7 @@
       "asphalt": "Asphalte"
     },
     "openInMaps": "Ouvrir dans Plans",
+    "facilityImages": "Images du site",
     "noMatches": {
       "title": "Aucune partie à venir",
       "description": "Aucune partie publique n'est prévue à ce site de jeu."
@@ -5518,7 +5519,6 @@
     "lastSpot": "Dernière place!",
     "noSlotsForFilter": "Aucun créneau disponible pour cette période",
     "showAllSlots": "Voir tous les créneaux",
-    "checkExternalBooking": "Voir les réservations externes",
     "matchFilters": {
       "all": "Toutes",
       "open": "Ouvertes",
@@ -5552,9 +5552,16 @@
     "paidCourtsUnavailable": "{count} terrain(s) payant(s) indisponible(s) pour la réservation en ligne",
     "available": "Disponible",
     "duration": "{hours}h",
+    "error": {
+      "generic": "La réservation a échoué. Veuillez réessayer."
+    },
     "success": {
       "title": "Réservation confirmée",
-      "description": "Votre terrain a été réservé avec succès."
+      "description": "Votre terrain a été réservé avec succès.",
+      "stepTitle": "Réservation confirmée!",
+      "createGamePrompt": "Créer une partie à partir de cette réservation?",
+      "createGame": "Créer une partie",
+      "done": "Terminé"
     },
     "external": {
       "title": "Réservation externe",
@@ -5835,6 +5842,10 @@
       "success": "Réservation annulée avec succès",
       "error": "Échec de l'annulation. Veuillez réessayer."
     },
+    "yourBookings": "Vos réservations",
+    "signInPrompt": "Connectez-vous pour réserver des terrains et gérer vos réservations",
+    "onboardingPrompt": "Complétez votre profil pour réserver des terrains et gérer vos réservations",
+    "completeProfile": "Compléter le profil",
     "facilitiesSection": {
       "title": "Mes réservations",
       "viewAll": "Voir tout",

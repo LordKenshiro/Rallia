@@ -153,6 +153,8 @@ function InfoTabSkeleton({ colors, isDark }: { colors: InfoTabProps['colors']; i
   const highlightColor = isDark ? neutral[700] : '#F2F8FC';
   const skeletonCardStyle = [styles.card, { backgroundColor: colors.card }, shadowsNative.sm];
 
+  const cardBg = isDark ? neutral[800] : '#E1E9EE';
+
   return (
     <View style={styles.container}>
       {/* About section skeleton */}
@@ -231,6 +233,7 @@ function InfoTabSkeleton({ colors, isDark }: { colors: InfoTabProps['colors']; i
                 height={14}
                 backgroundColor={bgColor}
                 highlightColor={highlightColor}
+                style={{ borderRadius: radiusPixels.md }}
               />
               <Skeleton
                 width={160}

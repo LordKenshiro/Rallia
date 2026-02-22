@@ -6,7 +6,7 @@
  * - Matches: Public matches at this facility
  */
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -15,7 +15,9 @@ import {
   RefreshControl,
   Linking,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Skeleton, useToast } from '@rallia/shared-components';
@@ -24,12 +26,14 @@ import {
   useFavoriteFacilities,
   usePlayer,
   useCourtAvailability,
+  useProfile,
 } from '@rallia/shared-hooks';
 import {
   useThemeStyles,
   useTranslation,
   useEffectiveLocation,
   useRequireOnboarding,
+  useAuth,
 } from '../../../hooks';
 import { getSafeAreaEdges } from '../../../utils';
 import { useSport } from '../../../context';
@@ -77,9 +81,17 @@ export default function FacilityDetail() {
   const { selectedSport } = useSport();
   const { player } = usePlayer();
   const { isReady: isOnboarded } = useRequireOnboarding();
+  const { session } = useAuth();
+  const { profile } = useProfile();
+
+  const showFavoriteButton = !!session?.user && !!profile?.onboarding_completed;
 
   // Active tab state
   const [activeTab, setActiveTab] = useState<TabKey>('info');
+  // Image carousel: current slide index for dot indicator
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  const { width: windowWidth } = useWindowDimensions();
 
   // Fetch facility details
   const { facility, courts, contacts, isLoading, isFetching, refetch } = useFacilityDetail({
@@ -209,6 +221,28 @@ export default function FacilityDetail() {
     lightHaptic();
     Linking.openURL(website);
   }, [website]);
+  // Image carousel: values and hooks (must be before any early return to keep hook count stable)
+  const headerImageWidth = windowWidth - 2 * spacingPixels[4];
+  const headerImages = facility?.images?.filter(img => img.url || img.thumbnail_url) ?? [];
+  const hasHeaderImages = headerImages.length > 0;
+  const imageCount = headerImages.length;
+
+  const handleImageScroll = useCallback(
+    (e: { nativeEvent: { contentOffset: { x: number } } }) => {
+      const x = e.nativeEvent.contentOffset.x;
+      const index = Math.round(x / headerImageWidth);
+      const clamped = Math.max(0, Math.min(index, Math.max(0, imageCount - 1)));
+      setCurrentImageIndex(clamped);
+    },
+    [headerImageWidth, imageCount]
+  );
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      setCurrentImageIndex(0);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [facilityId, imageCount]);
 
   // Theme-aware skeleton colors
   const skeletonBg = isDark ? neutral[800] : '#E1E9EE';
@@ -319,24 +353,53 @@ export default function FacilityDetail() {
     );
   }
 
-  return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-      {/* Enhanced Header */}
-      <View
-        style={[
-          styles.header,
-          { backgroundColor: colors.card },
-          isDark ? shadowsNative.sm : shadowsNative.DEFAULT,
-        ]}
-      >
-        <View style={styles.headerTop}>
-          <Text
-            size="xl"
-            weight="bold"
-            color={colors.text}
-            numberOfLines={2}
-            style={styles.headerTitle}
+  // Header card (images + name + favorite) – used only in Info tab
+  const renderInfoHeader = () => (
+    <View
+      style={[
+        styles.header,
+        { backgroundColor: colors.card },
+        isDark ? shadowsNative.sm : shadowsNative.DEFAULT,
+        hasHeaderImages && styles.headerWithImages,
+      ]}
+    >
+      {hasHeaderImages && (
+        <View style={styles.headerImageStripWrapper}>
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.headerImageStripContent}
+            onScroll={handleImageScroll}
+            onMomentumScrollEnd={handleImageScroll}
+            scrollEventThrottle={16}
+            accessibilityLabel={t('facilityDetail.facilityImages')}
           >
+            {headerImages.map(img => {
+              const uri = img.url || img.thumbnail_url;
+              return (
+                <View key={img.id} style={[styles.headerImageSlide, { width: headerImageWidth }]}>
+                  <Image
+                    source={{ uri: uri! }}
+                    style={[styles.headerImage, { width: headerImageWidth, height: 170 }]}
+                    contentFit="cover"
+                  />
+                </View>
+              );
+            })}
+          </ScrollView>
+          {imageCount > 0 && (
+            <View style={[styles.imageCountBadge, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+              <Text size="xs" weight="semibold" color="#FFF">
+                {currentImageIndex + 1}/{imageCount}
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+      <View style={styles.headerRow}>
+        <View style={styles.headerContent}>
+          <Text size="xl" weight="bold" color={colors.text} numberOfLines={3} style={{ flex: 1 }}>
             {facility.name}
           </Text>
           {isOnboarded && (
@@ -422,8 +485,12 @@ export default function FacilityDetail() {
           )}
         </View>
       </View>
+    </View>
+  );
 
-      {/* Tab Bar (pill style – matches Communities) */}
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      {/* Tab Bar at top */}
       <View style={[styles.tabBar, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
         {TAB_KEYS.map(tab => {
           const isActive = activeTab === tab;
@@ -472,12 +539,10 @@ export default function FacilityDetail() {
 
       {/* Tab content */}
       {activeTab === 'matches' ? (
-        // MatchesTab has its own FlatList with scroll and refresh
-        <View style={styles.content}>
+        <View style={styles.contentWithTopPadding}>
           <MatchesTab facilityId={facilityId} />
         </View>
       ) : (
-        // Info and Availability tabs use shared ScrollView
         <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
@@ -491,15 +556,18 @@ export default function FacilityDetail() {
           showsVerticalScrollIndicator={false}
         >
           {activeTab === 'info' && (
-            <InfoTab
-              facility={facility}
-              courts={courts}
-              onOpenInMaps={handleOpenInMaps}
-              colors={colors}
-              isDark={isDark}
-              t={t}
-              isLoading={isLoading}
-            />
+            <>
+              {renderInfoHeader()}
+              <InfoTab
+                facility={facility}
+                courts={courts}
+                onOpenInMaps={handleOpenInMaps}
+                colors={colors}
+                isDark={isDark}
+                t={t}
+                isLoading={isLoading}
+              />
+            </>
           )}
           {activeTab === 'availability' && (
             <AvailabilityTab
@@ -576,22 +644,54 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: 280,
   },
-  // Header styles
+  // Header styles (used as first block in Info tab; no marginTop – spacing comes from contentContainer paddingTop)
   header: {
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[4],
-    marginHorizontal: spacingPixels[3],
-    marginTop: spacingPixels[2],
+    paddingHorizontal: spacingPixels[2],
+    paddingVertical: spacingPixels[2],
+    marginHorizontal: spacingPixels[4],
+    marginBottom: spacingPixels[4],
     borderRadius: radiusPixels.xl,
   },
-  headerTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+  headerWithImages: {
+    flexDirection: 'column',
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    overflow: 'hidden',
   },
-  headerTitle: {
-    flex: 1,
-    marginRight: spacingPixels[3],
+  headerImageStripWrapper: {
+    height: 170,
+    width: '100%',
+    borderTopLeftRadius: radiusPixels.xl,
+    borderTopRightRadius: radiusPixels.xl,
+    overflow: 'hidden',
+  },
+  headerImageStripContent: {
+    flexDirection: 'row',
+  },
+  headerImageSlide: {
+    height: 170,
+  },
+  headerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  imageCountBadge: {
+    position: 'absolute',
+    bottom: spacingPixels[2],
+    right: spacingPixels[2],
+    paddingHorizontal: spacingPixels[2],
+    paddingVertical: spacingPixels[1],
+    borderRadius: radiusPixels.full,
+  },
+  headerRow: {
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[4],
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacingPixels[3],
   },
   headerBottom: {
     flexDirection: 'row',
@@ -629,6 +729,7 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.full,
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
   // Tab bar styles (pill container – matches Communities)
   tabBar: {
@@ -654,12 +755,19 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
-  // Content styles
+  // Content styles – same top spacing for all tabs (tab bar to first content)
   content: {
     flex: 1,
     marginTop: spacingPixels[2],
   },
   contentContainer: {
+    paddingTop: spacingPixels[3],
     paddingBottom: spacingPixels[6],
+  },
+  // Matches tab wrapper: same top padding as ScrollView contentContainer so spacing matches
+  contentWithTopPadding: {
+    flex: 1,
+    marginTop: spacingPixels[2],
+    paddingTop: spacingPixels[3],
   },
 });
