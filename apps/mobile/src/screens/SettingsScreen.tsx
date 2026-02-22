@@ -145,50 +145,44 @@ const SettingsScreen: React.FC = () => {
       return;
     }
 
-    Alert.alert(
-      'Make Admin (DEBUG)',
-      'This will make you a super_admin. Continue?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Make Admin',
-          onPress: async () => {
-            try {
-              setMakingAdmin(true);
-              // Check if already admin
-              const { data: existing } = await supabase
-                .from('admin')
-                .select('id')
-                .eq('id', profile.id)
-                .single();
+    Alert.alert('Make Admin (DEBUG)', 'This will make you a super_admin. Continue?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Make Admin',
+        onPress: async () => {
+          try {
+            setMakingAdmin(true);
+            // Check if already admin
+            const { data: existing } = await supabase
+              .from('admin')
+              .select('id')
+              .eq('id', profile.id)
+              .single();
 
-              if (existing) {
-                toast.info('You are already an admin!');
-                return;
-              }
-
-              // Insert admin record (id references profile.id)
-              const { error } = await supabase
-                .from('admin')
-                .insert({
-                  id: profile.id,
-                  role: 'super_admin',
-                });
-
-              if (error) throw error;
-
-              toast.success('You are now a super_admin! Restart the app to see Admin Panel.');
-              Logger.logUserAction('debug_make_admin', { userId: profile.id });
-            } catch (error) {
-              console.error('Failed to make admin:', error);
-              toast.error('Failed to make admin: ' + (error as Error).message);
-            } finally {
-              setMakingAdmin(false);
+            if (existing) {
+              toast.info('You are already an admin!');
+              return;
             }
-          },
+
+            // Insert admin record (id references profile.id)
+            const { error } = await supabase.from('admin').insert({
+              id: profile.id,
+              role: 'super_admin',
+            });
+
+            if (error) throw error;
+
+            toast.success('You are now a super_admin! Restart the app to see Admin Panel.');
+            Logger.logUserAction('debug_make_admin', { userId: profile.id });
+          } catch (error) {
+            console.error('Failed to make admin:', error);
+            toast.error('Failed to make admin: ' + (error as Error).message);
+          } finally {
+            setMakingAdmin(false);
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleResetTour = () => {
@@ -326,16 +320,18 @@ const SettingsScreen: React.FC = () => {
             onPress={handlePermissions}
           />
           {isOnboarded && (
-            <SettingsItem
-              icon="refresh-outline"
-              title={t('tour.settings.restartTour')}
-              onPress={handleResetTour}
-            />
-            <SettingsItem
-              icon="chatbox-ellipses-outline"
-              title={t('settings.feedback')}
-              onPress={handleFeedback}
-            />
+            <>
+              <SettingsItem
+                icon="refresh-outline"
+                title={t('tour.settings.restartTour')}
+                onPress={handleResetTour}
+              />
+              <SettingsItem
+                icon="chatbox-ellipses-outline"
+                title={t('settings.feedback')}
+                onPress={handleFeedback}
+              />
+            </>
           )}
         </View>
 
@@ -351,7 +347,16 @@ const SettingsScreen: React.FC = () => {
               activeOpacity={0.7}
             >
               <View style={styles.settingsItemLeft}>
-                <View style={[styles.adminIconContainer, { backgroundColor: isDark ? `${status.warning.DEFAULT}20` : `${status.warning.light}15` }]}>
+                <View
+                  style={[
+                    styles.adminIconContainer,
+                    {
+                      backgroundColor: isDark
+                        ? `${status.warning.DEFAULT}20`
+                        : `${status.warning.light}15`,
+                    },
+                  ]}
+                >
                   <Ionicons name="construct" size={18} color={status.warning.DEFAULT} />
                 </View>
                 <View style={styles.adminTextContainer}>
@@ -376,7 +381,9 @@ const SettingsScreen: React.FC = () => {
             <TouchableOpacity
               style={[
                 styles.debugButton,
-                { backgroundColor: isDark ? `${status.error.DEFAULT}20` : `${status.error.light}15` },
+                {
+                  backgroundColor: isDark ? `${status.error.DEFAULT}20` : `${status.error.light}15`,
+                },
               ]}
               onPress={handleMakeAdmin}
               disabled={makingAdmin}

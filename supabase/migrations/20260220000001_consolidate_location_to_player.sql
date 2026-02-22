@@ -15,21 +15,79 @@ ALTER TABLE player ADD COLUMN IF NOT EXISTS province TEXT;
 
 -- ============================================================================
 -- 2. Copy address, city, province data from profile to player (existing rows)
+-- Only if profile has these columns (they may have been removed)
 -- ============================================================================
-UPDATE player
-SET
-  address = p.address,
-  city = p.city,
-  province = p.province
-FROM profile p
-WHERE player.id = p.id;
+DO $$
+BEGIN
+  -- Check if profile has address column before attempting copy
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' AND table_name = 'profile' AND column_name = 'address'
+  ) THEN
+    UPDATE player
+    SET
+      address = p.address,
+      city = p.city,
+      province = p.province
+    FROM profile p
+    WHERE player.id = p.id;
+  END IF;
+END $$;
 
 -- ============================================================================
--- 3. Rename columns on player table
+-- 3. Rename columns on player table (only if old names exist AND new names don't)
 -- ============================================================================
-ALTER TABLE player RENAME COLUMN postal_code_country TO country;
-ALTER TABLE player RENAME COLUMN postal_code_lat TO latitude;
-ALTER TABLE player RENAME COLUMN postal_code_long TO longitude;
+DO $$
+BEGIN
+  -- Only rename if old column exists AND new column doesn't exist
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' AND table_name = 'player' AND column_name = 'postal_code_country'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' AND table_name = 'player' AND column_name = 'country'
+  ) THEN
+    ALTER TABLE player RENAME COLUMN postal_code_country TO country;
+  ELSIF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' AND table_name = 'player' AND column_name = 'postal_code_country'
+  ) THEN
+    -- Both exist, just drop the old one
+    ALTER TABLE player DROP COLUMN IF EXISTS postal_code_country;
+  END IF;
+  
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' AND table_name = 'player' AND column_name = 'postal_code_lat'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' AND table_name = 'player' AND column_name = 'latitude'
+  ) THEN
+    ALTER TABLE player RENAME COLUMN postal_code_lat TO latitude;
+  ELSIF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' AND table_name = 'player' AND column_name = 'postal_code_lat'
+  ) THEN
+    -- Both exist, just drop the old one
+    ALTER TABLE player DROP COLUMN IF EXISTS postal_code_lat;
+  END IF;
+  
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' AND table_name = 'player' AND column_name = 'postal_code_long'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' AND table_name = 'player' AND column_name = 'longitude'
+  ) THEN
+    ALTER TABLE player RENAME COLUMN postal_code_long TO longitude;
+  ELSIF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' AND table_name = 'player' AND column_name = 'postal_code_long'
+  ) THEN
+    -- Both exist, just drop the old one
+    ALTER TABLE player DROP COLUMN IF EXISTS postal_code_long;
+  END IF;
+END $$;
 
 -- ============================================================================
 -- 4. Drop postal_code_location column and recreate as auto-generated location
