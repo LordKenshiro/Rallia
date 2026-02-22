@@ -132,6 +132,7 @@
     "notifications": "Notifications",
     "notificationPreferences": "Notification Preferences",
     "permissions": "Permissions",
+    "feedback": "Feedback",
     "ratingProofs": "Rating Proofs",
     "publicMatches": "Public Games",
     "playerMatches": "My Games",
@@ -398,6 +399,7 @@
       }
     },
     "permissions": "Permissions",
+    "feedback": "Feedback & Suggestions",
     "language": "Language",
     "languageAuto": "Auto",
     "languageDescription": "Choose your preferred language for the app",
@@ -4040,6 +4042,67 @@
     }
   },
   "admin": {
+    "title": "Admin Panel",
+    "panelButton": "Admin Panel",
+    "roles": {
+      "super_admin": "Super Admin",
+      "moderator": "Moderator",
+      "support": "Support",
+      "analyst": "Analyst"
+    },
+    "stats": {
+      "activeUsers": "Active Users",
+      "matchesToday": "Games Today",
+      "pendingReports": "Pending Reports"
+    },
+    "sections": {
+      "users": {
+        "title": "User Management",
+        "description": "View, edit, and manage user accounts"
+      },
+      "analytics": {
+        "title": "Analytics",
+        "description": "View platform statistics and KPIs"
+      },
+      "moderation": {
+        "title": "Moderation",
+        "description": "Review reports and manage content"
+      },
+      "notifications": {
+        "title": "Push Notifications",
+        "description": "Send announcements to users"
+      },
+      "audit": {
+        "title": "Audit Trail",
+        "description": "View admin activity logs"
+      },
+      "settings": {
+        "title": "Admin Settings",
+        "description": "Configure admin preferences"
+      }
+    },
+    "users": {
+      "title": "User Management",
+      "searchPlaceholder": "Search users...",
+      "filterBy": "Filter by",
+      "all": "All Users",
+      "verified": "Verified Only",
+      "unverified": "Unverified Only",
+      "banned": "Banned Users",
+      "detail": {
+        "title": "User Details",
+        "noUser": "No user found"
+      }
+    },
+    "activityLog": {
+      "title": "Activity Log",
+      "empty": "No activity to display",
+      "loadMore": "Load More"
+    },
+    "moderation": {
+      "title": "Moderation",
+      "empty": "No reports to review"
+    },
     "signIn": {
       "title": "Admin Sign In",
       "description": "Sign in to access the administration dashboard",

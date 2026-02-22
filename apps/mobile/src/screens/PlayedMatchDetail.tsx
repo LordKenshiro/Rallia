@@ -48,7 +48,7 @@ interface GroupMatch {
     match_date: string;
     start_time: string;
     player_expectation: 'practice' | 'competitive' | 'both';
-    status: string;
+    cancelled_at: string | null;
     format: 'singles' | 'doubles';
     created_by: string;
     sport?: {

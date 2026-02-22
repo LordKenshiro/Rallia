@@ -28,6 +28,8 @@ export * from './reports';
 export * from './bookings';
 export * from './programs';
 export * from './tour';
+export * from './feedback';
+export * from './admin';
 
 // Export default DatabaseService
 export { default } from './database';

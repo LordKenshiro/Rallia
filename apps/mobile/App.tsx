@@ -15,6 +15,7 @@ import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AppNavigator from './src/navigation/AppNavigator';
 import { navigationRef } from './src/navigation';
+import { linking } from './src/navigation/linking';
 import { ActionsBottomSheet } from './src/components/ActionsBottomSheet';
 import { FeedbackSheet } from './src/components/FeedbackSheet';
 import { SplashOverlay } from './src/components/SplashOverlay';
@@ -271,7 +272,7 @@ function AppContent() {
   return (
     <>
       <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
-      <NavigationContainer ref={navigationRef}>
+      <NavigationContainer ref={navigationRef} linking={linking}>
         <SheetProvider>
           <Sheets />
           <AppNavigator />

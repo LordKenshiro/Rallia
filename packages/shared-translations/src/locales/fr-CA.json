@@ -132,6 +132,7 @@
     "notifications": "Notifications",
     "notificationPreferences": "Préférences de notifications",
     "permissions": "Permissions",
+    "feedback": "Commentaires",
     "ratingProofs": "Preuves de classement",
     "publicMatches": "Parties publiques",
     "playerMatches": "Mes parties",
@@ -398,6 +399,7 @@
       }
     },
     "permissions": "Autorisations",
+    "feedback": "Commentaires et suggestions",
     "language": "Langue",
     "languageAuto": "Auto",
     "languageDescription": "Choisissez votre langue préférée pour l'application",
@@ -4042,6 +4044,67 @@
     }
   },
   "admin": {
+    "title": "Panneau Admin",
+    "panelButton": "Panneau Admin",
+    "roles": {
+      "super_admin": "Super Admin",
+      "moderator": "Modérateur",
+      "support": "Support",
+      "analyst": "Analyste"
+    },
+    "stats": {
+      "activeUsers": "Utilisateurs actifs",
+      "matchesToday": "Parties aujourd'hui",
+      "pendingReports": "Rapports en attente"
+    },
+    "sections": {
+      "users": {
+        "title": "Gestion des utilisateurs",
+        "description": "Voir, modifier et gérer les comptes"
+      },
+      "analytics": {
+        "title": "Analytique",
+        "description": "Voir les statistiques de la plateforme"
+      },
+      "moderation": {
+        "title": "Modération",
+        "description": "Examiner les rapports et gérer le contenu"
+      },
+      "notifications": {
+        "title": "Notifications Push",
+        "description": "Envoyer des annonces aux utilisateurs"
+      },
+      "audit": {
+        "title": "Journal d'activité",
+        "description": "Voir les logs d'activité admin"
+      },
+      "settings": {
+        "title": "Paramètres Admin",
+        "description": "Configurer les préférences admin"
+      }
+    },
+    "users": {
+      "title": "Gestion des utilisateurs",
+      "searchPlaceholder": "Rechercher des utilisateurs...",
+      "filterBy": "Filtrer par",
+      "all": "Tous les utilisateurs",
+      "verified": "Vérifiés seulement",
+      "unverified": "Non vérifiés seulement",
+      "banned": "Utilisateurs bannis",
+      "detail": {
+        "title": "Détails de l'utilisateur",
+        "noUser": "Aucun utilisateur trouvé"
+      }
+    },
+    "activityLog": {
+      "title": "Journal d'activité",
+      "empty": "Aucune activité à afficher",
+      "loadMore": "Charger plus"
+    },
+    "moderation": {
+      "title": "Modération",
+      "empty": "Aucun rapport à examiner"
+    },
     "signIn": {
       "title": "Connexion Admin",
       "description": "Connectez-vous pour accéder au tableau de bord d'administration",

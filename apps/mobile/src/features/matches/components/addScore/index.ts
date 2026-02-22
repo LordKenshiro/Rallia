@@ -11,6 +11,7 @@ export { MatchDetailsStep } from './MatchDetailsStep';
 export { MatchExpectationStep } from './MatchExpectationStep';
 export { CreateTeamsStep } from './CreateTeamsStep';
 export { WinnerScoresStep } from './WinnerScoresStep';
+export { MatchResultConfirmModal } from './MatchResultConfirmModal';
 
 export type {
   MatchType,

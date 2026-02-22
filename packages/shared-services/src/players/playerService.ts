@@ -29,6 +29,15 @@ export interface HomeLocation {
  */
 export type GenderFilter = 'all' | 'male' | 'female' | 'other';
 export type AvailabilityFilter = 'all' | 'morning' | 'afternoon' | 'evening';
+export type DayFilter =
+  | 'all'
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday';
 export type PlayStyleFilter =
   | 'all'
   | 'counterpuncher'
@@ -45,6 +54,7 @@ export interface PlayerFilters {
   skillLevel?: SkillLevelFilter;
   maxDistance?: DistanceFilter;
   availability?: AvailabilityFilter;
+  day?: DayFilter;
   playStyle?: PlayStyleFilter;
 }
 
@@ -254,6 +264,27 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     } else if (availabilityPlayers) {
       const availablePlayerIds = [...new Set(availabilityPlayers.map(p => p.player_id))];
       playerIds = playerIds.filter(id => availablePlayerIds.includes(id));
+    }
+
+    if (playerIds.length === 0) {
+      return { players: [], hasMore: false, nextOffset: null };
+    }
+  }
+
+  // Step 4b: Apply day filter if specified
+  if (filters.day && filters.day !== 'all') {
+    const { data: dayFilteredPlayers, error: dayError } = await supabase
+      .from('player_availability')
+      .select('player_id')
+      .in('player_id', playerIds)
+      .eq('day', filters.day)
+      .or('is_active.is.null,is_active.eq.true');
+
+    if (dayError) {
+      console.error('[searchPlayersForSport] Error filtering by day:', dayError);
+    } else if (dayFilteredPlayers) {
+      const dayPlayerIds = [...new Set(dayFilteredPlayers.map(p => p.player_id))];
+      playerIds = playerIds.filter(id => dayPlayerIds.includes(id));
     }
 
     if (playerIds.length === 0) {
