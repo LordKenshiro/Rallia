@@ -457,6 +457,14 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     });
   }, [playerPreferences, preferencesLoading, isEditMode, hasDraft, isDraftForSport, sportId, form]);
 
+  // Helper to format date as YYYY-MM-DD in local time
+  const formatDateLocal = useCallback((date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
+
   // Apply initial booking data when opening from facility "Create game"
   const hasAppliedInitialBooking = useRef(false);
   useEffect(() => {
@@ -619,14 +627,6 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
       hasUnsavedChanges.current = true;
     }
   }, [isDirty, values]);
-
-  // Helper to format date as YYYY-MM-DD in local time
-  const formatDateLocal = useCallback((date: Date): string => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }, []);
 
   // Clear booked slot data when location type changes away from facility or facility is cleared
   // This unlocks the WhenFormatStep when user changes location type after booking a slot
